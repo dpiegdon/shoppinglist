@@ -1,0 +1,13 @@
+{
+  "body": "90-day purge incl. orphaned lists, gc_horizon advance, daily maybe_run hook in /sync, flask shoppinglist gc. Full ticket (files, interfaces, acceptance criteria): docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract sections first. TDD. Spec: docs/superpowers/specs/2026-07-08-shopping-list-server-design.md",
+  "created_at": "2026-07-08T22:17:29+00:00",
+  "id": "T-8",
+  "labels": [
+    "server",
+    "sonnet",
+    "agent"
+  ],
+  "priority": 1,
+  "title": "S8: tombstone GC (opportunistic + CLI)",
+  "updated_at": "2026-07-08T22:17:29+00:00"
+}
