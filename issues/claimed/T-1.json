@@ -7,7 +7,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 1,
   "title": "S1: server package scaffold, schema, DB layer, init-db CLI",
-  "updated_at": "2026-07-08T22:17:27+00:00"
+  "updated_at": "2026-07-08T22:20:31+00:00"
 }
