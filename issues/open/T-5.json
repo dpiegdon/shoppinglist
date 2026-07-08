@@ -1,0 +1,13 @@
+{
+  "body": "Wire engine into transactional /sync route + GET /lists; two-device convergence integration test. Full ticket (files, interfaces, acceptance criteria): docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract sections first. TDD. Spec: docs/superpowers/specs/2026-07-08-shopping-list-server-design.md",
+  "created_at": "2026-07-08T22:17:28+00:00",
+  "id": "T-5",
+  "labels": [
+    "server",
+    "sonnet",
+    "agent"
+  ],
+  "priority": 1,
+  "title": "S5: POST /sync + GET /lists endpoints",
+  "updated_at": "2026-07-08T22:17:28+00:00"
+}
