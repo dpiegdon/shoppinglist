@@ -3,6 +3,7 @@ from flask import Flask
 
 from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
+from shoppinglist_server.cli import shoppinglist_cli
 
 
 @pytest.fixture
@@ -30,9 +31,15 @@ def app(tmp_path):
         base_url="http://testserver",
     )
     flask_app.register_blueprint(bp)
+    flask_app.cli.add_command(shoppinglist_cli)
     return flask_app
 
 
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture
+def cli_runner(app):
+    return app.test_cli_runner()

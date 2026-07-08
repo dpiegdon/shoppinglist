@@ -28,16 +28,16 @@ def now_ms() -> int:
     return time.time_ns() // 1_000_000
 
 
-def _hash_token(token: str) -> str:
+def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _validate_email(email):
+def validate_email(email):
     if not email or not EMAIL_RE.match(email):
         raise ApiError(422, "invalid_email", "Email address is not valid.")
 
 
-def _validate_password(password):
+def validate_password(password):
     if not password or len(password) < MIN_PASSWORD_LENGTH:
         raise ApiError(
             422,
@@ -47,8 +47,8 @@ def _validate_password(password):
 
 
 def register(conn: sqlite3.Connection, email: str, password: str) -> str:
-    _validate_email(email)
-    _validate_password(password)
+    validate_email(email)
+    validate_password(password)
 
     account_id = str(uuid.uuid4())
     now = now_ms()
@@ -82,7 +82,7 @@ def login(conn: sqlite3.Connection, email: str, password: str, device_label: str
         raise ApiError(401, "invalid_credentials", "Email or password is incorrect.")
 
     token = secrets.token_urlsafe(32)  # 256 bits of randomness
-    token_hash = _hash_token(token)
+    token_hash = hash_token(token)
     now = now_ms()
     conn.execute(
         "INSERT INTO auth_tokens (id, token_hash, account_id, device_label, created_at, last_seen_at) "
@@ -94,7 +94,7 @@ def login(conn: sqlite3.Connection, email: str, password: str, device_label: str
 
 
 def logout(conn: sqlite3.Connection, token: str) -> None:
-    conn.execute("DELETE FROM auth_tokens WHERE token_hash = ?", (_hash_token(token),))
+    conn.execute("DELETE FROM auth_tokens WHERE token_hash = ?", (hash_token(token),))
     conn.commit()
 
 
@@ -114,7 +114,7 @@ def _extract_token(req) -> str:
 
 def require_account(conn: sqlite3.Connection, req) -> Account:
     token = _extract_token(req)
-    token_hash = _hash_token(token)
+    token_hash = hash_token(token)
 
     row = conn.execute(
         "SELECT auth_tokens.account_id AS account_id, accounts.email AS email "

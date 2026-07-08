@@ -32,9 +32,11 @@ def create_blueprint(
         if conn is not None:
             conn.close()
 
+    from .routes.account import register_routes as register_account_routes
     from .routes.auth import register_routes as register_auth_routes
 
     register_auth_routes(bp)
+    register_account_routes(bp)
 
     return bp
 
