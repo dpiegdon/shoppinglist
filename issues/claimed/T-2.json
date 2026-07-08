@@ -10,7 +10,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 1,
   "title": "S2: auth \u2014 register/login/logout + bearer middleware",
-  "updated_at": "2026-07-08T22:17:27+00:00"
+  "updated_at": "2026-07-08T22:27:27+00:00"
 }
