@@ -40,8 +40,6 @@
 ## List view
 - Shows **`todo`** items **grouped by category** (order from `category_order`),
   then listed; items sort **alphabetically within a category**.
-- Shows a **price total of open (todo) items** — summed **per currency** (items
-  without a currency count under the account's `default_currency`).
 - **`checked`** items are **selectively** visible; **`backlog`** items are
   **never** shown here (they only feed name suggestions in the add dialog).
 - **List header** contains:
