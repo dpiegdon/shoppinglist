@@ -1,0 +1,13 @@
+{
+  "body": "Gradle project org.p23q.shoppinglist, Material3 dark/light from system, nav routes, drawer stub. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
+  "created_at": "2026-07-08T22:17:49+00:00",
+  "id": "T-10",
+  "labels": [
+    "android",
+    "sonnet",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "A1: Android scaffold \u2014 Compose/Hilt/Room/Retrofit, theme, nav",
+  "updated_at": "2026-07-08T22:17:49+00:00"
+}
