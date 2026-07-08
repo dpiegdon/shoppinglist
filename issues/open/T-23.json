@@ -1,6 +1,9 @@
 {
   "body": "Category grouping with category_order, show-checked + strikethrough, add with suggestions, edit all fields, registry page. COARSE ticket \u2014 refine into a full plan before executing. Full context: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md (Epic W + Wire Contract).",
   "created_at": "2026-07-08T22:18:03+00:00",
+  "deps": [
+    "T-22"
+  ],
   "id": "T-23",
   "labels": [
     "web",
