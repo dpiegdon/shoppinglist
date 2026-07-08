@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-08T22:17:51+00:00", "kind": "created", "ref": "main@302303d", "text": "A9: share/list props, invite redemption, App Link"}
+{"actor": "claude", "at": "2026-07-08T22:17:51+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-15 T-6 T-7"}
