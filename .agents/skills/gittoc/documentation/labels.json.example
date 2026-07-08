@@ -1,0 +1,16 @@
+{
+  "agent":    "Safe for autonomous agent implementation without human supervision",
+  "bug":      "Something is broken or behaves incorrectly",
+  "chore":    "Maintenance tasks, dependency updates, housekeeping",
+  "docs":     "Documentation improvements",
+  "feature":  "New functionality",
+  "human":    "Requires human review or decision before proceeding",
+  "ops":      "Build, test, deployment, or infrastructure tooling",
+  "perf":     "Performance improvements",
+  "ready":    "Well-defined, clearly scoped, and ready to implement",
+  "refactor": "Internal code cleanup that preserves existing behaviour",
+  "reliability": "Error handling, fault tolerance, resilience, and robustness",
+  "security": "Security-related fix or improvement",
+  "structure":"Reorganise files, modules, or repo layout without logic changes",
+  "ux":       "User experience improvements"
+}

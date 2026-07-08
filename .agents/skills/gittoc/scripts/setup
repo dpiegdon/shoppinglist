@@ -1,0 +1,54 @@
+#!/bin/sh -e
+
+# Idempotent installation script for gittoc system into repositories.
+# Run from the project root.
+#  - Removes dev-only files (.git, AGENTS.md, scripts/dev pipeline) not needed by installs.
+#  - Sets up `git toc` alias.
+#  - Sets up skill symlinks and git alias for a vendored gittoc install.
+#  - Optionally enables autopush mode.
+#  - Initializes a new gittoc ticket system if none exists yet.
+#
+# Options:
+#   --autopush    enable auto-push/pull on every mutating command
+#                 (git config gittoc.autopush true)
+
+GITTOC_DIR="$(cd "$(dirname "$0")/../" && pwd)"
+
+# remove unneeded files that may befuddle agents or users
+# (scripts/dev is the dev-only lint/test pipeline + its venv; installs don't need it)
+for F in AGENTS.md .git assets/gittoc_logo.png scripts/dev .isort.cfg; do
+	if [ -e "$GITTOC_DIR/$F" ]; then
+		rm -Rf "$GITTOC_DIR/$F"
+	fi
+done
+
+# identify paths in relation to parent git repo
+GIT_ROOTDIR="$(git rev-parse --show-toplevel)"
+GITTOC_DIR_REL="$(realpath --relative-to="$GIT_ROOTDIR" "$GITTOC_DIR")"
+
+# create `git toc` alias
+git config alias.toc >/dev/null 2>&1 || git config alias.toc "!./$GITTOC_DIR_REL/scripts/gittoc"
+
+# enable autopush mode if desired (--autopush)
+AUTOPUSH=0
+for arg in "$@"; do
+    case "$arg" in
+        --autopush) AUTOPUSH=1 ;;
+    esac
+done
+if [ "$AUTOPUSH" = "1" ]; then
+    git config gittoc.autopush true
+    echo "auto-push enabled (gittoc.autopush=true)"
+fi
+
+# create agentic-specific symlinks to skill
+for AGENT in claude github openai opencode; do
+	SKILLDIR="$GIT_ROOTDIR/.${AGENT}/skills"
+	if [ ! -e "$SKILLDIR/gittoc" ]; then
+		mkdir -p "$SKILLDIR"
+		ln -s "../../$GITTOC_DIR_REL" "$SKILLDIR/gittoc"
+	fi
+done
+
+# initialize gittoc system
+git toc init

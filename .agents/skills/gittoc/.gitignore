@@ -1,0 +1,7 @@
+*.pyc
+*.pyo
+.*.swp
+.pytest_cache
+__pycache__/
+# local dev-only pipeline venv (scripts/dev/check); never committed or shipped
+scripts/dev/.venv/
