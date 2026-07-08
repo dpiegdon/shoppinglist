@@ -1,0 +1,12 @@
+{
+  "body": "/sync-based in-memory store (localStorage cursor, 410 reset), overview, create list, menu, last-opened restore. COARSE ticket \u2014 refine into a full plan before executing. Full context: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md (Epic W + Wire Contract).",
+  "created_at": "2026-07-08T22:18:03+00:00",
+  "id": "T-22",
+  "labels": [
+    "web",
+    "sonnet"
+  ],
+  "priority": 4,
+  "title": "W2: web lists overview + sync store",
+  "updated_at": "2026-07-08T22:18:03+00:00"
+}
