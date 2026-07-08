@@ -1,6 +1,13 @@
 {
   "body": "README (blueprint mounting, config, TLS/proxy deployment notes), finalize app.py, end-to-end two-account lifecycle test. Full ticket (files, interfaces, acceptance criteria): docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract sections first. TDD. Spec: docs/superpowers/specs/2026-07-08-shopping-list-server-design.md",
   "created_at": "2026-07-08T22:17:29+00:00",
+  "deps": [
+    "T-3",
+    "T-5",
+    "T-6",
+    "T-7",
+    "T-8"
+  ],
   "id": "T-9",
   "labels": [
     "server",
