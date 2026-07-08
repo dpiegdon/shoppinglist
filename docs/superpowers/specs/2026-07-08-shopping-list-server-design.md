@@ -22,8 +22,10 @@ access to a list (created it or was invited) or it does not. There is no
 ownership hierarchy or role model.
 
 A shopping list is a **registry of every item ever added to it**. Items are
-identified to the user by **Name** (unique within a list) and carry a boolean
-**TODO** flag meaning "currently on the list". All other fields are optional.
+identified to the user by **Name** (unique within a list) and carry a tri-state
+**`status`** (see §3): `backlog` (known but not on the list), `todo` (on the
+list, not yet bought), or `checked` (on the list, bought/done). All other fields
+are optional.
 
 ### Decomposition & sequencing
 
@@ -66,6 +68,19 @@ depends on it.
 | `INVITE_HMAC_KEY` | Server signing key for invite tokens (§5). |
 | `DATABASE_PATH` | SQLite file path. |
 
+### Operator CLI
+
+The package registers Flask CLI commands on the host app:
+
+- `flask shoppinglist init-db` — create the schema.
+- `flask shoppinglist reset-password <email>` — set (and print) a newly
+  generated password. This is the **only** password-reset path — there is no
+  self-service reset (no email infrastructure); the operator hands the new
+  password over out of band.
+- `flask shoppinglist gc` — force tombstone garbage collection (§6). GC also
+  runs opportunistically (piggybacked on a sync request at most about once a
+  day), so a cron job is optional.
+
 ---
 
 ## 3. Data model
@@ -90,10 +105,21 @@ Purely client-side preferences (e.g. **theme / dark-light**, which auto-follows
 the OS) are **not** stored here — they belong to the client spec.
 
 ### lists
-`id`, `name`, `created_at`, plus sync metadata (§6).
+`id`, `name`, `category_order`, `created_at`, plus sync metadata (§6).
 `name` is a human-facing label only; the **UUID is the list's identity** and is
-what appears in invite tokens. Lists sync exactly like items: `name` is an
-LWW field, and a list carries a tombstone so deletion propagates.
+what appears in invite tokens. `category_order` is an **ordered array of
+category names** (stored as JSON), a **list-level setting shared by all
+members** that fixes the grouping order in the list view; categories not present
+in it render after the ordered ones, alphabetically. Lists sync exactly like
+items: `name` and `category_order` are LWW fields, and a list carries a
+tombstone so deletion propagates.
+
+**Orphaned lists.** A list with **zero memberships** (last member left, or the
+sole member's account was deleted) is orphaned. On becoming orphaned, its
+content (items + metadata) is cleared immediately and the list is **tombstoned**
+so all of the departing user's *other* devices converge on the deletion via
+sync; at tombstone GC (§6) the row is **hard-deleted** — no ownerless data
+persists on the server.
 
 ### memberships
 `account_id`, `list_id` (composite PK). Flat access model. Creating a list
@@ -108,16 +134,36 @@ User-facing fields:
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `name` | string | **Unique within a list.** Editable (rename). |
+| `name` | string | **Unique within a list**, compared case-insensitively (casing preserved for display). Trimmed; empty names rejected. Editable (rename). |
 | `category` | string, optional | e.g. groceries, freezer, asian market, hygiene. Freeform. |
 | `stores` | set of strings, optional | Stores where the item is available. Freeform. |
 | `quantity` | string, optional | Free text — many possible units. |
+| `note` | string, optional | Free-text note (e.g. "the ripe ones", "brand X only"). |
 | `price_amount` | decimal, optional | Stored as a validated decimal **string** (no float rounding). |
 | `price_currency` | string, optional | ISO-4217 code. If omitted, the client displays using the account's `default_currency` (§3 account_settings). |
-| `todo` | boolean | Is the item currently on the list? |
+| `status` | enum | `backlog` \| `todo` \| `checked`. Tri-state (below). |
 
 `price_amount` + `price_currency` are treated as **one logical LWW field** for
-sync (§6) — they move together.
+sync (§6) — they move together. `status` is an ordinary scalar LWW field.
+
+**Item lifecycle (`status`).** Every item ever added stays in the list's
+registry forever; `status` records its relationship to the *current* list:
+
+| State | Meaning | Transitions |
+|-------|---------|-------------|
+| `backlog` | Known item, **not currently on the list**. The registry of everything ever added. | New items may be created directly in `backlog`; adding an existing backlog item to the list → `todo`. |
+| `todo` | On the list, **not yet bought**. | Marking bought → `checked`. Removing from list → `backlog`. |
+| `checked` | On the list, **bought / done**. | Undo → `todo`. Clearing done items → `backlog`. |
+
+Client-side visibility (a client concern, stated here so the field's purpose is
+unambiguous): `todo` items are **always** shown on the list view; `checked`
+items are **selectively** shown (a show-done toggle); `backlog` items are
+**never** shown on the list view — they surface only as **name suggestions**
+when adding an item. Name suggestions are drawn from the **entire registry**
+(all items regardless of `status`); picking an existing one sets its status to
+`todo` and lets the user edit the other fields. All state changes (including
+bulk "clear done → backlog") are ordinary field edits and flow through `/sync`;
+no dedicated endpoints are needed.
 
 Plus per-item: `list_id`, `created_at`, tombstone fields, and per-field sync
 metadata (§6).
@@ -148,6 +194,9 @@ Opaque bearer tokens, suited to mobile and to per-device revocation.
 client-only preferences like theme live in the client spec):
 
 - **Change password** — verifies the current password, re-hashes the new one.
+- **Change email** — verifies the password, enforces uniqueness. Pending invites
+  bound to the old address can no longer be redeemed by this account
+  (redemption always checks the *current* email).
 - **Sessions/devices** — list active tokens (device label, last seen) and revoke
   any one (remote logout).
 - **Settings** — read/update `account_settings` (currently `default_currency`).
@@ -166,7 +215,11 @@ client-only preferences like theme live in the client spec):
   `expires_at = now + 7 days`. It is carried inside the HMAC payload so it
   cannot be tampered with in transit.
 - The token/link is delivered **out of band** by the inviter (the server sends
-  no email).
+  no email). The canonical share format is a URL: `https://<server>/invite/<token>`.
+- **Landing page:** `GET /invite/<token>` serves a minimal HTML page (the only
+  non-JSON route) so the link works anywhere: on Android the app catches it via
+  App Links and prefills the redeem flow; in a browser the page shows the token
+  with instructions to paste it into the app (paste fallback).
 - **Redemption** (`POST /invites/redeem`): a logged-in account may redeem iff
   **all** hold:
   1. the HMAC verifies,
@@ -212,11 +265,16 @@ Conflict resolution is **field-level Last-Write-Wins**:
 ### Deletes — tombstones
 A delete sets `deleted = 1, deleted_at` on the item row rather than removing it,
 so deletions propagate on the next sync. Tombstones are garbage-collected after
-a retention window comfortably longer than any realistic offline period.
+a fixed retention window of **90 days** — comfortably longer than any realistic
+offline period. GC also hard-deletes orphaned tombstoned lists (§3). The server
+records the highest `change_seq` removed by GC as the **`gc_horizon`**. GC runs
+opportunistically (at most about once a day, piggybacked on a sync request) and
+can be forced via the operator CLI (§2).
 
 ### Name-uniqueness merge
-If two devices each add an item with the **same `name`** in the same list while
-offline, sync would produce two `item_id`s sharing a name. On sync the server
+If two devices each add an item with the **same `name`** (compared
+case-insensitively) in the same list while offline, sync would produce two
+`item_id`s sharing a name. On sync the server
 **merges them into one `item_id`** (field-level LWW across both) and tombstones
 the loser, preserving "Name is primary key within a list" without data loss.
 The surviving `item_id` is chosen deterministically (earliest `created_at`, then
@@ -234,6 +292,18 @@ lexically-smaller `item_id`).
 - **Account settings** are not part of the item/list delta. The Android client
   fetches `GET /settings` at login and caches `default_currency` locally so
   prices render offline; it re-reads after any `PATCH /settings`.
+- **Joining a list:** rows of a newly joined list mostly carry `change_seq`
+  values below the client's cursor, so a plain delta would skip them. The sync
+  request therefore accepts an optional `full_lists: [list_id, …]`; the server
+  returns **every live row** of those lists regardless of cursor. After
+  redeeming an invite (redeem returns the `list_id`), the client passes that id
+  here once.
+- **Stale cursor:** a cursor below `gc_horizon` cannot be served incrementally
+  (tombstones the client never saw are already gone). The server still applies
+  the request's pushed changes (normal LWW) but responds
+  `410 full_resync_required`; the client then syncs from cursor 0 and
+  **replaces** its local mirror with the response (deletions manifest as
+  absence).
 
 ### Known caveat
 Wall-clock LWW is sensitive to device clock skew. This is accepted per the
@@ -252,16 +322,19 @@ All JSON, under `/api/v1`. Authenticated requests carry `Authorization: Bearer`.
 | POST | `/login` | Obtain a bearer token. |
 | POST | `/logout` | Revoke the presented token. |
 | POST | `/account/change-password` | Change password (verifies current). |
+| POST | `/account/change-email` | Change login email (verifies password; enforces uniqueness). |
 | GET | `/account/sessions` | List active tokens/devices. |
 | DELETE | `/account/sessions/{id}` | Revoke a specific session (remote logout). |
 | GET | `/settings` | Read account settings (incl. `default_currency`). |
 | PATCH | `/settings` | Update account settings. |
 | DELETE | `/account` | Delete the account and its data. |
 | GET | `/lists` | Convenience read: the caller's accessible lists (online clients). |
-| POST | `/lists/{id}/leave` | Remove the caller's membership; if the last member leaves, the list is tombstoned. |
+| GET | `/lists/{id}/members` | List the list's members (emails) + pending invites — backs the share dialog. |
+| POST | `/lists/{id}/leave` | Remove the caller's membership; if that was the last member, the list is orphaned → see §3. |
 | POST | `/lists/{id}/invites` | Mint an email-bound invite (7-day expiry). |
 | DELETE | `/invites/{id}` | Revoke an invite. |
-| POST | `/invites/redeem` | Redeem an invite token → membership. |
+| POST | `/invites/redeem` | Redeem an invite token → membership; returns the `list_id` for a follow-up `full_lists` sync (§6). |
+| GET | `/invite/{token}` | HTML landing page for invite links (the only non-JSON route; backs App Links + paste fallback, §5). |
 | POST | `/sync` | Bidirectional delta sync of list + item content across the caller's lists (the sole content write path). |
 
 List create/rename/delete and item create/update/delete are all expressed
@@ -281,6 +354,7 @@ Consistent JSON error envelope: `{ "error": "<code>", "message": "<human text>" 
 | 403 | Authenticated but not a member of the target list. |
 | 404 | Unknown resource. |
 | 409 | Conflict — duplicate email on register, or invite expired/revoked/already-used/email-mismatch. |
+| 410 | Sync cursor predates `gc_horizon` — full resync required (§6). |
 | 422 | Validation failure (e.g. empty item name, malformed sync payload). |
 
 ---
@@ -289,14 +363,21 @@ Consistent JSON error envelope: `{ "error": "<code>", "message": "<human text>" 
 
 - **pytest** against a temporary SQLite DB, following TDD.
 - **Service unit tests:** password hashing/verification, change-password,
-  token issue/revoke + session listing, invite HMAC mint/verify + all five
+  change-email (incl. pending invites bound to the old address no longer
+  matching), token issue/revoke + session listing, invite HMAC mint/verify + all five
   redemption conditions + fixed 7-day expiry, field-level LWW merge (incl. the
-  combined `price_amount`+`price_currency` field), same-name merge, tombstone
-  propagation, cursor monotonicity, settings read/update + default-currency on
-  registration, account deletion cascade.
-- **API integration tests:** each endpoint incl. auth failures, membership
-  enforcement (403), and a full offline→sync→merge round-trip across two
-  simulated devices.
+  combined `price_amount`+`price_currency` field and concurrent `status`
+  transitions, e.g. `todo` vs `checked` resolving latest-wins), same-name merge, tombstone
+  propagation, cursor monotonicity, `category_order` LWW sync, settings
+  read/update + default-currency on registration, account deletion cascade, and
+  orphaned-list handling (last leave → content cleared + tombstoned → hard-deleted at GC).
+- **API integration tests:** each endpoint (incl. `GET /lists/{id}/members`
+  showing members + pending invites) with auth failures, membership enforcement
+  (403), a full offline→sync→merge round-trip across two simulated devices,
+  join-a-list snapshot sync via `full_lists`, the stale-cursor → 410 →
+  full-resync path, and the invite landing page.
+- **CLI tests:** `init-db`, `reset-password`, `gc` (removes expired tombstones,
+  hard-deletes orphaned lists, advances `gc_horizon`).
 
 ---
 
@@ -307,5 +388,9 @@ Consistent JSON error envelope: `{ "error": "<code>", "message": "<human text>" 
   email address; email verification is the recommended future hardening.
 - **No push / real-time.** Sync is client-initiated (on reconnect, on
   foreground, or manual). The server never pushes.
-- **No roles or granular permissions** beyond list membership.
+- **No roles or granular permissions** beyond list membership. In particular,
+  members cannot remove *other* members — only themselves (`leave`).
 - **No server-side email delivery infrastructure** of any kind.
+- **Transport security & abuse protection are the deployment's job.** The
+  blueprint assumes a TLS-terminating reverse proxy (bearer tokens must never
+  travel plaintext); login rate-limiting can likewise be added at the proxy.
