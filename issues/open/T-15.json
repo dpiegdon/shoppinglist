@@ -1,6 +1,9 @@
 {
   "body": "Overview cards, create list, last-opened persistence; menu: overview/settings/logout + account email. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
   "created_at": "2026-07-08T22:17:50+00:00",
+  "deps": [
+    "T-14"
+  ],
   "id": "T-15",
   "labels": [
     "android",
