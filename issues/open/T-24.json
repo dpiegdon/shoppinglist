@@ -1,6 +1,9 @@
 {
   "body": "List props (rename/order/members/invites/leave), redeem page for invite links (coordinate copy with S7 landing page), account settings. COARSE ticket \u2014 refine into a full plan before executing. Full context: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md (Epic W + Wire Contract).",
   "created_at": "2026-07-08T22:18:04+00:00",
+  "deps": [
+    "T-23"
+  ],
   "id": "T-24",
   "labels": [
     "web",
