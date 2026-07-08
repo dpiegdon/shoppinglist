@@ -1,6 +1,9 @@
 {
   "body": "Default currency picker, change password/email, sessions with revoke, delete account, theme override, server URL display. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
   "created_at": "2026-07-08T22:17:52+00:00",
+  "deps": [
+    "T-13"
+  ],
   "id": "T-19",
   "labels": [
     "android",
