@@ -1,6 +1,9 @@
 {
   "body": "Invite mint/redeem/revoke with fixed 7-day expiry, five redemption checks, members endpoint, leave, orphan clear+tombstone. Full ticket (files, interfaces, acceptance criteria): docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract sections first. TDD. Spec: docs/superpowers/specs/2026-07-08-shopping-list-server-design.md",
   "created_at": "2026-07-08T22:17:28+00:00",
+  "deps": [
+    "T-5"
+  ],
   "id": "T-6",
   "labels": [
     "server",
