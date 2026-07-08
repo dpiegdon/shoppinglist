@@ -1,6 +1,9 @@
 {
   "body": "Server URL entry, auth, settings fetch (default currency cache), navigate to last-opened list or overview, logout wipes local data. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
   "created_at": "2026-07-08T22:17:50+00:00",
+  "deps": [
+    "T-12"
+  ],
   "id": "T-13",
   "labels": [
     "android",
