@@ -7,7 +7,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "A1: Android scaffold \u2014 Compose/Hilt/Room/Retrofit, theme, nav",
-  "updated_at": "2026-07-08T22:17:49+00:00"
+  "updated_at": "2026-07-08T22:22:09+00:00"
 }
