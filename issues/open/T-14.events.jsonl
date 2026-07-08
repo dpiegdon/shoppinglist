@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-08T22:17:50+00:00", "kind": "created", "ref": "main@302303d", "text": "A5: sync engine + WorkManager triggers"}
+{"actor": "claude", "at": "2026-07-08T22:17:50+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-11 T-12 T-5"}

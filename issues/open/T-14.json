@@ -1,6 +1,11 @@
 {
   "body": "Dirty-row push + cursor pull, server-authoritative apply preserving racing local edits, 410 full resync, triggers: connectivity/foreground/edit-debounce/manual. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
   "created_at": "2026-07-08T22:17:50+00:00",
+  "deps": [
+    "T-5",
+    "T-11",
+    "T-12"
+  ],
   "id": "T-14",
   "labels": [
     "android",
