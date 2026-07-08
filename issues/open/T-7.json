@@ -1,6 +1,9 @@
 {
   "body": "GET /invite/<token>: copyable token, app-link, paste fallback; 404 tampered / 410 expired. Full ticket (files, interfaces, acceptance criteria): docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract sections first. TDD. Spec: docs/superpowers/specs/2026-07-08-shopping-list-server-design.md",
   "created_at": "2026-07-08T22:17:29+00:00",
+  "deps": [
+    "T-6"
+  ],
   "id": "T-7",
   "labels": [
     "server",
