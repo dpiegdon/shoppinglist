@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-08T22:18:03+00:00", "kind": "created", "ref": "main@302303d", "text": "W1: web scaffold \u2014 Vite/React/TS, API layer, auth pages"}
+{"actor": "claude", "at": "2026-07-08T22:18:03+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-9"}
