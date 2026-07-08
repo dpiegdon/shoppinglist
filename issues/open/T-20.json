@@ -1,6 +1,9 @@
 {
   "body": "Searchable all-status item list, edit via A8 dialog, delete with undo; closes epic with full test suite run. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
   "created_at": "2026-07-08T22:17:52+00:00",
+  "deps": [
+    "T-17"
+  ],
   "id": "T-20",
   "labels": [
     "android",
