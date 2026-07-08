@@ -1,6 +1,9 @@
 {
   "body": "change-password/change-email, sessions list+revoke, settings GET/PATCH (default currency), delete account, reset-password CLI. Full ticket (files, interfaces, acceptance criteria): docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract sections first. TDD. Spec: docs/superpowers/specs/2026-07-08-shopping-list-server-design.md",
   "created_at": "2026-07-08T22:17:27+00:00",
+  "deps": [
+    "T-2"
+  ],
   "id": "T-3",
   "labels": [
     "server",
