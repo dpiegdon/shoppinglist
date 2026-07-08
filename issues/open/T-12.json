@@ -1,6 +1,9 @@
 {
   "body": "Retrofit interface + DTOs byte-matching wire contract, auth interceptor, EncryptedSharedPreferences session store, DataStore server URL + device id. Full ticket: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md \u2014 read its Global Constraints + Wire Contract first; client requirements in docs/superpowers/specs/client-ui-notes.md. TDD.",
   "created_at": "2026-07-08T22:17:49+00:00",
+  "deps": [
+    "T-10"
+  ],
   "id": "T-12",
   "labels": [
     "android",
