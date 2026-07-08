@@ -32,6 +32,10 @@ def create_blueprint(
         if conn is not None:
             conn.close()
 
+    from .routes.auth import register_routes as register_auth_routes
+
+    register_auth_routes(bp)
+
     return bp
 
 
