@@ -43,6 +43,7 @@ import org.p23q.shoppinglist.ui.login.LoginScreen
 import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
+import org.p23q.shoppinglist.ui.settings.SettingsScreen
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -124,7 +125,14 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
         }
         composable(Routes.SETTINGS) {
             AppDrawerScaffold(navController = navController, title = "Settings") {
-                PlaceholderScreen(title = "Settings")
+                SettingsScreen(
+                    onAccountDeleted = {
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
             }
         }
     }

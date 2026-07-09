@@ -1,0 +1,171 @@
+package org.p23q.shoppinglist.ui.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.data.ThemePreference
+
+@Composable
+fun SettingsScreen(
+    onAccountDeleted: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val appVersion = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
+    }
+
+    LaunchedEffect(Unit) { viewModel.loadSessions() }
+    LaunchedEffect(state.isAccountDeleted) { if (state.isAccountDeleted) onAccountDeleted() }
+
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text("Account", style = MaterialTheme.typography.titleMedium)
+        state.accountEmail?.let { Text(it) }
+        Text("Server: ${state.serverUrl}", style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(16.dp))
+
+        Text("Default currency", style = MaterialTheme.typography.titleMedium)
+        var currencyInput by remember(state.defaultCurrency) { mutableStateOf(state.defaultCurrency) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = currencyInput,
+                onValueChange = { currencyInput = it },
+                label = { Text("Currency") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text("Save") }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Theme", style = MaterialTheme.typography.titleMedium)
+        Row {
+            ThemePreference.entries.forEach { pref ->
+                FilterChip(
+                    selected = state.theme == pref,
+                    onClick = { viewModel.setTheme(pref) },
+                    label = { Text(pref.name) },
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Change password", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = state.currentPassword,
+            onValueChange = viewModel::onCurrentPasswordChange,
+            label = { Text("Current password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.newPassword,
+            onValueChange = viewModel::onNewPasswordChange,
+            label = { Text("New password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(onClick = viewModel::changePassword) { Text("Change password") }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Change email", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = state.newEmail,
+            onValueChange = viewModel::onNewEmailChange,
+            label = { Text("New email") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = state.changeEmailPassword,
+            onValueChange = viewModel::onChangeEmailPasswordChange,
+            label = { Text("Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(onClick = viewModel::changeEmail) { Text("Change email") }
+        Spacer(Modifier.height(16.dp))
+
+        state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        state.infoMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Sessions", style = MaterialTheme.typography.titleMedium)
+        state.sessions.forEach { session ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text((session.deviceLabel ?: "Unknown device") + if (session.current) " (this device)" else "")
+                if (!session.current) {
+                    TextButton(onClick = { viewModel.revokeSession(session.id) }) { Text("Revoke") }
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Danger zone", style = MaterialTheme.typography.titleMedium)
+        TextButton(onClick = viewModel::requestDeleteAccount) {
+            Text("Delete account", color = MaterialTheme.colorScheme.error)
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Version $appVersion", style = MaterialTheme.typography.bodySmall)
+    }
+
+    if (state.isDeleteConfirmOpen) {
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDeleteAccount,
+            title = { Text("Delete account?") },
+            text = {
+                Column {
+                    Text("This permanently deletes your account and all data. Enter your password to confirm.")
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.deleteAccountPassword,
+                        onValueChange = viewModel::onDeleteAccountPasswordChange,
+                        label = { Text("Confirm password") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = viewModel::confirmDeleteAccount) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = viewModel::cancelDeleteAccount) { Text("Cancel") } },
+        )
+    }
+}

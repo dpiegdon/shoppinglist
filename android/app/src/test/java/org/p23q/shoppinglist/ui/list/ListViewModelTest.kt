@@ -156,4 +156,23 @@ class ListViewModelTest {
         assertEquals("1.99 EUR", formatPrice(items.getValue("Milk"), "USD"))
         assertEquals("2.50 USD", formatPrice(items.getValue("Bread"), "USD"))
     }
+
+    @Test
+    fun `a currency change made in Settings is reflected by the next list view (A10)`() = runTest {
+        val itemId = itemsRepo.createItem(listId, "Bread")
+        itemsRepo.setPrice(itemId, amount = "2.50", currency = null)
+        sessionState.defaultCurrency = "USD"
+        val beforeSettingsChange = newViewModel().uiState.first { it.groups.isNotEmpty() }
+        assertEquals("USD", beforeSettingsChange.defaultCurrency)
+
+        // Simulates SettingsViewModel.updateCurrency()'s effect: it writes straight through to the
+        // same SessionState this app-wide singleton represents, not a copy - so any ListViewModel
+        // constructed afterwards (i.e. next time the user opens a list) picks it up automatically.
+        sessionState.defaultCurrency = "EUR"
+
+        val afterSettingsChange = newViewModel().uiState.first { it.groups.isNotEmpty() }
+        assertEquals("EUR", afterSettingsChange.defaultCurrency)
+        val item = afterSettingsChange.groups.flatMap { it.items }.single { it.id == itemId }
+        assertEquals("2.50 EUR", formatPrice(item, afterSettingsChange.defaultCurrency))
+    }
 }

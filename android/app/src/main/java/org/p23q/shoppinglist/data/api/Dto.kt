@@ -75,7 +75,10 @@ data class ChangeEmailRequest(val password: String, @SerialName("new_email") val
 @Serializable
 data class SessionDto(
     val id: String,
-    @SerialName("device_label") val deviceLabel: String,
+    // Nullable: a real dev-server check (A10) showed the server returns null device_label for
+    // sessions from clients that didn't send one (e.g. curl) - unlike LoginRequest.deviceLabel,
+    // which this app always fills in when it logs in, but other clients aren't guaranteed to.
+    @SerialName("device_label") val deviceLabel: String?,
     @SerialName("created_at") val createdAt: Long,
     @SerialName("last_seen_at") val lastSeenAt: Long,
     val current: Boolean,
