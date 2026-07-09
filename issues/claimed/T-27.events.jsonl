@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-09T22:07:33+00:00", "kind": "created", "ref": "main@2aabf54", "text": "Fix blueprint multi-mount: name collision, shared config slot, CLI instance ambiguity"}
+{"actor": "claude", "at": "2026-07-09T22:07:39+00:00", "kind": "claimed", "ref": "main@2aabf54", "text": "claude"}

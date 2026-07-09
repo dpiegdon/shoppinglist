@@ -7,7 +7,8 @@
     "opus",
     "agent"
   ],
+  "owner": "claude",
   "priority": 1,
   "title": "Fix blueprint multi-mount: name collision, shared config slot, CLI instance ambiguity",
-  "updated_at": "2026-07-09T22:07:33+00:00"
+  "updated_at": "2026-07-09T22:07:39+00:00"
 }
