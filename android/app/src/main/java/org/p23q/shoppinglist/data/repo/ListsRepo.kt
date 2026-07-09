@@ -7,12 +7,14 @@ import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.db.ListDao
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.toLww
+import org.p23q.shoppinglist.data.sync.SyncTrigger
 import java.util.UUID
 import javax.inject.Inject
 
 class ListsRepo @Inject constructor(
     private val listDao: ListDao,
     private val deviceId: DeviceIdProvider,
+    private val syncTrigger: SyncTrigger,
 ) {
     fun activeLists(): Flow<List<ListEntity>> = listDao.activeLists()
 
@@ -36,6 +38,7 @@ class ListsRepo @Inject constructor(
                 dirty = true,
             ),
         )
+        syncTrigger.scheduleAfterEdit()
         return id
     }
 
@@ -55,5 +58,6 @@ class ListsRepo @Inject constructor(
     private suspend fun updateField(listId: String, mutate: suspend (ListEntity) -> ListEntity) {
         val current = listDao.getById(listId) ?: return
         listDao.upsert(mutate(current).copy(dirty = true))
+        syncTrigger.scheduleAfterEdit()
     }
 }

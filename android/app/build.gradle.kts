@@ -89,6 +89,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.security.crypto)
 
@@ -115,6 +118,25 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+}
+
+// androidx.hilt:hilt-work's Gradle module metadata requires com.google.dagger:hilt-android:2.59
+// (and transitively dagger/hilt-core/dagger-lint-aar at the same version), which Gradle's default
+// highest-wins resolution picks over our pinned 2.57.2 — but the Hilt Gradle plugin and
+// hilt-android-compiler both stay at 2.57.2 (libs.versions.toml), so the annotation processor
+// generates code (e.g. Hilt_MainActivity.java) against a runtime API that no longer matches,
+// producing "cannot find symbol: getSavedStateHandleHolder()". Force the whole Dagger/Hilt family
+// back to 2.57.2 so compiler, plugin, and runtime all agree; hilt-work's actual code only needs
+// long-stable hilt-core APIs, so the downgrade is safe.
+configurations.all {
+    resolutionStrategy {
+        force(
+            "com.google.dagger:hilt-android:${libs.versions.hilt.get()}",
+            "com.google.dagger:dagger:${libs.versions.hilt.get()}",
+            "com.google.dagger:hilt-core:${libs.versions.hilt.get()}",
+            "com.google.dagger:dagger-lint-aar:${libs.versions.hilt.get()}",
+        )
+    }
 }
 
 // Robolectric needs JDK 21 to shadow Android SDK 36 (compileSdk here), even though the rest of

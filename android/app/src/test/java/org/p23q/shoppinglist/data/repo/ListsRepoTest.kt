@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -21,6 +22,7 @@ class ListsRepoTest {
 
     private lateinit var db: AppDb
     private lateinit var repo: ListsRepo
+    private lateinit var syncTrigger: FakeSyncTrigger
     private val deviceId = DeviceIdProvider { "device-1" }
 
     @Before
@@ -32,7 +34,8 @@ class ListsRepoTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        repo = ListsRepo(db.listDao(), deviceId)
+        syncTrigger = FakeSyncTrigger()
+        repo = ListsRepo(db.listDao(), deviceId, syncTrigger)
     }
 
     @Test
@@ -91,6 +94,18 @@ class ListsRepoTest {
         val active = repo.activeLists().first()
 
         assertEquals(listOf(keepId), active.map { it.id })
+    }
+
+    @Test
+    fun `every mutation schedules a sync`() = runTest {
+        val listId = repo.createList("Groceries")
+        assertEquals(1, syncTrigger.scheduleCount)
+
+        repo.rename(listId, "Weekly Groceries")
+        assertEquals(2, syncTrigger.scheduleCount)
+
+        repo.delete(listId)
+        assertEquals(3, syncTrigger.scheduleCount)
     }
 
     @Test

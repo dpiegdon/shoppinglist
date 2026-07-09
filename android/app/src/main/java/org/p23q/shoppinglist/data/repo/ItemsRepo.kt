@@ -10,6 +10,7 @@ import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
+import org.p23q.shoppinglist.data.sync.SyncTrigger
 import java.util.UUID
 import javax.inject.Inject
 
@@ -19,6 +20,7 @@ data class Price(val amount: String, val currency: String?)
 class ItemsRepo @Inject constructor(
     private val itemDao: ItemDao,
     private val deviceId: DeviceIdProvider,
+    private val syncTrigger: SyncTrigger,
 ) {
     fun itemsForListByStatus(listId: String, status: Status): Flow<List<ItemEntity>> =
         itemDao.itemsForListByStatus(listId, status.wireValue)
@@ -54,6 +56,7 @@ class ItemsRepo @Inject constructor(
                 dirty = true,
             ),
         )
+        syncTrigger.scheduleAfterEdit()
         return id
     }
 
@@ -93,5 +96,6 @@ class ItemsRepo @Inject constructor(
     private suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val current = itemDao.getById(itemId) ?: return
         itemDao.upsert(mutate(current).copy(dirty = true))
+        syncTrigger.scheduleAfterEdit()
     }
 }

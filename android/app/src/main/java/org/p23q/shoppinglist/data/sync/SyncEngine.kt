@@ -1,0 +1,225 @@
+package org.p23q.shoppinglist.data.sync
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.api.ApiException
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.FieldClock
+import org.p23q.shoppinglist.data.api.ItemDto
+import org.p23q.shoppinglist.data.api.ItemFieldsDto
+import org.p23q.shoppinglist.data.api.ListDto
+import org.p23q.shoppinglist.data.api.ListFieldsDto
+import org.p23q.shoppinglist.data.api.PriceDto
+import org.p23q.shoppinglist.data.api.SyncChanges
+import org.p23q.shoppinglist.data.api.SyncRequest
+import org.p23q.shoppinglist.data.api.UnauthorizedException
+import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.db.ItemDao
+import org.p23q.shoppinglist.data.db.ItemEntity
+import org.p23q.shoppinglist.data.db.ListDao
+import org.p23q.shoppinglist.data.db.ListEntity
+import org.p23q.shoppinglist.data.db.LwwBoolean
+import org.p23q.shoppinglist.data.db.LwwOptionalString
+import org.p23q.shoppinglist.data.db.LwwString
+import org.p23q.shoppinglist.data.db.toLww
+import org.p23q.shoppinglist.data.db.toLwwOptional
+import java.io.IOException
+import javax.inject.Inject
+
+sealed interface SyncResult {
+    data class Success(val pushedItems: Int, val pushedLists: Int, val pulledItems: Int, val pulledLists: Int) : SyncResult
+    data object Unauthorized : SyncResult
+    data class Failed(val message: String) : SyncResult
+}
+
+/**
+ * Pushes dirty local rows and pulls remote changes in one round trip, per the Wire Contract's
+ * /sync endpoint. Applying the response is a field-level LWW merge — NOT a blind overwrite —
+ * because a local edit can race the request: the row we snapshotted as "dirty" may have been
+ * edited again before the response comes back, and that newer local edit must survive.
+ */
+class SyncEngine @Inject constructor(
+    private val itemDao: ItemDao,
+    private val listDao: ListDao,
+    private val apiProvider: ApiProvider,
+    private val sessionState: SessionState,
+    private val serverConfig: ServerConfig,
+    private val appDb: AppDb,
+) {
+    suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
+        val dirtyItems = itemDao.dirtyRows()
+        val dirtyLists = listDao.dirtyRows()
+
+        val request = SyncRequest(
+            cursor = sessionState.syncCursor,
+            deviceId = serverConfig.deviceId(),
+            fullLists = fullLists,
+            changes = SyncChanges(lists = dirtyLists.map { it.toDto() }, items = dirtyItems.map { it.toDto() }),
+        )
+
+        val response = try {
+            apiProvider.get().sync(request)
+        } catch (e: UnauthorizedException) {
+            return SyncResult.Unauthorized
+        } catch (e: ApiException) {
+            return if (e.code == "full_resync_required") {
+                // The server still applied our pushed changes before rejecting the cursor (Wire
+                // Contract), so it's safe to wipe: nothing pushed is lost, a fresh cursor-0 pull
+                // brings it all back. dirtyRows() will be empty post-wipe, so the retry is a pure pull.
+                withContext(Dispatchers.IO) { appDb.clearAllTables() }
+                sessionState.syncCursor = 0
+                syncNow(fullLists)
+            } else {
+                SyncResult.Failed(e.message ?: "sync failed")
+            }
+        } catch (e: IOException) {
+            return SyncResult.Failed(e.message ?: "network error")
+        }
+
+        for (dto in response.changes.lists) {
+            listDao.upsert(mergeList(listDao.getById(dto.id), dto))
+        }
+        for (dto in response.changes.items) {
+            itemDao.upsert(mergeItem(itemDao.getById(dto.id), dto))
+        }
+
+        sessionState.syncCursor = response.cursor
+
+        return SyncResult.Success(
+            pushedItems = dirtyItems.size,
+            pushedLists = dirtyLists.size,
+            pulledItems = response.changes.items.size,
+            pulledLists = response.changes.lists.size,
+        )
+    }
+}
+
+private fun ItemEntity.toDto(): ItemDto = ItemDto(
+    id = id,
+    listId = listId,
+    createdAt = createdAt,
+    fields = ItemFieldsDto(
+        name = FieldClock(name.value, name.updatedAt, name.updatedBy),
+        category = FieldClock(category.value, category.updatedAt, category.updatedBy),
+        stores = FieldClock(Json.decodeFromString(stores.value), stores.updatedAt, stores.updatedBy),
+        quantity = FieldClock(quantity.value, quantity.updatedAt, quantity.updatedBy),
+        price = FieldClock(price.value?.let { Json.decodeFromString<PriceDto>(it) }, price.updatedAt, price.updatedBy),
+        note = FieldClock(note.value, note.updatedAt, note.updatedBy),
+        status = FieldClock(status.value, status.updatedAt, status.updatedBy),
+        deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
+    ),
+)
+
+private fun ListEntity.toDto(): ListDto = ListDto(
+    id = id,
+    createdAt = createdAt,
+    fields = ListFieldsDto(
+        name = FieldClock(name.value, name.updatedAt, name.updatedBy),
+        categoryOrder = FieldClock(Json.decodeFromString(categoryOrder.value), categoryOrder.updatedAt, categoryOrder.updatedBy),
+        deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
+    ),
+)
+
+/** Result of merging one field: the winning value/clock, and whether the LOCAL side won (still unsynced). */
+private data class MergedField<T>(val value: T, val updatedAt: Long, val updatedBy: String, val dirty: Boolean)
+
+/** Local wins only if strictly newer (tuple-compare, updatedBy tiebreak) — ties/remote-newer both clear dirty. */
+private fun <T> mergeField(localValue: T, localAt: Long, localBy: String, remote: FieldClock<T>): MergedField<T> {
+    val localNewer = if (localAt != remote.updatedAt) localAt > remote.updatedAt else localBy > remote.updatedBy
+    return if (localNewer) {
+        MergedField(localValue, localAt, localBy, dirty = true)
+    } else {
+        MergedField(remote.value, remote.updatedAt, remote.updatedBy, dirty = false)
+    }
+}
+
+private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
+    val storesRemote = FieldClock(
+        Json.encodeToString(remote.fields.stores.value),
+        remote.fields.stores.updatedAt,
+        remote.fields.stores.updatedBy,
+    )
+    val priceRemote = FieldClock(
+        remote.fields.price.value?.let { Json.encodeToString(it) },
+        remote.fields.price.updatedAt,
+        remote.fields.price.updatedBy,
+    )
+
+    if (local == null) {
+        return ItemEntity(
+            id = remote.id,
+            listId = remote.listId,
+            createdAt = remote.createdAt,
+            name = remote.fields.name.value.toLww(remote.fields.name.updatedBy, remote.fields.name.updatedAt),
+            category = remote.fields.category.value.toLwwOptional(remote.fields.category.updatedBy, remote.fields.category.updatedAt),
+            stores = storesRemote.value.toLww(storesRemote.updatedBy, storesRemote.updatedAt),
+            quantity = remote.fields.quantity.value.toLwwOptional(remote.fields.quantity.updatedBy, remote.fields.quantity.updatedAt),
+            price = priceRemote.value.toLwwOptional(priceRemote.updatedBy, priceRemote.updatedAt),
+            note = remote.fields.note.value.toLwwOptional(remote.fields.note.updatedBy, remote.fields.note.updatedAt),
+            status = remote.fields.status.value.toLww(remote.fields.status.updatedBy, remote.fields.status.updatedAt),
+            deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
+            dirty = false,
+        )
+    }
+
+    val name = mergeField(local.name.value, local.name.updatedAt, local.name.updatedBy, remote.fields.name)
+    val category = mergeField(local.category.value, local.category.updatedAt, local.category.updatedBy, remote.fields.category)
+    val stores = mergeField(local.stores.value, local.stores.updatedAt, local.stores.updatedBy, storesRemote)
+    val quantity = mergeField(local.quantity.value, local.quantity.updatedAt, local.quantity.updatedBy, remote.fields.quantity)
+    val price = mergeField(local.price.value, local.price.updatedAt, local.price.updatedBy, priceRemote)
+    val note = mergeField(local.note.value, local.note.updatedAt, local.note.updatedBy, remote.fields.note)
+    val status = mergeField(local.status.value, local.status.updatedAt, local.status.updatedBy, remote.fields.status)
+    val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
+
+    return ItemEntity(
+        id = local.id,
+        listId = local.listId,
+        createdAt = local.createdAt,
+        name = LwwString(name.value, name.updatedAt, name.updatedBy),
+        category = LwwOptionalString(category.value, category.updatedAt, category.updatedBy),
+        stores = LwwString(stores.value, stores.updatedAt, stores.updatedBy),
+        quantity = LwwOptionalString(quantity.value, quantity.updatedAt, quantity.updatedBy),
+        price = LwwOptionalString(price.value, price.updatedAt, price.updatedBy),
+        note = LwwOptionalString(note.value, note.updatedAt, note.updatedBy),
+        status = LwwString(status.value, status.updatedAt, status.updatedBy),
+        deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
+        dirty = name.dirty || category.dirty || stores.dirty || quantity.dirty || price.dirty ||
+            note.dirty || status.dirty || deleted.dirty,
+    )
+}
+
+private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
+    val categoryOrderRemote = FieldClock(
+        Json.encodeToString(remote.fields.categoryOrder.value),
+        remote.fields.categoryOrder.updatedAt,
+        remote.fields.categoryOrder.updatedBy,
+    )
+
+    if (local == null) {
+        return ListEntity(
+            id = remote.id,
+            createdAt = remote.createdAt,
+            name = remote.fields.name.value.toLww(remote.fields.name.updatedBy, remote.fields.name.updatedAt),
+            categoryOrder = categoryOrderRemote.value.toLww(categoryOrderRemote.updatedBy, categoryOrderRemote.updatedAt),
+            deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
+            dirty = false,
+        )
+    }
+
+    val name = mergeField(local.name.value, local.name.updatedAt, local.name.updatedBy, remote.fields.name)
+    val categoryOrder = mergeField(local.categoryOrder.value, local.categoryOrder.updatedAt, local.categoryOrder.updatedBy, categoryOrderRemote)
+    val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
+
+    return ListEntity(
+        id = local.id,
+        createdAt = local.createdAt,
+        name = LwwString(name.value, name.updatedAt, name.updatedBy),
+        categoryOrder = LwwString(categoryOrder.value, categoryOrder.updatedAt, categoryOrder.updatedBy),
+        deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
+        dirty = name.dirty || categoryOrder.dirty || deleted.dirty,
+    )
+}
