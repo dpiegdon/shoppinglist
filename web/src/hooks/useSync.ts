@@ -3,7 +3,6 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import type { ItemFields, ItemObject, ListFields, ListObject, SyncResponse } from "../api/contract";
 
-const CURSOR_STORAGE_KEY = "shoppinglist_cursor";
 const DEVICE_ID_STORAGE_KEY = "shoppinglist_device_id";
 
 function getDeviceId(): string {
@@ -13,16 +12,6 @@ function getDeviceId(): string {
     localStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
   }
   return id;
-}
-
-function loadCursor(): number {
-  const raw = localStorage.getItem(CURSOR_STORAGE_KEY);
-  const parsed = raw ? Number(raw) : 0;
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function storeCursor(cursor: number) {
-  localStorage.setItem(CURSOR_STORAGE_KEY, String(cursor));
 }
 
 export function nowMs(): number {
@@ -53,7 +42,19 @@ export interface SyncState {
   refresh: () => Promise<void>;
 }
 
-/** In-memory + localStorage-cursor sync store (Spec §6, web has no offline mirror). */
+/**
+ * In-memory sync store (Spec §6; web has no offline mirror). The cursor is
+ * deliberately kept in memory only (a ref, not localStorage): it may only
+ * ever advance past what the client durably holds, and since lists/items
+ * here live only in React state - wiped on every page reload - persisting
+ * the cursor without the data it presupposes would make the next reload's
+ * *correctly empty* incremental delta look like "you have nothing" (a real
+ * bug this once was: the cursor survived a reload in localStorage while the
+ * data didn't, so the follow-up sync asked for "what's new since N" instead
+ * of a full resync, and correctly got nothing back). Starting at 0 on every
+ * fresh mount means a reload always requests a full snapshot, which is the
+ * only correct behavior for a client with no persistent local copy.
+ */
 export function useSync(): SyncState {
   const deviceId = useMemo(() => getDeviceId(), []);
   const [lists, setLists] = useState<Map<string, ListObject>>(new Map());
@@ -65,11 +66,10 @@ export function useSync(): SyncState {
   // not-yet-populated `lists`/`items` map.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const cursorRef = useRef(loadCursor());
+  const cursorRef = useRef(0);
 
   const applyResponse = useCallback((response: SyncResponse) => {
     cursorRef.current = response.cursor;
-    storeCursor(response.cursor);
     setLists((prev) => {
       const next = new Map(prev);
       for (const list of response.changes.lists) {
@@ -110,7 +110,6 @@ export function useSync(): SyncState {
         if (err instanceof ApiError && err.status === 410) {
           // Full resync required: drop cursor and mirror, then retry from 0.
           cursorRef.current = 0;
-          storeCursor(0);
           setLists(new Map());
           setItems(new Map());
           const response = await api.sync({
