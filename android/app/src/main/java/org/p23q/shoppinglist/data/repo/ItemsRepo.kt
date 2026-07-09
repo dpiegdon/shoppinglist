@@ -91,6 +91,9 @@ class ItemsRepo @Inject constructor(
     /** Tombstone: [ItemEntity.deleted] flips true, the row itself is retained for sync/undo. */
     suspend fun delete(itemId: String) = updateField(itemId) { it.copy(deleted = true.toLww(deviceId.get())) }
 
+    /** Reverses [delete] (Notes: registry delete offers a snackbar undo). */
+    suspend fun restore(itemId: String) = updateField(itemId) { it.copy(deleted = false.toLww(deviceId.get())) }
+
     fun decodeStores(json: String): List<String> = Json.decodeFromString(json)
 
     fun decodePrice(json: String?): Price? = json?.let { Json.decodeFromString(it) }

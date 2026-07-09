@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
@@ -43,6 +44,7 @@ import org.p23q.shoppinglist.data.db.Status
 fun ListScreen(
     onAddItem: () -> Unit,
     onEditItem: (itemId: String) -> Unit,
+    onOpenRegistry: () -> Unit = {},
     viewModel: ListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -81,6 +83,9 @@ fun ListScreen(
                     Text("Show checked")
                     Spacer(Modifier.width(8.dp))
                     Switch(checked = state.showChecked, onCheckedChange = { viewModel.toggleShowChecked() })
+                    IconButton(onClick = onOpenRegistry) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")
+                    }
                 }
             }
 

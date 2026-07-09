@@ -42,6 +42,7 @@ import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
 import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
+import org.p23q.shoppinglist.ui.registry.RegistryScreen
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -93,6 +94,7 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
                 ListScreen(
                     onAddItem = { isAddDialogOpen = true },
                     onEditItem = { itemId -> editingItemId = itemId },
+                    onOpenRegistry = { navController.navigate(Routes.registry(listId)) },
                 )
 
                 if (isAddDialogOpen) {
@@ -103,10 +105,15 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
                 }
             }
         }
-        composable(Routes.REGISTRY_PATTERN) { backStackEntry ->
-            val listId = backStackEntry.arguments?.getString(Routes.LIST_ID_ARG)
+        composable(Routes.REGISTRY_PATTERN) {
             AppDrawerScaffold(navController = navController, title = "Registry") {
-                PlaceholderScreen(title = "Registry $listId")
+                var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
+
+                RegistryScreen(onEditItem = { itemId -> editingItemId = itemId })
+
+                editingItemId?.let { itemId ->
+                    EditItemDialog(itemId = itemId, onDismiss = { editingItemId = null })
+                }
             }
         }
         composable(Routes.LIST_PROPS_PATTERN) { backStackEntry ->
