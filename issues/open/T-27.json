@@ -1,0 +1,13 @@
+{
+  "body": "Audit found: (1) Blueprint name hardcoded, blocks 2+ instances on one app entirely. (2) app.extensions[EXTENSION_KEY] is a single flat slot -> all API routes (auth/account/lists/invites/sync) silently share the LAST-registered instance's config across instances, incl. wrong database_path and wrong invite_hmac_key. (3) routes/landing.py calls the same shared get_config() at request time -> same cross-instance bug for the landing page specifically. (4) cli.py reads the same shared slot outside any request context -> flask shoppinglist commands always operate on whichever instance registered last, with no way to pick. routes/webapp.py already does this correctly (web_dist_dir passed as a direct closure-captured arg, not via get_config()) - that's the pattern to replicate.",
+  "created_at": "2026-07-09T22:07:33+00:00",
+  "id": "T-27",
+  "labels": [
+    "server",
+    "opus",
+    "agent"
+  ],
+  "priority": 1,
+  "title": "Fix blueprint multi-mount: name collision, shared config slot, CLI instance ambiguity",
+  "updated_at": "2026-07-09T22:07:33+00:00"
+}
