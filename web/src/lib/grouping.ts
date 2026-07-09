@@ -9,16 +9,26 @@ export interface CategoryGroup {
 const UNCATEGORIZED = "—";
 
 /**
- * Groups `todo` items by category, ordered per `categoryOrder`; categories not
- * present in it are appended afterward, alphabetically. Items are sorted
- * alphabetically within each group. Uncategorized items (no category, or an
- * empty string) form a trailing "—" group. (Spec: client-ui-notes.md List view.)
+ * Groups the list's visible items by category, ordered per `categoryOrder`;
+ * categories not present in it are appended afterward, alphabetically. `todo`
+ * and (when `showChecked`) `checked` items are mixed into one alphabetically
+ * sorted list per category - a checked item stays in its category, in the
+ * same position it would occupy as `todo`, rather than being pulled into a
+ * separate "Checked" section. `backlog` items are never visible here.
+ * (Spec: client-ui-notes.md List view.)
  */
-export function groupTodoItems(items: ItemObject[], categoryOrder: string[]): CategoryGroup[] {
-  const todo = items.filter((item) => itemFieldValue(item, "status") === "todo");
+export function groupVisibleItems(
+  items: ItemObject[],
+  categoryOrder: string[],
+  showChecked: boolean,
+): CategoryGroup[] {
+  const visible = items.filter((item) => {
+    const status = itemFieldValue(item, "status");
+    return status === "todo" || (showChecked && status === "checked");
+  });
 
   const byCategory = new Map<string, ItemObject[]>();
-  for (const item of todo) {
+  for (const item of visible) {
     const category = itemFieldValue(item, "category")?.trim() || UNCATEGORIZED;
     const bucket = byCategory.get(category);
     if (bucket) {
@@ -45,9 +55,7 @@ export function groupTodoItems(items: ItemObject[], categoryOrder: string[]): Ca
   return ordered.map((category) => ({ category, items: byCategory.get(category)! }));
 }
 
-/** `checked` items, alphabetical — shown only when the show-checked toggle is on. */
+/** Every `checked` item regardless of visibility - used for the "Clear checked" count/bulk action. */
 export function checkedItems(items: ItemObject[]): ItemObject[] {
-  return items
-    .filter((item) => itemFieldValue(item, "status") === "checked")
-    .sort((a, b) => (itemFieldValue(a, "name") ?? "").localeCompare(itemFieldValue(b, "name") ?? ""));
+  return items.filter((item) => itemFieldValue(item, "status") === "checked");
 }

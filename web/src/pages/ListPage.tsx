@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
-import { checkedItems, groupTodoItems } from "../lib/grouping";
+import { checkedItems, groupVisibleItems } from "../lib/grouping";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
@@ -34,9 +34,8 @@ export default function ListPage() {
   }
 
   const categoryOrder = listFieldValue(list, "category_order") ?? [];
-  const groups = groupTodoItems(listItems, categoryOrder);
+  const groups = groupVisibleItems(listItems, categoryOrder, showChecked);
   const allChecked = checkedItems(listItems);
-  const checked = showChecked ? allChecked : [];
 
   async function setItemStatus(itemId: string, status: ItemStatus) {
     await push({
@@ -157,7 +156,7 @@ export default function ListPage() {
         </div>
       </div>
 
-      {groups.length === 0 && checked.length === 0 && (
+      {groups.length === 0 && (
         <p className="muted">Nothing on this list yet. Add an item to get started.</p>
       )}
 
@@ -178,24 +177,6 @@ export default function ListPage() {
           </div>
         </section>
       ))}
-
-      {showChecked && checked.length > 0 && (
-        <section>
-          <h2 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", margin: "0 0 0.4rem" }}>
-            Checked
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            {checked.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                onToggle={() => handleToggle(item)}
-                onEdit={() => setDialogItem(item)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
 
       {undo && (
         <div

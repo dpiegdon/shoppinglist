@@ -23,7 +23,12 @@ function listObj() {
   };
 }
 
-function itemObj(id: string, name: string, status: "todo" | "checked" | "backlog") {
+function itemObj(
+  id: string,
+  name: string,
+  status: "todo" | "checked" | "backlog",
+  category: string | null = null,
+) {
   return {
     id,
     list_id: "list-1",
@@ -31,7 +36,7 @@ function itemObj(id: string, name: string, status: "todo" | "checked" | "backlog
     fields: {
       name: clock(name),
       status: clock(status),
-      category: clock(null),
+      category: clock(category),
       stores: clock([]),
       quantity: clock(null),
       price: clock(null),
@@ -134,5 +139,35 @@ describe("ListPage clear-checked", () => {
 
     expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByText("Bread")).not.toBeInTheDocument();
+  });
+
+  it("keeps a checked item in its own category, not a separate Checked section", async () => {
+    vi.mocked(api.sync).mockReset();
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [
+          itemObj("item-1", "Milk", "todo", "dairy"),
+          itemObj("item-2", "Butter", "checked", "dairy"),
+          itemObj("item-3", "Bread", "todo", "bakery"),
+        ],
+      },
+    });
+
+    renderListPage();
+    await screen.findByText("Milk");
+    await userEvent.click(screen.getByRole("button", { name: "Show checked" }));
+    await screen.findByText("Butter");
+
+    // No separate "Checked" heading exists anywhere.
+    expect(screen.queryByText("Checked")).not.toBeInTheDocument();
+
+    // Butter (checked) sits in the same DAIRY group as Milk (todo), not bakery.
+    const dairyHeading = screen.getByText("dairy");
+    const dairyGroup = dairyHeading.parentElement!;
+    expect(dairyGroup.textContent).toContain("Milk");
+    expect(dairyGroup.textContent).toContain("Butter");
+    expect(dairyGroup.textContent).not.toContain("Bread");
   });
 });
