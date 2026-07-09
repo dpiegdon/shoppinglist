@@ -8,7 +8,8 @@
     "ux",
     "agent"
   ],
+  "owner": "claude",
   "priority": 1,
   "title": "Android: no session resume \u2014 every app start demands full re-login",
-  "updated_at": "2026-07-09T23:16:36+00:00"
+  "updated_at": "2026-07-09T23:25:06+00:00"
 }
