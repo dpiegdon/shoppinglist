@@ -51,6 +51,9 @@ class ListsRepo @Inject constructor(
     /** Tombstone: [ListEntity.deleted] flips true, the row itself is retained for sync. */
     suspend fun delete(listId: String) = updateField(listId) { it.copy(deleted = true.toLww(deviceId.get())) }
 
+    /** Real delete, not the LWW tombstone — only for leaving a shared list (A9), never synced. */
+    suspend fun removeLocally(listId: String) = listDao.hardDelete(listId)
+
     fun decodeCategoryOrder(json: String): List<String> = Json.decodeFromString(json)
 
     private fun encodeCategoryOrder(order: List<String>): String = Json.encodeToString(order)

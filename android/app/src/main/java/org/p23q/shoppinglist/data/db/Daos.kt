@@ -45,6 +45,10 @@ interface ItemDao {
 
     @Query("UPDATE items SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
+
+    /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
+    @Query("DELETE FROM items WHERE listId = :listId")
+    suspend fun hardDeleteByListId(listId: String)
 }
 
 @Dao
@@ -63,4 +67,8 @@ interface ListDao {
 
     @Query("UPDATE lists SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
+
+    /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
+    @Query("DELETE FROM lists WHERE id = :id")
+    suspend fun hardDelete(id: String)
 }

@@ -1,0 +1,47 @@
+package org.p23q.shoppinglist.ui.redeem
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+/** Notes: "Join list" — the paste-a-code fallback for invite links, reachable from the drawer. */
+@Composable
+fun RedeemDialog(
+    onRedeemed: (listId: String) -> Unit,
+    onDismiss: () -> Unit,
+    viewModel: RedeemViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.redeemedListId) { state.redeemedListId?.let(onRedeemed) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Join list") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = state.token,
+                    onValueChange = viewModel::onTokenChange,
+                    label = { Text("Invite code or link") },
+                    singleLine = true,
+                )
+                state.errorMessage?.let { error ->
+                    Text(text = error, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { viewModel.redeem() }, enabled = !state.isLoading) { Text("Join") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}

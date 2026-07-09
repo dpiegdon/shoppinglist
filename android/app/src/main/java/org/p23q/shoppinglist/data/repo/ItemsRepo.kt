@@ -94,6 +94,9 @@ class ItemsRepo @Inject constructor(
     /** Reverses [delete] (Notes: registry delete offers a snackbar undo). */
     suspend fun restore(itemId: String) = updateField(itemId) { it.copy(deleted = false.toLww(deviceId.get())) }
 
+    /** Real delete, not the LWW tombstone — only for leaving a shared list (A9), never synced. */
+    suspend fun hardDeleteByListId(listId: String) = itemDao.hardDeleteByListId(listId)
+
     fun decodeStores(json: String): List<String> = Json.decodeFromString(json)
 
     fun decodePrice(json: String?): Price? = json?.let { Json.decodeFromString(it) }

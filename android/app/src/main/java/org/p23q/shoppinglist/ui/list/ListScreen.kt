@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +46,7 @@ fun ListScreen(
     onAddItem: () -> Unit,
     onEditItem: (itemId: String) -> Unit,
     onOpenRegistry: () -> Unit = {},
+    onOpenListProps: () -> Unit = {},
     viewModel: ListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -85,6 +87,9 @@ fun ListScreen(
                     Switch(checked = state.showChecked, onCheckedChange = { viewModel.toggleShowChecked() })
                     IconButton(onClick = onOpenRegistry) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")
+                    }
+                    IconButton(onClick = onOpenListProps) {
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "List properties")
                     }
                 }
             }

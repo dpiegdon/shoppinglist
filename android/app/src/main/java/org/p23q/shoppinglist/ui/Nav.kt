@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
@@ -35,13 +36,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.ui.item.AddItemDialog
 import org.p23q.shoppinglist.ui.item.EditItemDialog
 import org.p23q.shoppinglist.ui.list.ListScreen
+import org.p23q.shoppinglist.ui.listprops.ListPropsScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
 import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
+import org.p23q.shoppinglist.ui.redeem.RedeemDialog
+import org.p23q.shoppinglist.ui.redeem.RedeemScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
 
@@ -56,9 +61,13 @@ object Routes {
     const val REGISTRY_PATTERN = "registry/{$LIST_ID_ARG}"
     const val LIST_PROPS_PATTERN = "listProps/{$LIST_ID_ARG}"
 
+    const val TOKEN_ARG = "token"
+    const val REDEEM_PATTERN = "redeem/{$TOKEN_ARG}"
+
     fun list(listId: String) = "list/$listId"
     fun registry(listId: String) = "registry/$listId"
     fun listProps(listId: String) = "listProps/$listId"
+    fun redeem(token: String) = "redeem/$token"
 }
 
 /** Destinations reachable from the drawer menu (Notes: overview + account entries). */
@@ -96,6 +105,7 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
                     onAddItem = { isAddDialogOpen = true },
                     onEditItem = { itemId -> editingItemId = itemId },
                     onOpenRegistry = { navController.navigate(Routes.registry(listId)) },
+                    onOpenListProps = { navController.navigate(Routes.listProps(listId)) },
                 )
 
                 if (isAddDialogOpen) {
@@ -117,11 +127,39 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
                 }
             }
         }
-        composable(Routes.LIST_PROPS_PATTERN) { backStackEntry ->
-            val listId = backStackEntry.arguments?.getString(Routes.LIST_ID_ARG)
+        composable(Routes.LIST_PROPS_PATTERN) {
             AppDrawerScaffold(navController = navController, title = "List properties") {
-                PlaceholderScreen(title = "List properties $listId")
+                ListPropsScreen(
+                    onLeft = {
+                        navController.navigate(Routes.OVERVIEW) {
+                            popUpTo(Routes.OVERVIEW) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
             }
+        }
+        composable(
+            route = Routes.REDEEM_PATTERN,
+            // The manifest's intent-filter (any https host + /invite/ prefix) gets the OS to
+            // launch this Activity; this deep link is what routes the resulting Intent to this
+            // destination and extracts the token, once the Activity is already running.
+            deepLinks = listOf(navDeepLink { uriPattern = "https://{host}/invite/{${Routes.TOKEN_ARG}}" }),
+        ) { backStackEntry ->
+            val token = checkNotNull(backStackEntry.arguments?.getString(Routes.TOKEN_ARG))
+            RedeemScreen(
+                token = token,
+                onRedeemed = { listId ->
+                    navController.navigate(Routes.list(listId)) {
+                        popUpTo(Routes.REDEEM_PATTERN) { inclusive = true }
+                    }
+                },
+                onCancel = {
+                    navController.navigate(Routes.OVERVIEW) {
+                        popUpTo(Routes.REDEEM_PATTERN) { inclusive = true }
+                    }
+                },
+            )
         }
         composable(Routes.SETTINGS) {
             AppDrawerScaffold(navController = navController, title = "Settings") {
@@ -150,6 +188,7 @@ internal fun AppDrawerScaffold(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    var isJoinDialogOpen by rememberSaveable { mutableStateOf(false) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -187,6 +226,16 @@ internal fun AppDrawerScaffold(
                     )
                 }
                 NavigationDrawerItem(
+                    icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                    label = { Text("Join list") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        isJoinDialogOpen = true
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+                NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
                     label = { Text("Log out") },
                     selected = false,
@@ -222,6 +271,16 @@ internal fun AppDrawerScaffold(
                 content()
             }
         }
+    }
+
+    if (isJoinDialogOpen) {
+        RedeemDialog(
+            onRedeemed = { listId ->
+                isJoinDialogOpen = false
+                navController.navigate(Routes.list(listId))
+            },
+            onDismiss = { isJoinDialogOpen = false },
+        )
     }
 }
 

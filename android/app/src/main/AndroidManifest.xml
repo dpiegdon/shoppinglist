@@ -22,6 +22,25 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Notes: invite links are shared as https://<server>/invite/<token>. The server is
+                 user-configurable (self-hosted, no fixed public host - see ServerConfig), so this
+                 can't declare autoVerify="true" against one fixed host and a real assetlinks.json:
+                 with android:host="*" there is no single host to run Digital Asset Links
+                 verification against, so Android treats this as an ordinary (non-verified) deep
+                 link rather than a true App Link - it still opens directly when this is the only
+                 installed app that claims the URL, but yields to a chooser if others do too. A
+                 self-hoster who wants real App Link behavior needs to publish their own
+                 assetlinks.json; see android/README.md. -->
+            <intent-filter tools:ignore="AppLinkWarning">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="*"
+                    android:pathPrefix="/invite/" />
+            </intent-filter>
         </activity>
 
         <!-- Unused in production; hosts content for Compose UI tests (createComposeRule()'s
