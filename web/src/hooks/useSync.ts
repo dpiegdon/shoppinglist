@@ -58,7 +58,12 @@ export function useSync(): SyncState {
   const deviceId = useMemo(() => getDeviceId(), []);
   const [lists, setLists] = useState<Map<string, ListObject>>(new Map());
   const [items, setItems] = useState<Map<string, ItemObject>>(new Map());
-  const [loading, setLoading] = useState(false);
+  // Starts true: the mount effect below unconditionally kicks off an initial
+  // sync, so `loading` must never read as "false" before that first sync has
+  // actually run - a consumer (e.g. OverviewPage's last-list-resume check)
+  // could otherwise see a premature "not loading" moment against an empty,
+  // not-yet-populated `lists`/`items` map.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const cursorRef = useRef(loadCursor());
 

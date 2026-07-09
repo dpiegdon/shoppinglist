@@ -92,6 +92,9 @@ export default function ListPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
+      <Link to="/" className="muted" style={{ fontSize: "0.85rem" }}>
+        ← All lists
+      </Link>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
         <h1 style={{ fontSize: "1.3rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {listFieldValue(list, "name")}

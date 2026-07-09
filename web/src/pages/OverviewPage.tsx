@@ -6,6 +6,18 @@ import { listFieldValue } from "../hooks/useSync";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
 
+// Resuming the last-opened list must happen once, on first entry into the
+// app (Spec: "on login, open the list the user last had open") - NOT on
+// every visit to "/", or the overview would become unreachable once any
+// list has been opened. Module-level so it resets on a real page reload
+// (fresh entry) but stays put across in-app navigation.
+let didInitialResume = false;
+
+/** Test-only: restores the module-level flag to its fresh-page-load state. */
+export function _resetInitialResumeForTests() {
+  didInitialResume = false;
+}
+
 export default function OverviewPage() {
   const { lists, loading, push, deviceId } = useSyncContext();
   const [creating, setCreating] = useState(false);
@@ -14,12 +26,15 @@ export default function OverviewPage() {
 
   useEffect(() => {
     if (loading) return;
-    const lastId = localStorage.getItem(LAST_LIST_STORAGE_KEY);
-    if (lastId && lists.has(lastId)) {
-      setRedirectTo(`/list/${lastId}`);
-    } else {
-      setRedirectTo(null);
+    if (!didInitialResume) {
+      didInitialResume = true;
+      const lastId = localStorage.getItem(LAST_LIST_STORAGE_KEY);
+      if (lastId && lists.has(lastId)) {
+        setRedirectTo(`/list/${lastId}`);
+        return;
+      }
     }
+    setRedirectTo(null);
     // Only decide once, right after the first load completes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
