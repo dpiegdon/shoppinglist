@@ -30,5 +30,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
+    // This sandbox is CPU/memory-constrained: running multiple jsdom worker
+    // files fully in parallel causes real async work (mount effects, mocked
+    // promises) to occasionally miss the default test timeout under
+    // contention - not a logic bug, confirmed by every affected test passing
+    // reliably in isolation. Single-threaded file execution trades wall-clock
+    // speed for determinism, which matters more for a suite this size.
+    fileParallelism: false,
   },
 })

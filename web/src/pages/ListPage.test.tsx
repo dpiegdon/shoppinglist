@@ -115,4 +115,24 @@ describe("ListPage clear-checked", () => {
     await screen.findByText("Milk");
     expect(screen.queryByText(/Clear checked/)).not.toBeInTheDocument();
   });
+
+  it("show-checked is a toggle button that reveals and hides checked items", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    const toggle = screen.getByRole("button", { name: "Show checked" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("Bread")).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Bread")).toBeInTheDocument();
+    expect(screen.getByText("Eggs")).toBeInTheDocument();
+
+    await userEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("Bread")).not.toBeInTheDocument();
+  });
 });

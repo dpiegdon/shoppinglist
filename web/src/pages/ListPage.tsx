@@ -141,10 +141,14 @@ export default function ListPage() {
           + Add item
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.9rem" }}>
-            <input type="checkbox" checked={showChecked} onChange={(e) => setShowChecked(e.target.checked)} />
-            Show checked
-          </label>
+          <button
+            type="button"
+            className="btn-toggle"
+            aria-pressed={showChecked}
+            onClick={() => setShowChecked((v) => !v)}
+          >
+            {showChecked ? "✓ " : ""}Show checked
+          </button>
           {allChecked.length > 0 && (
             <button type="button" className="btn btn-secondary" onClick={handleClearChecked}>
               Clear checked ({allChecked.length})
