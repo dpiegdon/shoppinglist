@@ -1,0 +1,14 @@
+{
+  "body": "ItemFormViewModel.pickSuggestion() calls itemsRepo.setStatus(item.id, TODO)\nimmediately when the suggestion is tapped \u2014 before the user confirms the\ndialog. Tapping a suggestion and then Cancel still puts the item on the list\n(and marks the row dirty -> syncs to every member). Web's equivalent only\napplies changes on Save.\n\nFix: make pickSuggestion purely prefill form state (remember itemId), and move\nthe setStatus(TODO) into save() alongside the other field writes (status is\ncurrently skipped in add mode precisely because pick already did it \u2014 invert\nthat). Update ItemFormViewModelTest/AddItemDialogTest accordingly.",
+  "created_at": "2026-07-09T23:16:37+00:00",
+  "id": "T-33",
+  "labels": [
+    "android",
+    "bug",
+    "ux",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android: picking an add-dialog suggestion mutates the item before Save/Cancel",
+  "updated_at": "2026-07-09T23:16:37+00:00"
+}
