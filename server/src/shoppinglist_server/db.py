@@ -17,7 +17,9 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def next_change_seq(conn: sqlite3.Connection) -> int:
+    # Deliberately does NOT commit: the sync engine bumps change_seq many times
+    # per request and must apply changes + name-merge + build the delta in a
+    # single transaction (Spec §6). The caller owns the transaction boundary.
     conn.execute("UPDATE meta SET change_seq = change_seq + 1 WHERE id = 1")
     row = conn.execute("SELECT change_seq FROM meta WHERE id = 1").fetchone()
-    conn.commit()
     return row["change_seq"]
