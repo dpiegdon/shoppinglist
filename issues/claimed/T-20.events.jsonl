@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-08T22:17:52+00:00", "kind": "created", "ref": "main@302303d", "text": "A11: registry view (all items)"}
 {"actor": "claude", "at": "2026-07-08T22:17:52+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-17"}
+{"actor": "claude", "at": "2026-07-09T19:43:00+00:00", "kind": "claimed", "ref": "main@936e878", "text": "claude"}

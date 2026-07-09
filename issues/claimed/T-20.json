@@ -10,7 +10,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "A11: registry view (all items)",
-  "updated_at": "2026-07-08T22:17:52+00:00"
+  "updated_at": "2026-07-09T19:43:00+00:00"
 }
