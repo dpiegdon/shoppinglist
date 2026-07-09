@@ -1,0 +1,15 @@
+{
+  "body": "The W4 plan said the S7 landing page (templates/invite.html) should link to\nthe web app's redeem route for desktop users (\"the landing page links here\nwhen opened on desktop \u2014 coordinate copy with S7\"). Never implemented: the\npage offers only an Android intent:// link (useless on desktop browsers) and\npaste-the-code instructions. Since the web client is served same-origin by\nthe blueprint, the fix is one relative link in the valid-token branch:\n<a href=\"/redeem?token={{ token }}\">Redeem in your browser</a> (plus a test\nasserting it renders only for valid tokens, and only when the web client is\nbeing served \u2014 pass a flag from create_blueprint, it knows serve_web_client).\nDepends on the web login-destination ticket for the logged-out case to work\nend-to-end; link them.",
+  "created_at": "2026-07-09T23:16:41+00:00",
+  "id": "T-44",
+  "labels": [
+    "server",
+    "web",
+    "ux",
+    "sonnet",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Invite landing page: add the planned 'Redeem in browser' link",
+  "updated_at": "2026-07-09T23:16:41+00:00"
+}
