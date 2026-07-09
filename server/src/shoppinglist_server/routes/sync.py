@@ -1,6 +1,6 @@
 from flask import g, jsonify, request
 
-from .. import get_db
+from .. import gc, get_db
 from .. import sync as sync_engine
 from ..auth import authed
 from ..errors import ApiError
@@ -32,6 +32,7 @@ def register_routes(bp):
         changes = data.get("changes") or {}
 
         conn = get_db()
+        gc.maybe_run(conn)  # opportunistic, at most ~once/day (Spec §6)
 
         cursor_error = None
         try:

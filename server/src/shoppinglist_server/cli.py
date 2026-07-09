@@ -5,6 +5,8 @@ from flask.cli import with_appcontext
 from . import EXTENSION_KEY
 from . import accounts
 from . import db as db_module
+from . import gc
+from .auth import now_ms
 from .errors import ApiError
 
 
@@ -38,3 +40,17 @@ def reset_password_command(email):
     finally:
         conn.close()
     click.echo(f"New password for {email}: {new_password}")
+
+
+@shoppinglist_cli.command("gc")
+@with_appcontext
+def gc_command():
+    config = current_app.extensions[EXTENSION_KEY]
+    conn = db_module.connect(config["database_path"])
+    try:
+        result = gc.run(conn, now_ms())
+    finally:
+        conn.close()
+    click.echo(
+        f"GC purged {result['items_purged']} items, {result['lists_purged']} lists."
+    )
