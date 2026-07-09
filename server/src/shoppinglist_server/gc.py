@@ -10,14 +10,16 @@ def run(conn, now_ms: int) -> dict:
     """Hard-delete tombstones older than the retention window.
 
     Lists are purged first, and purging a list unconditionally deletes ALL of
-    its items (not just already-tombstoned ones) plus any lingering
-    membership rows. This guarantees no dangling `items.list_id` /
-    `memberships.list_id` FK reference survives regardless of edge-case item
-    state, and specifically handles the case `invites.leave` sets up
-    deliberately: an orphaned list's departing member keeps their membership
-    row so their other devices can see the tombstone propagate via sync; that
-    row must be removed together with (not after) the list row, since the FK
-    would otherwise block the delete.
+    its items (not just already-tombstoned ones), any lingering membership
+    row, and any invites that were ever minted for it. This guarantees no
+    dangling `items.list_id` / `memberships.list_id` / `invites.list_id` FK
+    reference survives regardless of edge-case state, and specifically
+    handles the case `invites.leave` sets up deliberately: an orphaned list's
+    departing member keeps their membership row so their other devices can
+    see the tombstone propagate via sync; that row must be removed together
+    with (not after) the list row, since the FK would otherwise block the
+    delete. (A used or expired invite referencing the list is equally a
+    dangling FK once the list is gone, regardless of how the list was shared.)
 
     Standalone item tombstones (the ordinary single-item-delete case, whose
     list is still alive) are purged separately afterward.
@@ -42,6 +44,7 @@ def run(conn, now_ms: int) -> dict:
         items_purged += item_count
         conn.execute("DELETE FROM items WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM memberships WHERE list_id = ?", (list_id,))
+        conn.execute("DELETE FROM invites WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM lists WHERE id = ?", (list_id,))
         lists_purged += 1
 

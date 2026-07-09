@@ -149,6 +149,37 @@ def test_orphaned_list_and_lingering_membership_purged_together(db_conn):
     assert not _membership_exists(db_conn, account_id, "list-1")
 
 
+def _invite_exists(conn, invite_id):
+    return conn.execute("SELECT 1 FROM invites WHERE id = ?", (invite_id,)).fetchone() is not None
+
+
+def test_purging_a_list_also_removes_invites_referencing_it(db_conn):
+    # invites.list_id is also a FK to lists(id): a used/expired/revoked
+    # invite still references the list until GC removes it too, or the list
+    # delete itself would violate the FK (caught by test_full_system.py first).
+    owner = _register(db_conn, "owner@example.com")
+    invitee = _register(db_conn, "invitee@example.com")
+    _create_list(db_conn, owner, "devA")
+    _create_item(db_conn, owner, "devA", "item-1")
+    minted = invites.mint(db_conn, KEY, BASE_URL, "list-1", "invitee@example.com", owner)
+    invitee_account = auth.Account(id=invitee, email="invitee@example.com")
+    invites.redeem(db_conn, KEY, invitee_account, minted["token"])
+    assert _invite_exists(db_conn, minted["invite_id"])  # precondition
+
+    invites.leave(db_conn, owner, "list-1")  # invitee remains -> list survives
+    invites.leave(db_conn, invitee, "list-1")  # last member -> orphans
+    old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
+    db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = 'list-1'", (old_ts,))
+    db_conn.execute("UPDATE items SET deleted_ts = ? WHERE list_id = 'list-1'", (old_ts,))
+    db_conn.commit()
+
+    result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
+
+    assert result == {"items_purged": 1, "lists_purged": 1}
+    assert not _list_exists(db_conn, "list-1")
+    assert not _invite_exists(db_conn, minted["invite_id"])
+
+
 def test_purging_a_list_removes_its_items_even_if_not_independently_old(db_conn):
     # Defense in depth: an item under a purged list is removed unconditionally,
     # not only when its own tombstone independently clears the age cutoff.
