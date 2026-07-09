@@ -1,0 +1,13 @@
+{
+  "body": "Ad-hoc self-signed HTTPS Flask dev server (server/dev_tls_server.py), bound 0.0.0.0:8723, separate DB from the plain-HTTP dev server, so Android/web clients under development can hit a real HTTPS endpoint (needed e.g. for App Link https scheme testing). User-requested directly, not from the original ticket plan.",
+  "created_at": "2026-07-09T09:23:59+00:00",
+  "id": "T-25",
+  "labels": [
+    "server",
+    "chore",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Minimal TLS-enabled dev server for client-side testing on port 8723",
+  "updated_at": "2026-07-09T09:23:59+00:00"
+}
