@@ -2,8 +2,9 @@ import json
 
 from flask import g, jsonify
 
-from .. import get_db
+from .. import get_db, invites
 from ..auth import authed
+from ..errors import ApiError
 
 
 def register_routes(bp):
@@ -27,3 +28,41 @@ def register_routes(bp):
             for row in rows
         ]
         return jsonify({"lists": lists}), 200
+
+    @bp.route("/lists/<list_id>/members", methods=["GET"])
+    @authed
+    def list_members_view(list_id):
+        conn = get_db()
+        # Uniform 403 regardless of whether list_id exists at all, so a
+        # non-member can't distinguish "not found" from "not yours" (no
+        # existence-leak).
+        if not invites.is_member(conn, g.account.id, list_id):
+            raise ApiError(403, "not_a_member", "You are not a member of this list.")
+
+        members = [
+            {"email": row["email"], "joined_at": row["joined_at"]}
+            for row in conn.execute(
+                "SELECT accounts.email AS email, memberships.joined_at AS joined_at "
+                "FROM memberships JOIN accounts ON accounts.id = memberships.account_id "
+                "WHERE memberships.list_id = ? ORDER BY memberships.joined_at",
+                (list_id,),
+            )
+        ]
+        pending_invites = [
+            {"id": row["id"], "invited_email": row["invited_email"], "expires_at": row["expires_at"]}
+            for row in conn.execute(
+                "SELECT id, invited_email, expires_at FROM invites "
+                "WHERE list_id = ? AND revoked = 0 AND used_at IS NULL "
+                "ORDER BY created_at",
+                (list_id,),
+            )
+        ]
+        return jsonify({"members": members, "invites": pending_invites}), 200
+
+    @bp.route("/lists/<list_id>/leave", methods=["POST"])
+    @authed
+    def leave_list_view(list_id):
+        conn = get_db()
+        invites.leave(conn, g.account.id, list_id)
+        conn.commit()
+        return "", 204

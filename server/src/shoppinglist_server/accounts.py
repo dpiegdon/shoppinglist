@@ -5,7 +5,7 @@ import string
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import auth
+from . import auth, invites
 from .errors import ApiError
 
 CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
@@ -98,23 +98,13 @@ def update_settings(conn: sqlite3.Connection, account_id: str, default_currency:
     return {"default_currency": default_currency}
 
 
-def _orphan_check_stub(conn: sqlite3.Connection, account_id: str, list_id: str) -> None:
-    """Placeholder for invites.orphan_check, which lands with S6/T-6.
-
-    Removes this account's membership in `list_id` only. Once S6 exists, a
-    list left with zero memberships must additionally have its items cleared
-    and be tombstoned (Spec §3) — replace this call with
-    invites.orphan_check(conn, list_id) at that point.
-    """
-    conn.execute(
-        "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",
-        (account_id, list_id),
-    )
-
-
 def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> None:
     _require_password(conn, account_id, password)
 
+    # No future session of this account can exist to observe a tombstone, so
+    # (unlike `invites.leave`) there's nothing to preserve propagation for:
+    # remove the membership immediately, then let orphan_check clear+tombstone
+    # the list if that was its last member.
     list_ids = [
         row["list_id"]
         for row in conn.execute(
@@ -122,7 +112,11 @@ def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> 
         ).fetchall()
     ]
     for list_id in list_ids:
-        _orphan_check_stub(conn, account_id, list_id)
+        conn.execute(
+            "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",
+            (account_id, list_id),
+        )
+        invites.orphan_check(conn, list_id)
 
     conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (account_id,))
     conn.execute("DELETE FROM account_settings WHERE account_id = ?", (account_id,))

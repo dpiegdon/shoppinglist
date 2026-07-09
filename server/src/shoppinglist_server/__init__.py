@@ -34,12 +34,14 @@ def create_blueprint(
 
     from .routes.account import register_routes as register_account_routes
     from .routes.auth import register_routes as register_auth_routes
+    from .routes.invites import register_routes as register_invites_routes
     from .routes.lists import register_routes as register_lists_routes
     from .routes.sync import register_routes as register_sync_routes
 
     register_auth_routes(bp)
     register_account_routes(bp)
     register_lists_routes(bp)
+    register_invites_routes(bp)
     register_sync_routes(bp)
 
     return bp
