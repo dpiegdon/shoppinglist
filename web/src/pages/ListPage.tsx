@@ -141,6 +141,11 @@ export default function ListPage() {
           + Add item
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {allChecked.length > 0 && (
+            <button type="button" className="btn btn-danger btn-sm" onClick={handleClearChecked}>
+              Clear checked ({allChecked.length})
+            </button>
+          )}
           <button
             type="button"
             className="btn-toggle"
@@ -149,11 +154,6 @@ export default function ListPage() {
           >
             {showChecked ? "✓ " : ""}Show checked
           </button>
-          {allChecked.length > 0 && (
-            <button type="button" className="btn btn-secondary" onClick={handleClearChecked}>
-              Clear checked ({allChecked.length})
-            </button>
-          )}
         </div>
       </div>
 

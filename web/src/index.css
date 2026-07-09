@@ -107,6 +107,11 @@ textarea:focus {
   color: #fff;
 }
 
+.btn-sm {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+}
+
 .btn-icon {
   background: transparent;
   color: var(--color-text-muted);
