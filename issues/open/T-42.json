@@ -1,0 +1,14 @@
+{
+  "body": "Overview cards show only the list name. Standard shopping-list pattern: a\ncount of open (todo) items per list (\"Supermercado \u00b7 7\") so you can see at a\nglance whether a trip is pending, before opening the list. Cheap on both\nclients: Android ItemDao already filters by status (add a count-by-list\nquery, join in OverviewViewModel); web has all items in the sync store\n(derive counts in OverviewPage).",
+  "created_at": "2026-07-09T23:16:40+00:00",
+  "id": "T-42",
+  "labels": [
+    "android",
+    "web",
+    "ux",
+    "feature"
+  ],
+  "priority": 4,
+  "title": "Overview cards: show open-item count per list (both clients)",
+  "updated_at": "2026-07-09T23:16:40+00:00"
+}
