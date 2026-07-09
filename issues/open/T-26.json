@@ -1,6 +1,9 @@
 {
   "body": "Bundle web/dist as package-data, add routes/webapp.py (SPA fallback + static assets, registered directly on app like S7's landing page), serve_web_client config flag, verify route precedence live. Full context: docs/superpowers/plans/2026-07-08-shopping-list-tickets.md (Epic W).",
   "created_at": "2026-07-09T10:22:59+00:00",
+  "deps": [
+    "T-24"
+  ],
   "id": "T-26",
   "labels": [
     "web",
