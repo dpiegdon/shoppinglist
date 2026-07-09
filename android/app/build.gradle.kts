@@ -107,6 +107,7 @@ dependencies {
     // an Android module), which expects natives pre-extracted into an APK's jniLibs/ and won't
     // self-load under a plain JVM test; "-jvm" bundles + self-extracts its native library instead.
     testImplementation(libs.sqlite.bundled.jvm)
+    testImplementation(libs.okhttp.mockwebserver)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

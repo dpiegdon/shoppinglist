@@ -1,0 +1,150 @@
+package org.p23q.shoppinglist.data.api
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+/** Wire Contract field clock: every syncable field value carries its own last-write-wins stamp. */
+@Serializable
+data class FieldClock<T>(
+    val value: T,
+    @SerialName("updated_at") val updatedAt: Long,
+    @SerialName("updated_by") val updatedBy: String,
+)
+
+@Serializable
+data class PriceDto(val amount: String, val currency: String?)
+
+@Serializable
+data class ItemFieldsDto(
+    val name: FieldClock<String>,
+    val category: FieldClock<String?>,
+    val stores: FieldClock<List<String>>,
+    val quantity: FieldClock<String?>,
+    val price: FieldClock<PriceDto?>,
+    val note: FieldClock<String?>,
+    val status: FieldClock<String>,
+    val deleted: FieldClock<Boolean>,
+)
+
+@Serializable
+data class ItemDto(
+    val id: String,
+    @SerialName("list_id") val listId: String,
+    @SerialName("created_at") val createdAt: Long,
+    val fields: ItemFieldsDto,
+)
+
+@Serializable
+data class ListFieldsDto(
+    val name: FieldClock<String>,
+    @SerialName("category_order") val categoryOrder: FieldClock<List<String>>,
+    val deleted: FieldClock<Boolean>,
+)
+
+@Serializable
+data class ListDto(
+    val id: String,
+    @SerialName("created_at") val createdAt: Long,
+    val fields: ListFieldsDto,
+)
+
+@Serializable
+data class ErrorEnvelope(val error: String, val message: String)
+
+@Serializable
+data class RegisterRequest(val email: String, val password: String)
+
+@Serializable
+data class RegisterResponse(@SerialName("account_id") val accountId: String)
+
+@Serializable
+data class LoginRequest(val email: String, val password: String, @SerialName("device_label") val deviceLabel: String)
+
+@Serializable
+data class LoginResponse(val token: String, @SerialName("account_id") val accountId: String, val email: String)
+
+@Serializable
+data class ChangePasswordRequest(
+    @SerialName("current_password") val currentPassword: String,
+    @SerialName("new_password") val newPassword: String,
+)
+
+@Serializable
+data class ChangeEmailRequest(val password: String, @SerialName("new_email") val newEmail: String)
+
+@Serializable
+data class SessionDto(
+    val id: String,
+    @SerialName("device_label") val deviceLabel: String,
+    @SerialName("created_at") val createdAt: Long,
+    @SerialName("last_seen_at") val lastSeenAt: Long,
+    val current: Boolean,
+)
+
+@Serializable
+data class SessionsResponse(val sessions: List<SessionDto>)
+
+@Serializable
+data class DeleteAccountRequest(val password: String)
+
+@Serializable
+data class SettingsResponse(@SerialName("default_currency") val defaultCurrency: String)
+
+@Serializable
+data class UpdateSettingsRequest(@SerialName("default_currency") val defaultCurrency: String)
+
+@Serializable
+data class ListSummaryDto(val id: String, val name: String, @SerialName("category_order") val categoryOrder: List<String>)
+
+@Serializable
+data class ListsResponse(val lists: List<ListSummaryDto>)
+
+@Serializable
+data class MemberDto(val email: String, @SerialName("joined_at") val joinedAt: Long)
+
+@Serializable
+data class PendingInviteDto(
+    val id: String,
+    @SerialName("invited_email") val invitedEmail: String,
+    @SerialName("expires_at") val expiresAt: Long,
+)
+
+@Serializable
+data class MembersResponse(val members: List<MemberDto>, val invites: List<PendingInviteDto>)
+
+@Serializable
+data class CreateInviteRequest(@SerialName("invited_email") val invitedEmail: String)
+
+@Serializable
+data class CreateInviteResponse(
+    @SerialName("invite_id") val inviteId: String,
+    val token: String,
+    val url: String,
+    @SerialName("expires_at") val expiresAt: Long,
+)
+
+@Serializable
+data class RedeemInviteRequest(val token: String)
+
+@Serializable
+data class RedeemInviteResponse(@SerialName("list_id") val listId: String)
+
+@Serializable
+data class SyncChanges(
+    val lists: List<ListDto> = emptyList(),
+    val items: List<ItemDto> = emptyList(),
+)
+
+@Serializable
+data class SyncRequest(
+    val cursor: Long,
+    @SerialName("device_id") val deviceId: String,
+    @SerialName("full_lists") val fullLists: List<String> = emptyList(),
+    val changes: SyncChanges = SyncChanges(),
+)
+
+@Serializable
+data class SyncResponse(
+    val cursor: Long,
+    val changes: SyncChanges,
+)

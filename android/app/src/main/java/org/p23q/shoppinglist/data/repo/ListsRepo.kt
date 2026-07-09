@@ -52,7 +52,7 @@ class ListsRepo @Inject constructor(
 
     private fun encodeCategoryOrder(order: List<String>): String = Json.encodeToString(order)
 
-    private suspend fun updateField(listId: String, mutate: (ListEntity) -> ListEntity) {
+    private suspend fun updateField(listId: String, mutate: suspend (ListEntity) -> ListEntity) {
         val current = listDao.getById(listId) ?: return
         listDao.upsert(mutate(current).copy(dirty = true))
     }

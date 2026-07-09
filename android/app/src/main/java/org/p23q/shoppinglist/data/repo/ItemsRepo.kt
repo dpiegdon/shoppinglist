@@ -90,7 +90,7 @@ class ItemsRepo @Inject constructor(
 
     private fun encodeStores(stores: List<String>): String = Json.encodeToString(stores)
 
-    private suspend fun updateField(itemId: String, mutate: (ItemEntity) -> ItemEntity) {
+    private suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val current = itemDao.getById(itemId) ?: return
         itemDao.upsert(mutate(current).copy(dirty = true))
     }
