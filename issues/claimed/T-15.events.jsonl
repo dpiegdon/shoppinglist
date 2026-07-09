@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-08T22:17:50+00:00", "kind": "created", "ref": "main@302303d", "text": "A6: lists overview + drawer menu"}
 {"actor": "claude", "at": "2026-07-08T22:17:50+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-14"}
+{"actor": "claude", "at": "2026-07-09T16:52:24+00:00", "kind": "claimed", "ref": "main@e96143b", "text": "claude"}
