@@ -10,7 +10,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "A3: API client, token store, server-URL config",
-  "updated_at": "2026-07-08T22:17:49+00:00"
+  "updated_at": "2026-07-09T10:20:56+00:00"
 }
