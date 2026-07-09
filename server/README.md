@@ -5,6 +5,10 @@ server: accounts, shared lists, offline-first field-level last-write-wins
 sync, and email-bound invites. It is a library — mount it into any host Flask
 app — plus a minimal standalone `app.py` for local development.
 
+**The web client is embedded and served by the blueprint itself.** Opening
+the server's base URL in a browser boots the React SPA directly — there is no
+separate static-hosting deployment step. See "Web client" below.
+
 The full design is documented in
 [`docs/superpowers/specs/2026-07-08-shopping-list-server-design.md`](../docs/superpowers/specs/2026-07-08-shopping-list-server-design.md).
 The **wire contract** (every endpoint's exact request/response JSON, the
@@ -32,6 +36,7 @@ bp = create_blueprint(
     invite_hmac_key=b"...",       # see Configuration below
     base_url="https://lists.example.com",
     url_prefix="/api/v1",         # optional, this is the default
+    serve_web_client=True,        # optional, this is the default — see "Web client" below
 )
 app.register_blueprint(bp)
 app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
@@ -91,6 +96,35 @@ curl -s -X POST http://localhost:5000/api/v1/login \
 The second call returns a bearer token; pass it as `Authorization: Bearer
 <token>` on every other endpoint (see the wire contract linked above for the
 full list).
+
+## Web client
+
+The React app in `../web/` builds straight into
+`src/shoppinglist_server/web_dist/` (see `web/vite.config.ts`'s `outDir`) —
+those built assets are committed to this repo and shipped as package data
+(`pyproject.toml`), the same way `templates/invite.html` is. No Node/npm is
+needed to *run* the server; it's only needed to *rebuild* the web client:
+
+```bash
+cd web
+npm install
+npm run build   # writes into ../server/src/shoppinglist_server/web_dist/
+```
+
+`routes/webapp.py`, registered directly on the host app (same reasoning as
+the invite landing page: it must live at the site root, not under
+`url_prefix`), serves the built `index.html` for `/` and any unmatched `GET`
+(SPA client-side routing fallback), and the hashed `/assets/*` bundle with a
+long cache lifetime. `/api/v1/*` and `/invite/<token>` both rank above this
+catch-all — Werkzeug sorts routes by rule specificity, not registration
+order — verified with real requests in `tests/test_webapp.py`, not just a
+route dump. Pass `serve_web_client=False` to `create_blueprint(...)` to
+disable it (e.g. a host app that wants to serve its own root content
+instead); a package installed without ever running `npm run build` degrades
+gracefully to the same effect rather than crashing.
+
+The web client is same-origin with its own API by construction, so — unlike
+the Android app — it has no server-URL setting.
 
 ## TLS dev server (for client-side testing)
 

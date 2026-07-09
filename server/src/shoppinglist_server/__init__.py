@@ -11,6 +11,8 @@ def create_blueprint(
     invite_hmac_key: bytes,
     base_url: str,
     url_prefix: str = "/api/v1",
+    serve_web_client: bool = True,
+    web_dist_dir: str | None = None,
 ) -> Blueprint:
     bp = Blueprint(
         "shoppinglist_server", __name__, url_prefix=url_prefix, template_folder="templates"
@@ -36,6 +38,20 @@ def create_blueprint(
         from .routes.landing import register_routes as register_landing_routes
 
         register_landing_routes(app)
+
+        # The embedded web client (Epic W) is likewise registered directly on
+        # the app, outside url_prefix, so opening the server's base URL boots
+        # the SPA. Registered last: its catch-all route is the least specific
+        # of everything mounted here, and Werkzeug ranks by rule specificity
+        # regardless of registration order, but this keeps the precedence
+        # obvious to a reader too.
+        if serve_web_client:
+            from .routes.webapp import register_routes as register_webapp_routes
+
+            if web_dist_dir is not None:
+                register_webapp_routes(app, web_dist_dir)
+            else:
+                register_webapp_routes(app)
 
     @bp.teardown_app_request
     def _close_db(exception=None):
