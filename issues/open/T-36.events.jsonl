@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-09T23:16:38+00:00", "kind": "created", "ref": "main@c2f3e88", "text": "Android: no pull-to-refresh / manual sync + no sync recency indicator"}
+{"actor": "claude", "at": "2026-07-09T23:17:03+00:00", "kind": "note", "ref": "main@c2f3e88", "text": "relates: T-32 \u2014 both add a sync-state surface; coordinate so there's one 'last synced / pending / failing' component, not two."}
