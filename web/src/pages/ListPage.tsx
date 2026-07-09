@@ -35,7 +35,8 @@ export default function ListPage() {
 
   const categoryOrder = listFieldValue(list, "category_order") ?? [];
   const groups = groupTodoItems(listItems, categoryOrder);
-  const checked = showChecked ? checkedItems(listItems) : [];
+  const allChecked = checkedItems(listItems);
+  const checked = showChecked ? allChecked : [];
 
   async function setItemStatus(itemId: string, status: ItemStatus) {
     await push({
@@ -57,6 +58,18 @@ export default function ListPage() {
     if (!undo) return;
     await setItemStatus(undo.itemId, undo.previousStatus);
     setUndo(null);
+  }
+
+  /** Moves every checked item back to the backlog (Spec: "clearing done items -> backlog"). */
+  async function handleClearChecked() {
+    if (allChecked.length === 0) return;
+    await push({
+      items: allChecked.map((item) => ({
+        id: item.id,
+        list_id: listId!,
+        fields: fieldPatch(deviceId, "status", "backlog" as ItemStatus),
+      })),
+    });
   }
 
   async function handleSave(values: ItemDialogSaveValues) {
@@ -114,14 +127,30 @@ export default function ListPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0.75rem 0" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          margin: "0.75rem 0",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
         <button type="button" className="btn" onClick={() => setDialogItem("new")}>
           + Add item
         </button>
-        <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.9rem" }}>
-          <input type="checkbox" checked={showChecked} onChange={(e) => setShowChecked(e.target.checked)} />
-          Show checked
-        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.9rem" }}>
+            <input type="checkbox" checked={showChecked} onChange={(e) => setShowChecked(e.target.checked)} />
+            Show checked
+          </label>
+          {allChecked.length > 0 && (
+            <button type="button" className="btn btn-secondary" onClick={handleClearChecked}>
+              Clear checked ({allChecked.length})
+            </button>
+          )}
+        </div>
       </div>
 
       {groups.length === 0 && checked.length === 0 && (
