@@ -10,7 +10,8 @@
     "chore",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Minimal TLS-enabled dev server for client-side testing on port 8723",
-  "updated_at": "2026-07-09T09:23:59+00:00"
+  "updated_at": "2026-07-09T09:24:04+00:00"
 }
