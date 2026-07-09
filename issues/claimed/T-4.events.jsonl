@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-08T22:17:28+00:00", "kind": "created", "ref": "main@302303d", "text": "S4: sync engine core (field-level LWW, pure service)"}
 {"actor": "claude", "at": "2026-07-08T22:17:28+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-1"}
 {"actor": "claude", "at": "2026-07-08T22:41:38+00:00", "kind": "claimed", "ref": "main@6cd3ff6", "text": "claude"}
+{"actor": "claude", "at": "2026-07-09T05:55:33+00:00", "kind": "note", "ref": "main@ded6dca", "text": "Design note: S1 partial-unique live-name index forbids two live same-name items, so name-merge cannot be a pure post-apply scan of committed rows. Collisions are caught as IntegrityError in apply_changes and merged inline via _merge_group; name_merge(conn,list_id) is the idempotent per-list safety net S5 should still call. Also removed the commit from db.next_change_seq (T-1) so apply+merge+delta stay in one transaction for S5."}
