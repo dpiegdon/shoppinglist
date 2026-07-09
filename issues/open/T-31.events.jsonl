@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-09T23:16:36+00:00", "kind": "created", "ref": "main@c2f3e88", "text": "Android: no session resume \u2014 every app start demands full re-login"}
+{"actor": "claude", "at": "2026-07-09T23:17:03+00:00", "kind": "note", "ref": "main@c2f3e88", "text": "relates: T-28 \u2014 T-28's login-then-redeem token stash should ride on this ticket's session-resume/startDestination rework rather than being bolted on before it."}
