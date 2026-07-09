@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-09T09:23:59+00:00", "kind": "created", "ref": "main@0dd5969", "text": "Minimal TLS-enabled dev server for client-side testing on port 8723"}
+{"actor": "claude", "at": "2026-07-09T09:23:59+00:00", "kind": "dependency", "ref": "main@0dd5969", "text": "T-9"}
