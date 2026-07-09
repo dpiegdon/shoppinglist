@@ -1,0 +1,14 @@
+{
+  "body": "A5's spec text listed triggers \"connectivity regained, foreground, manual\npull-to-refresh\" \u2014 the manual trigger was never built. Current triggers are\nforeground, 15-min periodic, and 5s-debounced after local edits. The everyday\nfailure: two people shopping together with the app open on both phones \u2014 one\nadds items, the other's screen stays stale for up to 15 minutes with no way to\nforce a refresh (only backgrounding/foregrounding the app).\n\nFix: Material pull-to-refresh on ListScreen (and Overview) invoking\nSyncEngine.syncNow() directly with a visible spinner; show a lightweight\nlast-synced indicator (ties into the sync-health surface of the sync-wedge\nticket \u2014 coordinate, don't duplicate). Files: ui/list/ListScreen.kt,\nui/overview/OverviewScreen.kt, a small shared \"sync now + state\" holder.",
+  "created_at": "2026-07-09T23:16:38+00:00",
+  "id": "T-36",
+  "labels": [
+    "android",
+    "ux",
+    "parity",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android: no pull-to-refresh / manual sync + no sync recency indicator",
+  "updated_at": "2026-07-09T23:16:38+00:00"
+}
