@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-08T22:18:03+00:00", "kind": "created", "ref": "main@302303d", "text": "W1: web scaffold \u2014 Vite/React/TS, API layer, auth pages"}
 {"actor": "claude", "at": "2026-07-08T22:18:03+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-9"}
+{"actor": "claude", "at": "2026-07-09T10:22:57+00:00", "kind": "note", "ref": "main@cbcad75", "text": "Architecture change (user-directed, 2026-07-09): served by the blueprint itself, same-origin API -> no server-URL config needed (drops from original scope). Route serving details + rationale in the plan doc's Epic W preamble."}
