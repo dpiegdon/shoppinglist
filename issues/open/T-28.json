@@ -1,0 +1,13 @@
+{
+  "body": "RedeemScreen (App Link deep-link target) and RedeemDialog (drawer \"Join\nlist\") both assume an existing session \u2014 redeemInvite() 401s immediately\nif the user isn't logged in, with no path to \"log in, then redeem.\" A\nlogged-out user tapping an invite link currently gets bounced toward\nLogin with the invite token silently lost (RedeemScreen's onCancel\nnavigates to Overview, which itself requires login).\n\nFix: stash the pending token when redeem fails due to no session, then\nconsume it right after login succeeds \u2014 either LoginViewModel checks for\na pending token on success and routes to redeem instead of the normal\nstart destination, or the App Link route detects \"not logged in\" and\nredirects to Login carrying the token along, returning to redeem after.\n\nFound and documented while closing T-18 (A9: share/list props, invite\nredemption, App Link) \u2014 see that ticket's closing note for more detail.",
+  "created_at": "2026-07-09T22:38:03+00:00",
+  "id": "T-28",
+  "labels": [
+    "android",
+    "bug",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Redeem via App Link/paste fails silently when logged out",
+  "updated_at": "2026-07-09T22:38:03+00:00"
+}
