@@ -1,0 +1,14 @@
+{
+  "body": "Established shopping-list UX (Bring!, AnyList, Google Keep lists): adding\nitems happens in bursts while planning \u2014 add milk, add bread, add eggs. Both\nclients currently close the add dialog after each item, forcing reopen + \nrefocus for every entry.\n\nFix (Android first): after a successful add, optionally keep the dialog open\nwith cleared fields and focus back in Name \u2014 e.g. an \"Add another\" secondary\naction next to \"Add\", or a checkbox remembered across uses. Consider showing\ntop backlog suggestions when the name field is still empty (most-recently\nchecked-off items are the likeliest re-adds), which the registry data already\nsupports. Web can inherit the same pattern cheaply, lower priority.\nFiles: android ui/item/AddItemDialog.kt + ItemFormViewModel.kt; web\nsrc/components/ItemDialog.tsx.",
+  "created_at": "2026-07-09T23:16:40+00:00",
+  "id": "T-41",
+  "labels": [
+    "android",
+    "web",
+    "ux",
+    "feature"
+  ],
+  "priority": 3,
+  "title": "Add-item flow: 'add another' mode for consecutive adds (Android; optionally web)",
+  "updated_at": "2026-07-09T23:16:40+00:00"
+}
