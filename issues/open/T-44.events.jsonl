@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-09T23:16:41+00:00", "kind": "created", "ref": "main@c2f3e88", "text": "Invite landing page: add the planned 'Redeem in browser' link"}
+{"actor": "claude", "at": "2026-07-09T23:17:02+00:00", "kind": "note", "ref": "main@c2f3e88", "text": "relates: T-43 \u2014 the browser-redeem link only works end-to-end for logged-out invitees once the web login flow preserves the intended destination."}
