@@ -3,3 +3,4 @@
 {"actor": "claude", "at": "2026-07-09T09:24:04+00:00", "kind": "claimed", "ref": "main@0dd5969", "text": "claude"}
 {"actor": "claude", "at": "2026-07-09T09:26:32+00:00", "kind": "note", "ref": "main@ba61b4f", "text": "Live and running: PID 1036928\n1037005, https://localhost:8723 and https://192.168.0.253:8723. Test account shopping@p23q.org / password created and verified (register+login+sync+invite+landing page all round-tripped over real TLS via curl -k)."}
 {"actor": "claude", "at": "2026-07-09T09:26:33+00:00", "kind": "closed", "ref": "main@ba61b4f", "text": ""}
+{"actor": "claude", "at": "2026-07-09T11:30:55+00:00", "kind": "note", "ref": "main@4d22189", "text": "Restarted 2026-07-09 11:31 (old PID 1036928 was stale, running since before the T-21..T-26 web client existed -> served 404 at /). New PID 1044042\n1044058. Verified reachable on the wg0 VPN interface (172.23.17.5) as well as LAN (192.168.0.253) and localhost, since it's bound 0.0.0.0."}
