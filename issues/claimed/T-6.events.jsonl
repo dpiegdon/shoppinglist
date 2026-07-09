@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-08T22:17:28+00:00", "kind": "created", "ref": "main@302303d", "text": "S6: sharing \u2014 invites (HMAC, 7d), members, leave, orphans"}
 {"actor": "claude", "at": "2026-07-08T22:17:28+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-5"}
+{"actor": "claude", "at": "2026-07-09T07:17:35+00:00", "kind": "claimed", "ref": "main@4b016d3", "text": "claude"}

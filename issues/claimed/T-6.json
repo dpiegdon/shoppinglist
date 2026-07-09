@@ -10,7 +10,8 @@
     "opus",
     "agent"
   ],
+  "owner": "claude",
   "priority": 1,
   "title": "S6: sharing \u2014 invites (HMAC, 7d), members, leave, orphans",
-  "updated_at": "2026-07-08T22:17:28+00:00"
+  "updated_at": "2026-07-09T07:17:35+00:00"
 }
