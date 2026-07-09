@@ -1,0 +1,14 @@
+{
+  "body": "ListPropsViewModel.confirmLeave() wraps the server call in runCatching, then\nunconditionally hard-deletes the list locally and reports success. Offline (or\nany server error): the list disappears from the device, but the account is\nSTILL a member server-side \u2014 other members keep seeing you, and the list\nreappears on your own device after the next full resync (confusing \"zombie\"\nUX). There is no retry queue for membership actions (they're deliberately not\nLWW content). revokeInvite() has the same swallow-everything pattern: tapping\nRevoke offline does nothing, silently.\n\nFix (choose per action): membership actions require connectivity \u2014 check the\ncall result and on failure keep state + show \"You're offline; try again when\nconnected\" (members view already has this pattern via loadMembers'\nmembersError). Only do local cleanup after a confirmed 2xx/404-ish response.\nFiles: ui/listprops/ListPropsViewModel.kt (+Screen for error display), tests.",
+  "created_at": "2026-07-09T23:16:39+00:00",
+  "id": "T-39",
+  "labels": [
+    "android",
+    "bug",
+    "ux",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Android: leave-list / revoke-invite silently no-op when offline",
+  "updated_at": "2026-07-09T23:16:39+00:00"
+}
