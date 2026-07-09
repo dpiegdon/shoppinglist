@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-09T23:16:37+00:00", "kind": "created", "ref": "main@c2f3e88", "text": "Android: one invalid field wedges sync forever, and sync failures are invisible"}
+{"actor": "claude", "at": "2026-07-09T23:17:04+00:00", "kind": "note", "ref": "main@c2f3e88", "text": "relates: T-28/T-31 for the 401 handling path only; the validation wedge itself is independent."}
