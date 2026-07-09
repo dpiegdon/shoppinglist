@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-07-08T22:18:04+00:00", "kind": "dependency", "ref": "main@302303d", "text": "T-23"}
 {"actor": "claude", "at": "2026-07-09T10:22:58+00:00", "kind": "note", "ref": "main@cbcad75", "text": "Redeem is now a client-side React Router route (/redeem?token=), no new server route; S7's invite.html gets one added link. Details in plan doc's Epic W preamble."}
 {"actor": "claude", "at": "2026-07-09T10:22:59+00:00", "kind": "updated", "ref": "main@cbcad75", "text": "fields updated"}
+{"actor": "claude", "at": "2026-07-09T10:51:05+00:00", "kind": "claimed", "ref": "main@4639a35", "text": "claude"}
