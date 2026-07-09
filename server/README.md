@@ -45,6 +45,52 @@ app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
 That's the entire integration surface. Everything else — routes, the sync
 engine, invite handling, GC — lives inside the package.
 
+### Multiple instances on one app
+
+`create_blueprint(...)` is safe to call more than once and register multiple
+fully independent instances on the same Flask app — each with its own
+`database_path`, `invite_hmac_key`, and `url_prefix`. There is no shared
+mutable state: each instance's config is resolved per-request from the
+blueprint that matched, so instances never see each other's data, tokens, or
+signing key, even under concurrent load.
+
+Each instance beyond the first needs a distinct `name=` (Flask requires
+unique blueprint names per app — this mirrors that requirement directly):
+
+```python
+app.register_blueprint(create_blueprint(
+    database_path="/var/lib/shoppinglist/tenant-a.db", invite_hmac_key=key_a,
+    base_url="https://a.example.com", url_prefix="/tenant-a/api", name="tenant_a",
+    serve_web_client=False, serve_invite_landing_page=False,
+))
+app.register_blueprint(create_blueprint(
+    database_path="/var/lib/shoppinglist/tenant-b.db", invite_hmac_key=key_b,
+    base_url="https://b.example.com", url_prefix="/tenant-b/api", name="tenant_b",
+    serve_web_client=False, serve_invite_landing_page=False,
+))
+```
+
+**One real constraint, not a bug:** the invite landing page (`/invite/<token>`)
+and the embedded web client (`/`, `/assets/*`) are unprefixed, site-root
+routes by design (Spec §5's share URL has no `/api/v1` segment) — there is
+only one `/` per app. At most **one** mounted instance per app may set
+`serve_web_client=True` / `serve_invite_landing_page=True`; a second attempt
+raises a clear `ValueError` rather than Flask's raw endpoint-collision error.
+Every other route (auth, account, lists, invites, sync) has no such
+constraint and scales to as many instances as you mount.
+
+The operator CLI needs to know which instance to target once more than one
+is registered — pass `--instance NAME` (matching the `name=` above); with
+exactly one instance mounted (the common case) it's inferred automatically:
+
+```bash
+flask --app app.py shoppinglist init-db --instance tenant_a
+```
+
+See `tests/test_multi_mount.py` for the full set of isolation guarantees this
+is tested against (account/token/settings/invite-key isolation across
+instances, and the CLI's instance-selection behavior).
+
 ## Configuration
 
 | Key | Purpose |

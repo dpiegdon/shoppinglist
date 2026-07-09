@@ -259,9 +259,10 @@ def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
     )
     assert resp.status_code == 200
 
-    config = app.extensions["shoppinglist_server"]
     from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
 
+    config = get_config_by_name(app)
     conn = db_module.connect(config["database_path"])
     old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
     conn.execute(
@@ -291,8 +292,10 @@ def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
 
 
 def test_gc_cli_runs(cli_runner, app, monkeypatch):
-    config = app.extensions["shoppinglist_server"]
     from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
+
+    config = get_config_by_name(app)
 
     conn = db_module.connect(config["database_path"])
     account_id = _register(conn, "clitest@example.com")

@@ -157,9 +157,10 @@ def test_sync_stale_cursor_410_but_still_applies_pushed_changes(client, app):
     )
     assert resp.status_code == 200
 
-    config = app.extensions["shoppinglist_server"]
     from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
 
+    config = get_config_by_name(app)
     conn = db_module.connect(config["database_path"])
     conn.execute("UPDATE meta SET gc_horizon = 999999")
     conn.commit()

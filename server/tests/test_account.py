@@ -172,8 +172,10 @@ def test_delete_account_cascades_and_orphans_memberships(db_conn):
 def test_reset_password_cli_allows_login_with_new_password(db_conn, cli_runner, app):
     auth.register(db_conn, EMAIL, PASSWORD)
     # The CLI operates on the app's own configured database, so register there too.
-    config = app.extensions["shoppinglist_server"]
     from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
+
+    config = get_config_by_name(app)
 
     app_conn = db_module.connect(config["database_path"])
     auth.register(app_conn, EMAIL, PASSWORD)

@@ -115,9 +115,11 @@ def test_full_system_lifecycle(client, app):
     assert resp.get_json()["lists"] == []
 
     # 9. Orphan purge via gc.run (simulate 91 days later).
-    config = app.extensions["shoppinglist_server"]
     from shoppinglist_server import auth as auth_module
     from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
+
+    config = get_config_by_name(app)
 
     conn = db_module.connect(config["database_path"])
     far_future = auth_module.now_ms() + 91 * 24 * 60 * 60 * 1000

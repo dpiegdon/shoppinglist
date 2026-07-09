@@ -11,7 +11,6 @@ from urllib.parse import urlsplit
 
 from flask import render_template
 
-from .. import get_config
 from ..auth import now_ms
 from ..errors import ApiError
 from ..invites import decode_token
@@ -24,14 +23,17 @@ def _intent_url(base_url: str, token: str) -> str:
     return f"intent://{host}/invite/{token}#Intent;scheme=https;package={ANDROID_PACKAGE};end"
 
 
-def register_routes(app):
+def register_routes(app, invite_hmac_key: bytes, base_url: str):
+    # invite_hmac_key/base_url are closure-captured here, NOT read via the
+    # shared get_config() at request time - this route is registered directly
+    # on the app (outside any blueprint), so request.blueprint would be None
+    # for it; closure capture is what correctly scopes it to the specific
+    # create_blueprint() call that registered it, even with other instances
+    # also mounted on the same app.
     @app.route("/invite/<token>", methods=["GET"])
     def invite_landing_view(token):
-        config = get_config()
         try:
-            _invite_id, _list_id, invited_email, expires_at = decode_token(
-                config["invite_hmac_key"], token
-            )
+            _invite_id, _list_id, invited_email, expires_at = decode_token(invite_hmac_key, token)
         except ApiError:
             # Blend in with "not found" rather than confirming a token-shaped
             # value was received at all.
@@ -46,7 +48,7 @@ def register_routes(app):
                 state="valid",
                 token=token,
                 invited_email=invited_email,
-                intent_url=_intent_url(config["base_url"], token),
+                intent_url=_intent_url(base_url, token),
             ),
             200,
         )
