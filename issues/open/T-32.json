@@ -1,0 +1,15 @@
+{
+  "body": "Two compounding problems:\n\n(1) No client-side validation of price input. ItemFormViewModel accepts any\nstring; the server validates amount against ^\\d+(\\.\\d{1,2})?$ and 422s. A\nEuropean user typing \"1,99\" (decimal comma) \u2014 or \"2\u20ac\", \"1.999\" \u2014 creates a\ndirty row the server will always reject. Server-side apply_changes runs in one\ntransaction, so the 422 aborts the WHOLE sync request: pushes AND pulls both\nstop working, permanently, for every list. SyncWorker maps Failed -> retry(),\nso WorkManager re-sends the same doomed payload on backoff forever.\n\n(2) Nothing surfaces sync state. No screen shows last-synced time, pending\nchanges, or errors \u2014 the app just silently stops reflecting other devices.\n\nFix, layered:\n- ItemFormViewModel: validate + normalize price at input/save time (accept\n  comma decimal -> dot; strip currency symbols/whitespace; reject >2 decimals\n  with an inline error). Same for currency (3-letter code or blank; settings\n  screen already does this \u2014 item form doesn't).\n- Surface sync health: minimal viable = a quiet \"last synced / N changes\n  pending / sync failing\" line (e.g. overview or drawer), loud when the same\n  failure repeats.\n- Defense in depth (server, small): include the offending row id + field in\n  the 422 error envelope so a client can quarantine that row (clear its dirty\n  bit / flag it for user attention) instead of blocking the queue forever.\n  Wire-contract addition, backward compatible (extra JSON keys).\n\nFiles: android ui/item/ItemFormViewModel.kt, data/sync/SyncEngine.kt +\nSyncWorker.kt, a small UI surface; server sync.py validation errors.\nRelated: server tests for the enriched 422 envelope.",
+  "created_at": "2026-07-09T23:16:37+00:00",
+  "id": "T-32",
+  "labels": [
+    "android",
+    "bug",
+    "reliability",
+    "opus",
+    "agent"
+  ],
+  "priority": 1,
+  "title": "Android: one invalid field wedges sync forever, and sync failures are invisible",
+  "updated_at": "2026-07-09T23:16:37+00:00"
+}
