@@ -28,6 +28,7 @@ Every ticket executor MUST read the spec/notes sections its ticket cites.
 - Server: Python ≥ 3.11; runtime deps **Flask only** (Werkzeug comes with it); stdlib `sqlite3`; tests with `pytest`. Package name `shoppinglist_server`, layout `server/src/shoppinglist_server/`.
 - Server API mounted at `url_prefix` default **`/api/v1`**; the invite landing page is the only non-JSON route.
 - Android: Kotlin ≥ 2.0, minSdk 26, Jetpack Compose + Material 3, Room, Retrofit + kotlinx-serialization, Hilt, WorkManager, DataStore; applicationId `org.p23q.shoppinglist`; single Gradle module `app`.
+- Web: Node ≥ 20, Vite + React 18 + TypeScript, React Router; tests with Vitest + React Testing Library. Package lives in `web/`, built assets embedded into the server package (see Epic W preamble) — no separate static-hosting deployment.
 - Timestamps: integer **UTC milliseconds** since epoch, everywhere.
 - UUIDs: lowercase, hyphenated strings.
 - Money amounts: **decimal strings** (e.g. `"1.99"`), never floats. Currency: ISO-4217 uppercase (e.g. `"EUR"`).
@@ -425,31 +426,71 @@ against the real dev server.
 
 # Epic W — Web client (online-only) · priority P3 (low)
 
-*Coarse tickets — refine each into a full plan before execution. All depend on Epic S
-complete and deployed. Stack: Vite + React + TypeScript, no offline storage; uses the
-same Wire Contract incl. `/sync` (cursor kept in localStorage; 410 → drop cursor and
-refetch). Lives in `web/`, built assets servable by any static host or the reverse proxy.*
+*All depend on Epic S complete (done). Stack: Vite + React + TypeScript, no offline
+storage; uses the same Wire Contract incl. `/sync` (cursor kept in `localStorage`; 410 →
+drop cursor and refetch). Lives in `web/`.*
 
-### W1 — Scaffold + API/auth layer · [Sonnet]
+**Architecture change from the original coarse tickets (2026-07-09, user-directed):**
+the built web app is **embedded in the server package and served by the blueprint
+itself**, not deployed as a separate static-hosted artifact. `npm run build` outputs to
+`web/dist/`; those assets are copied into
+`server/src/shoppinglist_server/web_dist/` and declared in `pyproject.toml`
+package-data (same mechanism as `templates/invite.html`, T-7). A new
+`routes/webapp.py`, wired into `create_blueprint()`'s existing `record_once` hook
+(same pattern S7's landing page uses — registered directly on the host `app`, not
+under `url_prefix`, since it must live at the site root), serves:
+- real static files under `/assets/*` (Vite's hashed JS/CSS bundle) with long-lived
+  cache headers,
+- `GET /` and any other unmatched `GET` (SPA client-side routing fallback) → `index.html`.
+
+New `create_blueprint(..., serve_web_client: bool = True)` parameter lets a host app
+opt out (e.g. if it wants to serve its own root content instead).
+
+**Route precedence:** Werkzeug ranks routes by rule specificity, not registration
+order, so `/api/v1/*` and `/invite/<token>` (both registered with static prefix
+segments) win over the web app's fully-dynamic catch-all regardless of order —
+verified empirically in the implementing ticket via a real request, not just a route
+dump, since this is exactly the kind of thing that looks right in `iter_rules()` but
+needs a live check.
+
+**Consequence for W1:** because the web app is same-origin with its own API (served by
+the same Flask process), it needs **no server-URL configuration** at all — unlike
+Android, which is a separate app that must be told where the server is. This drops
+that piece of W1's original scope.
+
+**Consequence for W4 (redeem):** the web app owns a client-side route (`/redeem?token=`,
+handled by React Router, part of the SPA bundle — no new server route). S7's
+`invite.html` template gains one additional same-origin link, "Redeem in browser →
+`/redeem?token=<token>`", alongside the existing App Link + paste-token instructions.
+
+### W1 — Scaffold + API/auth layer
 Vite+React+TS scaffold in `web/`; typed fetch wrapper implementing the Wire Contract
-(share DTO shapes as a generated or hand-written `contract.ts`); login/register/logout
-pages; server URL configurable (env + settings); token in memory + `sessionStorage`.
-CSS honors `prefers-color-scheme` (dark/light).
+(shared DTO shapes in `contract.ts`); login/register/logout pages; token in memory +
+`sessionStorage` (same-origin, no server-URL setting — see above). CSS honors
+`prefers-color-scheme` (dark/light). React Router shell with routes for every page
+below.
 
-### W2 — Lists overview + sync layer · [Sonnet]
-`/sync`-based store (in-memory, cursor in localStorage), overview page, create list,
-menu with account/overview, last-opened list restore.
+### W2 — Lists overview + sync layer
+`/sync`-based store (in-memory, cursor in `localStorage`), overview page, create list,
+menu with account/overview, last-opened list restore (`localStorage`).
 
-### W3 — List view + item dialogs · [Sonnet]
+### W3 — List view + item dialogs
 Category-grouped todo view with `category_order`, show-checked toggle with red
 strikethrough, tap-to-check + undo, add-item with registry suggestions, edit dialog
 (all fields + delete), registry page.
 
-### W4 — Share + settings · [Sonnet]
+### W4 — Share + settings + redeem
 List properties (rename, category order, members, invite mint/revoke via share URL,
-leave); redeem page consuming `/invite/<token>` links (the landing page links here
-when opened on desktop — coordinate copy with S7); settings (currency, password,
-email, sessions, delete account).
+leave); settings (currency, password, email, sessions, delete account); `/redeem?token=`
+page (see above) — paste-or-prefilled token, redeem, then navigate into the list.
+
+### W5 — Blueprint integration (new)
+Build the web app; wire `routes/webapp.py` + package-data + the
+`serve_web_client` config flag into the server package (files: modify
+`server/src/shoppinglist_server/__init__.py`, `server/pyproject.toml`; create
+`server/src/shoppinglist_server/routes/webapp.py`). Verify live: start a dev server,
+open `/` in a request/browser check, confirm the SPA boots and `/api/v1/*` +
+`/invite/<token>` are unaffected.
 
 ---
 
