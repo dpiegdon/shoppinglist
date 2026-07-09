@@ -1,0 +1,15 @@
+{
+  "body": "web/src/App.tsx ProtectedRoute redirects to /login without preserving the\noriginal location, and LoginPage always navigates to \"/\" after success. A\nlogged-out user opening an invite's \"redeem in browser\" URL\n(/redeem?token=XYZ) or any deep link ends up dumped at the overview with the\ntoken/URL silently lost \u2014 the web twin of Android's T-28.\n\nFix (small): pass the attempted location through the redirect\n(<Navigate to=\"/login\" state={{ from: location }} />), and in LoginPage\nnavigate(state?.from ?? \"/\") on success. Add a test mirroring\nOverviewPage.test.tsx patterns. Web is the fallback client, hence p3, but\nthis specifically breaks the invite-onboarding path for brand-new users,\nwho are exactly the people least equipped to recover.",
+  "created_at": "2026-07-09T23:16:40+00:00",
+  "id": "T-43",
+  "labels": [
+    "web",
+    "bug",
+    "ux",
+    "sonnet",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Web: login flow drops the intended destination (incl. /redeem?token=...)",
+  "updated_at": "2026-07-09T23:16:40+00:00"
+}
