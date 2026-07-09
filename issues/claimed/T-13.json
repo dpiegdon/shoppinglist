@@ -10,7 +10,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "A4: login/register/first-run flow",
-  "updated_at": "2026-07-08T22:17:50+00:00"
+  "updated_at": "2026-07-09T13:08:12+00:00"
 }
