@@ -1,0 +1,15 @@
+{
+  "body": "AndroidManifest sets android:allowBackup=\"true\" with no backup rules. Auto\nBackup includes SessionStore's EncryptedSharedPreferences file, but the\nKeystore master key is device-bound and never backed up \u2014 after a\nrestore-to-new-device, EncryptedSharedPreferences.create() throws\n(AEADBadTagException/GeneralSecurityException) while decrypting. SessionStore\nis a @Singleton constructed eagerly via DI on first use at startup, so the app\ncrash-loops on the new device until the user clears app data manually.\nSecondary concern: backing up the bearer token + full Room mirror into cloud\nbackups is also questionable security-wise.\n\nFix (combination):\n- Add backup exclusion rules (android:fullBackupContent + API-31\n  dataExtractionRules) excluding the \"session\" encrypted prefs and the Room\n  DB, or set allowBackup=false outright (simplest; all state is re-syncable\n  from the server anyway).\n- Make SessionStore construction defensive regardless: catch decryption\n  failure, delete the prefs file, recreate empty (-> user lands on login,\n  which is correct post-restore behavior).\nFiles: AndroidManifest.xml, res/xml backup rules, data/SessionStore.kt.",
+  "created_at": "2026-07-09T23:16:38+00:00",
+  "id": "T-37",
+  "labels": [
+    "android",
+    "bug",
+    "reliability",
+    "security",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android: allowBackup=true + EncryptedSharedPreferences = crash loop after backup restore",
+  "updated_at": "2026-07-09T23:16:38+00:00"
+}

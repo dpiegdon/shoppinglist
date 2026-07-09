@@ -1,0 +1,1 @@
+{"actor": "claude", "at": "2026-07-09T23:16:38+00:00", "kind": "created", "ref": "main@c2f3e88", "text": "Android: allowBackup=true + EncryptedSharedPreferences = crash loop after backup restore"}
