@@ -3,3 +3,4 @@
 {"actor": "claude", "at": "2026-07-09T10:22:57+00:00", "kind": "note", "ref": "main@cbcad75", "text": "Architecture change (user-directed, 2026-07-09): served by the blueprint itself, same-origin API -> no server-URL config needed (drops from original scope). Route serving details + rationale in the plan doc's Epic W preamble."}
 {"actor": "claude", "at": "2026-07-09T10:22:58+00:00", "kind": "updated", "ref": "main@cbcad75", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-09T10:23:21+00:00", "kind": "claimed", "ref": "main@e4beb61", "text": "claude"}
+{"actor": "claude", "at": "2026-07-09T10:50:54+00:00", "kind": "claimed", "ref": "main@4639a35", "text": "claude"}
