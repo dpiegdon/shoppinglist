@@ -12,7 +12,9 @@ def create_blueprint(
     base_url: str,
     url_prefix: str = "/api/v1",
 ) -> Blueprint:
-    bp = Blueprint("shoppinglist_server", __name__, url_prefix=url_prefix)
+    bp = Blueprint(
+        "shoppinglist_server", __name__, url_prefix=url_prefix, template_folder="templates"
+    )
 
     config = {
         "database_path": database_path,
@@ -25,6 +27,15 @@ def create_blueprint(
         app = setup_state.app
         app.extensions[EXTENSION_KEY] = config
         app.register_error_handler(ApiError, _handle_api_error)
+
+        # The invite landing page is deliberately NOT under url_prefix (Spec
+        # §5's share URL is https://<server>/invite/<token>, no /api/v1), so
+        # it's registered directly on the app rather than through `bp`. A
+        # blueprint's template_folder is searched app-wide regardless of which
+        # blueprint (if any) a view belongs to, so invite.html still resolves.
+        from .routes.landing import register_routes as register_landing_routes
+
+        register_landing_routes(app)
 
     @bp.teardown_app_request
     def _close_db(exception=None):

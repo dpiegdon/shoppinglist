@@ -38,7 +38,7 @@ def _encode_token(key: bytes, invite_id: str, list_id: str, email: str, expires_
     return f"{payload_b64}.{signature_b64}"
 
 
-def _decode_token(key: bytes, token: str):
+def decode_token(key: bytes, token: str):
     try:
         payload_b64, signature_b64 = (token or "").split(".", 1)
         expected = _sign(key, payload_b64)
@@ -102,7 +102,7 @@ def revoke(conn, account_id: str, invite_id: str) -> None:
 
 
 def redeem(conn, key: bytes, account, token: str) -> str:
-    invite_id, list_id, invited_email, expires_at = _decode_token(key, token)
+    invite_id, list_id, invited_email, expires_at = decode_token(key, token)
 
     row = conn.execute(
         "SELECT revoked, used_at FROM invites WHERE id = ?", (invite_id,)
