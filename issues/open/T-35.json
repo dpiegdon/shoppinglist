@@ -1,0 +1,14 @@
+{
+  "body": "Web ListPage gained a \"Clear checked (N)\" button (red, small, next to the\nshow-checked toggle) that bulk-moves every checked item to backlog \u2014 an\nexplicit user request implementing the spec's \"clearing done items -> backlog\"\ntransition (design doc \u00a73 lifecycle table). Android has no equivalent: the only\nroute from checked to backlog is opening each item's edit dialog and changing\nthe status dropdown, one by one. After every shopping trip this is the natural\n\"finish up\" action, so the gap bites on the primary client.\n\nFix: same semantics as web \u2014 button/action visible when checked items exist\n(count shown), sets status=backlog on all checked items of the list in one\nrepo call (one dirty batch -> one sync push). Placement suggestion: alongside\nthe Show-checked switch row in ListScreen, or overflow menu; keep destructive\ncolor + maybe snackbar undo (restore previous statuses) since it's a bulk\nchange. Files: ui/list/ListScreen.kt + ListViewModel.kt, ItemsRepo (bulk\nsetStatus), tests.",
+  "created_at": "2026-07-09T23:16:38+00:00",
+  "id": "T-35",
+  "labels": [
+    "android",
+    "ux",
+    "parity",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android: missing 'Clear checked' bulk action (web has it; user-requested feature)",
+  "updated_at": "2026-07-09T23:16:38+00:00"
+}
