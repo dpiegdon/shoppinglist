@@ -17,11 +17,30 @@ import javax.inject.Singleton
 abstract class SessionModule {
     @Binds
     abstract fun bindTokenProvider(sessionStore: SessionStore): TokenProvider
+
+    @Binds
+    abstract fun bindSessionState(sessionStore: SessionStore): SessionState
+}
+
+/**
+ * Read/write session fields, kept separate from [TokenProvider] (interface segregation: OkHttp's
+ * AuthInterceptor only ever needs read-only token access). AuthRepository depends on this instead
+ * of the concrete [SessionStore] so it's fakeable in tests without a real Keystore.
+ */
+interface SessionState {
+    var token: String?
+    var accountEmail: String?
+    var defaultCurrency: String?
+    var lastOpenedListId: String?
+    var syncCursor: Long
+
+    /** Wipes all session state, e.g. on logout. */
+    fun clear()
 }
 
 /** Per-device session state. The bearer token lives in the Keystore-backed EncryptedSharedPreferences (Notes). */
 @Singleton
-class SessionStore @Inject constructor(@ApplicationContext context: Context) : TokenProvider {
+class SessionStore @Inject constructor(@ApplicationContext context: Context) : TokenProvider, SessionState {
     private val prefs = EncryptedSharedPreferences.create(
         context,
         "session",
@@ -30,30 +49,29 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
-    var token: String?
+    override var token: String?
         get() = prefs.getString(KEY_TOKEN, null)
         set(value) = prefs.edit().putString(KEY_TOKEN, value).apply()
 
     override fun currentToken(): String? = token
 
-    var accountEmail: String?
+    override var accountEmail: String?
         get() = prefs.getString(KEY_ACCOUNT_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_ACCOUNT_EMAIL, value).apply()
 
-    var defaultCurrency: String?
+    override var defaultCurrency: String?
         get() = prefs.getString(KEY_DEFAULT_CURRENCY, null)
         set(value) = prefs.edit().putString(KEY_DEFAULT_CURRENCY, value).apply()
 
-    var lastOpenedListId: String?
+    override var lastOpenedListId: String?
         get() = prefs.getString(KEY_LAST_OPENED_LIST_ID, null)
         set(value) = prefs.edit().putString(KEY_LAST_OPENED_LIST_ID, value).apply()
 
-    var syncCursor: Long
+    override var syncCursor: Long
         get() = prefs.getLong(KEY_SYNC_CURSOR, 0L)
         set(value) = prefs.edit().putLong(KEY_SYNC_CURSOR, value).apply()
 
-    /** Wipes all session state, e.g. on logout. */
-    fun clear() = prefs.edit().clear().apply()
+    override fun clear() = prefs.edit().clear().apply()
 
     private companion object {
         const val KEY_TOKEN = "token"

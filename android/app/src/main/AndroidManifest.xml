@@ -23,6 +23,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Unused in production; hosts content for Compose UI tests (createComposeRule()'s
+             default test host), which otherwise can't resolve an activity to launch. Debug builds
+             already get this from the androidx.compose.ui:ui-test-manifest dependency (exported
+             there), but that's debugImplementation-only, so release unit tests need it too. -->
+        <activity android:name="androidx.activity.ComponentActivity" android:exported="true" />
+
     </application>
 
 </manifest>

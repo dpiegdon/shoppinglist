@@ -28,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.ui.login.LoginScreen
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -57,7 +58,13 @@ private val drawerDestinations = listOf(
 fun ShoppingListNavHost(navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = Routes.LOGIN) {
         composable(Routes.LOGIN) {
-            PlaceholderScreen(title = "Log in")
+            LoginScreen(
+                onLoginSuccess = { startDestination ->
+                    navController.navigate(startDestination) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
+            )
         }
         composable(Routes.OVERVIEW) {
             AppDrawerScaffold(navController = navController, title = "Overview") {
