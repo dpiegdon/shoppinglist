@@ -1,0 +1,13 @@
+{
+  "body": "Bundle of standard-practice hardening gaps found in security review (none are\nspec violations; spec \u00a710 delegates transport/rate-limiting to the proxy, but\nthese belong in the app layer):\n\n1. change-password (accounts.py) leaves every other session's token valid. If\n   you're changing a password because a device/token may be compromised, that\n   defeats the purpose. Standard: revoke all auth_tokens for the account\n   except the one making the change (session list UI already distinguishes\n   'current'). Consider same-but-optional on change-email.\n2. No MAX_CONTENT_LENGTH anywhere: unbounded request bodies hit\n   request.get_json() \u2014 /sync will happily buffer arbitrarily large payloads.\n   Set a sane app-level default in create_blueprint's record_once (e.g. a few\n   MB, sized to realistic sync batches) so self-hosters get protection even\n   without proxy tuning; document override.\n3. HTML-serving routes (invite landing page, embedded web app index) send no\n   security headers. Add at least Content-Security-Policy (SPA is fully\n   self-contained: default-src 'self' plus what Vite's output needs),\n   X-Content-Type-Options: nosniff, X-Frame-Options/frame-ancestors, and\n   Referrer-Policy \u2014 the invite URL path contains the secret token, so\n   Referrer-Policy: no-referrer on the landing page matters most.\n4. Document (README \"Deployment requirements\"): register/login responses\n   permit account enumeration (409 email_taken; accepted trade-off, no email\n   infra for the alternative) \u2014 state it explicitly so operators know.\nFiles: accounts.py (+tests for 1), __init__.py (2,3), templates/invite.html\nheaders via after_request or explicit response headers, README.md (4).",
+  "created_at": "2026-07-09T23:16:41+00:00",
+  "id": "T-45",
+  "labels": [
+    "server",
+    "security",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Server hardening: revoke sessions on password change, request size cap, security headers",
+  "updated_at": "2026-07-09T23:16:41+00:00"
+}
