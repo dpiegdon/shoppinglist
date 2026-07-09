@@ -11,7 +11,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "W5: wire built web app into the Flask blueprint",
-  "updated_at": "2026-07-09T10:22:59+00:00"
+  "updated_at": "2026-07-09T10:51:21+00:00"
 }
