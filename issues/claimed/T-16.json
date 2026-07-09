@@ -10,7 +10,8 @@
     "opus",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "A7: list view (core screen)",
-  "updated_at": "2026-07-08T22:17:51+00:00"
+  "updated_at": "2026-07-09T18:23:19+00:00"
 }
