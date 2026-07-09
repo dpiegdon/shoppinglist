@@ -1,0 +1,13 @@
+{
+  "body": "The login screen requires https (good) but every connection-layer failure\nsurfaces as \"Couldn't reach the server\" (IOException catch-all in\nLoginViewModel). An SSLHandshakeException from a self-signed/untrusted cert \u2014\nthe FIRST thing every self-hoster of dev_tls_server.py or a homelab setup hits\n\u2014 is indistinguishable from wrong-URL/offline, and there is no path to make it\nwork: Android 7+ never trusts user-installed CAs by default and the app ships\nno networkSecurityConfig.\n\nFix:\n- Catch SSLException distinctly in LoginViewModel.submit() (and surface it in\n  sync failure states) with an actionable message (\"The server's certificate\n  isn't trusted...\").\n- Add android:networkSecurityConfig trusting user-installed CAs (a deliberate,\n  documented choice appropriate for a self-hosted-server app: it only extends\n  trust to CAs the device owner explicitly installed; system CAs still work).\n- Document the options in android/README.md (proper cert via reverse proxy;\n  or install your CA as a user CA).\nFiles: LoginViewModel.kt, AndroidManifest.xml + res/xml/network_security_config.xml,\nandroid/README.md.",
+  "created_at": "2026-07-09T23:16:39+00:00",
+  "id": "T-38",
+  "labels": [
+    "android",
+    "ux",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Android: self-hosted TLS reality \u2014 indistinct error messages, self-signed certs unsupported",
+  "updated_at": "2026-07-09T23:16:39+00:00"
+}
