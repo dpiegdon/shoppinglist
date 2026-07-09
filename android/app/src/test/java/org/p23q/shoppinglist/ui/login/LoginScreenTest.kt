@@ -7,6 +7,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.AuthRepository
+import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -29,7 +30,7 @@ class LoginScreenTest {
         val tempFile = File.createTempFile("login_screen_test", ".preferences_pb")
         tempFile.deleteOnExit()
         val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
-        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig)
+        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, FakeSessionState())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)

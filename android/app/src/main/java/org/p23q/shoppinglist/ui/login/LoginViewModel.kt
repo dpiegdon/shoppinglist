@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.AuthRepository
 import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.UnauthorizedException
 import org.p23q.shoppinglist.ui.Routes
@@ -32,6 +33,7 @@ data class LoginUiState(
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val serverConfig: ServerConfig,
+    private val sessionState: SessionState,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -89,6 +91,9 @@ class LoginViewModel @Inject constructor(
 
     fun startDestinationAfterLogin(): String =
         authRepository.lastOpenedListId()?.let { Routes.list(it) } ?: Routes.OVERVIEW
+
+    /** Notes "user info": the drawer (A6) shows this alongside the Log out entry. */
+    val loggedInEmail: String? get() = sessionState.accountEmail
 }
 
 private fun isValidHttpsUrl(url: String): Boolean {

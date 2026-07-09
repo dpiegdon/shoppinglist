@@ -11,6 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.AuthRepository
+import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.UnauthorizedException
 import java.io.File
@@ -53,7 +54,7 @@ class LoginViewModelTest {
     fun `happy login succeeds and persists the entered server URL`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
 
         viewModel.onServerUrlChange("https://example.com/shoppinglist")
         viewModel.onEmailChange("milk@example.com")
@@ -71,7 +72,7 @@ class LoginViewModelTest {
     fun `bad password surfaces an error message and does not succeed`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository(onLogin = { _, _ -> throw UnauthorizedException("bad creds") })
-        val viewModel = LoginViewModel(repo, serverConfig)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
 
         viewModel.onServerUrlChange("https://example.com")
         viewModel.onEmailChange("milk@example.com")
@@ -86,7 +87,7 @@ class LoginViewModelTest {
     fun `register mode calls register before login`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
 
         viewModel.onServerUrlChange("https://example.com")
         viewModel.onEmailChange("milk@example.com")
@@ -102,7 +103,7 @@ class LoginViewModelTest {
     fun `non-https server URL is rejected before calling the repository`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
 
         viewModel.onServerUrlChange("http://example.com")
         viewModel.onEmailChange("milk@example.com")
@@ -117,10 +118,19 @@ class LoginViewModelTest {
     fun `logout delegates to the repository`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
 
         viewModel.logout().join()
 
         assertTrue(repo.loggedOut)
+    }
+
+    @Test
+    fun `loggedInEmail reflects the session state's account email`() = runTest {
+        val serverConfig = newServerConfig()
+        val sessionState = FakeSessionState().apply { accountEmail = "shopper@example.com" }
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, sessionState)
+
+        assertEquals("shopper@example.com", viewModel.loggedInEmail)
     }
 }
