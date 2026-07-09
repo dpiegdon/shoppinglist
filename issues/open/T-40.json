@@ -1,0 +1,15 @@
+{
+  "body": "Bundle of small list-surface polish items, all in the name of \"the Android app\nshould be perfect\":\n- ItemRow (ui/list/ListScreen.kt) renders only name + price. Quantity \u2014 the\n  thing you most need while standing in the store (\"2l milk\") \u2014 is not shown\n  (web shows quantity \u00b7 price). Show quantity, and the note (secondary line,\n  ellipsized) since notes like \"the ripe ones\" only matter in-store.\n- Checked strikethrough uses hardcoded Color.Red \u2014 poor contrast in dark\n  theme; use MaterialTheme.colorScheme.error (web equivalent uses a\n  theme-aware danger color).\n- Registry status chip shows raw wire strings (\"todo\"/\"backlog\"); use\n  user-facing labels (\"To buy\"/\"Done\"/\"Backlog\" or similar).\n- Settings theme chips show raw enum names SYSTEM/LIGHT/DARK; humanize.\n- Overview: activeLists() is unordered (rowid order); sort by name like web,\n  or most-recently-used.\n- Login screen: email field lacks KeyboardType.Email/ime Next->Done flow; no\n  show-password toggle; Column isn't scrollable (small screens + keyboard).\nFiles: ListScreen.kt, RegistryScreen.kt, SettingsScreen.kt, Daos.kt\n(activeLists ORDER BY), LoginScreen.kt.",
+  "created_at": "2026-07-09T23:16:39+00:00",
+  "id": "T-40",
+  "labels": [
+    "android",
+    "ux",
+    "parity",
+    "sonnet",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Android list rows: show quantity/note; fix hardcoded red; assorted row/label polish",
+  "updated_at": "2026-07-09T23:16:39+00:00"
+}
