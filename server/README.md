@@ -92,6 +92,27 @@ The second call returns a bearer token; pass it as `Authorization: Bearer
 <token>` on every other endpoint (see the wire contract linked above for the
 full list).
 
+## TLS dev server (for client-side testing)
+
+`server/dev_tls_server.py` serves the same app over **HTTPS on port 8723**
+with an ad-hoc self-signed certificate, bound to `0.0.0.0` — for Android/web
+clients under development that need a real `https://` endpoint (e.g. to
+exercise the invite landing page's App Link, which is hardcoded to
+`scheme=https`). Requires the `dev` extra (`cryptography`).
+
+```bash
+cd server
+python dev_tls_server.py
+# Serving HTTPS (self-signed) on 0.0.0.0:8723, BASE_URL=https://localhost:8723
+```
+
+Uses its own database (`dev_tls.db`, override via `DATABASE_PATH`), separate
+from the plain-HTTP dev server above. Clients must accept/ignore the
+self-signed certificate (`curl -k`, or the client's debug-build cert-trust
+config). Set `BASE_URL` if a device needs to reach it via the host's LAN IP
+rather than `localhost`. Not for production — see Deployment requirements
+below.
+
 ## Testing
 
 ```bash
