@@ -1,0 +1,13 @@
+{
+  "body": "Every A1-A11 ticket's manual e2e verification substituted Robolectric\nunit/Compose tests plus curl-based checks against the live dev server,\nin place of the emulator runs several tickets' acceptance criteria\nexplicitly asked for (A5: \"two emulators converge\"; A9: \"invite\u2192link\u2192\nredeem on second emulator\"; A11: \"Full ./gradlew test connectedAndroidTest\n(or documented emulator run) green\"). No AVD/emulator was available in\nthe sandbox this work was done in.\n\nThis means several things have never been verified against real Android\nOS behavior:\n- The App Link intent-filter (T-18) actually resolving a tapped\n  https://.../invite/... link to this app (vs. just the\n  Navigation-Compose deep-link parsing, which IS covered by\n  RedeemScreenTest).\n- WorkManager's actual periodic/expedited scheduling (A5) under real\n  Android constraints (Doze, battery optimization).\n- EncryptedSharedPreferences/Keystore behavior on a real device vs.\n  Robolectric's shadow.\n- The Android share sheet (invite URL sharing, A9) actually presenting.\n- General UI layout/rendering on a real screen size, not Robolectric's\n  simulated small viewport (observed as small as 320x470px for dialogs\n  during A8/A10 debugging).\n\nShould run the full `connectedAndroidTest` suite plus a manual pass\n(ideally two emulators/devices, one inviting the other) once an\nemulator/device is available.",
+  "created_at": "2026-07-09T22:38:13+00:00",
+  "id": "T-29",
+  "labels": [
+    "android",
+    "ops",
+    "reliability"
+  ],
+  "priority": 3,
+  "title": "Run real device/emulator verification for the Android app",
+  "updated_at": "2026-07-09T22:38:13+00:00"
+}
