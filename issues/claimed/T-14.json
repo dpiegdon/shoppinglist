@@ -12,7 +12,8 @@
     "opus",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "A5: sync engine + WorkManager triggers",
-  "updated_at": "2026-07-08T22:17:50+00:00"
+  "updated_at": "2026-07-09T15:13:38+00:00"
 }
