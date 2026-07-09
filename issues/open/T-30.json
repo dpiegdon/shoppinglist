@@ -1,0 +1,12 @@
+{
+  "body": "ListPropsScreen's category order editor (A9) uses IconButton up/down\ncontrols to reorder categories rather than a real drag gesture. This\nsatisfies A9's acceptance criteria (the persisted order is a correct\nLWW edit) and the Notes' functional requirement, but not the literal\n\"drag-reorder\" wording in the original ticket text.\n\nUpgrading to real drag would need Compose's pointerInput + offset\ntracking (or a reorderable-list library), which is a distinct, fairly\ninvolved piece of work \u2014 deliberately deferred rather than gold-plated\ninto A9.\n\nLow priority: the current buttons are fully functional, just less\nfluid UX than drag would be.",
+  "created_at": "2026-07-09T22:38:21+00:00",
+  "id": "T-30",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Category order editor: replace up/down buttons with real drag-reorder",
+  "updated_at": "2026-07-09T22:38:21+00:00"
+}
