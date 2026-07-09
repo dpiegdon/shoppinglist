@@ -1,9 +1,46 @@
 # Shopping List — Android client
 
-Jetpack Compose client for the shopping-list server (`server/`). See
-`docs/superpowers/specs/client-ui-notes.md` for the product requirements and
-`docs/superpowers/plans/2026-07-08-shopping-list-tickets.md` for the Wire
+Jetpack Compose client for the shopping-list server (`server/`). Offline-first:
+it keeps a full local Room mirror and syncs to the server in the background, so
+the app stays usable with no connection. See
+`../docs/superpowers/specs/client-ui-notes.md` for the product requirements and
+`../docs/superpowers/plans/2026-07-08-shopping-list-tickets.md` for the Wire
 Contract this app implements against.
+
+## Building
+
+Requires a **JDK 17** and the **Android SDK** — point `ANDROID_HOME` at your
+SDK, or add a `local.properties` here with `sdk.dir=/path/to/Android/sdk`.
+Then:
+
+```bash
+./gradlew assembleDebug
+```
+
+The APK lands at `app/build/outputs/apk/debug/app-debug.apk`. It's a debug
+build signed with the standard Android debug key — fine for installing and
+testing, but not for Play Store distribution (a release build needs your own
+signing config added to `app/build.gradle.kts`).
+
+Run the checks with `./gradlew lint test`.
+
+## Installing on a phone
+
+minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
+
+- **Over USB (adb):** enable Developer Options → USB debugging on the phone,
+  connect it, then run
+  `adb install app/build/outputs/apk/debug/app-debug.apk`.
+- **Sideload:** copy the APK to the phone (email, cloud drive, USB) and open
+  it in a file manager. You'll be prompted to allow installs from that source
+  the first time.
+
+On first launch the app asks for your **server URL** — the base URL where the
+Flask blueprint is mounted, e.g. `https://shopping.example.com/` or
+`https://example.com/apps/shopping/`. It **must be `https`** (the login screen
+rejects plain `http`), so the server needs TLS in front of it — see
+[`../server/README.md`](../server/README.md) for the deployment requirements.
+Enter it, then register a new account or log in.
 
 ## Invite links / App Links
 

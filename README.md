@@ -53,6 +53,16 @@ See [`web/README.md`](web/README.md).
 
 ### Android client
 
-<!-- TODO(android): fill in setup instructions -->
+Build a debug APK (needs a JDK and the Android SDK):
 
-See [`android/README.md`](android/README.md).
+```bash
+cd android
+./gradlew assembleDebug   # -> app/build/outputs/apk/debug/app-debug.apk
+```
+
+Install it on a phone (Android 8.0+) with `adb install app-debug.apk`, or
+copy the APK to the device and open it. On first launch, enter your server's
+**https** URL and register or log in.
+
+See [`android/README.md`](android/README.md) for prerequisites, sideloading,
+release builds, and invite-link (App Link) setup.
