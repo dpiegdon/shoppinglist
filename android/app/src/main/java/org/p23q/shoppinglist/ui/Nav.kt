@@ -22,7 +22,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,6 +36,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.ui.item.AddItemDialog
+import org.p23q.shoppinglist.ui.item.EditItemDialog
 import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
 import org.p23q.shoppinglist.ui.login.LoginViewModel
@@ -78,10 +84,23 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
                 OverviewScreen(onOpenList = { listId -> navController.navigate(Routes.list(listId)) })
             }
         }
-        composable(Routes.LIST_PATTERN) {
+        composable(Routes.LIST_PATTERN) { backStackEntry ->
+            val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
             AppDrawerScaffold(navController = navController, title = "List") {
-                // Add/edit dialogs land in A8; both callbacks are no-ops until then.
-                ListScreen(onAddItem = {}, onEditItem = {})
+                var isAddDialogOpen by rememberSaveable { mutableStateOf(false) }
+                var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
+
+                ListScreen(
+                    onAddItem = { isAddDialogOpen = true },
+                    onEditItem = { itemId -> editingItemId = itemId },
+                )
+
+                if (isAddDialogOpen) {
+                    AddItemDialog(listId = listId, onDismiss = { isAddDialogOpen = false })
+                }
+                editingItemId?.let { itemId ->
+                    EditItemDialog(itemId = itemId, onDismiss = { editingItemId = null })
+                }
             }
         }
         composable(Routes.REGISTRY_PATTERN) { backStackEntry ->

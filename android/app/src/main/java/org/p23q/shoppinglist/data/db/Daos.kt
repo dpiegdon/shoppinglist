@@ -14,6 +14,17 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun getById(id: String): ItemEntity?
 
+    /**
+     * Case-insensitive exact-name lookup for the local uniqueness pre-check (Global Constraints:
+     * item names unique per list, case-insensitive). [excludingId] takes an empty-string sentinel
+     * (item ids are UUIDs, never "") rather than a nullable bind, so a rename can exclude itself.
+     */
+    @Query(
+        "SELECT * FROM items WHERE listId = :listId AND deleted_value = 0 " +
+            "AND lower(name_value) = lower(:name) AND id != :excludingId LIMIT 1",
+    )
+    suspend fun findByExactName(listId: String, name: String, excludingId: String): ItemEntity?
+
     @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
     fun itemsForListByStatus(listId: String, status: String): Flow<List<ItemEntity>>
 

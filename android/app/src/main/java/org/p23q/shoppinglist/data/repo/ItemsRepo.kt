@@ -32,6 +32,10 @@ class ItemsRepo @Inject constructor(
 
     suspend fun getById(itemId: String): ItemEntity? = itemDao.getById(itemId)
 
+    /** Local pre-check mirroring the server's case-insensitive per-list name uniqueness rule. */
+    suspend fun findByExactName(listId: String, name: String, excludingId: String = ""): ItemEntity? =
+        itemDao.findByExactName(listId, name, excludingId)
+
     suspend fun dirtyRows(): List<ItemEntity> = itemDao.dirtyRows()
 
     suspend fun clearDirty(ids: List<String>) = itemDao.clearDirty(ids)
