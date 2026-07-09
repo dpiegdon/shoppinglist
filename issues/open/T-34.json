@@ -1,0 +1,14 @@
+{
+  "body": "ListViewModel loads the list row exactly once in init (listsRepo.getById), not\nas a Flow. Consequences:\n- Rename the list in List properties, navigate back (same back-stack entry ->\n  same ViewModel) -> old name state, and grouping still uses the old\n  category_order after reordering categories in props.\n- category_order/name changes arriving via sync from other devices never\n  reflect while the screen is open.\n- Independently, Nav.kt passes hardcoded scaffold titles: \"List\", \"Registry\",\n  \"List properties\" \u2014 the actual list name (which ListUiState even carries) is\n  never displayed anywhere on those screens. In a multi-list app you cannot\n  tell which list you're looking at.\n\nFix: expose a Flow<ListEntity> from ListsRepo/ListDao (observeById), combine it\ninto ListUiState so name + categoryOrder are live; surface the real list name\nin the top bar for list/registry/props destinations (pass through nav args or\nhoist from the VM). Same staleness applies to ListPropsViewModel's init.\nAlso: sessionState.defaultCurrency is read once per VM \u2014 currency changes only\napply after process restart; fold into the same \"make it live\" pass if cheap.",
+  "created_at": "2026-07-09T23:16:37+00:00",
+  "id": "T-34",
+  "labels": [
+    "android",
+    "bug",
+    "ux",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android: list name/category order go stale; top bar shows 'List' not the list's name",
+  "updated_at": "2026-07-09T23:16:37+00:00"
+}
