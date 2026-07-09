@@ -32,6 +32,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
 import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
@@ -77,10 +78,10 @@ fun ShoppingListNavHost(navController: NavHostController = rememberNavController
                 OverviewScreen(onOpenList = { listId -> navController.navigate(Routes.list(listId)) })
             }
         }
-        composable(Routes.LIST_PATTERN) { backStackEntry ->
-            val listId = backStackEntry.arguments?.getString(Routes.LIST_ID_ARG)
+        composable(Routes.LIST_PATTERN) {
             AppDrawerScaffold(navController = navController, title = "List") {
-                PlaceholderScreen(title = "List $listId")
+                // Add/edit dialogs land in A8; both callbacks are no-ops until then.
+                ListScreen(onAddItem = {}, onEditItem = {})
             }
         }
         composable(Routes.REGISTRY_PATTERN) { backStackEntry ->
