@@ -229,7 +229,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `confirmLeave still cleans up locally even if the server is unreachable`() = runTest {
+    fun `confirmLeave offline keeps the list and surfaces an error instead of a zombie delete (T-39)`() = runTest {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
@@ -237,8 +237,35 @@ class ListPropsViewModelTest {
 
         viewModel.confirmLeave().join()
 
+        // Still a member locally (the server never confirmed), with an actionable error.
+        assertFalse(viewModel.uiState.value.hasLeft)
+        assertNotNull(viewModel.uiState.value.errorMessage)
+        assertNotNull(listsRepo.getById(listId))
+        assertNotNull(itemsRepo.getById(itemId))
+    }
+
+    @Test
+    fun `confirmLeave treats a 404 as already-left and cleans up locally (T-39)`() = runTest {
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "gone"}"""))
+
+        viewModel.confirmLeave().join()
+
         assertTrue(viewModel.uiState.value.hasLeft)
         assertNull(listsRepo.getById(listId))
         assertNull(itemsRepo.getById(itemId))
+    }
+
+    @Test
+    fun `revokeInvite offline surfaces an error and does not silently no-op (T-39)`() = runTest {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        server.shutdown()
+
+        viewModel.revokeInvite("inv-1").join()
+
+        assertNotNull(viewModel.uiState.value.errorMessage)
     }
 }

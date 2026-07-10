@@ -116,7 +116,18 @@ class ListPropsViewModel @Inject constructor(
     fun consumeShareUrl() = _uiState.update { it.copy(inviteShareUrl = null) }
 
     fun revokeInvite(inviteId: String): Job = viewModelScope.launch {
-        runCatching { apiProvider.get().revokeInvite(inviteId) }
+        try {
+            apiProvider.get().revokeInvite(inviteId)
+        } catch (e: ApiException) {
+            // 404: the invite is already gone — fall through and refresh so it drops off the list.
+            if (e.httpStatus != 404) {
+                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't revoke the invite") }
+                return@launch
+            }
+        } catch (e: IOException) {
+            _uiState.update { it.copy(errorMessage = "You're offline; try again when connected") }
+            return@launch
+        }
         loadMembers().join()
     }
 
@@ -124,11 +135,27 @@ class ListPropsViewModel @Inject constructor(
 
     fun cancelLeave() = _uiState.update { it.copy(isLeaveConfirmOpen = false) }
 
-    /** Best-effort server call, same pattern as AuthRepositoryImpl.logout() — the device stops
-     * syncing a list it no longer has access to either way, so local cleanup always happens.
+    /**
+     * Leaving requires server confirmation (T-39): membership is not LWW content and has no retry
+     * queue, so cleaning up locally on a failed/offline call would produce a "zombie" — the account
+     * is still a member server-side, so the list reappears on the next full resync (and other members
+     * still see you). Only remove local state after a confirmed success (or a 404 = already not a
+     * member). NOTE: do NOT copy this to logout(), whose always-local-wipe is correct — you're ending
+     * your own session there, not asking the server's permission.
      */
     fun confirmLeave(): Job = viewModelScope.launch {
-        runCatching { apiProvider.get().leaveList(listId) }
+        try {
+            apiProvider.get().leaveList(listId)
+        } catch (e: ApiException) {
+            // 404: the server already lacks the membership — effectively left, so finish cleanup.
+            if (e.httpStatus != 404) {
+                _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = e.message ?: "Couldn't leave the list") }
+                return@launch
+            }
+        } catch (e: IOException) {
+            _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = "You're offline; try again when connected") }
+            return@launch
+        }
         itemsRepo.hardDeleteByListId(listId)
         listsRepo.removeLocally(listId)
         _uiState.update { it.copy(isLeaveConfirmOpen = false, hasLeft = true) }
