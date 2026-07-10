@@ -7,7 +7,8 @@
     "bug",
     "ux"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Redeem via App Link/paste fails silently when logged out",
-  "updated_at": "2026-07-09T22:38:03+00:00"
+  "updated_at": "2026-07-10T13:04:43+00:00"
 }
