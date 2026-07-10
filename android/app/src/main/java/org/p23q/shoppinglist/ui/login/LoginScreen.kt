@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.login
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,6 +33,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.BuildConfig
 
 @Composable
 fun LoginScreen(
@@ -108,6 +112,26 @@ fun LoginScreen(
 
         TextButton(onClick = viewModel::onToggleRegisterMode) {
             Text(if (state.isRegisterMode) "Already have an account? Log in" else "New here? Register")
+        }
+
+        // Debug-only self-signed-cert opt-in, mirrored from Settings so it's reachable before login —
+        // Settings is post-auth, which would otherwise be a bootstrap deadlock for a self-signed
+        // dev server. Absent from release builds (BuildConfig.DEBUG + no-op DevCertTrust). (T-38/T-46)
+        if (BuildConfig.DEBUG) {
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Trust self-signed certificates", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Developer option for a self-signed dev server. Insecure; debug builds only.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(
+                    checked = state.allowSelfSignedCerts,
+                    onCheckedChange = { viewModel.setAllowSelfSignedCerts(it) },
+                )
+            }
         }
     }
 }

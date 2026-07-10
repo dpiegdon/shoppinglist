@@ -108,6 +108,17 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `the self-signed toggle persists so it can apply before the first login (T-38)`() = runTest {
+        val serverConfig = newServerConfig()
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
+
+        viewModel.setAllowSelfSignedCerts(true).join()
+
+        assertTrue(viewModel.uiState.value.allowSelfSignedCerts)
+        assertTrue(serverConfig.allowSelfSignedCerts.first())
+    }
+
+    @Test
     fun `register mode calls register before login`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()

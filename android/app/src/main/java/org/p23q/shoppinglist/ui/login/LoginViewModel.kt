@@ -31,6 +31,9 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val loginSucceeded: Boolean = false,
+    /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
+     *  reach it before they've managed to log in — otherwise it's a bootstrap deadlock (T-38/T-46). */
+    val allowSelfSignedCerts: Boolean = false,
 )
 
 @HiltViewModel
@@ -54,6 +57,17 @@ class LoginViewModel @Inject constructor(
                 _uiState.update { if (it.serverUrl.isBlank()) it.copy(serverUrl = savedUrl) else it }
             }
         }
+        viewModelScope.launch {
+            _uiState.update { it.copy(allowSelfSignedCerts = serverConfig.allowSelfSignedCerts.first()) }
+        }
+    }
+
+    /** Debug-only: persist the self-signed-cert opt-in (ApiProvider rebuilds its client on the flag,
+     *  so the next submit picks it up). Surfaced on login to break the self-hosting bootstrap
+     *  deadlock — the Settings screen isn't reachable until you're already logged in (T-38/T-46). */
+    fun setAllowSelfSignedCerts(allow: Boolean): Job = viewModelScope.launch {
+        serverConfig.setAllowSelfSignedCerts(allow)
+        _uiState.update { it.copy(allowSelfSignedCerts = allow, errorMessage = null) }
     }
 
     fun onServerUrlChange(value: String) {
