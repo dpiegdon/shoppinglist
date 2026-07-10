@@ -32,8 +32,8 @@ def _insert_list_and_membership(conn, list_id, account_id):
 
 
 def test_change_password_service_happy_path(db_conn):
-    account_id, _ = _register_and_login(db_conn)
-    accounts.change_password(db_conn, account_id, PASSWORD, "a new password 2")
+    account_id, token = _register_and_login(db_conn)
+    accounts.change_password(db_conn, account_id, PASSWORD, "a new password 2", token)
 
     row = db_conn.execute(
         "SELECT password_hash FROM accounts WHERE id = ?", (account_id,)
@@ -44,10 +44,25 @@ def test_change_password_service_happy_path(db_conn):
 
 
 def test_change_password_wrong_current_raises_401(db_conn):
-    account_id, _ = _register_and_login(db_conn)
+    account_id, token = _register_and_login(db_conn)
     with pytest.raises(ApiError) as excinfo:
-        accounts.change_password(db_conn, account_id, "not the password", "a new password 2")
+        accounts.change_password(db_conn, account_id, "not the password", "a new password 2", token)
     assert excinfo.value.status == 401
+
+
+def test_change_password_revokes_other_sessions_but_keeps_current(db_conn):
+    account_id, token = _register_and_login(db_conn)
+    # A second, older session on another device — the one we expect to be revoked.
+    other_token, _ = auth.login(db_conn, EMAIL, PASSWORD, "other-device")
+
+    accounts.change_password(db_conn, account_id, PASSWORD, "a new password 2", token)
+
+    remaining = db_conn.execute(
+        "SELECT token_hash FROM auth_tokens WHERE account_id = ?", (account_id,)
+    ).fetchall()
+    hashes = {row["token_hash"] for row in remaining}
+    assert hashes == {auth.hash_token(token)}
+    assert auth.hash_token(other_token) not in hashes
 
 
 def test_change_email_service_happy_path(db_conn):
@@ -233,6 +248,29 @@ def test_change_password_http_wrong_current_401(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 401
+
+
+def test_change_password_http_invalidates_other_devices(client):
+    token = _register_and_login_http(client)
+    # A second device logs in, then the first device changes the password.
+    other = client.post(
+        "/api/v1/login",
+        json={"email": EMAIL, "password": PASSWORD, "device_label": "other-device"},
+    ).get_json()["token"]
+
+    client.post(
+        "/api/v1/account/change-password",
+        json={"current_password": PASSWORD, "new_password": "a new password 2"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    # The other device's token is now revoked; the changing device stays authenticated.
+    assert client.get(
+        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {other}"}
+    ).status_code == 401
+    assert client.get(
+        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
+    ).status_code == 200
 
 
 def test_change_email_http_flow(client):

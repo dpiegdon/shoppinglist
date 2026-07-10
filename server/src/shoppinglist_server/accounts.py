@@ -21,13 +21,24 @@ def _require_password(conn: sqlite3.Connection, account_id: str, password: str) 
 
 
 def change_password(
-    conn: sqlite3.Connection, account_id: str, current_password: str, new_password: str
+    conn: sqlite3.Connection,
+    account_id: str,
+    current_password: str,
+    new_password: str,
+    current_token: str,
 ) -> None:
     _require_password(conn, account_id, current_password)
     auth.validate_password(new_password)
     conn.execute(
         "UPDATE accounts SET password_hash = ? WHERE id = ?",
         (generate_password_hash(new_password), account_id),
+    )
+    # Revoke every other session (T-45): a password change is the standard response to a
+    # possibly-compromised device or token, so leaving other tokens valid would defeat it. The
+    # session performing the change keeps its own token, so the user isn't logged out here.
+    conn.execute(
+        "DELETE FROM auth_tokens WHERE account_id = ? AND token_hash != ?",
+        (account_id, auth.hash_token(current_token)),
     )
     conn.commit()
 

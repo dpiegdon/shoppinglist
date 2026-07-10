@@ -11,7 +11,11 @@ def register_routes(bp):
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
         accounts.change_password(
-            conn, g.account.id, data.get("current_password"), data.get("new_password")
+            conn,
+            g.account.id,
+            data.get("current_password"),
+            data.get("new_password"),
+            g.token,
         )
         return "", 204
 

@@ -1,9 +1,25 @@
 from flask import Blueprint, current_app, g, jsonify, request
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from . import db as db_module
 from .errors import ApiError
 
 EXTENSION_KEY = "shoppinglist_server"
+
+# App-level request-body cap (T-45): request.get_json() would otherwise buffer an unbounded body —
+# /sync especially. 4 MB sits comfortably above realistic sync batches; operators can override via
+# the standard Flask MAX_CONTENT_LENGTH config (documented in the README). setdefault, so an
+# operator-set value wins.
+DEFAULT_MAX_CONTENT_LENGTH = 4 * 1024 * 1024
+
+# CSP for the HTML-serving routes (invite landing, embedded SPA). script-src falls back to the
+# strict default-src 'self' — neither page uses inline scripts, so this blocks injected script
+# outright. style-src allows 'unsafe-inline' because invite.html carries an inline <style> and the
+# SPA sets inline styles at runtime; inline style is far lower risk than inline script (T-45).
+HTML_SECURITY_CSP = (
+    "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+    "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+)
 
 
 def create_blueprint(
@@ -44,6 +60,17 @@ def create_blueprint(
         # was the original bug this docstring/design replaced.
         app.extensions.setdefault(EXTENSION_KEY, {})[bp.name] = config
         app.register_error_handler(ApiError, _handle_api_error)
+        app.register_error_handler(RequestEntityTooLarge, _handle_payload_too_large)
+
+        # App-wide, not per-instance: cap the body size and attach security headers once. Guarded so
+        # mounting several instances doesn't stack duplicate after_request callbacks (T-45).
+        # Flask seeds MAX_CONTENT_LENGTH as None (unset), so key in `is None` — not setdefault — is
+        # what lets an operator-set value win while still supplying our default.
+        if app.config.get("MAX_CONTENT_LENGTH") is None:
+            app.config["MAX_CONTENT_LENGTH"] = DEFAULT_MAX_CONTENT_LENGTH
+        if not app.extensions.get("shoppinglist_security_headers"):
+            app.extensions["shoppinglist_security_headers"] = True
+            app.after_request(_add_security_headers)
 
         # The invite landing page is deliberately NOT under url_prefix (Spec
         # §5's share URL is https://<server>/invite/<token>, no /api/v1), so
@@ -114,6 +141,23 @@ def _handle_api_error(err: ApiError):
         for key, value in err.details.items():
             body.setdefault(key, value)
     return jsonify(body), err.status
+
+
+def _handle_payload_too_large(err: RequestEntityTooLarge):
+    # Same JSON envelope shape as ApiError, so API clients parse it the same way (T-45).
+    return jsonify({"error": "payload_too_large", "message": "Request body is too large."}), 413
+
+
+def _add_security_headers(response):
+    # Applied app-wide (T-45). nosniff and no-referrer are safe on every response — no-referrer in
+    # particular keeps the secret token in an /invite/<token> URL out of the Referer header on any
+    # navigation away. CSP and X-Frame-Options are only meaningful for HTML, so scope them there.
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if response.mimetype == "text/html":
+        response.headers.setdefault("Content-Security-Policy", HTML_SECURITY_CSP)
+        response.headers.setdefault("X-Frame-Options", "DENY")
+    return response
 
 
 def get_config() -> dict:

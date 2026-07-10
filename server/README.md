@@ -98,6 +98,7 @@ instances, and the CLI's instance-selection behavior).
 | `SECRET_KEY` | Flask secret. |
 | `INVITE_HMAC_KEY` | Server signing key for invite tokens. Keep it secret and stable — rotating it invalidates every outstanding invite. |
 | `DATABASE_PATH` | SQLite file path. |
+| `MAX_CONTENT_LENGTH` | Flask config key (not read from the env by the blueprint). The blueprint sets a **4 MB** default request-body cap so a host app is protected without proxy tuning; set this in the host app's Flask config to raise/lower it. Oversized requests get a `413 payload_too_large` JSON error. |
 
 The standalone dev `app.py` (below) reads these from the environment; a host
 app instead passes them as `create_blueprint(...)` arguments directly.
@@ -213,6 +214,29 @@ they are the deploying operator's responsibility:
   travel in plaintext.
 - **Login rate-limiting** should be added at the proxy; the blueprint does not
   rate-limit `/login` itself.
+
+What the blueprint *does* handle itself (so you don't have to at the proxy, and
+should avoid double-setting):
+
+- **Request body cap** — a 4 MB `MAX_CONTENT_LENGTH` default (see Configuration
+  to override).
+- **Security headers** — every response carries `X-Content-Type-Options:
+  nosniff` and `Referrer-Policy: no-referrer` (the latter keeps the secret token
+  in an `/invite/<token>` URL out of the `Referer` header); HTML responses (the
+  invite landing page and the embedded web client) additionally carry a
+  `Content-Security-Policy` and `X-Frame-Options: DENY`. All are set with
+  `setdefault`, so a header you set at the proxy is not overwritten.
+- **Session revocation on password change** — changing a password revokes all of
+  the account's other sessions, keeping only the one that made the change.
+
+Known, accepted trade-off:
+
+- **Account enumeration.** Registration returns `409 email_taken` for an
+  address already in use, and the operator `reset-password` CLI reports whether
+  an email exists — both reveal account existence. This is deliberate: with no
+  outbound email infrastructure (see Out of scope) there's no non-enumerating
+  alternative for these flows. `/login` itself does *not* enumerate (it returns
+  the same `invalid_credentials` for an unknown email and a wrong password).
 
 ## Out of scope (v1)
 
