@@ -21,7 +21,9 @@ import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncResult
 import org.p23q.shoppinglist.data.sync.SyncStatus
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -35,6 +37,7 @@ class OverviewViewModelTest {
     private lateinit var itemsRepo: ItemsRepo
     private lateinit var sessionState: FakeSessionState
     private lateinit var syncStatus: SyncStatus
+    private var syncCalls = 0
     private lateinit var viewModel: OverviewViewModel
 
     @Before
@@ -48,7 +51,11 @@ class OverviewViewModelTest {
         itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
         sessionState = FakeSessionState()
         syncStatus = SyncStatus()
-        viewModel = OverviewViewModel(listsRepo, itemsRepo, sessionState, syncStatus)
+        val syncer = Syncer {
+            syncCalls++
+            SyncResult.Success(0, 0, 0, 0)
+        }
+        viewModel = OverviewViewModel(listsRepo, itemsRepo, sessionState, syncer, syncStatus)
     }
 
     @Test
@@ -102,6 +109,14 @@ class OverviewViewModelTest {
         val state = viewModel.uiState.first { it.sync.lastSyncAt == 1_000L }
         assertEquals(2, state.sync.pendingCount)
         assertNull(state.attentionListId)
+    }
+
+    @Test
+    fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest {
+        viewModel.refresh().join()
+
+        assertEquals(1, syncCalls)
+        assertFalse(viewModel.uiState.value.isRefreshing)
     }
 
     @Test

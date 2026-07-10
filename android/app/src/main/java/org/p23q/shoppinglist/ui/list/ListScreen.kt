@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,8 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.db.ItemEntity
+import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.data.db.Status
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListScreen(
     onAddItem: () -> Unit,
@@ -128,8 +132,21 @@ fun ListScreen(
                 }
             }
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                state.groups.forEach { group ->
+            // Lightweight last-synced line (T-36/T-47); the loud attention banner is Overview's job.
+            SyncStatusBar(
+                state = state.sync,
+                nowMs = System.currentTimeMillis(),
+                onAttentionClick = {},
+                showAttention = false,
+            )
+
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    state.groups.forEach { group ->
                     item(key = "header-${group.category ?: "—"}") {
                         Text(
                             text = group.category ?: "—",
@@ -151,6 +168,7 @@ fun ListScreen(
                             onEdit = { onEditItem(item.id) },
                         )
                     }
+                }
                 }
             }
         }

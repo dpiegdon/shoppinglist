@@ -15,6 +15,7 @@ import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.SyncState
 import org.p23q.shoppinglist.data.sync.SyncStatus
+import org.p23q.shoppinglist.data.sync.Syncer
 import javax.inject.Inject
 
 data class OverviewUiState(
@@ -24,6 +25,8 @@ data class OverviewUiState(
     val sync: SyncState = SyncState(),
     /** The list holding a quarantined row, so the "needs attention" banner can open it (T-47). */
     val attentionListId: String? = null,
+    /** True while a user-initiated pull-to-refresh sync is running, for the spinner (T-36). */
+    val isRefreshing: Boolean = false,
 )
 
 @HiltViewModel
@@ -31,6 +34,7 @@ class OverviewViewModel @Inject constructor(
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,
     private val sessionState: SessionState,
+    private val syncer: Syncer,
     syncStatus: SyncStatus,
 ) : ViewModel() {
 
@@ -69,5 +73,15 @@ class OverviewViewModel @Inject constructor(
     /** Notes: tapping a list card persists it as the one to reopen on next login/launch. */
     fun openList(listId: String) {
         sessionState.lastOpenedListId = listId
+    }
+
+    /** Manual pull-to-refresh: an immediate foreground sync with a visible spinner (T-36). */
+    fun refresh(): Job = viewModelScope.launch {
+        _uiState.update { it.copy(isRefreshing = true) }
+        try {
+            syncer.syncNow(emptyList())
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
     }
 }

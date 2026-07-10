@@ -27,6 +27,9 @@ import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncResult
+import org.p23q.shoppinglist.data.sync.SyncStatus
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
 
@@ -58,6 +61,8 @@ class ListScreenTest {
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             itemsRepo,
             listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
             FakeSessionState(),
         )
         viewModel.toggleShowChecked()
@@ -92,6 +97,8 @@ class ListScreenTest {
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             itemsRepo,
             listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
             FakeSessionState(),
         )
 
@@ -121,6 +128,8 @@ class ListScreenTest {
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             itemsRepo,
             listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
             FakeSessionState(),
         )
         var editedItemId: String? = null

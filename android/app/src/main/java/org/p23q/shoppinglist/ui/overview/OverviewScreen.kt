@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.SyncStatusBar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
     onOpenList: (listId: String) -> Unit,
@@ -48,29 +53,36 @@ fun OverviewScreen(
                 nowMs = System.currentTimeMillis(),
                 onAttentionClick = { state.attentionListId?.let(onOpenList) },
             )
-            if (state.lists.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("No lists yet")
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                ) {
-                    items(state.lists, key = { it.id }) { list ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable {
-                                    viewModel.openList(list.id)
-                                    onOpenList(list.id)
-                                },
-                        ) {
-                            Text(text = list.name.value, modifier = Modifier.padding(16.dp))
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                if (state.lists.isEmpty()) {
+                    // Scrollable so the pull gesture still fires with no lists to scroll.
+                    Box(
+                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("No lists yet")
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                    ) {
+                        items(state.lists, key = { it.id }) { list ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable {
+                                        viewModel.openList(list.id)
+                                        onOpenList(list.id)
+                                    },
+                            ) {
+                                Text(text = list.name.value, modifier = Modifier.padding(16.dp))
+                            }
                         }
                     }
                 }

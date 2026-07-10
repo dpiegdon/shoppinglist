@@ -18,6 +18,9 @@ import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.repo.Price
+import org.p23q.shoppinglist.data.sync.SyncState
+import org.p23q.shoppinglist.data.sync.SyncStatus
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import javax.inject.Inject
 
@@ -36,6 +39,10 @@ data class ListUiState(
     val undoItemName: String? = null,
     /** Ids just bulk-cleared to backlog, held so the undo snackbar can restore them (T-35). */
     val clearedCheckedIds: List<String> = emptyList(),
+    /** Live sync health for the recency line (T-47). */
+    val sync: SyncState = SyncState(),
+    /** True while a user-initiated pull-to-refresh sync is running, for the spinner (T-36). */
+    val isRefreshing: Boolean = false,
 )
 
 @HiltViewModel
@@ -43,6 +50,8 @@ class ListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
+    private val syncer: Syncer,
+    syncStatus: SyncStatus,
     sessionState: SessionState,
 ) : ViewModel() {
 
@@ -75,6 +84,19 @@ class ListViewModel @Inject constructor(
                 _uiState.update { it.copy(listName = list?.name?.value ?: "") }
                 regroup()
             }
+        }
+        viewModelScope.launch {
+            syncStatus.state.collect { sync -> _uiState.update { it.copy(sync = sync) } }
+        }
+    }
+
+    /** Manual pull-to-refresh: an immediate foreground sync with a visible spinner (T-36). */
+    fun refresh(): Job = viewModelScope.launch {
+        _uiState.update { it.copy(isRefreshing = true) }
+        try {
+            syncer.syncNow(emptyList())
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 

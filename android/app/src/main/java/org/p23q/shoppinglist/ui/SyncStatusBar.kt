@@ -31,9 +31,12 @@ fun SyncStatusBar(
     nowMs: Long,
     onAttentionClick: () -> Unit,
     modifier: Modifier = Modifier,
+    // The list screen already surfaces the recency line and doesn't need the loud attention banner
+    // (Overview owns that), so it opts out (T-36).
+    showAttention: Boolean = true,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        if (state.blockedCount > 0) {
+        if (showAttention && state.blockedCount > 0) {
             Surface(
                 onClick = onAttentionClick,
                 color = MaterialTheme.colorScheme.errorContainer,

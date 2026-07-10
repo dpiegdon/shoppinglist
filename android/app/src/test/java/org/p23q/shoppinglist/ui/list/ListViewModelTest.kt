@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -22,6 +23,9 @@ import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncResult
+import org.p23q.shoppinglist.data.sync.SyncStatus
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
 
@@ -36,6 +40,16 @@ class ListViewModelTest {
     private lateinit var listsRepo: ListsRepo
     private lateinit var sessionState: FakeSessionState
     private lateinit var listId: String
+    private val syncStatus = SyncStatus()
+    private val syncer = RecordingSyncer()
+
+    private class RecordingSyncer : Syncer {
+        var calls = 0
+        override suspend fun syncNow(fullLists: List<String>): SyncResult {
+            calls++
+            return SyncResult.Success(0, 0, 0, 0)
+        }
+    }
 
     @Before
     fun setUp() = runTest {
@@ -51,7 +65,14 @@ class ListViewModelTest {
     }
 
     private fun newViewModel(): ListViewModel =
-        ListViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), itemsRepo, listsRepo, sessionState)
+        ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            syncer,
+            syncStatus,
+            sessionState,
+        )
 
     @Test
     fun `groups follow category_order, then leftover categories alphabetically, uncategorized last`() = runTest {
@@ -170,6 +191,26 @@ class ListViewModelTest {
         assertEquals(setOf(a, b), viewModel.uiState.value.clearedCheckedIds.toSet())
         // Nothing checked any more -> the action's count drops to 0 (button hides).
         assertEquals(0, viewModel.uiState.first { it.checkedCount == 0 }.checkedCount)
+    }
+
+    @Test
+    fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.listName == "Groceries" }
+
+        viewModel.refresh().join()
+
+        assertEquals(1, syncer.calls)
+        assertFalse(viewModel.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun `sync status flows into the list ui state (T-47)`() = runTest {
+        val viewModel = newViewModel()
+
+        syncStatus.succeeded(at = 5_000L, pending = 1, blocked = 0)
+
+        assertEquals(5_000L, viewModel.uiState.first { it.sync.lastSyncAt == 5_000L }.sync.lastSyncAt)
     }
 
     @Test

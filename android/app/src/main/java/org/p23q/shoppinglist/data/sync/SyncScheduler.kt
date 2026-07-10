@@ -11,6 +11,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
@@ -23,6 +24,13 @@ import javax.inject.Singleton
 abstract class SyncTriggerModule {
     @Binds
     abstract fun bindSyncTrigger(scheduler: SyncScheduler): SyncTrigger
+
+    companion object {
+        /** Screens depend on the [Syncer] seam for pull-to-refresh; [SyncEngine] is the impl (T-36).
+         *  A thin adapter (not @Binds) so SyncEngine keeps its own default-arg public API unchanged. */
+        @Provides
+        fun provideSyncer(engine: SyncEngine): Syncer = Syncer { fullLists -> engine.syncNow(fullLists) }
+    }
 }
 
 /** Owns every WorkManager entry point for [SyncWorker] (Notes: periodic, after-edit, foreground). */
