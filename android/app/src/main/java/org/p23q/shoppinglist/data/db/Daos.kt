@@ -80,7 +80,7 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE id = :id")
     fun observeById(id: String): Flow<ListEntity?>
 
-    @Query("SELECT * FROM lists WHERE deleted_value = 0")
+    @Query("SELECT * FROM lists WHERE deleted_value = 0 ORDER BY name_value COLLATE NOCASE")
     fun activeLists(): Flow<List<ListEntity>>
 
     @Query("SELECT * FROM lists WHERE dirty = 1")

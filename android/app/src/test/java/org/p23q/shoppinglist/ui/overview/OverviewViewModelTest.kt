@@ -73,6 +73,17 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `lists are sorted case-insensitively by name (T-40)`() = runTest {
+        listsRepo.createList("Zebra")
+        listsRepo.createList("apple")
+        listsRepo.createList("Mango")
+
+        val names = viewModel.uiState.first { it.lists.size == 3 }.lists.map { it.name.value }
+
+        assertEquals(listOf("apple", "Mango", "Zebra"), names)
+    }
+
+    @Test
     fun `blank name does not create a list`() = runTest {
         viewModel.onNewListNameChange("   ")
 

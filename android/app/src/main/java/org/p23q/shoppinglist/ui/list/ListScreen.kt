@@ -37,8 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -195,16 +195,29 @@ private fun ItemRow(
             Text(
                 text = item.name.value,
                 style = if (isChecked) {
+                    // Theme-aware (was a hardcoded Color.Red with poor dark-theme contrast — T-40).
                     MaterialTheme.typography.bodyLarge.copy(
                         textDecoration = TextDecoration.LineThrough,
-                        color = Color.Red,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 } else {
                     MaterialTheme.typography.bodyLarge
                 },
             )
-            formatPrice(item, defaultCurrency)?.let { price ->
-                Text(text = price, style = MaterialTheme.typography.bodySmall)
+            // Quantity is the thing you need in-store ("2l milk"), so show it alongside the price.
+            val quantity = item.quantity.value?.takeIf { it.isNotBlank() }
+            val detail = listOfNotNull(quantity, formatPrice(item, defaultCurrency)).joinToString(" · ")
+            if (detail.isNotEmpty()) {
+                Text(text = detail, style = MaterialTheme.typography.bodySmall)
+            }
+            item.note.value?.takeIf { it.isNotBlank() }?.let { note ->
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         IconButton(onClick = onEdit) {

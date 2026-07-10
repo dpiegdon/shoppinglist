@@ -74,7 +74,7 @@ fun SettingsScreen(
                 FilterChip(
                     selected = state.theme == pref,
                     onClick = { viewModel.setTheme(pref) },
-                    label = { Text(pref.name) },
+                    label = { Text(pref.label()) },
                     modifier = Modifier.padding(end = 4.dp),
                 )
             }
@@ -189,4 +189,11 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = viewModel::cancelDeleteAccount) { Text("Cancel") } },
         )
     }
+}
+
+/** User-facing theme names (T-40) — never show the raw SYSTEM/LIGHT/DARK enum constants. */
+private fun ThemePreference.label(): String = when (this) {
+    ThemePreference.SYSTEM -> "System"
+    ThemePreference.LIGHT -> "Light"
+    ThemePreference.DARK -> "Dark"
 }

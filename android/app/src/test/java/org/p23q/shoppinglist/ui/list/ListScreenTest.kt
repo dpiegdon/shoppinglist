@@ -1,6 +1,5 @@
 package org.p23q.shoppinglist.ui.list
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -46,7 +45,7 @@ class ListScreenTest {
     }
 
     @Test
-    fun `checked row renders with a red strikethrough, unchecked row does not`() = runBlocking {
+    fun `checked row renders with a strikethrough in a distinct color, unchecked row does not`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
@@ -73,9 +72,10 @@ class ListScreenTest {
         val checkedStyle = textStyleOf("Milk")
         val uncheckedStyle = textStyleOf("Bread")
         assertEquals(TextDecoration.LineThrough, checkedStyle.textDecoration)
-        assertEquals(Color.Red, checkedStyle.color)
         assertNotEquals(TextDecoration.LineThrough, uncheckedStyle.textDecoration)
-        assertNotEquals(Color.Red, uncheckedStyle.color)
+        // The checked color is now the theme's error color (T-40), not a fixed literal — assert it
+        // differs from the unchecked row's default rather than a hardcoded Color.Red.
+        assertNotEquals(checkedStyle.color, uncheckedStyle.color)
     }
 
     @Test

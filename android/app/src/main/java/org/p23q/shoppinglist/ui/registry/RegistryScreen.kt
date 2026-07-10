@@ -94,7 +94,7 @@ private fun RegistryRow(item: ItemEntity, onClick: () -> Unit, onDelete: () -> U
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(text = item.name.value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        AssistChip(onClick = onClick, label = { Text(Status.fromWireValue(item.status.value).wireValue) })
+        AssistChip(onClick = onClick, label = { Text(Status.fromWireValue(item.status.value).label) })
         Spacer(Modifier.width(4.dp))
         IconButton(onClick = onDelete) {
             Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete ${item.name.value}")
