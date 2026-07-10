@@ -1,0 +1,15 @@
+{
+  "body": "Split out of T-32 (which now covers the reliability fix: price validation +\nrow quarantine). This is T-32's other half \u2014 \"sync failures are invisible.\"\nNo screen shows last-synced time, pending-change count, sync errors, or\n(after T-32) rows quarantined by a server 422. The app silently stops\nreflecting other devices / silently stops pushing a bad row.\n\nFix: a small @Singleton sync-status holder (StateFlow of last-sync time,\nin-progress, last error, pending count, blocked-row count) updated by\nSyncEngine on every run; a quiet status line on Overview (and/or the drawer),\nloud when a failure repeats or a row is blocked (\"1 item needs attention\" ->\ntap to open it). T-32 leaves a syncBlocked flag + quarantine in place that\nthis should surface. Web has the same gap (its useSync store already knows\nloading/error \u2014 just needs a small indicator). Coordinate with T-36\n(pull-to-refresh) \u2014 same surface.\nrelates: T-32, T-36",
+  "created_at": "2026-07-10T08:19:52+00:00",
+  "id": "T-47",
+  "labels": [
+    "android",
+    "web",
+    "ux",
+    "reliability",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android + web: surface sync health (last-synced / pending / failing / blocked rows)",
+  "updated_at": "2026-07-10T08:19:52+00:00"
+}
