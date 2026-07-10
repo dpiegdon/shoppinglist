@@ -32,7 +32,12 @@ class AddItemDialogTest {
     fun `renders the name field, picking a suggestion sets it todo and dismisses`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            // Unconfined (not IO): this test awaits save()'s viewModelScope coroutine, whose only
+            // thread hop is the Room query context. On a real IO pool that hop races the Compose
+            // wait primitives (waitForIdle returns before the write lands; waitUntil never idles
+            // Robolectric's looper for the post-IO continuation) -> flaked under full-suite load.
+            // Running DAO calls inline makes save() complete deterministically under waitForIdle. (T-29)
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
