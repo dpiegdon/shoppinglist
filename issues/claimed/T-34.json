@@ -8,7 +8,8 @@
     "ux",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Android: list name/category order go stale; top bar shows 'List' not the list's name",
-  "updated_at": "2026-07-09T23:16:37+00:00"
+  "updated_at": "2026-07-10T13:45:13+00:00"
 }
