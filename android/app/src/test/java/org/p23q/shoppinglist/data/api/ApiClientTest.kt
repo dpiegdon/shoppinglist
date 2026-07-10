@@ -34,7 +34,7 @@ class ApiClientTest {
     private fun buildApi(tokenProvider: TokenProvider): Api {
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(tokenProvider))
-            .addInterceptor(ErrorInterceptor(json))
+            .addInterceptor(ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()))
             .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(server.url("/").toString())
@@ -71,7 +71,7 @@ class ApiClientTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"lists": []}"""))
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(TokenProvider { null }))
-            .addInterceptor(ErrorInterceptor(json))
+            .addInterceptor(ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()))
             .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(server.url("/my/stuff/shoppinglist/").toString())

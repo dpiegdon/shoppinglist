@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,6 +71,15 @@ object Routes {
     fun redeem(token: String) = "redeem/$token"
 }
 
+/**
+ * Where an already-authenticated session should land: the last-opened list if one is remembered
+ * (Notes: "on login, open the list the user last had open"), otherwise the overview. Shared by the
+ * cold-start resume in [org.p23q.shoppinglist.MainActivity] and the post-login navigation in
+ * [org.p23q.shoppinglist.ui.login.LoginViewModel].
+ */
+fun authedStartDestination(lastOpenedListId: String?): String =
+    lastOpenedListId?.let { Routes.list(it) } ?: Routes.OVERVIEW
+
 /** Destinations reachable from the drawer menu (Notes: overview + account entries). */
 private data class DrawerDestination(val route: String, val label: String)
 
@@ -79,12 +89,29 @@ private val drawerDestinations = listOf(
 )
 
 @Composable
-fun ShoppingListNavHost(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = Routes.LOGIN) {
+fun ShoppingListNavHost(
+    navController: NavHostController = rememberNavController(),
+    startDestination: String = Routes.LOGIN,
+    rootViewModel: RootViewModel = hiltViewModel(),
+) {
+    // A token that the server rejects mid-session (revoked/expired) surfaces once, at the
+    // interceptor, as a forced-logout signal; clear the dead session and return to Login rather
+    // than leaving the user on a silently-stale screen whose every request 401s.
+    LaunchedEffect(Unit) {
+        rootViewModel.forcedLogout.collect {
+            rootViewModel.onForcedLogout().join()
+            navController.navigate(Routes.LOGIN) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess = { startDestination ->
-                    navController.navigate(startDestination) {
+                onLoginSuccess = { destination ->
+                    navController.navigate(destination) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
                 },

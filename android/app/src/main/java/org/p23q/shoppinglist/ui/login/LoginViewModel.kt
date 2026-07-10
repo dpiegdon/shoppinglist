@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.AuthRepository
@@ -14,7 +15,7 @@ import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.UnauthorizedException
-import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.authedStartDestination
 import java.io.IOException
 import java.net.URI
 import javax.inject.Inject
@@ -38,6 +39,18 @@ class LoginViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    init {
+        // Prefill the previously-entered server URL (it persists in ServerConfig, but nothing
+        // seeded the field before, so a returning user re-typed it every time). Only fill while
+        // the field is still untouched, so we never clobber something the user is typing.
+        viewModelScope.launch {
+            val savedUrl = serverConfig.serverUrl.first()
+            if (!savedUrl.isNullOrBlank()) {
+                _uiState.update { if (it.serverUrl.isBlank()) it.copy(serverUrl = savedUrl) else it }
+            }
+        }
+    }
 
     fun onServerUrlChange(value: String) {
         _uiState.update { it.copy(serverUrl = value, errorMessage = null) }
@@ -90,7 +103,7 @@ class LoginViewModel @Inject constructor(
     fun logout(): Job = viewModelScope.launch { authRepository.logout() }
 
     fun startDestinationAfterLogin(): String =
-        authRepository.lastOpenedListId()?.let { Routes.list(it) } ?: Routes.OVERVIEW
+        authedStartDestination(authRepository.lastOpenedListId())
 
     /** Notes "user info": the drawer (A6) shows this alongside the Log out entry. */
     val loggedInEmail: String? get() = sessionState.accountEmail

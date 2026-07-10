@@ -26,6 +26,14 @@ interface AuthRepository {
     /** Best-effort server-side token revoke, then always clears local session + mirror regardless. */
     suspend fun logout()
 
+    /**
+     * Clears local session + mirror WITHOUT contacting the server. For a forced logout after the
+     * server has already rejected our token (401): the token is dead, so a server call is pointless.
+     * Wipes the mirror (same as [logout]) so a subsequent login as a different account can't see the
+     * previous account's local lists.
+     */
+    suspend fun clearLocalSession()
+
     fun lastOpenedListId(): String?
 }
 
@@ -58,6 +66,10 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout() {
         runCatching { apiProvider.get().logout() }
+        clearLocalSession()
+    }
+
+    override suspend fun clearLocalSession() {
         sessionState.clear()
         // clearAllTables() is a blocking call; Room refuses to run it on the calling thread if
         // that happens to be the main thread (viewModelScope.launch defaults to Dispatchers.Main).

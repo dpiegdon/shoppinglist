@@ -23,6 +23,7 @@ class LoginViewModelTest {
 
     private class FakeAuthRepository(
         private val onLogin: suspend (String, String) -> Unit = { _, _ -> },
+        private val lastOpened: String? = null,
     ) : AuthRepository {
         var registerCalled = false
         var loginCalled = false
@@ -41,7 +42,9 @@ class LoginViewModelTest {
             loggedOut = true
         }
 
-        override fun lastOpenedListId(): String? = null
+        override suspend fun clearLocalSession() {}
+
+        override fun lastOpenedListId(): String? = lastOpened
     }
 
     private fun newServerConfig(): ServerConfig {
@@ -132,5 +135,43 @@ class LoginViewModelTest {
         val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, sessionState)
 
         assertEquals("shopper@example.com", viewModel.loggedInEmail)
+    }
+
+    @Test
+    fun `previously-saved server URL prefills the field`() = runTest {
+        val serverConfig = newServerConfig()
+        serverConfig.setServerUrl("https://saved.example.com/shoppinglist")
+
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState())
+
+        // Await the init prefill coroutine's update rather than racing it.
+        val prefilled = viewModel.uiState.first { it.serverUrl.isNotBlank() }
+        assertEquals("https://saved.example.com/shoppinglist/", prefilled.serverUrl)
+    }
+
+    @Test
+    fun `prefill does not clobber a URL the user is already typing`() = runTest {
+        val serverConfig = newServerConfig()
+        serverConfig.setServerUrl("https://saved.example.com")
+
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState())
+        viewModel.onServerUrlChange("https://typing.example.com")
+
+        assertEquals("https://typing.example.com", viewModel.uiState.value.serverUrl)
+    }
+
+    @Test
+    fun `startDestinationAfterLogin resumes the last-opened list when present`() = runTest {
+        val repo = FakeAuthRepository(lastOpened = "list-42")
+        val viewModel = LoginViewModel(repo, newServerConfig(), FakeSessionState())
+
+        assertEquals("list/list-42", viewModel.startDestinationAfterLogin())
+    }
+
+    @Test
+    fun `startDestinationAfterLogin falls back to overview with no last-opened list`() = runTest {
+        val viewModel = LoginViewModel(FakeAuthRepository(), newServerConfig(), FakeSessionState())
+
+        assertEquals("overview", viewModel.startDestinationAfterLogin())
     }
 }

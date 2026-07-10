@@ -33,4 +33,14 @@ class NavTest {
     fun `listProps builds a concrete route for a given listId`() {
         assertEquals("listProps/abc-123", Routes.listProps("abc-123"))
     }
+
+    @Test
+    fun `authedStartDestination opens the last-opened list when one is remembered`() {
+        assertEquals("list/abc-123", authedStartDestination("abc-123"))
+    }
+
+    @Test
+    fun `authedStartDestination falls back to the overview when no list was remembered`() {
+        assertEquals(Routes.OVERVIEW, authedStartDestination(null))
+    }
 }

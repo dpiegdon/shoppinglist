@@ -8,9 +8,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
+import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ShoppingListNavHost
+import org.p23q.shoppinglist.ui.authedStartDestination
 import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
 import javax.inject.Inject
 
@@ -19,9 +22,22 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var themePreferenceStore: ThemePreferenceStore
 
+    @Inject lateinit var session: SessionState
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Resume the session on cold start instead of always dumping the user on a blank Login
+        // form. token/lastOpenedListId are synchronous (EncryptedSharedPreferences) reads, so the
+        // decision is resolved here, before setContent, and passed as the nav start destination.
+        // (A revoked token still surfaces later via the forced-logout path in ShoppingListNavHost.)
+        val startDestination = if (session.token != null) {
+            authedStartDestination(session.lastOpenedListId)
+        } else {
+            Routes.LOGIN
+        }
+
         setContent {
             val themePreference by themePreferenceStore.theme.collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)
             val darkTheme = when (themePreference) {
@@ -30,7 +46,7 @@ class MainActivity : ComponentActivity() {
                 ThemePreference.DARK -> true
             }
             ShoppingListTheme(darkTheme = darkTheme) {
-                ShoppingListNavHost()
+                ShoppingListNavHost(startDestination = startDestination)
             }
         }
     }

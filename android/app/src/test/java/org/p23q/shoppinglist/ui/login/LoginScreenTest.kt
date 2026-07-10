@@ -22,6 +22,7 @@ class LoginScreenTest {
         override suspend fun register(email: String, password: String) {}
         override suspend fun login(email: String, password: String) {}
         override suspend fun logout() {}
+        override suspend fun clearLocalSession() {}
         override fun lastOpenedListId(): String? = null
     }
 

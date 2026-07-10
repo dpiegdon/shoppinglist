@@ -72,7 +72,7 @@ class ListPropsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
-            errorInterceptor = ErrorInterceptor(json),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
             json = json,
         )
         val viewModel = ListPropsViewModel(
