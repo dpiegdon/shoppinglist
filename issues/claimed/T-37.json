@@ -9,7 +9,8 @@
     "security",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Android: allowBackup=true + EncryptedSharedPreferences = crash loop after backup restore",
-  "updated_at": "2026-07-09T23:16:38+00:00"
+  "updated_at": "2026-07-10T14:23:11+00:00"
 }
