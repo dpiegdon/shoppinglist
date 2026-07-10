@@ -1,6 +1,8 @@
 package org.p23q.shoppinglist.ui.listprops
 
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,13 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -26,9 +26,18 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -69,21 +78,16 @@ fun ListPropsScreen(
         Spacer(Modifier.height(16.dp))
 
         Text("Category order", style = MaterialTheme.typography.titleMedium)
-        state.categoryOrder.forEachIndexed { index, category ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(category, modifier = Modifier.weight(1f))
-                IconButton(onClick = { viewModel.moveCategoryUp(index) }) {
-                    Icon(imageVector = Icons.Default.KeyboardArrowUp, contentDescription = "Move $category up")
-                }
-                IconButton(onClick = { viewModel.moveCategoryDown(index) }) {
-                    Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "Move $category down")
-                }
-            }
-        }
+        Text(
+            "Long-press the handle and drag to reorder",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        CategoryOrderList(
+            categories = state.categoryOrder,
+            onMoveUp = viewModel::moveCategoryUp,
+            onMoveDown = viewModel::moveCategoryDown,
+        )
         TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text("Save order") }
         Spacer(Modifier.height(16.dp))
 
@@ -129,5 +133,65 @@ fun ListPropsScreen(
             confirmButton = { TextButton(onClick = viewModel::confirmLeave) { Text("Leave") } },
             dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text("Cancel") } },
         )
+    }
+}
+
+/**
+ * Real drag-reorder (T-30) replacing the old up/down buttons. Each row carries a long-press drag
+ * handle; as the pointer travels one row-height the item swaps with its neighbour (via the existing
+ * moveCategoryUp/Down edits, so persistence is unchanged). Long-press-to-start avoids fighting the
+ * screen's own vertical scroll. Rows are keyed by category and the gesture reads the category's
+ * *current* index live (rememberUpdatedState), so the handle keeps following its item across swaps.
+ */
+@Composable
+private fun CategoryOrderList(
+    categories: List<String>,
+    onMoveUp: (Int) -> Unit,
+    onMoveDown: (Int) -> Unit,
+) {
+    val rowHeightPx = with(LocalDensity.current) { 44.dp.toPx() }
+    var draggingCategory by remember { mutableStateOf<String?>(null) }
+    var accumulated by remember { mutableFloatStateOf(0f) }
+    val currentCategories by rememberUpdatedState(categories)
+
+    Column {
+        categories.forEach { category ->
+            key(category) {
+                val dragging = draggingCategory == category
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (dragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(category, modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Reorder $category",
+                        modifier = Modifier.pointerInput(category) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { draggingCategory = category; accumulated = 0f },
+                                onDragEnd = { draggingCategory = null; accumulated = 0f },
+                                onDragCancel = { draggingCategory = null; accumulated = 0f },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                accumulated += dragAmount.y
+                                val idx = currentCategories.indexOf(category)
+                                if (idx < 0) return@detectDragGesturesAfterLongPress
+                                if (accumulated <= -rowHeightPx && idx > 0) {
+                                    onMoveUp(idx)
+                                    accumulated = 0f
+                                } else if (accumulated >= rowHeightPx && idx < currentCategories.size - 1) {
+                                    onMoveDown(idx)
+                                    accumulated = 0f
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 }
