@@ -125,9 +125,13 @@ class ItemFormViewModel @Inject constructor(
 
     fun onStatusChange(status: Status) = _uiState.update { it.copy(status = status) }
 
-    /** Notes (Add dialog): picking an existing suggestion sets it `todo` and prefills the form. */
-    fun pickSuggestion(item: ItemEntity): Job = viewModelScope.launch {
-        itemsRepo.setStatus(item.id, Status.TODO)
+    /**
+     * Notes (Add dialog): picking an existing suggestion prefills the form and binds its id, so
+     * Save reuses that item instead of creating a duplicate. It does NOT touch the item yet — the
+     * item only actually joins the list (status -> todo) on Save, so Cancel leaves it untouched
+     * (T-33; this reverses A8's persist-on-pick behavior).
+     */
+    fun pickSuggestion(item: ItemEntity) {
         val price = itemsRepo.decodePrice(item.price.value)
         _uiState.update {
             it.copy(
@@ -180,6 +184,10 @@ class ItemFormViewModel @Inject constructor(
             val targetId = state.itemId ?: itemsRepo.createItem(listId, trimmedName, status = Status.TODO)
             if (state.itemId != null) {
                 itemsRepo.rename(targetId, trimmedName)
+                // Apply status on Save, not at pick time (T-33): an edited item takes the chosen
+                // status; a picked existing item joins the list as todo. (A brand-new item was
+                // already created todo above, so this branch — itemId != null — skips it.)
+                itemsRepo.setStatus(targetId, if (state.isEditMode) state.status else Status.TODO)
             }
             itemsRepo.setCategory(targetId, state.category.trim().ifBlank { null })
             itemsRepo.setStores(targetId, state.stores)
@@ -192,9 +200,6 @@ class ItemFormViewModel @Inject constructor(
                 currency = if (normalizedAmount != null) normalizedCurrency else null,
             )
             itemsRepo.setNote(targetId, state.note.trim().ifBlank { null })
-            if (state.isEditMode) {
-                itemsRepo.setStatus(targetId, state.status)
-            }
             _uiState.update { it.copy(nameError = null, isSaved = true, itemId = targetId) }
         }
     }

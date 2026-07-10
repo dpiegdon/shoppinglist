@@ -67,19 +67,35 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `picking a suggestion sets it todo, prefills the form, and binds the itemId`() = runTest {
+    fun `picking a suggestion prefills the form and binds the itemId WITHOUT mutating the item`() = runTest {
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
         itemsRepo.setCategory(existingId, "dairy")
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
         val existing = itemsRepo.getById(existingId)!!
 
-        viewModel.pickSuggestion(existing).join()
+        viewModel.pickSuggestion(existing)
 
-        assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
+        // The item is untouched until Save — picking then cancelling (never saving) must not put
+        // it on the list (T-33). Its status stays backlog.
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(existingId)!!.status.value)
         assertEquals(existingId, viewModel.uiState.value.itemId)
         assertEquals("Milk", viewModel.uiState.value.name)
         assertEquals("dairy", viewModel.uiState.value.category)
+    }
+
+    @Test
+    fun `saving a picked suggestion puts that existing item on the list as todo`() = runTest {
+        val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)
+
+        viewModel.save()?.join()
+
+        // Same item (no duplicate created), now on the list.
+        assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
+        assertEquals(1, itemsRepo.searchRegistry(listId, "Milk").first().size)
     }
 
     @Test

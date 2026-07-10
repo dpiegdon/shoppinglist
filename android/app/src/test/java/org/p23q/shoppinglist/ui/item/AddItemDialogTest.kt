@@ -56,11 +56,13 @@ class AddItemDialogTest {
         composeTestRule.onNodeWithText("Milk").performClick()
         composeTestRule.waitForIdle()
 
-        assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
+        // Picking a suggestion only prefills; the item isn't put on the list until Save (T-33).
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(existingId)!!.status.value)
 
         composeTestRule.onNodeWithText("Add").performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(true, dismissed)
+        assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
     }
 }
