@@ -203,6 +203,34 @@ def test_sync_invalid_status_422(client):
     assert resp.status_code == 422
 
 
+def test_sync_validation_422_names_the_offending_row_and_field(client):
+    token = _register_and_login(client)
+    _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"lists": [_mk_list("list-1", "Groceries", 100, "devA")]},
+    )
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "item-1", "list-1",
+                    name=("Milk", 100, "devA"),
+                    price=({"amount": "1,99", "currency": "EUR"}, 100, "devA"),
+                )
+            ]
+        },
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    # Canonical envelope keys are still present and unshadowed...
+    assert body["error"] == "invalid_price"
+    assert body["message"]
+    # ...plus the additive quarantine hints the client uses (T-32).
+    assert body["row_id"] == "item-1"
+    assert body["field"] == "price"
+
+
 def test_sync_missing_cursor_422(client):
     token = _register_and_login(client)
     resp = client.post(

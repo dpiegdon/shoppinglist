@@ -108,7 +108,12 @@ def create_blueprint(
 
 
 def _handle_api_error(err: ApiError):
-    return jsonify({"error": err.code, "message": err.message}), err.status
+    body = {"error": err.code, "message": err.message}
+    if err.details:
+        # Additive only — never let details shadow the canonical error/message keys.
+        for key, value in err.details.items():
+            body.setdefault(key, value)
+    return jsonify(body), err.status
 
 
 def get_config() -> dict:

@@ -149,14 +149,21 @@ def _validate_list_field(key, value):
 def _parse_row(obj, keys, tsby, validate, device_id):
     if not isinstance(obj, dict) or "id" not in obj:
         raise ApiError(422, "invalid_row", "Each change requires an id.")
+    row_id = obj["id"]
     fields = {}
     for key, clock in (obj.get("fields") or {}).items():
         if key not in keys:
             continue  # forward-compatible: ignore unknown fields
-        value, ts, by = _parse_clock(key, clock, device_id)
-        validate(key, value)
+        try:
+            value, ts, by = _parse_clock(key, clock, device_id)
+            validate(key, value)
+        except ApiError as exc:
+            # Name the offending row + field so a client can quarantine just this row
+            # rather than have one bad value wedge its entire push queue (T-32).
+            exc.details = {"row_id": row_id, "field": key}
+            raise
         fields[key] = (value, ts, by)
-    return obj["id"], obj.get("created_at") or _now_ms(), fields
+    return row_id, obj.get("created_at") or _now_ms(), fields
 
 
 # ---- membership helpers ----------------------------------------------------
