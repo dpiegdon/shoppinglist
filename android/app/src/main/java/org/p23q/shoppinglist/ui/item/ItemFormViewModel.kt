@@ -31,7 +31,9 @@ data class ItemFormUiState(
     val storeInput: String = "",
     val quantity: String = "",
     val priceAmount: String = "",
+    val priceError: String? = null,
     val priceCurrency: String = "",
+    val currencyError: String? = null,
     val note: String = "",
     val status: Status = Status.TODO,
     val isDeleteConfirmOpen: Boolean = false,
@@ -115,9 +117,9 @@ class ItemFormViewModel @Inject constructor(
 
     fun onQuantityChange(value: String) = _uiState.update { it.copy(quantity = value) }
 
-    fun onPriceAmountChange(value: String) = _uiState.update { it.copy(priceAmount = value) }
+    fun onPriceAmountChange(value: String) = _uiState.update { it.copy(priceAmount = value, priceError = null) }
 
-    fun onPriceCurrencyChange(value: String) = _uiState.update { it.copy(priceCurrency = value) }
+    fun onPriceCurrencyChange(value: String) = _uiState.update { it.copy(priceCurrency = value, currencyError = null) }
 
     fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
 
@@ -152,6 +154,23 @@ class ItemFormViewModel @Inject constructor(
             _uiState.update { it.copy(nameError = "Name is required") }
             return null
         }
+        // Validate/normalize price BEFORE writing, so a bad value (e.g. "1,99", "2€", "1.999") is
+        // caught with an inline error rather than pushed and 422'd by the server — which would abort
+        // the whole /sync transaction and wedge the push queue (T-32). Price amount + currency are
+        // the only user-typed fields the server validates that the client didn't already constrain.
+        val amountParse = parsePriceAmount(state.priceAmount)
+        if (amountParse is PriceParse.Invalid) {
+            _uiState.update { it.copy(priceError = amountParse.message) }
+            return null
+        }
+        val currencyParse = parseCurrency(state.priceCurrency)
+        if (currencyParse is PriceParse.Invalid) {
+            _uiState.update { it.copy(currencyError = currencyParse.message) }
+            return null
+        }
+        val normalizedAmount = (amountParse as PriceParse.Valid).value
+        val normalizedCurrency = (currencyParse as PriceParse.Valid).value
+
         return viewModelScope.launch {
             val collision = itemsRepo.findByExactName(listId, trimmedName, excludingId = state.itemId ?: "")
             if (collision != null) {
@@ -167,8 +186,10 @@ class ItemFormViewModel @Inject constructor(
             itemsRepo.setQuantity(targetId, state.quantity.trim().ifBlank { null })
             itemsRepo.setPrice(
                 targetId,
-                amount = state.priceAmount.trim().ifBlank { null },
-                currency = state.priceCurrency.trim().ifBlank { null },
+                amount = normalizedAmount,
+                // Currency only means something alongside an amount (the server stores price as
+                // amount+currency-or-null), so drop a stray currency when there's no amount.
+                currency = if (normalizedAmount != null) normalizedCurrency else null,
             )
             itemsRepo.setNote(targetId, state.note.trim().ifBlank { null })
             if (state.isEditMode) {
@@ -189,4 +210,39 @@ class ItemFormViewModel @Inject constructor(
             _uiState.update { it.copy(isDeleteConfirmOpen = false, isDeleted = true) }
         }
     }
+}
+
+/** Result of parsing a user-typed price/currency field. [Valid.value] is null when the field is blank. */
+internal sealed interface PriceParse {
+    data class Valid(val value: String?) : PriceParse
+    data class Invalid(val message: String) : PriceParse
+}
+
+private val PRICE_AMOUNT_RE = Regex("^\\d+(\\.\\d{1,2})?$")
+private val CURRENCY_RE = Regex("^[A-Z]{3}$")
+private const val CURRENCY_SYMBOLS = "€\$£¥"
+
+/**
+ * Normalizes a typed amount to the server's decimal-string format: accepts a comma decimal
+ * separator and strips whitespace + a leading/trailing currency symbol ("1,99", "2€", " 1.50 " ->
+ * "1.99"/"2"/"1.50"), then requires `\d+(\.\d{1,2})?`. Blank -> [PriceParse.Valid] with null (no
+ * price). Anything else (letters, >2 decimals) -> [PriceParse.Invalid].
+ */
+internal fun parsePriceAmount(raw: String): PriceParse {
+    val cleaned = buildString {
+        for (ch in raw.trim().replace(',', '.')) {
+            if (!ch.isWhitespace() && ch !in CURRENCY_SYMBOLS) append(ch)
+        }
+    }
+    if (cleaned.isBlank()) return PriceParse.Valid(null)
+    return if (PRICE_AMOUNT_RE.matches(cleaned)) PriceParse.Valid(cleaned)
+    else PriceParse.Invalid("Enter an amount like 1.99")
+}
+
+/** Uppercases and validates a 3-letter ISO-4217 code; blank -> [PriceParse.Valid] with null. */
+internal fun parseCurrency(raw: String): PriceParse {
+    val code = raw.trim().uppercase()
+    if (code.isBlank()) return PriceParse.Valid(null)
+    return if (CURRENCY_RE.matches(code)) PriceParse.Valid(code)
+    else PriceParse.Invalid("Use a 3-letter code like EUR")
 }

@@ -17,6 +17,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,6 +99,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
             onValueChange = viewModel::onPriceAmountChange,
             label = { Text("Price") },
             singleLine = true,
+            isError = state.priceError != null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),
         )
@@ -107,8 +109,12 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
             onValueChange = viewModel::onPriceCurrencyChange,
             label = { Text("Currency") },
             singleLine = true,
+            isError = state.currencyError != null,
             modifier = Modifier.widthIn(min = 88.dp),
         )
+    }
+    (state.priceError ?: state.currencyError)?.let { error ->
+        Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
     Spacer(Modifier.height(8.dp))
 

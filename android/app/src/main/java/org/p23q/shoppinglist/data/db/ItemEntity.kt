@@ -24,4 +24,10 @@ data class ItemEntity(
     @Embedded(prefix = "status_") val status: LwwString,
     @Embedded(prefix = "deleted_") val deleted: LwwBoolean,
     val dirty: Boolean,
+    /**
+     * Set when the server rejected this row's pushed value with a 422 (T-32). The row stays in the
+     * mirror (visible + editable) but [ItemDao.dirtyRows] skips it, so one bad field can't wedge
+     * the whole push queue. Cleared the moment the user edits the row again (see ItemsRepo).
+     */
+    val syncBlocked: Boolean = false,
 )

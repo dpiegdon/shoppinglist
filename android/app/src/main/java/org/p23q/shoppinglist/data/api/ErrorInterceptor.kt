@@ -18,9 +18,10 @@ class ErrorInterceptor @Inject constructor(
         val envelope = runCatching { json.decodeFromString<ErrorEnvelope>(body) }.getOrNull()
         val code = envelope?.error ?: "unknown_error"
         val message = envelope?.message ?: response.message
+        val httpCode = response.code
 
         response.close()
-        if (response.code == 401) {
+        if (httpCode == 401) {
             // A 401 on a request that actually carried a bearer token means "your token was
             // rejected" -> force re-login. A 401 with no Authorization header is an ordinary
             // login/register credential failure (no session to invalidate), so it must NOT trigger
@@ -30,6 +31,6 @@ class ErrorInterceptor @Inject constructor(
             }
             throw UnauthorizedException(message)
         }
-        throw ApiException(code, message, response.code)
+        throw ApiException(code, message, httpCode, rowId = envelope?.rowId, field = envelope?.field)
     }
 }

@@ -210,4 +210,58 @@ class ItemFormViewModelTest {
         viewModel.removeStore("Rewe")
         assertEquals(listOf("Aldi"), viewModel.uiState.value.stores)
     }
+
+    // ---- price validation / normalization (T-32) ------------------------------------------
+
+    @Test
+    fun `parsePriceAmount normalizes comma decimals and strips currency symbols and spaces`() {
+        assertEquals("1.99", (parsePriceAmount("1,99") as PriceParse.Valid).value)
+        assertEquals("2", (parsePriceAmount("2€") as PriceParse.Valid).value)
+        assertEquals("1.50", (parsePriceAmount("  1.50 ") as PriceParse.Valid).value)
+        assertNull((parsePriceAmount("   ") as PriceParse.Valid).value)
+    }
+
+    @Test
+    fun `parsePriceAmount rejects too many decimals and non-numeric input`() {
+        assertTrue(parsePriceAmount("1.999") is PriceParse.Invalid)
+        assertTrue(parsePriceAmount("abc") is PriceParse.Invalid)
+    }
+
+    @Test
+    fun `parseCurrency uppercases a valid code and rejects the wrong length`() {
+        assertEquals("EUR", (parseCurrency("eur") as PriceParse.Valid).value)
+        assertNull((parseCurrency("") as PriceParse.Valid).value)
+        assertTrue(parseCurrency("EU") is PriceParse.Invalid)
+    }
+
+    @Test
+    fun `saving a comma-decimal price stores it normalized`() = runTest {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.onNameChange("Milk")
+        viewModel.onPriceAmountChange("1,99")
+        viewModel.onPriceCurrencyChange("eur")
+
+        viewModel.save()?.join()
+
+        val stored = itemsRepo.findByExactName(listId, "Milk")!!
+        val price = itemsRepo.decodePrice(stored.price.value)!!
+        assertEquals("1.99", price.amount)
+        assertEquals("EUR", price.currency)
+    }
+
+    @Test
+    fun `an invalid price is rejected inline and never written (does not reach sync)`() = runTest {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.onNameChange("Milk")
+        viewModel.onPriceAmountChange("1.999")
+
+        val job = viewModel.save()
+
+        assertNull("synchronous validation failure returns no Job", job)
+        assertEquals("Enter an amount like 1.99", viewModel.uiState.value.priceError)
+        assertFalse(viewModel.uiState.value.isSaved)
+        assertNull("nothing was written to the mirror", itemsRepo.findByExactName(listId, "Milk"))
+    }
 }

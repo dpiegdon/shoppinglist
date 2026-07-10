@@ -14,7 +14,14 @@ import java.io.IOException
  * Extends IOException, not Exception: OkHttp interceptors may only throw IOException — anything
  * else gets caught by RealCall and rewrapped as a generic IOException, losing this type entirely.
  */
-open class ApiException(val code: String, message: String, val httpStatus: Int) : IOException(message)
+open class ApiException(
+    val code: String,
+    message: String,
+    val httpStatus: Int,
+    /** For a /sync validation 422: the offending row + field, so the client can quarantine it (T-32). */
+    val rowId: String? = null,
+    val field: String? = null,
+) : IOException(message)
 
 /** 401 responses always mean the caller must re-authenticate. */
 class UnauthorizedException(message: String) : ApiException("unauthorized", message, 401)

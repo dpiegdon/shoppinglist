@@ -218,6 +218,33 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `a validation 422 quarantines the named row and the retry pushes the rest`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("bad-item", "Milk", dirty = true))
+        db.itemDao().upsert(dummyItem("good-item", "Bread", dirty = true))
+
+        // First push: the server rejects one row, naming it via row_id (T-32 server change).
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody(
+                """{"error": "invalid_price", "message": "bad price", "row_id": "bad-item", "field": "price"}""",
+            ),
+        )
+        // Retry push (bad row now quarantined and excluded): accepted.
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        assertTrue("the rejected row is quarantined", db.itemDao().getById("bad-item")!!.syncBlocked)
+        assertFalse("the healthy row is not", db.itemDao().getById("good-item")!!.syncBlocked)
+
+        val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(setOf("bad-item", "good-item"), first.changes.items.map { it.id }.toSet())
+        assertEquals(setOf("good-item"), retry.changes.items.map { it.id }.toSet())
+    }
+
+    @Test
     fun `401 surfaces as Unauthorized without touching local state`() = runTest {
         pointAtServer()
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))

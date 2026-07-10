@@ -66,16 +66,26 @@ class SyncEngine @Inject constructor(
         } catch (e: UnauthorizedException) {
             return SyncResult.Unauthorized
         } catch (e: ApiException) {
-            return if (e.code == "full_resync_required") {
+            if (e.code == "full_resync_required") {
                 // The server still applied our pushed changes before rejecting the cursor (Wire
                 // Contract), so it's safe to wipe: nothing pushed is lost, a fresh cursor-0 pull
                 // brings it all back. dirtyRows() will be empty post-wipe, so the retry is a pure pull.
                 withContext(Dispatchers.IO) { appDb.clearAllTables() }
                 sessionState.syncCursor = 0
-                syncNow(fullLists)
-            } else {
-                SyncResult.Failed(e.message ?: "sync failed")
+                return syncNow(fullLists)
             }
+            // One row the server rejected (bad field value) aborts the whole transactional push.
+            // Quarantine just that row so it stops wedging the queue, then retry immediately: the
+            // remaining dirty rows now go through. The row stays visible/editable; editing it clears
+            // the block (ItemsRepo) so the corrected value is re-tried. Terminates because each retry
+            // excludes the blocked row, so the same id can't 422 twice. The getById guard avoids
+            // looping if the id isn't a known item (e.g. a list row we don't quarantine).
+            val badRowId = e.rowId
+            if (e.httpStatus == 422 && badRowId != null && itemDao.getById(badRowId) != null) {
+                itemDao.blockRow(badRowId)
+                return syncNow(fullLists)
+            }
+            return SyncResult.Failed(e.message ?: "sync failed")
         } catch (e: IOException) {
             return SyncResult.Failed(e.message ?: "network error")
         }
@@ -174,6 +184,8 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
     val note = mergeField(local.note.value, local.note.updatedAt, local.note.updatedBy, remote.fields.note)
     val status = mergeField(local.status.value, local.status.updatedAt, local.status.updatedBy, remote.fields.status)
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
+    val mergedDirty = name.dirty || category.dirty || stores.dirty || quantity.dirty || price.dirty ||
+        note.dirty || status.dirty || deleted.dirty
 
     return ItemEntity(
         id = local.id,
@@ -187,8 +199,12 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
         note = LwwOptionalString(note.value, note.updatedAt, note.updatedBy),
         status = LwwString(status.value, status.updatedAt, status.updatedBy),
         deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
-        dirty = name.dirty || category.dirty || stores.dirty || quantity.dirty || price.dirty ||
-            note.dirty || status.dirty || deleted.dirty,
+        dirty = mergedDirty,
+        // A quarantined row stays quarantined only while it still has unpushed local state; once a
+        // merge leaves nothing dirty (remote fully superseded the local edits) the block is moot.
+        // A user edit clears it regardless (ItemsRepo). syncBlocked isn't a synced field, so it's
+        // taken from the local row, never the remote DTO.
+        syncBlocked = local.syncBlocked && mergedDirty,
     )
 }
 

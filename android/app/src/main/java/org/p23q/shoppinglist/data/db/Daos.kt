@@ -40,11 +40,19 @@ interface ItemDao {
     )
     fun distinctCategories(listId: String): Flow<List<String>>
 
-    @Query("SELECT * FROM items WHERE dirty = 1")
+    /** Rows to push: dirty AND not quarantined by a prior server 422 (T-32). */
+    @Query("SELECT * FROM items WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ItemEntity>
 
     @Query("UPDATE items SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
+
+    /** Quarantine a row the server rejected (T-32); dirtyRows() then skips it until it's re-edited. */
+    @Query("UPDATE items SET syncBlocked = 1 WHERE id = :id")
+    suspend fun blockRow(id: String)
+
+    @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
+    suspend fun blockedRowCount(): Int
 
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
     @Query("DELETE FROM items WHERE listId = :listId")

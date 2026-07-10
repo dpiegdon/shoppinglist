@@ -103,9 +103,13 @@ class ItemsRepo @Inject constructor(
 
     private fun encodeStores(stores: List<String>): String = Json.encodeToString(stores)
 
+    /** True after the server quarantined at least one row (T-32) — for a "needs attention" hint. */
+    suspend fun blockedRowCount(): Int = itemDao.blockedRowCount()
+
     private suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val current = itemDao.getById(itemId) ?: return
-        itemDao.upsert(mutate(current).copy(dirty = true))
+        // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.
+        itemDao.upsert(mutate(current).copy(dirty = true, syncBlocked = false))
         syncTrigger.scheduleAfterEdit()
     }
 }

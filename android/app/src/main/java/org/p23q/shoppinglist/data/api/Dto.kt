@@ -49,7 +49,12 @@ data class ListDto(
 )
 
 @Serializable
-data class ErrorEnvelope(val error: String, val message: String)
+data class ErrorEnvelope(
+    val error: String,
+    val message: String,
+    @SerialName("row_id") val rowId: String? = null,
+    val field: String? = null,
+)
 
 @Serializable
 data class RegisterRequest(val email: String, val password: String)
