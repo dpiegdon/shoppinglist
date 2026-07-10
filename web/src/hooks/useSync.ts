@@ -35,6 +35,8 @@ export interface SyncState {
   items: Map<string, ItemObject>;
   loading: boolean;
   error: string | null;
+  /** Epoch-ms of the last successful sync, for the sync-health indicator (T-47); null until the first. */
+  lastSyncAt: number | null;
   deviceId: string;
   /** Push local changes (and/or force a snapshot of full_lists), then pull. */
   push: (changes: { lists?: ListObject[]; items?: ItemObject[] }, fullLists?: string[]) => Promise<void>;
@@ -66,10 +68,14 @@ export function useSync(): SyncState {
   // not-yet-populated `lists`/`items` map.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
   const cursorRef = useRef(0);
 
   const applyResponse = useCallback((response: SyncResponse) => {
     cursorRef.current = response.cursor;
+    // Called on every successfully-applied response (normal and the 410 retry), so it's the single
+    // place to stamp last-synced for the health indicator (T-47).
+    setLastSyncAt(nowMs());
     setLists((prev) => {
       const next = new Map(prev);
       for (const list of response.changes.lists) {
@@ -145,7 +151,7 @@ export function useSync(): SyncState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { lists, items, loading, error, deviceId, push, refresh };
+  return { lists, items, loading, error, lastSyncAt, deviceId, push, refresh };
 }
 
 export function itemFieldValue<K extends keyof ItemFields>(

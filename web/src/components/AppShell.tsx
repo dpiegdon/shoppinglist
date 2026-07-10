@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { SyncProvider } from "../hooks/SyncContext";
+import SyncIndicator from "./SyncIndicator";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,6 +32,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <Link to="/" style={{ fontWeight: 700, textDecoration: "none", color: "var(--color-text)" }}>
             Shopping List
           </Link>
+          <SyncIndicator />
         </header>
 
         {menuOpen && (

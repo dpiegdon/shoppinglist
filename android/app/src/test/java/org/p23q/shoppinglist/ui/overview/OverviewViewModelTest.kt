@@ -18,8 +18,10 @@ import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -30,7 +32,9 @@ class OverviewViewModelTest {
 
     private lateinit var db: AppDb
     private lateinit var listsRepo: ListsRepo
+    private lateinit var itemsRepo: ItemsRepo
     private lateinit var sessionState: FakeSessionState
+    private lateinit var syncStatus: SyncStatus
     private lateinit var viewModel: OverviewViewModel
 
     @Before
@@ -39,9 +43,12 @@ class OverviewViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-        listsRepo = ListsRepo(db.listDao(), DeviceIdProvider { "device-1" }, FakeSyncTrigger())
+        val deviceId = DeviceIdProvider { "device-1" }
+        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
         sessionState = FakeSessionState()
-        viewModel = OverviewViewModel(listsRepo, sessionState)
+        syncStatus = SyncStatus()
+        viewModel = OverviewViewModel(listsRepo, itemsRepo, sessionState, syncStatus)
     }
 
     @Test
@@ -86,5 +93,26 @@ class OverviewViewModelTest {
 
         viewModel.dismissCreateDialog()
         assertFalse(viewModel.uiState.value.isCreateDialogOpen)
+    }
+
+    @Test
+    fun `sync status flows into the ui state (T-47)`() = runTest {
+        syncStatus.succeeded(at = 1_000L, pending = 2, blocked = 0)
+
+        val state = viewModel.uiState.first { it.sync.lastSyncAt == 1_000L }
+        assertEquals(2, state.sync.pendingCount)
+        assertNull(state.attentionListId)
+    }
+
+    @Test
+    fun `a quarantined row surfaces its list for the attention banner (T-47)`() = runTest {
+        val listId = listsRepo.createList("Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        db.itemDao().blockRow(itemId)
+
+        syncStatus.failed("bad row", pending = 0, blocked = 1)
+
+        val state = viewModel.uiState.first { it.sync.blockedCount == 1 }
+        assertEquals(listId, state.attentionListId)
     }
 }

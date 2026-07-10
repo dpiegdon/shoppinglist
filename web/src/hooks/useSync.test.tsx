@@ -54,3 +54,33 @@ describe("useSync across a page reload", () => {
     expect(second.result.current.lists.size).toBe(3);
   });
 });
+
+describe("useSync health tracking (T-47)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("stamps lastSyncAt on a successful sync and leaves error null", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce(listResponse(1, ["list-1"]));
+    const { result } = renderHook(() => useSync());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(typeof result.current.lastSyncAt).toBe("number");
+    expect(result.current.error).toBeNull();
+  });
+
+  it("records the error message when a sync fails", async () => {
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    const { result } = renderHook(() => useSync());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.error).toBe("network down");
+    expect(result.current.lastSyncAt).toBeNull();
+  });
+});

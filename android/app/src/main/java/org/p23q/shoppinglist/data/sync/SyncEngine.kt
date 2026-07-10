@@ -49,10 +49,15 @@ class SyncEngine @Inject constructor(
     private val sessionState: SessionState,
     private val serverConfig: ServerConfig,
     private val appDb: AppDb,
+    private val syncStatus: SyncStatus,
 ) {
     suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
         val dirtyItems = itemDao.dirtyRows()
         val dirtyLists = listDao.dirtyRows()
+        val pendingBefore = dirtyItems.size + dirtyLists.size
+        // Surface "syncing…" plus the counts as they stand now (T-47). Recursive retries below
+        // re-enter this and re-report, so the innermost outcome is what the UI settles on.
+        syncStatus.started(pending = pendingBefore, blocked = itemDao.blockedRowCount())
 
         val request = SyncRequest(
             cursor = sessionState.syncCursor,
@@ -64,6 +69,7 @@ class SyncEngine @Inject constructor(
         val response = try {
             apiProvider.get().sync(request)
         } catch (e: UnauthorizedException) {
+            syncStatus.stoppedUnauthorized(pending = pendingBefore, blocked = itemDao.blockedRowCount())
             return SyncResult.Unauthorized
         } catch (e: ApiException) {
             if (e.code == "full_resync_required") {
@@ -85,9 +91,13 @@ class SyncEngine @Inject constructor(
                 itemDao.blockRow(badRowId)
                 return syncNow(fullLists)
             }
-            return SyncResult.Failed(e.message ?: "sync failed")
+            val message = e.message ?: "sync failed"
+            syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            return SyncResult.Failed(message)
         } catch (e: IOException) {
-            return SyncResult.Failed(e.message ?: "network error")
+            val message = e.message ?: "network error"
+            syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            return SyncResult.Failed(message)
         }
 
         for (dto in response.changes.lists) {
@@ -99,6 +109,12 @@ class SyncEngine @Inject constructor(
 
         sessionState.syncCursor = response.cursor
 
+        // Recompute pending after the merge: a local edit that raced the request may still be dirty.
+        syncStatus.succeeded(
+            at = System.currentTimeMillis(),
+            pending = itemDao.dirtyRows().size + listDao.dirtyRows().size,
+            blocked = itemDao.blockedRowCount(),
+        )
         return SyncResult.Success(
             pushedItems = dirtyItems.size,
             pushedLists = dirtyLists.size,

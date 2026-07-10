@@ -58,6 +58,10 @@ interface ItemDao {
     @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
     suspend fun blockedRowCount(): Int
 
+    /** A quarantined row, so the sync-health surface can send the user to the list that holds it (T-47). */
+    @Query("SELECT * FROM items WHERE syncBlocked = 1 LIMIT 1")
+    suspend fun firstBlockedItem(): ItemEntity?
+
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
     @Query("DELETE FROM items WHERE listId = :listId")
     suspend fun hardDeleteByListId(listId: String)

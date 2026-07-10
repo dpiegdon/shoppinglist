@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.overview
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.ui.SyncStatusBar
 
 @Composable
 fun OverviewScreen(
@@ -40,29 +42,36 @@ fun OverviewScreen(
             }
         },
     ) { innerPadding ->
-        if (state.lists.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("No lists yet")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-            ) {
-                items(state.lists, key = { it.id }) { list ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable {
-                                viewModel.openList(list.id)
-                                onOpenList(list.id)
-                            },
-                    ) {
-                        Text(text = list.name.value, modifier = Modifier.padding(16.dp))
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            SyncStatusBar(
+                state = state.sync,
+                nowMs = System.currentTimeMillis(),
+                onAttentionClick = { state.attentionListId?.let(onOpenList) },
+            )
+            if (state.lists.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("No lists yet")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                ) {
+                    items(state.lists, key = { it.id }) { list ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable {
+                                    viewModel.openList(list.id)
+                                    onOpenList(list.id)
+                                },
+                        ) {
+                            Text(text = list.name.value, modifier = Modifier.padding(16.dp))
+                        }
                     }
                 }
             }

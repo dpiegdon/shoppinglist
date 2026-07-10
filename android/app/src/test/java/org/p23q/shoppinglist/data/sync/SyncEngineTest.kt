@@ -12,6 +12,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -38,6 +39,7 @@ class SyncEngineTest {
     private lateinit var db: AppDb
     private lateinit var serverConfig: ServerConfig
     private lateinit var sessionState: FakeSessionState
+    private lateinit var syncStatus: SyncStatus
     private lateinit var syncEngine: SyncEngine
 
     @Before
@@ -64,7 +66,8 @@ class SyncEngineTest {
             json = json,
         )
 
-        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db)
+        syncStatus = SyncStatus()
+        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus)
     }
 
     @After
@@ -125,6 +128,14 @@ class SyncEngineTest {
         val stored = db.itemDao().getById("item-1")!!
         assertFalse(stored.dirty)
         assertEquals(1L, sessionState.syncCursor)
+
+        // A successful run records health for the UI (T-47): last-sync time set, no error, and the
+        // pending count recomputed to 0 now that the row synced.
+        val health = syncStatus.state.value
+        assertFalse(health.inProgress)
+        assertNotNull(health.lastSyncAt)
+        assertNull(health.lastError)
+        assertEquals(0, health.pendingCount)
     }
 
     @Test
@@ -242,6 +253,23 @@ class SyncEngineTest {
         val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         assertEquals(setOf("bad-item", "good-item"), first.changes.items.map { it.id }.toSet())
         assertEquals(setOf("good-item"), retry.changes.items.map { it.id }.toSet())
+
+        // The health surface counts the quarantined row so the UI can flag "needs attention" (T-47).
+        assertEquals(1, syncStatus.state.value.blockedCount)
+    }
+
+    @Test
+    fun `a failed sync records the error on the health surface (T-47)`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
+        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error": "server_error", "message": "boom"}"""))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Failed)
+        val health = syncStatus.state.value
+        assertFalse(health.inProgress)
+        assertNotNull(health.lastError)
     }
 
     @Test

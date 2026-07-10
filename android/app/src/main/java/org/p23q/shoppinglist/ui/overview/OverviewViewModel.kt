@@ -11,19 +11,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.db.ListEntity
+import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.data.sync.SyncState
+import org.p23q.shoppinglist.data.sync.SyncStatus
 import javax.inject.Inject
 
 data class OverviewUiState(
     val lists: List<ListEntity> = emptyList(),
     val isCreateDialogOpen: Boolean = false,
     val newListName: String = "",
+    val sync: SyncState = SyncState(),
+    /** The list holding a quarantined row, so the "needs attention" banner can open it (T-47). */
+    val attentionListId: String? = null,
 )
 
 @HiltViewModel
 class OverviewViewModel @Inject constructor(
     private val listsRepo: ListsRepo,
+    private val itemsRepo: ItemsRepo,
     private val sessionState: SessionState,
+    syncStatus: SyncStatus,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OverviewUiState())
@@ -32,6 +40,13 @@ class OverviewViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             listsRepo.activeLists().collect { lists -> _uiState.update { it.copy(lists = lists) } }
+        }
+        viewModelScope.launch {
+            syncStatus.state.collect { sync ->
+                // Resolve which list the attention banner should open only when something is blocked.
+                val attentionListId = if (sync.blockedCount > 0) itemsRepo.firstBlockedItem()?.listId else null
+                _uiState.update { it.copy(sync = sync, attentionListId = attentionListId) }
+            }
         }
     }
 

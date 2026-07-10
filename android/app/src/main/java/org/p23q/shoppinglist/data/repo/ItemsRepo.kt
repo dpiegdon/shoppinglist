@@ -140,6 +140,9 @@ class ItemsRepo @Inject constructor(
     /** True after the server quarantined at least one row (T-32) — for a "needs attention" hint. */
     suspend fun blockedRowCount(): Int = itemDao.blockedRowCount()
 
+    /** One quarantined row (or null), so a "needs attention" surface can open the list holding it (T-47). */
+    suspend fun firstBlockedItem(): ItemEntity? = itemDao.firstBlockedItem()
+
     private suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val current = itemDao.getById(itemId) ?: return
         // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.
