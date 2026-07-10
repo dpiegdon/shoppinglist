@@ -7,7 +7,8 @@
     "security",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Server hardening: revoke sessions on password change, request size cap, security headers",
-  "updated_at": "2026-07-09T23:16:41+00:00"
+  "updated_at": "2026-07-10T14:33:13+00:00"
 }
