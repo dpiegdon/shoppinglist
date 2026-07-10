@@ -6,7 +6,8 @@
     "android",
     "ux"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Category order editor: replace up/down buttons with real drag-reorder",
-  "updated_at": "2026-07-09T22:38:21+00:00"
+  "updated_at": "2026-07-10T18:56:30+00:00"
 }
