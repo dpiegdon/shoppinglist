@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -55,25 +56,23 @@ class ListViewModel @Inject constructor(
     private var checkedItems: List<ItemEntity> = emptyList()
 
     init {
-        // Observe the list row (not a one-shot read) so a rename or a category-order change — made
-        // in List properties or arriving from another device via sync — updates the name and
-        // re-groups the items without recreating this screen (T-34).
+        // Combine the list row with the todo + checked item streams (all observed live, so a rename,
+        // a category-order change, or another device's sync updates without recreating the screen —
+        // T-34). combine holds the first grouped emission until ALL three flows have emitted once, so
+        // grouping is never computed from a half-loaded snapshot: without this, the item streams
+        // (off Dispatchers.IO) could land before the list row and briefly group by an empty
+        // category_order — an order flash on open, and a race that flaked the ordering test.
         viewModelScope.launch {
-            listsRepo.observeById(listId).collect { list ->
+            combine(
+                listsRepo.observeById(listId),
+                itemsRepo.itemsForListByStatus(listId, Status.TODO),
+                itemsRepo.itemsForListByStatus(listId, Status.CHECKED),
+                ::Triple,
+            ).collect { (list, todo, checked) ->
                 categoryOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
+                todoItems = todo
+                checkedItems = checked
                 _uiState.update { it.copy(listName = list?.name?.value ?: "") }
-                regroup()
-            }
-        }
-        viewModelScope.launch {
-            itemsRepo.itemsForListByStatus(listId, Status.TODO).collect { items ->
-                todoItems = items
-                regroup()
-            }
-        }
-        viewModelScope.launch {
-            itemsRepo.itemsForListByStatus(listId, Status.CHECKED).collect { items ->
-                checkedItems = items
                 regroup()
             }
         }
