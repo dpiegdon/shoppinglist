@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-09T23:18:45+00:00", "kind": "created", "ref": "main@c2f3e88", "text": "Dev-only flag to skip server TLS cert validation (forced off in release)"}
 {"actor": "claude", "at": "2026-07-09T23:23:10+00:00", "kind": "note", "ref": "main@c2f3e88", "text": "relates: T-38 \u2014 that ticket proposes a networkSecurityConfig trusting\nuser-installed CAs (works in release; the \"proper\" self-host path) plus a\ndistinct SSLException error message. This ticket is the quicker debug-only\ntrust-all bypass. Complementary, not duplicate \u2014 coordinate so the two\ncert-handling paths and their settings/error surfaces don't collide."}
+{"actor": "claude", "at": "2026-07-10T07:49:06+00:00", "kind": "claimed", "ref": "main@605a276", "text": "claude"}
