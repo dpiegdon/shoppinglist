@@ -255,4 +255,16 @@ class SettingsViewModelTest {
         assertEquals(ThemePreference.DARK, viewModel.uiState.first { it.theme == ThemePreference.DARK }.theme)
         assertEquals(ThemePreference.DARK, themePreferenceStore.theme.first())
     }
+
+    @Test
+    fun `allowSelfSignedCerts loads from and persists to server config`() = runTest {
+        serverConfig.setAllowSelfSignedCerts(true)
+        val viewModel = newViewModel()
+        assertTrue(viewModel.uiState.first { it.allowSelfSignedCerts }.allowSelfSignedCerts)
+
+        viewModel.setAllowSelfSignedCerts(false).join()
+
+        assertFalse(viewModel.uiState.value.allowSelfSignedCerts)
+        assertFalse(serverConfig.allowSelfSignedCerts.first())
+    }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -43,6 +44,20 @@ class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferen
         dataStore.edit { it[SERVER_URL_KEY] = normalized }
     }
 
+    /**
+     * Developer-only opt-in to skip TLS certificate validation (for testing against a server with a
+     * self-signed cert, e.g. the bundled dev server). Persisted, default false. This flag is only
+     * ever HONORED in debug builds: the code that acts on it lives in the debug source set, and the
+     * release source set's counterpart is a no-op that ignores it entirely (see DevCertTrust.kt), so
+     * a value carried into a release build via backup/restore can never weaken its TLS. The Settings
+     * toggle that writes it is likewise gated to debug builds.
+     */
+    val allowSelfSignedCerts: Flow<Boolean> = dataStore.data.map { it[ALLOW_SELF_SIGNED_KEY] ?: false }
+
+    suspend fun setAllowSelfSignedCerts(allow: Boolean) {
+        dataStore.edit { it[ALLOW_SELF_SIGNED_KEY] = allow }
+    }
+
     /** Minted once per install and persisted; stamped as `updated_by` on every field this device writes. */
     suspend fun deviceId(): String {
         dataStore.data.first()[DEVICE_ID_KEY]?.let { return it }
@@ -57,5 +72,6 @@ class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferen
     private companion object {
         val SERVER_URL_KEY = stringPreferencesKey("server_url")
         val DEVICE_ID_KEY = stringPreferencesKey("device_id")
+        val ALLOW_SELF_SIGNED_KEY = booleanPreferencesKey("allow_self_signed_certs")
     }
 }

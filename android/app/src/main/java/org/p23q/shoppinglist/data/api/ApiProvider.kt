@@ -34,23 +34,29 @@ class ApiProvider @Inject constructor(
 ) {
     private val mutex = Mutex()
     private var cachedUrl: String? = null
+    private var cachedAllowSelfSigned: Boolean? = null
     private var cachedApi: Api? = null
 
     suspend fun get(): Api {
         val url = serverConfig.serverUrl.first() ?: error("Server URL is not configured")
+        val allowSelfSigned = serverConfig.allowSelfSignedCerts.first()
         mutex.withLock {
-            if (url != cachedUrl || cachedApi == null) {
-                cachedApi = buildApi(url)
+            if (url != cachedUrl || allowSelfSigned != cachedAllowSelfSigned || cachedApi == null) {
+                cachedApi = buildApi(url, allowSelfSigned)
                 cachedUrl = url
+                cachedAllowSelfSigned = allowSelfSigned
             }
             return cachedApi!!
         }
     }
 
-    private fun buildApi(url: String): Api {
+    private fun buildApi(url: String, allowSelfSignedCerts: Boolean): Api {
         val client = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(errorInterceptor)
+            // No-op in release (see DevCertTrust.kt); honored only in debug builds when the dev
+            // opt-in is set, to allow connecting to a self-signed dev server.
+            .applyDevCertTrust(allowSelfSignedCerts)
             .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(url)

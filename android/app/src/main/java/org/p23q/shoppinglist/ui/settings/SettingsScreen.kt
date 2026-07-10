@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.data.ThemePreference
 
 @Composable
@@ -78,6 +80,25 @@ fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(16.dp))
+
+        // Developer-only escape hatch for testing against a self-signed dev server. Present only in
+        // debug builds; even if this flag were somehow set, release builds ignore it (DevCertTrust).
+        if (BuildConfig.DEBUG) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Trust self-signed certificates", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Developer option — skips TLS certificate checks. Insecure; debug builds only.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(
+                    checked = state.allowSelfSignedCerts,
+                    onCheckedChange = { viewModel.setAllowSelfSignedCerts(it) },
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+        }
 
         Text("Change password", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(

@@ -39,6 +39,10 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig.DEBUG gates the dev-only "trust self-signed certs" toggle in Settings so it
+        // is absent from release builds (the trust-all code itself is excluded at the source-set
+        // level — see src/debug vs src/release DevCertTrust.kt).
+        buildConfig = true
     }
 
     testOptions {
@@ -113,6 +117,9 @@ dependencies {
     // self-load under a plain JVM test; "-jvm" bundles + self-extracts its native library instead.
     testImplementation(libs.sqlite.bundled.jvm)
     testImplementation(libs.okhttp.mockwebserver)
+    // HeldCertificate / HandshakeCertificates for the self-signed-cert TLS tests that verify the
+    // debug bypass connects and the release no-op still rejects untrusted certs.
+    testImplementation(libs.okhttp.tls)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

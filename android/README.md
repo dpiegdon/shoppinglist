@@ -40,7 +40,22 @@ Flask blueprint is mounted, e.g. `https://shopping.example.com/` or
 `https://example.com/apps/shopping/`. It **must be `https`** (the login screen
 rejects plain `http`), so the server needs TLS in front of it — see
 [`../server/README.md`](../server/README.md) for the deployment requirements.
-Enter it, then register a new account or log in.
+Enter it, then register a new account or log in. On later launches the app
+resumes your session and reopens the list you last had open; the server URL is
+remembered too.
+
+### Testing against a self-signed server (debug builds only)
+
+A **debug** build's Settings screen has a *"Trust self-signed certificates"*
+toggle for pointing the app at a server with a self-signed cert (e.g. the
+bundled `dev_tls_server.py` on `:8723`). It disables TLS certificate
+verification — **insecure, for local testing only.** The option and the code
+behind it exist **only in debug builds**: the release APK does not contain the
+trust-all path at all (`src/debug` vs `src/release` `DevCertTrust.kt`), so the
+setting is absent from release and a value carried over from a debug install
+can never weaken a release build's TLS. For a real self-hosted deployment, put
+a proper certificate (e.g. Let's Encrypt via a reverse proxy) in front of the
+server instead.
 
 ## Invite links / App Links
 

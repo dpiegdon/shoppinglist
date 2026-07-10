@@ -33,6 +33,7 @@ data class SettingsUiState(
     val accountEmail: String? = null,
     val defaultCurrency: String = "",
     val theme: ThemePreference = ThemePreference.SYSTEM,
+    val allowSelfSignedCerts: Boolean = false,
     val sessions: List<SessionDto> = emptyList(),
     val currentPassword: String = "",
     val newPassword: String = "",
@@ -67,6 +68,7 @@ class SettingsViewModel @Inject constructor(
                     serverUrl = serverConfig.serverUrl.first() ?: "",
                     accountEmail = sessionState.accountEmail,
                     defaultCurrency = sessionState.defaultCurrency ?: "",
+                    allowSelfSignedCerts = serverConfig.allowSelfSignedCerts.first(),
                 )
             }
         }
@@ -202,6 +204,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setTheme(preference: ThemePreference): Job = viewModelScope.launch { themePreferenceStore.setTheme(preference) }
+
+    /**
+     * Dev-only (the Settings toggle that calls this is gated to debug builds). Persists the flag;
+     * it only actually affects TLS in debug builds — release ignores it (see DevCertTrust.kt).
+     */
+    fun setAllowSelfSignedCerts(allow: Boolean): Job = viewModelScope.launch {
+        serverConfig.setAllowSelfSignedCerts(allow)
+        _uiState.update { it.copy(allowSelfSignedCerts = allow) }
+    }
 
     private companion object {
         val ISO_CURRENCY = Regex("^[A-Z]{3}$")
