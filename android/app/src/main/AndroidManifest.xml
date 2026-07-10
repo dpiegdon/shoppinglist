@@ -5,9 +5,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- allowBackup is off (T-37): SessionStore's EncryptedSharedPreferences is sealed by a
+         device-bound Keystore master key that backups can't carry, so restoring this app's data to
+         a new device would leave an undecryptable keyset and crash-loop the app at startup. All
+         local state is re-syncable from the server (and logout() already wipes the DB), so there's
+         no data-loss reason to keep backup on. SessionStore also recovers defensively if a keyset
+         ever does become unreadable (e.g. device-to-device transfer on API 31+). -->
     <application
         android:name=".ShoppingListApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
