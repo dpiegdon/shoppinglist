@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.AuthRepository
+import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.UnauthorizedException
+import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.authedStartDestination
 import java.io.IOException
 import java.net.URI
@@ -35,6 +37,7 @@ class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val serverConfig: ServerConfig,
     private val sessionState: SessionState,
+    private val pendingInviteHolder: PendingInviteHolder,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -102,8 +105,12 @@ class LoginViewModel @Inject constructor(
     /** Called from the menu (A6) — clears local session/mirror and returns to login regardless of network state. */
     fun logout(): Job = viewModelScope.launch { authRepository.logout() }
 
-    fun startDestinationAfterLogin(): String =
-        authedStartDestination(authRepository.lastOpenedListId())
+    fun startDestinationAfterLogin(): String {
+        // A logged-out invite (App Link / pasted code) was parked before login — resume straight
+        // into redeeming it, rather than the usual overview/last-list (T-28).
+        pendingInviteHolder.consume()?.let { token -> return Routes.redeem(token) }
+        return authedStartDestination(authRepository.lastOpenedListId())
+    }
 
     /** Notes "user info": the drawer (A6) shows this alongside the Log out entry. */
     val loggedInEmail: String? get() = sessionState.accountEmail

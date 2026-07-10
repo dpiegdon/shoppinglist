@@ -62,7 +62,7 @@ class AppDrawerScaffoldTest {
     @Test
     fun `selecting Account in the drawer navigates to settings`() {
         val sessionState = FakeSessionState()
-        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState)
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
         val getNavController = setDrawerContent(loginViewModel)
 
         composeTestRule.onNodeWithContentDescription("Menu").performClick()
@@ -74,7 +74,7 @@ class AppDrawerScaffoldTest {
     @Test
     fun `drawer shows the logged in account's email`() {
         val sessionState = FakeSessionState().apply { accountEmail = "shopper@example.com" }
-        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState)
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
         setDrawerContent(loginViewModel)
 
         composeTestRule.onNodeWithContentDescription("Menu").performClick()
@@ -86,7 +86,7 @@ class AppDrawerScaffoldTest {
     fun `logging out clears the session and navigates back to login`() {
         val sessionState = FakeSessionState().apply { accountEmail = "shopper@example.com" }
         val authRepository = NoopAuthRepository()
-        val loginViewModel = LoginViewModel(authRepository, newServerConfig(), sessionState)
+        val loginViewModel = LoginViewModel(authRepository, newServerConfig(), sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
         val getNavController = setDrawerContent(loginViewModel)
 
         composeTestRule.onNodeWithContentDescription("Menu").performClick()

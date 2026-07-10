@@ -26,6 +26,7 @@ fun RedeemScreen(
     token: String,
     onRedeemed: (listId: String) -> Unit,
     onCancel: () -> Unit,
+    onNeedsLogin: () -> Unit = {},
     viewModel: RedeemViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -35,6 +36,8 @@ fun RedeemScreen(
         viewModel.redeem()
     }
     LaunchedEffect(state.redeemedListId) { state.redeemedListId?.let(onRedeemed) }
+    // Logged out: the token has been stashed by the VM; go log in, then resume redeem (T-28).
+    LaunchedEffect(state.needsLogin) { if (state.needsLogin) onNeedsLogin() }
 
     Column(
         modifier = Modifier.fillMaxSize(),

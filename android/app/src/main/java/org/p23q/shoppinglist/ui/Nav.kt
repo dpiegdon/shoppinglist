@@ -186,6 +186,14 @@ fun ShoppingListNavHost(
                         popUpTo(Routes.REDEEM_PATTERN) { inclusive = true }
                     }
                 },
+                // Logged out: go to Login (the token is already stashed). After a successful login,
+                // LoginViewModel.startDestinationAfterLogin() routes back into redeem (T-28).
+                onNeedsLogin = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
             )
         }
         composable(Routes.SETTINGS) {

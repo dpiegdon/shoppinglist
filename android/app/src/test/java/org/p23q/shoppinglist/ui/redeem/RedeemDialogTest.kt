@@ -66,7 +66,7 @@ class RedeemDialogTest {
             json = json,
         )
         val syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db)
-        val viewModel = RedeemViewModel(apiProvider, syncEngine)
+        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
         var redeemedListId: String? = null
 
         composeTestRule.setContent {

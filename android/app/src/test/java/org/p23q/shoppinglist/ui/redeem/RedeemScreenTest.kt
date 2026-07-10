@@ -64,7 +64,7 @@ class RedeemScreenTest {
             json = json,
         )
         val syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db)
-        val viewModel = RedeemViewModel(apiProvider, syncEngine)
+        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
         var redeemedListId: String? = null
 
         composeTestRule.setContent {
@@ -108,7 +108,7 @@ class RedeemScreenTest {
             json = json,
         )
         val syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db)
-        val viewModel = RedeemViewModel(apiProvider, syncEngine)
+        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
 
         composeTestRule.setContent {
             RedeemScreen(token = "bad-token", onRedeemed = {}, onCancel = {}, viewModel = viewModel)

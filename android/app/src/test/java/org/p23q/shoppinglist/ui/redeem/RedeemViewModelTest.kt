@@ -13,12 +13,14 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
@@ -73,7 +75,7 @@ class RedeemViewModelTest {
         db.close()
     }
 
-    private fun newViewModel(): RedeemViewModel = RedeemViewModel(apiProvider, syncEngine)
+    private fun newViewModel(): RedeemViewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
 
     @Test
     fun `redeem with a blank token is rejected locally without a network call`() = runTest {
@@ -128,5 +130,20 @@ class RedeemViewModelTest {
 
         assertNotNull(viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.redeemedListId)
+    }
+
+    @Test
+    fun `redeeming while logged out stashes the token and signals needsLogin without calling the API`() = runTest {
+        val holder = PendingInviteHolder()
+        val loggedOut = FakeSessionState() // token == null
+        val viewModel = RedeemViewModel(apiProvider, syncEngine, loggedOut, holder)
+        viewModel.onTokenChange("invite-xyz")
+
+        val job = viewModel.redeem()
+
+        assertNull("short-circuits before launching any request", job)
+        assertTrue(viewModel.uiState.value.needsLogin)
+        assertEquals("invite-xyz", holder.consume())
+        assertEquals("no request should have reached the server", 0, server.requestCount)
     }
 }

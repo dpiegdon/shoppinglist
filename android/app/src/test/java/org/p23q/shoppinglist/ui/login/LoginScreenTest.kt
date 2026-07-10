@@ -31,7 +31,7 @@ class LoginScreenTest {
         val tempFile = File.createTempFile("login_screen_test", ".preferences_pb")
         tempFile.deleteOnExit()
         val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
-        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)

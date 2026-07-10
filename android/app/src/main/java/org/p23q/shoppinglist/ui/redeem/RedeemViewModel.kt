@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.data.PendingInviteHolder
+import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.RedeemInviteRequest
@@ -21,6 +23,8 @@ data class RedeemUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val redeemedListId: String? = null,
+    /** Set when redeem was attempted without a session — the caller should route to Login (T-28). */
+    val needsLogin: Boolean = false,
 )
 
 /** Notes: App Link / pasted token -> POST /invites/redeem -> syncNow(fullLists=[listId]) -> open list. */
@@ -28,6 +32,8 @@ data class RedeemUiState(
 class RedeemViewModel @Inject constructor(
     private val apiProvider: ApiProvider,
     private val syncEngine: SyncEngine,
+    private val sessionState: SessionState,
+    private val pendingInviteHolder: PendingInviteHolder,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RedeemUiState())
@@ -39,6 +45,14 @@ class RedeemViewModel @Inject constructor(
         val token = _uiState.value.token.trim()
         if (token.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Enter an invite code") }
+            return null
+        }
+        // Redeem needs a session. Logged out (e.g. tapped an invite link with no account signed in):
+        // stash the token and signal the caller to send the user through Login, which resumes the
+        // redeem afterwards — instead of a bare 401 that drops the invite (T-28).
+        if (sessionState.token == null) {
+            pendingInviteHolder.stash(token)
+            _uiState.update { it.copy(needsLogin = true) }
             return null
         }
         return viewModelScope.launch {

@@ -57,7 +57,7 @@ class LoginViewModelTest {
     fun `happy login succeeds and persists the entered server URL`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         viewModel.onServerUrlChange("https://example.com/shoppinglist")
         viewModel.onEmailChange("milk@example.com")
@@ -75,7 +75,7 @@ class LoginViewModelTest {
     fun `bad password surfaces an error message and does not succeed`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository(onLogin = { _, _ -> throw UnauthorizedException("bad creds") })
-        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         viewModel.onServerUrlChange("https://example.com")
         viewModel.onEmailChange("milk@example.com")
@@ -90,7 +90,7 @@ class LoginViewModelTest {
     fun `register mode calls register before login`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         viewModel.onServerUrlChange("https://example.com")
         viewModel.onEmailChange("milk@example.com")
@@ -106,7 +106,7 @@ class LoginViewModelTest {
     fun `non-https server URL is rejected before calling the repository`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         viewModel.onServerUrlChange("http://example.com")
         viewModel.onEmailChange("milk@example.com")
@@ -121,7 +121,7 @@ class LoginViewModelTest {
     fun `logout delegates to the repository`() = runTest {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         viewModel.logout().join()
 
@@ -132,7 +132,7 @@ class LoginViewModelTest {
     fun `loggedInEmail reflects the session state's account email`() = runTest {
         val serverConfig = newServerConfig()
         val sessionState = FakeSessionState().apply { accountEmail = "shopper@example.com" }
-        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, sessionState)
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
 
         assertEquals("shopper@example.com", viewModel.loggedInEmail)
     }
@@ -142,7 +142,7 @@ class LoginViewModelTest {
         val serverConfig = newServerConfig()
         serverConfig.setServerUrl("https://saved.example.com/shoppinglist")
 
-        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         // Await the init prefill coroutine's update rather than racing it.
         val prefilled = viewModel.uiState.first { it.serverUrl.isNotBlank() }
@@ -154,7 +154,7 @@ class LoginViewModelTest {
         val serverConfig = newServerConfig()
         serverConfig.setServerUrl("https://saved.example.com")
 
-        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState())
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
         viewModel.onServerUrlChange("https://typing.example.com")
 
         assertEquals("https://typing.example.com", viewModel.uiState.value.serverUrl)
@@ -163,15 +163,27 @@ class LoginViewModelTest {
     @Test
     fun `startDestinationAfterLogin resumes the last-opened list when present`() = runTest {
         val repo = FakeAuthRepository(lastOpened = "list-42")
-        val viewModel = LoginViewModel(repo, newServerConfig(), FakeSessionState())
+        val viewModel = LoginViewModel(repo, newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         assertEquals("list/list-42", viewModel.startDestinationAfterLogin())
     }
 
     @Test
     fun `startDestinationAfterLogin falls back to overview with no last-opened list`() = runTest {
-        val viewModel = LoginViewModel(FakeAuthRepository(), newServerConfig(), FakeSessionState())
+        val viewModel = LoginViewModel(FakeAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
 
         assertEquals("overview", viewModel.startDestinationAfterLogin())
+    }
+
+    @Test
+    fun `a pending invite routes startDestinationAfterLogin into redeem and is consumed once`() = runTest {
+        val holder = org.p23q.shoppinglist.data.PendingInviteHolder().apply { stash("invite-xyz") }
+        val repo = FakeAuthRepository(lastOpened = "list-42")
+        val viewModel = LoginViewModel(repo, newServerConfig(), FakeSessionState(), holder)
+
+        // First resolution after login: resume the parked invite (T-28), overriding the last list.
+        assertEquals("redeem/invite-xyz", viewModel.startDestinationAfterLogin())
+        // Consumed — a second resolution falls back to the normal destination.
+        assertEquals("list/list-42", viewModel.startDestinationAfterLogin())
     }
 }
