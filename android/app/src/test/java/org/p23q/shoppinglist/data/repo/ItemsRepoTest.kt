@@ -68,6 +68,65 @@ class ItemsRepoTest {
     }
 
     @Test
+    fun `clearChecked moves only checked items to backlog, stamping each dirty with an advanced status clock`() = runTest {
+        val checkedA = repo.createItem(listId = "list-1", name = "Milk", status = Status.CHECKED)
+        val checkedB = repo.createItem(listId = "list-1", name = "Eggs", status = Status.CHECKED)
+        val todo = repo.createItem(listId = "list-1", name = "Bread", status = Status.TODO)
+        val otherList = repo.createItem(listId = "list-2", name = "Soap", status = Status.CHECKED)
+        val clockBeforeA = repo.getById(checkedA)!!.status.updatedAt
+        repo.clearDirty(listOf(checkedA, checkedB, todo, otherList))
+
+        Thread.sleep(2)
+        val cleared = repo.clearChecked("list-1")
+
+        assertEquals(setOf(checkedA, checkedB), cleared.toSet())
+        // Both list-1 checked rows moved to backlog, re-stamped (clock advanced) and re-queued dirty
+        // — the LWW trap: a bare status_value UPDATE would change the value but not the clock/dirty.
+        val a = repo.getById(checkedA)!!
+        assertEquals(Status.BACKLOG.wireValue, a.status.value)
+        assertTrue(a.status.updatedAt > clockBeforeA)
+        assertTrue(a.dirty)
+        assertEquals(Status.BACKLOG.wireValue, repo.getById(checkedB)!!.status.value)
+        // Untouched: a todo on the same list, and a checked item on another list.
+        assertEquals(Status.TODO.wireValue, repo.getById(todo)!!.status.value)
+        assertEquals(Status.CHECKED.wireValue, repo.getById(otherList)!!.status.value)
+    }
+
+    @Test
+    fun `clearChecked with nothing checked returns empty and schedules no sync`() = runTest {
+        repo.createItem(listId = "list-1", name = "Bread", status = Status.TODO)
+        val before = syncTrigger.scheduleCount
+
+        val cleared = repo.clearChecked("list-1")
+
+        assertTrue(cleared.isEmpty())
+        assertEquals(before, syncTrigger.scheduleCount)
+    }
+
+    @Test
+    fun `clearChecked pushes the whole batch as a single sync`() = runTest {
+        repo.createItem(listId = "list-1", name = "Milk", status = Status.CHECKED)
+        repo.createItem(listId = "list-1", name = "Eggs", status = Status.CHECKED)
+        val before = syncTrigger.scheduleCount
+
+        repo.clearChecked("list-1")
+
+        assertEquals(before + 1, syncTrigger.scheduleCount)
+    }
+
+    @Test
+    fun `setStatusBulk restores the given ids and skips unknown ones`() = runTest {
+        val a = repo.createItem(listId = "list-1", name = "Milk", status = Status.BACKLOG)
+        val b = repo.createItem(listId = "list-1", name = "Eggs", status = Status.BACKLOG)
+
+        repo.setStatusBulk(listOf(a, b, "does-not-exist"), Status.CHECKED)
+
+        assertEquals(Status.CHECKED.wireValue, repo.getById(a)!!.status.value)
+        assertEquals(Status.CHECKED.wireValue, repo.getById(b)!!.status.value)
+        assertTrue(repo.getById(a)!!.dirty)
+    }
+
+    @Test
     fun `delete tombstones the deleted field but retains the row`() = runTest {
         val itemId = repo.createItem(listId = "list-1", name = "Milk")
 

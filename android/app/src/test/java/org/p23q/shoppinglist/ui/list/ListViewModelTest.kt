@@ -143,6 +143,50 @@ class ListViewModelTest {
     }
 
     @Test
+    fun `checkedCount counts checked items regardless of the show-checked toggle (T-35)`() = runTest {
+        itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
+        itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
+        itemsRepo.createItem(listId, "Bread", status = Status.TODO)
+        val viewModel = newViewModel()
+
+        assertEquals(2, viewModel.uiState.first { it.checkedCount == 2 }.checkedCount)
+
+        // Toggling show-checked changes visibility, not the count that drives the Clear-checked action.
+        viewModel.toggleShowChecked()
+        assertEquals(2, viewModel.uiState.value.checkedCount)
+    }
+
+    @Test
+    fun `clearChecked moves every checked item to backlog and arms the undo (T-35)`() = runTest {
+        val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
+        val b = itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.checkedCount == 2 }
+
+        viewModel.clearChecked().join()
+
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(a)!!.status.value)
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(b)!!.status.value)
+        assertEquals(setOf(a, b), viewModel.uiState.value.clearedCheckedIds.toSet())
+        // Nothing checked any more -> the action's count drops to 0 (button hides).
+        assertEquals(0, viewModel.uiState.first { it.checkedCount == 0 }.checkedCount)
+    }
+
+    @Test
+    fun `undoClearChecked puts the cleared items back to checked (T-35)`() = runTest {
+        val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.checkedCount == 1 }
+        viewModel.clearChecked().join()
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(a)!!.status.value)
+
+        viewModel.undoClearChecked().join()
+
+        assertEquals(Status.CHECKED.wireValue, itemsRepo.getById(a)!!.status.value)
+        assertTrue(viewModel.uiState.value.clearedCheckedIds.isEmpty())
+    }
+
+    @Test
     fun `price renders with the item currency, falling back to the account default when absent`() = runTest {
         val withCurrency = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setPrice(withCurrency, amount = "1.99", currency = "EUR")

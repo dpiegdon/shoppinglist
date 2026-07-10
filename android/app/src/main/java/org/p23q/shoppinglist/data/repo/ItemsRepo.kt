@@ -70,6 +70,40 @@ class ItemsRepo @Inject constructor(
     suspend fun setStatus(itemId: String, status: Status) =
         updateField(itemId) { it.copy(status = status.wireValue.toLww(deviceId.get())) }
 
+    /**
+     * Bulk 'clear checked': every checked item in [listId] -> backlog, in one dirty batch so it's a
+     * single sync push (T-35). Each row is re-stamped through the same LWW path as [setStatus] (its
+     * status clock advances and dirty flips), NOT a bare `UPDATE status_value` — that would change
+     * the value but not the clock/dirty, so the move would never sync and would lose any concurrent
+     * merge. Returns the affected ids so the caller can offer a snackbar undo ([setStatusBulk] back
+     * to checked).
+     */
+    suspend fun clearChecked(listId: String): List<String> {
+        val checked = itemDao.itemsForListByStatusOnce(listId, Status.CHECKED.wireValue)
+        if (checked.isEmpty()) return emptyList()
+        val by = deviceId.get()
+        val now = System.currentTimeMillis()
+        checked.forEach { item ->
+            itemDao.upsert(item.copy(status = Status.BACKLOG.wireValue.toLww(by, now), dirty = true, syncBlocked = false))
+        }
+        syncTrigger.scheduleAfterEdit()
+        return checked.map { it.id }
+    }
+
+    /** Batched [setStatus] over several ids — one dirty batch, one sync push. Backs clear-checked's undo (T-35). */
+    suspend fun setStatusBulk(itemIds: List<String>, status: Status) {
+        if (itemIds.isEmpty()) return
+        val by = deviceId.get()
+        val now = System.currentTimeMillis()
+        var changed = false
+        itemIds.forEach { id ->
+            val current = itemDao.getById(id) ?: return@forEach
+            itemDao.upsert(current.copy(status = status.wireValue.toLww(by, now), dirty = true, syncBlocked = false))
+            changed = true
+        }
+        if (changed) syncTrigger.scheduleAfterEdit()
+    }
+
     suspend fun setCategory(itemId: String, category: String?) =
         updateField(itemId) { it.copy(category = category.toLwwOptional(deviceId.get())) }
 

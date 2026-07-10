@@ -28,6 +28,10 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
     fun itemsForListByStatus(listId: String, status: String): Flow<List<ItemEntity>>
 
+    /** One-shot (non-Flow) variant, for bulk ops like clear-checked that read the current set once (T-35). */
+    @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
+    suspend fun itemsForListByStatusOnce(listId: String, status: String): List<ItemEntity>
+
     @Query(
         "SELECT * FROM items WHERE listId = :listId AND deleted_value = 0 " +
             "AND name_value LIKE '%' || :nameQuery || '%' COLLATE NOCASE",
