@@ -8,7 +8,8 @@
     "ux",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Android: picking an add-dialog suggestion mutates the item before Save/Cancel",
-  "updated_at": "2026-07-09T23:16:37+00:00"
+  "updated_at": "2026-07-10T13:36:30+00:00"
 }
