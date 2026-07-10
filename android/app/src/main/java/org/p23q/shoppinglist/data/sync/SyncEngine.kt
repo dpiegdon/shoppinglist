@@ -29,6 +29,7 @@ import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
 import java.io.IOException
 import javax.inject.Inject
+import javax.net.ssl.SSLException
 
 sealed interface SyncResult {
     data class Success(val pushedItems: Int, val pushedLists: Int, val pulledItems: Int, val pulledLists: Int) : SyncResult
@@ -92,6 +93,12 @@ class SyncEngine @Inject constructor(
                 return syncNow(fullLists)
             }
             val message = e.message ?: "sync failed"
+            syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            return SyncResult.Failed(message)
+        } catch (e: SSLException) {
+            // Distinct, actionable message for an untrusted cert (T-38); SSLException extends
+            // IOException, so this catch must precede it.
+            val message = "Server certificate not trusted"
             syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
             return SyncResult.Failed(message)
         } catch (e: IOException) {

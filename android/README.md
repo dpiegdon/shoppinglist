@@ -57,6 +57,27 @@ can never weaken a release build's TLS. For a real self-hosted deployment, put
 a proper certificate (e.g. Let's Encrypt via a reverse proxy) in front of the
 server instead.
 
+### Self-hosted TLS: making your own certificate trusted (release-safe)
+
+When the app can't validate the server's certificate it now says so distinctly —
+*"The server's certificate isn't trusted…"* — rather than the generic *"Couldn't
+reach the server"*, so you can tell a cert problem apart from a wrong URL or being
+offline. You have three options, in order of preference:
+
+1. **Use a certificate from a public CA** — e.g. Let's Encrypt, typically
+   terminated at a reverse proxy (nginx/Caddy/Traefik) in front of the Flask
+   blueprint. Nothing to configure on the phone. Best for anything internet-facing.
+2. **Run your own CA and install it on the device.** Homelab setups often use a
+   private CA. Install that CA's certificate on the phone (Settings → Security →
+   Encryption & credentials → Install a certificate → CA certificate). This app
+   ships a `network_security_config.xml` that trusts **user-installed** CAs in
+   addition to the system store — a deliberate choice for a self-hosted-server app
+   (Android 7+ ignores user CAs by default, which otherwise makes a correct private
+   HTTPS setup impossible). This works in **release** builds and only trusts CAs
+   *you* explicitly installed; it does not trust-all.
+3. **Debug-only trust-all toggle** (previous section) — quickest for local dev, but
+   debug builds only and insecure.
+
 ## Invite links / App Links
 
 Invites are shared as `https://<your-server>/invite/<token>` links. The app

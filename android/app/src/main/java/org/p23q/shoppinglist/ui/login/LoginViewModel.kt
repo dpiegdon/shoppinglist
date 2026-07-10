@@ -21,6 +21,7 @@ import org.p23q.shoppinglist.ui.authedStartDestination
 import java.io.IOException
 import java.net.URI
 import javax.inject.Inject
+import javax.net.ssl.SSLException
 
 data class LoginUiState(
     val serverUrl: String = "",
@@ -96,6 +97,19 @@ class LoginViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, errorMessage = "Incorrect email or password") }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Something went wrong") }
+            } catch (e: SSLException) {
+                // Distinct from the generic reach-the-server case: an untrusted/self-signed cert is the
+                // first thing a self-hoster hits, and it's actionable (T-38). SSLException extends
+                // IOException, so this catch must come first.
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "The server's certificate isn't trusted. Use a certificate from a " +
+                            "trusted CA (e.g. via a reverse proxy), or install your own CA on this device. " +
+                            "For a self-signed dev server, enable \"Trust self-signed certificates\" in " +
+                            "Settings (debug builds only).",
+                    )
+                }
             } catch (e: IOException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = "Couldn't reach the server") }
             }

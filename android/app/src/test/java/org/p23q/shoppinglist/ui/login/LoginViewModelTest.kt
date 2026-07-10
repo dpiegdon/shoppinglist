@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -84,6 +86,25 @@ class LoginViewModelTest {
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
         assertEquals("Incorrect email or password", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `an untrusted certificate gets a distinct, actionable message (T-38)`() = runTest {
+        val serverConfig = newServerConfig()
+        val repo = FakeAuthRepository(onLogin = { _, _ -> throw javax.net.ssl.SSLHandshakeException("cert") })
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder())
+
+        viewModel.onServerUrlChange("https://example.com")
+        viewModel.onEmailChange("milk@example.com")
+        viewModel.onPasswordChange("hunter2")
+        viewModel.submit()?.join()
+
+        assertFalse(viewModel.uiState.value.loginSucceeded)
+        // Distinct from the generic offline/wrong-URL message.
+        val message = viewModel.uiState.value.errorMessage
+        assertNotNull(message)
+        assertTrue(message!!.contains("certificate"))
+        assertNotEquals("Couldn't reach the server", message)
     }
 
     @Test

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Self-hosted-server app (T-38): the server URL is user-supplied and may be a homelab box behind a
+  CA the device owner controls. Trusting user-installed CAs (in addition to the system store) is a
+  deliberate choice for this app class — Android 7+ ignores user CAs by default, which makes an
+  otherwise-correct self-hosted HTTPS setup impossible. It only extends trust to CAs the owner
+  explicitly installed; it does NOT trust-all (that's the separate debug-only flag, T-46).
+  cleartext stays off — the app requires https regardless.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
