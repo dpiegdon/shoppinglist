@@ -8,7 +8,8 @@
     "parity",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Android: no pull-to-refresh / manual sync + no sync recency indicator",
-  "updated_at": "2026-07-09T23:16:38+00:00"
+  "updated_at": "2026-07-10T18:01:01+00:00"
 }
