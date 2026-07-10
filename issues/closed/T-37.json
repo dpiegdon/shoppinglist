@@ -12,5 +12,5 @@
   "owner": "claude",
   "priority": 2,
   "title": "Android: allowBackup=true + EncryptedSharedPreferences = crash loop after backup restore",
-  "updated_at": "2026-07-10T14:23:11+00:00"
+  "updated_at": "2026-07-10T14:32:54+00:00"
 }
