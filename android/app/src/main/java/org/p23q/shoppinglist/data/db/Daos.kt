@@ -67,6 +67,11 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE id = :id")
     suspend fun getById(id: String): ListEntity?
 
+    /** Live single-list observation — screens use this so a rename / category-order change (local
+     *  or arriving via sync) reflects without recreating the screen (T-34). */
+    @Query("SELECT * FROM lists WHERE id = :id")
+    fun observeById(id: String): Flow<ListEntity?>
+
     @Query("SELECT * FROM lists WHERE deleted_value = 0")
     fun activeLists(): Flow<List<ListEntity>>
 

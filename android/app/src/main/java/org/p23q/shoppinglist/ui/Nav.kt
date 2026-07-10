@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -69,6 +70,18 @@ object Routes {
     fun registry(listId: String) = "registry/$listId"
     fun listProps(listId: String) = "listProps/$listId"
     fun redeem(token: String) = "redeem/$token"
+}
+
+/**
+ * The current list's live name for the top-bar title on list/registry/props, falling back to a
+ * mode label while the name is momentarily loading. Scoped to the current nav back-stack entry, so
+ * it reflects renames (local or synced) without recreating the screen (T-34).
+ */
+@Composable
+private fun liveListTitle(fallback: String): String {
+    val viewModel: ListTitleViewModel = hiltViewModel()
+    val name by viewModel.name.collectAsStateWithLifecycle()
+    return name.ifBlank { fallback }
 }
 
 /**
@@ -124,7 +137,7 @@ fun ShoppingListNavHost(
         }
         composable(Routes.LIST_PATTERN) { backStackEntry ->
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
-            AppDrawerScaffold(navController = navController, title = "List") {
+            AppDrawerScaffold(navController = navController, title = liveListTitle("List")) {
                 var isAddDialogOpen by rememberSaveable { mutableStateOf(false) }
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -144,7 +157,7 @@ fun ShoppingListNavHost(
             }
         }
         composable(Routes.REGISTRY_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = "Registry") {
+            AppDrawerScaffold(navController = navController, title = liveListTitle("Registry")) {
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
                 RegistryScreen(onEditItem = { itemId -> editingItemId = itemId })
@@ -155,7 +168,7 @@ fun ShoppingListNavHost(
             }
         }
         composable(Routes.LIST_PROPS_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = "List properties") {
+            AppDrawerScaffold(navController = navController, title = liveListTitle("List properties")) {
                 ListPropsScreen(
                     onLeft = {
                         navController.navigate(Routes.OVERVIEW) {

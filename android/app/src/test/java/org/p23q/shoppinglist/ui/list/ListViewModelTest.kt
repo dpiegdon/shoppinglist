@@ -175,4 +175,35 @@ class ListViewModelTest {
         val item = afterSettingsChange.groups.flatMap { it.items }.single { it.id == itemId }
         assertEquals("2.50 EUR", formatPrice(item, afterSettingsChange.defaultCurrency))
     }
+
+    @Test
+    fun `the list name updates live on rename, without recreating the view model (T-34)`() = runTest {
+        val viewModel = newViewModel()
+        assertEquals("Groceries", viewModel.uiState.first { it.listName == "Groceries" }.listName)
+
+        listsRepo.rename(listId, "Weekly shop")
+
+        assertEquals("Weekly shop", viewModel.uiState.first { it.listName == "Weekly shop" }.listName)
+    }
+
+    @Test
+    fun `changing category_order re-groups the open list live (T-34)`() = runTest {
+        itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
+        itemsRepo.createItem(listId, "Bread").also { itemsRepo.setCategory(it, "bakery") }
+        val viewModel = newViewModel()
+        // No explicit order yet -> alphabetical.
+        assertEquals(
+            listOf("bakery", "dairy"),
+            viewModel.uiState.first { it.groups.size == 2 }.groups.map { it.category },
+        )
+
+        listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery"))
+
+        assertEquals(
+            listOf("dairy", "bakery"),
+            viewModel.uiState
+                .first { s -> s.groups.map { it.category } == listOf("dairy", "bakery") }
+                .groups.map { it.category },
+        )
+    }
 }

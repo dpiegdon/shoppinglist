@@ -50,10 +50,15 @@ class ListViewModel @Inject constructor(
     private var checkedItems: List<ItemEntity> = emptyList()
 
     init {
+        // Observe the list row (not a one-shot read) so a rename or a category-order change — made
+        // in List properties or arriving from another device via sync — updates the name and
+        // re-groups the items without recreating this screen (T-34).
         viewModelScope.launch {
-            val list = listsRepo.getById(listId)
-            categoryOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
-            _uiState.update { it.copy(listName = list?.name?.value ?: "") }
+            listsRepo.observeById(listId).collect { list ->
+                categoryOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
+                _uiState.update { it.copy(listName = list?.name?.value ?: "") }
+                regroup()
+            }
         }
         viewModelScope.launch {
             itemsRepo.itemsForListByStatus(listId, Status.TODO).collect { items ->

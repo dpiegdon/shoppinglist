@@ -20,6 +20,9 @@ class ListsRepo @Inject constructor(
 
     suspend fun getById(listId: String): ListEntity? = listDao.getById(listId)
 
+    /** Live single-list observation (T-34) — reflects rename / category-order changes as they land. */
+    fun observeById(listId: String): Flow<ListEntity?> = listDao.observeById(listId)
+
     suspend fun dirtyRows(): List<ListEntity> = listDao.dirtyRows()
 
     suspend fun clearDirty(ids: List<String>) = listDao.clearDirty(ids)
