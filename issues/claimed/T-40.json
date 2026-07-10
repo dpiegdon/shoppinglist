@@ -9,7 +9,8 @@
     "sonnet",
     "agent"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Android list rows: show quantity/note; fix hardcoded red; assorted row/label polish",
-  "updated_at": "2026-07-09T23:16:39+00:00"
+  "updated_at": "2026-07-10T18:56:31+00:00"
 }
