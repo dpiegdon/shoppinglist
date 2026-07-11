@@ -39,6 +39,8 @@ data class ItemFormUiState(
     val isDeleteConfirmOpen: Boolean = false,
     val isSaved: Boolean = false,
     val isDeleted: Boolean = false,
+    /** Bumped after a "save & add another" so the dialog refocuses the Name field (T-41). */
+    val focusNameSignal: Int = 0,
 )
 
 /**
@@ -151,7 +153,15 @@ class ItemFormViewModel @Inject constructor(
     }
 
     /** Returns null only for a trivial synchronous validation failure (blank name); Job otherwise. */
-    fun save(): Job? {
+    fun save(): Job? = performSave(closeAfter = true)
+
+    /**
+     * Save, then keep the Add dialog open on a fresh blank form with focus back in Name — for adding
+     * several items in a burst without reopening the dialog each time (T-41). Add mode only.
+     */
+    fun saveAndAddAnother(): Job? = performSave(closeAfter = false)
+
+    private fun performSave(closeAfter: Boolean): Job? {
         val state = _uiState.value
         val trimmedName = state.name.trim()
         if (trimmedName.isBlank()) {
@@ -200,7 +210,18 @@ class ItemFormViewModel @Inject constructor(
                 currency = if (normalizedAmount != null) normalizedCurrency else null,
             )
             itemsRepo.setNote(targetId, state.note.trim().ifBlank { null })
-            _uiState.update { it.copy(nameError = null, isSaved = true, itemId = targetId) }
+            if (closeAfter) {
+                _uiState.update { it.copy(nameError = null, isSaved = true, itemId = targetId) }
+            } else {
+                // Reset to a blank add form and bump the refocus signal so the dialog puts the
+                // cursor back in Name for the next item (T-41).
+                _uiState.value = ItemFormUiState(
+                    isEditMode = false,
+                    priceCurrency = sessionState.defaultCurrency ?: "",
+                    focusNameSignal = state.focusNameSignal + 1,
+                )
+                loadCategorySuggestions()
+            }
         }
     }
 

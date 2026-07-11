@@ -99,6 +99,22 @@ class ItemFormViewModelTest {
     }
 
     @Test
+    fun `saveAndAddAnother creates the item then resets the form without closing (T-41)`() = runTest {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.onNameChange("Milk")
+
+        viewModel.saveAndAddAnother()?.join()
+
+        // The item was created...
+        assertEquals(1, itemsRepo.searchRegistry(listId, "Milk").first().size)
+        // ...but the dialog stays open on a fresh form (not isSaved) and asks to refocus Name.
+        assertFalse(viewModel.uiState.value.isSaved)
+        assertEquals("", viewModel.uiState.value.name)
+        assertEquals(1, viewModel.uiState.value.focusNameSignal)
+    }
+
+    @Test
     fun `save with no picked suggestion creates a new todo item with the entered fields`() = runTest {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
