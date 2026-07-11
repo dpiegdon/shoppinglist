@@ -48,7 +48,7 @@ class ListScreenTest {
     fun `checked row renders with a strikethrough in a distinct color, unchecked row does not`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
@@ -117,7 +117,7 @@ class ListScreenTest {
     fun `the edit icon is a distinct hit target from the row body toggle`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())

@@ -51,7 +51,7 @@ class RedeemDialogTest {
 
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val serverConfigFile = File.createTempFile("redeem_dialog_server_config", ".preferences_pb")
         serverConfigFile.deleteOnExit()

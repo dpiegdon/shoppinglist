@@ -32,7 +32,7 @@ class EditItemDialogTest {
     fun `renders prefilled fields, delete asks to confirm, then tombstones and dismisses`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
