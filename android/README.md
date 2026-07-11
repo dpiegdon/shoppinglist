@@ -19,10 +19,44 @@ Then:
 
 The APK lands at `app/build/outputs/apk/debug/app-debug.apk`. It's a debug
 build signed with the standard Android debug key — fine for installing and
-testing, but not for Play Store distribution (a release build needs your own
-signing config added to `app/build.gradle.kts`).
+testing.
 
 Run the checks with `./gradlew lint test`.
+
+### Release builds
+
+```bash
+./gradlew assembleRelease   # -> app/build/outputs/apk/release/app-release.apk
+```
+
+Release builds are minified (R8; kotlinx-serialization keep rules live in
+`app/proguard-rules.pro`) and signed from a keystore that is **deliberately not
+committed**: `keystore/release.jks`, with its credentials in
+`keystore.properties` (both gitignored — see `.gitignore`). Without those files
+the release build has no signing config and fails at the signing step; recreate
+them with:
+
+```bash
+keytool -genkeypair -keystore keystore/release.jks -alias shoppinglist \
+  -keyalg RSA -keysize 2048 -validity 10000
+cat > keystore.properties <<EOF
+storeFile=keystore/release.jks
+storePassword=...
+keyAlias=shoppinglist
+keyPassword=...
+EOF
+```
+
+**Back the keystore + properties file up somewhere safe** — installing an
+update over an existing install requires the same signing key; losing it means
+uninstall/reinstall (local data re-syncs from the server, so nothing is lost,
+but sessions/settings reset). Note the release build cannot be installed *over*
+a debug build (different signatures) — uninstall the debug app first. Release
+builds have no "trust self-signed certificates" toggle by design; see the TLS
+section below.
+
+The release unit-test variant (`./gradlew testReleaseUnitTest`) includes the
+proof that the debug-only TLS bypass is absent from release.
 
 ## Installing on a phone
 

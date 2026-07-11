@@ -8,3 +8,6 @@
 /captures/
 .externalNativeBuild/
 .cxx/
+# Release signing (T-49): never commit the keystore or its credentials.
+/keystore/
+/keystore.properties
