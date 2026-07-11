@@ -1,0 +1,13 @@
+{
+  "body": "Everything so far is debug APKs (debuggable, unminified, carries the TLS-bypass\ntoggle). For daily use: create a signing keystore (document handling), verify R8/\nminification doesn't break kotlinx-serialization (usually needs keep rules \u2014 a\nclassic silent release-only crash), run the testRelease suite (exists since T-46),\nbuild and on-device-test a release APK. Check the manifest/gradle for\nminifyEnabled/shrinkResources decisions.",
+  "created_at": "2026-07-11T18:50:15+00:00",
+  "id": "T-49",
+  "labels": [
+    "android",
+    "ops",
+    "release"
+  ],
+  "priority": 2,
+  "title": "Android release build: keystore, R8/kotlinx-serialization keep rules, release APK",
+  "updated_at": "2026-07-11T18:50:15+00:00"
+}
