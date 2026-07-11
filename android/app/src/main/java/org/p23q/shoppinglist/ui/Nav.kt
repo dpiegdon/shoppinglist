@@ -1,8 +1,11 @@
 package org.p23q.shoppinglist.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
@@ -30,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +44,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.item.AddItemDialog
 import org.p23q.shoppinglist.ui.item.EditItemDialog
 import org.p23q.shoppinglist.ui.list.ListScreen
@@ -131,7 +136,17 @@ fun ShoppingListNavHost(
             )
         }
         composable(Routes.OVERVIEW) {
-            AppDrawerScaffold(navController = navController, title = "Overview") {
+            AppDrawerScaffold(
+                navController = navController,
+                title = "Overview",
+                actions = {
+                    Image(
+                        painter = painterResource(R.drawable.ic_brand_logo),
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 12.dp).size(28.dp),
+                    )
+                },
+            ) {
                 OverviewScreen(onOpenList = { listId -> navController.navigate(Routes.list(listId)) })
             }
         }
@@ -231,6 +246,7 @@ internal fun AppDrawerScaffold(
     navController: NavHostController,
     title: String,
     loginViewModel: LoginViewModel = hiltViewModel(),
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -312,6 +328,7 @@ internal fun AppDrawerScaffold(
                             Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
                         }
                     },
+                    actions = actions,
                 )
             },
         ) { innerPadding ->
