@@ -1,0 +1,13 @@
+{
+  "body": "Every real bug so far was found via adb logcat; day-to-day use loses that lens.\nFit the self-hosted ethos: a default UncaughtExceptionHandler that appends crash\nstacks to a small rotating file in app storage, plus a Settings entry \"Share\nlogs\" firing a share intent with that file. No telemetry service.",
+  "created_at": "2026-07-11T18:50:15+00:00",
+  "id": "T-50",
+  "labels": [
+    "android",
+    "reliability",
+    "ops"
+  ],
+  "priority": 3,
+  "title": "Android: capture crashes to a local log with a 'share logs' option in Settings",
+  "updated_at": "2026-07-11T18:50:15+00:00"
+}
