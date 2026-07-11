@@ -7,9 +7,9 @@ expiry embedded in its signed payload, never touching the database, so it
 cannot leak anything beyond what the token itself already carries.
 """
 
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
-from flask import render_template
+from flask import current_app, render_template
 
 from ..auth import now_ms
 from ..errors import ApiError
@@ -42,6 +42,14 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str):
         if now_ms() >= expires_at:
             return render_template("invite.html", state="expired"), 410
 
+        # Offer an in-browser "redeem" link for desktop users, but only when this app actually
+        # serves the web client (its SPA catch-all is what handles /redeem) — otherwise the link
+        # would 404. Presence of the web client's catch-all view is the reliable signal (T-44).
+        web_redeem_url = (
+            f"/redeem?token={quote(token, safe='')}"
+            if "web_index" in current_app.view_functions
+            else None
+        )
         return (
             render_template(
                 "invite.html",
@@ -49,6 +57,7 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str):
                 token=token,
                 invited_email=invited_email,
                 intent_url=_intent_url(base_url, token),
+                web_redeem_url=web_redeem_url,
             ),
             200,
         )

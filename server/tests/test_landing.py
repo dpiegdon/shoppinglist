@@ -51,6 +51,48 @@ def test_valid_token_renders_html_with_full_token(client):
     assert "invitee@example.com" in body
 
 
+def test_valid_token_offers_redeem_in_browser_when_web_client_is_served(client):
+    owner_token = _register_and_login(client)
+    invite = _mint_invite(client, owner_token)
+
+    body = client.get(f"/invite/{invite['token']}").get_data(as_text=True)
+
+    # The default test app serves the web client, so the landing page links to its redeem route (T-44).
+    assert "Redeem in your browser" in body
+    assert "/redeem?token=" in body
+
+
+def test_no_redeem_in_browser_link_when_web_client_not_served(tmp_path):
+    from flask import Flask
+
+    from shoppinglist_server import create_blueprint
+    from shoppinglist_server import db as db_module
+
+    database_path = str(tmp_path / "noweb.db")
+    conn = db_module.connect(database_path)
+    db_module.init_db(conn)
+    conn.close()
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.register_blueprint(
+        create_blueprint(
+            database_path=database_path,
+            invite_hmac_key=b"test-hmac-key",
+            base_url="http://testserver",
+            serve_web_client=False,
+        )
+    )
+    client = app.test_client()
+
+    owner_token = _register_and_login(client)
+    invite = _mint_invite(client, owner_token)
+    body = client.get(f"/invite/{invite['token']}").get_data(as_text=True)
+
+    # The valid invite still renders, but with no browser-redeem link (the SPA isn't served here).
+    assert invite["token"] in body
+    assert "Redeem in your browser" not in body
+
+
 def test_tampered_token_404(client):
     owner_token = _register_and_login(client)
     invite = _mint_invite(client, owner_token)

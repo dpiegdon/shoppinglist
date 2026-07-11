@@ -39,6 +39,9 @@
   <h1>You've been invited to a shopping list</h1>
   <p>This invite is for <strong>{{ invited_email }}</strong>.</p>
   <p><a class="button" href="{{ intent_url }}">Open in app</a></p>
+  {% if web_redeem_url %}
+  <p>On a computer? <a href="{{ web_redeem_url }}">Redeem in your browser</a>.</p>
+  {% endif %}
   <p>If the app didn't open automatically, copy the code below and paste it into the app's "Join list" screen:</p>
   <code>{{ token }}</code>
 {% elif state == "expired" %}
