@@ -1,0 +1,13 @@
+{
+  "body": "Same pattern as Android's T-41: an \"Add another\" action that saves, clears the\nform, and refocuses the name input without closing the dialog. Files:\nweb/src/components/ItemDialog.tsx (+ test).",
+  "created_at": "2026-07-11T18:50:16+00:00",
+  "id": "T-53",
+  "labels": [
+    "web",
+    "ux",
+    "feature"
+  ],
+  "priority": 4,
+  "title": "Web: 'add another' mode in the item dialog (parity with Android T-41)",
+  "updated_at": "2026-07-11T18:50:16+00:00"
+}
