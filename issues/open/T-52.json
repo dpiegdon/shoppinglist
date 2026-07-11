@@ -1,0 +1,13 @@
+{
+  "body": "Deferred half of T-41: when the add dialog's Name field is blank, show the most\nlikely re-adds (backlog items, ideally most-recently-checked-off first) as tap-to-\npick suggestions. The registry queries already exist; pickSuggestion() already\nprefills without mutating (T-33).",
+  "created_at": "2026-07-11T18:50:15+00:00",
+  "id": "T-52",
+  "labels": [
+    "android",
+    "ux",
+    "feature"
+  ],
+  "priority": 3,
+  "title": "Add dialog: suggest recent backlog items while the Name field is empty",
+  "updated_at": "2026-07-11T18:50:15+00:00"
+}
