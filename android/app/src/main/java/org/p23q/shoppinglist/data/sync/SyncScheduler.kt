@@ -41,33 +41,40 @@ class SyncScheduler @Inject constructor(@ApplicationContext private val context:
 
     /** Background sync every 15 minutes while the network is up. Idempotent — safe to call on every app start. */
     fun schedulePeriodic() {
-        val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
-            .setConstraints(networkConstraint)
-            .build()
         WorkManager.getInstance(context)
-            .enqueueUniquePeriodicWork(PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+            .enqueueUniquePeriodicWork(PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, periodicRequest())
     }
 
-    /** Debounced (5s): each local edit replaces any still-pending request rather than stacking one up. */
     override fun scheduleAfterEdit() {
-        val request = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setInitialDelay(5, TimeUnit.SECONDS)
-            .setConstraints(networkConstraint)
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .build()
         WorkManager.getInstance(context)
-            .enqueueUniqueWork(EDIT_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+            .enqueueUniqueWork(EDIT_WORK_NAME, ExistingWorkPolicy.REPLACE, afterEditRequest())
     }
 
     /** Immediate sync, e.g. when the app returns to the foreground (Notes). */
     fun scheduleImmediate() {
-        val request = OneTimeWorkRequestBuilder<SyncWorker>()
-            .setConstraints(networkConstraint)
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .build()
         WorkManager.getInstance(context)
-            .enqueueUniqueWork(FOREGROUND_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+            .enqueueUniqueWork(FOREGROUND_WORK_NAME, ExistingWorkPolicy.REPLACE, immediateRequest())
     }
+
+    // The request builders are internal so a test can assert they *build* — WorkRequest.Builder.build()
+    // validates the config (e.g. rejects expedited + initial delay: "Expedited jobs cannot be delayed"),
+    // which crashed every edit and was invisible to the fake-trigger unit tests.
+
+    internal fun periodicRequest() = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+        .setConstraints(networkConstraint)
+        .build()
+
+    /** Debounced (5s), NOT expedited — an expedited request with an initial delay is rejected at build(). */
+    internal fun afterEditRequest() = OneTimeWorkRequestBuilder<SyncWorker>()
+        .setInitialDelay(5, TimeUnit.SECONDS)
+        .setConstraints(networkConstraint)
+        .build()
+
+    /** Expedited with NO delay — a valid expedited request (unlike the after-edit one). */
+    internal fun immediateRequest() = OneTimeWorkRequestBuilder<SyncWorker>()
+        .setConstraints(networkConstraint)
+        .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+        .build()
 
     private companion object {
         const val PERIODIC_WORK_NAME = "sync-periodic"
