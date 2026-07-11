@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +30,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -93,27 +95,34 @@ fun ListScreen(
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            // Slim controls row: show-checked as a toggle-button (like web), plus the registry and
+            // list-settings actions. The Add-item button gets its own prominent line below.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Button(onClick = onAddItem) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Add item")
-                }
+                FilterChip(
+                    selected = state.showChecked,
+                    onClick = { viewModel.toggleShowChecked() },
+                    label = { Text("Show checked") },
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Show checked")
-                    Spacer(Modifier.width(8.dp))
-                    Switch(checked = state.showChecked, onCheckedChange = { viewModel.toggleShowChecked() })
-                    IconButton(onClick = onOpenRegistry) {
+                    IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")
                     }
-                    IconButton(onClick = onOpenListProps) {
+                    IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
                         Icon(imageVector = Icons.Default.Settings, contentDescription = "List properties")
                     }
                 }
+            }
+            Button(
+                onClick = onAddItem,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Add item")
             }
 
             // The post-trip 'finish up' action, mirroring web's "Clear checked (N)": only shown when
@@ -146,12 +155,18 @@ fun ListScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    state.groups.forEach { group ->
+                    state.groups.forEachIndexed { index, group ->
                     item(key = "header-${group.category ?: "—"}") {
+                        // A thin divider between categories (not above the first) makes groups easy to
+                        // tell apart; the header itself gets a colored accent.
+                        if (index > 0) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        }
                         Text(
                             text = group.category ?: "—",
                             style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                     }
                     items(group.items, key = { it.id }) { item ->
