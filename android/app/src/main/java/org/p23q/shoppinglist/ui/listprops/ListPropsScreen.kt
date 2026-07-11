@@ -2,7 +2,7 @@ package org.p23q.shoppinglist.ui.listprops
 
 import android.content.Intent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,10 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -79,7 +81,7 @@ fun ListPropsScreen(
 
         Text("Category order", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Long-press the handle and drag to reorder",
+            "Drag the handle to reorder",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -137,11 +139,12 @@ fun ListPropsScreen(
 }
 
 /**
- * Real drag-reorder (T-30) replacing the old up/down buttons. Each row carries a long-press drag
- * handle; as the pointer travels one row-height the item swaps with its neighbour (via the existing
- * moveCategoryUp/Down edits, so persistence is unchanged). Long-press-to-start avoids fighting the
- * screen's own vertical scroll. Rows are keyed by category and the gesture reads the category's
- * *current* index live (rememberUpdatedState), so the handle keeps following its item across swaps.
+ * Real drag-reorder (T-30) replacing the old up/down buttons. Dragging the handle starts immediately
+ * (no long-press) and the dragged row follows the finger (translationY + raised zIndex); once it has
+ * travelled one row-height it swaps with its neighbour via the existing moveCategoryUp/Down edits
+ * (persistence unchanged) and the offset is rebased by a row so the motion stays continuous. Rows are
+ * keyed by category and the gesture reads the category's *current* index live (rememberUpdatedState),
+ * so the handle keeps following its item across swaps.
  */
 @Composable
 private fun CategoryOrderList(
@@ -151,7 +154,7 @@ private fun CategoryOrderList(
 ) {
     val rowHeightPx = with(LocalDensity.current) { 44.dp.toPx() }
     var draggingCategory by remember { mutableStateOf<String?>(null) }
-    var accumulated by remember { mutableFloatStateOf(0f) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
     val currentCategories by rememberUpdatedState(categories)
 
     Column {
@@ -161,6 +164,8 @@ private fun CategoryOrderList(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .zIndex(if (dragging) 1f else 0f)
+                        .graphicsLayer { translationY = if (dragging) dragOffset else 0f }
                         .background(if (dragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
                         .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -171,21 +176,21 @@ private fun CategoryOrderList(
                         imageVector = Icons.Default.Menu,
                         contentDescription = "Reorder $category",
                         modifier = Modifier.pointerInput(category) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { draggingCategory = category; accumulated = 0f },
-                                onDragEnd = { draggingCategory = null; accumulated = 0f },
-                                onDragCancel = { draggingCategory = null; accumulated = 0f },
+                            detectDragGestures(
+                                onDragStart = { draggingCategory = category; dragOffset = 0f },
+                                onDragEnd = { draggingCategory = null; dragOffset = 0f },
+                                onDragCancel = { draggingCategory = null; dragOffset = 0f },
                             ) { change, dragAmount ->
                                 change.consume()
-                                accumulated += dragAmount.y
+                                dragOffset += dragAmount.y
                                 val idx = currentCategories.indexOf(category)
-                                if (idx < 0) return@detectDragGesturesAfterLongPress
-                                if (accumulated <= -rowHeightPx && idx > 0) {
+                                if (idx < 0) return@detectDragGestures
+                                if (dragOffset <= -rowHeightPx && idx > 0) {
                                     onMoveUp(idx)
-                                    accumulated = 0f
-                                } else if (accumulated >= rowHeightPx && idx < currentCategories.size - 1) {
+                                    dragOffset += rowHeightPx
+                                } else if (dragOffset >= rowHeightPx && idx < currentCategories.size - 1) {
                                     onMoveDown(idx)
-                                    accumulated = 0f
+                                    dragOffset -= rowHeightPx
                                 }
                             }
                         },
