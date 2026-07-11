@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
@@ -11,8 +11,11 @@ import RedeemPage from "./pages/RedeemPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { account } = useAuth();
+  const location = useLocation();
   if (!account) {
-    return <Navigate to="/login" replace />;
+    // Preserve where the user was headed (incl. /redeem?token=...) so login can return them there,
+    // instead of dropping them on the overview and silently losing the invite/deep link (T-43).
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
   return <AppShell>{children}</AppShell>;
 }

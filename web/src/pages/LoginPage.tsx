@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 
 export default function LoginPage() {
   const { login, register, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +21,10 @@ export default function LoginPage() {
       } else {
         await register(email, password);
       }
-      navigate("/", { replace: true });
+      // Return to wherever the user was headed before the redirect (e.g. /redeem?token=...),
+      // falling back to the overview (T-43). Rebuild the string so the query survives.
+      const from = (location.state as { from?: { pathname: string; search: string } } | null)?.from;
+      navigate(from ? `${from.pathname}${from.search}` : "/", { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
