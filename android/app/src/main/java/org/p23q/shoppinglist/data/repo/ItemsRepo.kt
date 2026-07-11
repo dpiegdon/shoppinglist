@@ -25,6 +25,9 @@ class ItemsRepo @Inject constructor(
     fun itemsForListByStatus(listId: String, status: Status): Flow<List<ItemEntity>> =
         itemDao.itemsForListByStatus(listId, status.wireValue)
 
+    /** All list-visible items (todo + checked) in one stream — see [ItemDao.itemsForList]. */
+    fun itemsForList(listId: String): Flow<List<ItemEntity>> = itemDao.itemsForList(listId)
+
     fun searchRegistry(listId: String, nameQuery: String): Flow<List<ItemEntity>> =
         itemDao.searchRegistry(listId, nameQuery)
 

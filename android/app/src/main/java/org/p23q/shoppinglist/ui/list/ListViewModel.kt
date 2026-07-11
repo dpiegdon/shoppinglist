@@ -65,22 +65,23 @@ class ListViewModel @Inject constructor(
     private var checkedItems: List<ItemEntity> = emptyList()
 
     init {
-        // Combine the list row with the todo + checked item streams (all observed live, so a rename,
-        // a category-order change, or another device's sync updates without recreating the screen —
-        // T-34). combine holds the first grouped emission until ALL three flows have emitted once, so
-        // grouping is never computed from a half-loaded snapshot: without this, the item streams
-        // (off Dispatchers.IO) could land before the list row and briefly group by an empty
-        // category_order — an order flash on open, and a race that flaked the ordering test.
+        // Combine the list row with a SINGLE items stream (todo + checked together — ItemsRepo
+        // .itemsForList) and derive the two sets from that one snapshot. Both are observed live, so a
+        // rename, category-order change, or another device's sync updates without recreating the
+        // screen (T-34); combine holds the first grouped emission until both flows have emitted, so
+        // grouping is never computed from a half-loaded snapshot (no category-order flash on open).
+        // Crucially, one item stream (not two per-status flows) means an item can never appear in
+        // both todo and checked during a status change — that transient duplicate crashed the
+        // LazyColumn with a duplicate key.
         viewModelScope.launch {
             combine(
                 listsRepo.observeById(listId),
-                itemsRepo.itemsForListByStatus(listId, Status.TODO),
-                itemsRepo.itemsForListByStatus(listId, Status.CHECKED),
-                ::Triple,
-            ).collect { (list, todo, checked) ->
+                itemsRepo.itemsForList(listId),
+                ::Pair,
+            ).collect { (list, items) ->
                 categoryOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
-                todoItems = todo
-                checkedItems = checked
+                todoItems = items.filter { it.status.value == Status.TODO.wireValue }
+                checkedItems = items.filter { it.status.value == Status.CHECKED.wireValue }
                 _uiState.update { it.copy(listName = list?.name?.value ?: "") }
                 regroup()
             }

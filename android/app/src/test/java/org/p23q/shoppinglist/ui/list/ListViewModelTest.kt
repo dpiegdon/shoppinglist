@@ -127,6 +127,25 @@ class ListViewModelTest {
     }
 
     @Test
+    fun `checking an item with show-checked on never duplicates it across groups (crash regression)`() = runTest {
+        val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val viewModel = newViewModel()
+        viewModel.toggleShowChecked()
+        viewModel.uiState.first { it.groups.isNotEmpty() }
+
+        viewModel.checkOff(itemId).join()
+
+        val checkedState = viewModel.uiState.first { s ->
+            s.groups.flatMap { it.items }.firstOrNull { it.id == itemId }?.status?.value == Status.CHECKED.wireValue
+        }
+        // Exactly one occurrence, and no id appears twice anywhere — the transient that a duplicate
+        // LazyColumn key crashed on can't happen now that todo/checked come from one snapshot.
+        assertEquals(1, checkedState.groups.flatMap { it.items }.count { it.id == itemId })
+        val allIds = checkedState.groups.flatMap { it.items }.map { it.id }
+        assertEquals(allIds.size, allIds.toSet().size)
+    }
+
+    @Test
     fun `checkOff marks todo item checked and arms the undo snackbar`() = runTest {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()

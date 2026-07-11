@@ -28,6 +28,15 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
     fun itemsForListByStatus(listId: String, status: String): Flow<List<ItemEntity>>
 
+    /**
+     * Every item shown on the list screen — todo + checked (i.e. not backlog), in ONE stream so the
+     * list VM derives both sets from the same snapshot. Two separate per-status flows briefly
+     * disagree during a status change (both hold the row), which duplicated a LazyColumn key and
+     * crashed the screen (fix).
+     */
+    @Query("SELECT * FROM items WHERE listId = :listId AND status_value != 'backlog' AND deleted_value = 0")
+    fun itemsForList(listId: String): Flow<List<ItemEntity>>
+
     /** One-shot (non-Flow) variant, for bulk ops like clear-checked that read the current set once (T-35). */
     @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
     suspend fun itemsForListByStatusOnce(listId: String, status: String): List<ItemEntity>
