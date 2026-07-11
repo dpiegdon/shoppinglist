@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.data.repo
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -27,6 +28,10 @@ class ItemsRepo @Inject constructor(
 
     /** All list-visible items (todo + checked) in one stream — see [ItemDao.itemsForList]. */
     fun itemsForList(listId: String): Flow<List<ItemEntity>> = itemDao.itemsForList(listId)
+
+    /** Open (todo) item count per list id, for the Overview cards (T-42). */
+    fun openItemCounts(): Flow<Map<String, Int>> =
+        itemDao.openItemCounts().map { rows -> rows.associate { it.listId to it.openCount } }
 
     fun searchRegistry(listId: String, nameQuery: String): Flow<List<ItemEntity>> =
         itemDao.searchRegistry(listId, nameQuery)

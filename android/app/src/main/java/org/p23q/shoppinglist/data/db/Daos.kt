@@ -6,6 +6,9 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
+/** Per-list open-item count projection ([ItemDao.openItemCounts], T-42). */
+data class ListOpenCount(val listId: String, val openCount: Int)
+
 @Dao
 interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -66,6 +69,13 @@ interface ItemDao {
 
     @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
     suspend fun blockedRowCount(): Int
+
+    /** Per-list count of open (todo) items, for the Overview cards (T-42). */
+    @Query(
+        "SELECT listId, COUNT(*) AS openCount FROM items " +
+            "WHERE status_value = 'todo' AND deleted_value = 0 GROUP BY listId",
+    )
+    fun openItemCounts(): Flow<List<ListOpenCount>>
 
     /** A quarantined row, so the sync-health surface can send the user to the list that holds it (T-47). */
     @Query("SELECT * FROM items WHERE syncBlocked = 1 LIMIT 1")

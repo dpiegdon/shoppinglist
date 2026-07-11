@@ -18,6 +18,7 @@ import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -70,6 +71,18 @@ class OverviewViewModelTest {
         assertTrue(lists.first().dirty)
         assertFalse(viewModel.uiState.value.isCreateDialogOpen)
         assertEquals("", viewModel.uiState.value.newListName)
+    }
+
+    @Test
+    fun `open item counts reflect todo items per list, excluding checked (T-42)`() = runTest {
+        val listId = listsRepo.createList("Groceries")
+        itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        itemsRepo.createItem(listId, "Bread", status = Status.TODO)
+        itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
+
+        val state = viewModel.uiState.first { it.openCounts[listId] == 2 }
+
+        assertEquals(2, state.openCounts[listId])
     }
 
     @Test

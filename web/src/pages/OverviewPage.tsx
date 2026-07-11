@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch } from "../hooks/useSync";
-import { listFieldValue } from "../hooks/useSync";
+import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
 
@@ -19,7 +19,7 @@ export function _resetInitialResumeForTests() {
 }
 
 export default function OverviewPage() {
-  const { lists, loading, push, deviceId } = useSyncContext();
+  const { lists, items, loading, push, deviceId } = useSyncContext();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [redirectTo, setRedirectTo] = useState<string | null | undefined>(undefined);
@@ -59,6 +59,14 @@ export default function OverviewPage() {
     (listFieldValue(a, "name") ?? "").localeCompare(listFieldValue(b, "name") ?? ""),
   );
 
+  // Open (todo) item count per list, for an at-a-glance "is a trip pending" hint (T-42).
+  const openCounts = new Map<string, number>();
+  for (const item of items.values()) {
+    if (itemFieldValue(item, "status") === "todo" && !itemFieldValue(item, "deleted")) {
+      openCounts.set(item.list_id, (openCounts.get(item.list_id) ?? 0) + 1);
+    }
+  }
+
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -72,22 +80,31 @@ export default function OverviewPage() {
       {!loading && listArray.length === 0 && <p className="muted">No lists yet. Create one to get started.</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "1rem" }}>
-        {listArray.map((list) => (
-          <Link
-            key={list.id}
-            to={`/list/${list.id}`}
-            className="card"
-            onClick={() => localStorage.setItem(LAST_LIST_STORAGE_KEY, list.id)}
-            style={{
-              padding: "1rem",
-              textDecoration: "none",
-              color: "var(--color-text)",
-              fontWeight: 600,
-            }}
-          >
-            {listFieldValue(list, "name")}
-          </Link>
-        ))}
+        {listArray.map((list) => {
+          const openCount = openCounts.get(list.id) ?? 0;
+          return (
+            <Link
+              key={list.id}
+              to={`/list/${list.id}`}
+              className="card"
+              onClick={() => localStorage.setItem(LAST_LIST_STORAGE_KEY, list.id)}
+              style={{
+                padding: "1rem",
+                textDecoration: "none",
+                color: "var(--color-text)",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>
+              {openCount > 0 && (
+                <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>{openCount}</span>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       {creating && (

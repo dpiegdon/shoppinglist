@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.SessionState
@@ -20,6 +21,8 @@ import javax.inject.Inject
 
 data class OverviewUiState(
     val lists: List<ListEntity> = emptyList(),
+    /** Open (todo) item count per list id, shown on each card (T-42). */
+    val openCounts: Map<String, Int> = emptyMap(),
     val isCreateDialogOpen: Boolean = false,
     val newListName: String = "",
     val sync: SyncState = SyncState(),
@@ -43,7 +46,9 @@ class OverviewViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            listsRepo.activeLists().collect { lists -> _uiState.update { it.copy(lists = lists) } }
+            combine(listsRepo.activeLists(), itemsRepo.openItemCounts(), ::Pair).collect { (lists, counts) ->
+                _uiState.update { it.copy(lists = lists, openCounts = counts) }
+            }
         }
         viewModelScope.launch {
             syncStatus.state.collect { sync ->
