@@ -8,7 +8,8 @@
     "ops",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Rebuild web_dist: served bundle is stale, missing all of this session's web fixes",
-  "updated_at": "2026-07-11T18:50:14+00:00"
+  "updated_at": "2026-07-11T18:50:27+00:00"
 }
