@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.UnauthorizedException
+import org.p23q.shoppinglist.data.sync.SyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.authedStartDestination
 import java.io.IOException
@@ -42,6 +43,7 @@ class LoginViewModel @Inject constructor(
     private val serverConfig: ServerConfig,
     private val sessionState: SessionState,
     private val pendingInviteHolder: PendingInviteHolder,
+    private val syncTrigger: SyncTrigger,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -111,6 +113,10 @@ class LoginViewModel @Inject constructor(
                     authRepository.register(state.email, state.password)
                 }
                 authRepository.login(state.email, state.password)
+                // The session is now authenticated — pull its data right away, so the first screen
+                // isn't stuck on empty until some later incidental sync (the app-foreground sync
+                // already fired before login, with no token).
+                syncTrigger.scheduleImmediate()
                 _uiState.update { it.copy(isLoading = false, loginSucceeded = true) }
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = "Incorrect email or password") }

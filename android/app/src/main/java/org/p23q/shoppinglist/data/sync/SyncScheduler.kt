@@ -50,8 +50,8 @@ class SyncScheduler @Inject constructor(@ApplicationContext private val context:
             .enqueueUniqueWork(EDIT_WORK_NAME, ExistingWorkPolicy.REPLACE, afterEditRequest())
     }
 
-    /** Immediate sync, e.g. when the app returns to the foreground (Notes). */
-    fun scheduleImmediate() {
+    /** Immediate sync, e.g. when the app returns to the foreground, or right after login (Notes). */
+    override fun scheduleImmediate() {
         WorkManager.getInstance(context)
             .enqueueUniqueWork(FOREGROUND_WORK_NAME, ExistingWorkPolicy.REPLACE, immediateRequest())
     }
