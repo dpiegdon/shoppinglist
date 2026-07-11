@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -93,20 +94,36 @@ fun ListScreen(
         }
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // This screen already sits inside AppDrawerScaffold's Scaffold (which insets for the top
+        // bar); without this, this inner Scaffold re-applies the status-bar inset and the controls
+        // sit a status-bar-height too low, leaving empty space up top.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            // Slim controls row: show-checked as a toggle-button (like web), plus the registry and
-            // list-settings actions. The Add-item button gets its own prominent line below.
+            // Slim controls row: show-checked toggle-button, plus "Clear checked" beside it when
+            // there are checked items; the registry and list-settings actions sit on the right (T-35).
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                FilterChip(
-                    selected = state.showChecked,
-                    onClick = { viewModel.toggleShowChecked() },
-                    label = { Text("Show checked") },
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilterChip(
+                        selected = state.showChecked,
+                        onClick = { viewModel.toggleShowChecked() },
+                        label = { Text("Show checked") },
+                    )
+                    if (state.checkedCount > 0) {
+                        TextButton(
+                            onClick = { viewModel.clearChecked() },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        ) {
+                            Text("Clear checked (${state.checkedCount})")
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")
@@ -123,22 +140,6 @@ fun ListScreen(
                 Icon(imageVector = Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("Add item")
-            }
-
-            // The post-trip 'finish up' action, mirroring web's "Clear checked (N)": only shown when
-            // checked items exist, on its own row so it never crowds the controls above (T-35).
-            if (state.checkedCount > 0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(
-                        onClick = { viewModel.clearChecked() },
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    ) {
-                        Text("Clear checked (${state.checkedCount})")
-                    }
-                }
             }
 
             // Lightweight last-synced line (T-36/T-47); the loud attention banner is Overview's job.
