@@ -1,0 +1,12 @@
+{
+  "body": "init-db creates the schema; there is no path for changing it on an existing\ndeployment (the Android client has Room migrations, the server has nothing). Add\na schema_version table + ordered migration list applied on connect/init-db.\nMuch cheaper to add now than to retrofit with the first real schema change.",
+  "created_at": "2026-07-11T18:50:17+00:00",
+  "id": "T-57",
+  "labels": [
+    "server",
+    "reliability"
+  ],
+  "priority": 3,
+  "title": "Server: versioned DB migration mechanism before the next schema change",
+  "updated_at": "2026-07-11T18:50:17+00:00"
+}
