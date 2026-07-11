@@ -1,0 +1,13 @@
+{
+  "body": "One README paragraph: back up with `sqlite3 DB \".backup ...\"` (safe under WAL,\nno downtime), which file(s) to snapshot, and a note that INVITE_HMAC_KEY must be\nbacked up alongside (losing it invalidates outstanding invites).",
+  "created_at": "2026-07-11T18:50:17+00:00",
+  "id": "T-58",
+  "labels": [
+    "server",
+    "ops",
+    "docs"
+  ],
+  "priority": 4,
+  "title": "Server README: operator backup guidance for the SQLite database",
+  "updated_at": "2026-07-11T18:50:17+00:00"
+}
