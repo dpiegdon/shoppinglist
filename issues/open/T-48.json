@@ -1,0 +1,14 @@
+{
+  "body": "The server serves the COMMITTED web_dist bundle, but web/src has moved past it:\nthe currency-dialog overflow fix, the login-destination fix (T-43), the sync\nindicator (T-47), and the overview open-item counts (T-42) are all missing from\nwhat's actually served. Run `cd web && npm run build` (outputs into\nserver/src/shoppinglist_server/web_dist/), sanity-check the server webapp tests,\nand commit the rebuilt bundle. Consider noting in the workflow that web-source\nchanges aren't live until a rebuild.",
+  "created_at": "2026-07-11T18:50:14+00:00",
+  "id": "T-48",
+  "labels": [
+    "web",
+    "server",
+    "ops",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Rebuild web_dist: served bundle is stale, missing all of this session's web fixes",
+  "updated_at": "2026-07-11T18:50:14+00:00"
+}
