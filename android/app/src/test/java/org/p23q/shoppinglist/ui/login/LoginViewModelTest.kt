@@ -204,6 +204,15 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `first run with nothing saved prefills the canonical instance URL`() = runTest {
+        val viewModel = LoginViewModel(FakeAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+        val prefilled = viewModel.uiState.first { it.serverUrl.isNotBlank() }
+
+        assertEquals("https://p23q.org/shopping", prefilled.serverUrl)
+    }
+
+    @Test
     fun `prefill does not clobber a URL the user is already typing`() = runTest {
         val serverConfig = newServerConfig()
         serverConfig.setServerUrl("https://saved.example.com")

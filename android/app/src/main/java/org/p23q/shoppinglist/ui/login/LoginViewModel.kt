@@ -61,12 +61,22 @@ class LoginViewModel @Inject constructor(
             val allowSelfSigned = serverConfig.allowSelfSignedCerts.first()
             _uiState.update {
                 it.copy(
-                    // Only prefill while the field is untouched, so we never clobber what the user types.
-                    serverUrl = if (it.serverUrl.isBlank() && !savedUrl.isNullOrBlank()) savedUrl else it.serverUrl,
+                    // Prefill the saved URL, or the canonical instance for a first run — and only
+                    // while the field is untouched, so we never clobber what the user types.
+                    serverUrl = when {
+                        it.serverUrl.isNotBlank() -> it.serverUrl
+                        !savedUrl.isNullOrBlank() -> savedUrl
+                        else -> DEFAULT_SERVER_URL
+                    },
                     allowSelfSignedCerts = allowSelfSigned,
                 )
             }
         }
+    }
+
+    private companion object {
+        /** First-run prefill; still editable, and replaced by whatever the user last logged into. */
+        const val DEFAULT_SERVER_URL = "https://p23q.org/shopping"
     }
 
     /** Debug-only: persist the self-signed-cert opt-in (ApiProvider rebuilds its client on the flag,
