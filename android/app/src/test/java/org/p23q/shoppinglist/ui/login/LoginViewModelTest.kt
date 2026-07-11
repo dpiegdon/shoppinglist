@@ -1,6 +1,9 @@
 package org.p23q.shoppinglist.ui.login
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -52,7 +55,12 @@ class LoginViewModelTest {
     private fun newServerConfig(): ServerConfig {
         val tempFile = File.createTempFile("login_vm_test", ".preferences_pb")
         tempFile.deleteOnExit()
-        return ServerConfig(PreferenceDataStoreFactory.create { tempFile })
+        // Unconfined DataStore scope so the VM's init reads run inline on the test thread and finish
+        // within runTest — the default IO scope hops to a real thread whose continuation resumes on
+        // Main after the rule reset it, crashing teardown.
+        return ServerConfig(
+            PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.Unconfined + Job())) { tempFile },
+        )
     }
 
     @Test

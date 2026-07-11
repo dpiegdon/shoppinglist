@@ -51,14 +51,19 @@ class LoginViewModel @Inject constructor(
         // Prefill the previously-entered server URL (it persists in ServerConfig, but nothing
         // seeded the field before, so a returning user re-typed it every time). Only fill while
         // the field is still untouched, so we never clobber something the user is typing.
+        // One coroutine reads both persisted values (mirrors SettingsViewModel). Two separate init
+        // coroutines each doing a DataStore read let the second one resume on Main after a test had
+        // already reset its dispatcher — crashing teardown; a single read avoids that.
         viewModelScope.launch {
             val savedUrl = serverConfig.serverUrl.first()
-            if (!savedUrl.isNullOrBlank()) {
-                _uiState.update { if (it.serverUrl.isBlank()) it.copy(serverUrl = savedUrl) else it }
+            val allowSelfSigned = serverConfig.allowSelfSignedCerts.first()
+            _uiState.update {
+                it.copy(
+                    // Only prefill while the field is untouched, so we never clobber what the user types.
+                    serverUrl = if (it.serverUrl.isBlank() && !savedUrl.isNullOrBlank()) savedUrl else it.serverUrl,
+                    allowSelfSignedCerts = allowSelfSigned,
+                )
             }
-        }
-        viewModelScope.launch {
-            _uiState.update { it.copy(allowSelfSignedCerts = serverConfig.allowSelfSignedCerts.first()) }
         }
     }
 
