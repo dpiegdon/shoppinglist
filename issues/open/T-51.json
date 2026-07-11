@@ -1,0 +1,12 @@
+{
+  "body": "The icon/logo purple (#863BFF) isn't the app's Material color scheme \u2014 buttons,\nchips, accents use the default palette. Seed light/dark color schemes from the\nbrand purple (and check whether dynamicColor is enabled \u2014 it would override the\nbrand on Android 12+; prefer the brand). Optionally set the themed splash/window\nbackground to the icon's lavender (#EDE6FF) for a coherent launch.",
+  "created_at": "2026-07-11T18:50:15+00:00",
+  "id": "T-51",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Brand-align the app theme: seed Material colors from the brand purple",
+  "updated_at": "2026-07-11T18:50:15+00:00"
+}
