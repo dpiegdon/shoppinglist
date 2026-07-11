@@ -198,7 +198,7 @@ export default function ItemDialog({
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <div className="form-field" style={{ flex: 2 }}>
+          <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
             <label htmlFor="item-price">Price</label>
             <input
               id="item-price"
@@ -208,7 +208,7 @@ export default function ItemDialog({
               onChange={(e) => setValues((v) => ({ ...v, priceAmount: e.target.value }))}
             />
           </div>
-          <div className="form-field" style={{ flex: 1 }}>
+          <div className="form-field" style={{ flex: "0 0 6rem", minWidth: 0 }}>
             <label htmlFor="item-currency">Currency</label>
             <input
               id="item-currency"
