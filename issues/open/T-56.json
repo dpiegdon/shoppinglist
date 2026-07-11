@@ -1,0 +1,12 @@
+{
+  "body": "Three suites, three invocations, easy to skip one. Add ./verify-all.sh at repo\nroot: server (.venv pytest), web (vitest run, tsc --noEmit -p tsconfig.app.json,\noxlint), android (gradlew :app:testDebugUnitTest :app:lintDebug --offline with\nJAVA_HOME=~/.sdkman/candidates/java/current). Fail fast, print a summary table.",
+  "created_at": "2026-07-11T18:50:17+00:00",
+  "id": "T-56",
+  "labels": [
+    "ops",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "verify-all script running server pytest + web vitest/tsc/lint + Android test/lint",
+  "updated_at": "2026-07-11T18:50:17+00:00"
+}
