@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ system splash: brand lavender behind the launcher icon (T-51). -->
+    <style name="Theme.ShoppingList" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#EDE6FF</item>
+    </style>
+</resources>

@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -29,8 +30,31 @@ fun resolveThemeVariant(darkTheme: Boolean, dynamicColorAvailable: Boolean): The
     else -> ThemeVariant.LIGHT
 }
 
-private val DarkColors = darkColorScheme()
-private val LightColors = lightColorScheme()
+// Brand palette (T-51): seeded from the logo purple (#863BFF) with the icon's lavender (#EDE6FF)
+// as its container, and the logo's blue (#47BFFF) informing the tertiary accent. Only the primary/
+// tertiary families are overridden; the Material baseline (already purple-family) fills the rest.
+private val BrandPurple = Color(0xFF863BFF)
+private val BrandLavender = Color(0xFFEDE6FF)
+
+private val LightColors = lightColorScheme(
+    primary = BrandPurple,
+    onPrimary = Color.White,
+    primaryContainer = BrandLavender,
+    onPrimaryContainer = Color(0xFF2A0A56),
+    tertiary = Color(0xFF00658F),
+    tertiaryContainer = Color(0xFFC7E7FF),
+    onTertiaryContainer = Color(0xFF001E2E),
+)
+
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFFCDB0FF),
+    onPrimary = Color(0xFF44148F),
+    primaryContainer = Color(0xFF6A24D0),
+    onPrimaryContainer = BrandLavender,
+    tertiary = Color(0xFF85CFFF),
+    tertiaryContainer = Color(0xFF004C6D),
+    onTertiaryContainer = Color(0xFFC7E7FF),
+)
 
 private val AppTypography = Typography(
     titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
@@ -39,7 +63,9 @@ private val AppTypography = Typography(
 @Composable
 fun ShoppingListTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    // Off by default (T-51): dynamic color follows the wallpaper on Android 12+, which would
+    // override the brand palette everywhere it matters. Kept as an opt-in parameter.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     // The Build.VERSION.SDK_INT check must guard the dynamicColorScheme calls directly at their
