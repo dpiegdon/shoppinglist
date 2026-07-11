@@ -1,0 +1,12 @@
+{
+  "body": "Deferred from T-34: SessionState (EncryptedSharedPreferences) isn't observable,\nso a Settings currency change only applies on the next list open. Options: an\nin-memory StateFlow mirror beside SessionState that Settings writes through, or\npiggyback on SyncStatus-style app singletons. Covered today by ListViewModelTest\n\"currency change reflected by the next list view (A10)\".",
+  "created_at": "2026-07-11T18:50:16+00:00",
+  "id": "T-55",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Android: default-currency change should reflect in an already-open list",
+  "updated_at": "2026-07-11T18:50:16+00:00"
+}
