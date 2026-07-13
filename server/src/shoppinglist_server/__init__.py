@@ -30,6 +30,7 @@ def create_blueprint(
     name: str = "shoppinglist_server",
     serve_web_client: bool = True,
     serve_invite_landing_page: bool = True,
+    serve_android_apk: bool = True,
     web_dist_dir: str | None = None,
 ) -> Blueprint:
     """Build a mountable blueprint instance.
@@ -38,9 +39,10 @@ def create_blueprint(
     app (different `database_path`/`invite_hmac_key`/`url_prefix` each,
     isolated from one another) — but each extra instance beyond the first
     MUST pass a distinct `name`, and at most one instance per app may set
-    `serve_web_client=True` / `serve_invite_landing_page=True` (both are
-    unprefixed, site-root routes; there is only one `/` and one
-    `/invite/<token>` per app, by construction).
+    `serve_web_client=True` / `serve_invite_landing_page=True` /
+    `serve_android_apk=True` (all are unprefixed, site-root routes; there is
+    only one `/`, one `/invite/<token>`, and one `/shoppinglist.apk` per app,
+    by construction).
     """
     bp = Blueprint(name, __name__, url_prefix=url_prefix, template_folder="templates")
 
@@ -91,6 +93,21 @@ def create_blueprint(
             from .routes.landing import register_routes as register_landing_routes
 
             register_landing_routes(app, invite_hmac_key, base_url)
+
+        # The Android APK download (T-59), also a site-root route, registered
+        # BEFORE the landing page's render decisions matter: the landing/login
+        # surfaces only link to it when this route exists.
+        if serve_android_apk:
+            if "android_apk" in app.view_functions:
+                raise ValueError(
+                    "serve_android_apk=True on this create_blueprint() call, but the APK "
+                    "download is already registered on this app by another mounted "
+                    "instance. Only one instance per app may serve it — pass "
+                    "serve_android_apk=False here."
+                )
+            from .routes.apk import register_routes as register_apk_routes
+
+            register_apk_routes(app)
 
         # The embedded web client (Epic W) is likewise registered directly on
         # the app, outside url_prefix, so opening the server's base URL boots

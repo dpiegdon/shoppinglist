@@ -50,6 +50,9 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str):
             if "web_index" in current_app.view_functions
             else None
         )
+        # Likewise the app download (T-59): the likeliest reader of this page doesn't have the
+        # app installed yet — that's why the intent link didn't already whisk them away.
+        apk_url = "/shoppinglist.apk" if "android_apk" in current_app.view_functions else None
         return (
             render_template(
                 "invite.html",
@@ -58,6 +61,7 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str):
                 invited_email=invited_email,
                 intent_url=_intent_url(base_url, token),
                 web_redeem_url=web_redeem_url,
+                apk_url=apk_url,
             ),
             200,
         )

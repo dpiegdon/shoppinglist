@@ -173,6 +173,38 @@ gracefully to the same effect rather than crashing.
 The web client is same-origin with its own API by construction, so — unlike
 the Android app — it has no server-URL setting.
 
+## Android app download / single-artifact deploys
+
+The Android release APK is shipped as package data too
+(`src/shoppinglist_server/apk/shoppinglist.apk`) and served at
+**`/shoppinglist.apk`** — linked from the web client's login page and from the
+invite landing page, so new users can install the app straight from your
+server. Pass `serve_android_apk=False` to `create_blueprint(...)` to disable;
+a package built without the APK file degrades gracefully (no route, no links).
+
+This makes one build of this package a **single deployable artifact** — API,
+web client, invite landing page, and the app download in one wheel:
+
+```bash
+cd server
+python -m build --wheel      # -> dist/shoppinglist_server-1.0.0-py3-none-any.whl
+pip install dist/shoppinglist_server-*.whl   # on the deployment host
+```
+
+…then mount it from your host app as shown in "Mounting the blueprint" above.
+(Copying the `src/shoppinglist_server/` directory into your Flask project works
+too — everything the blueprint serves lives inside the package.)
+
+**When a new Android release is built**, refresh the embedded copy:
+
+```bash
+cp android/app/build/outputs/apk/release/app-release.apk \
+   server/src/shoppinglist_server/apk/shoppinglist.apk
+```
+
+The download URL is stable (no content hash) and served with a short cache
+lifetime, so updated APKs propagate promptly.
+
 ## TLS dev server (for client-side testing)
 
 `server/dev_tls_server.py` serves the same app over **HTTPS on port 8723**

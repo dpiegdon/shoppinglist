@@ -1,6 +1,6 @@
 [project]
 name = "shoppinglist-server"
-version = "0.1.0"
+version = "1.0.0"
 description = "Flask blueprint + SQLite backend for a shared, offline-first shopping-list app."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,4 +22,4 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-shoppinglist_server = ["schema.sql", "templates/*.html", "web_dist/*", "web_dist/assets/*"]
+shoppinglist_server = ["schema.sql", "templates/*.html", "web_dist/*", "web_dist/assets/*", "apk/*.apk"]

@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
+
+const APK_URL = "/shoppinglist.apk";
 
 export default function LoginPage() {
   const { login, register, loading } = useAuth();
@@ -11,6 +13,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [apkAvailable, setApkAvailable] = useState(false);
+
+  // Show the app-download link only when this server actually serves the APK (T-59) — the SPA is
+  // static, so probe rather than render a link that might 404 on an operator without the artifact.
+  useEffect(() => {
+    if (typeof fetch === "undefined") return;
+    fetch(APK_URL, { method: "HEAD" })
+      .then((resp) => setApkAvailable(resp.ok))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -85,6 +97,13 @@ export default function LoginPage() {
         >
           {mode === "login" ? "Need an account? Register" : "Have an account? Log in"}
         </button>
+        {apkAvailable && (
+          <p className="muted" style={{ textAlign: "center", marginTop: "0.75rem", marginBottom: 0, fontSize: "0.85rem" }}>
+            <a href={APK_URL} style={{ color: "var(--color-accent)" }}>
+              Get the Android app
+            </a>
+          </p>
+        )}
       </form>
     </main>
   );

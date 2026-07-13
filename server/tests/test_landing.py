@@ -62,6 +62,17 @@ def test_valid_token_offers_redeem_in_browser_when_web_client_is_served(client):
     assert "/redeem?token=" in body
 
 
+def test_valid_token_offers_the_apk_download_when_served(client):
+    owner_token = _register_and_login(client)
+    invite = _mint_invite(client, owner_token)
+
+    body = client.get(f"/invite/{invite['token']}").get_data(as_text=True)
+
+    # The default test app serves the APK, so the landing page links the download (T-59).
+    assert "Download the Android app" in body
+    assert "/shoppinglist.apk" in body
+
+
 def test_no_redeem_in_browser_link_when_web_client_not_served(tmp_path):
     from flask import Flask
 

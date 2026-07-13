@@ -41,6 +41,7 @@ def _mount_two(tmp_path, **overrides):
         "name": "tenant_a",
         "serve_web_client": False,
         "serve_invite_landing_page": False,
+        "serve_android_apk": False,
         **overrides.get("a", {}),
     }
     args_b = {
@@ -51,6 +52,7 @@ def _mount_two(tmp_path, **overrides):
         "name": "tenant_b",
         "serve_web_client": False,
         "serve_invite_landing_page": False,
+        "serve_android_apk": False,
         **overrides.get("b", {}),
     }
     bp_a = create_blueprint(**args_a)
@@ -77,14 +79,14 @@ def test_same_name_twice_raises_flasks_own_clear_error(tmp_path):
     app.register_blueprint(
         create_blueprint(
             database_path=db_path, invite_hmac_key=b"k", base_url="http://x",
-            url_prefix="/a", serve_web_client=False, serve_invite_landing_page=False,
+            url_prefix="/a", serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
         )
     )
     with pytest.raises(ValueError, match="already registered"):
         app.register_blueprint(
             create_blueprint(
                 database_path=db_path, invite_hmac_key=b"k", base_url="http://x",
-                url_prefix="/b", serve_web_client=False, serve_invite_landing_page=False,
+                url_prefix="/b", serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
             )
         )
 
@@ -200,14 +202,14 @@ def test_serve_web_client_twice_on_one_app_raises_clear_error(tmp_path):
     app.register_blueprint(
         create_blueprint(
             database_path=db_1, invite_hmac_key=b"k1", base_url="http://x",
-            url_prefix="/a", name="a", serve_web_client=True, serve_invite_landing_page=False,
+            url_prefix="/a", name="a", serve_web_client=True, serve_invite_landing_page=False, serve_android_apk=False,
         )
     )
     with pytest.raises(ValueError, match="serve_web_client"):
         app.register_blueprint(
             create_blueprint(
                 database_path=db_2, invite_hmac_key=b"k2", base_url="http://y",
-                url_prefix="/b", name="b", serve_web_client=True, serve_invite_landing_page=False,
+                url_prefix="/b", name="b", serve_web_client=True, serve_invite_landing_page=False, serve_android_apk=False,
             )
         )
 
@@ -219,14 +221,33 @@ def test_serve_invite_landing_page_twice_on_one_app_raises_clear_error(tmp_path)
     app.register_blueprint(
         create_blueprint(
             database_path=db_1, invite_hmac_key=b"k1", base_url="http://x",
-            url_prefix="/a", name="a", serve_web_client=False, serve_invite_landing_page=True,
+            url_prefix="/a", name="a", serve_web_client=False, serve_invite_landing_page=True, serve_android_apk=False,
         )
     )
     with pytest.raises(ValueError, match="serve_invite_landing_page"):
         app.register_blueprint(
             create_blueprint(
                 database_path=db_2, invite_hmac_key=b"k2", base_url="http://y",
-                url_prefix="/b", name="b", serve_web_client=False, serve_invite_landing_page=True,
+                url_prefix="/b", name="b", serve_web_client=False, serve_invite_landing_page=True, serve_android_apk=False,
+            )
+        )
+
+
+def test_serve_android_apk_twice_on_one_app_raises_clear_error(tmp_path):
+    app = Flask(__name__)
+    db_1 = _init_db(tmp_path, "1.db")
+    db_2 = _init_db(tmp_path, "2.db")
+    app.register_blueprint(
+        create_blueprint(
+            database_path=db_1, invite_hmac_key=b"k1", base_url="http://x",
+            url_prefix="/a", name="a", serve_web_client=False, serve_invite_landing_page=False,
+        )
+    )
+    with pytest.raises(ValueError, match="serve_android_apk"):
+        app.register_blueprint(
+            create_blueprint(
+                database_path=db_2, invite_hmac_key=b"k2", base_url="http://y",
+                url_prefix="/b", name="b", serve_web_client=False, serve_invite_landing_page=False,
             )
         )
 
@@ -268,7 +289,7 @@ def test_get_config_by_name_single_instance_needs_no_name(tmp_path):
     app.register_blueprint(
         create_blueprint(
             database_path=db_path, invite_hmac_key=b"k", base_url="http://x",
-            url_prefix="/a", serve_web_client=False, serve_invite_landing_page=False,
+            url_prefix="/a", serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
         )
     )
     with app.app_context():

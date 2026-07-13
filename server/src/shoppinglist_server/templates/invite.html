@@ -44,6 +44,9 @@
   {% endif %}
   <p>If the app didn't open automatically, copy the code below and paste it into the app's "Join list" screen:</p>
   <code>{{ token }}</code>
+  {% if apk_url %}
+  <p>Don't have the app yet? <a href="{{ apk_url }}">Download the Android app</a>, then paste the code above.</p>
+  {% endif %}
 {% elif state == "expired" %}
   <h1>This invite has expired</h1>
   <p>Invites are valid for 7 days. Ask whoever shared this link to send you a new one.</p>
