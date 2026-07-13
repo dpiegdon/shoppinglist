@@ -9,6 +9,7 @@
     "ops",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Serve the Android APK from the server; single deployable artifact (wheel) with everything in it",
   "updated_at": "2026-07-13T23:37:36+00:00"
