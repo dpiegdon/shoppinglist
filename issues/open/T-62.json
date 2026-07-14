@@ -1,0 +1,14 @@
+{
+  "body": "Add a `notes` field to lists: free-text, multiline, for information that's\nuseful but not needed regularly (e.g. \"ask for the gate code\", \"store closes\n6pm Sundays\"). Lives ONLY in the list properties dialog/screen \u2014 not shown on\nthe list or overview screens, no special prominence.\n\nSchema: `lists.notes TEXT`, `notes_ts INTEGER NOT NULL DEFAULT 0`,\n`notes_by TEXT NOT NULL DEFAULT ''` \u2014 same field-level LWW pattern as\n`name`/`category_order` (device_id-based `_by`, same as every other list\nfield; unrelated to the account-identity work in the item-authorship\nticket). Generous length cap (e.g. 5000 chars) to bound payload size;\nvalidate server-side like other text fields.\n\nMigration: this is a genuine schema change and there's no versioned\nmigration mechanism yet (T-57, open/unclaimed). Don't block on T-57 \u2014 a\nsingle additive `ALTER TABLE lists ADD COLUMN notes ...` (+ ts/by columns)\nwith safe defaults is low-risk on SQLite; bundle a guarded one-off migration\nin this ticket's server init path (see the equivalent note in the\nitem-authorship ticket, which needs the same treatment).\n\nWire contract: `notes` added to LIST_KEYS/LIST_TSBY alongside the other list\nfields, flows through sync exactly like `name`.\n\nPlatform scope: Android full support (multiline OutlinedTextField in\nListPropsScreen, saved via the existing list-field-patch path used for\nname/category_order). Web basic support is fine \u2014 a plain textarea in\nListPropsPage, save-on-dialog-close/submit is enough, no need for\nautosave-on-keystroke polish.",
+  "created_at": "2026-07-14T20:09:09+00:00",
+  "id": "T-62",
+  "labels": [
+    "server",
+    "android",
+    "web",
+    "feature"
+  ],
+  "priority": 3,
+  "title": "List notes: free-text textarea in list properties",
+  "updated_at": "2026-07-14T20:09:09+00:00"
+}
