@@ -1,0 +1,13 @@
+{
+  "body": "Background sync itself already exists: `SyncScheduler.schedulePeriodic()`\nenqueues a network-constrained WorkManager periodic request every 15\nminutes (`SyncWorker` -> `SyncEngine.syncNow()`), independent of whether\nthe app is foregrounded \u2014 that's true background sync today, not new\nscope here. The actual net-new work is: when a background (or foreground)\nsync pulls a change that was NOT made by the current user, post a local\nAndroid notification (\"3 items changed in Groceries \u2014 tap to view\").\n\nDepends on T-64 (item last-touched-by): detecting \"changed by someone\nelse\" must compare against the ACCOUNT that made the change, not the\nper-field `_by` device_id. Device-level comparison would misfire\nconstantly for any user with 2+ devices on the same account (phone +\ntablet is a realistic self-hosting scenario) \u2014 every sync of their OWN\nsecond device would look like \"a collaborator changed this.\" Don't build\nthis on device_id; wait for T-64's `last_touched_by_account_id`.\n\nScope, once T-64 is available:\n- `SyncEngine.syncNow()` (or `SyncWorker` around it) needs to know, per\n  pulled item/list, whether `last_touched_by_account_id` differs from the\n  current account \u2014 and only for rows that actually changed in this sync\n  pass (not just \"not mine\", since most rows on every pull weren't\n  authored by you and haven't changed either).\n- Notification permission: `POST_NOTIFICATIONS` runtime permission on API\n  33+ (request it somewhere sensible \u2014 Settings, or on first detected\n  need \u2014 not a cold-start prompt).\n- One `NotificationChannel`, tap-to-open the affected list (or overview if\n  multiple lists changed in one sync pass).\n- Batch per sync run, not per changed row \u2014 a sync that pulls 12 changed\n  items across 2 lists is one or two notifications, not twelve.\n- A sync that finds no changes from other accounts stays completely\n  silent (the common case, every 15 minutes, for a solo list).\n\nOpen for whoever implements: per-list mute/Settings toggle for\nnotifications, and whether foreground syncs (app open) should also\nnotify or only background ones (arguably pointless to notify about\nsomething already visible on screen).\n\nPlatform scope: Android only. Browser push notifications for the web\nclient would need a service worker + push subscription + a push-capable\nserver component \u2014 a different, much larger undertaking, explicitly out\nof scope here.",
+  "created_at": "2026-07-14T20:37:11+00:00",
+  "id": "T-65",
+  "labels": [
+    "android",
+    "feature",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Android: notify when a collaborator changes a shared list (background sync already exists)",
+  "updated_at": "2026-07-14T20:37:11+00:00"
+}
