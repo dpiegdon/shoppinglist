@@ -24,6 +24,7 @@ import org.p23q.shoppinglist.data.api.DeleteAccountRequest
 import org.p23q.shoppinglist.data.api.SessionDto
 import org.p23q.shoppinglist.data.api.UnauthorizedException
 import org.p23q.shoppinglist.data.api.UpdateSettingsRequest
+import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import java.io.IOException
 import javax.inject.Inject
@@ -46,6 +47,8 @@ data class SettingsUiState(
     val errorMessage: String? = null,
     val infoMessage: String? = null,
     val isAccountDeleted: Boolean = false,
+    /** Absolute path of the crash log to hand to a share intent (T-50); consumed once fired. */
+    val crashLogPath: String? = null,
 )
 
 /** Notes: "the usual stuff" — currency, password/email, sessions, delete account, theme, server URL. */
@@ -56,6 +59,7 @@ class SettingsViewModel @Inject constructor(
     private val serverConfig: ServerConfig,
     private val themePreferenceStore: ThemePreferenceStore,
     private val appDb: AppDb,
+    private val crashLogWriter: CrashLogWriter,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -253,6 +257,18 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+
+    /** No log yet, or an empty one, surfaces a message instead of firing an empty share sheet (T-50). */
+    fun shareLogs() {
+        val file = crashLogWriter.logFile
+        if (file.exists() && file.length() > 0) {
+            _uiState.update { it.copy(crashLogPath = file.absolutePath) }
+        } else {
+            _uiState.update { it.copy(infoMessage = "No crash logs yet") }
+        }
+    }
+
+    fun consumeCrashLogShare() = _uiState.update { it.copy(crashLogPath = null) }
 
     fun setTheme(preference: ThemePreference): Job = viewModelScope.launch { themePreferenceStore.setTheme(preference) }
 

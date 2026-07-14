@@ -29,6 +29,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -87,7 +88,10 @@ class SettingsScreenTest {
             errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
             json = json,
         )
-        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db)
+        val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
+        crashLogFile.deleteOnExit()
+        val crashLogWriter = CrashLogWriter(crashLogFile)
+        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
         var deleted = false
 
         composeTestRule.setContent {
@@ -144,7 +148,10 @@ class SettingsScreenTest {
             errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
             json = json,
         )
-        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db)
+        val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
+        crashLogFile.deleteOnExit()
+        val crashLogWriter = CrashLogWriter(crashLogFile)
+        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
@@ -156,6 +163,59 @@ class SettingsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals("XY", viewModel.uiState.value.initials)
+        db.close()
+    }
+
+    @Test
+    fun `tapping Share crash logs with no log yet surfaces a message instead of a broken share sheet (T-50)`() = runBlocking {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path?.endsWith("/account/sessions") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"sessions": []}""")
+                request.path?.endsWith("/settings") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}""")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val serverConfigFile = File.createTempFile("settings_screen_crashlog_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val themeFile = File.createTempFile("settings_screen_crashlog_theme", ".preferences_pb")
+        themeFile.deleteOnExit()
+        val themePreferenceStore = ThemePreferenceStore(PreferenceDataStoreFactory.create { themeFile })
+        val sessionState = FakeSessionState().apply {
+            token = "tok-123"
+            accountEmail = "milk@example.com"
+            defaultCurrency = "EUR"
+        }
+        val json = Json { ignoreUnknownKeys = true }
+        val apiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            json = json,
+        )
+        val crashLogFile = File.createTempFile("settings_screen_crashlog_empty", ".txt")
+        crashLogFile.deleteOnExit()
+        val crashLogWriter = CrashLogWriter(crashLogFile)
+        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
+
+        composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Share crash logs").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("No crash logs yet").assertExists()
+        assertEquals(null, viewModel.uiState.value.crashLogPath)
         db.close()
     }
 }

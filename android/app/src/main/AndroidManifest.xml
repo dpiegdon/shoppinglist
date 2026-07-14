@@ -69,6 +69,19 @@
                 tools:node="remove" />
         </provider>
 
+        <!-- Shares the crash log file (T-50) as a content:// URI to whatever app the user picks
+             from the "Share crash logs" chooser - plain file:// URIs are blocked by StrictMode on
+             modern Android for anything leaving the app. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>

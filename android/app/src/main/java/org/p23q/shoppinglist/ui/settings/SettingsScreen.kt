@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.settings
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,10 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.data.ThemePreference
+import java.io.File
 
 @Composable
 fun SettingsScreen(
@@ -48,6 +51,19 @@ fun SettingsScreen(
     LaunchedEffect(Unit) { viewModel.loadSessions() }
     LaunchedEffect(Unit) { viewModel.loadInitials() }
     LaunchedEffect(state.isAccountDeleted) { if (state.isAccountDeleted) onAccountDeleted() }
+    LaunchedEffect(state.crashLogPath) {
+        val path = state.crashLogPath
+        if (path != null) {
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(path))
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Share crash logs"))
+            viewModel.consumeCrashLogShare()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("Account", style = MaterialTheme.typography.titleMedium)
@@ -179,6 +195,12 @@ fun SettingsScreen(
         TextButton(onClick = viewModel::requestDeleteAccount) {
             Text("Delete account", color = MaterialTheme.colorScheme.error)
         }
+        Spacer(Modifier.height(16.dp))
+
+        // No telemetry service (T-50) — this is purely local, opt-in, and manual: the crash log
+        // never leaves the device unless the user explicitly shares it here.
+        Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
+        TextButton(onClick = viewModel::shareLogs) { Text("Share crash logs") }
         Spacer(Modifier.height(16.dp))
 
         Text("Version $appVersion", style = MaterialTheme.typography.bodySmall)

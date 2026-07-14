@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- CrashLogWriter writes to context.filesDir directly (T-50). -->
+    <files-path name="crash_logs" path="." />
+</paths>

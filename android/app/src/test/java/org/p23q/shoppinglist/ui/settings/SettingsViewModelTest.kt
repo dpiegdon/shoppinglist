@@ -30,6 +30,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.robolectric.RobolectricTestRunner
 import kotlinx.serialization.json.Json
@@ -47,6 +48,7 @@ class SettingsViewModelTest {
     private lateinit var sessionState: FakeSessionState
     private lateinit var themePreferenceStore: ThemePreferenceStore
     private lateinit var apiProvider: ApiProvider
+    private lateinit var crashLogWriter: CrashLogWriter
 
     @Before
     fun setUp() = runTest {
@@ -80,6 +82,10 @@ class SettingsViewModelTest {
             errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
             json = json,
         )
+
+        val crashLogFile = File.createTempFile("settings_vm_crash_log", ".txt")
+        crashLogFile.deleteOnExit()
+        crashLogWriter = CrashLogWriter(crashLogFile)
     }
 
     @After
@@ -89,7 +95,7 @@ class SettingsViewModelTest {
     }
 
     private fun newViewModel(): SettingsViewModel =
-        SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db)
+        SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
 
     @Test
     fun `initial state loads server URL, account email, and cached currency without a network call`() = runTest {
@@ -321,5 +327,29 @@ class SettingsViewModelTest {
 
         assertFalse(viewModel.uiState.value.allowSelfSignedCerts)
         assertFalse(serverConfig.allowSelfSignedCerts.first())
+    }
+
+    @Test
+    fun `shareLogs with no crash log yet surfaces a message instead of a path (T-50)`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.shareLogs()
+
+        assertNull(viewModel.uiState.value.crashLogPath)
+        assertEquals("No crash logs yet", viewModel.uiState.value.infoMessage)
+    }
+
+    @Test
+    fun `shareLogs with an existing log exposes its path, and consumeCrashLogShare clears it (T-50)`() = runTest {
+        crashLogWriter.append("main", RuntimeException("boom"))
+        val viewModel = newViewModel()
+
+        viewModel.shareLogs()
+
+        assertEquals(crashLogWriter.logFile.absolutePath, viewModel.uiState.value.crashLogPath)
+
+        viewModel.consumeCrashLogShare()
+
+        assertNull(viewModel.uiState.value.crashLogPath)
     }
 }
