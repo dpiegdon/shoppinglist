@@ -5,9 +5,11 @@
   "labels": [
     "web",
     "ux",
-    "feature"
+    "feature",
+    "agent",
+    "ready"
   ],
   "priority": 4,
   "title": "Web: 'add another' mode in the item dialog (parity with Android T-41)",
-  "updated_at": "2026-07-11T18:50:16+00:00"
+  "updated_at": "2026-07-14T20:16:56+00:00"
 }
