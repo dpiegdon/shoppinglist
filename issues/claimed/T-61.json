@@ -8,6 +8,7 @@
     "feature",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "create_blueprint flag to disable new-account registration (API 403 + web notice)",
   "updated_at": "2026-07-14T00:15:58+00:00"

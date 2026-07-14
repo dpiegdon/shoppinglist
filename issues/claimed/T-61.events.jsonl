@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-14T00:15:58+00:00", "kind": "created", "ref": "main@f27af2f", "text": "create_blueprint flag to disable new-account registration (API 403 + web notice)"}
+{"actor": "claude", "at": "2026-07-14T00:15:58+00:00", "kind": "claimed", "ref": "main@f27af2f", "text": "claude"}
