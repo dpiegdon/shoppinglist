@@ -3,3 +3,4 @@
 {"actor": "claude", "at": "2026-07-14T20:16:59+00:00", "kind": "updated", "ref": "main@93ef191", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-14T23:09:06+00:00", "kind": "claimed", "ref": "main@a6fcc7a", "text": "claude"}
 {"actor": "claude", "at": "2026-07-14T23:36:34+00:00", "kind": "note", "ref": "main@dbab06a", "text": "Done. Android: ListsRepo.duplicate() + ItemsRepo.duplicateForList() (client-side snapshot copy, fresh ids/clocks, status preserved, deleted items skipped), ListPropsViewModel orchestration, Duplicate button in list-properties screen navigating to the new list. Web: basic Duplicate button on ListPropsPage, one sync-batch push. No new server endpoint (as scoped). Commit dbab06a."}
+{"actor": "claude", "at": "2026-07-14T23:36:35+00:00", "kind": "closed", "ref": "main@dbab06a", "text": ""}
