@@ -206,4 +206,6 @@ def test_allow_registration_false_is_advertised_to_the_web_client(tmp_path):
 
     body = client.get("/").get_data(as_text=True)
 
-    assert '"allowRegistration": false' in body
+    # Carried as a meta tag, not an inline script: the security CSP blocks inline
+    # scripts in a real browser (see routes/webapp.py).
+    assert '<meta name="app-allow-registration" content="false">' in body

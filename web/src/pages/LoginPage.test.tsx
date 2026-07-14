@@ -53,11 +53,15 @@ describe("LoginPage destination after login (T-43)", () => {
 
 describe("registration disabled by the server (T-61)", () => {
   afterEach(() => {
-    delete window.__APP_CONFIG__;
+    document.head.querySelectorAll('meta[name^="app-"]').forEach((m) => m.remove());
   });
 
   it("disables the register toggle and shows the notice", () => {
-    window.__APP_CONFIG__ = { allowRegistration: false };
+    // The server carries the flag as a meta tag (CSP blocks inline config scripts).
+    const meta = document.createElement("meta");
+    meta.name = "app-allow-registration";
+    meta.content = "false";
+    document.head.appendChild(meta);
     renderLogin(undefined);
 
     expect(screen.getByRole("button", { name: "Need an account? Register" })).toBeDisabled();

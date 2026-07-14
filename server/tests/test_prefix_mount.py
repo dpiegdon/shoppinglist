@@ -66,8 +66,24 @@ def test_spa_served_under_the_prefix_with_rewritten_urls(tmp_path):
     # Asset/favicon URLs are rewritten to live under the mount root...
     assert '"/shopping/assets/' in body
     assert '"/assets/' not in body
-    # ...and the client is told its router basename.
-    assert '"basename": "/shopping"' in body
+    # ...and the client is told its router basename via a meta tag.
+    assert '<meta name="app-basename" content="/shopping">' in body
+
+
+def test_config_is_a_meta_tag_not_an_inline_script(tmp_path):
+    # The security CSP (T-45) blocks inline scripts in a real browser, so the config
+    # MUST be carried by meta tags — an inline <script> silently failed in the field
+    # while passing curl/jsdom tests. Guard against a regression to inline config.
+    resp = _make_app(tmp_path).test_client().get("/shopping/")
+    body = resp.get_data(as_text=True)
+
+    assert '<meta name="app-basename"' in body
+    assert "__APP_CONFIG__" not in body
+
+    # And the CSP on that very response really is script-src-strict (no 'unsafe-inline'),
+    # so nobody "fixes" a future inline script by weakening the policy instead.
+    csp = resp.headers.get("Content-Security-Policy", "")
+    assert "'unsafe-inline'" not in csp.split("style-src")[0]  # scripts fall back to default-src 'self'
 
 
 def test_spa_fallback_for_deep_routes_under_the_prefix(tmp_path):
