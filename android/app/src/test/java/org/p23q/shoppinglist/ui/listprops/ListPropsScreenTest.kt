@@ -84,7 +84,7 @@ class ListPropsScreenTest {
         )
         var left = false
 
-        composeTestRule.setContent { ListPropsScreen(onLeft = { left = true }, viewModel = viewModel) }
+        composeTestRule.setContent { ListPropsScreen(onLeft = { left = true }, onDuplicated = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Groceries").assertExists()
@@ -131,7 +131,7 @@ class ListPropsScreenTest {
             apiProvider,
         )
 
-        composeTestRule.setContent { ListPropsScreen(onLeft = {}, viewModel = viewModel) }
+        composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Notes").assertExists()
@@ -141,6 +141,53 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals("Gate code: 4471", listsRepo.getById(listId)!!.notes.value)
+        db.close()
+    }
+
+    @Test
+    fun `tapping Duplicate creates a copy and navigates to it (T-63)`() = runBlocking {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        itemsRepo.createItem(listId, "Milk")
+
+        val serverConfigFile = File.createTempFile("listprops_screen_duplicate_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val json = Json { ignoreUnknownKeys = true }
+        val apiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            json = json,
+        )
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            apiProvider,
+        )
+        var duplicatedListId: String? = null
+
+        composeTestRule.setContent {
+            ListPropsScreen(onLeft = {}, onDuplicated = { duplicatedListId = it }, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Duplicate").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(true, duplicatedListId != null && duplicatedListId != listId)
         db.close()
     }
 }

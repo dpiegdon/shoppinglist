@@ -34,6 +34,7 @@ data class ListPropsUiState(
     val inviteShareUrl: String? = null,
     val isLeaveConfirmOpen: Boolean = false,
     val hasLeft: Boolean = false,
+    val duplicatedListId: String? = null,
     val errorMessage: String? = null,
 )
 
@@ -141,6 +142,13 @@ class ListPropsViewModel @Inject constructor(
             return@launch
         }
         loadMembers().join()
+    }
+
+    /** Solo-owned snapshot copy of this list and its non-deleted items, purely client-side (T-63). */
+    fun duplicateList(): Job = viewModelScope.launch {
+        val newListId = listsRepo.duplicate(listId) ?: return@launch
+        itemsRepo.duplicateForList(sourceListId = listId, targetListId = newListId)
+        _uiState.update { it.copy(duplicatedListId = newListId) }
     }
 
     fun requestLeave() = _uiState.update { it.copy(isLeaveConfirmOpen = true) }

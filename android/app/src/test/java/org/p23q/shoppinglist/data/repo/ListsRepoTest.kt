@@ -154,4 +154,39 @@ class ListsRepoTest {
 
         assertFalse(repo.dirtyRows().any { it.id == listId })
     }
+
+    @Test
+    fun `duplicate creates a solo-owned copy with the source's name, category order, and notes (T-63)`() = runTest {
+        val sourceId = repo.createList("Groceries")
+        repo.setCategoryOrder(sourceId, listOf("dairy", "bakery"))
+        repo.setNotes(sourceId, "Gate code: 4471")
+
+        val copyId = repo.duplicate(sourceId)!!
+
+        assertTrue(copyId != sourceId)
+        val copy = repo.getById(copyId)!!
+        assertEquals("Groceries (Copy)", copy.name.value)
+        assertEquals(listOf("dairy", "bakery"), repo.decodeCategoryOrder(copy.categoryOrder.value))
+        assertEquals("Gate code: 4471", copy.notes.value)
+        assertFalse(copy.deleted.value)
+        assertTrue(copy.dirty)
+        assertEquals("device-1", copy.name.updatedBy)
+    }
+
+    @Test
+    fun `duplicate returns null for an unknown source list`() = runTest {
+        val result = repo.duplicate("does-not-exist")
+
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun `duplicate schedules a sync`() = runTest {
+        val sourceId = repo.createList("Groceries")
+        val before = syncTrigger.scheduleCount
+
+        repo.duplicate(sourceId)
+
+        assertEquals(before + 1, syncTrigger.scheduleCount)
+    }
 }

@@ -60,6 +60,32 @@ class ListsRepo @Inject constructor(
     /** Tombstone: [ListEntity.deleted] flips true, the row itself is retained for sync. */
     suspend fun delete(listId: String) = updateField(listId) { it.copy(deleted = true.toLww(deviceId.get())) }
 
+    /**
+     * Solo-owned snapshot copy (T-63): a new list with its own id and fresh field-clocks, carrying
+     * over [source]'s name (suffixed), category order, and notes by VALUE only — no membership, no
+     * shared history. Returns the new list's id, or null if [listId] doesn't exist. Items are copied
+     * separately via [org.p23q.shoppinglist.data.repo.ItemsRepo.duplicateForList].
+     */
+    suspend fun duplicate(listId: String): String? {
+        val source = listDao.getById(listId) ?: return null
+        val id = UUID.randomUUID().toString()
+        val by = deviceId.get()
+        val now = System.currentTimeMillis()
+        listDao.upsert(
+            ListEntity(
+                id = id,
+                createdAt = now,
+                name = "${source.name.value} (Copy)".toLww(by, now),
+                categoryOrder = source.categoryOrder.value.toLww(by, now),
+                notes = source.notes.value.toLwwOptional(by, now),
+                deleted = false.toLww(by, now),
+                dirty = true,
+            ),
+        )
+        syncTrigger.scheduleAfterEdit()
+        return id
+    }
+
     /** Real delete, not the LWW tombstone — only for leaving a shared list (A9), never synced. */
     suspend fun removeLocally(listId: String) = listDao.hardDelete(listId)
 

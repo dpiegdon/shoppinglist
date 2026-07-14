@@ -3,13 +3,13 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
-import { fieldPatch, listFieldValue } from "../hooks/useSync";
+import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import type { MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 
 export default function ListPropsPage() {
   const { listId } = useParams<{ listId: string }>();
-  const { lists, push, deviceId, refresh } = useSyncContext();
+  const { lists, items, push, deviceId, refresh } = useSyncContext();
   const navigate = useNavigate();
   const list = listId ? lists.get(listId) : undefined;
 
@@ -100,6 +100,48 @@ export default function ListPropsPage() {
   async function handleRevoke(inviteId: string) {
     await api.revokeInvite(inviteId);
     setMembers(await api.getMembers(id));
+  }
+
+  /**
+   * Solo-owned snapshot copy (T-63): a new list with the source's name (suffixed), category order,
+   * and notes, plus a fresh-id copy of every non-deleted item (status preserved as-is - this is a
+   * template/snapshot duplicate, not a "reset for next week" action). No membership carries over.
+   * Pushed as one sync batch, matching how the rest of this page mutates lists/items.
+   */
+  async function handleDuplicate() {
+    if (!list) return;
+    const newListId = crypto.randomUUID();
+    const sourceItems = Array.from(items.values()).filter(
+      (item) => item.list_id === id && !itemFieldValue(item, "deleted"),
+    );
+    await push({
+      lists: [
+        {
+          id: newListId,
+          created_at: nowMs(),
+          fields: {
+            ...fieldPatch(deviceId, "name", `${listFieldValue(list, "name")} (Copy)`),
+            ...fieldPatch(deviceId, "category_order", listFieldValue(list, "category_order") ?? []),
+            ...fieldPatch(deviceId, "notes", listFieldValue(list, "notes") ?? null),
+          },
+        },
+      ],
+      items: sourceItems.map((item) => ({
+        id: crypto.randomUUID(),
+        list_id: newListId,
+        created_at: nowMs(),
+        fields: {
+          ...fieldPatch(deviceId, "name", itemFieldValue(item, "name") ?? ""),
+          ...fieldPatch(deviceId, "category", itemFieldValue(item, "category") ?? null),
+          ...fieldPatch(deviceId, "stores", itemFieldValue(item, "stores") ?? []),
+          ...fieldPatch(deviceId, "quantity", itemFieldValue(item, "quantity") ?? null),
+          ...fieldPatch(deviceId, "price", itemFieldValue(item, "price") ?? null),
+          ...fieldPatch(deviceId, "note", itemFieldValue(item, "note") ?? null),
+          ...fieldPatch(deviceId, "status", itemFieldValue(item, "status") ?? "todo"),
+        },
+      })),
+    });
+    navigate(`/list/${newListId}`);
   }
 
   async function handleLeave() {
@@ -224,6 +266,9 @@ export default function ListPropsPage() {
         </form>
       </section>
 
+      <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginRight: "0.5rem" }}>
+        Duplicate
+      </button>
       <button type="button" className="btn btn-danger" onClick={handleLeave}>
         Leave list
       </button>

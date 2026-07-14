@@ -6,6 +6,7 @@ import ListPage from "./ListPage";
 import ListPropsPage from "./ListPropsPage";
 import { SyncProvider } from "../hooks/SyncContext";
 import * as api from "../api/client";
+import type { ItemStatus } from "../api/contract";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
@@ -121,5 +122,75 @@ describe("ListPropsPage notes (T-62)", () => {
       const pushedList = call.changes.lists![0];
       expect(pushedList.fields.notes?.value).toBeNull();
     });
+  });
+});
+
+describe("ListPropsPage duplicate list (T-63)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  function itemObj(id: string, name: string, deleted = false) {
+    return {
+      id,
+      list_id: "list-1",
+      created_at: 0,
+      fields: {
+        name: clock(name),
+        category: clock("dairy"),
+        stores: clock(["Rewe"]),
+        quantity: clock("2l"),
+        price: clock(null),
+        note: clock(null),
+        status: clock<ItemStatus>("todo"),
+        deleted: clock(deleted),
+      },
+    };
+  }
+
+  it("pushes a solo-owned copy of the list and its non-deleted items, then navigates to it", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj("Gate code: 4471")],
+        items: [itemObj("item-1", "Milk"), itemObj("item-2", "Old", true)],
+      },
+    });
+
+    await renderListPropsPageViaListPage();
+    await screen.findByRole("button", { name: "Duplicate" });
+
+    // Echo back whatever was pushed, like a real server round-trip - lets the test learn the
+    // client-generated new list id rather than having to predict crypto.randomUUID()'s output.
+    vi.mocked(api.sync).mockImplementationOnce(async (req) => ({
+      cursor: 2,
+      changes: { lists: req.changes.lists ?? [], items: req.changes.items ?? [] },
+    }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+
+    await waitFor(() => {
+      const call = vi.mocked(api.sync).mock.calls[1][0];
+      const pushedLists = call.changes.lists!;
+      const pushedItems = call.changes.items!;
+      expect(pushedLists).toHaveLength(1);
+      expect(pushedLists[0].id).not.toBe("list-1");
+      expect(pushedLists[0].fields.name?.value).toBe("Groceries (Copy)");
+      expect(pushedLists[0].fields.notes?.value).toBe("Gate code: 4471");
+      // Only the non-deleted item was copied, as a fresh id, with its status preserved.
+      expect(pushedItems).toHaveLength(1);
+      expect(pushedItems[0].id).not.toBe("item-1");
+      expect(pushedItems[0].list_id).toBe(pushedLists[0].id);
+      expect(pushedItems[0].fields.name?.value).toBe("Milk");
+      expect(pushedItems[0].fields.status?.value).toBe("todo");
+    });
+
+    await screen.findByText("Groceries (Copy)");
   });
 });

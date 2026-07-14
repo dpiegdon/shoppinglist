@@ -44,6 +44,10 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
     suspend fun itemsForListByStatusOnce(listId: String, status: String): List<ItemEntity>
 
+    /** Every non-deleted item regardless of status, for a full-list snapshot like duplicate (T-63). */
+    @Query("SELECT * FROM items WHERE listId = :listId AND deleted_value = 0")
+    suspend fun activeItemsForListOnce(listId: String): List<ItemEntity>
+
     @Query(
         "SELECT * FROM items WHERE listId = :listId AND deleted_value = 0 " +
             "AND name_value LIKE '%' || :nameQuery || '%' COLLATE NOCASE",

@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun ListPropsScreen(
     onLeft: () -> Unit,
+    onDuplicated: (listId: String) -> Unit,
     viewModel: ListPropsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -54,6 +55,7 @@ fun ListPropsScreen(
 
     LaunchedEffect(Unit) { viewModel.loadMembers() }
     LaunchedEffect(state.hasLeft) { if (state.hasLeft) onLeft() }
+    LaunchedEffect(state.duplicatedListId) { state.duplicatedListId?.let(onDuplicated) }
     LaunchedEffect(state.inviteShareUrl) {
         val url = state.inviteShareUrl
         if (url != null) {
@@ -136,6 +138,10 @@ fun ListPropsScreen(
         }
         state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Spacer(Modifier.height(16.dp))
+
+        // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
+        TextButton(onClick = viewModel::duplicateList) { Text("Duplicate") }
+        Spacer(Modifier.height(8.dp))
 
         Button(onClick = viewModel::requestLeave) { Text("Unsubscribe") }
     }

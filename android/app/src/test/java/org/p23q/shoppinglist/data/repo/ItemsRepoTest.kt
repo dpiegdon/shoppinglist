@@ -215,6 +215,54 @@ class ItemsRepoTest {
     }
 
     @Test
+    fun `duplicateForList copies non-deleted items with fresh ids and preserved status, skipping deleted ones (T-63)`() = runTest {
+        val todoId = repo.createItem(listId = "list-1", name = "Milk", status = Status.TODO)
+        repo.setCategory(todoId, "dairy")
+        repo.setStores(todoId, listOf("Rewe"))
+        repo.setQuantity(todoId, "2l")
+        repo.setPrice(todoId, amount = "1.99", currency = "EUR")
+        repo.setNote(todoId, "low-fat")
+        val checkedId = repo.createItem(listId = "list-1", name = "Eggs", status = Status.CHECKED)
+        val backlogId = repo.createItem(listId = "list-1", name = "Flour", status = Status.BACKLOG)
+        val deletedId = repo.createItem(listId = "list-1", name = "Old", status = Status.TODO)
+        repo.delete(deletedId)
+        repo.createItem(listId = "list-2", name = "Soap", status = Status.TODO)
+
+        val copiedCount = repo.duplicateForList(sourceListId = "list-1", targetListId = "list-3")
+
+        assertEquals(3, copiedCount)
+        val copied = repo.itemsForListByStatus("list-3", Status.TODO).first() +
+            repo.itemsForListByStatus("list-3", Status.CHECKED).first() +
+            repo.itemsForListByStatus("list-3", Status.BACKLOG).first()
+        assertEquals(3, copied.size)
+        assertEquals(setOf("Milk", "Eggs", "Flour"), copied.map { it.name.value }.toSet())
+        assertTrue(copied.none { it.id == todoId || it.id == checkedId || it.id == backlogId })
+        val milkCopy = copied.single { it.name.value == "Milk" }
+        assertEquals("dairy", milkCopy.category.value)
+        assertEquals(listOf("Rewe"), repo.decodeStores(milkCopy.stores.value))
+        assertEquals("2l", milkCopy.quantity.value)
+        assertEquals("1.99", repo.decodePrice(milkCopy.price.value)?.amount)
+        assertEquals("low-fat", milkCopy.note.value)
+        assertEquals(Status.TODO.wireValue, milkCopy.status.value)
+        assertTrue(milkCopy.dirty)
+        assertEquals("device-1", milkCopy.name.updatedBy)
+        val eggsCopy = copied.single { it.name.value == "Eggs" }
+        assertEquals(Status.CHECKED.wireValue, eggsCopy.status.value)
+        val flourCopy = copied.single { it.name.value == "Flour" }
+        assertEquals(Status.BACKLOG.wireValue, flourCopy.status.value)
+    }
+
+    @Test
+    fun `duplicateForList with nothing to copy returns zero and schedules no sync`() = runTest {
+        val before = syncTrigger.scheduleCount
+
+        val count = repo.duplicateForList(sourceListId = "list-1", targetListId = "list-2")
+
+        assertEquals(0, count)
+        assertEquals(before, syncTrigger.scheduleCount)
+    }
+
+    @Test
     fun `a quarantined row is skipped by dirtyRows but re-editing it clears the block`() = runTest {
         val itemId = repo.createItem(listId = "list-1", name = "Milk")
         db.itemDao().blockRow(itemId)

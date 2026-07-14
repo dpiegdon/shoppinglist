@@ -191,6 +191,11 @@ fun ShoppingListNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onDuplicated = { newListId ->
+                        navController.navigate(Routes.list(newListId)) {
+                            popUpTo(Routes.OVERVIEW)
+                        }
+                    },
                 )
             }
         }

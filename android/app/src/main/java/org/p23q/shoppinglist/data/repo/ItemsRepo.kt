@@ -133,6 +133,39 @@ class ItemsRepo @Inject constructor(
     /** Tombstone: [ItemEntity.deleted] flips true, the row itself is retained for sync/undo. */
     suspend fun delete(itemId: String) = updateField(itemId) { it.copy(deleted = true.toLww(deviceId.get())) }
 
+    /**
+     * Snapshot-copies every non-deleted item of [sourceListId] into [targetListId] as a fresh row
+     * (new id, new created_at, fresh field-clocks) with each field's current VALUE carried over —
+     * status included, since duplicate is a template/snapshot copy, not a "reset for next week"
+     * action (T-63). Returns the number of items copied.
+     */
+    suspend fun duplicateForList(sourceListId: String, targetListId: String): Int {
+        val items = itemDao.activeItemsForListOnce(sourceListId)
+        if (items.isEmpty()) return 0
+        val by = deviceId.get()
+        val now = System.currentTimeMillis()
+        items.forEach { source ->
+            itemDao.upsert(
+                ItemEntity(
+                    id = UUID.randomUUID().toString(),
+                    listId = targetListId,
+                    createdAt = now,
+                    name = source.name.value.toLww(by, now),
+                    category = source.category.value.toLwwOptional(by, now),
+                    stores = source.stores.value.toLww(by, now),
+                    quantity = source.quantity.value.toLwwOptional(by, now),
+                    price = source.price.value.toLwwOptional(by, now),
+                    note = source.note.value.toLwwOptional(by, now),
+                    status = source.status.value.toLww(by, now),
+                    deleted = false.toLww(by, now),
+                    dirty = true,
+                ),
+            )
+        }
+        syncTrigger.scheduleAfterEdit()
+        return items.size
+    }
+
     /** Reverses [delete] (Notes: registry delete offers a snackbar undo). */
     suspend fun restore(itemId: String) = updateField(itemId) { it.copy(deleted = false.toLww(deviceId.get())) }
 

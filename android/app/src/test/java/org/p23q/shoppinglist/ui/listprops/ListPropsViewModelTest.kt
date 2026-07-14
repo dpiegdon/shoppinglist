@@ -291,6 +291,26 @@ class ListPropsViewModelTest {
     }
 
     @Test
+    fun `duplicateList creates a solo-owned copy with its items and updates state with the new list id (T-63)`() = runTest {
+        val todoId = itemsRepo.createItem(listId, "Milk")
+        itemsRepo.setCategory(todoId, "dairy")
+        val deletedId = itemsRepo.createItem(listId, "Old")
+        itemsRepo.delete(deletedId)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+
+        viewModel.duplicateList().join()
+
+        val newListId = viewModel.uiState.value.duplicatedListId
+        assertNotNull(newListId)
+        val copy = listsRepo.getById(newListId!!)!!
+        assertEquals("Groceries (Copy)", copy.name.value)
+        val copiedItems = itemsRepo.itemsForList(newListId).first()
+        assertEquals(listOf("Milk"), copiedItems.map { it.name.value })
+        assertEquals("dairy", copiedItems.single().category.value)
+    }
+
+    @Test
     fun `revokeInvite offline surfaces an error and does not silently no-op (T-39)`() = runTest {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
