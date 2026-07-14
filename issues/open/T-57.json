@@ -4,9 +4,11 @@
   "id": "T-57",
   "labels": [
     "server",
-    "reliability"
+    "reliability",
+    "agent",
+    "ready"
   ],
-  "priority": 3,
+  "priority": 2,
   "title": "Server: versioned DB migration mechanism before the next schema change",
-  "updated_at": "2026-07-11T18:50:17+00:00"
+  "updated_at": "2026-07-14T20:16:58+00:00"
 }
