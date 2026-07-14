@@ -1,0 +1,14 @@
+{
+  "body": "\"Duplicate\" action in the list properties dialog (Android: full; web: a\nworking button is enough, styling can be basic) creates a new list:\n\n- Owned solely by the duplicating account. No other members or pending\n  invites carry over, even if the source list has collaborators \u2014 the\n  duplicate starts as a private, single-owner list.\n- Name: \"<original name> (Copy)\".\n- Copies list-level fields: category_order, and notes (once T-62 lands \u2014\n  if this ticket ships first, structure the copy logic generically over\n  \"all known list fields\" rather than a hardcoded field list, so notes\n  falls in automatically once T-62 adds it, with no follow-up code change\n  needed here).\n- Copies every non-deleted item as a fresh item (new id, new created_at)\n  with all its fields: name, category, stores, quantity, price, note.\n  Status is PRESERVED as-is (a checked item in the source stays checked in\n  the copy, backlog stays backlog) \u2014 this is a snapshot/template\n  duplicate, not a \"reset for next week\" action.\n- Deleted (tombstoned) items are NOT copied.\n- The new list's items get fresh field-clocks (ts=now, by=duplicating\n  device) independent of the source's history \u2014 a clean new list, not a\n  shared-history fork. last_touched_by (T-63, once it lands) on the new\n  items should naturally be the duplicating account, since they're newly\n  created field-writes by that account.\n\nNo new server endpoint needed: this is client-side orchestration (build\nthe new list+items payload locally from the already-loaded source list and\nits items, then push as a normal sync batch) on both Android and web.\n\nPlatform scope: Android full support. Web basic support \u2014 the action and\nits correctness matter more than polish there.",
+  "created_at": "2026-07-14T20:09:19+00:00",
+  "id": "T-63",
+  "labels": [
+    "server",
+    "android",
+    "web",
+    "feature"
+  ],
+  "priority": 3,
+  "title": "Duplicate list: copy entries + settings to a new solo-owned list",
+  "updated_at": "2026-07-14T20:09:19+00:00"
+}
