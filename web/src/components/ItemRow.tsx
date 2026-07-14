@@ -1,13 +1,16 @@
-import type { ItemObject } from "../api/contract";
+import type { ItemObject, Member } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 
 interface ItemRowProps {
   item: ItemObject;
+  /** Who last touched this item, only when the list has 2+ members (T-64) — undefined hides the
+   *  indicator entirely (the common solo-list case, and the pre-T-64 default for every caller). */
+  authorMember?: Member;
   onToggle: () => void;
   onEdit: () => void;
 }
 
-export default function ItemRow({ item, onToggle, onEdit }: ItemRowProps) {
+export default function ItemRow({ item, authorMember, onToggle, onEdit }: ItemRowProps) {
   const checked = itemFieldValue(item, "status") === "checked";
   const category = itemFieldValue(item, "category");
   const quantity = itemFieldValue(item, "quantity");
@@ -53,6 +56,27 @@ export default function ItemRow({ item, onToggle, onEdit }: ItemRowProps) {
         {details && <div className="muted" style={{ fontSize: "0.85rem" }}>{details}</div>}
         {!category && null}
       </div>
+      {authorMember && (
+        <span
+          title={`Last touched by ${authorMember.email}`}
+          aria-label={`Last touched by ${authorMember.email}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "1.5rem",
+            height: "1.5rem",
+            borderRadius: "50%",
+            fontSize: "0.7rem",
+            fontWeight: 600,
+            flexShrink: 0,
+            background: "var(--color-border)",
+            color: "var(--color-text)",
+          }}
+        >
+          {authorMember.initials}
+        </span>
+      )}
       <button
         type="button"
         className="btn-icon"

@@ -7,8 +7,10 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -113,7 +115,7 @@ class SettingsViewModelTest {
 
     @Test
     fun `updateCurrency success updates state and the session cache`() = runTest {
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "MI"}"""))
         val viewModel = newViewModel()
 
         viewModel.updateCurrency("usd")?.join()
@@ -121,6 +123,59 @@ class SettingsViewModelTest {
         assertEquals("USD", viewModel.uiState.value.defaultCurrency)
         assertEquals("USD", sessionState.defaultCurrency)
         assertNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `updateCurrency resends the currently-loaded initials so it is not wiped (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
+        // GET and PATCH share the same /settings path, and either can arrive more than once (e.g.
+        // OkHttp's silent retry-on-connection-failure) — a FIFO .enqueue() queue can't guarantee
+        // which physical request gets which response, so route by method instead (same pattern as
+        // SettingsScreenTest).
+        val recordedRequests = java.util.concurrent.CopyOnWriteArrayList<RecordedRequest>()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                recordedRequests.add(request)
+                return when (request.method) {
+                    "PATCH" -> MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "XY"}""")
+                    else -> MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "XY"}""")
+                }
+            }
+        }
+        val viewModel = newViewModel()
+        viewModel.loadInitials().join()
+
+        viewModel.updateCurrency("usd")?.join()
+
+        val patchRequest = recordedRequests.first { it.method == "PATCH" }
+        assertTrue(patchRequest.body.readUtf8().contains("\"initials\":\"XY\""))
+        assertEquals("XY", viewModel.uiState.value.initials)
+    }
+
+    // A standalone "loadInitials populates state" test was removed here: its exact claim (a fresh
+    // fetch lands in uiState.initials) is already asserted by the test above, which calls
+    // loadInitials().join() itself and checks the resulting value — no unique coverage lost.
+
+    @Test
+    fun `updateInitials rejects more than 3 characters locally without calling the server`() = runTest {
+        val viewModel = newViewModel()
+
+        val job = viewModel.updateInitials("TooLong")
+
+        assertNull(job)
+        assertNotNull(viewModel.uiState.value.errorMessage)
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `updateInitials resends the current currency so it is not overwritten (T-64)`() = runTest {
+        val viewModel = newViewModel()  // defaultCurrency = "EUR" from FakeSessionState in setUp
+
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "AB"}"""))
+        viewModel.updateInitials("ab")?.join()
+
+        val request = server.takeRequest()
+        assertTrue(request.body.readUtf8().contains("\"default_currency\":\"EUR\""))
+        assertEquals("AB", viewModel.uiState.value.initials)
     }
 
     @Test

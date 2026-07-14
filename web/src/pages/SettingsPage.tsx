@@ -29,6 +29,19 @@ export default function SettingsPage() {
   const [currency, setCurrency] = useState(currentCurrency);
   const currencyStatus = useFormStatus();
 
+  // Not covered by useDefaultCurrency (that hook is currency-only and used well beyond this
+  // page) — a small dedicated fetch, mirroring the same on-mount pattern.
+  const [initials, setInitials] = useState("");
+  const initialsStatus = useFormStatus();
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getSettings()
+      .then((s) => { if (!cancelled) setInitials(s.initials); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const passwordStatus = useFormStatus();
@@ -54,8 +67,24 @@ export default function SettingsPage() {
   async function handleCurrencySave(e: FormEvent) {
     e.preventDefault();
     await currencyStatus.run(async () => {
-      const result = await api.updateSettings({ default_currency: currency.toUpperCase() });
+      // Must resend the currently-loaded initials (T-64): the server writes both columns on
+      // every PATCH, so omitting this would silently wipe any existing override.
+      const result = await api.updateSettings({ default_currency: currency.toUpperCase(), initials });
       setCachedDefaultCurrency(result.default_currency);
+      setInitials(result.initials);
+    });
+  }
+
+  async function handleInitialsSave(e: FormEvent) {
+    e.preventDefault();
+    await initialsStatus.run(async () => {
+      // Must resend the current currency: the endpoint requires it on every PATCH. Length is
+      // validated server-side (422 invalid_initials), same as currency's format check above.
+      const result = await api.updateSettings({
+        default_currency: currency.toUpperCase(),
+        initials: initials.trim().toUpperCase(),
+      });
+      setInitials(result.initials);
     });
   }
 
@@ -117,6 +146,25 @@ export default function SettingsPage() {
         <p className="muted" style={{ fontSize: "0.8rem" }}>
           Currently cached: {getCachedDefaultCurrency()}
         </p>
+      </section>
+
+      {/* Shown as a small indicator on shared-list item rows so collaborators can see who last
+          touched an item (T-64); defaults to the email's initials until customized here. */}
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Display initials</h2>
+        <form onSubmit={handleInitialsSave} style={{ display: "flex", gap: "0.5rem" }}>
+          <input
+            value={initials}
+            maxLength={3}
+            onChange={(e) => setInitials(e.target.value.toUpperCase())}
+            style={{ width: "6rem" }}
+          />
+          <button type="submit" className="btn">
+            Save
+          </button>
+        </form>
+        {initialsStatus.error && <p className="error-text">{initialsStatus.error}</p>}
+        {initialsStatus.ok && <p className="muted">Saved.</p>}
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>

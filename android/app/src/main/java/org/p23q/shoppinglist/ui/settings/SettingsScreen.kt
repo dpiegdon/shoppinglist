@@ -46,6 +46,7 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(Unit) { viewModel.loadSessions() }
+    LaunchedEffect(Unit) { viewModel.loadInitials() }
     LaunchedEffect(state.isAccountDeleted) { if (state.isAccountDeleted) onAccountDeleted() }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -65,6 +66,22 @@ fun SettingsScreen(
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text("Save") }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        // Shown as a small badge on shared-list item rows so collaborators can see who last
+        // touched an item (T-64); defaults to the email's initials until customized here.
+        Text("Display initials", style = MaterialTheme.typography.titleMedium)
+        var initialsInput by remember(state.initials) { mutableStateOf(state.initials) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = initialsInput,
+                onValueChange = { initialsInput = it },
+                label = { Text("Initials") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text("Save") }
         }
         Spacer(Modifier.height(16.dp))
 

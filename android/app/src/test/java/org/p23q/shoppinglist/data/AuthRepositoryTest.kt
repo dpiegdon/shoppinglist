@@ -81,7 +81,7 @@ class AuthRepositoryTest {
             MockResponse().setResponseCode(200)
                 .setBody("""{"token": "tok-123", "account_id": "acc-1", "email": "milk@example.com"}"""),
         )
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
 
         repository.login("milk@example.com", "hunter2")
 

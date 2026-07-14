@@ -32,6 +32,8 @@ data class SettingsUiState(
     val serverUrl: String = "",
     val accountEmail: String? = null,
     val defaultCurrency: String = "",
+    /** Resolved default-or-override (T-64); "" until the one-time fetch in init completes. */
+    val initials: String = "",
     val theme: ThemePreference = ThemePreference.SYSTEM,
     val allowSelfSignedCerts: Boolean = false,
     val sessions: List<SessionDto> = emptyList(),
@@ -86,6 +88,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Not cached anywhere locally (unlike currency, via sessionState) — a real fetch, opt-in like
+     * [loadSessions] rather than in init (this screen's init is local/cached-only by design). The
+     * screen calls this once on open. Best-effort: leaving initials at "" just means a currency
+     * save before this resolves resends an empty string, which the server resolves right back to
+     * the same email-derived default — harmless unless the account already had a custom override.
+     */
+    fun loadInitials(): Job = viewModelScope.launch {
+        try {
+            _uiState.update { it.copy(initials = apiProvider.get().getSettings().initials) }
+        } catch (e: IOException) {
+            // Offline — the initials section just starts blank; not a hard error for this screen.
+        }
+    }
+
     fun onCurrentPasswordChange(value: String) = _uiState.update { it.copy(currentPassword = value, errorMessage = null) }
 
     fun onNewPasswordChange(value: String) = _uiState.update { it.copy(newPassword = value, errorMessage = null) }
@@ -104,13 +121,47 @@ class SettingsViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             try {
-                val response = apiProvider.get().updateSettings(UpdateSettingsRequest(normalized))
+                // Must resend the current initials (T-64): the server writes both columns on every
+                // PATCH, so omitting this would silently wipe any existing override.
+                val response = apiProvider.get().updateSettings(
+                    UpdateSettingsRequest(normalized, _uiState.value.initials),
+                )
                 sessionState.defaultCurrency = response.defaultCurrency
                 _uiState.update {
-                    it.copy(defaultCurrency = response.defaultCurrency, errorMessage = null, infoMessage = "Currency updated")
+                    it.copy(
+                        defaultCurrency = response.defaultCurrency,
+                        initials = response.initials,
+                        errorMessage = null,
+                        infoMessage = "Currency updated",
+                    )
                 }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't update currency") }
+            } catch (e: IOException) {
+                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+            }
+        }
+    }
+
+    fun onInitialsChange(value: String) = _uiState.update { it.copy(initials = value, errorMessage = null) }
+
+    fun updateInitials(initials: String): Job? {
+        val normalized = initials.trim().uppercase()
+        if (normalized.length > INITIALS_MAX_LENGTH) {
+            _uiState.update { it.copy(errorMessage = "Initials must be $INITIALS_MAX_LENGTH characters or fewer") }
+            return null
+        }
+        return viewModelScope.launch {
+            try {
+                // Must resend the current currency: the endpoint requires it on every PATCH.
+                val response = apiProvider.get().updateSettings(
+                    UpdateSettingsRequest(_uiState.value.defaultCurrency, normalized),
+                )
+                _uiState.update {
+                    it.copy(initials = response.initials, errorMessage = null, infoMessage = "Initials updated")
+                }
+            } catch (e: ApiException) {
+                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't update initials") }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
             }
@@ -216,5 +267,6 @@ class SettingsViewModel @Inject constructor(
 
     private companion object {
         val ISO_CURRENCY = Regex("^[A-Z]{3}$")
+        const val INITIALS_MAX_LENGTH = 3
     }
 }

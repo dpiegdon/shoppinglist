@@ -51,7 +51,7 @@ async function renderListPropsPageViaListPage() {
 
 describe("ListPropsPage notes (T-62)", () => {
   beforeEach(() => {
-    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR" });
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
     vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
   });
 

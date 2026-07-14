@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems, groupVisibleItems } from "../lib/grouping";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
-import type { ItemObject, ItemStatus } from "../api/contract";
+import type { ItemObject, ItemStatus, Member } from "../api/contract";
 
 export default function ListPage() {
   const { listId } = useParams<{ listId: string }>();
@@ -15,6 +16,20 @@ export default function ListPage() {
   const [showChecked, setShowChecked] = useState(false);
   const [dialogItem, setDialogItem] = useState<ItemObject | "new" | null>(null);
   const [undo, setUndo] = useState<{ itemId: string; previousStatus: ItemStatus } | null>(null);
+  // Fetched once per list open, best-effort (T-64) — an empty roster on error/offline correctly
+  // hides the last-touched-by indicator (fewer members shown is a safe default) rather than
+  // erroring the whole page. Mirrors the Android ListViewModel's equivalent fetch.
+  const [members, setMembers] = useState<Member[]>([]);
+
+  useEffect(() => {
+    if (!listId) return;
+    let cancelled = false;
+    api
+      .getMembers(listId)
+      .then((r) => { if (!cancelled) setMembers(r.members); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [listId]);
 
   const list = listId ? lists.get(listId) : undefined;
 
@@ -107,13 +122,48 @@ export default function ListPage() {
       <Link to="/" className="muted" style={{ fontSize: "0.85rem" }}>
         ← All lists
       </Link>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-        <h1 style={{ fontSize: "1.3rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {listFieldValue(list, "name")}
-        </h1>
+      <h1
+        style={{
+          fontSize: "1.3rem",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          margin: "0.25rem 0",
+        }}
+      >
+        {listFieldValue(list, "name")}
+      </h1>
+
+      {/* Top controls row mirrors the Android app: show-checked (+ clear-checked) on the
+          left, all-items/settings icons on the right; add-item gets its own full-width row. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          margin: "0.75rem 0",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <button
+            type="button"
+            className="btn-toggle"
+            aria-pressed={showChecked}
+            onClick={() => setShowChecked((v) => !v)}
+          >
+            {showChecked ? "✓ " : ""}Show checked
+          </button>
+          {allChecked.length > 0 && (
+            <button type="button" className="btn btn-danger btn-sm" onClick={handleClearChecked}>
+              Clear checked ({allChecked.length})
+            </button>
+          )}
+        </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
           <Link to={`/list/${listId}/registry`} className="btn-icon" aria-label="All items" title="All items">
-            🗂
+            ☰
           </Link>
           <Link
             to={`/list/${listId}/properties`}
@@ -126,35 +176,14 @@ export default function ListPage() {
         </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          margin: "0.75rem 0",
-          flexWrap: "wrap",
-          gap: "0.5rem",
-        }}
+      <button
+        type="button"
+        className="btn"
+        style={{ width: "100%", marginBottom: "0.75rem" }}
+        onClick={() => setDialogItem("new")}
       >
-        <button type="button" className="btn" onClick={() => setDialogItem("new")}>
-          + Add item
-        </button>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          {allChecked.length > 0 && (
-            <button type="button" className="btn btn-danger btn-sm" onClick={handleClearChecked}>
-              Clear checked ({allChecked.length})
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn-toggle"
-            aria-pressed={showChecked}
-            onClick={() => setShowChecked((v) => !v)}
-          >
-            {showChecked ? "✓ " : ""}Show checked
-          </button>
-        </div>
-      </div>
+        + Add item
+      </button>
 
       {groups.length === 0 && (
         <p className="muted">Nothing on this list yet. Add an item to get started.</p>
@@ -170,6 +199,9 @@ export default function ListPage() {
               <ItemRow
                 key={item.id}
                 item={item}
+                authorMember={
+                  members.length >= 2 ? members.find((m) => m.account_id === item.last_touched_by) : undefined
+                }
                 onToggle={() => handleToggle(item)}
                 onEdit={() => setDialogItem(item)}
               />

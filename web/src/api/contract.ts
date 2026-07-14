@@ -30,6 +30,10 @@ export interface ItemObject {
   list_id: string;
   created_at?: number;
   fields: Partial<ItemFields>;
+  // Whole-item, account-scoped (T-64) — not a per-field LWW clock, so it's not in `fields`. Absent
+  // (undefined) on a payload this client builds locally to push; present (string | null) on
+  // anything read back from the server.
+  last_touched_by?: string | null;
 }
 
 export interface ListFields {
@@ -94,6 +98,9 @@ export interface Session {
 
 export interface Settings {
   default_currency: string;
+  // Resolved default-or-override (T-64) — never absent; NULL on the server side just means
+  // "derive from email," which the server already does before responding.
+  initials: string;
 }
 
 export interface ListSummary {
@@ -103,7 +110,9 @@ export interface ListSummary {
 }
 
 export interface Member {
+  account_id: string;
   email: string;
+  initials: string;
   joined_at: number;
 }
 

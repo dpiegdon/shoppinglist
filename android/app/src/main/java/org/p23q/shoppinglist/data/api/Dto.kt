@@ -100,10 +100,20 @@ data class SessionsResponse(val sessions: List<SessionDto>)
 data class DeleteAccountRequest(val password: String)
 
 @Serializable
-data class SettingsResponse(@SerialName("default_currency") val defaultCurrency: String)
+data class SettingsResponse(
+    @SerialName("default_currency") val defaultCurrency: String,
+    // Resolved default-or-override (T-64) — never absent.
+    val initials: String,
+)
 
+// initials: T-64. The server always writes both columns on every PATCH — omitting this field
+// would silently wipe any existing override back to the email-derived default, so every caller
+// MUST resend the account's current initials, not just whichever field the user actually edited.
 @Serializable
-data class UpdateSettingsRequest(@SerialName("default_currency") val defaultCurrency: String)
+data class UpdateSettingsRequest(
+    @SerialName("default_currency") val defaultCurrency: String,
+    val initials: String? = null,
+)
 
 @Serializable
 data class ListSummaryDto(val id: String, val name: String, @SerialName("category_order") val categoryOrder: List<String>)

@@ -8,7 +8,7 @@ import * as api from "../api/client";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
-  return { ...actual, sync: vi.fn(), getSettings: vi.fn() };
+  return { ...actual, sync: vi.fn(), getSettings: vi.fn(), getMembers: vi.fn() };
 });
 
 function clock<T>(value: T) {
@@ -60,7 +60,8 @@ function renderListPage() {
 
 describe("ListPage clear-checked", () => {
   beforeEach(() => {
-    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR" });
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
     vi.mocked(api.sync).mockResolvedValueOnce({
       cursor: 1,
       changes: {
@@ -169,5 +170,53 @@ describe("ListPage clear-checked", () => {
     expect(dairyGroup.textContent).toContain("Milk");
     expect(dairyGroup.textContent).toContain("Butter");
     expect(dairyGroup.textContent).not.toContain("Bread");
+  });
+});
+
+describe("ListPage last-touched-by indicator (T-64)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("shows the indicator with the right initials when the list has 2+ members", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({
+      members: [
+        { account_id: "acc-a", email: "a@example.com", initials: "A", joined_at: 1 },
+        { account_id: "acc-b", email: "b@example.com", initials: "B", joined_at: 2 },
+      ],
+      invites: [],
+    });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [{ ...itemObj("item-1", "Milk", "todo"), last_touched_by: "acc-b" }],
+      },
+    });
+
+    renderListPage();
+
+    await screen.findByText("Milk");
+    expect(await screen.findByText("B")).toBeInTheDocument();
+    expect(screen.getByLabelText("Last touched by b@example.com")).toBeInTheDocument();
+  });
+
+  it("hides the indicator on a solo list even when last_touched_by is set", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [{ ...itemObj("item-1", "Milk", "todo"), last_touched_by: "acc-a" }],
+      },
+    });
+
+    renderListPage();
+
+    await screen.findByText("Milk");
+    expect(screen.queryByLabelText(/Last touched by/)).not.toBeInTheDocument();
   });
 });
