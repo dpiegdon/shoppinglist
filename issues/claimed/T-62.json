@@ -10,7 +10,8 @@
     "agent",
     "ready"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "List notes: free-text textarea in list properties",
-  "updated_at": "2026-07-14T20:16:58+00:00"
+  "updated_at": "2026-07-14T20:45:01+00:00"
 }
