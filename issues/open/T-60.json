@@ -1,0 +1,14 @@
+{
+  "body": "Real-deploy finding: mounting with base_url=https://p23q.org/shopping/ half-works.\nThe SPA catch-all owns the whole domain (login page shows at /shopping but also\neverywhere else), the router rewrites URLs to domain-root /login, assets/API are\nabsolute (/assets, /api/v1), and the landing/apk routes are hardcoded at the\nroot. Android is already prefix-correct (relative Retrofit paths), which means\nthe API must live under the prefix too.\n\nFix: derive root path from base_url's path; register webapp/landing/apk routes\nunder it; url_prefix default becomes {root}/api/v1 (explicit value wins); serve\nindex.html with the asset URLs rewritten and window.__APP_BASENAME__ injected;\nweb client reads the basename at runtime (router basename, API base, APK probe).\nAt root (empty path) everything stays byte-identical to today.",
+  "created_at": "2026-07-14T00:14:57+00:00",
+  "id": "T-60",
+  "labels": [
+    "server",
+    "web",
+    "bug",
+    "agent"
+  ],
+  "priority": 1,
+  "title": "Blueprint must be fully mountable under a path prefix (p23q.org/shopping breaks)",
+  "updated_at": "2026-07-14T00:14:57+00:00"
+}
