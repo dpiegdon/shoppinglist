@@ -2,8 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
+import { allowRegistration, appBasename } from "../lib/appConfig";
 
-const APK_URL = "/shoppinglist.apk";
+const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
 export default function LoginPage() {
   const { login, register, loading } = useAuth();
@@ -19,7 +20,7 @@ export default function LoginPage() {
   // static, so probe rather than render a link that might 404 on an operator without the artifact.
   useEffect(() => {
     if (typeof fetch === "undefined") return;
-    fetch(APK_URL, { method: "HEAD" })
+    fetch(apkUrl(), { method: "HEAD" })
       .then((resp) => setApkAvailable(resp.ok))
       .catch(() => {});
   }, []);
@@ -91,15 +92,21 @@ export default function LoginPage() {
         </button>
         <button
           type="button"
+          disabled={!allowRegistration()}
           onClick={() => setMode(mode === "login" ? "register" : "login")}
           className="btn-secondary btn"
           style={{ width: "100%", marginTop: "0.5rem", background: "transparent", border: "none" }}
         >
           {mode === "login" ? "Need an account? Register" : "Have an account? Log in"}
         </button>
+        {!allowRegistration() && (
+          <p className="muted" style={{ textAlign: "center", marginTop: "0.25rem", marginBottom: 0, fontSize: "0.85rem" }}>
+            Registration is disabled on this server.
+          </p>
+        )}
         {apkAvailable && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.75rem", marginBottom: 0, fontSize: "0.85rem" }}>
-            <a href={APK_URL} style={{ color: "var(--color-accent)" }}>
+            <a href={apkUrl()} style={{ color: "var(--color-accent)" }}>
               Get the Android app
             </a>
           </p>

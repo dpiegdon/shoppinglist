@@ -50,3 +50,24 @@ describe("LoginPage destination after login (T-43)", () => {
     await waitFor(() => expect(screen.getByTestId("loc").textContent).toBe("/"));
   });
 });
+
+describe("registration disabled by the server (T-61)", () => {
+  afterEach(() => {
+    delete window.__APP_CONFIG__;
+  });
+
+  it("disables the register toggle and shows the notice", () => {
+    window.__APP_CONFIG__ = { allowRegistration: false };
+    renderLogin(undefined);
+
+    expect(screen.getByRole("button", { name: "Need an account? Register" })).toBeDisabled();
+    expect(screen.getByText("Registration is disabled on this server.")).toBeInTheDocument();
+  });
+
+  it("keeps registration available by default", () => {
+    renderLogin(undefined);
+
+    expect(screen.getByRole("button", { name: "Need an account? Register" })).toBeEnabled();
+    expect(screen.queryByText("Registration is disabled on this server.")).toBeNull();
+  });
+});

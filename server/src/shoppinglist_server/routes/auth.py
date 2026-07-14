@@ -1,15 +1,22 @@
 from flask import g, jsonify, request
 
-from .. import get_db
+from .. import get_config, get_db
 from ..auth import authed
 from ..auth import login as auth_login
 from ..auth import logout as auth_logout
 from ..auth import register as auth_register
+from ..errors import ApiError
 
 
 def register_routes(bp):
     @bp.route("/register", methods=["POST"])
     def register_view():
+        # Operator opt-out for invite-only/closed instances (T-61). Per-instance:
+        # read from this request's blueprint config, like every other setting.
+        if not get_config().get("allow_registration", True):
+            raise ApiError(
+                403, "registration_disabled", "Registration is disabled on this server."
+            )
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
         account_id = auth_register(conn, data.get("email"), data.get("password"))
