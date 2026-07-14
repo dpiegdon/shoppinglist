@@ -6,9 +6,11 @@
     "server",
     "android",
     "web",
-    "feature"
+    "feature",
+    "agent",
+    "ready"
   ],
-  "priority": 3,
+  "priority": 2,
   "title": "List notes: free-text textarea in list properties",
-  "updated_at": "2026-07-14T20:09:09+00:00"
+  "updated_at": "2026-07-14T20:16:58+00:00"
 }
