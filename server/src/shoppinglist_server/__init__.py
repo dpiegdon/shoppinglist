@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from flask import Blueprint, current_app, g, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -26,30 +28,48 @@ def create_blueprint(
     database_path: str,
     invite_hmac_key: bytes,
     base_url: str,
-    url_prefix: str = "/api/v1",
+    url_prefix: str | None = None,
     name: str = "shoppinglist_server",
     serve_web_client: bool = True,
     serve_invite_landing_page: bool = True,
     serve_android_apk: bool = True,
     web_dist_dir: str | None = None,
+    allow_registration: bool = True,
 ) -> Blueprint:
     """Build a mountable blueprint instance.
+
+    The path component of `base_url` is the instance's mount root (T-60): with
+    `base_url="https://example.com/shopping/"`, the web client is served at
+    `/shopping/`, the invite landing page at `/shopping/invite/<token>`, the
+    APK at `/shopping/shoppinglist.apk`, and — unless `url_prefix` is passed
+    explicitly — the API at `/shopping/api/v1`. With no path in `base_url`,
+    everything sits at the domain root exactly as before.
 
     Safe to call more than once and register multiple instances on the same
     app (different `database_path`/`invite_hmac_key`/`url_prefix` each,
     isolated from one another) — but each extra instance beyond the first
     MUST pass a distinct `name`, and at most one instance per app may set
     `serve_web_client=True` / `serve_invite_landing_page=True` /
-    `serve_android_apk=True` (all are unprefixed, site-root routes; there is
-    only one `/`, one `/invite/<token>`, and one `/shoppinglist.apk` per app,
-    by construction).
+    `serve_android_apk=True` (all rooted at the mount root; there is only one
+    `<root>/`, one `<root>/invite/<token>`, and one `<root>/shoppinglist.apk`
+    per app, by construction).
+
+    `allow_registration=False` rejects `POST /register` with a 403
+    `registration_disabled` error and tells the served web client to disable
+    its register option (T-61) — for instances that are invite/operator-only.
     """
+    # "https://example.com/shopping/" -> "/shopping"; no path -> "".
+    root_path = urlsplit(base_url).path.rstrip("/")
+    if url_prefix is None:
+        url_prefix = f"{root_path}/api/v1"
+
     bp = Blueprint(name, __name__, url_prefix=url_prefix, template_folder="templates")
 
     config = {
         "database_path": database_path,
         "invite_hmac_key": invite_hmac_key,
         "base_url": base_url,
+        "allow_registration": allow_registration,
     }
 
     @bp.record_once
@@ -92,7 +112,7 @@ def create_blueprint(
                 )
             from .routes.landing import register_routes as register_landing_routes
 
-            register_landing_routes(app, invite_hmac_key, base_url)
+            register_landing_routes(app, invite_hmac_key, base_url, root_path=root_path)
 
         # The Android APK download (T-59), also a site-root route, registered
         # BEFORE the landing page's render decisions matter: the landing/login
@@ -107,7 +127,7 @@ def create_blueprint(
                 )
             from .routes.apk import register_routes as register_apk_routes
 
-            register_apk_routes(app)
+            register_apk_routes(app, root_path=root_path)
 
         # The embedded web client (Epic W) is likewise registered directly on
         # the app, outside url_prefix, so opening the server's base URL boots
@@ -126,9 +146,13 @@ def create_blueprint(
             from .routes.webapp import register_routes as register_webapp_routes
 
             if web_dist_dir is not None:
-                register_webapp_routes(app, web_dist_dir)
+                register_webapp_routes(
+                    app, web_dist_dir, root_path=root_path, allow_registration=allow_registration
+                )
             else:
-                register_webapp_routes(app)
+                register_webapp_routes(
+                    app, root_path=root_path, allow_registration=allow_registration
+                )
 
     @bp.teardown_app_request
     def _close_db(exception=None):

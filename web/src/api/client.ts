@@ -13,8 +13,11 @@ import type {
   SyncRequest,
   SyncResponse,
 } from "./contract";
+import { appBasename } from "../lib/appConfig";
 
-const API_BASE = "/api/v1";
+// Resolved per-request against the server-injected mount root, so an instance
+// served at e.g. /shopping calls /shopping/api/v1 (T-60). "" in dev = /api/v1.
+const apiBase = () => `${appBasename()}/api/v1`;
 const TOKEN_STORAGE_KEY = "shoppinglist_token";
 
 export class ApiError extends Error {
@@ -60,7 +63,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
     headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${apiBase()}${path}`, {
     method: options.method,
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,

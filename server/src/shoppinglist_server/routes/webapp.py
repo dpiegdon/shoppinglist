@@ -1,14 +1,23 @@
 """Serves the built web client (Epic W), embedded in this package.
 
 Registered directly on the host app (not the /api/v1 blueprint), same
-reasoning as routes/landing.py: it must live at the site root so opening the
-server's base URL in a browser boots the SPA. Route precedence relies on
-Werkzeug ranking rules by specificity, not registration order: /api/v1/* and
-/invite/<token> both have static prefix segments and rank above this
-module's fully-dynamic catch-all regardless of when each is registered —
-verified with real requests in tests/test_webapp.py, not just a route dump.
+reasoning as routes/landing.py: it must live at the instance's mount root so
+opening the server's base URL in a browser boots the SPA. Route precedence
+relies on Werkzeug ranking rules by specificity, not registration order: the
+API prefix, /invite/<token>, and /shoppinglist.apk all have static path
+segments and rank above this module's fully-dynamic catch-all regardless of
+when each is registered — verified with real requests in tests/test_webapp.py
+and tests/test_prefix_mount.py, not just a route dump.
+
+The SPA is built once, path-agnostic; mount-specific facts are injected when
+index.html is served (T-60/T-61): asset URLs get the mount root prefixed, and
+a window.__APP_CONFIG__ script tells the client its router basename (so
+/shopping deployments don't escape to domain-root /login) and whether
+registration is enabled. The transformed page is prepared once at
+registration time and served from memory.
 """
 
+import json
 import os
 from pathlib import Path
 
@@ -21,30 +30,52 @@ DEFAULT_WEB_DIST_DIR = str(PACKAGE_DIR / "web_dist")
 # indefinitely; index.html must always be revalidated so a rebuild's new
 # asset hashes are picked up.
 ASSET_MAX_AGE = 31536000
-INDEX_MAX_AGE = 0
 
 
-def register_routes(app, web_dist_dir: str = DEFAULT_WEB_DIST_DIR) -> bool:
-    """Registers the web client routes on `app`. Returns False (no-op) if
-    `web_dist_dir` doesn't contain a built app, so a package installed
-    without ever running `npm run build` degrades gracefully instead of
-    crashing at request time."""
+def _transformed_index(web_dist_dir: str, root_path: str, allow_registration: bool) -> str:
+    with open(os.path.join(web_dist_dir, "index.html"), encoding="utf-8") as f:
+        index_html = f.read()
+    if root_path:
+        index_html = index_html.replace('"/assets/', f'"{root_path}/assets/')
+        index_html = index_html.replace('"/favicon.svg"', f'"{root_path}/favicon.svg"')
+    config = {"basename": root_path, "allowRegistration": allow_registration}
+    # A classic inline script executes during parse, before the deferred module
+    # bundle runs — so the config global is always set before app code reads it.
+    config_script = f"<script>window.__APP_CONFIG__ = {json.dumps(config)};</script>"
+    return index_html.replace("<head>", "<head>" + config_script, 1)
+
+
+def register_routes(
+    app,
+    web_dist_dir: str = DEFAULT_WEB_DIST_DIR,
+    root_path: str = "",
+    allow_registration: bool = True,
+) -> bool:
+    """Registers the web client routes on `app` under `root_path` ("" = domain
+    root). Returns False (no-op) if `web_dist_dir` doesn't contain a built
+    app, so a package installed without ever running `npm run build` degrades
+    gracefully instead of crashing at request time."""
     if not os.path.isfile(os.path.join(web_dist_dir, "index.html")):
         return False
 
-    @app.route("/assets/<path:filename>")
+    index_html = _transformed_index(web_dist_dir, root_path, allow_registration)
+
+    @app.route(f"{root_path}/assets/<path:filename>")
     def web_asset(filename):
         return send_from_directory(
             os.path.join(web_dist_dir, "assets"), filename, max_age=ASSET_MAX_AGE
         )
 
-    @app.route("/favicon.svg")
+    @app.route(f"{root_path}/favicon.svg")
     def web_favicon():
         return send_from_directory(web_dist_dir, "favicon.svg", max_age=ASSET_MAX_AGE)
 
-    @app.route("/")
-    @app.route("/<path:spa_path>")
+    @app.route(f"{root_path}/")
+    @app.route(f"{root_path}/<path:spa_path>")
     def web_index(spa_path=None):
-        return send_from_directory(web_dist_dir, "index.html", max_age=INDEX_MAX_AGE)
+        response = app.response_class(index_html, mimetype="text/html")
+        # Same must-revalidate behavior the old send_from_directory(max_age=0) gave.
+        response.cache_control.no_cache = True
+        return response
 
     return True

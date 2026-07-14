@@ -35,14 +35,16 @@ bp = create_blueprint(
     database_path="/var/lib/shoppinglist/shoppinglist.db",
     invite_hmac_key=b"...",              # signs invite tokens — see Configuration below
     base_url="https://lists.example.com",  # public URL clients reach you at — see Configuration below
-    url_prefix="/api/v1",                # optional, this is the default
+    url_prefix=None,                     # optional; defaults to "<base_url path>/api/v1"
     name="shoppinglist_server",          # optional; must be unique per app when mounting several instances
-    serve_web_client=True,               # optional, default — the embedded SPA at "/" (see "Web client")
-    serve_invite_landing_page=True,      # optional, default — the "/invite/<token>" landing page
-    serve_android_apk=True,              # optional, default — the app download at "/shoppinglist.apk"
+    serve_web_client=True,               # optional, default — the embedded SPA at the mount root
+    serve_invite_landing_page=True,      # optional, default — the ".../invite/<token>" landing page
+    serve_android_apk=True,              # optional, default — the app download at ".../shoppinglist.apk"
                                          #   (see "Android app download" below)
     web_dist_dir=None,                   # optional — serve the web client from a custom directory
                                          #   instead of the bundle embedded in this package
+    allow_registration=True,             # optional; False = invite/operator-only instance — POST
+                                         #   /register returns 403 and the web login page says so
 )
 app.register_blueprint(bp)
 app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
@@ -50,6 +52,29 @@ app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
 
 That's the entire integration surface. Everything else — routes, the sync
 engine, invite handling, GC — lives inside the package.
+
+### Mounting under a path prefix
+
+The **path component of `base_url` is the mount root**. To serve the whole
+instance under `https://example.com/shopping` (say, alongside other apps on
+the same domain), just say so in `base_url`:
+
+```python
+bp = create_blueprint(
+    database_path="shopping/shopping.db",
+    invite_hmac_key=b"...",
+    base_url="https://example.com/shopping/",
+)
+```
+
+Everything follows: the web client is served at `/shopping/` (with its asset
+URLs and client-side router scoped to the prefix — logging in navigates to
+`/shopping/login`, not `/login`), invites at `/shopping/invite/<token>`, the
+APK at `/shopping/shoppinglist.apk`, and the API defaults to
+`/shopping/api/v1` (pass `url_prefix` explicitly to override). The domain
+root stays untouched for the rest of your app. Android users enter
+`https://example.com/shopping` as their server URL — the app builds its API
+calls relative to it.
 
 ### Multiple instances on one app
 

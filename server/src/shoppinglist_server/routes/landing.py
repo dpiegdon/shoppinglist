@@ -23,14 +23,15 @@ def _intent_url(base_url: str, token: str) -> str:
     return f"intent://{host}/invite/{token}#Intent;scheme=https;package={ANDROID_PACKAGE};end"
 
 
-def register_routes(app, invite_hmac_key: bytes, base_url: str):
+def register_routes(app, invite_hmac_key: bytes, base_url: str, root_path: str = ""):
     # invite_hmac_key/base_url are closure-captured here, NOT read via the
     # shared get_config() at request time - this route is registered directly
     # on the app (outside any blueprint), so request.blueprint would be None
     # for it; closure capture is what correctly scopes it to the specific
     # create_blueprint() call that registered it, even with other instances
-    # also mounted on the same app.
-    @app.route("/invite/<token>", methods=["GET"])
+    # also mounted on the same app. root_path is base_url's path component, so
+    # the route matches the share URLs that invites.mint() builds (T-60).
+    @app.route(f"{root_path}/invite/<token>", methods=["GET"])
     def invite_landing_view(token):
         try:
             _invite_id, _list_id, invited_email, expires_at = decode_token(invite_hmac_key, token)
@@ -46,13 +47,13 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str):
         # serves the web client (its SPA catch-all is what handles /redeem) — otherwise the link
         # would 404. Presence of the web client's catch-all view is the reliable signal (T-44).
         web_redeem_url = (
-            f"/redeem?token={quote(token, safe='')}"
+            f"{root_path}/redeem?token={quote(token, safe='')}"
             if "web_index" in current_app.view_functions
             else None
         )
         # Likewise the app download (T-59): the likeliest reader of this page doesn't have the
         # app installed yet — that's why the intent link didn't already whisk them away.
-        apk_url = "/shoppinglist.apk" if "android_apk" in current_app.view_functions else None
+        apk_url = f"{root_path}/shoppinglist.apk" if "android_apk" in current_app.view_functions else None
         return (
             render_template(
                 "invite.html",

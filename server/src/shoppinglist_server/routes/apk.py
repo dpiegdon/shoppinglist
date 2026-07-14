@@ -21,14 +21,15 @@ APK_FILENAME = "shoppinglist.apk"
 APK_MAX_AGE = 300
 
 
-def register_routes(app, apk_dir: str = DEFAULT_APK_DIR) -> bool:
-    """Registers the APK download route on `app`. Returns False (no-op) if
-    `apk_dir` doesn't contain the APK, so a package built without the Android
-    artifact degrades gracefully instead of serving 404s from a live link."""
+def register_routes(app, apk_dir: str = DEFAULT_APK_DIR, root_path: str = "") -> bool:
+    """Registers the APK download route on `app` under `root_path` ("" = domain
+    root). Returns False (no-op) if `apk_dir` doesn't contain the APK, so a
+    package built without the Android artifact degrades gracefully instead of
+    serving 404s from a live link."""
     if not os.path.isfile(os.path.join(apk_dir, APK_FILENAME)):
         return False
 
-    @app.route(f"/{APK_FILENAME}")
+    @app.route(f"{root_path}/{APK_FILENAME}")
     def android_apk():
         return send_from_directory(
             apk_dir,
