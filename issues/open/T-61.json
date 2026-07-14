@@ -1,0 +1,14 @@
+{
+  "body": "allow_registration: bool = True on create_blueprint. When False: POST /register\nreturns 403 registration_disabled with a clear message (Android surfaces the\nmessage via its existing ApiException path); the web login page disables the\n\"Need an account? Register\" toggle and shows \"Registration is disabled on this\nserver.\" \u2014 the SPA learns the flag from the same serve-time window.__APP_CONFIG__\ninjection that T-60 adds for the mount root.",
+  "created_at": "2026-07-14T00:15:58+00:00",
+  "id": "T-61",
+  "labels": [
+    "server",
+    "web",
+    "feature",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "create_blueprint flag to disable new-account registration (API 403 + web notice)",
+  "updated_at": "2026-07-14T00:15:58+00:00"
+}
