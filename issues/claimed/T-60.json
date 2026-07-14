@@ -8,6 +8,7 @@
     "bug",
     "agent"
   ],
+  "owner": "claude",
   "priority": 1,
   "title": "Blueprint must be fully mountable under a path prefix (p23q.org/shopping breaks)",
   "updated_at": "2026-07-14T00:14:57+00:00"
