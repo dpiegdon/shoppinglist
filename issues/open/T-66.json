@@ -1,0 +1,13 @@
+{
+  "body": "OverviewViewModelTest fails intermittently with\n`java.lang.IllegalStateException at TestMainDispatcher.kt:72` (sometimes\n`UncompletedCoroutinesError`), on different test methods across different\nruns \u2014 not a specific test's logic, a class-wide race. Confirmed\nnondeterministic: identical code, back-to-back runs, one run failed one\ntest and passed on immediate re-run with zero changes; caught again by\nT-56's verify-all.sh full-suite run (a different test method failed that\ntime).\n\nRoot cause (diagnosed, not yet fixed): `MainDispatcherRule`\n(app/src/test/java/org/p23q/shoppinglist/MainDispatcherRule.kt) creates\nits own `UnconfinedTestDispatcher()`, NOT tied to the `TestCoroutineScheduler`\nthat each test's own `runTest { }` block creates internally. Two\nindependent virtual-time schedulers exist per test \u2014 `viewModelScope`\ncoroutines run on the Rule's dispatcher/scheduler, while `runTest`'s\n`advanceUntilIdle`/completion tracking watches its own. Under certain\ninterleavings the two race, producing the observed exceptions.\n\nFix: `MainDispatcherRule` should accept and install a dispatcher backed by\nthe *same* scheduler the enclosing `runTest` uses, not a standalone one \u2014\ne.g. thread the `TestScope`'s dispatcher through, or restructure so the\nrule and `runTest` share one `TestCoroutineScheduler`. Verify by running\nOverviewViewModelTest repeatedly (a loop, not just twice) both in\nisolation and inside the full suite, since isolation alone didn't\nreproduce it in this session's investigation \u2014 needs the full-suite load\nor repeated runs to surface reliably.",
+  "created_at": "2026-07-14T20:37:45+00:00",
+  "id": "T-66",
+  "labels": [
+    "android",
+    "reliability",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Android: OverviewViewModelTest is flaky (MainDispatcherRule / runTest dispatcher race)",
+  "updated_at": "2026-07-14T20:37:45+00:00"
+}
