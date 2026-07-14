@@ -75,6 +75,39 @@ class ListsRepoTest {
     }
 
     @Test
+    fun `a new list has no notes until set`() = runTest {
+        val listId = repo.createList("Groceries")
+
+        assertEquals(null, repo.getById(listId)!!.notes.value)
+    }
+
+    @Test
+    fun `setNotes stamps only the notes field clock`() = runTest {
+        val listId = repo.createList("Groceries")
+        val created = repo.getById(listId)!!
+        val nameClockBefore = created.name.updatedAt
+
+        Thread.sleep(2)
+        repo.setNotes(listId, "Gate code: 4471")
+
+        val updated = repo.getById(listId)!!
+        assertEquals("Gate code: 4471", updated.notes.value)
+        assertEquals("device-1", updated.notes.updatedBy)
+        assertTrue(updated.notes.updatedAt > created.notes.updatedAt)
+        assertEquals(nameClockBefore, updated.name.updatedAt)
+    }
+
+    @Test
+    fun `setNotes to null clears an existing note`() = runTest {
+        val listId = repo.createList("Groceries")
+        repo.setNotes(listId, "temporary")
+
+        repo.setNotes(listId, null)
+
+        assertEquals(null, repo.getById(listId)!!.notes.value)
+    }
+
+    @Test
     fun `delete tombstones the list but retains the row`() = runTest {
         val listId = repo.createList("Groceries")
 
@@ -104,8 +137,11 @@ class ListsRepoTest {
         repo.rename(listId, "Weekly Groceries")
         assertEquals(2, syncTrigger.scheduleCount)
 
-        repo.delete(listId)
+        repo.setNotes(listId, "Gate code: 4471")
         assertEquals(3, syncTrigger.scheduleCount)
+
+        repo.delete(listId)
+        assertEquals(4, syncTrigger.scheduleCount)
     }
 
     @Test

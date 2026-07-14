@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
@@ -95,5 +96,51 @@ class ListPropsScreenTest {
         composeTestRule.onNodeWithText("Leave this list?").assertExists()
         db.close()
         assertEquals(false, left)
+    }
+
+    @Test
+    fun `typing a note and saving persists it as an LWW edit`() = runBlocking {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+
+        val serverConfigFile = File.createTempFile("listprops_screen_notes_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val json = Json { ignoreUnknownKeys = true }
+        val apiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            json = json,
+        )
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            apiProvider,
+        )
+
+        composeTestRule.setContent { ListPropsScreen(onLeft = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Notes").assertExists()
+        composeTestRule.onNodeWithText("Gate code, store hours, anything worth remembering…")
+            .performTextInput("Gate code: 4471")
+        composeTestRule.onNodeWithText("Save notes").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("Gate code: 4471", listsRepo.getById(listId)!!.notes.value)
+        db.close()
     }
 }

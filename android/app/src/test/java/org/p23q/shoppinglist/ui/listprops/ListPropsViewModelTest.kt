@@ -118,6 +118,38 @@ class ListPropsViewModelTest {
     }
 
     @Test
+    fun `initial state loads an existing note`() = runTest {
+        listsRepo.setNotes(listId, "Gate code: 4471")
+
+        val state = newViewModel().uiState.first { it.name.isNotBlank() }
+
+        assertEquals("Gate code: 4471", state.notes)
+    }
+
+    @Test
+    fun `saveNotes persists notes as an LWW edit`() = runTest {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+
+        viewModel.onNotesChange("Gate code: 4471")
+        viewModel.saveNotes().join()
+
+        assertEquals("Gate code: 4471", listsRepo.getById(listId)!!.notes.value)
+    }
+
+    @Test
+    fun `saveNotes trims whitespace and collapses a blank note to null`() = runTest {
+        listsRepo.setNotes(listId, "temporary")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+
+        viewModel.onNotesChange("   ")
+        viewModel.saveNotes().join()
+
+        assertEquals(null, listsRepo.getById(listId)!!.notes.value)
+    }
+
+    @Test
     fun `moveCategoryUp then saveCategoryOrder persists the new order as an LWW edit`() = runTest {
         listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery"))
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }

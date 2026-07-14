@@ -38,6 +38,7 @@ data class ItemDto(
 data class ListFieldsDto(
     val name: FieldClock<String>,
     @SerialName("category_order") val categoryOrder: FieldClock<List<String>>,
+    val notes: FieldClock<String?>,
     val deleted: FieldClock<Boolean>,
 )
 

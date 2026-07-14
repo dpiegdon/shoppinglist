@@ -7,6 +7,7 @@ import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.db.ListDao
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.toLww
+import org.p23q.shoppinglist.data.db.toLwwOptional
 import org.p23q.shoppinglist.data.sync.SyncTrigger
 import java.util.UUID
 import javax.inject.Inject
@@ -37,6 +38,7 @@ class ListsRepo @Inject constructor(
                 createdAt = now,
                 name = name.toLww(by, now),
                 categoryOrder = encodeCategoryOrder(emptyList()).toLww(by, now),
+                notes = null.toLwwOptional(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
             ),
@@ -50,6 +52,10 @@ class ListsRepo @Inject constructor(
 
     suspend fun setCategoryOrder(listId: String, order: List<String>) =
         updateField(listId) { it.copy(categoryOrder = encodeCategoryOrder(order).toLww(deviceId.get())) }
+
+    /** Free-text, not-regularly-needed info (T-62) — list-properties-dialog only, synced like any other field. */
+    suspend fun setNotes(listId: String, notes: String?) =
+        updateField(listId) { it.copy(notes = notes.toLwwOptional(deviceId.get())) }
 
     /** Tombstone: [ListEntity.deleted] flips true, the row itself is retained for sync. */
     suspend fun delete(listId: String) = updateField(listId) { it.copy(deleted = true.toLww(deviceId.get())) }

@@ -93,6 +93,19 @@ fun ListPropsScreen(
         TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text("Save order") }
         Spacer(Modifier.height(16.dp))
 
+        // Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens.
+        Text("Notes", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = state.notes,
+            onValueChange = viewModel::onNotesChange,
+            placeholder = { Text("Gate code, store hours, anything worth remembering…") },
+            minLines = 3,
+            maxLines = 6,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(onClick = { viewModel.saveNotes() }) { Text("Save notes") }
+        Spacer(Modifier.height(16.dp))
+
         Text("Shared with", style = MaterialTheme.typography.titleMedium)
         if (state.isMembersLoading) {
             CircularProgressIndicator()

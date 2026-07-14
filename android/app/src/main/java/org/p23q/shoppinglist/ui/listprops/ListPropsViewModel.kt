@@ -25,6 +25,7 @@ import javax.inject.Inject
 data class ListPropsUiState(
     val name: String = "",
     val categoryOrder: List<String> = emptyList(),
+    val notes: String = "",
     val members: List<MemberDto> = emptyList(),
     val pendingInvites: List<PendingInviteDto> = emptyList(),
     val isMembersLoading: Boolean = false,
@@ -58,7 +59,11 @@ class ListPropsViewModel @Inject constructor(
             val currentOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
             val allCategories = itemsRepo.distinctCategories(listId).first()
             _uiState.update {
-                it.copy(name = list?.name?.value ?: "", categoryOrder = mergeCategoryOrder(currentOrder, allCategories))
+                it.copy(
+                    name = list?.name?.value ?: "",
+                    categoryOrder = mergeCategoryOrder(currentOrder, allCategories),
+                    notes = list?.notes?.value ?: "",
+                )
             }
         }
     }
@@ -78,6 +83,13 @@ class ListPropsViewModel @Inject constructor(
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value) }
 
     fun saveName(): Job = viewModelScope.launch { listsRepo.rename(listId, _uiState.value.name.trim()) }
+
+    fun onNotesChange(value: String) = _uiState.update { it.copy(notes = value) }
+
+    /** Blank collapses to null (matches how other optional text fields are stored) rather than an empty string. */
+    fun saveNotes(): Job = viewModelScope.launch {
+        listsRepo.setNotes(listId, _uiState.value.notes.trim().ifBlank { null })
+    }
 
     fun moveCategoryUp(index: Int) {
         if (index <= 0) return

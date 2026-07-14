@@ -65,21 +65,26 @@ def test_connect_applies_pending_migrations_to_an_existing_database(tmp_path, mo
     conn = db_module.connect(str(path))
     db_module.init_db(conn)
     conn.close()
+    # Real (unpatched) CURRENT_VERSION at the moment this "existing" database was
+    # created — the DB is stamped at this version, whatever it is today (grows over
+    # time as real migrations, e.g. T-62's, get appended above).
+    base_version = migrations_module.CURRENT_VERSION
 
     # Simulate a schema change shipped after this database was created: a new
     # migration the database doesn't know about yet.
+    next_version = base_version + 1
     monkeypatch.setattr(
         migrations_module,
         "MIGRATIONS",
-        [(1, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
+        [(next_version, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
     )
-    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", next_version)
 
     # This is the production path (create_blueprint's per-request connect() never
     # calls init_db()) — migrations must self-apply from connect() alone.
     conn = db_module.connect(str(path))
 
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == next_version
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(lists)")}
     assert "motto" in cols
     conn.close()
@@ -105,20 +110,22 @@ def test_connect_does_not_reapply_an_already_applied_migration(tmp_path, monkeyp
 
 
 def test_a_failing_migration_does_not_advance_user_version(tmp_path, monkeypatch):
-    # Database starts at version 0 (no migrations existed when it was created)...
+    # Database starts at the real current version (no pending migrations)...
     path = tmp_path / "broken_migration.db"
     conn = db_module.connect(str(path))
     db_module.init_db(conn)
     conn.close()
-    assert sqlite3.connect(str(path)).execute("PRAGMA user_version").fetchone()[0] == 0
+    base_version = migrations_module.CURRENT_VERSION
+    assert sqlite3.connect(str(path)).execute("PRAGMA user_version").fetchone()[0] == base_version
 
-    # ...so a version-1 migration is genuinely pending and will actually run.
+    # ...so a migration one version ahead is genuinely pending and will actually run.
+    next_version = base_version + 1
     monkeypatch.setattr(
         migrations_module,
         "MIGRATIONS",
-        [(1, ["ALTER TABLE lists ADD COLUMN"])],  # invalid SQL: guaranteed to fail
+        [(next_version, ["ALTER TABLE lists ADD COLUMN"])],  # invalid SQL: guaranteed to fail
     )
-    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", next_version)
     with pytest.raises(sqlite3.OperationalError):
         db_module.connect(str(path))
 
@@ -127,10 +134,10 @@ def test_a_failing_migration_does_not_advance_user_version(tmp_path, monkeypatch
     monkeypatch.setattr(
         migrations_module,
         "MIGRATIONS",
-        [(1, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
+        [(next_version, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
     )
     conn = db_module.connect(str(path))
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == next_version
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(lists)")}
     assert "motto" in cols
     conn.close()

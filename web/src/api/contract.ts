@@ -35,6 +35,7 @@ export interface ItemObject {
 export interface ListFields {
   name: FieldClock<string>;
   category_order: FieldClock<string[]>;
+  notes: FieldClock<string | null>;
   deleted: FieldClock<boolean>;
 }
 

@@ -52,6 +52,7 @@ class DtoTest {
           "fields": {
             "name":           {"value": "Groceries", "updated_at": 1751970000000, "updated_by": "dev-uuid"},
             "category_order": {"value": ["groceries", "freezer"], "updated_at": 1751970000000, "updated_by": "dev-uuid"},
+            "notes":          {"value": "Gate code: 4471", "updated_at": 1751970000000, "updated_by": "dev-uuid"},
             "deleted":        {"value": false, "updated_at": 1751970000000, "updated_by": "dev-uuid"}
           }
         }
@@ -105,6 +106,7 @@ class DtoTest {
         assertEquals("list-uuid", list.id)
         assertEquals("Groceries", list.fields.name.value)
         assertEquals(listOf("groceries", "freezer"), list.fields.categoryOrder.value)
+        assertEquals("Gate code: 4471", list.fields.notes.value)
         assertEquals(false, list.fields.deleted.value)
 
         val reEncoded = json.encodeToString(ListDto.serializer(), list)

@@ -17,6 +17,15 @@ already-released migration's SQL; add a new one instead.
 # (version, [sql statements]) — statements run individually via conn.execute(),
 # in order, in one transaction per migration (all-or-nothing: a failure rolls
 # back that migration's statements and PRAGMA user_version is not advanced).
-MIGRATIONS: list[tuple[int, list[str]]] = []
+MIGRATIONS: list[tuple[int, list[str]]] = [
+    (
+        1,
+        [
+            "ALTER TABLE lists ADD COLUMN notes TEXT",
+            "ALTER TABLE lists ADD COLUMN notes_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE lists ADD COLUMN notes_by TEXT NOT NULL DEFAULT ''",
+        ],
+    ),  # T-62: list notes
+]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

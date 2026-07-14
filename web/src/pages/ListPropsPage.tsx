@@ -17,11 +17,13 @@ export default function ListPropsPage() {
   const [categoryOrder, setCategoryOrder] = useState<string[]>(
     list ? listFieldValue(list, "category_order") ?? [] : [],
   );
+  const [notes, setNotes] = useState(list ? listFieldValue(list, "notes") ?? "" : "");
   const [newCategory, setNewCategory] = useState("");
   const [members, setMembers] = useState<MembersResponse | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [membersError, setMembersError] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     if (!listId) return;
@@ -44,6 +46,16 @@ export default function ListPropsPage() {
       await push({ lists: [{ id, fields: fieldPatch(deviceId, "name", trimmed) }] });
     } finally {
       setSavingName(false);
+    }
+  }
+
+  async function saveNotes(e: FormEvent) {
+    e.preventDefault();
+    setSavingNotes(true);
+    try {
+      await push({ lists: [{ id, fields: fieldPatch(deviceId, "notes", notes.trim() || null) }] });
+    } finally {
+      setSavingNotes(false);
     }
   }
 
@@ -150,6 +162,23 @@ export default function ListPropsPage() {
           />
           <button type="submit" className="btn btn-secondary">
             Add
+          </button>
+        </form>
+      </section>
+
+      {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Notes</h2>
+        <form onSubmit={saveNotes} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Gate code, store hours, anything worth remembering…"
+            rows={4}
+            style={{ resize: "vertical", font: "inherit" }}
+          />
+          <button type="submit" className="btn" disabled={savingNotes} style={{ alignSelf: "flex-start" }}>
+            Save notes
           </button>
         </form>
       </section>

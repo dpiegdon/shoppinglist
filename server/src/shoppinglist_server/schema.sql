@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS lists (
     category_order_ts INTEGER NOT NULL DEFAULT 0,
     category_order_by TEXT NOT NULL DEFAULT '',
 
+    notes TEXT,
+    notes_ts INTEGER NOT NULL DEFAULT 0,
+    notes_by TEXT NOT NULL DEFAULT '',
+
     deleted INTEGER NOT NULL DEFAULT 0,
     deleted_ts INTEGER NOT NULL DEFAULT 0,
     deleted_by TEXT NOT NULL DEFAULT ''

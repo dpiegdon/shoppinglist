@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 2, exportSchema = false)
+@Database(entities = [ListEntity::class, ItemEntity::class], version = 3, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao
@@ -26,6 +26,16 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** Adds lists.notes (T-62), an @Embedded LwwOptionalString — same three-column shape Room already
+ *  generates for it elsewhere (e.g. items.note_*): value/updatedAt/updatedBy. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE lists ADD COLUMN notes_value TEXT")
+        db.execSQL("ALTER TABLE lists ADD COLUMN notes_updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE lists ADD COLUMN notes_updatedBy TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -33,7 +43,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDb(@ApplicationContext context: Context): AppDb =
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 
     @Provides

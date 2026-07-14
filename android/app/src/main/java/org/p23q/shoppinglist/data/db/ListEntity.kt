@@ -11,6 +11,7 @@ data class ListEntity(
     val createdAt: Long,
     @Embedded(prefix = "name_") val name: LwwString,
     @Embedded(prefix = "categoryOrder_") val categoryOrder: LwwString,
+    @Embedded(prefix = "notes_") val notes: LwwOptionalString,
     @Embedded(prefix = "deleted_") val deleted: LwwBoolean,
     val dirty: Boolean,
 )

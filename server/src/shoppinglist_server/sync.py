@@ -37,8 +37,10 @@ ITEM_FIELD_META = [
 LIST_FIELD_META = [
     ("name", "name_ts", "name_by"),
     ("category_order", "category_order_ts", "category_order_by"),
+    ("notes", "notes_ts", "notes_by"),
     ("deleted", "deleted_ts", "deleted_by"),
 ]
+NOTES_MAX_LENGTH = 5000
 ITEM_TSBY = {key: (ts, by) for key, ts, by in ITEM_FIELD_META}
 LIST_TSBY = {key: (ts, by) for key, ts, by in LIST_FIELD_META}
 ITEM_KEYS = set(ITEM_TSBY)
@@ -144,6 +146,8 @@ def _validate_item_field(key, value):
 def _validate_list_field(key, value):
     if key == "name" and (value is None or not str(value).strip()):
         raise ApiError(422, "invalid_name", "List name must not be empty.")
+    if key == "notes" and value is not None and len(str(value)) > NOTES_MAX_LENGTH:
+        raise ApiError(422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer.")
 
 
 def _parse_row(obj, keys, tsby, validate, device_id):
@@ -225,6 +229,7 @@ def _new_list_columns(list_id, created_at, fields):
         "id": list_id, "created_at": created_at,
         "name": "", "name_ts": 0, "name_by": "",
         "category_order": "[]", "category_order_ts": 0, "category_order_by": "",
+        "notes": None, "notes_ts": 0, "notes_by": "",
         "deleted": 0, "deleted_ts": 0, "deleted_by": "",
     }
     for key, (value, ts, by) in fields.items():

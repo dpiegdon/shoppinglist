@@ -19,10 +19,12 @@ def _clock(value, ts, by):
     return {"value": value, "updated_at": ts, "updated_by": by}
 
 
-def _mk_list(list_id, name, ts, by, created_at=1000, category_order=None):
+def _mk_list(list_id, name, ts, by, created_at=1000, category_order=None, notes=None):
     fields = {"name": _clock(name, ts, by)}
     if category_order is not None:
         fields["category_order"] = _clock(category_order, ts, by)
+    if notes is not None:
+        fields["notes"] = _clock(notes, ts, by)
     return {"id": list_id, "created_at": created_at, "fields": fields}
 
 
@@ -410,3 +412,76 @@ def test_list_name_and_category_order_lww(db_conn):
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["name"] == "Food"
     assert row["category_order"] == '["freezer", "produce"]'
+
+
+def test_list_notes_set_via_sync_and_returned_on_wire(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list("list-1", "Groceries", 200, "X",
+                                           notes="Gate code: 4471")]})
+
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["notes"] == "Gate code: 4471"
+
+    wire_lists = {lst["id"]: lst for lst in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
+    assert wire_lists["list-1"]["fields"]["notes"]["value"] == "Gate code: 4471"
+
+
+def test_list_notes_lww_older_write_loses(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list("list-1", "Groceries", 300, "X", notes="new note")]})
+
+    # A stale write (earlier timestamp) must not overwrite the newer note.
+    sync.apply_changes(db_conn, account_id, "Y",
+                       {"lists": [_mk_list("list-1", "Groceries", 200, "Y", notes="stale note")]})
+
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["notes"] == "new note"
+
+
+def test_list_notes_can_be_cleared_to_null(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes="temporary")]})
+
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list("list-1", "Groceries", 300, "X", notes=None)]})
+
+    # notes wasn't included in this push's fields (notes=None short-circuits _mk_list's
+    # helper), so re-send explicitly via the raw payload to actually clear it.
+    sync.apply_changes(db_conn, account_id, "X", {
+        "lists": [{
+            "id": "list-1", "created_at": 1000,
+            "fields": {"notes": {"value": None, "updated_at": 400, "updated_by": "X"}},
+        }],
+    })
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["notes"] is None
+
+
+def test_list_notes_over_max_length_rejected(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+
+    too_long = "x" * (sync.NOTES_MAX_LENGTH + 1)
+    with pytest.raises(ApiError) as exc_info:
+        sync.apply_changes(db_conn, account_id, "X",
+                           {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=too_long)]})
+    assert exc_info.value.status == 422
+    assert exc_info.value.code == "invalid_notes"
+
+
+def test_list_notes_at_max_length_accepted(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+
+    exactly_max = "x" * sync.NOTES_MAX_LENGTH
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=exactly_max)]})
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["notes"] == exactly_max
