@@ -22,8 +22,13 @@ npm run dev      # Vite dev server; proxies /api and /invite to a real
                   # VITE_API_PROXY_TARGET) since this runs on its own port
 npm run build     # production build -> ../server/src/shoppinglist_server/web_dist/
 npm test          # Vitest + React Testing Library
+npm run lint      # oxlint
 npx tsc --noEmit -p tsconfig.app.json   # typecheck
 ```
+
+A production build's output must be **committed** (it's package data of the
+server) — until you rebuild and commit, the served web app doesn't include
+your source changes.
 
 ## Structure
 

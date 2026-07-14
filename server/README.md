@@ -33,10 +33,16 @@ app = Flask(__name__)
 
 bp = create_blueprint(
     database_path="/var/lib/shoppinglist/shoppinglist.db",
-    invite_hmac_key=b"...",       # see Configuration below
-    base_url="https://lists.example.com",
-    url_prefix="/api/v1",         # optional, this is the default
-    serve_web_client=True,        # optional, this is the default — see "Web client" below
+    invite_hmac_key=b"...",              # signs invite tokens — see Configuration below
+    base_url="https://lists.example.com",  # public URL clients reach you at — see Configuration below
+    url_prefix="/api/v1",                # optional, this is the default
+    name="shoppinglist_server",          # optional; must be unique per app when mounting several instances
+    serve_web_client=True,               # optional, default — the embedded SPA at "/" (see "Web client")
+    serve_invite_landing_page=True,      # optional, default — the "/invite/<token>" landing page
+    serve_android_apk=True,              # optional, default — the app download at "/shoppinglist.apk"
+                                         #   (see "Android app download" below)
+    web_dist_dir=None,                   # optional — serve the web client from a custom directory
+                                         #   instead of the bundle embedded in this package
 )
 app.register_blueprint(bp)
 app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
@@ -61,20 +67,21 @@ unique blueprint names per app — this mirrors that requirement directly):
 app.register_blueprint(create_blueprint(
     database_path="/var/lib/shoppinglist/tenant-a.db", invite_hmac_key=key_a,
     base_url="https://a.example.com", url_prefix="/tenant-a/api", name="tenant_a",
-    serve_web_client=False, serve_invite_landing_page=False,
+    serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
 ))
 app.register_blueprint(create_blueprint(
     database_path="/var/lib/shoppinglist/tenant-b.db", invite_hmac_key=key_b,
     base_url="https://b.example.com", url_prefix="/tenant-b/api", name="tenant_b",
-    serve_web_client=False, serve_invite_landing_page=False,
+    serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
 ))
 ```
 
-**One real constraint, not a bug:** the invite landing page (`/invite/<token>`)
-and the embedded web client (`/`, `/assets/*`) are unprefixed, site-root
-routes by design (Spec §5's share URL has no `/api/v1` segment) — there is
-only one `/` per app. At most **one** mounted instance per app may set
-`serve_web_client=True` / `serve_invite_landing_page=True`; a second attempt
+**One real constraint, not a bug:** the invite landing page (`/invite/<token>`),
+the embedded web client (`/`, `/assets/*`), and the Android APK download
+(`/shoppinglist.apk`) are unprefixed, site-root routes by design (Spec §5's
+share URL has no `/api/v1` segment) — there is only one `/` per app. At most
+**one** mounted instance per app may set `serve_web_client=True` /
+`serve_invite_landing_page=True` / `serve_android_apk=True`; a second attempt
 raises a clear `ValueError` rather than Flask's raw endpoint-collision error.
 Every other route (auth, account, lists, invites, sync) has no such
 constraint and scales to as many instances as you mount.
@@ -95,13 +102,31 @@ instances, and the CLI's instance-selection behavior).
 
 | Key | Purpose |
 |-----|---------|
-| `SECRET_KEY` | Flask secret. |
-| `INVITE_HMAC_KEY` | Server signing key for invite tokens. Keep it secret and stable — rotating it invalidates every outstanding invite. |
-| `DATABASE_PATH` | SQLite file path. |
+| `DATABASE_PATH` / `database_path` | SQLite file path. Created (with schema) by `init-db`; the parent directory must exist and be writable. |
+| `INVITE_HMAC_KEY` / `invite_hmac_key` | The signing key for invite tokens — see below. |
+| `BASE_URL` / `base_url` | The absolute public URL clients reach this server at (scheme + host, plus any mount path; a trailing `/` is tolerated). Used to build the invite **share URLs** (`<base_url>/invite/<token>`) and the landing page's open-in-app link — get it wrong and invite links point somewhere unreachable. |
 | `MAX_CONTENT_LENGTH` | Flask config key (not read from the env by the blueprint). The blueprint sets a **4 MB** default request-body cap so a host app is protected without proxy tuning; set this in the host app's Flask config to raise/lower it. Oversized requests get a `413 payload_too_large` JSON error. |
+| `SECRET_KEY` | Read by the dev `app.py` only, as ordinary Flask hygiene. The blueprint itself never uses Flask sessions or cookies (auth is bearer tokens), so it does not depend on this value. |
 
 The standalone dev `app.py` (below) reads these from the environment; a host
 app instead passes them as `create_blueprint(...)` arguments directly.
+
+### About `invite_hmac_key`
+
+Invite links are **stateless signed tokens**: the server HMAC-SHA256-signs the
+invite payload (invite id, list, invited email, a fixed 7-day expiry) with this
+key, and later verifies redemptions against it — no invite state has to exist
+server-side for the *link* to be checkable. Consequences:
+
+- **Any byte string works; use a real random one** (32+ bytes), e.g.
+  `python -c 'import secrets; print(secrets.token_hex(32))'`. Never ship the
+  dev default.
+- **Keep it secret.** Anyone holding the key can mint valid invite tokens for
+  arbitrary lists.
+- **Keep it stable, and back it up alongside the database.** Rotating (or
+  losing) it invalidates every outstanding invite link — nothing else is
+  affected (accounts, lists, sessions, and already-redeemed memberships all
+  live in the database), so recovery is just re-sending invites.
 
 ## Operator CLI
 
@@ -162,10 +187,10 @@ npm run build   # writes into ../server/src/shoppinglist_server/web_dist/
 the invite landing page: it must live at the site root, not under
 `url_prefix`), serves the built `index.html` for `/` and any unmatched `GET`
 (SPA client-side routing fallback), and the hashed `/assets/*` bundle with a
-long cache lifetime. `/api/v1/*` and `/invite/<token>` both rank above this
-catch-all — Werkzeug sorts routes by rule specificity, not registration
-order — verified with real requests in `tests/test_webapp.py`, not just a
-route dump. Pass `serve_web_client=False` to `create_blueprint(...)` to
+long cache lifetime. `/api/v1/*`, `/invite/<token>`, and `/shoppinglist.apk`
+all rank above this catch-all — Werkzeug sorts routes by rule specificity,
+not registration order — verified with real requests in
+`tests/test_webapp.py` and `tests/test_apk.py`, not just a route dump. Pass `serve_web_client=False` to `create_blueprint(...)` to
 disable it (e.g. a host app that wants to serve its own root content
 instead); a package installed without ever running `npm run build` degrades
 gracefully to the same effect rather than crashing.

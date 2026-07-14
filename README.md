@@ -18,9 +18,9 @@ The full design lives in
 
 | Path | What | Docs |
 |------|------|------|
-| `server/` | Flask blueprint + SQLite backend: accounts, sync, sharing. Mountable at any URL, including multiple isolated instances on one app. | [`server/README.md`](server/README.md) |
+| `server/` | Flask blueprint + SQLite backend: accounts, sync, sharing. Mountable at any URL, including multiple isolated instances on one app. One built wheel is a **single deployable artifact**: it embeds and serves the web client, the invite landing page, and the Android APK download. | [`server/README.md`](server/README.md) |
 | `web/` | React web client. Not deployed separately — built straight into the server package and served by the blueprint itself. | [`web/README.md`](web/README.md) |
-| `android/` | Native Android client (Kotlin/Compose), offline-first with a local Room mirror. | [`android/README.md`](android/README.md) |
+| `android/` | Native Android client (Kotlin/Compose), offline-first with a local Room mirror. Installable straight from a running server at `/shoppinglist.apk`. | [`android/README.md`](android/README.md) |
 
 ## Setup
 
@@ -61,8 +61,10 @@ cd android
 ```
 
 Install it on a phone (Android 8.0+) with `adb install app-debug.apk`, or
-copy the APK to the device and open it. On first launch, enter your server's
-**https** URL and register or log in.
+copy the APK to the device and open it — or skip building entirely and
+download the release APK straight from a running server at
+`https://<your-server>/shoppinglist.apk`. On first launch, confirm or edit
+the prefilled server **https** URL and register or log in.
 
 See [`android/README.md`](android/README.md) for prerequisites, sideloading,
 release builds, and invite-link (App Link) setup.

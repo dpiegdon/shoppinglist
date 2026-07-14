@@ -58,10 +58,23 @@ section below.
 The release unit-test variant (`./gradlew testReleaseUnitTest`) includes the
 proof that the debug-only TLS bypass is absent from release.
 
+After building a release, **refresh the copy embedded in the server package**
+so `/shoppinglist.apk` serves the new version (see "Android app download" in
+[`../server/README.md`](../server/README.md)):
+
+```bash
+cp app/build/outputs/apk/release/app-release.apk \
+   ../server/src/shoppinglist_server/apk/shoppinglist.apk
+```
+
 ## Installing on a phone
 
 minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
 
+- **From a running server (easiest for users):** the server serves the release
+  APK itself at `https://<your-server>/shoppinglist.apk`, linked from the web
+  client's login page and from invite landing pages — see the "Android app
+  download" section in [`../server/README.md`](../server/README.md).
 - **Over USB (adb):** enable Developer Options → USB debugging on the phone,
   connect it, then run
   `adb install app/build/outputs/apk/debug/app-debug.apk`.
@@ -69,14 +82,15 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
   it in a file manager. You'll be prompted to allow installs from that source
   the first time.
 
-On first launch the app asks for your **server URL** — the base URL where the
-Flask blueprint is mounted, e.g. `https://shopping.example.com/` or
-`https://example.com/apps/shopping/`. It **must be `https`** (the login screen
-rejects plain `http`), so the server needs TLS in front of it — see
+On first launch the login screen shows the **server URL** — prefilled with
+`https://p23q.org/shopping` (the canonical instance; edit it if you self-host)
+or with whatever you last logged into. It's the base URL where the Flask
+blueprint is mounted, e.g. `https://shopping.example.com/` or
+`https://example.com/apps/shopping/`, and **must be `https`** (the login
+screen rejects plain `http`), so the server needs TLS in front of it — see
 [`../server/README.md`](../server/README.md) for the deployment requirements.
-Enter it, then register a new account or log in. On later launches the app
-resumes your session and reopens the list you last had open; the server URL is
-remembered too.
+Confirm it, then register a new account or log in. On later launches the app
+resumes your session and reopens the list you last had open.
 
 ### Testing against a self-signed server (debug builds only)
 
