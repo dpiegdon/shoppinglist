@@ -1,12 +1,13 @@
 package org.p23q.shoppinglist.ui.list
 
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -45,7 +46,7 @@ class ListScreenTest {
     }
 
     @Test
-    fun `checked row renders with a strikethrough in a distinct color, unchecked row does not`() = runBlocking {
+    fun `checked row renders a strike-through across the whole row, unchecked row does not`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
@@ -69,12 +70,13 @@ class ListScreenTest {
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
 
+        // The strike spans the whole row (T-63), not just the name text, so there's exactly one
+        // strike element for the one checked item — Bread (unchecked) has none.
+        composeTestRule.onAllNodesWithTag("checked-item-strike").assertCountEquals(1)
+        // The checked color is still the theme's error color (T-40), not a fixed literal — assert it
+        // differs from the unchecked row's default rather than a hardcoded Color.Red.
         val checkedStyle = textStyleOf("Milk")
         val uncheckedStyle = textStyleOf("Bread")
-        assertEquals(TextDecoration.LineThrough, checkedStyle.textDecoration)
-        assertNotEquals(TextDecoration.LineThrough, uncheckedStyle.textDecoration)
-        // The checked color is now the theme's error color (T-40), not a fixed literal — assert it
-        // differs from the unchecked row's default rather than a hardcoded Color.Red.
         assertNotEquals(checkedStyle.color, uncheckedStyle.color)
     }
 
@@ -111,6 +113,35 @@ class ListScreenTest {
 
         assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(milk)!!.status.value)
         assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(eggs)!!.status.value)
+    }
+
+    @Test
+    fun `sync status is a marker on the top controls line, not its own line`() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            FakeSessionState(),
+        )
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        // A fresh SyncStatus() has never synced (T-63): the marker carries that sentence as its
+        // content description, and "Show checked" (the top row it shares a line with) still exists.
+        composeTestRule.onNodeWithContentDescription("Not synced yet").assertExists()
+        composeTestRule.onNodeWithText("Show checked").assertExists()
+        composeTestRule.onNodeWithText("Not synced yet").assertDoesNotExist()
     }
 
     @Test

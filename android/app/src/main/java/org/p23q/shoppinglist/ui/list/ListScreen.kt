@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,14 +41,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.ui.SyncStatusBar
+import org.p23q.shoppinglist.ui.SyncStatusMarker
 import org.p23q.shoppinglist.data.db.Status
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,6 +127,11 @@ fun ListScreen(
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Folded into this row instead of its own line (T-63): a quiet dot rather than a
+                    // full "Synced 5 min ago" sentence; the sentence itself is still there as the
+                    // content description for TalkBack. The loud attention banner is Overview's job.
+                    SyncStatusMarker(state = state.sync, nowMs = System.currentTimeMillis())
+                    Spacer(Modifier.width(8.dp))
                     IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")
                     }
@@ -142,14 +148,6 @@ fun ListScreen(
                 Spacer(Modifier.width(4.dp))
                 Text("Add item")
             }
-
-            // Lightweight last-synced line (T-36/T-47); the loud attention banner is Overview's job.
-            SyncStatusBar(
-                state = state.sync,
-                nowMs = System.currentTimeMillis(),
-                onAttentionClick = {},
-                showAttention = false,
-            )
 
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
@@ -169,7 +167,7 @@ fun ListScreen(
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                         )
                     }
                     items(group.items, key = { it.id }) { item ->
@@ -201,45 +199,57 @@ private fun ItemRow(
     onEdit: () -> Unit,
 ) {
     val isChecked = item.status.value == Status.CHECKED.wireValue
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.name.value,
-                style = if (isChecked) {
-                    // Theme-aware (was a hardcoded Color.Red with poor dark-theme contrast — T-40).
-                    MaterialTheme.typography.bodyLarge.copy(
-                        textDecoration = TextDecoration.LineThrough,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                } else {
-                    MaterialTheme.typography.bodyLarge
-                },
-            )
-            // Quantity is the thing you need in-store ("2l milk"), so show it alongside the price.
-            val quantity = item.quantity.value?.takeIf { it.isNotBlank() }
-            val detail = listOfNotNull(quantity, formatPrice(item, defaultCurrency)).joinToString(" · ")
-            if (detail.isNotEmpty()) {
-                Text(text = detail, style = MaterialTheme.typography.bodySmall)
-            }
-            item.note.value?.takeIf { it.isNotBlank() }?.let { note ->
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = note,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = item.name.value,
+                    style = if (isChecked) {
+                        // Theme-aware (was a hardcoded Color.Red with poor dark-theme contrast — T-40).
+                        // The strike itself now spans the whole row (below), not just this text.
+                        MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.error)
+                    } else {
+                        MaterialTheme.typography.bodyLarge
+                    },
                 )
+                // Quantity is the thing you need in-store ("2l milk"), so show it alongside the price.
+                val quantity = item.quantity.value?.takeIf { it.isNotBlank() }
+                val detail = listOfNotNull(quantity, formatPrice(item, defaultCurrency)).joinToString(" · ")
+                if (detail.isNotEmpty()) {
+                    Text(text = detail, style = MaterialTheme.typography.bodySmall)
+                }
+                item.note.value?.takeIf { it.isNotBlank() }?.let { note ->
+                    Text(
+                        text = note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit ${item.name.value}")
             }
         }
-        IconButton(onClick = onEdit) {
-            Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit ${item.name.value}")
+        // A per-word LineThrough only crossed the name, leaving quantity/note/icon untouched; one
+        // line across the whole row reads more clearly as "done" (T-63).
+        if (isChecked) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(horizontal = 16.dp)
+                    .testTag("checked-item-strike"),
+                thickness = 1.5.dp,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

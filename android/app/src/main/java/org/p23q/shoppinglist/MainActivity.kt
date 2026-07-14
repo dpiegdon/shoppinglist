@@ -5,7 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import org.p23q.shoppinglist.data.SessionState
@@ -46,7 +50,13 @@ class MainActivity : ComponentActivity() {
                 ThemePreference.DARK -> true
             }
             ShoppingListTheme(darkTheme = darkTheme) {
-                ShoppingListNavHost(startDestination = startDestination)
+                // The base Android theme (themes.xml) is a fixed light theme, not day/night — so
+                // without this Surface, dark mode paints the DarkColors palette's light-on-dark text
+                // over the window's still-white background ("light gray on white"). Surface is the
+                // one composable that actually fills the screen with colorScheme.background.
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    ShoppingListNavHost(startDestination = startDestination)
+                }
             }
         }
     }
