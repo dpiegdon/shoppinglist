@@ -3,6 +3,7 @@ import sqlite3
 import pytest
 
 from shoppinglist_server import db as db_module
+from shoppinglist_server import migrations as migrations_module
 from shoppinglist_server.errors import ApiError
 
 NOW = 1751970000000
@@ -37,6 +38,101 @@ def test_init_db_is_idempotent(tmp_path):
     conn = db_module.connect(str(path))
     db_module.init_db(conn)
     db_module.init_db(conn)  # must not raise
+    conn.close()
+
+
+def test_fresh_init_db_stamps_current_version_without_running_migrations(tmp_path, monkeypatch):
+    # A migration that would fail if actually executed against a fresh schema
+    # (the column already exists from schema.sql) — proves init_db() on a
+    # brand-new file skips straight to CURRENT_VERSION rather than replaying it.
+    monkeypatch.setattr(
+        migrations_module, "MIGRATIONS", [(1, ["ALTER TABLE lists ADD COLUMN nonexistent_marker TEXT"])]
+    )
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
+
+    conn = db_module.connect(str(tmp_path / "fresh.db"))
+    db_module.init_db(conn)
+
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    # The column from the "migration" was never applied — proof it didn't run.
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(lists)")}
+    assert "nonexistent_marker" not in cols
+    conn.close()
+
+
+def test_connect_applies_pending_migrations_to_an_existing_database(tmp_path, monkeypatch):
+    path = tmp_path / "upgrade.db"
+    conn = db_module.connect(str(path))
+    db_module.init_db(conn)
+    conn.close()
+
+    # Simulate a schema change shipped after this database was created: a new
+    # migration the database doesn't know about yet.
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [(1, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
+    )
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
+
+    # This is the production path (create_blueprint's per-request connect() never
+    # calls init_db()) — migrations must self-apply from connect() alone.
+    conn = db_module.connect(str(path))
+
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(lists)")}
+    assert "motto" in cols
+    conn.close()
+
+
+def test_connect_does_not_reapply_an_already_applied_migration(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [(1, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
+    )
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
+
+    path = tmp_path / "already_current.db"
+    conn = db_module.connect(str(path))
+    db_module.init_db(conn)
+    conn.close()
+
+    # Reconnecting must not try to add the same column again (which would raise
+    # "duplicate column name").
+    conn = db_module.connect(str(path))
+    conn.close()
+
+
+def test_a_failing_migration_does_not_advance_user_version(tmp_path, monkeypatch):
+    # Database starts at version 0 (no migrations existed when it was created)...
+    path = tmp_path / "broken_migration.db"
+    conn = db_module.connect(str(path))
+    db_module.init_db(conn)
+    conn.close()
+    assert sqlite3.connect(str(path)).execute("PRAGMA user_version").fetchone()[0] == 0
+
+    # ...so a version-1 migration is genuinely pending and will actually run.
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [(1, ["ALTER TABLE lists ADD COLUMN"])],  # invalid SQL: guaranteed to fail
+    )
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
+    with pytest.raises(sqlite3.OperationalError):
+        db_module.connect(str(path))
+
+    # A later, correctly-written retry of the same version must still apply —
+    # the failed attempt must not have left user_version advanced.
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [(1, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
+    )
+    conn = db_module.connect(str(path))
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(lists)")}
+    assert "motto" in cols
     conn.close()
 
 
