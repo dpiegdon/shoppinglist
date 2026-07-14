@@ -19,6 +19,7 @@ registration time and served from memory.
 
 import json
 import os
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from flask import send_from_directory
@@ -38,7 +39,18 @@ def _transformed_index(web_dist_dir: str, root_path: str, allow_registration: bo
     if root_path:
         index_html = index_html.replace('"/assets/', f'"{root_path}/assets/')
         index_html = index_html.replace('"/favicon.svg"', f'"{root_path}/favicon.svg"')
-    config = {"basename": root_path, "allowRegistration": allow_registration}
+    # The package version rides along so "what is this server actually running?"
+    # is answerable with one curl of the page — deployment staleness (stale
+    # process, shadowed package) is otherwise invisible from the outside.
+    try:
+        pkg_version = version("shoppinglist-server")
+    except PackageNotFoundError:
+        pkg_version = "unknown"
+    config = {
+        "basename": root_path,
+        "allowRegistration": allow_registration,
+        "version": pkg_version,
+    }
     # A classic inline script executes during parse, before the deferred module
     # bundle runs — so the config global is always set before app code reads it.
     config_script = f"<script>window.__APP_CONFIG__ = {json.dumps(config)};</script>"
