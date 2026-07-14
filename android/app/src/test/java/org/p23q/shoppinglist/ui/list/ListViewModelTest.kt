@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.list
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -7,6 +8,12 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -18,6 +25,12 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.AuthInterceptor
+import org.p23q.shoppinglist.data.api.ErrorInterceptor
+import org.p23q.shoppinglist.data.api.SessionEvents
+import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -28,6 +41,7 @@ import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class ListViewModelTest {
@@ -40,6 +54,8 @@ class ListViewModelTest {
     private lateinit var listsRepo: ListsRepo
     private lateinit var sessionState: FakeSessionState
     private lateinit var listId: String
+    private lateinit var server: MockWebServer
+    private lateinit var apiProvider: ApiProvider
     private val syncStatus = SyncStatus()
     private val syncer = RecordingSyncer()
 
@@ -62,6 +78,32 @@ class ListViewModelTest {
         listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
         sessionState = FakeSessionState()
         listId = listsRepo.createList("Groceries")
+
+        // T-64: ListViewModel fetches the member roster on init. Most tests here don't care about
+        // it, so the default dispatcher answers every request with an empty roster; a test that
+        // does care overrides server.dispatcher before calling newViewModel().
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) =
+                MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}""")
+        }
+        server.start()
+        val serverConfigFile = File.createTempFile("list_vm_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val json = Json { ignoreUnknownKeys = true }
+        apiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
+            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
+            json = json,
+        )
+    }
+
+    @After
+    fun tearDown() {
+        server.shutdown()
     }
 
     private fun newViewModel(): ListViewModel =
@@ -72,6 +114,7 @@ class ListViewModelTest {
             syncer,
             syncStatus,
             sessionState,
+            apiProvider,
         )
 
     @Test
@@ -309,5 +352,55 @@ class ListViewModelTest {
                 .first { s -> s.groups.map { it.category } == listOf("dairy", "bakery") }
                 .groups.map { it.category },
         )
+    }
+
+    @Test
+    fun `the member roster loads into state on init (T-64)`() = runTest {
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) = MockResponse().setResponseCode(200).setBody(
+                """{"members": [""" +
+                    """{"account_id": "acc-a", "email": "a@example.com", "initials": "A", "joined_at": 1},""" +
+                    """{"account_id": "acc-b", "email": "b@example.com", "initials": "B", "joined_at": 2}""" +
+                    """], "invites": []}""",
+            )
+        }
+
+        val members = newViewModel().uiState.first { it.members.isNotEmpty() }.members
+
+        assertEquals(listOf("acc-a", "acc-b"), members.map { it.accountId })
+        assertEquals(listOf("A", "B"), members.map { it.initials })
+    }
+
+    @Test
+    fun `an offline member-roster fetch leaves members empty rather than crashing (T-64)`() = runTest {
+        // A dedicated, never-started server: any request against it fails to connect, without
+        // touching the shared server/apiProvider the other tests (and tearDown) depend on.
+        val unreachable = MockWebServer()
+        val serverConfigFile = File.createTempFile("list_vm_offline_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig.setServerUrl(unreachable.url("/").toString())
+        val json = Json { ignoreUnknownKeys = true }
+        val offlineApiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
+            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
+            json = json,
+        )
+
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            syncer,
+            syncStatus,
+            sessionState,
+            offlineApiProvider,
+        )
+        // Give the failed fetch a chance to run; nothing to await on success, so just confirm the
+        // view model is otherwise fully usable (the exception didn't propagate and crash init).
+        viewModel.uiState.first { it.listName == "Groceries" }
+
+        assertTrue(viewModel.uiState.value.members.isEmpty())
     }
 }

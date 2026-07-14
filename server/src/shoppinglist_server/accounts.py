@@ -10,6 +10,18 @@ from .errors import ApiError
 
 CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
 RESET_PASSWORD_LENGTH = 16
+INITIALS_MAX_LENGTH = 3
+
+
+def _default_initials(email: str) -> str:
+    """Leading 1-2 characters of the email's local-part, uppercased (T-64)."""
+    local_part = email.split("@", 1)[0]
+    return local_part[:2].upper()
+
+
+def resolve_initials(email: str, initials: str | None) -> str:
+    """The account's chosen initials, or a derived default when unset (T-64)."""
+    return initials or _default_initials(email)
 
 
 def _require_password(conn: sqlite3.Connection, account_id: str, password: str) -> None:
@@ -89,24 +101,39 @@ def revoke_session(conn: sqlite3.Connection, account_id: str, session_id: str) -
 
 def get_settings(conn: sqlite3.Connection, account_id: str) -> dict:
     row = conn.execute(
-        "SELECT default_currency FROM account_settings WHERE account_id = ?", (account_id,)
+        "SELECT account_settings.default_currency AS default_currency, "
+        "account_settings.initials AS initials, accounts.email AS email "
+        "FROM account_settings JOIN accounts ON accounts.id = account_settings.account_id "
+        "WHERE account_settings.account_id = ?",
+        (account_id,),
     ).fetchone()
-    return {"default_currency": row["default_currency"]}
+    return {
+        "default_currency": row["default_currency"],
+        "initials": resolve_initials(row["email"], row["initials"]),
+    }
 
 
-def update_settings(conn: sqlite3.Connection, account_id: str, default_currency: str) -> dict:
+def update_settings(
+    conn: sqlite3.Connection, account_id: str, default_currency: str, initials: str | None = None
+) -> dict:
     if not default_currency or not CURRENCY_RE.match(default_currency):
         raise ApiError(
             422,
             "invalid_currency",
             "default_currency must be a 3-letter uppercase ISO-4217 code.",
         )
+    if initials is not None and len(initials) > INITIALS_MAX_LENGTH:
+        raise ApiError(
+            422,
+            "invalid_initials",
+            f"initials must be {INITIALS_MAX_LENGTH} characters or fewer.",
+        )
     conn.execute(
-        "UPDATE account_settings SET default_currency = ?, updated_at = ? WHERE account_id = ?",
-        (default_currency, auth.now_ms(), account_id),
+        "UPDATE account_settings SET default_currency = ?, initials = ?, updated_at = ? WHERE account_id = ?",
+        (default_currency, initials, auth.now_ms(), account_id),
     )
     conn.commit()
-    return {"default_currency": default_currency}
+    return get_settings(conn, account_id)
 
 
 def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> None:

@@ -30,4 +30,10 @@ data class ItemEntity(
      * the whole push queue. Cleared the moment the user edits the row again (see ItemsRepo).
      */
     val syncBlocked: Boolean = false,
+    /**
+     * Whole-item, account-scoped (T-64) — NOT an LWW clock like the fields above; the client never
+     * sets this locally, it's simply whatever the server last reported. Null until synced at least
+     * once after this column existed server-side.
+     */
+    val lastTouchedByAccountId: String? = null,
 )

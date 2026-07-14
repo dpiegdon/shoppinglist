@@ -60,5 +60,7 @@ def register_routes(bp):
     def update_settings_view():
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
-        result = accounts.update_settings(conn, g.account.id, data.get("default_currency"))
+        result = accounts.update_settings(
+            conn, g.account.id, data.get("default_currency"), data.get("initials")
+        )
         return jsonify(result), 200

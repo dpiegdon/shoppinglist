@@ -20,6 +20,9 @@ CREATE INDEX IF NOT EXISTS idx_auth_tokens_account ON auth_tokens (account_id);
 CREATE TABLE IF NOT EXISTS account_settings (
     account_id TEXT PRIMARY KEY REFERENCES accounts (id),
     default_currency TEXT NOT NULL,
+    -- NULL = derive a default from the account's email (T-64); the account can
+    -- override with any 1-3 characters via PATCH /settings.
+    initials TEXT,
     updated_at INTEGER NOT NULL
 );
 
@@ -89,6 +92,12 @@ CREATE TABLE IF NOT EXISTS items (
     status TEXT NOT NULL DEFAULT 'todo',
     status_ts INTEGER NOT NULL,
     status_by TEXT NOT NULL,
+
+    -- Item-level (not per-field, unlike the *_by columns above), updated whenever
+    -- any field-level write wins for this item (T-64). NULL until the item's
+    -- first post-migration edit for rows that predate this column.
+    last_touched_by_account_id TEXT,
+    last_touched_ts INTEGER NOT NULL DEFAULT 0,
 
     deleted INTEGER NOT NULL DEFAULT 0,
     deleted_ts INTEGER NOT NULL DEFAULT 0,

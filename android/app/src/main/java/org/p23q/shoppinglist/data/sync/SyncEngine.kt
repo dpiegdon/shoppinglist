@@ -197,6 +197,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
             status = remote.fields.status.value.toLww(remote.fields.status.updatedBy, remote.fields.status.updatedAt),
             deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
             dirty = false,
+            lastTouchedByAccountId = remote.lastTouchedBy,
         )
     }
 
@@ -229,6 +230,8 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
         // A user edit clears it regardless (ItemsRepo). syncBlocked isn't a synced field, so it's
         // taken from the local row, never the remote DTO.
         syncBlocked = local.syncBlocked && mergedDirty,
+        // Not an LWW field (T-64) — always mirrors the server's latest report, unconditionally.
+        lastTouchedByAccountId = remote.lastTouchedBy,
     )
 }
 

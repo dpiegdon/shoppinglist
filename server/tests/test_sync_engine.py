@@ -280,6 +280,92 @@ def test_tombstone_beats_older_edit_and_loses_to_newer_resurrect(db_conn):
     assert _item_row(db_conn, "item-1")["deleted"] == 0
 
 
+# ---- item last-touched-by (T-64) -------------------------------------------
+
+
+def test_item_last_touched_by_set_to_creating_account(db_conn):
+    account_id = _setup_item(db_conn)
+    row = _item_row(db_conn, "item-1")
+    assert row["last_touched_by_account_id"] == account_id
+    assert row["last_touched_ts"] == 100  # the name field's ts, the only field provided
+
+
+def test_item_last_touched_by_updates_when_a_different_account_edits(db_conn):
+    account_a = _setup_item(db_conn)
+    account_b = _register(db_conn, "b@example.com")
+    db_conn.execute(
+        "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, 'list-1', 0)",
+        (account_b,),
+    )
+
+    sync.apply_changes(db_conn, account_b, "devB",
+                       {"items": [_mk_item("item-1", "list-1", status=("checked", 200, "devB"))]})
+
+    row = _item_row(db_conn, "item-1")
+    assert row["last_touched_by_account_id"] == account_b
+    assert row["last_touched_ts"] == 200
+
+
+def test_item_last_touched_by_unaffected_by_a_stale_losing_write(db_conn):
+    account_a = _setup_item(db_conn)  # name written at ts=100
+    account_b = _register(db_conn, "b@example.com")
+    db_conn.execute(
+        "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, 'list-1', 0)",
+        (account_b,),
+    )
+
+    # Older than the item's existing name write (ts=100) — loses, no field actually changes.
+    sync.apply_changes(db_conn, account_b, "devB",
+                       {"items": [_mk_item("item-1", "list-1", name=("Stale", 50, "devB"))]})
+
+    row = _item_row(db_conn, "item-1")
+    assert row["name"] == "Milk"  # the stale write really did lose
+    assert row["last_touched_by_account_id"] == account_a  # still the creator, not devB
+
+
+def test_item_last_touched_by_does_not_regress_even_when_another_field_wins(db_conn):
+    account_a = _setup_item(db_conn)  # created ts=100, last_touched=(account_a, 100)
+    account_b = _register(db_conn, "b@example.com")
+    db_conn.execute(
+        "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, 'list-1', 0)",
+        (account_b,),
+    )
+    sync.apply_changes(db_conn, account_b, "devB",
+                       {"items": [_mk_item("item-1", "list-1", status=("checked", 300, "devB"))]})
+    # last_touched is now (account_b, 300).
+
+    # account_a's write wins its OWN field (note's prior ts was 0, so 150 > 0 wins) but 150 is
+    # still less than the item's current last_touched_ts (300) — last_touched must not regress
+    # to account_a just because *some* field in this push happened to win.
+    sync.apply_changes(db_conn, account_a, "devA",
+                       {"items": [_mk_item("item-1", "list-1", note=("ripe ones", 150, "devA"))]})
+
+    row = _item_row(db_conn, "item-1")
+    assert row["note"] == "ripe ones"  # the field itself did win
+    assert row["last_touched_by_account_id"] == account_b  # unchanged: 150 < 300
+    assert row["last_touched_ts"] == 300
+
+
+def test_item_last_touched_by_on_the_wire(db_conn):
+    account_id = _setup_item(db_conn)
+    wire_items = {i["id"]: i for i in sync.delta(db_conn, account_id, 0)["changes"]["items"]}
+    assert wire_items["item-1"]["last_touched_by"] == account_id
+
+
+def test_item_last_touched_by_is_null_on_wire_when_never_set(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA")
+    # Directly insert a row bypassing apply_changes, simulating a pre-T-64 migrated row.
+    db_conn.execute(
+        "INSERT INTO items (id, list_id, created_at, change_seq, name, name_ts, name_by, "
+        "status, status_ts, status_by) VALUES ('item-2', 'list-1', 1000, 1, 'Eggs', 100, 'devA', "
+        "'todo', 100, 'devA')"
+    )
+    db_conn.commit()
+    wire_items = {i["id"]: i for i in sync.delta(db_conn, account_id, 0)["changes"]["items"]}
+    assert wire_items["item-2"]["last_touched_by"] is None
+
+
 # ---- same-name merge -------------------------------------------------------
 
 

@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.list
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
@@ -42,11 +44,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.ui.SyncStatusMarker
 import org.p23q.shoppinglist.data.db.Status
@@ -174,6 +179,13 @@ fun ListScreen(
                         ItemRow(
                             item = item,
                             defaultCurrency = state.defaultCurrency,
+                            // Only when the list has 2+ members (T-64) — no clutter for the common
+                            // solo case, where "who touched this" has exactly one possible answer.
+                            authorMember = if (state.members.size >= 2) {
+                                state.members.find { it.accountId == item.lastTouchedByAccountId }
+                            } else {
+                                null
+                            },
                             onToggle = {
                                 if (item.status.value == Status.CHECKED.wireValue) {
                                     viewModel.uncheck(item.id)
@@ -195,6 +207,7 @@ fun ListScreen(
 private fun ItemRow(
     item: ItemEntity,
     defaultCurrency: String?,
+    authorMember: MemberDto?,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
 ) {
@@ -235,6 +248,10 @@ private fun ItemRow(
                     )
                 }
             }
+            if (authorMember != null) {
+                AuthorBadge(authorMember)
+                Spacer(Modifier.width(4.dp))
+            }
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit ${item.name.value}")
             }
@@ -251,5 +268,24 @@ private fun ItemRow(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+    }
+}
+
+/** Small initials circle for "who last touched this" (T-64); the full email rides as the
+ *  accessibility content description since there's no hover on touch devices. */
+@Composable
+private fun AuthorBadge(member: MemberDto) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+            .semantics { contentDescription = "Last touched by ${member.email}" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = member.initials,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
     }
 }

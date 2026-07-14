@@ -32,6 +32,9 @@ data class ItemDto(
     @SerialName("list_id") val listId: String,
     @SerialName("created_at") val createdAt: Long,
     val fields: ItemFieldsDto,
+    // Whole-item, account-scoped (T-64) — not a per-field LWW clock, so it rides outside `fields`.
+    // Null until the item's first edit after this column existed server-side.
+    @SerialName("last_touched_by") val lastTouchedBy: String? = null,
 )
 
 @Serializable
@@ -109,7 +112,12 @@ data class ListSummaryDto(val id: String, val name: String, @SerialName("categor
 data class ListsResponse(val lists: List<ListSummaryDto>)
 
 @Serializable
-data class MemberDto(val email: String, @SerialName("joined_at") val joinedAt: Long)
+data class MemberDto(
+    @SerialName("account_id") val accountId: String,
+    val email: String,
+    val initials: String,
+    @SerialName("joined_at") val joinedAt: Long,
+)
 
 @Serializable
 data class PendingInviteDto(

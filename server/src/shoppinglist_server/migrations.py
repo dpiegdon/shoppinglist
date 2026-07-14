@@ -26,6 +26,14 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "ALTER TABLE lists ADD COLUMN notes_by TEXT NOT NULL DEFAULT ''",
         ],
     ),  # T-62: list notes
+    (
+        2,
+        [
+            "ALTER TABLE items ADD COLUMN last_touched_by_account_id TEXT",
+            "ALTER TABLE items ADD COLUMN last_touched_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE account_settings ADD COLUMN initials TEXT",
+        ],
+    ),  # T-64: item last-touched-by + account initials
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

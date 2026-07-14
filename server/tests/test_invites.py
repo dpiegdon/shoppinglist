@@ -361,6 +361,24 @@ def test_mint_revoke_redeem_members_leave_http_flow(client):
     assert resp.status_code == 403  # no longer a member
 
 
+def test_members_response_includes_account_id_and_initials(client):
+    owner_token = _register_and_login_http(client, "owner5@example.com")
+    _sync_http(
+        client, owner_token,
+        {"lists": [{"id": "list-h5", "fields": {
+            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+        }}]},
+    )
+
+    resp = client.get("/api/v1/lists/list-h5/members", headers=_auth(owner_token))
+
+    assert resp.status_code == 200
+    [member] = resp.get_json()["members"]
+    assert member["email"] == "owner5@example.com"
+    assert member["initials"] == "OW"  # derived default: owner5@... -> "OW"
+    assert member["account_id"]  # present and non-empty; exact value not asserted
+
+
 def test_revoke_invite_http(client):
     owner_token = _register_and_login_http(client, "owner4@example.com")
     invitee_token = _register_and_login_http(client, "invitee4@example.com")

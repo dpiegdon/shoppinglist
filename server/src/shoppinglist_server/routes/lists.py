@@ -2,7 +2,7 @@ import json
 
 from flask import g, jsonify
 
-from .. import get_db, invites
+from .. import accounts, get_db, invites
 from ..auth import authed
 from ..errors import ApiError
 
@@ -40,10 +40,20 @@ def register_routes(bp):
             raise ApiError(403, "not_a_member", "You are not a member of this list.")
 
         members = [
-            {"email": row["email"], "joined_at": row["joined_at"]}
+            {
+                "account_id": row["account_id"],
+                "email": row["email"],
+                # Resolved default-or-override (T-64) so clients rendering the last-touched-by
+                # badge don't need a second per-account lookup.
+                "initials": accounts.resolve_initials(row["email"], row["initials"]),
+                "joined_at": row["joined_at"],
+            }
             for row in conn.execute(
-                "SELECT accounts.email AS email, memberships.joined_at AS joined_at "
-                "FROM memberships JOIN accounts ON accounts.id = memberships.account_id "
+                "SELECT accounts.id AS account_id, accounts.email AS email, "
+                "account_settings.initials AS initials, memberships.joined_at AS joined_at "
+                "FROM memberships "
+                "JOIN accounts ON accounts.id = memberships.account_id "
+                "JOIN account_settings ON account_settings.account_id = accounts.id "
                 "WHERE memberships.list_id = ? ORDER BY memberships.joined_at",
                 (list_id,),
             )

@@ -174,7 +174,7 @@ class ListPropsViewModelTest {
     fun `loadMembers populates members and pending invites`() = runTest {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
-                """{"members": [{"email": "a@example.com", "joined_at": 1}],""" +
+                """{"members": [{"account_id": "acc-a", "email": "a@example.com", "initials": "A", "joined_at": 1}],""" +
                     """"invites": [{"id": "inv-1", "invited_email": "b@example.com", "expires_at": 2}]}""",
             ),
         )

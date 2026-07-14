@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -22,6 +24,7 @@ import org.p23q.shoppinglist.data.sync.SyncState
 import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
+import java.io.IOException
 import javax.inject.Inject
 
 /** A category header ([category] `null` = uncategorized, rendered last) plus its sorted items. */
@@ -43,6 +46,12 @@ data class ListUiState(
     val sync: SyncState = SyncState(),
     /** True while a user-initiated pull-to-refresh sync is running, for the spinner (T-36). */
     val isRefreshing: Boolean = false,
+    /**
+     * The list's collaborators (T-64), fetched once per screen open — best-effort; stays empty
+     * offline, which correctly suppresses the last-touched-by badge (fewer members shown is a
+     * safe default, never wrong data) rather than erroring the whole screen.
+     */
+    val members: List<MemberDto> = emptyList(),
 )
 
 @HiltViewModel
@@ -53,6 +62,7 @@ class ListViewModel @Inject constructor(
     private val syncer: Syncer,
     syncStatus: SyncStatus,
     sessionState: SessionState,
+    private val apiProvider: ApiProvider,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
@@ -88,6 +98,16 @@ class ListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             syncStatus.state.collect { sync -> _uiState.update { it.copy(sync = sync) } }
+        }
+        // One-shot, not live (T-64): the badge only needs to know the roster, which changes rarely
+        // relative to how often this screen opens. Silently stays empty offline/on error.
+        viewModelScope.launch {
+            try {
+                val response = apiProvider.get().members(listId)
+                _uiState.update { it.copy(members = response.members) }
+            } catch (e: IOException) {
+                // Offline or unreachable — no badges is the safe fallback, not an error state.
+            }
         }
     }
 

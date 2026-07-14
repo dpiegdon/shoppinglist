@@ -133,14 +133,15 @@ def test_revoke_session_unknown_id_raises_404(db_conn):
 
 def test_get_settings_default_currency_is_eur(db_conn):
     account_id, _ = _register_and_login(db_conn)
-    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "EUR"}
+    # initials default to the email's local-part when never set (T-64) — bob@... -> "BO".
+    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "EUR", "initials": "BO"}
 
 
 def test_update_settings_valid_currency(db_conn):
     account_id, _ = _register_and_login(db_conn)
     result = accounts.update_settings(db_conn, account_id, "USD")
-    assert result == {"default_currency": "USD"}
-    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "USD"}
+    assert result == {"default_currency": "USD", "initials": "BO"}
+    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "USD", "initials": "BO"}
 
 
 @pytest.mark.parametrize("bad_currency", ["usd", "US", "USDD", "", None])
@@ -149,6 +150,49 @@ def test_update_settings_invalid_currency_raises_422(db_conn, bad_currency):
     with pytest.raises(ApiError) as excinfo:
         accounts.update_settings(db_conn, account_id, bad_currency)
     assert excinfo.value.status == 422
+
+
+# ---- service layer: initials (T-64) -----------------------------------------
+
+
+def test_default_initials_derived_from_email_local_part():
+    assert accounts._default_initials("alice@example.com") == "AL"
+    assert accounts._default_initials("a@example.com") == "A"
+
+
+def test_update_settings_with_initials_override(db_conn):
+    account_id, _ = _register_and_login(db_conn)
+    result = accounts.update_settings(db_conn, account_id, "EUR", "XY")
+    assert result == {"default_currency": "EUR", "initials": "XY"}
+
+
+@pytest.mark.parametrize("bad_initials", ["ABCD", "TooLong"])
+def test_update_settings_initials_over_max_length_raises_422(db_conn, bad_initials):
+    account_id, _ = _register_and_login(db_conn)
+    with pytest.raises(ApiError) as excinfo:
+        accounts.update_settings(db_conn, account_id, "EUR", bad_initials)
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_initials"
+
+
+def test_update_settings_initials_none_clears_override_back_to_default(db_conn):
+    account_id, _ = _register_and_login(db_conn)
+    accounts.update_settings(db_conn, account_id, "EUR", "XY")
+
+    result = accounts.update_settings(db_conn, account_id, "EUR", None)
+
+    assert result == {"default_currency": "EUR", "initials": "BO"}  # bob@... derived default
+
+
+def test_settings_http_patch_with_initials(client):
+    token = _register_and_login_http(client)
+    resp = client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "EUR", "initials": "XY"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.get_json() == {"default_currency": "EUR", "initials": "XY"}
 
 
 # ---- service layer: delete account ------------------------------------------
@@ -318,7 +362,7 @@ def test_settings_http_get_and_patch(client):
 
     resp = client.get("/api/v1/settings", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
-    assert resp.get_json() == {"default_currency": "EUR"}
+    assert resp.get_json() == {"default_currency": "EUR", "initials": "BO"}
 
     resp = client.patch(
         "/api/v1/settings",
@@ -326,10 +370,10 @@ def test_settings_http_get_and_patch(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.get_json() == {"default_currency": "USD"}
+    assert resp.get_json() == {"default_currency": "USD", "initials": "BO"}
 
     resp = client.get("/api/v1/settings", headers={"Authorization": f"Bearer {token}"})
-    assert resp.get_json() == {"default_currency": "USD"}
+    assert resp.get_json() == {"default_currency": "USD", "initials": "BO"}
 
 
 def test_settings_http_patch_invalid_currency_422(client):

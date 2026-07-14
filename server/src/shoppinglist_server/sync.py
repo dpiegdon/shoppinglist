@@ -108,6 +108,9 @@ def _item_to_wire(row) -> dict:
         "list_id": row["list_id"],
         "created_at": row["created_at"],
         "fields": fields,
+        # Whole-item, account-scoped (T-64) — not a syncable field the client can set itself, so it
+        # rides outside `fields`. NULL for a row whose column predates its first post-migration edit.
+        "last_touched_by": row["last_touched_by_account_id"],
     }
 
 
@@ -204,7 +207,7 @@ def _update(conn, table, row_id, cols):
     conn.execute(f"UPDATE {table} SET {assignments} WHERE id = ?", [*cols.values(), row_id])
 
 
-def _new_item_columns(item_id, list_id, created_at, fields):
+def _new_item_columns(item_id, list_id, created_at, fields, account_id):
     cols = {
         "id": item_id, "list_id": list_id, "created_at": created_at,
         "name": "", "name_ts": 0, "name_by": "",
@@ -214,6 +217,7 @@ def _new_item_columns(item_id, list_id, created_at, fields):
         "price_amount": None, "price_currency": None, "price_ts": 0, "price_by": "",
         "note": None, "note_ts": 0, "note_by": "",
         "status": "todo", "status_ts": 0, "status_by": "",
+        "last_touched_by_account_id": None, "last_touched_ts": 0,
         "deleted": 0, "deleted_ts": 0, "deleted_by": "",
     }
     for key, (value, ts, by) in fields.items():
@@ -221,6 +225,12 @@ def _new_item_columns(item_id, list_id, created_at, fields):
         ts_col, by_col = ITEM_TSBY[key]
         cols[ts_col] = ts
         cols[by_col] = by
+    # Whole-item authorship (T-64): whoever creates the item is its "last touched by" until
+    # some other field write later beats it — the creating account, at the latest of this
+    # payload's field timestamps (every provided field is a "write" on a brand-new row).
+    if fields:
+        cols["last_touched_by_account_id"] = account_id
+        cols["last_touched_ts"] = max(ts for _, ts, _ in fields.values())
     return cols
 
 
@@ -288,6 +298,14 @@ def _merge_group(conn, list_id, item_ids):
         merged[ts_col] = best[ts_col]
         merged[by_col] = best[by_col]
 
+    # Whole-item authorship (T-64) — same "pick the max across the group" shape as each
+    # per-field winner above, but item-level: whichever row was touched most recently.
+    last_touched_source = max(
+        rows, key=lambda r: (r["last_touched_ts"], r["last_touched_by_account_id"] or "")
+    )
+    merged["last_touched_by_account_id"] = last_touched_source["last_touched_by_account_id"]
+    merged["last_touched_ts"] = last_touched_source["last_touched_ts"]
+
     for loser in losers:
         _update(conn, "items", loser["id"], {
             "deleted": 1, "deleted_ts": now, "deleted_by": SERVER_MERGE,
@@ -347,7 +365,7 @@ def _apply_item(conn, account_id, device_id, obj):
     if existing is None:
         if "name" not in fields:
             raise ApiError(422, "invalid_name", "Creating an item requires a name.")
-        cols = _new_item_columns(item_id, list_id, created_at, fields)
+        cols = _new_item_columns(item_id, list_id, created_at, fields, account_id)
         cols["change_seq"] = _bump(conn)
         try:
             _insert(conn, "items", cols)
@@ -366,6 +384,13 @@ def _apply_item(conn, account_id, device_id, obj):
     set_cols = _lww_update_columns(existing, fields, _item_field_to_columns, ITEM_TSBY)
     if not set_cols:
         return
+    # Whole-item authorship (T-64): only among the fields that actually WON this round —
+    # a losing (stale) field write must not look like a more recent "touch" than really
+    # happened. account_id is the whole push's authenticated account, not a per-field device.
+    won_ts = max((set_cols[ts_col] for ts_col, _ in ITEM_TSBY.values() if ts_col in set_cols), default=None)
+    if won_ts is not None and won_ts > existing["last_touched_ts"]:
+        set_cols["last_touched_by_account_id"] = account_id
+        set_cols["last_touched_ts"] = won_ts
     set_cols["change_seq"] = _bump(conn)
     try:
         _update(conn, "items", item_id, set_cols)
