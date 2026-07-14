@@ -5,9 +5,11 @@
   "labels": [
     "android",
     "web",
-    "ux"
+    "ux",
+    "agent",
+    "ready"
   ],
   "priority": 4,
   "title": "Sync recency label should tick, not freeze on 'just now' (both clients)",
-  "updated_at": "2026-07-11T18:50:16+00:00"
+  "updated_at": "2026-07-14T20:16:57+00:00"
 }
