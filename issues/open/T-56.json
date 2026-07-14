@@ -4,9 +4,10 @@
   "id": "T-56",
   "labels": [
     "ops",
-    "agent"
+    "agent",
+    "ready"
   ],
-  "priority": 3,
+  "priority": 2,
   "title": "verify-all script running server pytest + web vitest/tsc/lint + Android test/lint",
-  "updated_at": "2026-07-11T18:50:17+00:00"
+  "updated_at": "2026-07-14T20:16:58+00:00"
 }
