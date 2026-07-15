@@ -1,0 +1,13 @@
+{
+  "body": "Collaborator notifications only fire from a background sync while the app is\nclosed; the periodic WorkManager job is every 15 min. WorkManager's PeriodicWork\nminimum is 15 min, so to target ~5 min switch to a self-rescheduling one-time\nworker (network-constrained, non-expedited). Caveat to note: Doze/battery\noptimization still batches background work when the device is idle, and this\nuses more battery than the 15-min periodic.",
+  "created_at": "2026-07-15T20:52:40+00:00",
+  "id": "T-73",
+  "labels": [
+    "android",
+    "sync",
+    "notifications"
+  ],
+  "priority": 3,
+  "title": "Android: reduce background-sync interval toward ~5 min for timelier collaborator notifications",
+  "updated_at": "2026-07-15T20:52:40+00:00"
+}
