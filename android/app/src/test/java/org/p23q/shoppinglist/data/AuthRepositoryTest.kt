@@ -107,6 +107,20 @@ class AuthRepositoryTest {
     }
 
     @Test
+    fun `login stores the account id for collaborator-change detection (T-65)`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-123", "account_id": "acc-1", "email": "milk@example.com"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+
+        repository.login("milk@example.com", "hunter2")
+
+        assertEquals("acc-1", sessionState.accountId)
+    }
+
+    @Test
     fun `register does not itself store a token`() = runTest {
         pointAtServer()
         server.enqueue(MockResponse().setResponseCode(201).setBody("""{"account_id": "acc-1"}"""))

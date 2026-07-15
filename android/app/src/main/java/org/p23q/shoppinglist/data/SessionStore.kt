@@ -33,6 +33,8 @@ abstract class SessionModule {
 interface SessionState {
     var token: String?
     var accountEmail: String?
+    /** The logged-in account's server id (T-65) — the basis for "changed by someone else" checks. */
+    var accountId: String?
     var defaultCurrency: String?
     var lastOpenedListId: String?
     var syncCursor: Long
@@ -63,6 +65,10 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         get() = prefs.getString(KEY_ACCOUNT_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_ACCOUNT_EMAIL, value).apply()
 
+    override var accountId: String?
+        get() = prefs.getString(KEY_ACCOUNT_ID, null)
+        set(value) = prefs.edit().putString(KEY_ACCOUNT_ID, value).apply()
+
     override var defaultCurrency: String?
         get() = prefs.getString(KEY_DEFAULT_CURRENCY, null)
         set(value) = prefs.edit().putString(KEY_DEFAULT_CURRENCY, value).apply()
@@ -90,6 +96,7 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         const val PREFS_FILE = "session"
         const val KEY_TOKEN = "token"
         const val KEY_ACCOUNT_EMAIL = "account_email"
+        const val KEY_ACCOUNT_ID = "account_id"
         const val KEY_DEFAULT_CURRENCY = "default_currency"
         const val KEY_LAST_OPENED_LIST_ID = "last_opened_list_id"
         const val KEY_SYNC_CURSOR = "sync_cursor"
