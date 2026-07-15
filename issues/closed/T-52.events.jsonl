@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-07-14T20:16:56+00:00", "kind": "updated", "ref": "main@93ef191", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-14T23:58:44+00:00", "kind": "claimed", "ref": "main@03eaafa", "text": "claude"}
 {"actor": "claude", "at": "2026-07-15T07:25:27+00:00", "kind": "note", "ref": "main@6f5858b", "text": "Done. Add-item dialog now suggests recent backlog items (most-recently-touched first, capped at 5) as tap-to-pick suggestions while Name is blank; typing switches back to the existing live registry search. Reuses pickSuggestion() (T-33) and the existing suggestion-row UI as-is -- no AddItemDialog.kt changes needed. Introduced listIdFlow so the suggestions flow reacts correctly to listId being set (was a plain var, previously harmless only because blank-query suggestions were always empty). Commit 6f5858b."}
+{"actor": "claude", "at": "2026-07-15T07:25:27+00:00", "kind": "closed", "ref": "main@6f5858b", "text": ""}
