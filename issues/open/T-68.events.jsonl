@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-15T20:08:21+00:00", "kind": "created", "ref": "main@0df8123", "text": "Web: share the 'show checked' toggle across lists for the browser session"}
+{"actor": "claude", "at": "2026-07-15T20:08:38+00:00", "kind": "note", "ref": "main@0df8123", "text": "Done. sessionStorage-backed useShowChecked hook shared across all lists, remembered for the browser session. Commit 44f6d05."}
