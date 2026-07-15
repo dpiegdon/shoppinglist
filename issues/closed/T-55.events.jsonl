@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-07-14T20:16:57+00:00", "kind": "updated", "ref": "main@93ef191", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-15T07:46:24+00:00", "kind": "claimed", "ref": "main@5525f22", "text": "claude"}
 {"actor": "claude", "at": "2026-07-15T08:06:42+00:00", "kind": "note", "ref": "main@7210c2b", "text": "Done. Added DefaultCurrencyState (Singleton, in-memory StateFlow<String?> mirror of SessionState.defaultCurrency), written through by AuthRepositoryImpl.login() and SettingsViewModel.updateCurrency(). ListViewModel now collects it live instead of reading SessionState once at construction, so an already-open list picks up a Settings currency change immediately. Full suite + lint both clean, zero failures. Commit 7210c2b."}
+{"actor": "claude", "at": "2026-07-15T08:06:42+00:00", "kind": "closed", "ref": "main@7210c2b", "text": ""}
