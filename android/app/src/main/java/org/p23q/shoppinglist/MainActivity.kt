@@ -36,10 +36,12 @@ class MainActivity : ComponentActivity() {
         // form. token/lastOpenedListId are synchronous (EncryptedSharedPreferences) reads, so the
         // decision is resolved here, before setContent, and passed as the nav start destination.
         // (A revoked token still surfaces later via the forced-logout path in ShoppingListNavHost.)
-        val startDestination = if (session.token != null) {
-            authedStartDestination(session.lastOpenedListId)
-        } else {
-            Routes.LOGIN
+        val notifiedListId = intent.getStringExtra(EXTRA_OPEN_LIST_ID)
+        val startDestination = when {
+            session.token == null -> Routes.LOGIN
+            // A collaborator-change notification tap deep-links straight to the affected list (T-65).
+            notifiedListId != null -> Routes.list(notifiedListId)
+            else -> authedStartDestination(session.lastOpenedListId)
         }
 
         setContent {
@@ -59,5 +61,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** A notification tap's target list (T-65); absent = open normally. */
+        const val EXTRA_OPEN_LIST_ID = "open_list_id"
     }
 }

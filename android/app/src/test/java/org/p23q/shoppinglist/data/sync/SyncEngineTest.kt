@@ -35,12 +35,20 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 class SyncEngineTest {
 
+    private class RecordingNotifier : CollaboratorChangeNotifier {
+        val calls = mutableListOf<List<CollaboratorChange>>()
+        override suspend fun notifyCollaboratorChanges(changes: List<CollaboratorChange>) {
+            calls.add(changes)
+        }
+    }
+
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
     private lateinit var serverConfig: ServerConfig
     private lateinit var sessionState: FakeSessionState
     private lateinit var syncStatus: SyncStatus
     private lateinit var syncEngine: SyncEngine
+    private val notifier = RecordingNotifier()
 
     @Before
     fun setUp() {
@@ -67,7 +75,7 @@ class SyncEngineTest {
         )
 
         syncStatus = SyncStatus()
-        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus)
+        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus, notifier)
     }
 
     @After
@@ -282,5 +290,124 @@ class SyncEngineTest {
 
         assertTrue(result is SyncResult.Unauthorized)
         assertTrue("dirty row should be untouched", db.itemDao().getById("item-1")!!.dirty)
+    }
+
+    // --- Collaborator-change detection (T-65) -----------------------------------------------
+
+    /** Wire-shaped item JSON, with the account-scoped top-level last_touched_by (T-64). */
+    private fun itemJson(id: String, listId: String, name: String, lastTouchedBy: String?): String {
+        val touchedBy = lastTouchedBy?.let { "\"$it\"" } ?: "null"
+        return """
+            {"id": "$id", "list_id": "$listId", "created_at": 2000, "last_touched_by": $touchedBy, "fields": {
+              "name": {"value": "$name", "updated_at": 2000, "updated_by": "other-device"},
+              "category": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+              "stores": {"value": [], "updated_at": 2000, "updated_by": "other-device"},
+              "quantity": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+              "price": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+              "note": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+              "status": {"value": "todo", "updated_at": 2000, "updated_by": "other-device"},
+              "deleted": {"value": false, "updated_at": 2000, "updated_by": "other-device"}
+            }}
+        """.trimIndent()
+    }
+
+    private fun listJson(id: String, name: String): String = """
+        {"id": "$id", "created_at": 1000, "fields": {
+          "name": {"value": "$name", "updated_at": 1000, "updated_by": "other-device"},
+          "category_order": {"value": [], "updated_at": 1000, "updated_by": "other-device"},
+          "notes": {"value": null, "updated_at": 1000, "updated_by": "other-device"},
+          "deleted": {"value": false, "updated_at": 1000, "updated_by": "other-device"}
+        }}
+    """.trimIndent()
+
+    private fun syncResponseJson(cursor: Long, lists: List<String>, items: List<String>): String =
+        """{"cursor": $cursor, "changes": {"lists": [${lists.joinToString(",")}], "items": [${items.joinToString(",")}]}}"""
+
+    @Test
+    fun `items pulled with another account's last_touched_by are reported to the notifier, grouped per list (T-65)`() = runTest {
+        pointAtServer()
+        sessionState.accountId = "acc-me"
+        sessionState.syncCursor = 5
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(
+                        itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-other"),
+                        itemJson(id = "i2", listId = "list-1", name = "Eggs", lastTouchedBy = "acc-other"),
+                        itemJson(id = "i3", listId = "list-1", name = "Bread", lastTouchedBy = "acc-me"),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertEquals(1, notifier.calls.size)
+        assertEquals(listOf(CollaboratorChange("list-1", "Groceries", 2)), notifier.calls.single())
+    }
+
+    @Test
+    fun `a pull containing only own-account and null-account rows stays silent (T-65)`() = runTest {
+        pointAtServer()
+        sessionState.accountId = "acc-me"
+        sessionState.syncCursor = 5
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(
+                        itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-me"),
+                        itemJson(id = "i2", listId = "list-1", name = "Eggs", lastTouchedBy = null),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertTrue(notifier.calls.isEmpty())
+    }
+
+    @Test
+    fun `a cursor-zero pull (initial hydration or full resync) never notifies (T-65)`() = runTest {
+        pointAtServer()
+        sessionState.accountId = "acc-me"
+        sessionState.syncCursor = 0
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-other")),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertTrue(notifier.calls.isEmpty())
+    }
+
+    @Test
+    fun `an unknown own account id stays silent rather than guessing (T-65)`() = runTest {
+        pointAtServer()
+        sessionState.accountId = null // session predates accountId storage
+        sessionState.syncCursor = 5
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-other")),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertTrue(notifier.calls.isEmpty())
     }
 }

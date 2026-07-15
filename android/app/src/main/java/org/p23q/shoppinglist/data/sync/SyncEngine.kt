@@ -51,6 +51,7 @@ class SyncEngine @Inject constructor(
     private val serverConfig: ServerConfig,
     private val appDb: AppDb,
     private val syncStatus: SyncStatus,
+    private val notifier: CollaboratorChangeNotifier,
 ) {
     suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
         val dirtyItems = itemDao.dirtyRows()
@@ -116,6 +117,8 @@ class SyncEngine @Inject constructor(
 
         sessionState.syncCursor = response.cursor
 
+        reportCollaboratorChanges(requestCursor = request.cursor, pulledItems = response.changes.items)
+
         // Recompute pending after the merge: a local edit that raced the request may still be dirty.
         syncStatus.succeeded(
             at = System.currentTimeMillis(),
@@ -128,6 +131,30 @@ class SyncEngine @Inject constructor(
             pulledItems = response.changes.items.size,
             pulledLists = response.changes.lists.size,
         )
+    }
+
+    /**
+     * Detects rows in this pull that were last touched by a DIFFERENT account and reports them
+     * (T-65). Account-scoped, never device-scoped: a user's own second device must not
+     * self-notify. Deliberately silent when: this pass started from cursor 0 (initial hydration /
+     * full resync — everything would look "new"), our own account id is unknown (pre-T-65
+     * session — can't distinguish, so don't guess), or a row's last_touched_by is null (pre-T-64
+     * row never re-touched). Reports RAW detections; pref filtering lives in the notifier impl.
+     */
+    private suspend fun reportCollaboratorChanges(requestCursor: Long, pulledItems: List<ItemDto>) {
+        if (requestCursor == 0L) return
+        val myAccountId = sessionState.accountId ?: return
+        val foreign = pulledItems.filter { it.lastTouchedBy != null && it.lastTouchedBy != myAccountId }
+        if (foreign.isEmpty()) return
+        val changes = foreign.groupBy { it.listId }.map { (listId, items) ->
+            CollaboratorChange(
+                listId = listId,
+                // Resolved AFTER the merge loops, so a list first seen in this same pull is found.
+                listName = listDao.getById(listId)?.name?.value ?: "a shared list",
+                changedItemCount = items.size,
+            )
+        }
+        notifier.notifyCollaboratorChanges(changes)
     }
 }
 

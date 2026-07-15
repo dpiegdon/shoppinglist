@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Collaborator-change notifications (T-65); runtime-requested on API 33+ from Settings. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- allowBackup is off (T-37): SessionStore's EncryptedSharedPreferences is sealed by a
          device-bound Keystore master key that backups can't carry, so restoring this app's data to
