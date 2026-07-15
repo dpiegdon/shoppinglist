@@ -105,6 +105,33 @@ class RedeemViewModelTest {
     }
 
     @Test
+    fun `a pasted full invite URL is redeemed as its bare token (T-71)`() = runTest(mainDispatcherRule.dispatcher) {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+        val viewModel = newViewModel()
+        viewModel.onTokenChange("https://p23q.org/invite/abc.def")
+
+        viewModel.redeem()?.join()
+
+        assertEquals("list-42", viewModel.uiState.value.redeemedListId)
+        val redeemRequest = server.takeRequest()
+        assertEquals("/api/v1/invites/redeem", redeemRequest.path)
+        assertTrue(redeemRequest.body.readUtf8().contains("\"abc.def\""))
+    }
+
+    @Test
+    fun `extractInviteToken pulls the token out of full URLs and passes bare tokens through (T-71)`() {
+        assertEquals("abc.def", extractInviteToken("abc.def"))
+        assertEquals("abc.def", extractInviteToken("  abc.def  "))
+        assertEquals("abc.def", extractInviteToken("https://p23q.org/invite/abc.def"))
+        // Mounted under a path prefix, and with a trailing slash / query / fragment riding along.
+        assertEquals("abc.def", extractInviteToken("https://example.com/shopping/invite/abc.def"))
+        assertEquals("abc.def", extractInviteToken("https://p23q.org/invite/abc.def/"))
+        assertEquals("abc.def", extractInviteToken("https://p23q.org/invite/abc.def?utm=x"))
+        assertEquals("abc.def", extractInviteToken("https://p23q.org/invite/abc.def#frag"))
+    }
+
+    @Test
     fun `redeem failure surfaces the server's error message`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(409)

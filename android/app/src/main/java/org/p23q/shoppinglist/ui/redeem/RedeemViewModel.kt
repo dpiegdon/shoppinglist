@@ -42,7 +42,7 @@ class RedeemViewModel @Inject constructor(
     fun onTokenChange(value: String) = _uiState.update { it.copy(token = value, errorMessage = null) }
 
     fun redeem(): Job? {
-        val token = _uiState.value.token.trim()
+        val token = extractInviteToken(_uiState.value.token)
         if (token.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Enter an invite code") }
             return null
@@ -68,4 +68,19 @@ class RedeemViewModel @Inject constructor(
             }
         }
     }
+}
+
+/**
+ * Accepts either a bare invite token or a full invite URL (T-71). Share links are
+ * `<base_url>/invite/<token>` — possibly under a path prefix — so if the pasted text contains an
+ * `/invite/` segment, take everything after the last one and strip any trailing slash, query, or
+ * fragment that rode along. A bare token (no `/invite/`) is returned trimmed, unchanged.
+ */
+internal fun extractInviteToken(raw: String): String {
+    val trimmed = raw.trim()
+    val marker = "/invite/"
+    val afterPrefix = trimmed.lastIndexOf(marker).let { idx ->
+        if (idx >= 0) trimmed.substring(idx + marker.length) else trimmed
+    }
+    return afterPrefix.substringBefore('?').substringBefore('#').trimEnd('/')
 }
