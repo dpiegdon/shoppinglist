@@ -47,8 +47,20 @@ class NotificationPrefsStore @Inject constructor(
 
     val mutedListIds: Flow<Set<String>> = dataStore.data.map { it[MUTED_LISTS_KEY] ?: emptySet() }
 
+    /**
+     * Whether the app has already prompted for POST_NOTIFICATIONS (T-72). The in-app toggle
+     * defaults on, so the toggle's own flip-to-enable request never fires on a fresh install —
+     * MainActivity asks once after login instead, guarded by this so it prompts at most once.
+     */
+    val notificationPermissionRequested: Flow<Boolean> =
+        dataStore.data.map { it[PERMISSION_REQUESTED_KEY] ?: false }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[ENABLED_KEY] = enabled }
+    }
+
+    suspend fun setNotificationPermissionRequested(requested: Boolean) {
+        dataStore.edit { it[PERMISSION_REQUESTED_KEY] = requested }
     }
 
     suspend fun setListMuted(listId: String, muted: Boolean) {
@@ -61,5 +73,6 @@ class NotificationPrefsStore @Inject constructor(
     private companion object {
         val ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
         val MUTED_LISTS_KEY = stringSetPreferencesKey("muted_list_ids")
+        val PERMISSION_REQUESTED_KEY = booleanPreferencesKey("notification_permission_requested")
     }
 }

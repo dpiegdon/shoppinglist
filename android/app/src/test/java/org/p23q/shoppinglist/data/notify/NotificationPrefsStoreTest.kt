@@ -37,6 +37,15 @@ class NotificationPrefsStoreTest {
     }
 
     @Test
+    fun `the notification-permission-requested flag defaults false and persists once set (T-72)`() = runTest {
+        assertFalse(store.notificationPermissionRequested.first())
+
+        store.setNotificationPermissionRequested(true)
+
+        assertTrue(store.notificationPermissionRequested.first())
+    }
+
+    @Test
     fun `muting and unmuting a list only affects that list`() = runTest {
         store.setListMuted("list-a", muted = true)
         store.setListMuted("list-b", muted = true)

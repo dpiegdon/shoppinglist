@@ -1,20 +1,29 @@
 package org.p23q.shoppinglist
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ShoppingListNavHost
 import org.p23q.shoppinglist.ui.authedStartDestination
@@ -27,6 +36,12 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var themePreferenceStore: ThemePreferenceStore
 
     @Inject lateinit var session: SessionState
+
+    @Inject lateinit var notificationPrefs: NotificationPrefsStore
+
+    // Registered up-front (required before STARTED); .launch() is deferred to maybeAsk...() below.
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* result surfaces via the OS */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +59,8 @@ class MainActivity : ComponentActivity() {
             else -> authedStartDestination(session.lastOpenedListId)
         }
 
+        if (session.token != null) maybeRequestNotificationPermission()
+
         setContent {
             val themePreference by themePreferenceStore.theme.collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)
             val darkTheme = when (themePreference) {
@@ -59,6 +76,28 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     ShoppingListNavHost(startDestination = startDestination)
                 }
+            }
+        }
+    }
+
+    /**
+     * Asks for POST_NOTIFICATIONS once, after login (T-72). The in-app notifications toggle defaults
+     * on, so its own flip-to-enable request never fires on a fresh install — without this, a new
+     * user never gets prompted and collaborator notifications silently never post. Guarded by a
+     * persisted flag so we prompt at most once; the user can still (re)enable via Settings.
+     */
+    private fun maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        lifecycleScope.launch {
+            val enabled = notificationPrefs.notificationsEnabled.first()
+            val alreadyAsked = notificationPrefs.notificationPermissionRequested.first()
+            val granted = ContextCompat.checkSelfPermission(
+                this@MainActivity, Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (enabled && !alreadyAsked && !granted) {
+                // Set the flag before launching so a dismissed dialog still counts as "asked".
+                notificationPrefs.setNotificationPermissionRequested(true)
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
