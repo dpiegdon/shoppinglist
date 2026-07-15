@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -37,7 +36,7 @@ class RegistryViewModelTest {
     fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())

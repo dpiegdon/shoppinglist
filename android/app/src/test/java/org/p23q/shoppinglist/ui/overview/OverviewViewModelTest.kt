@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.overview
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -45,7 +44,7 @@ class OverviewViewModelTest {
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
         listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())

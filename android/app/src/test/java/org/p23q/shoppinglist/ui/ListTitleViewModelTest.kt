@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -33,7 +32,7 @@ class ListTitleViewModelTest {
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
+            .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         listsRepo = ListsRepo(db.listDao(), DeviceIdProvider { "device-1" }, FakeSyncTrigger())
     }
