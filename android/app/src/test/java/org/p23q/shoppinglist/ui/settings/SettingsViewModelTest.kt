@@ -23,6 +23,7 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
@@ -50,6 +51,7 @@ class SettingsViewModelTest {
     private lateinit var apiProvider: ApiProvider
     private lateinit var crashLogWriter: CrashLogWriter
     private lateinit var defaultCurrencyState: DefaultCurrencyState
+    private lateinit var notificationPrefs: NotificationPrefsStore
 
     @Before
     fun setUp() = runTest(mainDispatcherRule.dispatcher) {
@@ -89,6 +91,10 @@ class SettingsViewModelTest {
         crashLogWriter = CrashLogWriter(crashLogFile)
 
         defaultCurrencyState = DefaultCurrencyState(sessionState)
+
+        val notifPrefsFile = File.createTempFile("settings_vm_notif_prefs", ".preferences_pb")
+        notifPrefsFile.deleteOnExit()
+        notificationPrefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { notifPrefsFile })
     }
 
     @After
@@ -98,7 +104,10 @@ class SettingsViewModelTest {
     }
 
     private fun newViewModel(): SettingsViewModel =
-        SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter, defaultCurrencyState)
+        SettingsViewModel(
+            apiProvider, sessionState, serverConfig, themePreferenceStore, db,
+            crashLogWriter, defaultCurrencyState, notificationPrefs,
+        )
 
     @Test
     fun `initial state loads server URL, account email, and cached currency without a network call`() = runTest(mainDispatcherRule.dispatcher) {
@@ -188,6 +197,9 @@ class SettingsViewModelTest {
     @Test
     fun `updateInitials resends the current currency so it is not overwritten (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()  // defaultCurrency = "EUR" from FakeSessionState in setUp
+        // Await the init load (currency comes from a DataStore read on Dispatchers.IO) before acting:
+        // updateInitials resends _uiState.value.defaultCurrency, so the test must not race that load.
+        viewModel.uiState.first { it.defaultCurrency == "EUR" }
 
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "AB"}"""))
         viewModel.updateInitials("ab")?.join()
@@ -340,6 +352,17 @@ class SettingsViewModelTest {
 
         assertFalse(viewModel.uiState.value.allowSelfSignedCerts)
         assertFalse(serverConfig.allowSelfSignedCerts.first())
+    }
+
+    @Test
+    fun `notification toggle state loads from prefs and updates live (T-65)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        assertTrue(viewModel.uiState.first { it.notificationsEnabled }.notificationsEnabled)
+
+        viewModel.setNotificationsEnabled(false).join()
+
+        assertFalse(viewModel.uiState.first { !it.notificationsEnabled }.notificationsEnabled)
+        assertFalse(notificationPrefs.notificationsEnabled.first())
     }
 
     @Test

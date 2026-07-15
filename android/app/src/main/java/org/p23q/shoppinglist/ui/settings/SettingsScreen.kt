@@ -1,6 +1,10 @@
 package org.p23q.shoppinglist.ui.settings
 
+import android.Manifest
 import android.content.Intent
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -111,6 +115,31 @@ fun SettingsScreen(
                     modifier = Modifier.padding(end = 4.dp),
                 )
             }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        // Collaborator-change notifications (T-65); mute individual lists in their list properties.
+        Text("Notifications", style = MaterialTheme.typography.titleMedium)
+        val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Collaborator changes")
+                Text(
+                    "Notify when someone else edits a shared list. Mute individual lists in their list properties.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = state.notificationsEnabled,
+                onCheckedChange = { enabled ->
+                    viewModel.setNotificationsEnabled(enabled)
+                    // API 33+ needs the runtime permission; requested on enable (not cold start) per T-65.
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                },
+            )
         }
         Spacer(Modifier.height(16.dp))
 

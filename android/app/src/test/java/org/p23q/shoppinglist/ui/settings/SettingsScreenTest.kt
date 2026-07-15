@@ -32,6 +32,7 @@ import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -100,6 +101,11 @@ class SettingsScreenTest {
             db,
             crashLogWriter,
             DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
         var deleted = false
 
@@ -168,6 +174,11 @@ class SettingsScreenTest {
             db,
             crashLogWriter,
             DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
@@ -231,6 +242,11 @@ class SettingsScreenTest {
             db,
             crashLogWriter,
             DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }

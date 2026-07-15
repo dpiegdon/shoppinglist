@@ -27,6 +27,7 @@ import org.p23q.shoppinglist.data.api.UnauthorizedException
 import org.p23q.shoppinglist.data.api.UpdateSettingsRequest
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import java.io.IOException
 import javax.inject.Inject
 
@@ -50,6 +51,8 @@ data class SettingsUiState(
     val isAccountDeleted: Boolean = false,
     /** Absolute path of the crash log to hand to a share intent (T-50); consumed once fired. */
     val crashLogPath: String? = null,
+    /** Global collaborator-change notifications on/off (T-65). */
+    val notificationsEnabled: Boolean = true,
 )
 
 /** Notes: "the usual stuff" — currency, password/email, sessions, delete account, theme, server URL. */
@@ -62,6 +65,7 @@ class SettingsViewModel @Inject constructor(
     private val appDb: AppDb,
     private val crashLogWriter: CrashLogWriter,
     private val defaultCurrencyState: DefaultCurrencyState,
+    private val notificationPrefs: NotificationPrefsStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -83,6 +87,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferenceStore.theme.collect { pref -> _uiState.update { it.copy(theme = pref) } }
         }
+        viewModelScope.launch {
+            notificationPrefs.notificationsEnabled.collect { enabled ->
+                _uiState.update { it.copy(notificationsEnabled = enabled) }
+            }
+        }
+    }
+
+    /** Global collaborator-change notification toggle (T-65); per-list mutes live in list properties. */
+    fun setNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {
+        notificationPrefs.setNotificationsEnabled(enabled)
     }
 
     fun loadSessions(): Job = viewModelScope.launch {
