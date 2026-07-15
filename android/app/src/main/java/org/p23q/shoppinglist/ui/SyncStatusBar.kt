@@ -18,12 +18,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import org.p23q.shoppinglist.data.sync.SyncState
 
 /**
@@ -104,6 +106,24 @@ fun SyncStatusMarker(state: SyncState, nowMs: Long, modifier: Modifier = Modifie
             Text(text = "${state.pendingCount}", style = MaterialTheme.typography.labelSmall)
         }
     }
+}
+
+/**
+ * A "now" that ticks roughly every [intervalMs] instead of being fixed at first composition, so a
+ * recency label like [syncRecencyText]'s "just now" doesn't freeze indefinitely between sync-state
+ * changes (T-54). [intervalMs] defaults to a minute — [syncRecencyText]'s smallest unit is "min
+ * ago", so finer granularity wouldn't be visible. [clock] is a seam for tests (default: the real
+ * wall clock) so ticking can be verified without depending on real time elapsing during a test run.
+ */
+@Composable
+fun rememberTickingNowMs(intervalMs: Long = 60_000L, clock: () -> Long = System::currentTimeMillis): Long {
+    val state = produceState(initialValue = clock()) {
+        while (true) {
+            delay(intervalMs)
+            value = clock()
+        }
+    }
+    return state.value
 }
 
 internal fun attentionText(blockedCount: Int): String =

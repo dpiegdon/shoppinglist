@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useSyncContext } from "../hooks/SyncContext";
 import { syncStatusLabel } from "../lib/syncStatus";
 
@@ -8,7 +9,15 @@ import { syncStatusLabel } from "../lib/syncStatus";
  */
 export default function SyncIndicator() {
   const { loading, error, lastSyncAt } = useSyncContext();
-  const label = syncStatusLabel({ loading, error, lastSyncAt }, Date.now());
+  // Without this, "now" is only re-evaluated when loading/error/lastSyncAt changes, so a label
+  // like "Synced just now" would freeze indefinitely between syncs (T-54). A 60s tick is enough
+  // granularity for a label whose smallest unit is "min ago".
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const label = syncStatusLabel({ loading, error, lastSyncAt }, now);
 
   return (
     <span

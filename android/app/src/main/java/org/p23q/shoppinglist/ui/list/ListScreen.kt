@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.ui.SyncStatusMarker
+import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.data.db.Status
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,7 +136,7 @@ fun ListScreen(
                     // Folded into this row instead of its own line (T-63): a quiet dot rather than a
                     // full "Synced 5 min ago" sentence; the sentence itself is still there as the
                     // content description for TalkBack. The loud attention banner is Overview's job.
-                    SyncStatusMarker(state = state.sync, nowMs = System.currentTimeMillis())
+                    SyncStatusMarker(state = state.sync, nowMs = rememberTickingNowMs())
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")

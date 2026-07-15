@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.SyncStatusBar
+import org.p23q.shoppinglist.ui.rememberTickingNowMs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +53,7 @@ fun OverviewScreen(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             SyncStatusBar(
                 state = state.sync,
-                nowMs = System.currentTimeMillis(),
+                nowMs = rememberTickingNowMs(),
                 onAttentionClick = { state.attentionListId?.let(onOpenList) },
             )
             PullToRefreshBox(
