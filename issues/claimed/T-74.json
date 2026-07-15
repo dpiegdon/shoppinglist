@@ -8,7 +8,8 @@
     "notifications",
     "sync"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Android: self-heal a missing accountId so pre-v1.2.0 sessions can detect collaborator changes",
-  "updated_at": "2026-07-15T23:16:35+00:00"
+  "updated_at": "2026-07-15T23:16:36+00:00"
 }
