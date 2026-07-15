@@ -23,6 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DefaultCurrencyState
+import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
@@ -56,6 +57,7 @@ class ListViewModelTest {
     private lateinit var listId: String
     private lateinit var server: MockWebServer
     private lateinit var apiProvider: ApiProvider
+    private lateinit var showCheckedStore: ShowCheckedStore
     private val syncStatus = SyncStatus()
     private val syncer = RecordingSyncer()
 
@@ -99,6 +101,10 @@ class ListViewModelTest {
             errorInterceptor = ErrorInterceptor(json, SessionEvents()),
             json = json,
         )
+
+        val showCheckedFile = File.createTempFile("list_vm_show_checked", ".preferences_pb")
+        showCheckedFile.deleteOnExit()
+        showCheckedStore = ShowCheckedStore(PreferenceDataStoreFactory.create { showCheckedFile })
     }
 
     @After
@@ -114,6 +120,7 @@ class ListViewModelTest {
             syncer,
             syncStatus,
             defaultCurrencyState,
+            showCheckedStore,
             apiProvider,
         )
 
@@ -167,6 +174,20 @@ class ListViewModelTest {
 
         val afterToggle = viewModel.uiState.first { state -> state.groups.any { g -> g.items.any { it.id == itemId } } }
         assertTrue(afterToggle.showChecked)
+    }
+
+    @Test
+    fun `show-checked is remembered app-wide — persisted by one list and restored by the next (T-65 followup)`() = runTest(mainDispatcherRule.dispatcher) {
+        // Toggle it on via one list view; join the returned Job so the persist has landed.
+        val first = newViewModel()
+        first.uiState.first { it.listName == "Groceries" }
+        first.toggleShowChecked().join()
+        assertTrue(showCheckedStore.showChecked.first())
+
+        // A freshly-opened list view (new ViewModel, same store) restores the remembered choice.
+        val second = newViewModel()
+
+        assertTrue(second.uiState.first { it.showChecked }.showChecked)
     }
 
     @Test
@@ -414,6 +435,7 @@ class ListViewModelTest {
             syncer,
             syncStatus,
             DefaultCurrencyState(sessionState),
+            showCheckedStore,
             offlineApiProvider,
         )
         // Give the failed fetch a chance to run; nothing to await on success, so just confirm the

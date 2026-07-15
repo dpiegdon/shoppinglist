@@ -29,6 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DefaultCurrencyState
+import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
@@ -112,6 +113,11 @@ class ListScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
             DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
             apiProvider,
         )
         viewModel.toggleShowChecked()
@@ -151,6 +157,11 @@ class ListScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
             DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
             apiProvider,
         )
 
@@ -182,6 +193,11 @@ class ListScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
             DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
             apiProvider,
         )
 
@@ -213,6 +229,11 @@ class ListScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
             DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
             apiProvider,
         )
         var editedItemId: String? = null
@@ -258,6 +279,11 @@ class ListScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
             DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
             apiProvider,
         )
 
@@ -289,6 +315,11 @@ class ListScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
             DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
             apiProvider,
         )
 

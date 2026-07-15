@@ -11,8 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DefaultCurrencyState
+import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
@@ -62,6 +64,7 @@ class ListViewModel @Inject constructor(
     private val syncer: Syncer,
     syncStatus: SyncStatus,
     defaultCurrencyState: DefaultCurrencyState,
+    private val showCheckedStore: ShowCheckedStore,
     private val apiProvider: ApiProvider,
 ) : ViewModel() {
 
@@ -73,6 +76,9 @@ class ListViewModel @Inject constructor(
     private var categoryOrder: List<String> = emptyList()
     private var todoItems: List<ItemEntity> = emptyList()
     private var checkedItems: List<ItemEntity> = emptyList()
+
+    /** Guards the async restore below from clobbering a toggle that raced it (e.g. in a fast test). */
+    private var showCheckedTouched = false
 
     init {
         // Combine the list row with a SINGLE items stream (todo + checked together — ItemsRepo
@@ -115,6 +121,16 @@ class ListViewModel @Inject constructor(
                 // Offline or unreachable — no badges is the safe fallback, not an error state.
             }
         }
+        // Restore the app-wide, remembered show-checked choice (persisted, device-local, not synced).
+        // One-shot read: only one list screen is open at a time, so it's re-read on each open rather
+        // than collected live. Guarded so a toggle before this async read lands isn't overwritten.
+        viewModelScope.launch {
+            val stored = showCheckedStore.showChecked.first()
+            if (!showCheckedTouched) {
+                _uiState.update { it.copy(showChecked = stored) }
+                regroup()
+            }
+        }
     }
 
     /** Manual pull-to-refresh: an immediate foreground sync with a visible spinner (T-36). */
@@ -127,9 +143,14 @@ class ListViewModel @Inject constructor(
         }
     }
 
-    fun toggleShowChecked() {
-        _uiState.update { it.copy(showChecked = !it.showChecked) }
+    /** Returns the persistence [Job] (state updates synchronously first, so the UI is immediate). */
+    fun toggleShowChecked(): Job {
+        showCheckedTouched = true
+        val next = !_uiState.value.showChecked
+        _uiState.update { it.copy(showChecked = next) }
         regroup()
+        // Persist app-wide so every list — and the next app launch — remembers the choice.
+        return viewModelScope.launch { showCheckedStore.setShowChecked(next) }
     }
 
     /** Notes: tapping a todo row's body checks it off and arms a brief undo snackbar. */
