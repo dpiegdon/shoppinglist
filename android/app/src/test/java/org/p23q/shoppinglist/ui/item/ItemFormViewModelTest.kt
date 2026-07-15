@@ -67,6 +67,76 @@ class ItemFormViewModelTest {
     }
 
     @Test
+    fun `backlog items are suggested while the Name field is still blank (T-52)`() = runTest {
+        itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
+        itemsRepo.createItem(listId, "Sugar", status = Status.TODO)
+        itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
+        val viewModel = newViewModel()
+
+        viewModel.startAdd(listId)
+
+        val suggestions = viewModel.uiState.first { it.suggestions.isNotEmpty() }.suggestions
+        assertEquals(listOf("Flour"), suggestions.map { it.name.value })
+    }
+
+    @Test
+    fun `backlog suggestions are ordered most-recently-touched first (T-52)`() = runTest {
+        itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
+        Thread.sleep(2)
+        itemsRepo.createItem(listId, "Sugar", status = Status.BACKLOG)
+        Thread.sleep(2)
+        itemsRepo.createItem(listId, "Salt", status = Status.BACKLOG)
+        val viewModel = newViewModel()
+
+        viewModel.startAdd(listId)
+
+        val suggestions = viewModel.uiState.first { it.suggestions.size == 3 }.suggestions
+        assertEquals(listOf("Salt", "Sugar", "Flour"), suggestions.map { it.name.value })
+    }
+
+    @Test
+    fun `typing replaces backlog suggestions with a name search across every status (T-52)`() = runTest {
+        itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
+        itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.uiState.first { it.suggestions.any { s -> s.name.value == "Flour" } }
+
+        viewModel.onNameChange("Milk")
+
+        // Both the stale backlog suggestion and the new search result happen to have size 1, so
+        // sizing alone can't distinguish "already updated" from "still the old emission" -
+        // match on content instead, or first{} can return immediately on the stale value.
+        val suggestions = viewModel.uiState.first { it.suggestions.any { s -> s.name.value == "Milk" } }.suggestions
+        assertEquals(listOf("Milk"), suggestions.map { it.name.value })
+    }
+
+    @Test
+    fun `clearing the Name field back to blank restores backlog suggestions (T-52)`() = runTest {
+        itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.onNameChange("something")
+        viewModel.uiState.first { it.suggestions.isEmpty() }
+
+        viewModel.onNameChange("")
+
+        val suggestions = viewModel.uiState.first { it.suggestions.isNotEmpty() }.suggestions
+        assertEquals(listOf("Flour"), suggestions.map { it.name.value })
+    }
+
+    @Test
+    fun `edit mode never shows backlog suggestions`() = runTest {
+        itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
+        val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val viewModel = newViewModel()
+
+        viewModel.startEdit(itemId).join()
+
+        assertTrue(viewModel.uiState.value.suggestions.isEmpty())
+    }
+
+    @Test
     fun `picking a suggestion prefills the form and binds the itemId WITHOUT mutating the item`() = runTest {
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
         itemsRepo.setCategory(existingId, "dairy")

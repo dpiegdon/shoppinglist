@@ -8,9 +8,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.SessionState
@@ -45,9 +47,10 @@ data class ItemFormUiState(
 
 /**
  * Shared by [AddItemDialog] and [EditItemDialog] (Notes: both edit the same field set). Add mode
- * starts blank and offers live registry suggestions as the name is typed; picking one reuses that
- * item (setting it `todo`) instead of creating a duplicate. Edit mode pre-fills from an existing
- * item and additionally exposes status + delete.
+ * starts blank and, while Name is still empty, offers the most likely re-adds — recent backlog
+ * items, most-recently-touched first (T-52) — then switches to live registry search once the user
+ * types. Picking any suggestion reuses that item (setting it `todo`) instead of creating a
+ * duplicate. Edit mode pre-fills from an existing item and additionally exposes status + delete.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -60,19 +63,29 @@ class ItemFormViewModel @Inject constructor(
     val uiState: StateFlow<ItemFormUiState> = _uiState.asStateFlow()
 
     private var listId: String = ""
+    private val listIdFlow = MutableStateFlow("")
     private val nameQuery = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
-            nameQuery.flatMapLatest { query ->
-                if (_uiState.value.isEditMode || query.isBlank()) flowOf(emptyList()) else itemsRepo.searchRegistry(listId, query)
-            }.collect { results -> _uiState.update { it.copy(suggestions = results) } }
+            combine(listIdFlow, nameQuery) { id, query -> id to query }
+                .flatMapLatest { (id, query) ->
+                    when {
+                        _uiState.value.isEditMode || id.isBlank() -> flowOf(emptyList())
+                        query.isBlank() -> itemsRepo.itemsForListByStatus(id, Status.BACKLOG)
+                            .map { backlog -> backlog.sortedByDescending { it.status.updatedAt }.take(BACKLOG_SUGGESTION_LIMIT) }
+                        else -> itemsRepo.searchRegistry(id, query)
+                    }
+                }.collect { results -> _uiState.update { it.copy(suggestions = results) } }
         }
     }
 
     fun startAdd(listId: String) {
         this.listId = listId
+        // isEditMode must land in _uiState BEFORE listIdFlow's new value can trigger the
+        // suggestions flow, or it could briefly re-read a stale isEditMode from before this call.
         _uiState.value = ItemFormUiState(isEditMode = false, priceCurrency = sessionState.defaultCurrency ?: "")
+        listIdFlow.value = listId
         loadCategorySuggestions()
     }
 
@@ -92,6 +105,7 @@ class ItemFormViewModel @Inject constructor(
             note = item.note.value ?: "",
             status = Status.fromWireValue(item.status.value),
         )
+        listIdFlow.value = item.listId
         loadCategorySuggestions()
     }
 
@@ -235,6 +249,10 @@ class ItemFormViewModel @Inject constructor(
             itemsRepo.delete(itemId)
             _uiState.update { it.copy(isDeleteConfirmOpen = false, isDeleted = true) }
         }
+    }
+
+    private companion object {
+        const val BACKLOG_SUGGESTION_LIMIT = 5
     }
 }
 
