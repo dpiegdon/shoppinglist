@@ -10,7 +10,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SyncProvider>
-      <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <header
           style={{
             display: "flex",

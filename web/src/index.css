@@ -35,10 +35,14 @@
   box-sizing: border-box;
 }
 
+/* min-height (not height:100%) so the page — and body's background — grow with
+   content instead of clamping to one viewport; otherwise the scrolled-past area
+   of a long list falls through to the browser's default canvas colour. dvh keeps
+   short pages filling the viewport without depending on a percentage-height chain. */
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100dvh;
 }
 
 body {
