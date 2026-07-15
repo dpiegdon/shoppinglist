@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-11T18:50:17+00:00", "kind": "created", "ref": "main@e2bd7ea", "text": "Server README: operator backup guidance for the SQLite database"}
 {"actor": "claude", "at": "2026-07-14T20:16:57+00:00", "kind": "updated", "ref": "main@93ef191", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-15T08:06:56+00:00", "kind": "claimed", "ref": "main@7210c2b", "text": "claude"}
+{"actor": "claude", "at": "2026-07-15T08:08:17+00:00", "kind": "note", "ref": "main@31b9bf0", "text": "Done. Added a 'Backups' section to server/README.md: sqlite3 .backup command (safe under WAL, no downtime), notes the -wal/-shm sidecars don't need separate copying, and that INVITE_HMAC_KEY must be backed up alongside (not in the DB, losing it invalidates outstanding invites). Verified against the actual connect() code path (db.py sets PRAGMA journal_mode = WAL unconditionally on every connection). Commit 31b9bf0."}
