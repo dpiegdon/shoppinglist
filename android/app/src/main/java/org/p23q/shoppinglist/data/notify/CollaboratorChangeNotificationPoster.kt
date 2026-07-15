@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.data.notify
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -46,6 +47,9 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
     private val foregroundState: AppForegroundState,
 ) : CollaboratorChangeNotifier {
 
+    // canPost() already checks POST_NOTIFICATIONS before any notify(); lint's flow analysis can't
+    // see the check across that method boundary, so the guarded notify() below is a false positive.
+    @SuppressLint("MissingPermission")
     override suspend fun notifyCollaboratorChanges(changes: List<CollaboratorChange>) {
         if (changes.isEmpty() || foregroundState.isForeground) return
         if (!prefs.notificationsEnabled.first()) return
