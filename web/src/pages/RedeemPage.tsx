@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
+import { extractInviteToken } from "../lib/inviteToken";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 
 export default function RedeemPage() {
@@ -18,7 +19,8 @@ export default function RedeemPage() {
     setError(null);
     setRedeeming(true);
     try {
-      const { list_id } = await api.redeemInvite(token.trim());
+      // Accept a bare token or a pasted full invite URL (T-71).
+      const { list_id } = await api.redeemInvite(extractInviteToken(token));
       // Pull the newly joined list's full state immediately (Spec §6 full_lists).
       await push({}, [list_id]);
       localStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
