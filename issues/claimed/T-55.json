@@ -8,7 +8,8 @@
     "agent",
     "ready"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "Android: default-currency change should reflect in an already-open list",
-  "updated_at": "2026-07-14T20:16:57+00:00"
+  "updated_at": "2026-07-15T07:46:24+00:00"
 }
