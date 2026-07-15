@@ -28,6 +28,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
@@ -110,7 +111,7 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            FakeSessionState(),
+            DefaultCurrencyState(FakeSessionState()),
             apiProvider,
         )
         viewModel.toggleShowChecked()
@@ -149,7 +150,7 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            FakeSessionState(),
+            DefaultCurrencyState(FakeSessionState()),
             apiProvider,
         )
 
@@ -180,7 +181,7 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            FakeSessionState(),
+            DefaultCurrencyState(FakeSessionState()),
             apiProvider,
         )
 
@@ -211,7 +212,7 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            FakeSessionState(),
+            DefaultCurrencyState(FakeSessionState()),
             apiProvider,
         )
         var editedItemId: String? = null
@@ -256,7 +257,7 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            FakeSessionState(),
+            DefaultCurrencyState(FakeSessionState()),
             apiProvider,
         )
 
@@ -287,7 +288,7 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            FakeSessionState(),
+            DefaultCurrencyState(FakeSessionState()),
             apiProvider,
         )
 

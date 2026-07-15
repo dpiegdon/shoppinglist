@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.ThemePreference
@@ -60,6 +61,7 @@ class SettingsViewModel @Inject constructor(
     private val themePreferenceStore: ThemePreferenceStore,
     private val appDb: AppDb,
     private val crashLogWriter: CrashLogWriter,
+    private val defaultCurrencyState: DefaultCurrencyState,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -131,6 +133,9 @@ class SettingsViewModel @Inject constructor(
                     UpdateSettingsRequest(normalized, _uiState.value.initials),
                 )
                 sessionState.defaultCurrency = response.defaultCurrency
+                // Also updates the in-memory mirror (T-55) so an already-open list screen picks up
+                // the change immediately instead of only the next time it's opened.
+                defaultCurrencyState.set(response.defaultCurrency)
                 _uiState.update {
                     it.copy(
                         defaultCurrency = response.defaultCurrency,

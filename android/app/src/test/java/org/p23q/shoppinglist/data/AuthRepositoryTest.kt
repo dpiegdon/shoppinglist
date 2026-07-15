@@ -33,6 +33,7 @@ class AuthRepositoryTest {
     private lateinit var db: AppDb
     private lateinit var serverConfig: ServerConfig
     private lateinit var sessionState: FakeSessionState
+    private lateinit var defaultCurrencyState: DefaultCurrencyState
     private lateinit var repository: AuthRepository
 
     @Before
@@ -61,7 +62,8 @@ class AuthRepositoryTest {
             json = json,
         )
 
-        repository = AuthRepositoryImpl(apiProvider, sessionState, db)
+        defaultCurrencyState = DefaultCurrencyState(sessionState)
+        repository = AuthRepositoryImpl(apiProvider, sessionState, db, defaultCurrencyState)
     }
 
     @After
@@ -88,6 +90,20 @@ class AuthRepositoryTest {
         assertEquals("tok-123", sessionState.token)
         assertEquals("milk@example.com", sessionState.accountEmail)
         assertEquals("EUR", sessionState.defaultCurrency)
+    }
+
+    @Test
+    fun `login also writes the default currency through the in-memory mirror (T-55)`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-123", "account_id": "acc-1", "email": "milk@example.com"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+
+        repository.login("milk@example.com", "hunter2")
+
+        assertEquals("EUR", defaultCurrencyState.currency.value)
     }
 
     @Test

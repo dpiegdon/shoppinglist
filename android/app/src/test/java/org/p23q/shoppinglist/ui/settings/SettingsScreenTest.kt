@@ -22,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreferenceStore
@@ -91,7 +92,15 @@ class SettingsScreenTest {
         val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
         crashLogFile.deleteOnExit()
         val crashLogWriter = CrashLogWriter(crashLogFile)
-        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
+        val viewModel = SettingsViewModel(
+            apiProvider,
+            sessionState,
+            serverConfig,
+            themePreferenceStore,
+            db,
+            crashLogWriter,
+            DefaultCurrencyState(sessionState),
+        )
         var deleted = false
 
         composeTestRule.setContent {
@@ -151,7 +160,15 @@ class SettingsScreenTest {
         val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
         crashLogFile.deleteOnExit()
         val crashLogWriter = CrashLogWriter(crashLogFile)
-        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
+        val viewModel = SettingsViewModel(
+            apiProvider,
+            sessionState,
+            serverConfig,
+            themePreferenceStore,
+            db,
+            crashLogWriter,
+            DefaultCurrencyState(sessionState),
+        )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
@@ -206,7 +223,15 @@ class SettingsScreenTest {
         val crashLogFile = File.createTempFile("settings_screen_crashlog_empty", ".txt")
         crashLogFile.deleteOnExit()
         val crashLogWriter = CrashLogWriter(crashLogFile)
-        val viewModel = SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
+        val viewModel = SettingsViewModel(
+            apiProvider,
+            sessionState,
+            serverConfig,
+            themePreferenceStore,
+            db,
+            crashLogWriter,
+            DefaultCurrencyState(sessionState),
+        )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()

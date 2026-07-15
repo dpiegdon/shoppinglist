@@ -22,6 +22,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreference
@@ -49,6 +50,7 @@ class SettingsViewModelTest {
     private lateinit var themePreferenceStore: ThemePreferenceStore
     private lateinit var apiProvider: ApiProvider
     private lateinit var crashLogWriter: CrashLogWriter
+    private lateinit var defaultCurrencyState: DefaultCurrencyState
 
     @Before
     fun setUp() = runTest {
@@ -86,6 +88,8 @@ class SettingsViewModelTest {
         val crashLogFile = File.createTempFile("settings_vm_crash_log", ".txt")
         crashLogFile.deleteOnExit()
         crashLogWriter = CrashLogWriter(crashLogFile)
+
+        defaultCurrencyState = DefaultCurrencyState(sessionState)
     }
 
     @After
@@ -95,7 +99,7 @@ class SettingsViewModelTest {
     }
 
     private fun newViewModel(): SettingsViewModel =
-        SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter)
+        SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter, defaultCurrencyState)
 
     @Test
     fun `initial state loads server URL, account email, and cached currency without a network call`() = runTest {
@@ -129,6 +133,16 @@ class SettingsViewModelTest {
         assertEquals("USD", viewModel.uiState.value.defaultCurrency)
         assertEquals("USD", sessionState.defaultCurrency)
         assertNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `updateCurrency success also writes through the in-memory mirror (T-55)`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "MI"}"""))
+        val viewModel = newViewModel()
+
+        viewModel.updateCurrency("usd")?.join()
+
+        assertEquals("USD", defaultCurrencyState.currency.value)
     }
 
     @Test

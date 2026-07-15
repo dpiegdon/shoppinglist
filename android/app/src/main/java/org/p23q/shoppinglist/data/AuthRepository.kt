@@ -49,6 +49,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val apiProvider: ApiProvider,
     private val sessionState: SessionState,
     private val appDb: AppDb,
+    private val defaultCurrencyState: DefaultCurrencyState,
 ) : AuthRepository {
 
     override suspend fun register(email: String, password: String) {
@@ -61,7 +62,9 @@ class AuthRepositoryImpl @Inject constructor(
         val response = api.login(LoginRequest(email, password, deviceLabel))
         sessionState.token = response.token
         sessionState.accountEmail = response.email
-        sessionState.defaultCurrency = api.getSettings().defaultCurrency
+        val currency = api.getSettings().defaultCurrency
+        sessionState.defaultCurrency = currency
+        defaultCurrencyState.set(currency)
     }
 
     override suspend fun logout() {

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
@@ -61,13 +61,13 @@ class ListViewModel @Inject constructor(
     private val listsRepo: ListsRepo,
     private val syncer: Syncer,
     syncStatus: SyncStatus,
-    sessionState: SessionState,
+    defaultCurrencyState: DefaultCurrencyState,
     private val apiProvider: ApiProvider,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
 
-    private val _uiState = MutableStateFlow(ListUiState(defaultCurrency = sessionState.defaultCurrency))
+    private val _uiState = MutableStateFlow(ListUiState(defaultCurrency = defaultCurrencyState.currency.value))
     val uiState: StateFlow<ListUiState> = _uiState.asStateFlow()
 
     private var categoryOrder: List<String> = emptyList()
@@ -98,6 +98,12 @@ class ListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             syncStatus.state.collect { sync -> _uiState.update { it.copy(sync = sync) } }
+        }
+        // Live, not one-shot (T-55): SessionState's EncryptedSharedPreferences backing isn't
+        // observable, so without this an already-open list wouldn't see a Settings currency change
+        // until the screen was recreated.
+        viewModelScope.launch {
+            defaultCurrencyState.currency.collect { currency -> _uiState.update { it.copy(defaultCurrency = currency) } }
         }
         // One-shot, not live (T-64): the badge only needs to know the roster, which changes rarely
         // relative to how often this screen opens. Silently stays empty offline/on error.

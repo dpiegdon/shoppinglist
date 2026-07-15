@@ -23,6 +23,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
@@ -106,14 +107,14 @@ class ListViewModelTest {
         server.shutdown()
     }
 
-    private fun newViewModel(): ListViewModel =
+    private fun newViewModel(defaultCurrencyState: DefaultCurrencyState = DefaultCurrencyState(sessionState)): ListViewModel =
         ListViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             itemsRepo,
             listsRepo,
             syncer,
             syncStatus,
-            sessionState,
+            defaultCurrencyState,
             apiProvider,
         )
 
@@ -324,6 +325,25 @@ class ListViewModelTest {
     }
 
     @Test
+    fun `a currency change reflects immediately in an already-open list, not just the next one (T-55)`() = runTest {
+        val itemId = itemsRepo.createItem(listId, "Bread")
+        itemsRepo.setPrice(itemId, amount = "2.50", currency = null)
+        sessionState.defaultCurrency = "USD"
+        val defaultCurrencyState = DefaultCurrencyState(sessionState)
+        val viewModel = newViewModel(defaultCurrencyState)
+        viewModel.uiState.first { it.groups.isNotEmpty() }
+        assertEquals("USD", viewModel.uiState.value.defaultCurrency)
+
+        // Simulates SettingsViewModel.updateCurrency()'s effect on the SAME app-wide singleton this
+        // already-open ListViewModel is observing - no need to recreate the screen (T-55).
+        defaultCurrencyState.set("EUR")
+
+        val updated = viewModel.uiState.first { it.defaultCurrency == "EUR" }
+        val item = updated.groups.flatMap { it.items }.single { it.id == itemId }
+        assertEquals("2.50 EUR", formatPrice(item, updated.defaultCurrency))
+    }
+
+    @Test
     fun `the list name updates live on rename, without recreating the view model (T-34)`() = runTest {
         val viewModel = newViewModel()
         assertEquals("Groceries", viewModel.uiState.first { it.listName == "Groceries" }.listName)
@@ -394,7 +414,7 @@ class ListViewModelTest {
             listsRepo,
             syncer,
             syncStatus,
-            sessionState,
+            DefaultCurrencyState(sessionState),
             offlineApiProvider,
         )
         // Give the failed fetch a chance to run; nothing to await on success, so just confirm the
