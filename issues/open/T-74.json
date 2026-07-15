@@ -1,0 +1,14 @@
+{
+  "body": "accountId is only stored at login; a session that logged in before v1.2.0 has\naccountId=null, so SyncEngine.reportCollaboratorChanges() returns early and no\ncollaborator-change notification ever fires \u2014 a silent failure with no re-login\nprompt. There's no /me endpoint, but the members list (lists/{id}/members)\nreturns account_id + email, and the client knows its own accountEmail. Backfill\naccountId in SyncEngine (best-effort, when null) by fetching any local list's\nmembers and matching the email, so it self-heals in the background worker.",
+  "created_at": "2026-07-15T23:16:35+00:00",
+  "id": "T-74",
+  "labels": [
+    "android",
+    "bug",
+    "notifications",
+    "sync"
+  ],
+  "priority": 2,
+  "title": "Android: self-heal a missing accountId so pre-v1.2.0 sessions can detect collaborator changes",
+  "updated_at": "2026-07-15T23:16:35+00:00"
+}
