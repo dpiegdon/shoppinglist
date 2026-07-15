@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-15T20:52:40+00:00", "kind": "created", "ref": "main@6eb58f1", "text": "Android: reduce background-sync interval toward ~5 min for timelier collaborator notifications"}
 {"actor": "claude", "at": "2026-07-15T20:52:40+00:00", "kind": "claimed", "ref": "main@6eb58f1", "text": "claude"}
 {"actor": "claude", "at": "2026-07-15T23:11:42+00:00", "kind": "note", "ref": "main@6eb58f1", "text": "Implemented a self-rescheduling ~5-min one-time worker, then reverted at the user's request: WorkManager's periodic minimum is 15 min, and Doze/battery optimization batches background work when the device is idle anyway, so the ~5-min target gave little real benefit for more battery. Keeping the 15-min PeriodicWorkRequest."}
+{"actor": "claude", "at": "2026-07-15T23:11:42+00:00", "kind": "rejected", "ref": "main@6eb58f1", "text": ""}
