@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-15T20:08:21+00:00", "kind": "created", "ref": "main@0df8123", "text": "Android: remember the 'show checked' toggle app-wide across lists and restarts"}
+{"actor": "claude", "at": "2026-07-15T20:08:39+00:00", "kind": "note", "ref": "main@0df8123", "text": "Done. DataStore-backed ShowCheckedStore (device-local, not synced, survives logout), restored on each list open with a guard against an early toggle being clobbered by the async restore; toggle returns its persist Job. Commit 2b60cfb. Full Android suite + lint clean."}
