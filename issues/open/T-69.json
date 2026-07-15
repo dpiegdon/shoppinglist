@@ -1,0 +1,13 @@
+{
+  "body": "Show-checked was per-ListViewModel and reset on each open. Persist it app-wide\n(DataStore, device-local, not synced) so it's shared across lists and survives\napp restarts.",
+  "created_at": "2026-07-15T20:08:21+00:00",
+  "id": "T-69",
+  "labels": [
+    "android",
+    "feature",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Android: remember the 'show checked' toggle app-wide across lists and restarts",
+  "updated_at": "2026-07-15T20:08:21+00:00"
+}
