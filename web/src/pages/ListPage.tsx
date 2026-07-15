@@ -7,13 +7,14 @@ import { checkedItems, groupVisibleItems } from "../lib/grouping";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
+import { useShowChecked } from "../hooks/useShowChecked";
 import type { ItemObject, ItemStatus, Member } from "../api/contract";
 
 export default function ListPage() {
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId } = useSyncContext();
   const defaultCurrency = useDefaultCurrency();
-  const [showChecked, setShowChecked] = useState(false);
+  const [showChecked, toggleShowChecked] = useShowChecked();
   const [dialogItem, setDialogItem] = useState<ItemObject | "new" | null>(null);
   const [undo, setUndo] = useState<{ itemId: string; previousStatus: ItemStatus } | null>(null);
   // Fetched once per list open, best-effort (T-64) — an empty roster on error/offline correctly
@@ -151,7 +152,7 @@ export default function ListPage() {
             type="button"
             className="btn-toggle"
             aria-pressed={showChecked}
-            onClick={() => setShowChecked((v) => !v)}
+            onClick={toggleShowChecked}
           >
             {showChecked ? "✓ " : ""}Show checked
           </button>
