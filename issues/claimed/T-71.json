@@ -5,10 +5,11 @@
   "labels": [
     "android",
     "bug",
-    "ux"
+    "ux",
+    "web"
   ],
   "owner": "claude",
   "priority": 3,
-  "title": "Android: redeeming a pasted invite should accept the full URL, not only the bare token",
-  "updated_at": "2026-07-15T20:34:13+00:00"
+  "title": "Redeeming a pasted invite should accept the full URL, not only the bare token (Android + web)",
+  "updated_at": "2026-07-15T20:34:14+00:00"
 }
