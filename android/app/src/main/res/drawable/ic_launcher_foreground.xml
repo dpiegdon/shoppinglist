@@ -1,6 +1,10 @@
 <!-- Adaptive-icon foreground: the brand mark centered in the 108dp canvas, within the 72dp safe
-     zone (scaled 1.2x, i.e. ~57.6dp, and translated to center). Background is @color/ic_launcher_background. -->
+     zone (scaled 1.2x, i.e. ~57.6dp, and translated to center). Background is @color/ic_launcher_background.
+     Same violet-to-blue gradient as ic_brand_logo.xml — the gradient's start/end coordinates live in
+     the path's own (pre-transform) space, so the enclosing group's scale/translate carries the
+     gradient along with the path exactly as it does for a flat fillColor. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
@@ -10,8 +14,17 @@
         android:scaleY="1.2"
         android:translateX="25.2"
         android:translateY="26.4">
-        <path
-            android:fillColor="#863BFF"
-            android:pathData="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" />
+        <path android:pathData="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="0"
+                    android:endX="48"
+                    android:endY="44.938"
+                    android:startColor="#863BFF"
+                    android:endColor="#47BFFF" />
+            </aapt:attr>
+        </path>
     </group>
 </vector>
