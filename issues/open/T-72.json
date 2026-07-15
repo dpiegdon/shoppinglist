@@ -1,0 +1,13 @@
+{
+  "body": "The collaborator-notification toggle defaults ON, but POST_NOTIFICATIONS is only\nrequested when the user flips the Settings toggle to on. On a fresh install the\ntoggle is already on, so that flip never happens -> permission never requested ->\ncanPost() silently returns false -> no notifications until the user grants it by\nhand in system settings. Fix: request POST_NOTIFICATIONS automatically once, when\nthe user first lands in the app after login (if enabled + not granted, API 33+).",
+  "created_at": "2026-07-15T20:52:39+00:00",
+  "id": "T-72",
+  "labels": [
+    "android",
+    "bug",
+    "notifications"
+  ],
+  "priority": 2,
+  "title": "Android: notification permission is never auto-requested (always-on toggle means the flip-to-enable request never fires)",
+  "updated_at": "2026-07-15T20:52:39+00:00"
+}
