@@ -82,6 +82,71 @@ describe("ItemDialog (add mode)", () => {
   });
 });
 
+describe("ItemDialog add-another mode (T-53)", () => {
+  it("saves, clears the form, and keeps the dialog open instead of closing it", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Category"), "dairy");
+    await userEvent.click(screen.getByText("Add another"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "Milk", category: "dairy" }));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Name")).toHaveValue("");
+    expect(screen.getByLabelText("Category")).toHaveValue("");
+  });
+
+  it("refocuses the name field after saving so another item can be typed immediately", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.click(screen.getByText("Add another"));
+
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+  });
+
+  it("clears a matched-existing suggestion pick so the next item isn't bound to the same id", async () => {
+    const registry = [registryItem("1", "Milk")];
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={registry} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+    await userEvent.type(screen.getByLabelText("Name"), "Mi");
+    await userEvent.click(await screen.findByText("Milk"));
+    await userEvent.click(screen.getByText("Add another"));
+
+    await userEvent.type(screen.getByLabelText("Name"), "Bread");
+    await userEvent.click(screen.getByText("Add another"));
+
+    const secondCall = onSave.mock.calls[1][0];
+    expect(secondCall.name).toBe("Bread");
+    expect(secondCall.itemId).not.toBe("1");
+  });
+
+  it("is not shown in edit mode", () => {
+    const item = registryItem("1", "Milk");
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Add another")).not.toBeInTheDocument();
+  });
+});
+
 describe("ItemDialog (edit mode)", () => {
   it("prefills existing values and offers delete", async () => {
     const item = registryItem("1", "Milk", "dairy");

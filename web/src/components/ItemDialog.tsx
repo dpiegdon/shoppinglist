@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import type { ItemObject, ItemStatus } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 
@@ -69,6 +69,7 @@ export default function ItemDialog({
   );
   const [saving, setSaving] = useState(false);
   const [storesInput, setStoresInput] = useState(values.stores.join(", "));
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const suggestions = useMemo(() => {
     if (isEdit || !values.name.trim()) return [];
@@ -93,8 +94,12 @@ export default function ItemDialog({
     }
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  /**
+   * closeAfter=false is "Add another" (T-53, parity with Android's T-41): saves, then resets to a
+   * blank add form and refocuses Name instead of closing, for adding several items in a burst
+   * without reopening the dialog each time. Add mode only.
+   */
+  async function performSave(closeAfter: boolean) {
     const name = values.name.trim();
     if (!name) return;
     setSaving(true);
@@ -114,10 +119,27 @@ export default function ItemDialog({
         note: values.note.trim(),
         status,
       });
-      onClose();
+      if (closeAfter) {
+        onClose();
+      } else {
+        setMatchedExisting(null);
+        setValues(emptyValues(defaultCurrency));
+        setStoresInput("");
+        setStatus("todo");
+        nameInputRef.current?.focus();
+      }
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    performSave(true);
+  }
+
+  function handleSaveAndAddAnother() {
+    performSave(false);
   }
 
   return (
@@ -129,6 +151,7 @@ export default function ItemDialog({
           <label htmlFor="item-name">Name</label>
           <input
             id="item-name"
+            ref={nameInputRef}
             autoFocus
             required
             autoComplete="off"
@@ -257,6 +280,11 @@ export default function ItemDialog({
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
+            {!isEdit && (
+              <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleSaveAndAddAnother}>
+                Add another
+              </button>
+            )}
             <button type="submit" className="btn" disabled={saving}>
               Save
             </button>
