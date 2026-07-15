@@ -10,5 +10,5 @@
   "owner": "claude",
   "priority": 2,
   "title": "Android: notification permission is never auto-requested (always-on toggle means the flip-to-enable request never fires)",
-  "updated_at": "2026-07-15T20:52:39+00:00"
+  "updated_at": "2026-07-15T23:28:35+00:00"
 }

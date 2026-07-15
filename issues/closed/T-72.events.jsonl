@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-15T20:52:39+00:00", "kind": "created", "ref": "main@6eb58f1", "text": "Android: notification permission is never auto-requested (always-on toggle means the flip-to-enable request never fires)"}
 {"actor": "claude", "at": "2026-07-15T20:52:39+00:00", "kind": "claimed", "ref": "main@6eb58f1", "text": "claude"}
 {"actor": "claude", "at": "2026-07-15T23:28:35+00:00", "kind": "note", "ref": "main@db5fd04", "text": "Fixed 2fda7cc \u2014 MainActivity requests POST_NOTIFICATIONS once after login (API 33+, if enabled & not granted), guarded by a persisted flag in NotificationPrefsStore. Full Android suite + lint clean."}
+{"actor": "claude", "at": "2026-07-15T23:28:35+00:00", "kind": "closed", "ref": "main@db5fd04", "text": ""}
