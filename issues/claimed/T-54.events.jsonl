@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-11T18:50:16+00:00", "kind": "created", "ref": "main@e2bd7ea", "text": "Sync recency label should tick, not freeze on 'just now' (both clients)"}
 {"actor": "claude", "at": "2026-07-14T20:16:57+00:00", "kind": "updated", "ref": "main@93ef191", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-15T07:29:39+00:00", "kind": "claimed", "ref": "main@97f955a", "text": "claude"}
+{"actor": "claude", "at": "2026-07-15T07:46:12+00:00", "kind": "note", "ref": "main@5525f22", "text": "Done, both platforms. Android: rememberTickingNowMs() (produceState + delay, ~60s, injectable clock for deterministic Compose mainClock tests), wired into SyncStatusBar (Overview) and SyncStatusMarker (list screen). Web: SyncIndicator re-renders on a 60s setInterval tick. Pure formatters untouched. Full Android suite BUILD SUCCESSFUL (zero failures), web 56/56 + tsc + oxlint clean. Commit 5525f22."}
