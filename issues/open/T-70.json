@@ -1,0 +1,13 @@
+{
+  "body": "When a list is open its title shows in the top bar; tapping it should navigate\nto the overview to pick another list.",
+  "created_at": "2026-07-15T20:08:21+00:00",
+  "id": "T-70",
+  "labels": [
+    "android",
+    "feature",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Android: tapping the open list's title should return to the overview",
+  "updated_at": "2026-07-15T20:08:21+00:00"
+}
