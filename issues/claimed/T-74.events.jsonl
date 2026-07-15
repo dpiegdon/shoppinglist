@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-15T23:16:35+00:00", "kind": "created", "ref": "main@6eb58f1", "text": "Android: self-heal a missing accountId so pre-v1.2.0 sessions can detect collaborator changes"}
 {"actor": "claude", "at": "2026-07-15T23:16:36+00:00", "kind": "claimed", "ref": "main@6eb58f1", "text": "claude"}
+{"actor": "claude", "at": "2026-07-15T23:28:36+00:00", "kind": "note", "ref": "main@db5fd04", "text": "Fixed db5fd04 \u2014 SyncEngine.ensureAccountId() backfills a null accountId best-effort by matching sessionState.accountEmail against any list's members roster (account_id + email), self-healing in the background worker without a re-login. Verified: new SyncEngineTest test + full Android suite + lint clean."}
