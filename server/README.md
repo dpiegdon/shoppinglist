@@ -287,6 +287,26 @@ accounts, list creation, invite + redeem, concurrent offline edits, sync
 convergence, both members leaving (the second leave orphans the list), and
 tombstone purge via `gc.run`.
 
+## Backups
+
+The database is a single SQLite file (`DATABASE_PATH`), running in WAL mode
+(`PRAGMA journal_mode = WAL`) — a raw file copy taken while the server is
+running can catch it mid-write. Use SQLite's own online backup instead,
+which is safe to run against a live database with no downtime:
+
+```bash
+sqlite3 /var/lib/shoppinglist/shoppinglist.db ".backup /backups/shoppinglist-$(date +%F).db"
+```
+
+That's the only file you need to snapshot: WAL mode's `-wal`/`-shm` sidecar
+files next to the main database are transient, and `.backup` already folds
+their content into the output, so they don't need to be copied separately.
+
+**Also back up `INVITE_HMAC_KEY` alongside the database** — it isn't stored
+in the database, and losing it invalidates every outstanding invite link
+(see "About `invite_hmac_key`" above); nothing else is affected, and
+everything else recovers from the database backup alone.
+
 ## Deployment requirements
 
 These are **not optional** — the blueprint does not implement them itself,
