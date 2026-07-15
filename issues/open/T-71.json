@@ -1,0 +1,13 @@
+{
+  "body": "RedeemViewModel.redeem() passes the text field value straight to the API, so\npasting a full invite link (e.g. https://host/invite/<token>, including under a\npath prefix like /shopping/invite/<token>) fails \u2014 only the bare encoded token\nworks. Extract the token from the /invite/<token> URL when one is pasted, while\nstill accepting a bare token. (The App-Link deep-link path already extracts the\ntoken in Nav.kt; this is the manual-paste path in the redeem dialog/screen.)",
+  "created_at": "2026-07-15T20:18:38+00:00",
+  "id": "T-71",
+  "labels": [
+    "android",
+    "bug",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Android: redeeming a pasted invite should accept the full URL, not only the bare token",
+  "updated_at": "2026-07-15T20:18:38+00:00"
+}
