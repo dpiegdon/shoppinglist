@@ -7,6 +7,7 @@
     "sync",
     "notifications"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Android: reduce background-sync interval toward ~5 min for timelier collaborator notifications",
   "updated_at": "2026-07-15T20:52:40+00:00"
