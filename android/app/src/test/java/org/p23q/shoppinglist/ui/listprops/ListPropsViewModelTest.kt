@@ -29,6 +29,7 @@ import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -52,6 +53,7 @@ class ListPropsViewModelTest {
     private lateinit var itemsRepo: ItemsRepo
     private lateinit var listsRepo: ListsRepo
     private lateinit var apiProvider: ApiProvider
+    private lateinit var notificationPrefs: NotificationPrefsStore
     private lateinit var listId: String
 
     @Before
@@ -81,6 +83,10 @@ class ListPropsViewModelTest {
             errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
             json = json,
         )
+
+        val notifPrefsFile = File.createTempFile("listprops_vm_notif_prefs", ".preferences_pb")
+        notifPrefsFile.deleteOnExit()
+        notificationPrefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { notifPrefsFile })
     }
 
     @After
@@ -90,7 +96,7 @@ class ListPropsViewModelTest {
     }
 
     private fun newViewModel(): ListPropsViewModel =
-        ListPropsViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, itemsRepo, apiProvider)
+        ListPropsViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, itemsRepo, apiProvider, notificationPrefs)
 
     @Test
     fun `initial state loads the name and merges category_order with distinct categories, without a network call`() = runTest(mainDispatcherRule.dispatcher) {
@@ -287,6 +293,22 @@ class ListPropsViewModelTest {
         assertTrue(viewModel.uiState.value.hasLeft)
         assertNull(listsRepo.getById(listId))
         assertNull(itemsRepo.getById(itemId))
+    }
+
+    @Test
+    fun `the per-list notification toggle reflects and writes the mute preference (T-65)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        assertTrue(viewModel.uiState.first { it.notificationsEnabledForList }.notificationsEnabledForList)
+
+        viewModel.setListNotificationsEnabled(false).join()
+
+        assertFalse(viewModel.uiState.first { !it.notificationsEnabledForList }.notificationsEnabledForList)
+        assertEquals(setOf(listId), notificationPrefs.mutedListIds.first())
+
+        viewModel.setListNotificationsEnabled(true).join()
+
+        assertTrue(viewModel.uiState.first { it.notificationsEnabledForList }.notificationsEnabledForList)
+        assertTrue(notificationPrefs.mutedListIds.first().isEmpty())
     }
 
     @Test

@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -106,6 +107,17 @@ fun ListPropsScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         TextButton(onClick = { viewModel.saveNotes() }) { Text("Save notes") }
+        Spacer(Modifier.height(16.dp))
+
+        // Per-list collaborator-change notification mute (T-65); the global switch is in Settings.
+        Text("Notifications", style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("Notify about changes to this list", modifier = Modifier.weight(1f))
+            Switch(
+                checked = state.notificationsEnabledForList,
+                onCheckedChange = { viewModel.setListNotificationsEnabled(it) },
+            )
+        }
         Spacer(Modifier.height(16.dp))
 
         Text("Shared with", style = MaterialTheme.typography.titleMedium)

@@ -28,6 +28,7 @@ import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -81,6 +82,11 @@ class ListPropsScreenTest {
             listsRepo,
             itemsRepo,
             apiProvider,
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
         var left = false
 
@@ -129,6 +135,11 @@ class ListPropsScreenTest {
             listsRepo,
             itemsRepo,
             apiProvider,
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
 
         composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
@@ -176,6 +187,11 @@ class ListPropsScreenTest {
             listsRepo,
             itemsRepo,
             apiProvider,
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
         var duplicatedListId: String? = null
 

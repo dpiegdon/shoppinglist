@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.CreateInviteRequest
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.api.PendingInviteDto
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.ui.Routes
@@ -35,6 +36,8 @@ data class ListPropsUiState(
     val isLeaveConfirmOpen: Boolean = false,
     val hasLeft: Boolean = false,
     val duplicatedListId: String? = null,
+    /** Per-list collaborator-change notifications (T-65); false = this list is muted. */
+    val notificationsEnabledForList: Boolean = true,
     val errorMessage: String? = null,
 )
 
@@ -45,6 +48,7 @@ class ListPropsViewModel @Inject constructor(
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,
     private val apiProvider: ApiProvider,
+    private val notificationPrefs: NotificationPrefsStore,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
@@ -67,6 +71,16 @@ class ListPropsViewModel @Inject constructor(
                 )
             }
         }
+        viewModelScope.launch {
+            notificationPrefs.mutedListIds.collect { muted ->
+                _uiState.update { it.copy(notificationsEnabledForList = listId !in muted) }
+            }
+        }
+    }
+
+    /** Per-list collaborator-notification mute (T-65) — device-local, deliberately not synced. */
+    fun setListNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {
+        notificationPrefs.setListMuted(listId, muted = !enabled)
     }
 
     fun loadMembers(): Job = viewModelScope.launch {
