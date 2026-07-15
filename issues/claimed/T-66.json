@@ -7,7 +7,8 @@
     "reliability",
     "agent"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Android: OverviewViewModelTest is flaky (MainDispatcherRule / runTest dispatcher race)",
-  "updated_at": "2026-07-14T20:37:45+00:00"
+  "updated_at": "2026-07-15T09:36:48+00:00"
 }
