@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-07-14T20:16:56+00:00", "kind": "updated", "ref": "main@93ef191", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-15T07:25:37+00:00", "kind": "claimed", "ref": "main@6f5858b", "text": "claude"}
 {"actor": "claude", "at": "2026-07-15T07:29:29+00:00", "kind": "note", "ref": "main@97f955a", "text": "Done. 'Add another' button in ItemDialog.tsx (add mode only): saves, resets the form to blank, refocuses Name, clears any matched-existing suggestion binding. Mirrors Android's T-41. Commit 97f955a."}
+{"actor": "claude", "at": "2026-07-15T07:29:30+00:00", "kind": "closed", "ref": "main@97f955a", "text": ""}
