@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -152,7 +153,17 @@ fun ShoppingListNavHost(
         }
         composable(Routes.LIST_PATTERN) { backStackEntry ->
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
-            AppDrawerScaffold(navController = navController, title = liveListTitle("List")) {
+            AppDrawerScaffold(
+                navController = navController,
+                title = liveListTitle("List"),
+                // Tapping the open list's title jumps back to the overview to pick another list.
+                onTitleClick = {
+                    navController.navigate(Routes.OVERVIEW) {
+                        popUpTo(Routes.OVERVIEW)
+                        launchSingleTop = true
+                    }
+                },
+            ) {
                 var isAddDialogOpen by rememberSaveable { mutableStateOf(false) }
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -251,6 +262,8 @@ internal fun AppDrawerScaffold(
     navController: NavHostController,
     title: String,
     loginViewModel: LoginViewModel = hiltViewModel(),
+    // When set, the top-bar title becomes tappable (the list screen uses it to jump to Overview).
+    onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -327,7 +340,10 @@ internal fun AppDrawerScaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
-                    title = { Text(title) },
+                    title = {
+                        val titleModifier = if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier
+                        Text(title, modifier = titleModifier)
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
