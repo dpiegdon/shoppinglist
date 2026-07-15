@@ -410,4 +410,35 @@ class SyncEngineTest {
 
         assertTrue(notifier.calls.isEmpty())
     }
+
+    @Test
+    fun `a null accountId is backfilled from the members roster by email, enabling detection (T-74)`() = runTest {
+        pointAtServer()
+        sessionState.accountId = null // pre-v1.2.0 session: never stored at login
+        sessionState.accountEmail = "me@example.com"
+        sessionState.syncCursor = 5
+        // The sync response (applied before the backfill) creates list-1, which the backfill then
+        // uses for its members lookup.
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-other")),
+                ),
+            ),
+        )
+        // The members roster carries the current user (matched by email) plus the collaborator.
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"members": [{"account_id": "acc-me", "email": "me@example.com", "initials": "ME", "joined_at": 1},""" +
+                    """{"account_id": "acc-other", "email": "friend@example.com", "initials": "FR", "joined_at": 2}], "invites": []}""",
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertEquals("acc-me", sessionState.accountId)
+        assertEquals(listOf(CollaboratorChange("list-1", "Groceries", 1)), notifier.calls.single())
+    }
 }

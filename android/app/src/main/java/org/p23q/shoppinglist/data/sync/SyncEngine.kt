@@ -117,6 +117,7 @@ class SyncEngine @Inject constructor(
 
         sessionState.syncCursor = response.cursor
 
+        ensureAccountId()
         reportCollaboratorChanges(requestCursor = request.cursor, pulledItems = response.changes.items)
 
         // Recompute pending after the merge: a local edit that raced the request may still be dirty.
@@ -131,6 +132,28 @@ class SyncEngine @Inject constructor(
             pulledItems = response.changes.items.size,
             pulledLists = response.changes.lists.size,
         )
+    }
+
+    /**
+     * Self-heals a missing account id (T-74). accountId is only stored at login, so a session that
+     * predates that (pre-v1.2.0) has it null — and [reportCollaboratorChanges] would then silently
+     * never fire. There's no /me endpoint, but any list's members roster carries account_id + email
+     * and includes the current user, so match our own email to recover it. Best-effort and one-shot
+     * per install (stops once set); runs in the background worker too, so it heals without a screen
+     * open. Needs a local list to exist (true from the second sync on; the first is cursor-0 anyway).
+     */
+    private suspend fun ensureAccountId() {
+        if (sessionState.accountId != null) return
+        val email = sessionState.accountEmail ?: return
+        val listId = listDao.anyActiveListId() ?: return
+        try {
+            val members = apiProvider.get().members(listId).members
+            members.firstOrNull { it.email == email }?.let { sessionState.accountId = it.accountId }
+        } catch (e: ApiException) {
+            // Best-effort — retried on the next sync.
+        } catch (e: IOException) {
+            // Best-effort — retried on the next sync.
+        }
     }
 
     /**

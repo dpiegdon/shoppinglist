@@ -106,6 +106,10 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE deleted_value = 0 ORDER BY name_value COLLATE NOCASE")
     fun activeLists(): Flow<List<ListEntity>>
 
+    /** Any non-deleted list id, for the accountId self-heal's members lookup (T-74). */
+    @Query("SELECT id FROM lists WHERE deleted_value = 0 LIMIT 1")
+    suspend fun anyActiveListId(): String?
+
     @Query("SELECT * FROM lists WHERE dirty = 1")
     suspend fun dirtyRows(): List<ListEntity>
 
