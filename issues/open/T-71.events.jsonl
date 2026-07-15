@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-07-15T20:18:39+00:00", "kind": "claimed", "ref": "main@0df8123", "text": "claude"}
 {"actor": "claude", "at": "2026-07-15T20:32:27+00:00", "kind": "note", "ref": "main@0ca508f", "text": "Fixed. extractInviteToken() extracts the token from a pasted /invite/<token> URL (path-prefix, trailing slash, query, fragment tolerated) while still accepting a bare token; redeem() uses it. App-Link deep-link path was already handled in Nav.kt. Commit 0ca508f. RedeemViewModelTest + full Android suite + lint clean."}
 {"actor": "claude", "at": "2026-07-15T20:32:27+00:00", "kind": "closed", "ref": "main@0ca508f", "text": ""}
+{"actor": "claude", "at": "2026-07-15T20:34:13+00:00", "kind": "updated", "ref": "main@0ca508f", "text": "fields updated"}
