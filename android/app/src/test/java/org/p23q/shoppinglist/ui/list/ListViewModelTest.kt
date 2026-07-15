@@ -69,7 +69,7 @@ class ListViewModelTest {
     }
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
@@ -119,7 +119,7 @@ class ListViewModelTest {
         )
 
     @Test
-    fun `groups follow category_order, then leftover categories alphabetically, uncategorized last`() = runTest {
+    fun `groups follow category_order, then leftover categories alphabetically, uncategorized last`() = runTest(mainDispatcherRule.dispatcher) {
         listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery"))
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
         itemsRepo.createItem(listId, "Bread").also { itemsRepo.setCategory(it, "bakery") }
@@ -133,7 +133,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `items sort alphabetically within a category`() = runTest {
+    fun `items sort alphabetically within a category`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Zucchini").also { itemsRepo.setCategory(it, "produce") }
         itemsRepo.createItem(listId, "apple").also { itemsRepo.setCategory(it, "produce") }
         itemsRepo.createItem(listId, "Banana").also { itemsRepo.setCategory(it, "produce") }
@@ -144,7 +144,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `backlog items never appear regardless of the show-checked toggle`() = runTest {
+    fun `backlog items never appear regardless of the show-checked toggle`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Someday item", status = Status.BACKLOG)
         val viewModel = newViewModel()
 
@@ -157,7 +157,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `checked items are hidden by default and appear once the toggle is on`() = runTest {
+    fun `checked items are hidden by default and appear once the toggle is on`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
         val viewModel = newViewModel()
 
@@ -171,7 +171,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `checking an item with show-checked on never duplicates it across groups (crash regression)`() = runTest {
+    fun `checking an item with show-checked on never duplicates it across groups (crash regression)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         val viewModel = newViewModel()
         viewModel.toggleShowChecked()
@@ -190,7 +190,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `checkOff marks todo item checked and arms the undo snackbar`() = runTest {
+    fun `checkOff marks todo item checked and arms the undo snackbar`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.groups.isNotEmpty() }
@@ -203,7 +203,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `undoCheckOff restores the item to todo and clears the snackbar`() = runTest {
+    fun `undoCheckOff restores the item to todo and clears the snackbar`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.groups.isNotEmpty() }
@@ -216,7 +216,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `uncheck reverts a checked item back to todo`() = runTest {
+    fun `uncheck reverts a checked item back to todo`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
         val viewModel = newViewModel()
         viewModel.uiState.first { it.listName == "Groceries" }
@@ -227,7 +227,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `checkedCount counts checked items regardless of the show-checked toggle (T-35)`() = runTest {
+    fun `checkedCount counts checked items regardless of the show-checked toggle (T-35)`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
         itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
         itemsRepo.createItem(listId, "Bread", status = Status.TODO)
@@ -241,7 +241,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `clearChecked moves every checked item to backlog and arms the undo (T-35)`() = runTest {
+    fun `clearChecked moves every checked item to backlog and arms the undo (T-35)`() = runTest(mainDispatcherRule.dispatcher) {
         val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
         val b = itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
         val viewModel = newViewModel()
@@ -257,7 +257,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest {
+    fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.listName == "Groceries" }
 
@@ -268,7 +268,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `sync status flows into the list ui state (T-47)`() = runTest {
+    fun `sync status flows into the list ui state (T-47)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         syncStatus.succeeded(at = 5_000L, pending = 1, blocked = 0)
@@ -277,7 +277,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `undoClearChecked puts the cleared items back to checked (T-35)`() = runTest {
+    fun `undoClearChecked puts the cleared items back to checked (T-35)`() = runTest(mainDispatcherRule.dispatcher) {
         val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
         val viewModel = newViewModel()
         viewModel.uiState.first { it.checkedCount == 1 }
@@ -291,7 +291,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `price renders with the item currency, falling back to the account default when absent`() = runTest {
+    fun `price renders with the item currency, falling back to the account default when absent`() = runTest(mainDispatcherRule.dispatcher) {
         val withCurrency = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setPrice(withCurrency, amount = "1.99", currency = "EUR")
         val withoutCurrency = itemsRepo.createItem(listId, "Bread")
@@ -306,7 +306,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `a currency change made in Settings is reflected by the next list view (A10)`() = runTest {
+    fun `a currency change made in Settings is reflected by the next list view (A10)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Bread")
         itemsRepo.setPrice(itemId, amount = "2.50", currency = null)
         sessionState.defaultCurrency = "USD"
@@ -325,7 +325,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `a currency change reflects immediately in an already-open list, not just the next one (T-55)`() = runTest {
+    fun `a currency change reflects immediately in an already-open list, not just the next one (T-55)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Bread")
         itemsRepo.setPrice(itemId, amount = "2.50", currency = null)
         sessionState.defaultCurrency = "USD"
@@ -344,7 +344,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `the list name updates live on rename, without recreating the view model (T-34)`() = runTest {
+    fun `the list name updates live on rename, without recreating the view model (T-34)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         assertEquals("Groceries", viewModel.uiState.first { it.listName == "Groceries" }.listName)
 
@@ -354,7 +354,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `changing category_order re-groups the open list live (T-34)`() = runTest {
+    fun `changing category_order re-groups the open list live (T-34)`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
         itemsRepo.createItem(listId, "Bread").also { itemsRepo.setCategory(it, "bakery") }
         val viewModel = newViewModel()
@@ -375,7 +375,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `the member roster loads into state on init (T-64)`() = runTest {
+    fun `the member roster loads into state on init (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest) = MockResponse().setResponseCode(200).setBody(
                 """{"members": [""" +
@@ -392,7 +392,7 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `an offline member-roster fetch leaves members empty rather than crashing (T-64)`() = runTest {
+    fun `an offline member-roster fetch leaves members empty rather than crashing (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
         // A dedicated, never-started server: any request against it fails to connect, without
         // touching the shared server/apiProvider the other tests (and tearDown) depend on.
         val unreachable = MockWebServer()

@@ -56,7 +56,7 @@ class ListPropsViewModelTest {
     private lateinit var listId: String
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         server = MockWebServer()
         server.start()
 
@@ -94,7 +94,7 @@ class ListPropsViewModelTest {
         ListPropsViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, itemsRepo, apiProvider)
 
     @Test
-    fun `initial state loads the name and merges category_order with distinct categories, without a network call`() = runTest {
+    fun `initial state loads the name and merges category_order with distinct categories, without a network call`() = runTest(mainDispatcherRule.dispatcher) {
         listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery"))
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
         itemsRepo.createItem(listId, "Nails").also { itemsRepo.setCategory(it, "hardware") }
@@ -107,7 +107,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `saveName persists a rename as an LWW edit`() = runTest {
+    fun `saveName persists a rename as an LWW edit`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
@@ -118,7 +118,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `initial state loads an existing note`() = runTest {
+    fun `initial state loads an existing note`() = runTest(mainDispatcherRule.dispatcher) {
         listsRepo.setNotes(listId, "Gate code: 4471")
 
         val state = newViewModel().uiState.first { it.name.isNotBlank() }
@@ -127,7 +127,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `saveNotes persists notes as an LWW edit`() = runTest {
+    fun `saveNotes persists notes as an LWW edit`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
@@ -138,7 +138,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `saveNotes trims whitespace and collapses a blank note to null`() = runTest {
+    fun `saveNotes trims whitespace and collapses a blank note to null`() = runTest(mainDispatcherRule.dispatcher) {
         listsRepo.setNotes(listId, "temporary")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
@@ -150,7 +150,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `moveCategoryUp then saveCategoryOrder persists the new order as an LWW edit`() = runTest {
+    fun `moveCategoryUp then saveCategoryOrder persists the new order as an LWW edit`() = runTest(mainDispatcherRule.dispatcher) {
         listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery"))
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
         itemsRepo.createItem(listId, "Bread").also { itemsRepo.setCategory(it, "bakery") }
@@ -171,7 +171,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `loadMembers populates members and pending invites`() = runTest {
+    fun `loadMembers populates members and pending invites`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 """{"members": [{"account_id": "acc-a", "email": "a@example.com", "initials": "A", "joined_at": 1}],""" +
@@ -187,7 +187,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `loadMembers failure surfaces an offline notice instead of crashing`() = runTest {
+    fun `loadMembers failure surfaces an offline notice instead of crashing`() = runTest(mainDispatcherRule.dispatcher) {
         server.shutdown()
 
         val viewModel = newViewModel()
@@ -197,7 +197,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `sendInvite success shares the URL and refreshes members`() = runTest {
+    fun `sendInvite success shares the URL and refreshes members`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
         viewModel.onInviteEmailChange("friend@example.com")
@@ -220,7 +220,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `sendInvite with a blank email is rejected locally without a network call`() = runTest {
+    fun `sendInvite with a blank email is rejected locally without a network call`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
@@ -232,7 +232,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `revokeInvite calls the server then refreshes the list`() = runTest {
+    fun `revokeInvite calls the server then refreshes the list`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
         server.enqueue(MockResponse().setResponseCode(204))
@@ -244,7 +244,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `confirmLeave calls the server and hard-deletes the list and its items locally`() = runTest {
+    fun `confirmLeave calls the server and hard-deletes the list and its items locally`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
@@ -261,7 +261,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `confirmLeave offline keeps the list and surfaces an error instead of a zombie delete (T-39)`() = runTest {
+    fun `confirmLeave offline keeps the list and surfaces an error instead of a zombie delete (T-39)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
@@ -277,7 +277,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `confirmLeave treats a 404 as already-left and cleans up locally (T-39)`() = runTest {
+    fun `confirmLeave treats a 404 as already-left and cleans up locally (T-39)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
@@ -291,7 +291,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `duplicateList creates a solo-owned copy with its items and updates state with the new list id (T-63)`() = runTest {
+    fun `duplicateList creates a solo-owned copy with its items and updates state with the new list id (T-63)`() = runTest(mainDispatcherRule.dispatcher) {
         val todoId = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setCategory(todoId, "dairy")
         val deletedId = itemsRepo.createItem(listId, "Old")
@@ -311,7 +311,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `revokeInvite offline surfaces an error and does not silently no-op (T-39)`() = runTest {
+    fun `revokeInvite offline surfaces an error and does not silently no-op (T-39)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
         server.shutdown()

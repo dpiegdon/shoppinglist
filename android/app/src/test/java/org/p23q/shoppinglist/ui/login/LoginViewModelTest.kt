@@ -64,7 +64,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `happy login succeeds and persists the entered server URL`() = runTest {
+    fun `happy login succeeds and persists the entered server URL`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -82,7 +82,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `a successful login triggers an immediate sync so the first screen isn't empty`() = runTest {
+    fun `a successful login triggers an immediate sync so the first screen isn't empty`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val trigger = org.p23q.shoppinglist.data.sync.FakeSyncTrigger()
         val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), trigger)
@@ -96,7 +96,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `bad password surfaces an error message and does not succeed`() = runTest {
+    fun `bad password surfaces an error message and does not succeed`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository(onLogin = { _, _ -> throw UnauthorizedException("bad creds") })
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -111,7 +111,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `an untrusted certificate gets a distinct, actionable message (T-38)`() = runTest {
+    fun `an untrusted certificate gets a distinct, actionable message (T-38)`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository(onLogin = { _, _ -> throw javax.net.ssl.SSLHandshakeException("cert") })
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -130,7 +130,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `the self-signed toggle persists so it can apply before the first login (T-38)`() = runTest {
+    fun `the self-signed toggle persists so it can apply before the first login (T-38)`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -141,7 +141,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `register mode calls register before login`() = runTest {
+    fun `register mode calls register before login`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -157,7 +157,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `non-https server URL is rejected before calling the repository`() = runTest {
+    fun `non-https server URL is rejected before calling the repository`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -172,7 +172,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `logout delegates to the repository`() = runTest {
+    fun `logout delegates to the repository`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -183,7 +183,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `loggedInEmail reflects the session state's account email`() = runTest {
+    fun `loggedInEmail reflects the session state's account email`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         val sessionState = FakeSessionState().apply { accountEmail = "shopper@example.com" }
         val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
@@ -192,7 +192,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `previously-saved server URL prefills the field`() = runTest {
+    fun `previously-saved server URL prefills the field`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         serverConfig.setServerUrl("https://saved.example.com/shoppinglist")
 
@@ -204,7 +204,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `first run with nothing saved prefills the canonical instance URL`() = runTest {
+    fun `first run with nothing saved prefills the canonical instance URL`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = LoginViewModel(FakeAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         val prefilled = viewModel.uiState.first { it.serverUrl.isNotBlank() }
@@ -213,7 +213,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `prefill does not clobber a URL the user is already typing`() = runTest {
+    fun `prefill does not clobber a URL the user is already typing`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
         serverConfig.setServerUrl("https://saved.example.com")
 
@@ -224,7 +224,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `startDestinationAfterLogin resumes the last-opened list when present`() = runTest {
+    fun `startDestinationAfterLogin resumes the last-opened list when present`() = runTest(mainDispatcherRule.dispatcher) {
         val repo = FakeAuthRepository(lastOpened = "list-42")
         val viewModel = LoginViewModel(repo, newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -232,14 +232,14 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `startDestinationAfterLogin falls back to overview with no last-opened list`() = runTest {
+    fun `startDestinationAfterLogin falls back to overview with no last-opened list`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = LoginViewModel(FakeAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         assertEquals("overview", viewModel.startDestinationAfterLogin())
     }
 
     @Test
-    fun `a pending invite routes startDestinationAfterLogin into redeem and is consumed once`() = runTest {
+    fun `a pending invite routes startDestinationAfterLogin into redeem and is consumed once`() = runTest(mainDispatcherRule.dispatcher) {
         val holder = org.p23q.shoppinglist.data.PendingInviteHolder().apply { stash("invite-xyz") }
         val repo = FakeAuthRepository(lastOpened = "list-42")
         val viewModel = LoginViewModel(repo, newServerConfig(), FakeSessionState(), holder, org.p23q.shoppinglist.data.sync.FakeSyncTrigger())

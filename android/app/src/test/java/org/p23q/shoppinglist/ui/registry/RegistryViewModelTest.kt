@@ -34,7 +34,7 @@ class RegistryViewModelTest {
     private lateinit var listId: String
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
@@ -49,7 +49,7 @@ class RegistryViewModelTest {
         RegistryViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), itemsRepo)
 
     @Test
-    fun `shows every item regardless of status when the query is empty`() = runTest {
+    fun `shows every item regardless of status when the query is empty`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "Bread", status = Status.CHECKED)
         itemsRepo.createItem(listId, "Someday item", status = Status.BACKLOG)
@@ -60,7 +60,7 @@ class RegistryViewModelTest {
     }
 
     @Test
-    fun `search narrows items by name case-insensitively across every status`() = runTest {
+    fun `search narrows items by name case-insensitively across every status`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "milk chocolate", status = Status.BACKLOG)
         itemsRepo.createItem(listId, "Bread", status = Status.CHECKED)
@@ -74,7 +74,7 @@ class RegistryViewModelTest {
     }
 
     @Test
-    fun `deleteItem tombstones the item, arms undo, and it drops out of results`() = runTest {
+    fun `deleteItem tombstones the item, arms undo, and it drops out of results`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.items.isNotEmpty() }
@@ -89,7 +89,7 @@ class RegistryViewModelTest {
     }
 
     @Test
-    fun `undoDelete restores the item and it reappears in results`() = runTest {
+    fun `undoDelete restores the item and it reappears in results`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.uiState.first { it.items.isNotEmpty() }

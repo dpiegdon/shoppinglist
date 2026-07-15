@@ -44,7 +44,7 @@ class RedeemViewModelTest {
     private lateinit var syncEngine: SyncEngine
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         server = MockWebServer()
         server.start()
 
@@ -78,7 +78,7 @@ class RedeemViewModelTest {
     private fun newViewModel(): RedeemViewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
 
     @Test
-    fun `redeem with a blank token is rejected locally without a network call`() = runTest {
+    fun `redeem with a blank token is rejected locally without a network call`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         val job = viewModel.redeem()
@@ -89,7 +89,7 @@ class RedeemViewModelTest {
     }
 
     @Test
-    fun `redeem success syncs the newly shared list and reports its id`() = runTest {
+    fun `redeem success syncs the newly shared list and reports its id`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
         val viewModel = newViewModel()
@@ -106,7 +106,7 @@ class RedeemViewModelTest {
     }
 
     @Test
-    fun `redeem failure surfaces the server's error message`() = runTest {
+    fun `redeem failure surfaces the server's error message`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(409)
                 .setBody("""{"error": "invite_used", "message": "This invite was already used"}"""),
@@ -121,7 +121,7 @@ class RedeemViewModelTest {
     }
 
     @Test
-    fun `redeem with the server unreachable surfaces a network error`() = runTest {
+    fun `redeem with the server unreachable surfaces a network error`() = runTest(mainDispatcherRule.dispatcher) {
         server.shutdown()
         val viewModel = newViewModel()
         viewModel.onTokenChange("abc.def")
@@ -133,7 +133,7 @@ class RedeemViewModelTest {
     }
 
     @Test
-    fun `redeeming while logged out stashes the token and signals needsLogin without calling the API`() = runTest {
+    fun `redeeming while logged out stashes the token and signals needsLogin without calling the API`() = runTest(mainDispatcherRule.dispatcher) {
         val holder = PendingInviteHolder()
         val loggedOut = FakeSessionState() // token == null
         val viewModel = RedeemViewModel(apiProvider, syncEngine, loggedOut, holder)

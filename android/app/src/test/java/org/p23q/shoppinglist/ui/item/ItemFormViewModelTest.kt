@@ -38,7 +38,7 @@ class ItemFormViewModelTest {
     private lateinit var listId: String
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
@@ -53,7 +53,7 @@ class ItemFormViewModelTest {
     private fun newViewModel(): ItemFormViewModel = ItemFormViewModel(itemsRepo, sessionState)
 
     @Test
-    fun `suggestions narrow as the name is typed, case-insensitively, across every status`() = runTest {
+    fun `suggestions narrow as the name is typed, case-insensitively, across every status`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "milk chocolate", status = Status.BACKLOG)
         itemsRepo.createItem(listId, "Bread", status = Status.CHECKED)
@@ -67,7 +67,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `backlog items are suggested while the Name field is still blank (T-52)`() = runTest {
+    fun `backlog items are suggested while the Name field is still blank (T-52)`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
         itemsRepo.createItem(listId, "Sugar", status = Status.TODO)
         itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
@@ -80,7 +80,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `backlog suggestions are ordered most-recently-touched first (T-52)`() = runTest {
+    fun `backlog suggestions are ordered most-recently-touched first (T-52)`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
         Thread.sleep(2)
         itemsRepo.createItem(listId, "Sugar", status = Status.BACKLOG)
@@ -95,7 +95,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `typing replaces backlog suggestions with a name search across every status (T-52)`() = runTest {
+    fun `typing replaces backlog suggestions with a name search across every status (T-52)`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         val viewModel = newViewModel()
@@ -112,7 +112,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `clearing the Name field back to blank restores backlog suggestions (T-52)`() = runTest {
+    fun `clearing the Name field back to blank restores backlog suggestions (T-52)`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
@@ -126,7 +126,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `edit mode never shows backlog suggestions`() = runTest {
+    fun `edit mode never shows backlog suggestions`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Flour", status = Status.BACKLOG)
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         val viewModel = newViewModel()
@@ -137,7 +137,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `picking a suggestion prefills the form and binds the itemId WITHOUT mutating the item`() = runTest {
+    fun `picking a suggestion prefills the form and binds the itemId WITHOUT mutating the item`() = runTest(mainDispatcherRule.dispatcher) {
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
         itemsRepo.setCategory(existingId, "dairy")
         val viewModel = newViewModel()
@@ -155,7 +155,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `saving a picked suggestion puts that existing item on the list as todo`() = runTest {
+    fun `saving a picked suggestion puts that existing item on the list as todo`() = runTest(mainDispatcherRule.dispatcher) {
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
@@ -169,7 +169,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `saveAndAddAnother creates the item then resets the form without closing (T-41)`() = runTest {
+    fun `saveAndAddAnother creates the item then resets the form without closing (T-41)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
         viewModel.onNameChange("Milk")
@@ -185,7 +185,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `save with no picked suggestion creates a new todo item with the entered fields`() = runTest {
+    fun `save with no picked suggestion creates a new todo item with the entered fields`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
         viewModel.onNameChange("Milk")
@@ -202,7 +202,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `save is blocked with an inline error when the typed name collides with another item`() = runTest {
+    fun `save is blocked with an inline error when the typed name collides with another item`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
@@ -216,7 +216,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `startEdit prefills every field from the existing item`() = runTest {
+    fun `startEdit prefills every field from the existing item`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setCategory(itemId, "dairy")
         itemsRepo.setStores(itemId, listOf("Rewe", "Aldi"))
@@ -239,7 +239,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `renaming to a name already used by another item is blocked`() = runTest {
+    fun `renaming to a name already used by another item is blocked`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Bread")
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
@@ -253,7 +253,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `renaming an item to its own current name (any case) is not a collision`() = runTest {
+    fun `renaming an item to its own current name (any case) is not a collision`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
@@ -268,7 +268,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `edit save persists field edits including status`() = runTest {
+    fun `edit save persists field edits including status`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
@@ -283,7 +283,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `confirmDelete tombstones the item`() = runTest {
+    fun `confirmDelete tombstones the item`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
@@ -298,7 +298,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `addStore appends a chip and removeStore drops it`() = runTest {
+    fun `addStore appends a chip and removeStore drops it`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
 
@@ -337,7 +337,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `saving a comma-decimal price stores it normalized`() = runTest {
+    fun `saving a comma-decimal price stores it normalized`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
         viewModel.onNameChange("Milk")
@@ -353,7 +353,7 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `an invalid price is rejected inline and never written (does not reach sync)`() = runTest {
+    fun `an invalid price is rejected inline and never written (does not reach sync)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
         viewModel.onNameChange("Milk")

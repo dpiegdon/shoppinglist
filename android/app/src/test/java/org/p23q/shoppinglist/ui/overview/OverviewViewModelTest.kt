@@ -60,7 +60,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `created list appears in state, is dirty, and closes the dialog`() = runTest {
+    fun `created list appears in state, is dirty, and closes the dialog`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.onNewListNameChange("Groceries")
 
         viewModel.createList()?.join()
@@ -74,7 +74,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `open item counts reflect todo items per list, excluding checked (T-42)`() = runTest {
+    fun `open item counts reflect todo items per list, excluding checked (T-42)`() = runTest(mainDispatcherRule.dispatcher) {
         val listId = listsRepo.createList("Groceries")
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "Bread", status = Status.TODO)
@@ -86,7 +86,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `lists are sorted case-insensitively by name (T-40)`() = runTest {
+    fun `lists are sorted case-insensitively by name (T-40)`() = runTest(mainDispatcherRule.dispatcher) {
         listsRepo.createList("Zebra")
         listsRepo.createList("apple")
         listsRepo.createList("Mango")
@@ -97,7 +97,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `blank name does not create a list`() = runTest {
+    fun `blank name does not create a list`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.onNewListNameChange("   ")
 
         val job = viewModel.createList()
@@ -107,7 +107,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `openList persists lastOpenedListId in session state`() = runTest {
+    fun `openList persists lastOpenedListId in session state`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.onNewListNameChange("Groceries")
         viewModel.createList()?.join()
         val listId = viewModel.uiState.first { it.lists.isNotEmpty() }.lists.first().id
@@ -118,7 +118,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `openCreateDialog and dismissCreateDialog toggle dialog visibility`() = runTest {
+    fun `openCreateDialog and dismissCreateDialog toggle dialog visibility`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.openCreateDialog()
         assertTrue(viewModel.uiState.value.isCreateDialogOpen)
 
@@ -127,7 +127,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `sync status flows into the ui state (T-47)`() = runTest {
+    fun `sync status flows into the ui state (T-47)`() = runTest(mainDispatcherRule.dispatcher) {
         syncStatus.succeeded(at = 1_000L, pending = 2, blocked = 0)
 
         val state = viewModel.uiState.first { it.sync.lastSyncAt == 1_000L }
@@ -136,7 +136,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest {
+    fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.refresh().join()
 
         assertEquals(1, syncCalls)
@@ -144,7 +144,7 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `a quarantined row surfaces its list for the attention banner (T-47)`() = runTest {
+    fun `a quarantined row surfaces its list for the attention banner (T-47)`() = runTest(mainDispatcherRule.dispatcher) {
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         db.itemDao().blockRow(itemId)

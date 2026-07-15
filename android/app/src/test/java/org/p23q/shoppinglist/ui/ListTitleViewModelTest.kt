@@ -42,7 +42,7 @@ class ListTitleViewModelTest {
     fun tearDown() = db.close()
 
     @Test
-    fun `name exposes the list name and updates live on rename`() = runTest {
+    fun `name exposes the list name and updates live on rename`() = runTest(mainDispatcherRule.dispatcher) {
         val listId = listsRepo.createList("Groceries")
         val viewModel = ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo)
 

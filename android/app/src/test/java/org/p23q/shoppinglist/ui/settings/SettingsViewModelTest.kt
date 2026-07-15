@@ -53,7 +53,7 @@ class SettingsViewModelTest {
     private lateinit var defaultCurrencyState: DefaultCurrencyState
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
         server = MockWebServer()
         server.start()
 
@@ -102,7 +102,7 @@ class SettingsViewModelTest {
         SettingsViewModel(apiProvider, sessionState, serverConfig, themePreferenceStore, db, crashLogWriter, defaultCurrencyState)
 
     @Test
-    fun `initial state loads server URL, account email, and cached currency without a network call`() = runTest {
+    fun `initial state loads server URL, account email, and cached currency without a network call`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         val state = viewModel.uiState.first { it.serverUrl.isNotBlank() }
@@ -113,7 +113,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateCurrency rejects an invalid code locally without calling the server`() = runTest {
+    fun `updateCurrency rejects an invalid code locally without calling the server`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         val job = viewModel.updateCurrency("euros")
@@ -124,7 +124,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateCurrency success updates state and the session cache`() = runTest {
+    fun `updateCurrency success updates state and the session cache`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "MI"}"""))
         val viewModel = newViewModel()
 
@@ -136,7 +136,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateCurrency success also writes through the in-memory mirror (T-55)`() = runTest {
+    fun `updateCurrency success also writes through the in-memory mirror (T-55)`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "MI"}"""))
         val viewModel = newViewModel()
 
@@ -176,7 +176,7 @@ class SettingsViewModelTest {
     // loadInitials().join() itself and checks the resulting value — no unique coverage lost.
 
     @Test
-    fun `updateInitials rejects more than 3 characters locally without calling the server`() = runTest {
+    fun `updateInitials rejects more than 3 characters locally without calling the server`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         val job = viewModel.updateInitials("TooLong")
@@ -187,7 +187,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateInitials resends the current currency so it is not overwritten (T-64)`() = runTest {
+    fun `updateInitials resends the current currency so it is not overwritten (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()  // defaultCurrency = "EUR" from FakeSessionState in setUp
 
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "AB"}"""))
@@ -199,7 +199,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `changePassword with the wrong current password surfaces an inline error`() = runTest {
+    fun `changePassword with the wrong current password surfaces an inline error`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(401)
                 .setBody("""{"error": "unauthorized", "message": "wrong password"}"""),
@@ -214,7 +214,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `changePassword success clears the fields and shows a confirmation`() = runTest {
+    fun `changePassword success clears the fields and shows a confirmation`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(204))
         val viewModel = newViewModel()
         viewModel.onCurrentPasswordChange("hunter2")
@@ -229,7 +229,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `changeEmail success updates the account email and session cache`() = runTest {
+    fun `changeEmail success updates the account email and session cache`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(204))
         val viewModel = newViewModel()
         viewModel.onChangeEmailPasswordChange("hunter2")
@@ -242,7 +242,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `loadSessions populates the sessions list`() = runTest {
+    fun `loadSessions populates the sessions list`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 """{"sessions": [{"id": "s1", "device_label": "Pixel", "created_at": 1, "last_seen_at": 2, "current": true}]}""",
@@ -257,7 +257,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `loadSessions tolerates a null device_label (confirmed against the live dev server)`() = runTest {
+    fun `loadSessions tolerates a null device_label (confirmed against the live dev server)`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 """{"sessions": [{"id": "s1", "device_label": null, "created_at": 1, "last_seen_at": 2, "current": true}]}""",
@@ -272,7 +272,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `revokeSession calls the server then refreshes the list`() = runTest {
+    fun `revokeSession calls the server then refreshes the list`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 """{"sessions": [{"id": "s1", "device_label": "Pixel", "created_at": 1, "last_seen_at": 2, "current": true},""" +
@@ -294,7 +294,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `confirmDeleteAccount with the wrong password surfaces an inline error and does not wipe local data`() = runTest {
+    fun `confirmDeleteAccount with the wrong password surfaces an inline error and does not wipe local data`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(
             MockResponse().setResponseCode(401)
                 .setBody("""{"error": "unauthorized", "message": "wrong password"}"""),
@@ -310,7 +310,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `confirmDeleteAccount success wipes the session and local mirror`() = runTest {
+    fun `confirmDeleteAccount success wipes the session and local mirror`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(204))
         val viewModel = newViewModel()
         viewModel.onDeleteAccountPasswordChange("hunter2")
@@ -322,7 +322,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `setTheme persists the preference and it is reflected in state`() = runTest {
+    fun `setTheme persists the preference and it is reflected in state`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         viewModel.setTheme(ThemePreference.DARK).join()
@@ -332,7 +332,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `allowSelfSignedCerts loads from and persists to server config`() = runTest {
+    fun `allowSelfSignedCerts loads from and persists to server config`() = runTest(mainDispatcherRule.dispatcher) {
         serverConfig.setAllowSelfSignedCerts(true)
         val viewModel = newViewModel()
         assertTrue(viewModel.uiState.first { it.allowSelfSignedCerts }.allowSelfSignedCerts)
@@ -344,7 +344,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `shareLogs with no crash log yet surfaces a message instead of a path (T-50)`() = runTest {
+    fun `shareLogs with no crash log yet surfaces a message instead of a path (T-50)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 
         viewModel.shareLogs()
@@ -354,7 +354,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `shareLogs with an existing log exposes its path, and consumeCrashLogShare clears it (T-50)`() = runTest {
+    fun `shareLogs with an existing log exposes its path, and consumeCrashLogShare clears it (T-50)`() = runTest(mainDispatcherRule.dispatcher) {
         crashLogWriter.append("main", RuntimeException("boom"))
         val viewModel = newViewModel()
 

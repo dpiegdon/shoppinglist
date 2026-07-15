@@ -29,7 +29,7 @@ class RootViewModelTest {
     }
 
     @Test
-    fun `forcedLogout re-exposes the SessionEvents signal`() = runTest {
+    fun `forcedLogout re-exposes the SessionEvents signal`() = runTest(mainDispatcherRule.dispatcher) {
         val events = SessionEvents()
         val viewModel = RootViewModel(events, FakeAuthRepository())
         val received = mutableListOf<Unit>()
@@ -44,7 +44,7 @@ class RootViewModelTest {
     }
 
     @Test
-    fun `onForcedLogout clears the local session`() = runTest {
+    fun `onForcedLogout clears the local session`() = runTest(mainDispatcherRule.dispatcher) {
         val repo = FakeAuthRepository()
         val viewModel = RootViewModel(SessionEvents(), repo)
 
