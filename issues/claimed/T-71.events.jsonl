@@ -4,3 +4,4 @@
 {"actor": "claude", "at": "2026-07-15T20:32:27+00:00", "kind": "closed", "ref": "main@0ca508f", "text": ""}
 {"actor": "claude", "at": "2026-07-15T20:34:13+00:00", "kind": "updated", "ref": "main@0ca508f", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-15T20:34:14+00:00", "kind": "updated", "ref": "main@0ca508f", "text": "fields updated"}
+{"actor": "claude", "at": "2026-07-15T20:38:00+00:00", "kind": "note", "ref": "main@6eb58f1", "text": "Web parity done (same ticket, per user). Added web/src/lib/inviteToken.ts extractInviteToken() mirroring the Android helper; RedeemPage now uses it instead of token.trim(). Commit 6eb58f1. Full web suite (62) + tsc + oxlint clean. Both platforms now accept a pasted full invite URL or a bare token."}
