@@ -1,0 +1,12 @@
+{
+  "body": "Tapping a row toggles done. There's no gesture to jump straight to editing from\nthe row body (only the small edit pencil). Make a long-press on the row open the\nedit-item dialog, and crucially NOT also toggle done \u2014 use combinedClickable so\nthe long-press consumes the gesture.",
+  "created_at": "2026-07-16T17:48:31+00:00",
+  "id": "T-79",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "App list: long-press an item opens the edit dialog instead of marking it done",
+  "updated_at": "2026-07-16T17:48:31+00:00"
+}
