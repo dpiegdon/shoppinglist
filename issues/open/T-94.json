@@ -1,0 +1,14 @@
+{
+  "body": "auth.require_account() runs `UPDATE auth_tokens SET last_seen_at = ?` plus a\nCOMMIT on every single authenticated request \u2014 including every /sync poll from\nevery device. On a WAL SQLite database on an SD-card-backed host (this deploy\ntarget) that is a durable write per request for a value whose only consumer is\nthe sessions list in Settings, where minute-level precision is meaningless.\n\nFix: only touch last_seen_at when it is actually stale \u2014 e.g. skip the UPDATE\nunless now - last_seen_at > 15 min (one line: fetch last_seen_at in the\nexisting SELECT, compare before writing). Keeps the sessions screen just as\nuseful, drops ~all of the per-request write load. Alternatively defer the\ncommit into the request's existing transaction where one exists \u2014 but the\nstaleness check is simpler and enough.\n\nFiles: server/src/shoppinglist_server/auth.py, server/tests/test_auth.py.",
+  "created_at": "2026-07-16T22:25:44+00:00",
+  "id": "T-94",
+  "labels": [
+    "server",
+    "perf",
+    "agent",
+    "ready"
+  ],
+  "priority": 4,
+  "title": "Server: last_seen_at write + commit on every authed request \u2014 throttle to staleness",
+  "updated_at": "2026-07-16T22:25:44+00:00"
+}
