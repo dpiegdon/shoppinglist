@@ -6,6 +6,7 @@
     "web",
     "ux"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "Web item rows: right-align the author badge next to the edit pencil (match Android)",
   "updated_at": "2026-07-16T17:26:47+00:00"
