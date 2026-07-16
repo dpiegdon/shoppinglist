@@ -40,7 +40,10 @@ export default function ItemRow({ item, authorMember, onToggle, onEdit }: ItemRo
         gap: "0.5rem",
       }}
     >
-      <div style={{ minWidth: 0 }}>
+      {/* flex:1 makes the text column fill the row so the author badge sits snug against the edit
+          pencil on the right (matching Android's weight(1f) text column) instead of floating
+          centered in the leftover space. */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontWeight: 600,
@@ -84,6 +87,19 @@ export default function ItemRow({ item, authorMember, onToggle, onEdit }: ItemRo
         onClick={(e) => {
           e.stopPropagation();
           onEdit();
+        }}
+        style={{
+          // Make the tap target the whole right corner of the row (T-77) rather than just the ✎
+          // glyph: stretch to full row height and reach the card's right/top/bottom edges via
+          // negative margins that cancel the card's 0.65rem/0.75rem padding.
+          alignSelf: "stretch",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 0.9rem",
+          margin: "-0.65rem -0.75rem -0.65rem 0",
+          borderRadius: "0 var(--radius) var(--radius) 0",
+          fontSize: "1.05rem",
         }}
       >
         ✎
