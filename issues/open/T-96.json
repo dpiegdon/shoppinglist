@@ -7,9 +7,10 @@
     "ops",
     "reliability",
     "agent",
-    "ready"
+    "ready",
+    "sonnet"
   ],
-  "priority": 3,
+  "priority": 2,
   "title": "Android: SettingsScreenTest initials-save test is flaky \u2014 waitForIdle races the MockWebServer round trip",
-  "updated_at": "2026-07-16T22:37:13+00:00"
+  "updated_at": "2026-07-16T22:40:29+00:00"
 }
