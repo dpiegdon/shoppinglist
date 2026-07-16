@@ -1,0 +1,16 @@
+{
+  "body": "Saving the item edit dialog re-stamps EVERY field with a fresh LWW clock, not\njust the fields the user changed \u2014 which silently reverts collaborators'\nconcurrent edits to the untouched fields and defeats the whole point of\nfield-level LWW (spec \u00a76: \"edits to different fields of the same item merge\").\n\nScenario: Alice opens the edit dialog for \"Milk\" (form snapshots name=\"Milk\").\nBob renames it to \"Oat milk\" and syncs. Alice only edits the note and saves \u2192\nher save pushes name=\"Milk\" with a fresh timestamp, which beats Bob's rename.\nBob's edit is silently lost.\n\nBoth clients have it:\n- web: ListPage.handleSave / RegistryPage.handleSave build fieldPatch(...) for\n  all 7 fields with nowMs() regardless of what changed (ItemDialog returns the\n  full value set with no dirty tracking).\n- android: ItemFormViewModel.performSave() unconditionally calls rename /\n  setStatus / setCategory / setStores / setQuantity / setPrice / setNote, and\n  each ItemsRepo setter stamps a fresh clock.\n\nFix: diff the form values against the snapshot loaded when the dialog opened\nand only push/stamp fields whose value actually changed. (ListPropsPage and\nListsRepo already do this correctly for list fields \u2014 single-field pushes.)\nNote the add-mode \"picked an existing suggestion\" path intentionally writes\nall fields (the user is adopting the prefill) \u2014 keep the diff against the\nPICKED item's values there, so an unmodified adopt only flips status.\n\nFiles: web/src/pages/ListPage.tsx, web/src/pages/RegistryPage.tsx,\nweb/src/components/ItemDialog.tsx,\nandroid .../ui/item/ItemFormViewModel.kt (+ tests in both clients).",
+  "created_at": "2026-07-16T22:23:03+00:00",
+  "id": "T-88",
+  "labels": [
+    "web",
+    "android",
+    "bug",
+    "sync",
+    "agent",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Item edit dialog stamps ALL fields with fresh clocks \u2014 reverts collaborators concurrent edits (web + Android)",
+  "updated_at": "2026-07-16T22:23:03+00:00"
+}
