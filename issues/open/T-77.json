@@ -1,0 +1,12 @@
+{
+  "body": "The edit (\u270e) button on a web item row is a small btn-icon (0.35rem padding), so\nits tap target is barely the glyph \u2014 easy to miss on touch. Enlarge it to cover\nthe complete right corner of the row: stretch to full row height and reach the\ncard's right/top/bottom edges (negative margins cancelling the card padding),\nwith generous horizontal padding for width.",
+  "created_at": "2026-07-16T17:28:35+00:00",
+  "id": "T-77",
+  "labels": [
+    "web",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Web item rows: enlarge the edit hitbox to the whole right corner, not just the pencil glyph",
+  "updated_at": "2026-07-16T17:28:35+00:00"
+}
