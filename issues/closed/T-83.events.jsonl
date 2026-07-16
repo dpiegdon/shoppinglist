@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T18:56:22+00:00", "kind": "created", "ref": "main@556ed9b", "text": "Web: expose the invite link/token after minting so the inviter can share it"}
 {"actor": "claude", "at": "2026-07-16T18:56:22+00:00", "kind": "claimed", "ref": "main@556ed9b", "text": "claude"}
 {"actor": "claude", "at": "2026-07-16T19:04:48+00:00", "kind": "note", "ref": "main@556ed9b", "text": "ListPropsPage: handleInvite now captures mint's returned url and shows it in a read-only, selectable field with a Copy button (navigator.clipboard, 2s 'Copied!' feedback); note that only freshly-minted invites expose the link. New test covers it."}
+{"actor": "claude", "at": "2026-07-16T19:04:49+00:00", "kind": "closed", "ref": "main@a13e5fe", "text": ""}
