@@ -13,5 +13,5 @@
   "owner": "claude",
   "priority": 2,
   "title": "Android: SettingsScreenTest initials-save test is flaky \u2014 waitForIdle races the MockWebServer round trip",
-  "updated_at": "2026-07-16T22:43:15+00:00"
+  "updated_at": "2026-07-16T23:19:58+00:00"
 }
