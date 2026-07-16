@@ -286,3 +286,98 @@ def test_get_lists_excludes_deleted(client):
 def test_get_lists_without_token_401(client):
     resp = client.get("/api/v1/lists")
     assert resp.status_code == 401
+
+
+# ---- adversarial: a non-member cannot reach a list by ANY path -------------
+
+
+def test_non_member_cannot_access_a_list_in_any_way(client):
+    """Security sweep (authorization): a second, logged-in account that was never
+    made a member of a list must not be able to read, enumerate, edit, hijack,
+    invite into, or forge access to it — the server is the sole enforcement point."""
+    import base64
+
+    def _b64url(raw: bytes) -> str:
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+    # Account A owns a private list with one item.
+    token_a = _register_and_login(client, email="alice@example.com", device="devA")
+    resp = _sync(
+        client, token_a, cursor=0, device_id="devA",
+        changes={
+            "lists": [_mk_list("list-victim", "Alice's list", 100, "devA")],
+            "items": [_mk_item("item-victim", "list-victim", name=("Milk", 100, "devA"))],
+        },
+    )
+    assert resp.status_code == 200
+
+    # Account B: a different, logged-in account, never invited to list-victim.
+    token_b = _register_and_login(client, email="bob@example.com", device="devB")
+
+    # (a) Enumeration: B's list index never includes it.
+    lists_b = client.get("/api/v1/lists", headers=_auth(token_b)).get_json()["lists"]
+    assert all(lst["id"] != "list-victim" for lst in lists_b)
+
+    # (b) Incremental pull: B's delta carries none of A's rows.
+    delta_b = _sync(client, token_b, cursor=0, device_id="devB").get_json()
+    assert "list-victim" not in {lst["id"] for lst in delta_b["changes"]["lists"]}
+    assert "item-victim" not in {itm["id"] for itm in delta_b["changes"]["items"]}
+
+    # (c) Full-snapshot pull of the list id: refused, not leaked.
+    resp = _sync(client, token_b, cursor=0, device_id="devB", full_lists=["list-victim"])
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "not_a_member"
+
+    # (d) Members roster: refused (uniform 403 — no exists-vs-not-yours leak).
+    resp = client.get("/api/v1/lists/list-victim/members", headers=_auth(token_b))
+    assert resp.status_code == 403
+
+    # (e) Push a brand-new item into A's list: refused.
+    resp = _sync(
+        client, token_b, cursor=0, device_id="devB",
+        changes={"items": [_mk_item("item-intruder", "list-victim", name=("Intruder", 200, "devB"))]},
+    )
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "not_a_member"
+
+    # (f) Edit A's existing item: refused.
+    resp = _sync(
+        client, token_b, cursor=0, device_id="devB",
+        changes={"items": [_mk_item("item-victim", "list-victim", name=("Hacked", 999, "devB"))]},
+    )
+    assert resp.status_code == 403
+
+    # (g) Hijack via mislabelled list_id: the server authorizes against the item's
+    # STORED list, not the client-supplied one, so this is still refused.
+    resp = _sync(
+        client, token_b, cursor=0, device_id="devB",
+        changes={"items": [_mk_item("item-victim", "some-other-list", name=("Hacked", 1000, "devB"))]},
+    )
+    assert resp.status_code == 403
+
+    # (h) Invite themselves in: refused (only members can mint invites).
+    resp = client.post(
+        "/api/v1/lists/list-victim/invites",
+        json={"invited_email": "bob@example.com"},
+        headers=_auth(token_b),
+    )
+    assert resp.status_code == 403
+
+    # (i) Forge an invite token for the list: rejected at the HMAC signature check.
+    forged_payload = _b64url(b"fake-invite:list-victim:bob@example.com:99999999999999")
+    forged_token = f"{forged_payload}.{_b64url(b'not-a-real-signature')}"
+    resp = client.post(
+        "/api/v1/invites/redeem", json={"token": forged_token}, headers=_auth(token_b)
+    )
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "invalid_token"
+
+    # A's item is still the untouched original after all of B's attempts.
+    delta_a = _sync(
+        client, token_a, cursor=0, device_id="devA", full_lists=["list-victim"]
+    ).get_json()
+    victim = next(i for i in delta_a["changes"]["items"] if i["id"] == "item-victim")
+    assert victim["fields"]["name"]["value"] == "Milk"
+
+    # And B still has no lists at all — nothing leaked into their world.
+    assert client.get("/api/v1/lists", headers=_auth(token_b)).get_json()["lists"] == []
