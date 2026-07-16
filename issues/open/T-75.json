@@ -1,0 +1,13 @@
+{
+  "body": "\"Clear checked\" sits in the list screen's top controls, easy to tap by accident.\nMove it into the list-properties screen \u2014 a red (danger) button between the\nCategory order and Notes sections \u2014 on both Android and web. The relocation makes\nit deliberate; drop Android's clear-checked undo snackbar (properties has no\nsnackbar host, and the move + items-go-to-backlog recovery makes it unnecessary),\nmatching web which already has no clear-checked undo. Keep the \"Clear checked (N)\"\ncount label; only show it when there are checked items.",
+  "created_at": "2026-07-16T16:58:49+00:00",
+  "id": "T-75",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Move 'Clear checked' out of the list screen into list properties (too easy to hit accidentally)",
+  "updated_at": "2026-07-16T16:58:49+00:00"
+}
