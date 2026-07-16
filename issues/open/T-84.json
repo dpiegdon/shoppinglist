@@ -1,0 +1,14 @@
+{
+  "body": "DELETE /account returns a 500 (sqlite3.IntegrityError: FOREIGN KEY constraint\nfailed) for any account that has ever minted an invite for a still-existing\nlist. accounts.delete_account() deletes auth_tokens, account_settings, and the\naccounts row, but invites.created_by REFERENCES accounts(id) and those rows are\nonly removed when their list is GC-hard-deleted \u2014 so the final DELETE FROM\naccounts is blocked. Reproduced against a fresh DB: register \u2192 create list \u2192\nmint invite \u2192 DELETE /account \u2192 500.\n\nFix in accounts.delete_account(): delete the account's invite rows\n(DELETE FROM invites WHERE created_by = ?) before deleting the account \u2014\nrevoking a departed member's pending invites is also the right behavior\n(otherwise an invite whose creator is gone would still admit the invitee).\nAdd a regression test (delete account after minting an invite; also after\nminting an invite on a list that keeps other members).\n\nFiles: server/src/shoppinglist_server/accounts.py, server/tests/test_account.py.",
+  "created_at": "2026-07-16T22:21:31+00:00",
+  "id": "T-84",
+  "labels": [
+    "server",
+    "bug",
+    "agent",
+    "ready"
+  ],
+  "priority": 2,
+  "title": "Server: DELETE /account 500s (FK) once the account has minted an invite",
+  "updated_at": "2026-07-16T22:21:31+00:00"
+}
