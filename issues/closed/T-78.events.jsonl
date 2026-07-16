@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T17:48:31+00:00", "kind": "created", "ref": "main@b7c36de", "text": "App list: draw slightly-visible separator lines between items within a group"}
 {"actor": "claude", "at": "2026-07-16T17:48:32+00:00", "kind": "claimed", "ref": "main@b7c36de", "text": "claude"}
 {"actor": "claude", "at": "2026-07-16T17:57:25+00:00", "kind": "note", "ref": "main@b7c36de", "text": "ListScreen LazyColumn now uses itemsIndexed and draws a subtle HorizontalDivider (outlineVariant @ 50% alpha) between items within a group, skipping the last so it doesn't stack with the between-category divider."}
+{"actor": "claude", "at": "2026-07-16T17:57:26+00:00", "kind": "closed", "ref": "main@b7dbb60", "text": ""}
