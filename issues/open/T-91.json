@@ -7,9 +7,10 @@
     "ux",
     "parity",
     "agent",
-    "ready"
+    "ready",
+    "sonnet"
   ],
   "priority": 4,
   "title": "Web: item dialog swallows save errors \u2014 no inline price/currency validation (Android has it)",
-  "updated_at": "2026-07-16T22:24:43+00:00"
+  "updated_at": "2026-07-16T22:40:32+00:00"
 }
