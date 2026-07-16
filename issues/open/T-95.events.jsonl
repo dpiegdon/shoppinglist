@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-16T22:26:05+00:00", "kind": "created", "ref": "main@416ffda", "text": "Ops: no off-device backup \u2014 repo, gittoc tracker, and release keystore exist only on this machine"}
+{"actor": "human", "at": "2026-07-16T22:31:18+00:00", "kind": "note", "ref": "main@416ffda", "text": "actually wrong; keystore, git and gittoc all have remote backups; they are just not visible on the dev server since that is an agent sandbox."}
