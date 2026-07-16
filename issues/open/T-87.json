@@ -1,0 +1,14 @@
+{
+  "body": "PATCH /settings actually has PUT semantics: accounts.update_settings() writes\nBOTH columns on every call, so a request carrying only default_currency resets\na custom initials override to NULL (reproduced: set initials \"CZ\", PATCH\ncurrency-only \u2192 initials silently back to the derived default), and a request\ncarrying only initials 422s on the missing currency.\n\nBoth clients currently work around it by always resending both fields (web\nSettingsPage, Android SettingsViewModel \u2014 each carries a \"must resend\" comment,\nwhich is the tell that the server semantics are wrong). The workaround has a\nreal hole on Android: the initials preload is best-effort (offline start \u2192\ninitials stays \"\"), and a later currency save then resends \"\" and wipes the\nuser's override.\n\nFix server-side: treat an absent key as \"leave unchanged\" (validate only the\nkeys present; distinguish absent from explicit null for initials, where null =\nclear override). Also validate the initials type (a non-string currently hits\nlen() \u2192 500). Then drop the client workarounds (or leave them \u2014 they become\nharmless).\n\nFiles: server/src/shoppinglist_server/accounts.py,\nserver/src/shoppinglist_server/routes/account.py, server/tests/test_account.py;\noptional cleanup: web/src/pages/SettingsPage.tsx,\nandroid .../ui/settings/SettingsViewModel.kt.",
+  "created_at": "2026-07-16T22:22:39+00:00",
+  "id": "T-87",
+  "labels": [
+    "server",
+    "bug",
+    "agent",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Server: PATCH /settings behaves as PUT \u2014 currency-only PATCH wipes the initials override",
+  "updated_at": "2026-07-16T22:22:39+00:00"
+}
