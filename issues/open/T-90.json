@@ -1,0 +1,16 @@
+{
+  "body": "The web client only syncs on mount and after its own pushes \u2014 there is no\nperiodic pull, no visibilitychange/focus/online re-sync, and no manual refresh\ncontrol (useSync.refresh() exists but nothing calls it except the mount effect\nand post-leave cleanup). A tab left open during a shared shopping trip never\nsees the collaborator's checks/adds; the header happily reports \"Synced 40 min\nago\" (T-54's ticking label) with no way to act on it short of a full reload.\n\nThe server design (\u00a710) says sync is client-initiated \"on reconnect, on\nforeground, or manual\" \u2014 the web client currently implements none of the\nthree. Android has all three (15-min periodic WorkManager, foreground\nexpedited sync, pull-to-refresh, T-36).\n\nFix in useSync/AppShell:\n- re-sync on document visibilitychange \u2192 visible and on window 'online';\n- a modest interval while the tab is visible (e.g. 60\u2013120 s; skip while a\n  runSync is already in flight);\n- make the SyncIndicator (or a button beside it) clickable as a manual\n  refresh.\n\nFiles: web/src/hooks/useSync.ts, web/src/components/SyncIndicator.tsx,\nweb/src/components/AppShell.tsx (+ tests).",
+  "created_at": "2026-07-16T22:24:23+00:00",
+  "id": "T-90",
+  "labels": [
+    "web",
+    "ux",
+    "reliability",
+    "sync",
+    "agent",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Web: never re-syncs while open \u2014 collaborator changes invisible until reload (no poll/focus/manual refresh)",
+  "updated_at": "2026-07-16T22:24:23+00:00"
+}
