@@ -1,29 +1,50 @@
 package org.p23q.shoppinglist.ui.item
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.db.Status
 
-/** Notes (List view): the row edit icon opens this — every field including name, plus delete. */
+/** Notes (List view): the row edit icon / a long-press opens this — every field including name,
+ *  plus delete. Full-screen (T-80) rather than a floating AlertDialog: no tap-outside-to-cancel
+ *  (edits aren't lost by an accidental scrim tap), and a fixed action bar that stays above the
+ *  soft keyboard while the field area scrolls underneath it. */
 @Composable
 fun EditItemDialog(
     itemId: String,
@@ -36,7 +57,7 @@ fun EditItemDialog(
     LaunchedEffect(state.isSaved) { if (state.isSaved) onDismiss() }
     LaunchedEffect(state.isDeleted) { if (state.isDeleted) onDismiss() }
 
-    // Mutually exclusive rather than stacked: only one Dialog window is ever active at a time.
+    // Mutually exclusive rather than stacked: only one dialog window is ever active at a time.
     if (state.isDeleteConfirmOpen) {
         AlertDialog(
             onDismissRequest = viewModel::cancelDelete,
@@ -46,44 +67,88 @@ fun EditItemDialog(
             dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Cancel") } },
         )
     } else {
-        AlertDialog(
+        Dialog(
             onDismissRequest = onDismiss,
-            title = { Text("Edit item") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
-                        value = state.name,
-                        onValueChange = viewModel::onNameChange,
-                        label = { Text("Name") },
-                        singleLine = true,
-                        isError = state.nameError != null,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    state.nameError?.let { error ->
-                        Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    ItemFormFields(state = state, viewModel = viewModel)
-                    Spacer(Modifier.height(8.dp))
+            // Full-screen and no dismiss-on-click-outside (T-80); back-press still cancels.
+            properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+        ) {
+            // A plain Compose Dialog window fits system windows and reports the IME inset as 0, so
+            // safeDrawingPadding() couldn't lift the action bar above the keyboard. Opt this dialog's
+            // window out of decor-fits-system-windows so the keyboard becomes a real inset (T-80).
+            val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+            SideEffect { dialogWindow?.let { WindowCompat.setDecorFitsSystemWindows(it, false) } }
 
-                    Text("Status", style = MaterialTheme.typography.labelMedium)
-                    Row {
-                        Status.entries.forEach { status ->
-                            FilterChip(
-                                selected = state.status == status,
-                                onClick = { viewModel.onStatusChange(status) },
-                                label = { Text(status.wireValue) },
-                                modifier = Modifier.padding(end = 4.dp),
-                            )
+            Surface(modifier = Modifier.fillMaxSize()) {
+                // safeDrawingPadding on the outer column insets for the status bar (top) and the
+                // nav bar / keyboard (bottom, whichever is larger) — so the fixed action bar below
+                // rides up to sit just above the keyboard when it's open.
+                Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Cancel")
                         }
+                        Text(
+                            "Edit item",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f).padding(start = 4.dp),
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider()
 
-                    TextButton(onClick = viewModel::requestDelete) { Text("Delete") }
+                    // Scrollable field area filling the gap between the fixed header and action bar.
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = state.name,
+                            onValueChange = viewModel::onNameChange,
+                            label = { Text("Name") },
+                            singleLine = true,
+                            isError = state.nameError != null,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        state.nameError?.let { error ->
+                            Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        ItemFormFields(state = state, viewModel = viewModel)
+                        Spacer(Modifier.height(8.dp))
+
+                        Text("Status", style = MaterialTheme.typography.labelMedium)
+                        Row {
+                            Status.entries.forEach { status ->
+                                FilterChip(
+                                    selected = state.status == status,
+                                    onClick = { viewModel.onStatusChange(status) },
+                                    label = { Text(status.wireValue) },
+                                    modifier = Modifier.padding(end = 4.dp),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+
+                        TextButton(onClick = viewModel::requestDelete) { Text("Delete") }
+                    }
+
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = viewModel::save) { Text("Save") }
+                    }
                 }
-            },
-            confirmButton = { TextButton(onClick = viewModel::save) { Text("Save") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        )
+            }
+        }
     }
 }
