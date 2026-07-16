@@ -6,6 +6,7 @@
     "android",
     "ux"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "App: make the edit-item dialog full-screen and scrollable with the keyboard up",
   "updated_at": "2026-07-16T17:48:32+00:00"
