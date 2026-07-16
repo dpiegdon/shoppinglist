@@ -289,7 +289,13 @@ class ListScreenTest {
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
-        composeTestRule.waitForIdle()
+        // The member roster is a real MockWebServer round trip fired from ListViewModel's init
+        // (T-64), which waitForIdle() alone doesn't wait for (T-96) - poll the observed state,
+        // re-idling Compose each attempt so a response that lands late still gets picked up.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.members.size == 2
+        }
 
         composeTestRule.onNodeWithText("B").assertExists()
         composeTestRule.onNodeWithContentDescription("Last touched by b@example.com").assertExists()

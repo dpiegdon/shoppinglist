@@ -113,7 +113,13 @@ class RedeemScreenTest {
         composeTestRule.setContent {
             RedeemScreen(token = "bad-token", onRedeemed = {}, onCancel = {}, viewModel = viewModel)
         }
-        composeTestRule.waitForIdle()
+        // redeem() auto-fires on mount and the 404 is a real MockWebServer round trip, which
+        // waitForIdle() alone doesn't wait for (T-96) - poll the observed state, re-idling Compose
+        // each attempt so a response that lands late still gets picked up.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.errorMessage == "Bad invite link"
+        }
 
         composeTestRule.onNodeWithText("Bad invite link").assertExists()
         composeTestRule.onNodeWithText("Back").assertExists()

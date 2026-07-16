@@ -182,13 +182,24 @@ class SettingsScreenTest {
         )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
-        composeTestRule.waitForIdle()
+        // loadInitials() (mounted via LaunchedEffect(Unit)) fires a real MockWebServer round trip
+        // on OkHttp's dispatcher, which waitForIdle() alone doesn't wait for (T-96) - poll the
+        // observed state instead, re-idling Compose each attempt so a response that lands late is
+        // still picked up.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.initials == "MI"
+        }
 
         composeTestRule.onNodeWithText("MI").assertExists()
 
         composeTestRule.onNodeWithText("MI").performScrollTo().performTextReplacement("XY")
         composeTestRule.onAllNodesWithText("Save")[1].performClick()
-        composeTestRule.waitForIdle()
+        // Same race on the PATCH response for the save itself (T-96 root cause).
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.initials == "XY"
+        }
 
         assertEquals("XY", viewModel.uiState.value.initials)
         db.close()
