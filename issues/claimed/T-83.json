@@ -6,6 +6,7 @@
     "web",
     "ux"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Web: expose the invite link/token after minting so the inviter can share it",
   "updated_at": "2026-07-16T18:56:22+00:00"
