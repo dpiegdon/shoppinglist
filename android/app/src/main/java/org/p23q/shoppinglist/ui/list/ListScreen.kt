@@ -1,7 +1,8 @@
 package org.p23q.shoppinglist.ui.list
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -149,7 +150,7 @@ fun ListScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                         )
                     }
-                    items(group.items, key = { it.id }) { item ->
+                    itemsIndexed(group.items, key = { _, it -> it.id }) { itemIndex, item ->
                         ItemRow(
                             item = item,
                             defaultCurrency = state.defaultCurrency,
@@ -169,6 +170,14 @@ fun ListScreen(
                             },
                             onEdit = { onEditItem(item.id) },
                         )
+                        // A slightly-visible line between each item within a group (T-78). Skipped
+                        // after the last one so it doesn't stack with the next category's divider.
+                        if (itemIndex < group.items.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                        }
                     }
                 }
                 }
@@ -177,6 +186,7 @@ fun ListScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ItemRow(
     item: ItemEntity,
@@ -190,7 +200,8 @@ private fun ItemRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onToggle)
+                // Tap toggles done; long-press opens the item editor instead of toggling it (T-79).
+                .combinedClickable(onClick = onToggle, onLongClick = onEdit)
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,

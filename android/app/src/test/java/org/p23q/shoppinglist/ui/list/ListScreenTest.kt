@@ -3,10 +3,12 @@ package org.p23q.shoppinglist.ui.list
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -208,6 +210,46 @@ class ListScreenTest {
         assertEquals(itemId, editedItemId)
         assertEquals(Status.TODO.wireValue, itemsRepo.getById(itemId)!!.status.value)
         assertFalse(viewModel.uiState.value.undoItemId == itemId)
+    }
+
+    @Test
+    fun `long-press on the row body opens the editor instead of marking it done (T-79)`() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            apiProvider,
+        )
+        var editedItemId: String? = null
+
+        composeTestRule.setContent {
+            ListScreen(onAddItem = {}, onEditItem = { editedItemId = it }, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Milk").performTouchInput { longClick() }
+        composeTestRule.waitForIdle()
+
+        // The long-press opens the editor and leaves the item's status untouched (not checked off).
+        assertEquals(itemId, editedItemId)
+        assertEquals(Status.TODO.wireValue, itemsRepo.getById(itemId)!!.status.value)
     }
 
     @Test
