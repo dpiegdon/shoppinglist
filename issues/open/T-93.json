@@ -1,0 +1,15 @@
+{
+  "body": "Small invite-subsystem hygiene items, none urgent:\n\n1. Invite rows for LIVE lists are never purged: expired, used, and revoked\n   invites accumulate forever (gc.run only deletes invites when their list is\n   hard-deleted). Add a purge of clearly-dead invites (expired/used/revoked\n   older than the 90-day retention) to gc.run(). Keep recently-used ones so\n   the members screen history stays sensible if ever wanted.\n2. invites.mint() validates invited_email as just `\"@\" in email`, but the\n   token payload is colon-delimited (`invite_id:list_id:email:expires_at`,\n   split(\":\", 3)). An email containing \":\" mints fine yet produces a token\n   that can never decode (expires_at parse fails) \u2014 an invite that's dead on\n   arrival. Validate with the same EMAIL_RE as registration (or at least\n   reject \":\"), and add a length cap while at it.\n3. The redeem flow's SELECT\u2192UPDATE isn't atomic, but since an invite is bound\n   to one email the worst case is the same account redeeming twice \u2014\n   INSERT OR IGNORE makes that harmless. No action needed; documenting here\n   so the next reader doesn't re-derive it.\n\nFiles: server/src/shoppinglist_server/gc.py,\nserver/src/shoppinglist_server/invites.py, server/tests/test_invites.py,\nserver/tests/test_gc.py.",
+  "created_at": "2026-07-16T22:25:25+00:00",
+  "id": "T-93",
+  "labels": [
+    "server",
+    "chore",
+    "reliability",
+    "agent",
+    "ready"
+  ],
+  "priority": 4,
+  "title": "Server: invite hygiene \u2014 dead invites never purged; colon-in-email mints an undecodable token",
+  "updated_at": "2026-07-16T22:25:25+00:00"
+}
