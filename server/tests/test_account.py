@@ -1,11 +1,13 @@
 import pytest
 
-from shoppinglist_server import accounts, auth
+from shoppinglist_server import accounts, auth, invites
 from shoppinglist_server.errors import ApiError
 
 EMAIL = "bob@example.com"
 PASSWORD = "correct horse battery staple"
 DEVICE = "test-device"
+INVITE_KEY = b"test-invite-hmac-key"
+BASE_URL = "http://testserver"
 
 
 def _register_and_login(conn, email=EMAIL, password=PASSWORD, device=DEVICE):
@@ -223,6 +225,57 @@ def test_delete_account_cascades_and_orphans_memberships(db_conn):
     assert db_conn.execute(
         "SELECT 1 FROM memberships WHERE account_id = ?", (account_id,)
     ).fetchone() is None
+
+
+def test_delete_account_after_minting_invite_does_not_500(db_conn):
+    """T-84: invites.created_by REFERENCES accounts(id) — the departed
+    account's own invites must be removed in the same transaction, or the
+    final DELETE FROM accounts hits a FOREIGN KEY IntegrityError."""
+    account_id, _ = _register_and_login(db_conn)
+    _insert_list_and_membership(db_conn, "list-1", account_id)
+    invites.mint(db_conn, INVITE_KEY, BASE_URL, "list-1", "invitee@example.com", account_id)
+
+    accounts.delete_account(db_conn, account_id, PASSWORD)
+
+    assert db_conn.execute(
+        "SELECT 1 FROM accounts WHERE id = ?", (account_id,)
+    ).fetchone() is None
+    assert db_conn.execute(
+        "SELECT 1 FROM invites WHERE created_by = ?", (account_id,)
+    ).fetchone() is None
+
+
+def test_delete_account_after_minting_invite_list_keeps_other_member(db_conn):
+    """Same FK hazard, but the list survives (another member remains) — the
+    invite the departed account minted must still be revoked so a since-gone
+    creator can't leave a live invite that would still admit the invitee."""
+    account_id, _ = _register_and_login(db_conn)
+    other_id, _ = _register_and_login(
+        db_conn, email="other@example.com", device="other-device"
+    )
+    _insert_list_and_membership(db_conn, "list-1", account_id)
+    db_conn.execute(
+        "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, ?, ?)",
+        (other_id, "list-1", auth.now_ms()),
+    )
+    db_conn.commit()
+    invites.mint(db_conn, INVITE_KEY, BASE_URL, "list-1", "invitee@example.com", account_id)
+
+    accounts.delete_account(db_conn, account_id, PASSWORD)
+
+    assert db_conn.execute(
+        "SELECT 1 FROM accounts WHERE id = ?", (account_id,)
+    ).fetchone() is None
+    assert db_conn.execute(
+        "SELECT 1 FROM invites WHERE created_by = ?", (account_id,)
+    ).fetchone() is None
+    # The list survives — orphan_check must not have tombstoned it.
+    row = db_conn.execute("SELECT deleted FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["deleted"] == 0
+    assert db_conn.execute(
+        "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?",
+        (other_id, "list-1"),
+    ).fetchone() is not None
 
 
 # ---- CLI: reset-password -----------------------------------------------------

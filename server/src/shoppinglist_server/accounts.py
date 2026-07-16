@@ -158,6 +158,11 @@ def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> 
 
     conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (account_id,))
     conn.execute("DELETE FROM account_settings WHERE account_id = ?", (account_id,))
+    # invites.created_by REFERENCES accounts(id), so a departed account's own
+    # invites must go too — that also revokes them, which is the right call:
+    # otherwise an invite whose creator no longer exists would still admit
+    # the invitee (T-84).
+    conn.execute("DELETE FROM invites WHERE created_by = ?", (account_id,))
     conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
     conn.commit()
 
