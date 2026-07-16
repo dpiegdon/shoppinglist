@@ -1,0 +1,12 @@
+{
+  "body": "In list properties the clear-checked action is a TextButton (red text only), which\nreads as a link, not a button. Make it a proper filled red Button matching the web\nversion's btn-danger.",
+  "created_at": "2026-07-16T18:56:21+00:00",
+  "id": "T-82",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "App: make 'Clear checked' in list properties a proper filled button (not text)",
+  "updated_at": "2026-07-16T18:56:21+00:00"
+}
