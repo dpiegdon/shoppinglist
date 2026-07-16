@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T17:28:35+00:00", "kind": "created", "ref": "main@8089c6d", "text": "Web item rows: enlarge the edit hitbox to the whole right corner, not just the pencil glyph"}
 {"actor": "claude", "at": "2026-07-16T17:28:36+00:00", "kind": "claimed", "ref": "main@8089c6d", "text": "claude"}
 {"actor": "claude", "at": "2026-07-16T17:29:45+00:00", "kind": "note", "ref": "main@8089c6d", "text": "Enlarged the \u270e edit button hitbox in web ItemRow.tsx to the whole right corner: alignSelf stretch + negative margins cancelling the card padding + wider horizontal padding, with rounded right corners to match the card."}
+{"actor": "claude", "at": "2026-07-16T17:29:45+00:00", "kind": "closed", "ref": "main@b7c36de", "text": ""}
