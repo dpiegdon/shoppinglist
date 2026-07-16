@@ -1,0 +1,15 @@
+{
+  "body": "Field-LWW accepts any client-supplied updated_at. A device with a wildly wrong\nclock (or a malicious member) can stamp a field with a far-future timestamp and\nevery honest edit to that field loses until that moment passes. Reproduced:\npush name with updated_at = year 2100 \u2192 a later honest rename (server-now\nclock) is silently discarded; the field is wedged for all members for 74 years.\n\nThe spec (server design \u00a76 \"Known caveat\") accepts wall-clock LWW skew, but an\nunbounded wedge is a much worse failure mode than ordinary skew, and there is a\ncheap server-side bound: clamp (or reject with 422) any updated_at more than a\nsmall window ahead of server time (e.g. now + 1h \u2014 real skew is minutes, and a\nclamp keeps the push flowing while capping the damage; a rejected-row 422 would\ninstead quarantine an innocent device whose clock is wrong, so clamping is the\nfriendlier choice). Apply in _parse_clock so it covers items and lists, and\nalso clamps the merge-relevant created_at.\n\nrelates: T-85 (same code area \u2014 implement after/with the validation pass).\n\nFiles: server/src/shoppinglist_server/sync.py, server/tests/test_sync_engine.py.",
+  "created_at": "2026-07-16T22:22:18+00:00",
+  "id": "T-86",
+  "labels": [
+    "server",
+    "reliability",
+    "security",
+    "agent",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Server: clamp client-supplied updated_at \u2014 a far-future timestamp wedges a field for everyone",
+  "updated_at": "2026-07-16T22:22:18+00:00"
+}
