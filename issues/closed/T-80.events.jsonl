@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T17:48:32+00:00", "kind": "created", "ref": "main@b7c36de", "text": "App: make the edit-item dialog full-screen and scrollable with the keyboard up"}
 {"actor": "claude", "at": "2026-07-16T17:48:32+00:00", "kind": "claimed", "ref": "main@b7c36de", "text": "claude"}
 {"actor": "claude", "at": "2026-07-16T17:57:26+00:00", "kind": "note", "ref": "main@b7c36de", "text": "EditItemDialog is now a full-screen Dialog (usePlatformDefaultWidth=false, dismissOnClickOutside=false): fixed header (X + title), scrollable field area, fixed Cancel/Save action bar. safeDrawingPadding on the root + setDecorFitsSystemWindows(window,false) so the keyboard is a real inset and the action bar stays above it. EditItemDialogTest still green."}
+{"actor": "claude", "at": "2026-07-16T17:57:27+00:00", "kind": "closed", "ref": "main@b7dbb60", "text": ""}
