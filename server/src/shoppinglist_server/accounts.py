@@ -113,26 +113,55 @@ def get_settings(conn: sqlite3.Connection, account_id: str) -> dict:
     }
 
 
+# Sentinel distinguishing "caller didn't pass this field at all" from any real value,
+# including None. update_settings is a PATCH, not a PUT (T-87): a field left at this
+# default is left untouched in the database, whereas initials=None is a meaningful
+# value ("clear the custom override back to the derived default").
+_UNSET = object()
+
+
 def update_settings(
-    conn: sqlite3.Connection, account_id: str, default_currency: str, initials: str | None = None
+    conn: sqlite3.Connection,
+    account_id: str,
+    default_currency=_UNSET,
+    initials=_UNSET,
 ) -> dict:
-    if not default_currency or not CURRENCY_RE.match(default_currency):
-        raise ApiError(
-            422,
-            "invalid_currency",
-            "default_currency must be a 3-letter uppercase ISO-4217 code.",
+    set_clauses = []
+    params: list = []
+
+    if default_currency is not _UNSET:
+        if not isinstance(default_currency, str) or not CURRENCY_RE.match(default_currency):
+            raise ApiError(
+                422,
+                "invalid_currency",
+                "default_currency must be a 3-letter uppercase ISO-4217 code.",
+            )
+        set_clauses.append("default_currency = ?")
+        params.append(default_currency)
+
+    if initials is not _UNSET:
+        if initials is not None:
+            if not isinstance(initials, str):
+                raise ApiError(422, "invalid_initials", "initials must be a string.")
+            if len(initials) > INITIALS_MAX_LENGTH:
+                raise ApiError(
+                    422,
+                    "invalid_initials",
+                    f"initials must be {INITIALS_MAX_LENGTH} characters or fewer.",
+                )
+        set_clauses.append("initials = ?")
+        params.append(initials)
+
+    if set_clauses:
+        set_clauses.append("updated_at = ?")
+        params.append(auth.now_ms())
+        params.append(account_id)
+        conn.execute(
+            f"UPDATE account_settings SET {', '.join(set_clauses)} WHERE account_id = ?",
+            params,
         )
-    if initials is not None and len(initials) > INITIALS_MAX_LENGTH:
-        raise ApiError(
-            422,
-            "invalid_initials",
-            f"initials must be {INITIALS_MAX_LENGTH} characters or fewer.",
-        )
-    conn.execute(
-        "UPDATE account_settings SET default_currency = ?, initials = ?, updated_at = ? WHERE account_id = ?",
-        (default_currency, initials, auth.now_ms(), account_id),
-    )
-    conn.commit()
+        conn.commit()
+
     return get_settings(conn, account_id)
 
 

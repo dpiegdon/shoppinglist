@@ -141,8 +141,10 @@ class SettingsViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             try {
-                // Must resend the current initials (T-64): the server writes both columns on every
-                // PATCH, so omitting this would silently wipe any existing override.
+                // Resending initials is no longer required for correctness — the server treats
+                // an absent key as "leave unchanged" (T-87), not PUT-style overwrite. Still sent
+                // for parity, but note an empty string here is a *real* value (not "absent"), so
+                // [loadInitials] must have resolved before this call or a custom override is lost.
                 val response = apiProvider.get().updateSettings(
                     UpdateSettingsRequest(normalized, _uiState.value.initials),
                 )
@@ -176,7 +178,9 @@ class SettingsViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             try {
-                // Must resend the current currency: the endpoint requires it on every PATCH.
+                // No longer required by the server (T-87: absent key = unchanged); kept for
+                // parity. Currency is always loaded from cached session state, so unlike
+                // initials there's no staleness risk in resending it here.
                 val response = apiProvider.get().updateSettings(
                     UpdateSettingsRequest(_uiState.value.defaultCurrency, normalized),
                 )

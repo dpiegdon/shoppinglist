@@ -186,6 +186,38 @@ def test_update_settings_initials_none_clears_override_back_to_default(db_conn):
     assert result == {"default_currency": "EUR", "initials": "BO"}  # bob@... derived default
 
 
+# ---- service layer: PATCH-not-PUT semantics (T-87) --------------------------
+
+
+def test_update_settings_currency_only_preserves_custom_initials_override(db_conn):
+    account_id, _ = _register_and_login(db_conn)
+    accounts.update_settings(db_conn, account_id, "EUR", "CZ")
+
+    # Omitting the `initials` kwarg entirely must leave the override untouched.
+    result = accounts.update_settings(db_conn, account_id, "USD")
+
+    assert result == {"default_currency": "USD", "initials": "CZ"}
+    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "USD", "initials": "CZ"}
+
+
+def test_update_settings_initials_only_leaves_currency_unchanged(db_conn):
+    account_id, _ = _register_and_login(db_conn)
+    accounts.update_settings(db_conn, account_id, "USD")  # move off the EUR default
+
+    # Omitting the `default_currency` kwarg entirely must leave it untouched.
+    result = accounts.update_settings(db_conn, account_id, initials="ZZ")
+
+    assert result == {"default_currency": "USD", "initials": "ZZ"}
+
+
+def test_update_settings_non_string_initials_raises_422_not_500(db_conn):
+    account_id, _ = _register_and_login(db_conn)
+    with pytest.raises(ApiError) as excinfo:
+        accounts.update_settings(db_conn, account_id, "EUR", 123)
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_initials"
+
+
 def test_settings_http_patch_with_initials(client):
     token = _register_and_login_http(client)
     resp = client.patch(
@@ -434,6 +466,73 @@ def test_settings_http_patch_invalid_currency_422(client):
     resp = client.patch(
         "/api/v1/settings",
         json={"default_currency": "usd"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+
+
+# ---- HTTP layer: PATCH-not-PUT semantics (T-87) ------------------------------
+
+
+def test_settings_http_patch_currency_only_preserves_custom_initials_override(client):
+    token = _register_and_login_http(client)
+    client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "EUR", "initials": "CZ"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    resp = client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "USD"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {"default_currency": "USD", "initials": "CZ"}
+
+
+def test_settings_http_patch_initials_only_works_without_currency(client):
+    token = _register_and_login_http(client)
+    client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "USD", "initials": "XY"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    resp = client.patch(
+        "/api/v1/settings",
+        json={"initials": "ZZ"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {"default_currency": "USD", "initials": "ZZ"}
+
+
+def test_settings_http_patch_explicit_null_initials_clears_override(client):
+    token = _register_and_login_http(client)
+    client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "EUR", "initials": "CZ"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    resp = client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "EUR", "initials": None},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {"default_currency": "EUR", "initials": "BO"}  # bob@... derived default
+
+
+def test_settings_http_patch_non_string_initials_422_not_500(client):
+    token = _register_and_login_http(client)
+    resp = client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "EUR", "initials": 123},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 422

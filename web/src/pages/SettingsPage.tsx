@@ -67,8 +67,9 @@ export default function SettingsPage() {
   async function handleCurrencySave(e: FormEvent) {
     e.preventDefault();
     await currencyStatus.run(async () => {
-      // Must resend the currently-loaded initials (T-64): the server writes both columns on
-      // every PATCH, so omitting this would silently wipe any existing override.
+      // The server now treats an absent key as "leave unchanged" (T-87), so resending
+      // initials here is no longer required to avoid wiping the override — kept for
+      // parity with the value already shown in the form.
       const result = await api.updateSettings({ default_currency: currency.toUpperCase(), initials });
       setCachedDefaultCurrency(result.default_currency);
       setInitials(result.initials);
@@ -78,8 +79,9 @@ export default function SettingsPage() {
   async function handleInitialsSave(e: FormEvent) {
     e.preventDefault();
     await initialsStatus.run(async () => {
-      // Must resend the current currency: the endpoint requires it on every PATCH. Length is
-      // validated server-side (422 invalid_initials), same as currency's format check above.
+      // No longer required by the server (T-87: absent key = unchanged); kept for parity
+      // with the currency shown in the form. Length is validated server-side (422
+      // invalid_initials), same as currency's format check above.
       const result = await api.updateSettings({
         default_currency: currency.toUpperCase(),
         initials: initials.trim().toUpperCase(),

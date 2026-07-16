@@ -60,7 +60,14 @@ def register_routes(bp):
     def update_settings_view():
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
-        result = accounts.update_settings(
-            conn, g.account.id, data.get("default_currency"), data.get("initials")
-        )
+        # PATCH, not PUT (T-87): only forward keys the caller actually sent, so an
+        # absent key means "leave unchanged" rather than being coerced to None and
+        # wiping the column. A present `initials: null` still reaches update_settings
+        # as None, which it treats as "clear the override back to the derived default".
+        kwargs = {}
+        if "default_currency" in data:
+            kwargs["default_currency"] = data["default_currency"]
+        if "initials" in data:
+            kwargs["initials"] = data["initials"]
+        result = accounts.update_settings(conn, g.account.id, **kwargs)
         return jsonify(result), 200
