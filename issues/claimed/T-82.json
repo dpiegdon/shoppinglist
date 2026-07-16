@@ -6,7 +6,8 @@
     "android",
     "ux"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "App: make 'Clear checked' in list properties a proper filled button (not text)",
-  "updated_at": "2026-07-16T18:56:21+00:00"
+  "updated_at": "2026-07-16T18:56:22+00:00"
 }
