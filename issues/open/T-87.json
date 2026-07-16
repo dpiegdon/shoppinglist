@@ -6,9 +6,10 @@
     "server",
     "bug",
     "agent",
-    "ready"
+    "ready",
+    "sonnet"
   ],
   "priority": 3,
   "title": "Server: PATCH /settings behaves as PUT \u2014 currency-only PATCH wipes the initials override",
-  "updated_at": "2026-07-16T22:22:39+00:00"
+  "updated_at": "2026-07-16T22:40:31+00:00"
 }

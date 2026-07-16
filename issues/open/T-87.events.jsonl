@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-16T22:22:39+00:00", "kind": "created", "ref": "main@416ffda", "text": "Server: PATCH /settings behaves as PUT \u2014 currency-only PATCH wipes the initials override"}
+{"actor": "claude", "at": "2026-07-16T22:40:31+00:00", "kind": "updated", "ref": "main@416ffda", "text": "fields updated"}
