@@ -1,0 +1,12 @@
+{
+  "body": "On Android the last-touched-by initials badge sits to the right of an item row,\nsnug against the edit pencil (the text column has weight(1f)). On web the text\ncolumn had no flex-grow, so with justify-content:space-between across the three\nchildren the badge floated centered in the gap instead. Give the text column\nflex:1 so the badge sits next to the pencil, matching Android.",
+  "created_at": "2026-07-16T17:26:47+00:00",
+  "id": "T-76",
+  "labels": [
+    "web",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Web item rows: right-align the author badge next to the edit pencil (match Android)",
+  "updated_at": "2026-07-16T17:26:47+00:00"
+}
