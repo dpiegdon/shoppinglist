@@ -25,6 +25,10 @@ export default function ListPropsPage() {
   const [membersError, setMembersError] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  // The most recently minted invite link (T-83) — mint returns it once; the members roster doesn't
+  // carry tokens for older pending invites, so this only reflects an invite created this session.
+  const [inviteLink, setInviteLink] = useState<{ url: string; email: string } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     if (!listId) return;
@@ -89,14 +93,30 @@ export default function ListPropsPage() {
 
   async function handleInvite(e: FormEvent) {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    const email = inviteEmail.trim();
+    if (!email) return;
     try {
-      await api.mintInvite(id, inviteEmail.trim());
+      const minted = await api.mintInvite(id, email);
       setInviteEmail("");
+      // Surface the link so the inviter can pass it along (the server only returns the token at
+      // mint time; nothing emails it for them).
+      setInviteLink({ url: minted.url, email });
+      setLinkCopied(false);
       const refreshed = await api.getMembers(id);
       setMembers(refreshed);
     } catch (err) {
       setMembersError(err instanceof ApiError ? err.message : "Failed to send invite.");
+    }
+  }
+
+  async function copyInviteLink() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink.url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable (e.g. non-secure context) — the field stays selectable as a fallback.
     }
   }
 
@@ -296,6 +316,34 @@ export default function ListPropsPage() {
             Invite
           </button>
         </form>
+
+        {inviteLink && (
+          <div
+            style={{
+              marginTop: "0.75rem",
+              padding: "0.6rem",
+              border: "1px solid var(--color-border)",
+              borderRadius: "var(--radius)",
+            }}
+          >
+            <p className="muted" style={{ margin: "0 0 0.4rem", fontSize: "0.85rem" }}>
+              Invite link for <strong>{inviteLink.email}</strong> — send it to them. Only that email
+              can redeem it, and it expires in 7 days.
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input
+                readOnly
+                value={inviteLink.url}
+                onFocus={(e) => e.target.select()}
+                style={{ flex: 1, fontSize: "0.8rem" }}
+                aria-label="Invite link"
+              />
+              <button type="button" className="btn" onClick={copyInviteLink}>
+                {linkCopied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginRight: "0.5rem" }}>

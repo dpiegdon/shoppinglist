@@ -10,7 +10,7 @@ import type { ItemStatus } from "../api/contract";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
-  return { ...actual, sync: vi.fn(), getSettings: vi.fn(), getMembers: vi.fn() };
+  return { ...actual, sync: vi.fn(), getSettings: vi.fn(), getMembers: vi.fn(), mintInvite: vi.fn() };
 });
 
 function clock<T>(value: T) {
@@ -275,5 +275,43 @@ describe("ListPropsPage clear-checked (T-75)", () => {
 
     await screen.findByRole("heading", { name: "List properties" });
     expect(screen.queryByText(/Clear checked/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ListPropsPage invite link (T-83)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("surfaces the minted invite URL with a copy control after inviting", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [] },
+    });
+    vi.mocked(api.mintInvite).mockResolvedValue({
+      invite_id: "inv-1",
+      token: "tok-abc",
+      url: "http://testserver/invite/tok-abc",
+      expires_at: 9999999999999,
+    });
+
+    await renderListPropsPageViaListPage();
+
+    const emailInput = await screen.findByPlaceholderText("Invite by email…");
+    await userEvent.type(emailInput, "friend@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "Invite" }));
+
+    // The link the inviter needs is now shown (and passed the invited email to mint).
+    const linkField = await screen.findByLabelText("Invite link");
+    expect(linkField).toHaveValue("http://testserver/invite/tok-abc");
+    expect(screen.getByText(/friend@example\.com/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+    expect(vi.mocked(api.mintInvite)).toHaveBeenCalledWith("list-1", "friend@example.com");
   });
 });
