@@ -1,0 +1,14 @@
+{
+  "body": "The operator CLI `flask shoppinglist reset-password <email>` sets a new\npassword but leaves every existing auth token valid. change-password (T-45)\ndeliberately revokes all other sessions because a password change is the\nstandard response to a possibly-compromised account \u2014 the operator reset is\nused in exactly the same situations (user lost the device / suspects\ncompromise / forgot password), so the same reasoning applies with more force:\nafter a reset, an attacker holding a stolen token keeps full access\nindefinitely.\n\nFix: accounts.reset_password() should DELETE FROM auth_tokens WHERE\naccount_id = ? (all of them \u2014 there is no \"current session\" to spare in the\nCLI case) in the same transaction as the hash update. Mention it in the CLI\nhelp/README (\"resets the password and signs out all devices\").\n\nFiles: server/src/shoppinglist_server/accounts.py,\nserver/src/shoppinglist_server/cli.py (help text), server/tests/test_account.py,\nserver/README.md.",
+  "created_at": "2026-07-16T22:25:03+00:00",
+  "id": "T-92",
+  "labels": [
+    "server",
+    "security",
+    "agent",
+    "ready"
+  ],
+  "priority": 4,
+  "title": "Server: operator reset-password leaves all existing sessions valid (inconsistent with T-45)",
+  "updated_at": "2026-07-16T22:25:03+00:00"
+}
