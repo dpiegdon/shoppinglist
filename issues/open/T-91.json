@@ -1,6 +1,9 @@
 {
   "body": "The web item dialog gives no feedback when a save is rejected. Example: type a\nprice of \"1,50\" (comma decimal \u2014 the natural EU input) \u2192 the server 422s\n(invalid_price), performSave's exception escapes unhandled, the dialog just\nstays open with no message; the only trace is the tiny header status flipping\nto \"Sync failed\". The user has no idea what's wrong or that nothing was saved.\n\nAndroid solved exactly this (ItemFormViewModel.parsePriceAmount /\nparseCurrency): it normalizes \"1,99\" \u2192 \"1.99\", strips currency symbols and\nwhitespace, validates the 3-letter currency code, and shows inline field\nerrors BEFORE pushing \u2014 because a 422'd push also wedges the queue (T-32).\n\nFix (parity):\n- port the normalization + validation to the web dialog (price amount,\n  currency) with inline error text under the fields;\n- catch onSave rejections in ItemDialog.performSave and surface the ApiError\n  message inline instead of letting it escape as an unhandled rejection.\n\nrelates: T-88 (same component; do together or in sequence).\n\nFiles: web/src/components/ItemDialog.tsx (+ test).",
   "created_at": "2026-07-16T22:24:43+00:00",
+  "deps": [
+    "T-88"
+  ],
   "id": "T-91",
   "labels": [
     "web",
@@ -12,5 +15,5 @@
   ],
   "priority": 4,
   "title": "Web: item dialog swallows save errors \u2014 no inline price/currency validation (Android has it)",
-  "updated_at": "2026-07-16T22:40:32+00:00"
+  "updated_at": "2026-07-16T22:40:33+00:00"
 }
