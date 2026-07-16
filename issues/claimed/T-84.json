@@ -9,7 +9,8 @@
     "ready",
     "sonnet"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Server: DELETE /account 500s (FK) once the account has minted an invite",
-  "updated_at": "2026-07-16T22:40:30+00:00"
+  "updated_at": "2026-07-16T23:19:58+00:00"
 }
