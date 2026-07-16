@@ -1,0 +1,15 @@
+{
+  "body": "/sync trusts pushed field payloads far too much. Confirmed against a fresh DB:\n\n1. Wrong-typed values are stored verbatim and served back to every member:\n   `stores: \"not-a-list\"` (string), `category_order: {\"not\":\"a list\"}` (dict),\n   `quantity: 12345` (int) all round-trip. The Android client deserializes\n   `stores` as `FieldClock<List<String>>` (kotlinx strict), so ONE buggy or\n   malicious member pushing a mis-typed value breaks every other member's pull\n   permanently \u2014 exactly the wedge class T-32/T-47 were meant to eliminate,\n   but triggered cross-client where quarantining can't help (the poison is in\n   the pull, not the push queue).\n2. No length caps except list notes (5000): a 100 KB item name is accepted\n   (verified) \u2014 anything up to the 4 MB body cap bloats every member's sync\n   forever.\n3. Structurally junk payloads produce 500s instead of 422 quarantine\n   envelopes: `updated_at: 2**65` \u2192 OverflowError; `id: {\"weird\":1}` \u2192\n   sqlite3.ProgrammingError; `changes: \"junk\"` \u2192 AttributeError. A 500 has no\n   row_id/field details, so the Android client can't quarantine the row and\n   its whole push queue wedges (the T-32 flow only handles 422).\n4. `created_at` and `id` types are never validated (a string created_at would\n   be stored and served to clients expecting an int).\n\nFix in sync.py (_parse_row/_parse_clock/_validate_item_field/\n_validate_list_field) and routes/sync.py:\n- validate envelope shapes: changes must be a dict, changes.lists/items lists\n  of dicts, id a string (with a sane cap, e.g. 128), created_at an int within\n  SQLite int64 range, updated_at an int within range;\n- stores / category_order: list of strings, item count + element length caps;\n- name/category/quantity/note/price.amount/updated_by: strings with sane max\n  lengths (e.g. name 500, note 5000, updated_by 128);\n- every rejection = ApiError 422 with row_id+field details (the existing\n  quarantine envelope), never an unhandled exception.\nAdd tests covering each rejected shape and that a valid push still works.\n\nFiles: server/src/shoppinglist_server/sync.py,\nserver/src/shoppinglist_server/routes/sync.py, server/tests/test_sync_api.py.",
+  "created_at": "2026-07-16T22:21:56+00:00",
+  "id": "T-85",
+  "labels": [
+    "server",
+    "reliability",
+    "security",
+    "agent",
+    "ready"
+  ],
+  "priority": 2,
+  "title": "Server: /sync input validation \u2014 mis-typed fields poison all members, junk payloads 500 instead of 422",
+  "updated_at": "2026-07-16T22:21:56+00:00"
+}
