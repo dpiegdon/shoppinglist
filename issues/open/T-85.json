@@ -7,9 +7,10 @@
     "reliability",
     "security",
     "agent",
-    "ready"
+    "ready",
+    "opus"
   ],
   "priority": 2,
   "title": "Server: /sync input validation \u2014 mis-typed fields poison all members, junk payloads 500 instead of 422",
-  "updated_at": "2026-07-16T22:21:56+00:00"
+  "updated_at": "2026-07-16T22:40:30+00:00"
 }
