@@ -1,0 +1,12 @@
+{
+  "body": "This repository has no git remote (`git remote -v` is empty): the code, the\nfull history, AND the gittoc tracker branch exist only on this machine\n(an SD-card-backed Raspberry Pi, per the host OS). The Android release\nkeystore + keystore.properties are deliberately gitignored, so they exist\nonly as loose files here unless the android/README backup advice was actually\nfollowed. Concretely: losing this disk loses the project and permanently\nloses the ability to ship an updatable APK (a new keystore can't upgrade\ninstalled apps).\n\nThis session already hit the fragility sideways: the repo was moved from\n/home/claude/empty to /home/claude/shoppinglist at some point, which silently\nbroke the gittoc worktree pointer and the server/.venv interpreter paths\n(both repaired 2026-07-16).\n\nDecide + set up an off-device backup:\n- a bare mirror on another host (or a private GitHub/Gitea remote) with a\n  push habit/cron, INCLUDING the gittoc branch (`git push <remote> main gittoc`,\n  or `git toc remote --set` + autopush);\n- a separate, encrypted copy of android/keystore/ + keystore.properties (NOT\n  in the git remote);\n- confirm the production server's SQLite backup practice from T-58 is actually\n  running against the live deployment.\n\nNeeds a human decision on where backups should live before any agent can act.",
+  "created_at": "2026-07-16T22:26:05+00:00",
+  "id": "T-95",
+  "labels": [
+    "ops",
+    "human"
+  ],
+  "priority": 3,
+  "title": "Ops: no off-device backup \u2014 repo, gittoc tracker, and release keystore exist only on this machine",
+  "updated_at": "2026-07-16T22:26:05+00:00"
+}
