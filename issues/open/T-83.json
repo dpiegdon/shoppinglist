@@ -1,0 +1,12 @@
+{
+  "body": "Web invite flow (Members -> email -> Invite) mints an invite but discards the\nreturned url, so the inviter never gets a link to send. Surface the invite URL\nafter minting with a copy-to-clipboard control (the Android app already shares the\nURL via a share intent). Only freshly-minted invites can show it \u2014 the members\nresponse doesn't carry tokens for pre-existing pending invites.",
+  "created_at": "2026-07-16T18:56:22+00:00",
+  "id": "T-83",
+  "labels": [
+    "web",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Web: expose the invite link/token after minting so the inviter can share it",
+  "updated_at": "2026-07-16T18:56:22+00:00"
+}
