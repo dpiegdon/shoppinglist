@@ -6,6 +6,7 @@
     "server",
     "security"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Security review: a logged-in non-member cannot access a list in any way (server authz)",
   "updated_at": "2026-07-16T18:50:30+00:00"
