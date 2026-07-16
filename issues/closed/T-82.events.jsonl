@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T18:56:21+00:00", "kind": "created", "ref": "main@556ed9b", "text": "App: make 'Clear checked' in list properties a proper filled button (not text)"}
 {"actor": "claude", "at": "2026-07-16T18:56:22+00:00", "kind": "claimed", "ref": "main@556ed9b", "text": "claude"}
 {"actor": "claude", "at": "2026-07-16T19:04:48+00:00", "kind": "note", "ref": "main@556ed9b", "text": "ListPropsScreen: clear-checked changed from a red TextButton to a filled Button (containerColor=error, contentColor=onError), matching the web btn-danger."}
+{"actor": "claude", "at": "2026-07-16T19:04:49+00:00", "kind": "closed", "ref": "main@a13e5fe", "text": ""}
