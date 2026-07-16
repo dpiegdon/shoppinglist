@@ -29,6 +29,7 @@ import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
@@ -340,5 +341,33 @@ class ListPropsViewModelTest {
         viewModel.revokeInvite("inv-1").join()
 
         assertNotNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `checkedCount counts checked items regardless of category (T-75)`() = runTest(mainDispatcherRule.dispatcher) {
+        itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
+        itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
+        itemsRepo.createItem(listId, "Bread", status = Status.TODO)
+
+        val state = newViewModel().uiState.first { it.checkedCount == 2 }
+
+        assertEquals(2, state.checkedCount)
+    }
+
+    @Test
+    fun `clearChecked moves every checked item to backlog and drops the count to zero (T-75)`() = runTest(mainDispatcherRule.dispatcher) {
+        val milk = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
+        val eggs = itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
+        val bread = itemsRepo.createItem(listId, "Bread", status = Status.TODO)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.checkedCount == 2 }
+
+        viewModel.clearChecked().join()
+
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(milk)!!.status.value)
+        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(eggs)!!.status.value)
+        // The todo item is untouched, and the live count falls to 0 (hiding the button).
+        assertEquals(Status.TODO.wireValue, itemsRepo.getById(bread)!!.status.value)
+        assertEquals(0, viewModel.uiState.first { it.checkedCount == 0 }.checkedCount)
     }
 }

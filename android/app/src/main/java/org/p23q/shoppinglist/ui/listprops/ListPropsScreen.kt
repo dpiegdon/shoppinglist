@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -95,6 +96,19 @@ fun ListPropsScreen(
         )
         TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text("Save order") }
         Spacer(Modifier.height(16.dp))
+
+        // Relocated here from the list screen (T-75), where it was too easy to tap by accident: move
+        // every checked item to backlog. Same red styling as before; only shown when there's
+        // something to clear.
+        if (state.checkedCount > 0) {
+            TextButton(
+                onClick = { viewModel.clearChecked() },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
+                Text("Clear checked (${state.checkedCount})")
+            }
+            Spacer(Modifier.height(16.dp))
+        }
 
         // Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens.
         Text("Notes", style = MaterialTheme.typography.titleMedium)

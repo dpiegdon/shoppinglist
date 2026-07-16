@@ -136,47 +136,6 @@ class ListScreenTest {
     }
 
     @Test
-    fun `Clear checked shows the count and bulk-moves checked items to backlog`() = runBlocking {
-        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
-            .setDriver(BundledSQLiteDriver())
-            // Unconfined so clearChecked()'s viewModelScope coroutine completes inline under
-            // waitForIdle - a real IO pool races the Compose wait primitives (see AddItemDialogTest / T-29).
-            .setQueryCoroutineContext(Dispatchers.Unconfined)
-            .build()
-        val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
-        val listId = listsRepo.createList("Groceries")
-        val milk = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
-        val eggs = itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
-        itemsRepo.createItem(listId, "Bread", status = Status.TODO)
-        val viewModel = ListViewModel(
-            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
-            itemsRepo,
-            listsRepo,
-            Syncer { SyncResult.Success(0, 0, 0, 0) },
-            SyncStatus(),
-            DefaultCurrencyState(FakeSessionState()),
-            ShowCheckedStore(
-                PreferenceDataStoreFactory.create {
-                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
-                },
-            ),
-            apiProvider,
-        )
-
-        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
-        composeTestRule.waitForIdle()
-
-        // Count reflects the two checked items even though show-checked is off.
-        composeTestRule.onNodeWithText("Clear checked (2)").performClick()
-        composeTestRule.waitForIdle()
-
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(milk)!!.status.value)
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(eggs)!!.status.value)
-    }
-
-    @Test
     fun `sync status is a marker on the top controls line, not its own line`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())

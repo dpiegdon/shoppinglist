@@ -247,36 +247,6 @@ class ListViewModelTest {
     }
 
     @Test
-    fun `checkedCount counts checked items regardless of the show-checked toggle (T-35)`() = runTest(mainDispatcherRule.dispatcher) {
-        itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
-        itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
-        itemsRepo.createItem(listId, "Bread", status = Status.TODO)
-        val viewModel = newViewModel()
-
-        assertEquals(2, viewModel.uiState.first { it.checkedCount == 2 }.checkedCount)
-
-        // Toggling show-checked changes visibility, not the count that drives the Clear-checked action.
-        viewModel.toggleShowChecked()
-        assertEquals(2, viewModel.uiState.value.checkedCount)
-    }
-
-    @Test
-    fun `clearChecked moves every checked item to backlog and arms the undo (T-35)`() = runTest(mainDispatcherRule.dispatcher) {
-        val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
-        val b = itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
-        val viewModel = newViewModel()
-        viewModel.uiState.first { it.checkedCount == 2 }
-
-        viewModel.clearChecked().join()
-
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(a)!!.status.value)
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(b)!!.status.value)
-        assertEquals(setOf(a, b), viewModel.uiState.value.clearedCheckedIds.toSet())
-        // Nothing checked any more -> the action's count drops to 0 (button hides).
-        assertEquals(0, viewModel.uiState.first { it.checkedCount == 0 }.checkedCount)
-    }
-
-    @Test
     fun `refresh runs a sync and clears the refreshing flag (T-36)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.listName == "Groceries" }
@@ -294,20 +264,6 @@ class ListViewModelTest {
         syncStatus.succeeded(at = 5_000L, pending = 1, blocked = 0)
 
         assertEquals(5_000L, viewModel.uiState.first { it.sync.lastSyncAt == 5_000L }.sync.lastSyncAt)
-    }
-
-    @Test
-    fun `undoClearChecked puts the cleared items back to checked (T-35)`() = runTest(mainDispatcherRule.dispatcher) {
-        val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
-        val viewModel = newViewModel()
-        viewModel.uiState.first { it.checkedCount == 1 }
-        viewModel.clearChecked().join()
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(a)!!.status.value)
-
-        viewModel.undoClearChecked().join()
-
-        assertEquals(Status.CHECKED.wireValue, itemsRepo.getById(a)!!.status.value)
-        assertTrue(viewModel.uiState.value.clearedCheckedIds.isEmpty())
     }
 
     @Test

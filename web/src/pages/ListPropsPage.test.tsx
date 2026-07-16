@@ -194,3 +194,86 @@ describe("ListPropsPage duplicate list (T-63)", () => {
     await screen.findByText("Groceries (Copy)");
   });
 });
+
+describe("ListPropsPage clear-checked (T-75)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  function itemObj(id: string, name: string, status: ItemStatus) {
+    return {
+      id,
+      list_id: "list-1",
+      created_at: 0,
+      fields: {
+        name: clock(name),
+        category: clock(null),
+        stores: clock([]),
+        quantity: clock(null),
+        price: clock(null),
+        note: clock(null),
+        status: clock<ItemStatus>(status),
+        deleted: clock(false),
+      },
+    };
+  }
+
+  it("shows the checked count and moves every checked item to backlog on click", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [
+          itemObj("item-1", "Milk", "todo"),
+          itemObj("item-2", "Bread", "checked"),
+          itemObj("item-3", "Eggs", "checked"),
+        ],
+      },
+    });
+
+    await renderListPropsPageViaListPage();
+
+    const clearButton = await screen.findByRole("button", { name: "Clear checked (2)" });
+
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 2,
+      changes: {
+        lists: [],
+        items: [itemObj("item-2", "Bread", "backlog"), itemObj("item-3", "Eggs", "backlog")],
+      },
+    });
+
+    await userEvent.click(clearButton);
+
+    await waitFor(() => {
+      const call = vi.mocked(api.sync).mock.calls[1][0];
+      expect(call.changes.items).toHaveLength(2);
+      const ids = call.changes.items!.map((i) => i.id).sort();
+      expect(ids).toEqual(["item-2", "item-3"]);
+      for (const item of call.changes.items!) {
+        expect(item.fields.status?.value).toBe("backlog");
+      }
+    });
+
+    // Nothing left to clear, so the section disappears.
+    await waitFor(() => expect(screen.queryByText(/Clear checked/)).not.toBeInTheDocument());
+  });
+
+  it("hides the clear-checked section when nothing is checked", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [itemObj("item-1", "Milk", "todo")] },
+    });
+
+    await renderListPropsPageViaListPage();
+
+    await screen.findByRole("heading", { name: "List properties" });
+    expect(screen.queryByText(/Clear checked/)).not.toBeInTheDocument();
+  });
+});

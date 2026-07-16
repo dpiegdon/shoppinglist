@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -35,7 +34,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,22 +84,6 @@ fun ListScreen(
         }
     }
 
-    LaunchedEffect(state.clearedCheckedIds) {
-        val count = state.clearedCheckedIds.size
-        if (count > 0) {
-            val result = snackbarHostState.showSnackbar(
-                message = if (count == 1) "1 item cleared" else "$count items cleared",
-                actionLabel = "Undo",
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undoClearChecked()
-            } else {
-                viewModel.dismissClearUndo()
-            }
-        }
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         // This screen already sits inside AppDrawerScaffold's Scaffold (which insets for the top
@@ -110,28 +92,19 @@ fun ListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            // Slim controls row: show-checked toggle-button, plus "Clear checked" beside it when
-            // there are checked items; the registry and list-settings actions sit on the right (T-35).
+            // Slim controls row: show-checked toggle-button on the left; the registry and
+            // list-settings actions on the right (T-35). "Clear checked" moved into list properties
+            // (T-75) — too easy to tap here by accident.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FilterChip(
-                        selected = state.showChecked,
-                        onClick = { viewModel.toggleShowChecked() },
-                        label = { Text("Show checked") },
-                    )
-                    if (state.checkedCount > 0) {
-                        TextButton(
-                            onClick = { viewModel.clearChecked() },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        ) {
-                            Text("Clear checked (${state.checkedCount})")
-                        }
-                    }
-                }
+                FilterChip(
+                    selected = state.showChecked,
+                    onClick = { viewModel.toggleShowChecked() },
+                    label = { Text("Show checked") },
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Folded into this row instead of its own line (T-63): a quiet dot rather than a
                     // full "Synced 5 min ago" sentence; the sentence itself is still there as the

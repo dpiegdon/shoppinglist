@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,7 +58,7 @@ function renderListPage() {
   );
 }
 
-describe("ListPage clear-checked", () => {
+describe("ListPage checked items", () => {
   beforeEach(() => {
     vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
     vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
@@ -78,48 +78,6 @@ describe("ListPage clear-checked", () => {
   afterEach(() => {
     vi.clearAllMocks();
     cleanup();
-  });
-
-  it("shows a count of checked items and moves them all to backlog on click", async () => {
-    renderListPage();
-
-    const clearButton = await screen.findByText("Clear checked (2)");
-
-    vi.mocked(api.sync).mockResolvedValueOnce({
-      cursor: 2,
-      changes: {
-        lists: [],
-        items: [itemObj("item-2", "Bread", "backlog"), itemObj("item-3", "Eggs", "backlog")],
-      },
-    });
-
-    await userEvent.click(clearButton);
-
-    await waitFor(() => {
-      const call = vi.mocked(api.sync).mock.calls[1][0];
-      expect(call.changes.items).toHaveLength(2);
-      const ids = call.changes.items!.map((i) => i.id).sort();
-      expect(ids).toEqual(["item-2", "item-3"]);
-      for (const item of call.changes.items!) {
-        expect(item.fields.status?.value).toBe("backlog");
-      }
-    });
-
-    // Cleared items are gone from the (now empty) checked count.
-    await waitFor(() => expect(screen.queryByText(/Clear checked/)).not.toBeInTheDocument());
-  });
-
-  it("hides the clear-checked button when nothing is checked", async () => {
-    vi.mocked(api.sync).mockReset();
-    vi.mocked(api.sync).mockResolvedValueOnce({
-      cursor: 1,
-      changes: { lists: [listObj()], items: [itemObj("item-1", "Milk", "todo")] },
-    });
-
-    renderListPage();
-
-    await screen.findByText("Milk");
-    expect(screen.queryByText(/Clear checked/)).not.toBeInTheDocument();
   });
 
   it("show-checked is a toggle button that reveals and hides checked items", async () => {

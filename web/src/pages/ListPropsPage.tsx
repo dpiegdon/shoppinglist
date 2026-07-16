@@ -4,7 +4,8 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
-import type { MembersResponse } from "../api/contract";
+import { checkedItems } from "../lib/grouping";
+import type { ItemStatus, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 
 export default function ListPropsPage() {
@@ -36,6 +37,8 @@ export default function ListPropsPage() {
   if (!listId) return <Navigate to="/" replace />;
   if (!list) return <Navigate to="/" replace />;
   const id: string = listId;
+
+  const allChecked = checkedItems(Array.from(items.values()).filter((i) => i.list_id === id));
 
   async function saveName(e: FormEvent) {
     e.preventDefault();
@@ -144,6 +147,21 @@ export default function ListPropsPage() {
     navigate(`/list/${newListId}`);
   }
 
+  /**
+   * Moves every checked item back to the backlog (Spec: "clearing done items -> backlog"). Lives
+   * here rather than on the list screen (T-75) so it can't be tapped by accident mid-shop.
+   */
+  async function handleClearChecked() {
+    if (allChecked.length === 0) return;
+    await push({
+      items: allChecked.map((item) => ({
+        id: item.id,
+        list_id: id,
+        fields: fieldPatch(deviceId, "status", "backlog" as ItemStatus),
+      })),
+    });
+  }
+
   async function handleLeave() {
     if (!confirm("Leave this list? You will lose access to it.")) return;
     await api.leaveList(id);
@@ -207,6 +225,20 @@ export default function ListPropsPage() {
           </button>
         </form>
       </section>
+
+      {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
+          when there's something to clear. */}
+      {allChecked.length > 0 && (
+        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Clear checked</h2>
+          <p className="muted" style={{ margin: "0 0 0.6rem" }}>
+            Move every checked item back to the backlog.
+          </p>
+          <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
+            Clear checked ({allChecked.length})
+          </button>
+        </section>
+      )}
 
       {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>

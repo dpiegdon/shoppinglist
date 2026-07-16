@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.CreateInviteRequest
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.api.PendingInviteDto
+import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
@@ -38,6 +39,8 @@ data class ListPropsUiState(
     val duplicatedListId: String? = null,
     /** Per-list collaborator-change notifications (T-65); false = this list is muted. */
     val notificationsEnabledForList: Boolean = true,
+    /** Number of checked items — drives the relocated 'Clear checked (N)' button (T-75). */
+    val checkedCount: Int = 0,
     val errorMessage: String? = null,
 )
 
@@ -76,12 +79,27 @@ class ListPropsViewModel @Inject constructor(
                 _uiState.update { it.copy(notificationsEnabledForList = listId !in muted) }
             }
         }
+        // Live checked-item count for the relocated 'Clear checked' button (T-75); after a clear the
+        // items move to backlog, the flow re-emits, and the count drops to 0 (hiding the button).
+        viewModelScope.launch {
+            itemsRepo.itemsForList(listId).collect { items ->
+                val count = items.count { it.status.value == Status.CHECKED.wireValue }
+                _uiState.update { it.copy(checkedCount = count) }
+            }
+        }
     }
 
     /** Per-list collaborator-notification mute (T-65) — device-local, deliberately not synced. */
     fun setListNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {
         notificationPrefs.setListMuted(listId, muted = !enabled)
     }
+
+    /**
+     * The post-trip 'finish up' bulk action: move every checked item to backlog at once. Relocated
+     * from the list screen to here (T-75) so it can't be tapped by accident while shopping — the
+     * deliberate trip into list properties is the safeguard, so there's no undo snackbar.
+     */
+    fun clearChecked(): Job = viewModelScope.launch { itemsRepo.clearChecked(listId) }
 
     fun loadMembers(): Job = viewModelScope.launch {
         _uiState.update { it.copy(isMembersLoading = true, membersError = null) }

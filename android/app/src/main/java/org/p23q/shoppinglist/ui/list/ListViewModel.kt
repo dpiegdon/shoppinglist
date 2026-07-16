@@ -37,13 +37,8 @@ data class ListUiState(
     val groups: List<ItemGroup> = emptyList(),
     val showChecked: Boolean = false,
     val defaultCurrency: String? = null,
-    /** Number of checked items in the list (regardless of the show-checked toggle) — drives the
-     *  'Clear checked (N)' action's visibility and label (T-35). */
-    val checkedCount: Int = 0,
     val undoItemId: String? = null,
     val undoItemName: String? = null,
-    /** Ids just bulk-cleared to backlog, held so the undo snackbar can restore them (T-35). */
-    val clearedCheckedIds: List<String> = emptyList(),
     /** Live sync health for the recency line (T-47). */
     val sync: SyncState = SyncState(),
     /** True while a user-initiated pull-to-refresh sync is running, for the spinner (T-36). */
@@ -171,30 +166,10 @@ class ListViewModel @Inject constructor(
 
     fun dismissUndo() = _uiState.update { it.copy(undoItemId = null, undoItemName = null) }
 
-    /**
-     * The post-trip 'finish up' bulk action: move every checked item to backlog at once (T-35).
-     * Arms its own undo snackbar and supersedes any pending single-item check-off undo, so only one
-     * snackbar is ever showing.
-     */
-    fun clearChecked(): Job = viewModelScope.launch {
-        val cleared = itemsRepo.clearChecked(listId)
-        if (cleared.isNotEmpty()) {
-            _uiState.update { it.copy(clearedCheckedIds = cleared, undoItemId = null, undoItemName = null) }
-        }
-    }
-
-    fun undoClearChecked(): Job = viewModelScope.launch {
-        val ids = _uiState.value.clearedCheckedIds
-        if (ids.isNotEmpty()) itemsRepo.setStatusBulk(ids, Status.CHECKED)
-        _uiState.update { it.copy(clearedCheckedIds = emptyList()) }
-    }
-
-    fun dismissClearUndo() = _uiState.update { it.copy(clearedCheckedIds = emptyList()) }
-
     private fun regroup() {
         _uiState.update { state ->
             val visible = if (state.showChecked) todoItems + checkedItems else todoItems
-            state.copy(groups = groupByCategory(visible, categoryOrder), checkedCount = checkedItems.size)
+            state.copy(groups = groupByCategory(visible, categoryOrder))
         }
     }
 }

@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
-import { checkedItems, groupVisibleItems } from "../lib/grouping";
+import { groupVisibleItems } from "../lib/grouping";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
@@ -51,7 +51,6 @@ export default function ListPage() {
 
   const categoryOrder = listFieldValue(list, "category_order") ?? [];
   const groups = groupVisibleItems(listItems, categoryOrder, showChecked);
-  const allChecked = checkedItems(listItems);
 
   async function setItemStatus(itemId: string, status: ItemStatus) {
     await push({
@@ -73,18 +72,6 @@ export default function ListPage() {
     if (!undo) return;
     await setItemStatus(undo.itemId, undo.previousStatus);
     setUndo(null);
-  }
-
-  /** Moves every checked item back to the backlog (Spec: "clearing done items -> backlog"). */
-  async function handleClearChecked() {
-    if (allChecked.length === 0) return;
-    await push({
-      items: allChecked.map((item) => ({
-        id: item.id,
-        list_id: listId!,
-        fields: fieldPatch(deviceId, "status", "backlog" as ItemStatus),
-      })),
-    });
   }
 
   async function handleSave(values: ItemDialogSaveValues) {
@@ -135,8 +122,9 @@ export default function ListPage() {
         {listFieldValue(list, "name")}
       </h1>
 
-      {/* Top controls row mirrors the Android app: show-checked (+ clear-checked) on the
-          left, all-items/settings icons on the right; add-item gets its own full-width row. */}
+      {/* Top controls row mirrors the Android app: show-checked on the left, all-items/settings
+          icons on the right; add-item gets its own full-width row. Clear-checked lives in List
+          properties (T-75), out of accidental-tap range. */}
       <div
         style={{
           display: "flex",
@@ -156,11 +144,6 @@ export default function ListPage() {
           >
             {showChecked ? "✓ " : ""}Show checked
           </button>
-          {allChecked.length > 0 && (
-            <button type="button" className="btn btn-danger btn-sm" onClick={handleClearChecked}>
-              Clear checked ({allChecked.length})
-            </button>
-          )}
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
           <Link to={`/list/${listId}/registry`} className="btn-icon" aria-label="All items" title="All items">
