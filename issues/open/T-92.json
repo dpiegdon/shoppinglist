@@ -6,9 +6,10 @@
     "server",
     "security",
     "agent",
-    "ready"
+    "ready",
+    "sonnet"
   ],
   "priority": 4,
   "title": "Server: operator reset-password leaves all existing sessions valid (inconsistent with T-45)",
-  "updated_at": "2026-07-16T22:25:03+00:00"
+  "updated_at": "2026-07-16T22:40:32+00:00"
 }
