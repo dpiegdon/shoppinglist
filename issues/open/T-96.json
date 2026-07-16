@@ -1,0 +1,15 @@
+{
+  "body": "verify-all.sh failed on this machine (2026-07-16):\n`SettingsScreenTest > initials load from the server and can be edited and saved\n(T-64)` \u2014 ComparisonFailure expected:<[XY]> but was:<[MI]> at line 193\n(server pytest and web vitest/tsc/lint both green; the other 250 Android tests\npass).\n\nRoot cause is a wait-for-the-wrong-thing race, same family as T-66: the test\nclicks Save, then `composeTestRule.waitForIdle()`, then asserts\n`viewModel.uiState.value.initials == \"XY\"`. waitForIdle() only waits for\nCompose to go idle \u2014 updateInitials() runs a real MockWebServer round trip on\nOkHttp's dispatcher, which Compose knows nothing about. On a fast machine the\nresponse usually lands first; on slow hardware it loses the race and the\nassertion still sees the GET-loaded \"MI\".\n\nFix: await the actual condition, not idleness \u2014 e.g.\n`composeTestRule.waitUntil(timeoutMillis) { viewModel.uiState.value.initials == \"XY\" }`\nbefore the assert (and sweep SettingsScreenTest's sibling tests for the same\nclick-then-waitForIdle-then-assert-network-result pattern).",
+  "created_at": "2026-07-16T22:37:13+00:00",
+  "id": "T-96",
+  "labels": [
+    "android",
+    "ops",
+    "reliability",
+    "agent",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Android: SettingsScreenTest initials-save test is flaky \u2014 waitForIdle races the MockWebServer round trip",
+  "updated_at": "2026-07-16T22:37:13+00:00"
+}
