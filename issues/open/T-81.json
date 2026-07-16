@@ -1,0 +1,12 @@
+{
+  "body": "Audited every list-aware server surface for authorization. Result: no exploitable\nbypass \u2014 pull (delta) is scoped to member lists, push authorizes edits against the\nitem's STORED list_id (immutable, not a syncable field), and /lists, /members,\nmint/revoke/leave, and redeem all gate correctly. Added a consolidated adversarial\nHTTP test (test_non_member_cannot_access_a_list_in_any_way) proving read/enumerate/\nedit/hijack/invite/forge are all denied.\n\nTwo non-blocking observations (optional hardening, not exploitable):\n1. Resource-existence oracle: /sync item push returns 422 (unknown/ missing list)\n   vs 403 (exists-but-not-member), distinguishable \u2014 inconsistent with the uniform\n   403 used by /members. Not practical to exploit (122-bit UUID ids) and leaks only\n   existence, never contents.\n2. Email-bound invites rely on unverified email ownership: with a leaked invite\n   link, an attacker could register/relabel to the invited email (if unregistered)\n   and redeem. Inherent to the documented email-bound design; token is the primary\n   secret; single-use + 7-day expiry + revocable + HMAC-signed mitigate.",
+  "created_at": "2026-07-16T18:50:30+00:00",
+  "id": "T-81",
+  "labels": [
+    "server",
+    "security"
+  ],
+  "priority": 3,
+  "title": "Security review: a logged-in non-member cannot access a list in any way (server authz)",
+  "updated_at": "2026-07-16T18:50:30+00:00"
+}
