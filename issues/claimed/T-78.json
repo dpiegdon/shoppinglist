@@ -6,7 +6,8 @@
     "android",
     "ux"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "App list: draw slightly-visible separator lines between items within a group",
-  "updated_at": "2026-07-16T17:48:31+00:00"
+  "updated_at": "2026-07-16T17:48:32+00:00"
 }
