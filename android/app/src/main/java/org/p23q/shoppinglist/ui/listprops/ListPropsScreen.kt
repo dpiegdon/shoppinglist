@@ -98,12 +98,15 @@ fun ListPropsScreen(
         Spacer(Modifier.height(16.dp))
 
         // Relocated here from the list screen (T-75), where it was too easy to tap by accident: move
-        // every checked item to backlog. Same red styling as before; only shown when there's
-        // something to clear.
+        // every checked item to backlog. A proper filled red button (T-82), matching the web
+        // version's btn-danger; only shown when there's something to clear.
         if (state.checkedCount > 0) {
-            TextButton(
+            Button(
                 onClick = { viewModel.clearChecked() },
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
             ) {
                 Text("Clear checked (${state.checkedCount})")
             }
