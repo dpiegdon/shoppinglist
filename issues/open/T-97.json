@@ -1,0 +1,15 @@
+{
+  "body": "Residual from T-87 (disclosed in its review): SettingsViewModel updateCurrency() resends _uiState.value.initials, which is a literal \"\" when the best-effort loadInitials() has not resolved (e.g. offline start) \u2014 a present \"\" is a valid value and overwrites a real override server-side. Now that the server treats an ABSENT initials key as leave-unchanged (T-87), the fix is to omit initials from UpdateSettingsRequest on currency-only saves (kotlinx Json with default null + encodeDefaults=false omits the key \u2014 verify the configured Json instance actually omits it on the wire in a test). Also update the comment at SettingsViewModel.kt:32-35. Ships with the next APK release. Files: android .../ui/settings/SettingsViewModel.kt, .../data/api/Dto.kt if needed, SettingsViewModelTest.",
+  "created_at": "2026-07-16T23:38:45+00:00",
+  "id": "T-97",
+  "labels": [
+    "android",
+    "bug",
+    "agent",
+    "ready",
+    "sonnet"
+  ],
+  "priority": 4,
+  "title": "Android: currency save can still clobber initials when the preload failed \u2014 omit the initials key",
+  "updated_at": "2026-07-16T23:38:45+00:00"
+}
