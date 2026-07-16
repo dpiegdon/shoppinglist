@@ -22,6 +22,16 @@ The full design lives in
 | `web/` | React web client. Not deployed separately — built straight into the server package and served by the blueprint itself. | [`web/README.md`](web/README.md) |
 | `android/` | Native Android client (Kotlin/Compose), offline-first with a local Room mirror. Installable straight from a running server at `/shoppinglist.apk`. | [`android/README.md`](android/README.md) |
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`).
+Because one built wheel is a **single deployable artifact** — the server, the
+embedded web client, and the Android APK all ship together — every part shares
+**one** version number rather than versioning independently. A release bumps that
+single version in both `server/pyproject.toml` and `android/app/build.gradle.kts`
+(`versionName`, plus an incremented integer `versionCode`), and is tagged once as
+`vX.Y.Z`.
+
 ## Setup
 
 ### Server
