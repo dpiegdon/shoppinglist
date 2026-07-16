@@ -1,0 +1,12 @@
+{
+  "body": "The edit-item dialog is an AlertDialog: it has a scrim you can tap to cancel\n(easy to lose edits), and when the soft keyboard is up the Save/Cancel buttons\nare hidden behind it \u2014 you must dismiss the keyboard to reach them. Make it a\nfull-screen dialog (no dismiss-on-click-outside) with a fixed header and a fixed\nCancel/Save action bar that stays above the keyboard, and a scrollable field\narea, so the whole form is reachable while typing.",
+  "created_at": "2026-07-16T17:48:32+00:00",
+  "id": "T-80",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "App: make the edit-item dialog full-screen and scrollable with the keyboard up",
+  "updated_at": "2026-07-16T17:48:32+00:00"
+}
