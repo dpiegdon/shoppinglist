@@ -402,6 +402,54 @@ def test_sync_device_id_non_string_422(client):
     assert resp.status_code == 422
 
 
+def test_sync_item_fields_as_string_422_with_row_id(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [{"id": "item-1", "list_id": "list-1", "fields": "junk"}]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["row_id"] == "item-1"
+
+
+def test_sync_list_fields_as_list_422_with_row_id(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"lists": [{"id": "list-1", "fields": [1, 2, 3]}]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["row_id"] == "list-1"
+
+
+def test_sync_new_item_list_id_as_dict_422_with_row_id(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [{"id": "item-1", "list_id": {"weird": 1},
+                            "fields": {"name": _clock("Milk", 100, "devA")}}]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["row_id"] == "item-1"
+
+
+def test_sync_cursor_out_of_int64_range_422_not_500(client):
+    token = _register_and_login(client)
+    # Membership matters: delta only binds the cursor into SQL when the account
+    # has at least one list, and that bind is where the OverflowError lived.
+    _seed_list(client, token)
+    resp = client.post(
+        "/api/v1/sync",
+        json={"cursor": 2 ** 65, "device_id": "devA", "full_lists": [], "changes": {}},
+        headers=_auth(token),
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_cursor"
+
+
 def test_sync_maximal_valid_payload_applies_cleanly(client):
     """A maximal, fully-populated push (every syncable field, plus a second row
     exercising nulls on every nullable field) still applies and round-trips."""

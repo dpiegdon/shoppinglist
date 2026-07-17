@@ -299,8 +299,13 @@ def _parse_row(obj, keys, tsby, validate, device_id):
         raise ApiError(422, "invalid_row", "created_at must be an integer.", details={"row_id": row_id})
     elif not (SQLITE_INT_MIN <= created_at <= SQLITE_INT_MAX):
         raise ApiError(422, "invalid_row", "created_at is out of range.", details={"row_id": row_id})
+    fields_obj = obj.get("fields")
+    if fields_obj is None:
+        fields_obj = {}  # absent/null fields is a legitimate (if pointless) shape.
+    elif not isinstance(fields_obj, dict):
+        raise ApiError(422, "invalid_row", "fields must be an object.", details={"row_id": row_id})
     fields = {}
-    for key, clock in (obj.get("fields") or {}).items():
+    for key, clock in fields_obj.items():
         if key not in keys:
             continue  # forward-compatible: ignore unknown fields
         try:
@@ -498,7 +503,17 @@ def _apply_item(conn, account_id, device_id, obj):
     else:
         list_id = obj.get("list_id")
         if not list_id:
-            raise ApiError(422, "missing_list_id", "Each item change requires a list_id.")
+            raise ApiError(
+                422, "missing_list_id", "Each item change requires a list_id.",
+                details={"row_id": item_id},
+            )
+        # A mis-typed list_id (dict/list/…) would crash at the SQL bind below; reject it
+        # with the row-scoped 422 the quarantine flow needs (T-85).
+        if not isinstance(list_id, str):
+            raise ApiError(
+                422, "invalid_row", "Item list_id must be a string.",
+                details={"row_id": item_id},
+            )
         if not _list_exists(conn, list_id):
             raise ApiError(422, "unknown_list", "Item refers to an unknown list_id.")
     if not _is_member(conn, account_id, list_id):

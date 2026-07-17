@@ -41,7 +41,14 @@ def register_routes(bp):
     def sync_view():
         data = request.get_json(force=True, silent=True) or {}
         cursor = data.get("cursor")
-        if not isinstance(cursor, int) or isinstance(cursor, bool) or cursor < 0:
+        # Bounded above too: the cursor binds into SQL, and anything past SQLite's
+        # signed int64 range raises OverflowError at bind time (T-85).
+        if (
+            not isinstance(cursor, int)
+            or isinstance(cursor, bool)
+            or cursor < 0
+            or cursor > sync_engine.SQLITE_INT_MAX
+        ):
             raise ApiError(422, "invalid_cursor", "cursor must be a non-negative integer.")
         device_id = data.get("device_id") or ""
         if not isinstance(device_id, str):
