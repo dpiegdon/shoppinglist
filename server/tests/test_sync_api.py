@@ -241,6 +241,227 @@ def test_sync_missing_cursor_422(client):
     assert resp.status_code == 422
 
 
+# ---- T-85: input validation — mis-typed / oversized / junk payloads ---------
+#
+# Every one of these must be a 422 quarantine envelope (never a 500 / stored
+# garbage). Where a row is identifiable, the envelope carries row_id (+ field).
+
+
+def _seed_list(client, token, list_id="list-1", ts=100):
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"lists": [_mk_list(list_id, "Groceries", ts, "devA")]},
+    )
+    assert resp.status_code == 200
+
+
+def test_sync_updated_at_out_of_int64_range_422_not_500(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1", name=("Milk", 2 ** 65, "devA"))]},
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["row_id"] == "item-1"
+    assert body["field"] == "name"
+
+
+def test_sync_id_as_dict_422_invalid_row(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [{"id": {"weird": 1}, "list_id": "list-1",
+                            "fields": {"name": _clock("Milk", 100, "devA")}}]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_row"
+
+
+def test_sync_changes_as_string_422_not_500(client):
+    token = _register_and_login(client)
+    resp = client.post(
+        "/api/v1/sync",
+        json={"cursor": 0, "device_id": "devA", "full_lists": [], "changes": "junk"},
+        headers=_auth(token),
+    )
+    assert resp.status_code == 422
+
+
+def test_sync_created_at_as_string_422(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [{"id": "item-1", "list_id": "list-1", "created_at": "yesterday",
+                            "fields": {"name": _clock("Milk", 100, "devA")}}]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["row_id"] == "item-1"
+
+
+def test_sync_stores_as_string_422_with_row_and_field(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1",
+                                    name=("Milk", 100, "devA"),
+                                    stores=("not-a-list", 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["row_id"] == "item-1"
+    assert body["field"] == "stores"
+
+
+def test_sync_category_order_as_dict_422_with_row_and_field(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"lists": [{"id": "list-1",
+                            "fields": {"category_order": _clock({"not": "a list"}, 200, "devA")}}]},
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["row_id"] == "list-1"
+    assert body["field"] == "category_order"
+
+
+def test_sync_stores_element_not_a_string_422(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1",
+                                    name=("Milk", 100, "devA"),
+                                    stores=(["ok", 5], 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["field"] == "stores"
+
+
+def test_sync_oversized_name_422(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    huge = "x" * 100_000
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1", name=(huge, 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["row_id"] == "item-1"
+
+
+def test_sync_quantity_as_int_rejected_not_coerced(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1",
+                                    name=("Milk", 100, "devA"),
+                                    quantity=(12345, 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["field"] == "quantity"
+
+
+def test_sync_updated_by_non_string_422(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [{"id": "item-1", "list_id": "list-1",
+                            "fields": {"name": {"value": "Milk", "updated_at": 100,
+                                                "updated_by": {"nope": 1}}}}]},
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["field"] == "name"
+
+
+def test_sync_full_lists_not_a_list_422(client):
+    token = _register_and_login(client)
+    resp = client.post(
+        "/api/v1/sync",
+        json={"cursor": 0, "device_id": "devA", "full_lists": "list-1", "changes": {}},
+        headers=_auth(token),
+    )
+    assert resp.status_code == 422
+
+
+def test_sync_device_id_non_string_422(client):
+    token = _register_and_login(client)
+    resp = client.post(
+        "/api/v1/sync",
+        json={"cursor": 0, "device_id": {"nope": 1}, "full_lists": [], "changes": {}},
+        headers=_auth(token),
+    )
+    assert resp.status_code == 422
+
+
+def test_sync_maximal_valid_payload_applies_cleanly(client):
+    """A maximal, fully-populated push (every syncable field, plus a second row
+    exercising nulls on every nullable field) still applies and round-trips."""
+    token = _register_and_login(client)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={
+            "lists": [{
+                "id": "list-1", "created_at": 1000,
+                "fields": {
+                    "name": _clock("Groceries", 100, "devA"),
+                    "category_order": _clock(["dairy", "produce", "bakery"], 100, "devA"),
+                    "notes": _clock("weekly shop", 100, "devA"),
+                },
+            }],
+            "items": [
+                {
+                    "id": "item-full", "list_id": "list-1", "created_at": 1000,
+                    "fields": {
+                        "name": _clock("Milk", 100, "devA"),
+                        "category": _clock("dairy", 100, "devA"),
+                        "stores": _clock(["Aldi", "Rewe"], 100, "devA"),
+                        "quantity": _clock("2 l", 100, "devA"),
+                        "price": _clock({"amount": "1.99", "currency": "EUR"}, 100, "devA"),
+                        "note": _clock("cold aisle", 100, "devA"),
+                        "status": _clock("todo", 100, "devA"),
+                        "deleted": _clock(False, 100, "devA"),
+                    },
+                },
+                {
+                    "id": "item-nulls", "list_id": "list-1", "created_at": 1000,
+                    "fields": {
+                        "name": _clock("Bread", 100, "devA"),
+                        "category": _clock(None, 100, "devA"),
+                        "stores": _clock([], 100, "devA"),
+                        "quantity": _clock(None, 100, "devA"),
+                        "price": _clock(None, 100, "devA"),
+                        "note": _clock(None, 100, "devA"),
+                    },
+                },
+            ],
+        },
+    )
+    assert resp.status_code == 200
+
+    pull = _sync(client, token, cursor=0, device_id="devB").get_json()
+    items = {i["id"]: i for i in pull["changes"]["items"]}
+    full = items["item-full"]["fields"]
+    assert full["stores"]["value"] == ["Aldi", "Rewe"]
+    assert full["price"]["value"] == {"amount": "1.99", "currency": "EUR"}
+    assert full["quantity"]["value"] == "2 l"
+    nulls = items["item-nulls"]["fields"]
+    assert nulls["category"]["value"] is None
+    assert nulls["price"]["value"] is None
+    assert nulls["stores"]["value"] == []
+    lst = next(l for l in pull["changes"]["lists"] if l["id"] == "list-1")
+    assert lst["fields"]["category_order"]["value"] == ["dairy", "produce", "bakery"]
+    assert lst["fields"]["notes"]["value"] == "weekly shop"
+
+
 # ---- GET /lists --------------------------------------------------------------
 
 

@@ -41,6 +41,32 @@ LIST_FIELD_META = [
     ("deleted", "deleted_ts", "deleted_by"),
 ]
 NOTES_MAX_LENGTH = 5000
+
+# ---- validation caps (T-85) ------------------------------------------------
+# The /sync engine used to trust pushed field payloads almost entirely: a
+# mis-typed value (e.g. `stores` as a string) was stored verbatim and served
+# back to every member, permanently wedging strict clients' pulls, and a
+# structurally junk value (id as a dict, an out-of-range int) 500'd instead of
+# returning the row-scoped 422 the Android quarantine flow (T-32) needs. These
+# caps bound each field to what a real client legitimately sends; each is
+# generous enough for genuine usage while blocking bloat/poisoning.
+
+# SQLite stores integers as signed 64-bit; anything outside this range raises
+# OverflowError at bind time. Timestamps (ms epoch) and created_at live here.
+SQLITE_INT_MIN = -(2 ** 63)
+SQLITE_INT_MAX = 2 ** 63 - 1
+
+ID_MAX_LENGTH = 128  # client-minted row ids are UUID/ULID-scale (~26-36 chars); 128 is ample headroom.
+NAME_MAX_LENGTH = 500  # item/list names are short labels; 500 covers verbose entries, blocks KB-scale bloat.
+CATEGORY_MAX_LENGTH = 200  # a single category label; dozens of them fit in a list's category_order.
+QUANTITY_MAX_LENGTH = 200  # free text like "2 l" / "3 boxes"; 200 is generous for any real quantity.
+ITEM_NOTE_MAX_LENGTH = 5000  # freeform per-item annotation; same generosity as list notes.
+UPDATED_BY_MAX_LENGTH = 128  # device/author id string, same scale as a row id.
+PRICE_AMOUNT_MAX_LENGTH = 32  # decimal string; 32 digits is billions-with-cents, far beyond any real price.
+PRICE_CURRENCY_MAX_LENGTH = 16  # ISO 4217 codes are 3 chars; 16 leaves room for any sane variant.
+STRING_LIST_MAX_ITEMS = 200  # element cap for stores / category_order; dozens are normal, 200 is comfortable.
+STRING_LIST_ELEM_MAX_LENGTH = 200  # each store name / category label, same scale as a category label.
+
 ITEM_TSBY = {key: (ts, by) for key, ts, by in ITEM_FIELD_META}
 LIST_TSBY = {key: (ts, by) for key, ts, by in LIST_FIELD_META}
 ITEM_KEYS = set(ITEM_TSBY)
@@ -125,38 +151,154 @@ def _list_to_wire(row) -> dict:
 # ---- parsing / validation --------------------------------------------------
 
 
+def _is_int(value) -> bool:
+    # bool is an int subclass in Python, but a JSON true/false is never a valid
+    # timestamp/created_at — treat it as the wrong type.
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _require_int64(key, value, label):
+    if not _is_int(value):
+        raise ApiError(422, "invalid_field", f"Field '{key}' requires an integer {label}.")
+    if not (SQLITE_INT_MIN <= value <= SQLITE_INT_MAX):
+        raise ApiError(422, "invalid_field", f"Field '{key}' {label} is out of range.")
+
+
+def _require_str(key, value, max_length, *, nullable, code="invalid_field"):
+    if value is None:
+        if nullable:
+            return
+        raise ApiError(422, code, f"Field '{key}' must not be null.")
+    if not isinstance(value, str):
+        raise ApiError(422, code, f"Field '{key}' must be a string.")
+    if len(value) > max_length:
+        raise ApiError(422, code, f"Field '{key}' must be {max_length} characters or fewer.")
+
+
+def _require_str_list(key, value, *, nullable):
+    if value is None:
+        if nullable:
+            return  # null is coerced to [] downstream — a legitimate client shape.
+        raise ApiError(422, "invalid_field", f"Field '{key}' must not be null.")
+    if not isinstance(value, list):
+        raise ApiError(422, "invalid_field", f"Field '{key}' must be a list of strings.")
+    if len(value) > STRING_LIST_MAX_ITEMS:
+        raise ApiError(
+            422, "invalid_field", f"Field '{key}' may contain at most {STRING_LIST_MAX_ITEMS} entries."
+        )
+    for elem in value:
+        if not isinstance(elem, str):
+            raise ApiError(422, "invalid_field", f"Field '{key}' entries must be strings.")
+        if len(elem) > STRING_LIST_ELEM_MAX_LENGTH:
+            raise ApiError(
+                422, "invalid_field",
+                f"Field '{key}' entries must be {STRING_LIST_ELEM_MAX_LENGTH} characters or fewer.",
+            )
+
+
 def _parse_clock(key, clock, device_id):
     if not isinstance(clock, dict) or "value" not in clock:
         raise ApiError(422, "invalid_field", f"Field '{key}' must be an object with a value.")
-    ts = clock.get("updated_at")
-    if not isinstance(ts, int):
-        raise ApiError(422, "invalid_field", f"Field '{key}' requires an integer updated_at.")
-    by = clock.get("updated_by") or device_id or ""
-    return clock["value"], ts, by
+    _require_int64(key, clock.get("updated_at"), "updated_at")
+    by = clock.get("updated_by")
+    if not by:  # None / "" / other falsy -> fall back to the request's device id.
+        by = device_id or ""
+    if not isinstance(by, str):
+        raise ApiError(422, "invalid_field", f"Field '{key}' updated_by must be a string.")
+    if len(by) > UPDATED_BY_MAX_LENGTH:
+        raise ApiError(
+            422, "invalid_field", f"Field '{key}' updated_by must be {UPDATED_BY_MAX_LENGTH} characters or fewer."
+        )
+    return clock["value"], clock["updated_at"], by
+
+
+def _validate_deleted(value):
+    # `deleted` is a boolean flag (JSON true/false on the wire); anything else is junk.
+    if not isinstance(value, bool):
+        raise ApiError(422, "invalid_field", "deleted must be a boolean.")
 
 
 def _validate_item_field(key, value):
-    if key == "name" and (value is None or not str(value).strip()):
-        raise ApiError(422, "invalid_name", "Item name must not be empty.")
-    if key == "status" and value not in STATUS_VALUES:
-        raise ApiError(422, "invalid_status", f"status must be one of {sorted(STATUS_VALUES)}.")
-    if key == "price" and value is not None:
-        amount = value.get("amount") if isinstance(value, dict) else None
-        if amount is None or not PRICE_AMOUNT_RE.match(str(amount)):
-            raise ApiError(422, "invalid_price", "price amount must be a decimal string.")
+    if key == "name":
+        # Empty/null keeps the established invalid_name code; a wrong type is a new invalid_field.
+        if value is None or (isinstance(value, str) and not value.strip()):
+            raise ApiError(422, "invalid_name", "Item name must not be empty.")
+        _require_str(key, value, NAME_MAX_LENGTH, nullable=False)
+    elif key == "category":
+        _require_str(key, value, CATEGORY_MAX_LENGTH, nullable=True)
+    elif key == "quantity":
+        _require_str(key, value, QUANTITY_MAX_LENGTH, nullable=True)
+    elif key == "note":
+        _require_str(key, value, ITEM_NOTE_MAX_LENGTH, nullable=True)
+    elif key == "stores":
+        _require_str_list(key, value, nullable=True)
+    elif key == "status":
+        if value not in STATUS_VALUES:
+            raise ApiError(422, "invalid_status", f"status must be one of {sorted(STATUS_VALUES)}.")
+    elif key == "price":
+        _validate_price(value)
+    elif key == "deleted":
+        _validate_deleted(value)
+
+
+def _validate_price(value):
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        raise ApiError(422, "invalid_price", "price must be an object with a decimal amount string.")
+    amount = value.get("amount")
+    if not isinstance(amount, str) or not PRICE_AMOUNT_RE.match(amount):
+        raise ApiError(422, "invalid_price", "price amount must be a decimal string.")
+    if len(amount) > PRICE_AMOUNT_MAX_LENGTH:
+        raise ApiError(422, "invalid_price", f"price amount must be {PRICE_AMOUNT_MAX_LENGTH} characters or fewer.")
+    currency = value.get("currency")
+    if currency is not None:
+        if not isinstance(currency, str):
+            raise ApiError(422, "invalid_price", "price currency must be a string or null.")
+        if len(currency) > PRICE_CURRENCY_MAX_LENGTH:
+            raise ApiError(
+                422, "invalid_price", f"price currency must be {PRICE_CURRENCY_MAX_LENGTH} characters or fewer."
+            )
 
 
 def _validate_list_field(key, value):
-    if key == "name" and (value is None or not str(value).strip()):
-        raise ApiError(422, "invalid_name", "List name must not be empty.")
-    if key == "notes" and value is not None and len(str(value)) > NOTES_MAX_LENGTH:
-        raise ApiError(422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer.")
+    if key == "name":
+        if value is None or (isinstance(value, str) and not value.strip()):
+            raise ApiError(422, "invalid_name", "List name must not be empty.")
+        _require_str(key, value, NAME_MAX_LENGTH, nullable=False)
+    elif key == "category_order":
+        _require_str_list(key, value, nullable=True)
+    elif key == "notes":
+        # Preserve the exact invalid_notes code+message on the length path (existing contract);
+        # a wrong type is a new invalid_field rejection.
+        if value is not None and not isinstance(value, str):
+            raise ApiError(422, "invalid_field", "List notes must be a string.")
+        if value is not None and len(value) > NOTES_MAX_LENGTH:
+            raise ApiError(422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer.")
+    elif key == "deleted":
+        _validate_deleted(value)
 
 
 def _parse_row(obj, keys, tsby, validate, device_id):
     if not isinstance(obj, dict) or "id" not in obj:
         raise ApiError(422, "invalid_row", "Each change requires an id.")
     row_id = obj["id"]
+    # id must be a clean, non-empty string within cap. A junk id (dict/int/…) means the row
+    # isn't identifiable, so no row_id detail can help a client quarantine it.
+    if not isinstance(row_id, str) or not row_id.strip():
+        raise ApiError(422, "invalid_row", "Change id must be a non-empty string.")
+    if len(row_id) > ID_MAX_LENGTH:
+        raise ApiError(
+            422, "invalid_row", f"Change id must be {ID_MAX_LENGTH} characters or fewer.",
+            details={"row_id": row_id},
+        )
+    created_at = obj.get("created_at")
+    if created_at is None:
+        created_at = _now_ms()  # absent/null created_at is a legitimate client shape.
+    elif not _is_int(created_at):
+        raise ApiError(422, "invalid_row", "created_at must be an integer.", details={"row_id": row_id})
+    elif not (SQLITE_INT_MIN <= created_at <= SQLITE_INT_MAX):
+        raise ApiError(422, "invalid_row", "created_at is out of range.", details={"row_id": row_id})
     fields = {}
     for key, clock in (obj.get("fields") or {}).items():
         if key not in keys:
@@ -170,7 +312,7 @@ def _parse_row(obj, keys, tsby, validate, device_id):
             exc.details = {"row_id": row_id, "field": key}
             raise
         fields[key] = (value, ts, by)
-    return row_id, obj.get("created_at") or _now_ms(), fields
+    return row_id, created_at, fields
 
 
 # ---- membership helpers ----------------------------------------------------
@@ -414,9 +556,17 @@ def apply_changes(conn, account_id, device_id, changes) -> None:
     commit — the caller owns the transaction.
     """
     changes = changes or {}
-    for obj in changes.get("lists", []):
+    if not isinstance(changes, dict):
+        raise ApiError(422, "invalid_changes", "changes must be an object.")
+    lists = changes.get("lists") or []
+    items = changes.get("items") or []
+    if not isinstance(lists, list):
+        raise ApiError(422, "invalid_changes", "changes.lists must be a list.")
+    if not isinstance(items, list):
+        raise ApiError(422, "invalid_changes", "changes.items must be a list.")
+    for obj in lists:
         _apply_list(conn, account_id, device_id, obj)
-    for obj in changes.get("items", []):
+    for obj in items:
         _apply_item(conn, account_id, device_id, obj)
 
 
