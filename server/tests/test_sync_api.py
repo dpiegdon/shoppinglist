@@ -436,6 +436,20 @@ def test_sync_new_item_list_id_as_dict_422_with_row_id(client):
     assert resp.get_json()["row_id"] == "item-1"
 
 
+def test_sync_new_item_unknown_list_422_with_row_id(client):
+    token = _register_and_login(client)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "no-such-list", name=("Milk", 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["error"] == "unknown_list"
+    # Same row-quarantine shape as its sibling rejections (missing_list_id,
+    # invalid_row) so a client can quarantine just this row (T-102 parity fix).
+    assert body["row_id"] == "item-1"
+
+
 def test_sync_status_as_dict_422_not_500(client):
     token = _register_and_login(client)
     _seed_list(client, token)

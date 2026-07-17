@@ -322,7 +322,11 @@ def _parse_row(obj, keys, tsby, validate, device_id):
     elif not (SQLITE_INT_MIN <= created_at <= SQLITE_INT_MAX):
         raise ApiError(422, "invalid_row", "created_at is out of range.", details={"row_id": row_id})
     else:
-        created_at = _clamp_future_ms(created_at)  # T-86: bounds merge-survivor gaming too.
+        # T-86: bounds a far-future created_at the same way as updated_at, limiting
+        # LWW field-wedging. It does NOT bound merge-survivor selection — the
+        # name-merge survivor is min(created_at) (earliest wins, see _merge_group),
+        # so that's gamed with a small/past created_at, which this clamp can't touch.
+        created_at = _clamp_future_ms(created_at)
     fields_obj = obj.get("fields")
     if fields_obj is None:
         fields_obj = {}  # absent/null fields is a legitimate (if pointless) shape.
@@ -539,7 +543,10 @@ def _apply_item(conn, account_id, device_id, obj):
                 details={"row_id": item_id},
             )
         if not _list_exists(conn, list_id):
-            raise ApiError(422, "unknown_list", "Item refers to an unknown list_id.")
+            raise ApiError(
+                422, "unknown_list", "Item refers to an unknown list_id.",
+                details={"row_id": item_id},
+            )
     if not _is_member(conn, account_id, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
 

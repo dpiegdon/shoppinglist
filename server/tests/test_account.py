@@ -601,6 +601,27 @@ def test_settings_http_patch_non_string_initials_422_not_500(client):
     assert resp.status_code == 422
 
 
+def test_settings_http_patch_empty_body_is_noop_200(client):
+    token = _register_and_login_http(client)
+    client.patch(
+        "/api/v1/settings",
+        json={"default_currency": "USD", "initials": "ZZ"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    before = client.get(
+        "/api/v1/settings", headers={"Authorization": f"Bearer {token}"}
+    ).get_json()
+
+    resp = client.patch(
+        "/api/v1/settings",
+        json={},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.get_json() == before == {"default_currency": "USD", "initials": "ZZ"}
+
+
 def test_delete_account_http_flow(client):
     token = _register_and_login_http(client)
     resp = client.delete(
