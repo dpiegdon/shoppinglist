@@ -1,0 +1,15 @@
+{
+  "body": "Surfaced during T-88 review (pre-existing, not introduced by T-88). Web ItemDialog stores are a single comma-joined text input (storesInput), so a store named e.g. \"Costco, Inc\" splits into two stores on save and cannot round-trip. Post-T-88 this also makes the stores field read as changed on an otherwise-untouched save, re-stamping only that field (harmless to other fields; does not defeat the merge goal). Android stores are a chip list and are unaffected. Fix: use a real multi-value editor (chips) like Android, or escape/scope the separator. Files: web/src/components/ItemDialog.tsx (+ test).",
+  "created_at": "2026-07-17T18:36:43+00:00",
+  "id": "T-99",
+  "labels": [
+    "web",
+    "bug",
+    "agent",
+    "ready",
+    "sonnet"
+  ],
+  "priority": 4,
+  "title": "Web: a store name containing a comma does not round-trip the stores text input",
+  "updated_at": "2026-07-17T18:36:43+00:00"
+}
