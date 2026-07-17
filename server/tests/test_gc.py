@@ -11,6 +11,19 @@ NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
 NOW = 10_000_000_000_000  # arbitrary but comfortably larger than any retention window
 
 
+@pytest.fixture(autouse=True)
+def _pin_sync_clock_to_now(monkeypatch):
+    """This file scripts tombstone ages as offsets from the synthetic NOW above,
+    pushed via sync.apply_changes() and then evaluated by gc.run(NOW). Since
+    T-86 clamps a pushed updated_at to real server-now + an allowance, an
+    "old" offset from this file's far-future NOW (real wall-clock time is
+    nowhere near 10_000_000_000_000ms) would otherwise get clamped down to
+    real-now and look artificially fresh to GC. Pin the sync engine's clock to
+    this file's synthetic NOW so the relative-age arithmetic still holds.
+    """
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+
+
 def _register(conn, email):
     return auth.register(conn, email, PW)
 

@@ -67,6 +67,15 @@ PRICE_CURRENCY_MAX_LENGTH = 16  # ISO 4217 codes are 3 chars; 16 leaves room for
 STRING_LIST_MAX_ITEMS = 200  # element cap for stores / category_order; dozens are normal, 200 is comfortable.
 STRING_LIST_ELEM_MAX_LENGTH = 200  # each store name / category label, same scale as a category label.
 
+# ---- clock clamping (T-86) --------------------------------------------------
+# A client-supplied updated_at/created_at that is wildly in the future (broken
+# or malicious clock) would otherwise beat every honest edit until that moment
+# arrives, wedging a field for every member for years. Real clock skew is on
+# the order of minutes, so anything further ahead than this is a broken or
+# malicious clock; clamp it rather than reject the push outright (a 422 would
+# quarantine an innocent device whose clock is merely wrong).
+CLOCK_SKEW_ALLOWANCE_MS = 60 * 60 * 1000  # 1 hour
+
 ITEM_TSBY = {key: (ts, by) for key, ts, by in ITEM_FIELD_META}
 LIST_TSBY = {key: (ts, by) for key, ts, by in LIST_FIELD_META}
 ITEM_KEYS = set(ITEM_TSBY)
@@ -75,6 +84,16 @@ LIST_KEYS = set(LIST_TSBY)
 
 def _now_ms() -> int:
     return time.time_ns() // 1_000_000
+
+
+def _clamp_future_ms(value: int) -> int:
+    """Cap a client-supplied ms-epoch timestamp at server-now + allowance (T-86).
+
+    Values at or before server-now pass through untouched — an offline edit
+    pushed late legitimately carries an old timestamp and must not be bumped
+    forward.
+    """
+    return min(value, _now_ms() + CLOCK_SKEW_ALLOWANCE_MS)
 
 
 def _bump(conn: sqlite3.Connection) -> int:
@@ -209,7 +228,8 @@ def _parse_clock(key, clock, device_id):
         raise ApiError(
             422, "invalid_field", f"Field '{key}' updated_by must be {UPDATED_BY_MAX_LENGTH} characters or fewer."
         )
-    return clock["value"], clock["updated_at"], by
+    updated_at = _clamp_future_ms(clock["updated_at"])
+    return clock["value"], updated_at, by
 
 
 def _validate_deleted(value):
@@ -301,6 +321,8 @@ def _parse_row(obj, keys, tsby, validate, device_id):
         raise ApiError(422, "invalid_row", "created_at must be an integer.", details={"row_id": row_id})
     elif not (SQLITE_INT_MIN <= created_at <= SQLITE_INT_MAX):
         raise ApiError(422, "invalid_row", "created_at is out of range.", details={"row_id": row_id})
+    else:
+        created_at = _clamp_future_ms(created_at)  # T-86: bounds merge-survivor gaming too.
     fields_obj = obj.get("fields")
     if fields_obj is None:
         fields_obj = {}  # absent/null fields is a legitimate (if pointless) shape.

@@ -308,7 +308,11 @@ lexically-smaller `item_id`).
 ### Known caveat
 Wall-clock LWW is sensitive to device clock skew. This is accepted per the
 "latest edit wins" rule and documented here; `updated_by` gives deterministic
-(if arbitrary) resolution when timestamps tie.
+(if arbitrary) resolution when timestamps tie. To bound the pathological case
+— a broken or malicious clock stamping a field decades ahead and wedging it
+for every member until that moment — the server clamps any pushed
+`updated_at`/`created_at` to server-now plus a small allowance (T-86); ordinary
+skew of a few minutes passes through untouched.
 
 ---
 

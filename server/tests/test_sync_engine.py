@@ -280,6 +280,98 @@ def test_tombstone_beats_older_edit_and_loses_to_newer_resurrect(db_conn):
     assert _item_row(db_conn, "item-1")["deleted"] == 0
 
 
+# ---- clock clamping (T-86) --------------------------------------------------
+#
+# A far-future client-supplied updated_at (broken or malicious clock) would
+# otherwise beat every honest edit until that moment arrives, wedging the
+# field for every member for years. The server clamps to server-now + a small
+# allowance so the field is only wedged for that allowance window, not
+# forever.
+
+NOW = 1_700_000_000_000  # arbitrary fixed "server now" for deterministic clamp math
+FAR_FUTURE = 4_102_444_800_000  # year 2100 in ms epoch
+
+
+def test_far_future_updated_at_is_clamped_on_store(db_conn, monkeypatch):
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+    account_id = _setup_item(db_conn)  # creates item-1, name="Milk" @ ts=100
+
+    sync.apply_changes(
+        db_conn, account_id, "bad-clock",
+        {"items": [_mk_item("item-1", "list-1", name=("Wedged", FAR_FUTURE, "bad-clock"))]},
+    )
+    row = _item_row(db_conn, "item-1")
+    assert row["name"] == "Wedged"  # the write is still applied...
+    assert row["name_ts"] == NOW + sync.CLOCK_SKEW_ALLOWANCE_MS  # ...but the stamp is clamped
+
+
+def test_clamped_far_future_field_is_beatable_by_a_later_honest_edit(db_conn, monkeypatch):
+    """End-to-end repro from the ticket: a year-2100 push must not wedge the
+    field forever. Once real server time passes the clamp window, an honest
+    edit with its own current timestamp wins the field."""
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+    account_id = _setup_item(db_conn)
+
+    sync.apply_changes(
+        db_conn, account_id, "bad-clock",
+        {"items": [_mk_item("item-1", "list-1", name=("Wedged", FAR_FUTURE, "bad-clock"))]},
+    )
+    assert _item_row(db_conn, "item-1")["name"] == "Wedged"
+
+    # Server time advances past the clamp window (simulating the allowance elapsing).
+    later = NOW + sync.CLOCK_SKEW_ALLOWANCE_MS + 1_000
+    monkeypatch.setattr(sync, "_now_ms", lambda: later)
+    sync.apply_changes(
+        db_conn, account_id, "devA",
+        {"items": [_mk_item("item-1", "list-1", name=("Honest Rename", later, "devA"))]},
+    )
+    assert _item_row(db_conn, "item-1")["name"] == "Honest Rename"
+
+
+def test_past_updated_at_is_stored_unmodified(db_conn, monkeypatch):
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA")
+    sync.apply_changes(
+        db_conn, account_id, "devA",
+        {"items": [_mk_item("item-1", "list-1", name=("Milk", 12345, "devA"))]},
+    )
+    assert _item_row(db_conn, "item-1")["name_ts"] == 12345
+
+
+def test_list_far_future_updated_at_is_clamped_too(db_conn, monkeypatch):
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+    account_id = _register(db_conn, "a@example.com")
+    sync.apply_changes(
+        db_conn, account_id, "devA",
+        {"lists": [_mk_list("list-1", "Groceries", FAR_FUTURE, "devA")]},
+    )
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["name_ts"] == NOW + sync.CLOCK_SKEW_ALLOWANCE_MS
+
+
+def test_far_future_created_at_is_clamped(db_conn, monkeypatch):
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA")
+    sync.apply_changes(
+        db_conn, account_id, "devA",
+        {"items": [_mk_item("item-1", "list-1", created_at=FAR_FUTURE, name=("Milk", 100, "devA"))]},
+    )
+    assert _item_row(db_conn, "item-1")["created_at"] == NOW + sync.CLOCK_SKEW_ALLOWANCE_MS
+
+
+def test_past_created_at_is_untouched(db_conn, monkeypatch):
+    monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA")
+    sync.apply_changes(
+        db_conn, account_id, "devA",
+        {"items": [_mk_item("item-1", "list-1", created_at=1000, name=("Milk", 100, "devA"))]},
+    )
+    assert _item_row(db_conn, "item-1")["created_at"] == 1000
+
+
 # ---- item last-touched-by (T-64) -------------------------------------------
 
 
