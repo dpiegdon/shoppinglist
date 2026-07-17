@@ -1,0 +1,15 @@
+{
+  "body": "Noted during T-89 (web fixed the equivalent). Android AuthInterceptor adds Authorization to every request including /login and /register when a token happens to exist. Not UI-reachable today (those calls only happen while logged out, token null), so latent \u2014 but if a logged-in code path ever hits them, a stale/valid token rides along and a 401 there would trigger the forced-logout path spuriously. Mirror the web fix (T-89 ab7e059): skip attaching the token on the auth endpoints. Files: android .../data/api/AuthInterceptor.kt (+ test). Cross-ref: T-89.",
+  "created_at": "2026-07-17T19:02:35+00:00",
+  "id": "T-100",
+  "labels": [
+    "android",
+    "security",
+    "agent",
+    "ready",
+    "sonnet"
+  ],
+  "priority": 4,
+  "title": "Android: AuthInterceptor attaches the bearer token to /login and /register",
+  "updated_at": "2026-07-17T19:02:35+00:00"
+}
