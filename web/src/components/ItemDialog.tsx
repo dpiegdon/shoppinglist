@@ -237,7 +237,16 @@ export default function ItemDialog({
     try {
       const itemId = matchedExisting?.id ?? editingItem?.id ?? crypto.randomUUID();
       const category = values.category.trim();
-      const stores = values.stores;
+      // Fold any text still sitting in the add-store box (typed but not yet committed via
+      // Enter/Add) into the pushed array, so clicking Save doesn't silently drop it (T-99 review).
+      // Same dedup rule as addStore. When the box is empty (the normal case) stores stays
+      // referentially identical to values.stores, so an untouched list still diffs equal and stays
+      // out of changedFields (T-88 no re-stomp).
+      const pendingStore = storeInput.trim();
+      const stores =
+        pendingStore && !values.stores.includes(pendingStore)
+          ? [...values.stores, pendingStore]
+          : values.stores;
       const quantity = values.quantity.trim();
       const note = values.note.trim();
       // Snapshot the form was seeded from: the item in edit mode (kept even across a rename, which
@@ -267,12 +276,14 @@ export default function ItemDialog({
         status,
         changedFields,
       });
+      // A pending store name was folded into the pushed payload above, so clear the add-store box
+      // now that it's committed (consistent with adding a chip).
+      setStoreInput("");
       if (closeAfter) {
         onClose();
       } else {
         setMatchedExisting(null);
         setValues(emptyValues(defaultCurrency));
-        setStoreInput("");
         setStatus("todo");
         nameInputRef.current?.focus();
       }

@@ -335,6 +335,21 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Costco, Inc"] }));
   });
 
+  it("folds a pending (uncommitted) store name into the payload when Save is clicked without Enter", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
+    // Type a second store but do NOT commit it via Enter/Add before saving.
+    await userEvent.type(screen.getByLabelText("Stores"), "Walmart");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Aldi", "Walmart"] }));
+  });
+
   it("adding several chips via Enter pushes them all as an array, in order", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(
