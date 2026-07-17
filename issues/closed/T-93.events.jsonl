@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T22:25:25+00:00", "kind": "created", "ref": "main@416ffda", "text": "Server: invite hygiene \u2014 dead invites never purged; colon-in-email mints an undecodable token"}
 {"actor": "claude", "at": "2026-07-16T22:40:32+00:00", "kind": "updated", "ref": "main@416ffda", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-17T06:09:25+00:00", "kind": "claimed", "ref": "main@05759fa", "text": "claude"}
+{"actor": "claude", "at": "2026-07-17T06:21:47+00:00", "kind": "closed", "ref": "main@3bac551", "text": ""}
