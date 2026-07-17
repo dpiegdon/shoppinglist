@@ -17,6 +17,11 @@ DEFAULT_CURRENCY = "EUR"
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD_LENGTH = 8
 
+# last_seen_at only feeds the sessions list in Settings, where minute-level
+# precision is meaningless. Throttle the write (and its commit) to this
+# staleness window instead of touching the DB on every authed request.
+LAST_SEEN_REFRESH_MS = 15 * 60 * 1000
+
 
 @dataclass
 class Account:
@@ -117,7 +122,8 @@ def require_account(conn: sqlite3.Connection, req) -> Account:
     token_hash = hash_token(token)
 
     row = conn.execute(
-        "SELECT auth_tokens.account_id AS account_id, accounts.email AS email "
+        "SELECT auth_tokens.account_id AS account_id, accounts.email AS email, "
+        "auth_tokens.last_seen_at AS last_seen_at "
         "FROM auth_tokens JOIN accounts ON accounts.id = auth_tokens.account_id "
         "WHERE auth_tokens.token_hash = ?",
         (token_hash,),
@@ -125,11 +131,13 @@ def require_account(conn: sqlite3.Connection, req) -> Account:
     if row is None:
         raise ApiError(401, "invalid_token", "The bearer token is invalid or has been revoked.")
 
-    conn.execute(
-        "UPDATE auth_tokens SET last_seen_at = ? WHERE token_hash = ?",
-        (now_ms(), token_hash),
-    )
-    conn.commit()
+    now = now_ms()
+    if now - row["last_seen_at"] > LAST_SEEN_REFRESH_MS:
+        conn.execute(
+            "UPDATE auth_tokens SET last_seen_at = ? WHERE token_hash = ?",
+            (now, token_hash),
+        )
+        conn.commit()
     return Account(id=row["account_id"], email=row["email"])
 
 

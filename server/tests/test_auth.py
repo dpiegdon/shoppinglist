@@ -102,6 +102,67 @@ def test_require_account_valid_token_returns_account(app, db_conn):
     assert account.email == EMAIL
 
 
+def _last_seen_at(db_conn, token):
+    row = db_conn.execute(
+        "SELECT last_seen_at FROM auth_tokens WHERE token_hash = ?",
+        (auth.hash_token(token),),
+    ).fetchone()
+    return row["last_seen_at"]
+
+
+def test_require_account_first_request_after_login_keeps_sane_last_seen_at(
+    app, db_conn, monkeypatch
+):
+    login_time = 1_000_000
+    monkeypatch.setattr(auth, "now_ms", lambda: login_time)
+    auth.register(db_conn, EMAIL, PASSWORD)
+    token, _ = auth.login(db_conn, EMAIL, PASSWORD, DEVICE)
+
+    with app.test_request_context("/", headers={"Authorization": f"Bearer {token}"}):
+        from flask import request
+
+        auth.require_account(db_conn, request)
+
+    # Login already stamped a fresh last_seen_at; the very next request (still
+    # within the staleness window) should leave it exactly as login set it —
+    # sane, not null, not clobbered.
+    assert _last_seen_at(db_conn, token) == login_time
+
+
+def test_require_account_within_threshold_does_not_update_last_seen_at(
+    app, db_conn, monkeypatch
+):
+    login_time = 1_000_000
+    monkeypatch.setattr(auth, "now_ms", lambda: login_time)
+    auth.register(db_conn, EMAIL, PASSWORD)
+    token, _ = auth.login(db_conn, EMAIL, PASSWORD, DEVICE)
+
+    just_under_threshold = login_time + auth.LAST_SEEN_REFRESH_MS - 1
+    monkeypatch.setattr(auth, "now_ms", lambda: just_under_threshold)
+    with app.test_request_context("/", headers={"Authorization": f"Bearer {token}"}):
+        from flask import request
+
+        auth.require_account(db_conn, request)
+
+    assert _last_seen_at(db_conn, token) == login_time
+
+
+def test_require_account_after_threshold_updates_last_seen_at(app, db_conn, monkeypatch):
+    login_time = 1_000_000
+    monkeypatch.setattr(auth, "now_ms", lambda: login_time)
+    auth.register(db_conn, EMAIL, PASSWORD)
+    token, _ = auth.login(db_conn, EMAIL, PASSWORD, DEVICE)
+
+    past_threshold = login_time + auth.LAST_SEEN_REFRESH_MS + 1
+    monkeypatch.setattr(auth, "now_ms", lambda: past_threshold)
+    with app.test_request_context("/", headers={"Authorization": f"Bearer {token}"}):
+        from flask import request
+
+        auth.require_account(db_conn, request)
+
+    assert _last_seen_at(db_conn, token) == past_threshold
+
+
 # ---- HTTP layer ------------------------------------------------------------
 
 
