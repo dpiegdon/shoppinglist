@@ -194,6 +194,51 @@ describe("useSync re-sync triggers (T-90)", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
   });
 
+  it("never gates push() behind the in-flight guard: a push while a refresh is outstanding still goes out, payload intact", async () => {
+    const pending: Array<(value: ReturnType<typeof listResponse>) => void> = [];
+    vi.mocked(api.sync).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+    const { result } = renderHook(() => useSync());
+    // The mount effect's refresh() is now in flight and unresolved.
+    await waitFor(() => expect(result.current.loading).toBe(true));
+    expect(api.sync).toHaveBeenCalledTimes(1);
+
+    // A user write while that refresh is still outstanding must NOT be
+    // dropped by the skip-if-in-flight guard - only refresh triggers are.
+    const pushedChanges = {
+      items: [
+        {
+          id: "item-1",
+          list_id: "list-1",
+          fields: {
+            name: { value: "Milk", updated_at: 2, updated_by: "dev" },
+            status: { value: "checked" as const, updated_at: 2, updated_by: "dev" },
+          },
+        },
+      ],
+    };
+    let pushPromise!: Promise<void>;
+    act(() => {
+      pushPromise = result.current.push(pushedChanges);
+    });
+
+    expect(api.sync).toHaveBeenCalledTimes(2);
+    expect(api.sync).toHaveBeenLastCalledWith(expect.objectContaining({ changes: pushedChanges }));
+
+    // Drain both outstanding requests so nothing leaks into other tests.
+    await act(async () => {
+      for (const resolve of pending) {
+        resolve(listResponse(1, ["list-1"]));
+      }
+      await pushPromise;
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
   it("removes its listeners and interval on unmount", async () => {
     vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
     const docAddSpy = vi.spyOn(document, "addEventListener");
