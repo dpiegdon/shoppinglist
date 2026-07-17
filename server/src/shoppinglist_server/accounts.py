@@ -29,7 +29,13 @@ def _require_password(conn: sqlite3.Connection, account_id: str, password: str) 
         "SELECT password_hash FROM accounts WHERE id = ?", (account_id,)
     ).fetchone()
     if row is None or not check_password_hash(row["password_hash"], password or ""):
-        raise ApiError(401, "invalid_credentials", "Password is incorrect.")
+        # 403, not 401 (T-98): this guards a CONFIRMATION password on an already-authed,
+        # token-bearing request (change-password / change-email / delete-account), not a
+        # login attempt. Both clients treat any 401 on a token-bearing request as the
+        # token being revoked and force-log-out — so a Settings-page typo must not use
+        # 401, or it nukes a perfectly valid session. 403 still surfaces inline as an
+        # ordinary ApiError without triggering that logout path.
+        raise ApiError(403, "invalid_credentials", "Password is incorrect.")
 
 
 def change_password(

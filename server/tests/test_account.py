@@ -45,11 +45,15 @@ def test_change_password_service_happy_path(db_conn):
     assert check_password_hash(row["password_hash"], "a new password 2")
 
 
-def test_change_password_wrong_current_raises_401(db_conn):
+def test_change_password_wrong_current_raises_403(db_conn):
+    # 403, not 401 (T-98): a wrong CONFIRMATION password on a token-bearing
+    # request must not look like a revoked token to the client, or it force-logs-out
+    # a perfectly valid session over a Settings-page typo.
     account_id, token = _register_and_login(db_conn)
     with pytest.raises(ApiError) as excinfo:
         accounts.change_password(db_conn, account_id, "not the password", "a new password 2", token)
-    assert excinfo.value.status == 401
+    assert excinfo.value.status == 403
+    assert excinfo.value.code == "invalid_credentials"
 
 
 def test_change_password_revokes_other_sessions_but_keeps_current(db_conn):
@@ -84,11 +88,13 @@ def test_change_email_duplicate_raises_409(db_conn):
     assert excinfo.value.status == 409
 
 
-def test_change_email_wrong_password_raises_401(db_conn):
+def test_change_email_wrong_password_raises_403(db_conn):
+    # 403, not 401 (T-98) — see test_change_password_wrong_current_raises_403.
     account_id, _ = _register_and_login(db_conn)
     with pytest.raises(ApiError) as excinfo:
         accounts.change_email(db_conn, account_id, "not the password", "newbob@example.com")
-    assert excinfo.value.status == 401
+    assert excinfo.value.status == 403
+    assert excinfo.value.code == "invalid_credentials"
 
 
 # ---- service layer: sessions ------------------------------------------------
@@ -232,11 +238,13 @@ def test_settings_http_patch_with_initials(client):
 # ---- service layer: delete account ------------------------------------------
 
 
-def test_delete_account_wrong_password_raises_401(db_conn):
+def test_delete_account_wrong_password_raises_403(db_conn):
+    # 403, not 401 (T-98) — see test_change_password_wrong_current_raises_403.
     account_id, _ = _register_and_login(db_conn)
     with pytest.raises(ApiError) as excinfo:
         accounts.delete_account(db_conn, account_id, "not the password")
-    assert excinfo.value.status == 401
+    assert excinfo.value.status == 403
+    assert excinfo.value.code == "invalid_credentials"
 
 
 def test_delete_account_cascades_and_orphans_memberships(db_conn):
@@ -396,14 +404,24 @@ def test_change_password_http_flow(client):
     assert resp.status_code == 200
 
 
-def test_change_password_http_wrong_current_401(client):
+def test_change_password_http_wrong_current_403(client):
+    # 403, not 401 (T-98): both clients force-log-out on any 401 for a token-bearing
+    # request, treating it as a revoked token. A wrong confirmation password must not
+    # trigger that — it needs to surface as an inline, non-session-ending error.
     token = _register_and_login_http(client)
     resp = client.post(
         "/api/v1/account/change-password",
         json={"current_password": "nope", "new_password": "a new password 2"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "invalid_credentials"
+
+    # And the session must still be usable afterwards — the point of the fix.
+    resp = client.get(
+        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
 
 
 def test_change_password_http_invalidates_other_devices(client):
@@ -448,6 +466,24 @@ def test_change_email_http_duplicate_409(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 409
+
+
+def test_change_email_http_wrong_password_403(client):
+    # 403, not 401 (T-98) — see test_change_password_http_wrong_current_403.
+    token = _register_and_login_http(client)
+    resp = client.post(
+        "/api/v1/account/change-email",
+        json={"password": "not the password", "new_email": "newbob@example.com"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "invalid_credentials"
+
+    # And the session must still be usable afterwards — the email was NOT changed.
+    resp = client.get(
+        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
 
 
 def test_sessions_http_list_and_revoke(client):
@@ -581,11 +617,19 @@ def test_delete_account_http_flow(client):
     assert resp.status_code == 401
 
 
-def test_delete_account_http_wrong_password_401(client):
+def test_delete_account_http_wrong_password_403(client):
+    # 403, not 401 (T-98) — see test_change_password_http_wrong_current_403.
     token = _register_and_login_http(client)
     resp = client.delete(
         "/api/v1/account",
         json={"password": "not the password"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "invalid_credentials"
+
+    # And the session must still be usable afterwards — the account was NOT deleted.
+    resp = client.get(
+        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
