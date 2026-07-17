@@ -1,6 +1,9 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import type { ItemObject, ItemStatus } from "../api/contract";
+import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
+
+/** The item fields the dialog can push, as LWW keys (matches the `fieldPatch` keys the pages spread). */
+export type ItemChangedField = "name" | "category" | "stores" | "quantity" | "price" | "note" | "status";
 
 export interface ItemDialogSaveValues {
   itemId: string;
@@ -12,6 +15,78 @@ export interface ItemDialogSaveValues {
   priceCurrency: string;
   note: string;
   status: ItemStatus;
+  /**
+   * The fields whose normalized value actually differs from the snapshot the form was seeded with
+   * (T-88) — the pages spread only these fieldPatch entries, so an edit stamps a fresh LWW clock
+   * only on what the user really changed and never stomps a collaborator's concurrent edit to an
+   * untouched field. Empty means a zero-change edit: the pages push nothing at all.
+   */
+  changedFields: Set<ItemChangedField>;
+}
+
+/** Optional-string parity for diffing: "" and null are the same value (an absent optional field). */
+function optEqual(a: string | null, b: string | null): boolean {
+  return (a || null) === (b || null);
+}
+
+function storesEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+function priceEqual(a: Price | null, b: Price | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.amount === b.amount && (a.currency || null) === (b.currency || null);
+}
+
+interface NormalizedValues {
+  name: string;
+  category: string | null;
+  stores: string[];
+  quantity: string | null;
+  price: Price | null;
+  note: string | null;
+  status: ItemStatus;
+}
+
+function snapshotOf(item: ItemObject): NormalizedValues {
+  const price = itemFieldValue(item, "price") ?? null;
+  return {
+    name: (itemFieldValue(item, "name") ?? "").trim(),
+    category: (itemFieldValue(item, "category") ?? "").trim() || null,
+    stores: itemFieldValue(item, "stores") ?? [],
+    quantity: (itemFieldValue(item, "quantity") ?? "").trim() || null,
+    price,
+    note: (itemFieldValue(item, "note") ?? "").trim() || null,
+    status: itemFieldValue(item, "status") ?? "todo",
+  };
+}
+
+/**
+ * Diff the (already-normalized) form values against the snapshot the form was seeded from.
+ * `snapshot === null` is a brand-new row: every non-empty field is a first write, and status is
+ * always stamped so the fresh row lands with a status (T-88 grooming: "push all non-empty fields").
+ */
+function computeChangedFields(current: NormalizedValues, snapshot: ItemObject | null): Set<ItemChangedField> {
+  const changed = new Set<ItemChangedField>();
+  if (!snapshot) {
+    if (current.name) changed.add("name");
+    if (current.category) changed.add("category");
+    if (current.stores.length) changed.add("stores");
+    if (current.quantity) changed.add("quantity");
+    if (current.price) changed.add("price");
+    if (current.note) changed.add("note");
+    changed.add("status");
+    return changed;
+  }
+  const base = snapshotOf(snapshot);
+  if (current.name !== base.name) changed.add("name");
+  if (!optEqual(current.category, base.category)) changed.add("category");
+  if (!storesEqual(current.stores, base.stores)) changed.add("stores");
+  if (!optEqual(current.quantity, base.quantity)) changed.add("quantity");
+  if (!priceEqual(current.price, base.price)) changed.add("price");
+  if (!optEqual(current.note, base.note)) changed.add("note");
+  if (current.status !== base.status) changed.add("status");
+  return changed;
 }
 
 interface ItemDialogProps {
@@ -26,7 +101,7 @@ interface ItemDialogProps {
   onDelete?: (itemId: string) => Promise<void>;
 }
 
-function emptyValues(defaultCurrency: string): Omit<ItemDialogSaveValues, "itemId" | "status"> {
+function emptyValues(defaultCurrency: string): Omit<ItemDialogSaveValues, "itemId" | "status" | "changedFields"> {
   return {
     name: "",
     category: "",
@@ -38,7 +113,7 @@ function emptyValues(defaultCurrency: string): Omit<ItemDialogSaveValues, "itemI
   };
 }
 
-function valuesFromItem(item: ItemObject): Omit<ItemDialogSaveValues, "itemId" | "status"> {
+function valuesFromItem(item: ItemObject): Omit<ItemDialogSaveValues, "itemId" | "status" | "changedFields"> {
   const price = itemFieldValue(item, "price");
   return {
     name: itemFieldValue(item, "name") ?? "",
@@ -105,19 +180,41 @@ export default function ItemDialog({
     setSaving(true);
     try {
       const itemId = matchedExisting?.id ?? editingItem?.id ?? crypto.randomUUID();
+      const category = values.category.trim();
+      const stores = storesInput
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const quantity = values.quantity.trim();
+      const priceAmount = values.priceAmount.trim();
+      const priceCurrency = values.priceCurrency.trim();
+      const note = values.note.trim();
+      // Snapshot the form was seeded from: the item in edit mode (kept even across a rename, which
+      // clears matchedExisting), the picked suggestion after an adopt, or null for a brand-new row.
+      const snapshot = editingItem ?? matchedExisting;
+      const changedFields = computeChangedFields(
+        {
+          name,
+          category: category || null,
+          stores,
+          quantity: quantity || null,
+          price: priceAmount ? { amount: priceAmount, currency: priceCurrency || null } : null,
+          note: note || null,
+          status,
+        },
+        snapshot,
+      );
       await onSave({
         itemId,
         name,
-        category: values.category.trim(),
-        stores: storesInput
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        quantity: values.quantity.trim(),
-        priceAmount: values.priceAmount.trim(),
-        priceCurrency: values.priceCurrency.trim(),
-        note: values.note.trim(),
+        category,
+        stores,
+        quantity,
+        priceAmount,
+        priceCurrency,
+        note,
         status,
+        changedFields,
       });
       if (closeAfter) {
         onClose();

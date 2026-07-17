@@ -185,3 +185,105 @@ describe("ItemDialog (edit mode)", () => {
     expect(screen.queryByText("Mineral water")).not.toBeInTheDocument();
   });
 });
+
+describe("ItemDialog changed-field tracking (T-88)", () => {
+  it("edit changing only the note reports note as the sole changed field", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Note"), "the ripe ones");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["note"]);
+  });
+
+  it("edit renaming still reports name (and only name) even though it clears the match", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await userEvent.clear(screen.getByLabelText("Name"));
+    await userEvent.type(screen.getByLabelText("Name"), "Oat milk");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["name"]);
+  });
+
+  it("adopting an unmodified suggestion reports status as the sole changed field", async () => {
+    const registry = [registryItem("1", "Milk", "dairy")];
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={registry}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Mi");
+    await userEvent.click(await screen.findByText("Milk"));
+    await userEvent.click(screen.getByText("Save"));
+
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["status"]);
+  });
+
+  it("a zero-change edit save reports no changed fields but still closes", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={onClose}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual([]);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("a brand-new item reports every non-empty field plus status as changed", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Brand new item");
+    await userEvent.type(screen.getByLabelText("Category"), "misc");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect([...onSave.mock.calls[0][0].changedFields].sort()).toEqual(["category", "name", "status"]);
+  });
+});

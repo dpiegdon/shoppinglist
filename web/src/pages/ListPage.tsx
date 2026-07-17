@@ -75,24 +75,31 @@ export default function ListPage() {
   }
 
   async function handleSave(values: ItemDialogSaveValues) {
+    const changed = values.changedFields;
+    // Zero-change edit (T-88): nothing to stamp, so push nothing — the dialog still closes.
+    if (changed.size === 0) return;
     await push({
       items: [
         {
           id: values.itemId,
           list_id: listId!,
           created_at: nowMs(),
+          // Spread only the fields the user actually changed, so an edit stamps a fresh LWW clock
+          // on those alone and can't stomp a collaborator's concurrent edit to an untouched field.
           fields: {
-            ...fieldPatch(deviceId, "name", values.name),
-            ...fieldPatch(deviceId, "category", values.category || null),
-            ...fieldPatch(deviceId, "stores", values.stores),
-            ...fieldPatch(deviceId, "quantity", values.quantity || null),
-            ...fieldPatch(
-              deviceId,
-              "price",
-              values.priceAmount ? { amount: values.priceAmount, currency: values.priceCurrency || null } : null,
-            ),
-            ...fieldPatch(deviceId, "note", values.note || null),
-            ...fieldPatch(deviceId, "status", values.status),
+            ...(changed.has("name") ? fieldPatch(deviceId, "name", values.name) : {}),
+            ...(changed.has("category") ? fieldPatch(deviceId, "category", values.category || null) : {}),
+            ...(changed.has("stores") ? fieldPatch(deviceId, "stores", values.stores) : {}),
+            ...(changed.has("quantity") ? fieldPatch(deviceId, "quantity", values.quantity || null) : {}),
+            ...(changed.has("price")
+              ? fieldPatch(
+                  deviceId,
+                  "price",
+                  values.priceAmount ? { amount: values.priceAmount, currency: values.priceCurrency || null } : null,
+                )
+              : {}),
+            ...(changed.has("note") ? fieldPatch(deviceId, "note", values.note || null) : {}),
+            ...(changed.has("status") ? fieldPatch(deviceId, "status", values.status) : {}),
           },
         },
       ],

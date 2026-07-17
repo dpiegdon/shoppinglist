@@ -131,6 +131,76 @@ describe("ListPage checked items", () => {
   });
 });
 
+describe("ListPage item-save pushes only changed fields (T-88)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    // Default for every save-push call; the mount call is overridden below.
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [
+          itemObj("item-1", "Milk", "todo", "dairy"),
+          itemObj("item-2", "Cheese", "backlog", "dairy"),
+        ],
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  function pushedItemCalls() {
+    return vi
+      .mocked(api.sync)
+      .mock.calls.map((c) => c[0])
+      .filter((req) => (req.changes.items?.length ?? 0) > 0);
+  }
+
+  it("editing only the note pushes a payload with just the note field", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Milk" }));
+    await userEvent.type(screen.getByLabelText("Note"), "the ripe ones");
+    await userEvent.click(screen.getByText("Save"));
+
+    const pushes = pushedItemCalls();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].changes.items![0].id).toBe("item-1");
+    expect(Object.keys(pushes[0].changes.items![0].fields)).toEqual(["note"]);
+  });
+
+  it("saving an edit with no changes pushes nothing", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Milk" }));
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(pushedItemCalls()).toHaveLength(0);
+  });
+
+  it("adopting an unmodified backlog suggestion pushes only the status flip", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Add item" }));
+    await userEvent.type(screen.getByLabelText("Name"), "Chee");
+    await userEvent.click(await screen.findByText("Cheese"));
+    await userEvent.click(screen.getByText("Save"));
+
+    const pushes = pushedItemCalls();
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0].changes.items![0].id).toBe("item-2");
+    expect(Object.keys(pushes[0].changes.items![0].fields)).toEqual(["status"]);
+  });
+});
+
 describe("ListPage last-touched-by indicator (T-64)", () => {
   afterEach(() => {
     vi.clearAllMocks();
