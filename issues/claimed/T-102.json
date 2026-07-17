@@ -10,7 +10,8 @@
     "ready",
     "sonnet"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "Server: two doc/test cleanups from the T-84..T-96 review (merge-survivor comment + {}-PATCH test)",
-  "updated_at": "2026-07-17T19:13:06+00:00"
+  "updated_at": "2026-07-17T20:16:42+00:00"
 }
