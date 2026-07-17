@@ -322,10 +322,12 @@ def _parse_row(obj, keys, tsby, validate, device_id):
     elif not (SQLITE_INT_MIN <= created_at <= SQLITE_INT_MAX):
         raise ApiError(422, "invalid_row", "created_at is out of range.", details={"row_id": row_id})
     else:
-        # T-86: bounds a far-future created_at the same way as updated_at, limiting
-        # LWW field-wedging. It does NOT bound merge-survivor selection — the
-        # name-merge survivor is min(created_at) (earliest wins, see _merge_group),
-        # so that's gamed with a small/past created_at, which this clamp can't touch.
+        # T-86: bounds a far-future created_at (same _clamp_future_ms mechanism as
+        # each field's updated_at in _parse_clock). Unlike updated_at, created_at
+        # plays no role in per-field LWW resolution — it only feeds the merge-survivor
+        # tiebreak (min(created_at, id), earliest wins, see _merge_group), which a
+        # future-only clamp can't bound anyway: survivorship is gamed with a
+        # small/past created_at, not a future one.
         created_at = _clamp_future_ms(created_at)
     fields_obj = obj.get("fields")
     if fields_obj is None:
