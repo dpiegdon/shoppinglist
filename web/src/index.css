@@ -153,6 +153,35 @@ textarea:focus {
   color: var(--color-accent-text);
 }
 
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.4rem 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0 0.15rem;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.chip-remove:hover {
+  color: var(--color-text);
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

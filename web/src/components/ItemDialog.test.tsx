@@ -321,6 +321,109 @@ describe("ItemDialog changed-field tracking (T-88)", () => {
   });
 });
 
+describe("ItemDialog stores chip editor (T-99)", () => {
+  it("preserves a store name containing a comma as a single store, not split in two", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Toilet paper");
+    await userEvent.type(screen.getByLabelText("Stores"), "Costco, Inc{enter}");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Costco, Inc"] }));
+  });
+
+  it("adding several chips via Enter pushes them all as an array, in order", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
+    await userEvent.type(screen.getByLabelText("Stores"), "Lidl{enter}");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Aldi", "Lidl"] }));
+  });
+
+  it("clicking Add also commits a chip and clears the input", async () => {
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={vi.fn()} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Stores"), "Aldi");
+    await userEvent.click(screen.getByText("Add"));
+
+    expect(screen.getByText("Aldi")).toBeInTheDocument();
+    expect(screen.getByLabelText("Stores")).toHaveValue("");
+  });
+
+  it("removing a chip drops it from the pushed stores array", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
+    await userEvent.type(screen.getByLabelText("Stores"), "Lidl{enter}");
+    await userEvent.click(screen.getByLabelText("Remove Aldi"));
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Lidl"] }));
+  });
+
+  it("ignores blank and duplicate store entries", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Stores"), "   {enter}");
+    await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
+    await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Aldi"] }));
+  });
+
+  it("seeds existing stores as chips in edit mode, and an unrelated edit leaves stores out of changedFields (T-88 no re-stomp)", async () => {
+    const base = registryItem("1", "Milk", "dairy");
+    const item: ItemObject = {
+      ...base,
+      fields: {
+        ...base.fields,
+        stores: { value: ["Aldi", "Lidl"], updated_at: 1, updated_by: "dev" },
+      },
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Aldi")).toBeInTheDocument();
+    expect(screen.getByText("Lidl")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Note"), "the ripe ones");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave.mock.calls[0][0].stores).toEqual(["Aldi", "Lidl"]);
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["note"]);
+  });
+});
+
 describe("ItemDialog price/currency validation (T-91)", () => {
   it("shows an inline error and does not push when the price can't be parsed", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);

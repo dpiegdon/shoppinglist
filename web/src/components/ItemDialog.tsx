@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { ApiError } from "../api/client";
@@ -145,7 +145,11 @@ export default function ItemDialog({
     editingItem ? itemFieldValue(editingItem, "status") ?? "todo" : "todo",
   );
   const [saving, setSaving] = useState(false);
-  const [storesInput, setStoresInput] = useState(values.stores.join(", "));
+  // Store name entry (T-99): a single trimmed string is appended to values.stores as a chip on
+  // Enter/Add, never comma-split — a store name containing a comma (e.g. "Costco, Inc") stays one
+  // value. values.stores itself is the string[] compared element-wise by storesEqual (T-88), so
+  // seeding chips from the snapshot and leaving them untouched keeps that diff invariant intact.
+  const [storeInput, setStoreInput] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
   const [currencyError, setCurrencyError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -163,8 +167,32 @@ export default function ItemDialog({
     setMatchedExisting(item);
     const next = valuesFromItem(item);
     setValues(next);
-    setStoresInput(next.stores.join(", "));
+    setStoreInput("");
     setStatus("todo");
+  }
+
+  /** Commit the trimmed store-input text as a new chip; ignores empty/duplicate entries (T-99). */
+  function addStore() {
+    const trimmed = storeInput.trim();
+    setStoreInput("");
+    if (!trimmed) return;
+    setValues((v) => (v.stores.includes(trimmed) ? v : { ...v, stores: [...v.stores, trimmed] }));
+  }
+
+  function removeStore(store: string) {
+    setValues((v) => ({ ...v, stores: v.stores.filter((s) => s !== store) }));
+  }
+
+  /**
+   * Enter commits a chip instead of submitting the whole form — a comma typed here is a literal
+   * character of the store name, never a separator (T-99: the old comma-joined text input could
+   * not represent a store name containing a comma).
+   */
+  function handleStoreInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addStore();
+    }
   }
 
   function handleNameChange(name: string) {
@@ -209,10 +237,7 @@ export default function ItemDialog({
     try {
       const itemId = matchedExisting?.id ?? editingItem?.id ?? crypto.randomUUID();
       const category = values.category.trim();
-      const stores = storesInput
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const stores = values.stores;
       const quantity = values.quantity.trim();
       const note = values.note.trim();
       // Snapshot the form was seeded from: the item in edit mode (kept even across a rename, which
@@ -247,7 +272,7 @@ export default function ItemDialog({
       } else {
         setMatchedExisting(null);
         setValues(emptyValues(defaultCurrency));
-        setStoresInput("");
+        setStoreInput("");
         setStatus("todo");
         nameInputRef.current?.focus();
       }
@@ -340,8 +365,36 @@ export default function ItemDialog({
         </div>
 
         <div className="form-field">
-          <label htmlFor="item-stores">Stores (comma-separated)</label>
-          <input id="item-stores" value={storesInput} onChange={(e) => setStoresInput(e.target.value)} />
+          <label htmlFor="item-stores">Stores</label>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              id="item-stores"
+              value={storeInput}
+              onChange={(e) => setStoreInput(e.target.value)}
+              onKeyDown={handleStoreInputKeyDown}
+              placeholder="Add a store"
+            />
+            <button type="button" className="btn btn-secondary" onClick={addStore}>
+              Add
+            </button>
+          </div>
+          {values.stores.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
+              {values.stores.map((store) => (
+                <span key={store} className="chip">
+                  {store}
+                  <button
+                    type="button"
+                    className="chip-remove"
+                    aria-label={`Remove ${store}`}
+                    onClick={() => removeStore(store)}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="form-field">
