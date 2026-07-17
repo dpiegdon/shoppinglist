@@ -106,9 +106,14 @@ data class SettingsResponse(
     val initials: String,
 )
 
-// initials: T-64. The server always writes both columns on every PATCH — omitting this field
-// would silently wipe any existing override back to the email-derived default, so every caller
-// MUST resend the account's current initials, not just whichever field the user actually edited.
+// initials: T-64/T-87/T-97. The server treats an ABSENT initials key as "leave unchanged" (T-87)
+// — a *present* "" still overwrites a custom override, so callers must only send a real,
+// known value. `initials = null` (the default) omits the key from the wire entirely: with this
+// app's configured Json (JsonModule.provideJson — encodeDefaults left at its library default of
+// false), a property equal to its declared default is elided from the encoded JSON rather than
+// sent as literal null. This lets a currency-only save skip initials when it isn't known yet
+// (e.g. offline start racing the best-effort preload) instead of clobbering the override with an
+// unresolved empty string (T-97, mirrors web's T-101).
 @Serializable
 data class UpdateSettingsRequest(
     @SerialName("default_currency") val defaultCurrency: String,

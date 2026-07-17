@@ -3,6 +3,8 @@ package org.p23q.shoppinglist.data.api
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.Json.Default.parseToJsonElement
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -129,6 +131,43 @@ class DtoTest {
         val responseJson = json.encodeToString(SyncResponse.serializer(), response)
         val decodedResponse = json.decodeFromString<SyncResponse>(responseJson)
         assertEquals(response, decodedResponse)
+    }
+
+    // T-97: PATCH /settings now treats an ABSENT initials key as "leave unchanged" (T-87), but a
+    // *present* "" still overwrites a custom override. A currency-only save must be able to omit
+    // the key entirely when the client doesn't yet know the account's initials (e.g. offline
+    // start racing the best-effort preload) instead of resending a literal "". These tests use
+    // the app's actual configured Json instance (JsonModule.provideJson(), same package) rather
+    // than a fresh default Json() — the omission depends on that instance's encodeDefaults
+    // setting, not just the DTO's declared default.
+    @Test
+    fun `UpdateSettingsRequest with null initials omits the key on the wire (T-97)`() {
+        val request = UpdateSettingsRequest(defaultCurrency = "USD", initials = null)
+
+        val encoded = JsonModule.provideJson().encodeToString(UpdateSettingsRequest.serializer(), request)
+
+        assertEquals("""{"default_currency":"USD"}""", encoded)
+        assertFalse(encoded.contains("initials"))
+    }
+
+    @Test
+    fun `UpdateSettingsRequest with a real initials value includes it on the wire`() {
+        val request = UpdateSettingsRequest(defaultCurrency = "USD", initials = "AB")
+
+        val encoded = JsonModule.provideJson().encodeToString(UpdateSettingsRequest.serializer(), request)
+
+        assertTrue(encoded.contains(""""initials":"AB""""))
+    }
+
+    @Test
+    fun `UpdateSettingsRequest with a genuinely empty initials value still sends the empty string (T-97)`() {
+        // Distinct from null: "" is a real, resolved value (e.g. the account has no override) and
+        // must still be sent so the server can act on it — only "not known yet" should be omitted.
+        val request = UpdateSettingsRequest(defaultCurrency = "USD", initials = "")
+
+        val encoded = JsonModule.provideJson().encodeToString(UpdateSettingsRequest.serializer(), request)
+
+        assertTrue(encoded.contains(""""initials":"""""))
     }
 
     @Test

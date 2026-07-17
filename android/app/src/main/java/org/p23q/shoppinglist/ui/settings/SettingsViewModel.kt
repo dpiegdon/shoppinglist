@@ -35,8 +35,15 @@ data class SettingsUiState(
     val serverUrl: String = "",
     val accountEmail: String? = null,
     val defaultCurrency: String = "",
-    /** Resolved default-or-override (T-64); "" until the one-time fetch in init completes. */
-    val initials: String = "",
+    /**
+     * Resolved default-or-override (T-64). `null` means the one-time fetch in [SettingsViewModel]
+     * hasn't resolved yet (or failed) — distinct from a genuinely blank/no-override value once
+     * loaded. This matters because the server treats an ABSENT `initials` key in PATCH /settings
+     * as "leave unchanged" (T-87), but a *present* "" still overwrites a custom override. Keeping
+     * "not loaded" distinguishable from "" lets a currency-only save omit the key entirely instead
+     * of resending an unresolved "" as if it were real (T-97).
+     */
+    val initials: String? = null,
     val theme: ThemePreference = ThemePreference.SYSTEM,
     val allowSelfSignedCerts: Boolean = false,
     val sessions: List<SessionDto> = emptyList(),
@@ -141,10 +148,13 @@ class SettingsViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             try {
-                // Resending initials is no longer required for correctness — the server treats
-                // an absent key as "leave unchanged" (T-87), not PUT-style overwrite. Still sent
-                // for parity, but note an empty string here is a *real* value (not "absent"), so
-                // [loadInitials] must have resolved before this call or a custom override is lost.
+                // The server treats an absent initials key as "leave unchanged" (T-87), not
+                // PUT-style overwrite. uiState.initials is null until [loadInitials] resolves (or
+                // an explicit updateInitials save has completed) — passing that null straight
+                // through here omits the key from the request entirely (kotlinx serialization
+                // elides a property equal to its declared default), so a currency-only save can't
+                // clobber a real override with an unresolved "" (T-97). Once initials is known
+                // (even if genuinely blank), it's resent as the real value.
                 val response = apiProvider.get().updateSettings(
                     UpdateSettingsRequest(normalized, _uiState.value.initials),
                 )

@@ -184,6 +184,46 @@ class SettingsViewModelTest {
     // loadInitials().join() itself and checks the resulting value — no unique coverage lost.
 
     @Test
+    fun `updateCurrency omits the initials key when the preload has not resolved (T-97)`() = runTest(mainDispatcherRule.dispatcher) {
+        // loadInitials() is deliberately never called — simulates an offline start racing the
+        // best-effort preload. Before T-97, uiState.initials started at literal "" and got resent
+        // as a real value, clobbering any custom override server-side; it must now be omitted.
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": ""}"""))
+        val viewModel = newViewModel()
+
+        viewModel.updateCurrency("usd")?.join()
+
+        val request = server.takeRequest()
+        assertFalse(request.body.readUtf8().contains("initials"))
+    }
+
+    @Test
+    fun `updateCurrency sends the real initials value after an explicit initials save, even without loadInitials (T-97)`() = runTest(mainDispatcherRule.dispatcher) {
+        val recordedRequests = java.util.concurrent.CopyOnWriteArrayList<RecordedRequest>()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                recordedRequests.add(request)
+                return when (request.method) {
+                    "PATCH" -> if (recordedRequests.count { it.method == "PATCH" } == 1) {
+                        MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "ZZ"}""")
+                    } else {
+                        MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "ZZ"}""")
+                    }
+                    else -> MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "ZZ"}""")
+                }
+            }
+        }
+        val viewModel = newViewModel()
+
+        viewModel.updateInitials("zz")?.join()
+        viewModel.updateCurrency("usd")?.join()
+
+        val patchRequests = recordedRequests.filter { it.method == "PATCH" }
+        assertEquals(2, patchRequests.size)
+        assertTrue(patchRequests[1].body.readUtf8().contains("\"initials\":\"ZZ\""))
+    }
+
+    @Test
     fun `updateInitials rejects more than 3 characters locally without calling the server`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 

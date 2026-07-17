@@ -92,7 +92,8 @@ fun SettingsScreen(
         // Shown as a small badge on shared-list item rows so collaborators can see who last
         // touched an item (T-64); defaults to the email's initials until customized here.
         Text("Display initials", style = MaterialTheme.typography.titleMedium)
-        var initialsInput by remember(state.initials) { mutableStateOf(state.initials) }
+        // state.initials is null until the preload resolves (T-97); the field just starts blank.
+        var initialsInput by remember(state.initials) { mutableStateOf(state.initials ?: "") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = initialsInput,
