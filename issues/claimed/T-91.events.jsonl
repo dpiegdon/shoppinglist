@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-07-16T22:24:43+00:00", "kind": "created", "ref": "main@416ffda", "text": "Web: item dialog swallows save errors \u2014 no inline price/currency validation (Android has it)"}
 {"actor": "claude", "at": "2026-07-16T22:40:32+00:00", "kind": "updated", "ref": "main@416ffda", "text": "fields updated"}
 {"actor": "claude", "at": "2026-07-16T22:40:33+00:00", "kind": "dependency", "ref": "main@416ffda", "text": "T-88"}
+{"actor": "claude", "at": "2026-07-17T18:36:43+00:00", "kind": "claimed", "ref": "main@3663269", "text": "claude"}
