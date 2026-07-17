@@ -175,6 +175,41 @@ def test_mint_by_non_member_raises_403(db_conn):
     assert excinfo.value.status == 403
 
 
+# ---- invited_email validation (T-93: token payload is colon-delimited, so a ---
+# ---- colon-containing email mints a token that can never decode) -------------
+
+
+def test_mint_rejects_colon_in_email(db_conn):
+    owner = _register(db_conn, "owner@example.com")
+    _create_list(db_conn, owner, "devOwner")
+    with pytest.raises(ApiError) as excinfo:
+        invites.mint(db_conn, KEY, BASE_URL, "list-1", "bad:actor@example.com", owner)
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_email"
+
+
+def test_mint_rejects_overlong_email(db_conn):
+    owner = _register(db_conn, "owner@example.com")
+    _create_list(db_conn, owner, "devOwner")
+    overlong = ("a" * (invites.MAX_INVITED_EMAIL_LENGTH - len("@example.com") + 1)) + "@example.com"
+    assert len(overlong) > invites.MAX_INVITED_EMAIL_LENGTH
+    with pytest.raises(ApiError) as excinfo:
+        invites.mint(db_conn, KEY, BASE_URL, "list-1", overlong, owner)
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_email"
+
+
+def test_mint_rejects_email_that_fails_the_registration_email_regex(db_conn):
+    # Same EMAIL_RE as registration is used, e.g. it requires a domain dot;
+    # the old "@" in email check alone would have let this mint fine.
+    owner = _register(db_conn, "owner@example.com")
+    _create_list(db_conn, owner, "devOwner")
+    with pytest.raises(ApiError) as excinfo:
+        invites.mint(db_conn, KEY, BASE_URL, "list-1", "invitee@localhost", owner)
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_email"
+
+
 # ---- revoke ------------------------------------------------------------------
 
 

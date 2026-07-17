@@ -9,11 +9,12 @@ import uuid
 from hashlib import sha256
 
 from . import db as db_module
-from .auth import now_ms
+from .auth import EMAIL_RE, now_ms
 from .errors import ApiError
 
 INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000  # fixed 7 days; never client-supplied
 SERVER_ORPHAN = "server-orphan"
+MAX_INVITED_EMAIL_LENGTH = 254  # RFC 5321 practical email length cap
 
 
 # ---- token encode / decode (Wire Contract format) ---------------------------
@@ -71,7 +72,12 @@ def is_member(conn, account_id, list_id) -> bool:
 def mint(conn, key: bytes, base_url: str, list_id: str, invited_email: str, created_by: str) -> dict:
     if not is_member(conn, created_by, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
-    if not invited_email or "@" not in invited_email:
+    if (
+        not invited_email
+        or len(invited_email) > MAX_INVITED_EMAIL_LENGTH
+        or ":" in invited_email  # token payload is colon-delimited; see decode_token
+        or not EMAIL_RE.match(invited_email)
+    ):
         raise ApiError(422, "invalid_email", "invited_email is not valid.")
 
     invite_id = str(uuid.uuid4())

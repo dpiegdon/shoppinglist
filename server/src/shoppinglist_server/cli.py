@@ -72,5 +72,6 @@ def gc_command(instance_name):
     finally:
         conn.close()
     click.echo(
-        f"GC purged {result['items_purged']} items, {result['lists_purged']} lists."
+        f"GC purged {result['items_purged']} items, {result['lists_purged']} lists, "
+        f"{result['invites_purged']} invites."
     )

@@ -68,7 +68,7 @@ def test_fresh_tombstone_survives(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
     assert _item_exists(db_conn, "item-1")
 
 
@@ -94,7 +94,7 @@ def test_89_day_old_tombstone_survives(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
     assert _item_exists(db_conn, "item-1")
 
 
@@ -143,7 +143,7 @@ def test_orphaned_list_and_lingering_membership_purged_together(db_conn):
 
     result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
 
-    assert result == {"items_purged": 1, "lists_purged": 1}
+    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
     assert not _list_exists(db_conn, "list-1")
     assert not _item_exists(db_conn, "item-1")
     assert not _membership_exists(db_conn, account_id, "list-1")
@@ -151,6 +151,21 @@ def test_orphaned_list_and_lingering_membership_purged_together(db_conn):
 
 def _invite_exists(conn, invite_id):
     return conn.execute("SELECT 1 FROM invites WHERE id = ?", (invite_id,)).fetchone() is not None
+
+
+def _insert_invite(
+    conn, invite_id, list_id, created_by, email="invitee@example.com",
+    created_at=NOW - 1000, expires_at=NOW + 1000, revoked=0, used_at=None,
+):
+    """Insert an invite row with fully-controlled timestamps, bypassing
+    invites.mint() (which stamps real wall-clock time, not the synthetic
+    NOW these GC tests run on)."""
+    conn.execute(
+        "INSERT INTO invites (id, list_id, invited_email, created_by, created_at, expires_at, revoked, used_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (invite_id, list_id, email, created_by, created_at, expires_at, revoked, used_at),
+    )
+    conn.commit()
 
 
 def test_purging_a_list_also_removes_invites_referencing_it(db_conn):
@@ -175,7 +190,7 @@ def test_purging_a_list_also_removes_invites_referencing_it(db_conn):
 
     result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
 
-    assert result == {"items_purged": 1, "lists_purged": 1}
+    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
     assert not _list_exists(db_conn, "list-1")
     assert not _invite_exists(db_conn, minted["invite_id"])
 
@@ -195,8 +210,146 @@ def test_purging_a_list_removes_its_items_even_if_not_independently_old(db_conn)
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 1, "lists_purged": 1}
+    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
     assert not _item_exists(db_conn, "item-1")
+
+
+# ---- dead-invite purging on LIVE lists (T-93) ---------------------------------
+#
+# Invites for lists that get hard-deleted are already handled above (cascade
+# delete alongside the list). These tests cover the *additive* case: a list
+# that is still alive, but whose invites have gone clearly dead (expired,
+# used, or revoked) and aged past the retention window. Purging these must
+# NOT advance gc_horizon — invites are not part of the sync change_seq stream.
+
+
+def test_expired_invite_older_than_retention_is_purged(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=old_expiry,
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1}
+    assert not _invite_exists(db_conn, "inv-1")
+    assert _list_exists(db_conn, "list-1")  # the list itself is untouched, still live
+
+
+def test_used_invite_older_than_retention_is_purged(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    old_used_at = NOW - NINETY_DAYS_MS - 1000
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        expires_at=old_used_at + 1000, used_at=old_used_at,
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1}
+    assert not _invite_exists(db_conn, "inv-1")
+
+
+def test_revoked_invite_older_than_retention_is_purged(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        expires_at=old_expiry, revoked=1,
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1}
+    assert not _invite_exists(db_conn, "inv-1")
+
+
+def test_pending_unexpired_invite_is_kept(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        created_at=NOW - 1000, expires_at=NOW + (6 * 24 * 60 * 60 * 1000),
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert _invite_exists(db_conn, "inv-1")
+
+
+def test_recently_expired_invite_within_window_is_kept(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    recent_expiry = NOW - (10 * 24 * 60 * 60 * 1000)  # expired 10 days ago
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        created_at=recent_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=recent_expiry,
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert _invite_exists(db_conn, "inv-1")
+
+
+def test_recently_used_invite_within_window_is_kept(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    recent_used_at = NOW - (10 * 24 * 60 * 60 * 1000)
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        expires_at=recent_used_at + 1000, used_at=recent_used_at,
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert _invite_exists(db_conn, "inv-1")
+
+
+def test_dead_invite_purge_does_not_advance_gc_horizon(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=old_expiry,
+    )
+    horizon_before = _meta(db_conn)["gc_horizon"]
+
+    result = gc.run(db_conn, NOW)
+
+    assert result["invites_purged"] == 1
+    assert _meta(db_conn)["gc_horizon"] == horizon_before  # invites are not in the change_seq stream
+
+
+def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_conn):
+    # A list that is dead but not yet past its own retention window keeps its
+    # invites for now; only the list-purge cascade (once the list itself is
+    # old enough) removes them, not this additive live-list purge.
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    _insert_invite(
+        db_conn, "inv-1", "list-1", account_id,
+        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=old_expiry,
+    )
+    # Orphan + tombstone the list, but keep its deleted_ts recent (well within
+    # the list's own retention window).
+    invites.leave(db_conn, account_id, "list-1")
+    db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = 'list-1'", (NOW - 1000,))
+    db_conn.commit()
+
+    result = gc.run(db_conn, NOW)
+
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert _invite_exists(db_conn, "inv-1")
 
 
 # ---- maybe_run ----------------------------------------------------------------

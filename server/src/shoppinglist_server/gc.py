@@ -24,6 +24,15 @@ def run(conn, now_ms: int) -> dict:
     Standalone item tombstones (the ordinary single-item-delete case, whose
     list is still alive) are purged separately afterward.
 
+    Finally, clearly-dead invites (expired, used, or revoked) on lists that
+    are still alive are purged once they're old enough — see
+    `_purge_dead_invites_for_live_lists` below. This is additive to the
+    cascade delete above: invites on a list that itself just got purged are
+    already gone by the time this step runs, so it only ever touches invites
+    whose list survives. Invites are not part of the sync change_seq stream
+    (they have no `change_seq` column), so purging them never advances
+    `meta.gc_horizon`.
+
     Advances `meta.gc_horizon` to the highest `change_seq` removed and stamps
     `meta.last_gc_at`. Returns purge counts.
     """
@@ -56,12 +65,52 @@ def run(conn, now_ms: int) -> dict:
         conn.execute("DELETE FROM items WHERE id = ?", (row["id"],))
     items_purged += len(item_rows)
 
+    invites_purged = _purge_dead_invites_for_live_lists(conn, cutoff)
+
     if max_seq > 0:
         conn.execute("UPDATE meta SET gc_horizon = MAX(gc_horizon, ?) WHERE id = 1", (max_seq,))
     conn.execute("UPDATE meta SET last_gc_at = ? WHERE id = 1", (now_ms,))
     conn.commit()
 
-    return {"items_purged": items_purged, "lists_purged": lists_purged}
+    return {"items_purged": items_purged, "lists_purged": lists_purged, "invites_purged": invites_purged}
+
+
+def _purge_dead_invites_for_live_lists(conn, cutoff: int) -> int:
+    """Hard-delete clearly-dead invites — expired, used, or revoked — that
+    reference a still-LIVE list and are old enough to clear `cutoff`.
+
+    Invites for lists that get hard-deleted above are already gone by the
+    time this runs, so this only ever touches lists with `deleted = 0`.
+
+    "Dead" here reduces to a single check per invite:
+      - used: `used_at` is the moment it stopped being actionable, so age is
+        measured from `used_at` regardless of `expires_at`/`revoked` (this
+        also means a *recently*-used invite is kept even if its nominal
+        `expires_at` is already old, per "keep recently-used ones so the
+        members screen history stays sensible").
+      - not used: `expires_at` is used as the death marker for BOTH the
+        naturally-expired and the revoked case. There's no dedicated
+        `revoked_at` column, but once `expires_at` is itself older than the
+        retention window the invite is unusable either way (it's long past
+        its own 7-day life), so this is a safe, conservative proxy — a
+        revoked invite is never purged earlier than an equivalent
+        never-revoked one would be.
+
+    Does NOT touch `meta.gc_horizon` / `change_seq` — invites have no
+    `change_seq` column and are not part of the sync stream.
+    """
+    rows = conn.execute(
+        "SELECT invites.id AS id FROM invites "
+        "JOIN lists ON lists.id = invites.list_id "
+        "WHERE lists.deleted = 0 AND ("
+        "  (invites.used_at IS NOT NULL AND invites.used_at < ?)"
+        "  OR (invites.used_at IS NULL AND invites.expires_at < ?)"
+        ")",
+        (cutoff, cutoff),
+    ).fetchall()
+    for row in rows:
+        conn.execute("DELETE FROM invites WHERE id = ?", (row["id"],))
+    return len(rows)
 
 
 def maybe_run(conn) -> None:
