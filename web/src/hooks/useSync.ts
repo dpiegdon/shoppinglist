@@ -57,6 +57,15 @@ export interface SyncState {
  * fresh mount means a reload always requests a full snapshot, which is the
  * only correct behavior for a client with no persistent local copy.
  */
+// Visible-tab-only fallback poll (T-90). This is deliberately a *fallback*,
+// not the primary sync mechanism: visibilitychange->visible, window 'online',
+// and manual refresh cover the cases that matter promptly. Per the T-73
+// precedent (aggressive background/Doze polling on Android was rejected),
+// there is no hidden-tab equivalent here at all - the interval keeps ticking
+// but its body is a no-op while document.hidden, so a backgrounded tab makes
+// zero network calls.
+const SYNC_INTERVAL_MS = 100_000;
+
 export function useSync(): SyncState {
   const deviceId = useMemo(() => getDeviceId(), []);
   const [lists, setLists] = useState<Map<string, ListObject>>(new Map());
@@ -70,6 +79,12 @@ export function useSync(): SyncState {
   const [error, setError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
   const cursorRef = useRef(0);
+  // Tracks whether a runSync() call (push or refresh) is currently
+  // outstanding, so the re-sync triggers below can skip-if-in-flight instead
+  // of queuing a redundant request behind it. push() itself is never gated by
+  // this flag - a user-initiated write must never be silently dropped - only
+  // the background/manual refresh triggers are.
+  const inFlightRef = useRef(false);
 
   const applyResponse = useCallback((response: SyncResponse) => {
     cursorRef.current = response.cursor;
@@ -102,6 +117,7 @@ export function useSync(): SyncState {
 
   const runSync = useCallback(
     async (changes: { lists?: ListObject[]; items?: ItemObject[] }, fullLists: string[] = []) => {
+      inFlightRef.current = true;
       setLoading(true);
       setError(null);
       try {
@@ -131,6 +147,7 @@ export function useSync(): SyncState {
         }
       } finally {
         setLoading(false);
+        inFlightRef.current = false;
       }
     },
     [deviceId, applyResponse],
@@ -142,7 +159,16 @@ export function useSync(): SyncState {
     [runSync],
   );
 
-  const refresh = useCallback(() => runSync({}), [runSync]);
+  // Pull-only sync used by the mount effect, the re-sync triggers below, and
+  // manual refresh (SyncIndicator). Skip-if-in-flight: a trigger that fires
+  // while a sync (push or refresh) is already outstanding is dropped, not
+  // queued - the in-flight sync will bring the client current anyway.
+  const refresh = useCallback(() => {
+    if (inFlightRef.current) {
+      return Promise.resolve();
+    }
+    return runSync({});
+  }, [runSync]);
 
   useEffect(() => {
     refresh().catch(() => {
@@ -150,6 +176,50 @@ export function useSync(): SyncState {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-sync on document visibilitychange -> visible (T-90). This is a
+  // primary trigger: a tab that was backgrounded during a shared shopping
+  // trip should catch up the moment it's looked at again, not wait for the
+  // next interval tick.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        refresh().catch(() => {
+          // surfaced via `error` state; nothing further to do here
+        });
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [refresh]);
+
+  // Re-sync on window 'online' (T-90): another primary trigger, for a tab
+  // that stayed visible through a network blip (e.g. laptop lid closed with
+  // the tab pinned, wifi handoff).
+  useEffect(() => {
+    function handleOnline() {
+      refresh().catch(() => {
+        // surfaced via `error` state; nothing further to do here
+      });
+    }
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [refresh]);
+
+  // Modest visible-tab-only fallback poll (T-90, T-73 precedent - see
+  // SYNC_INTERVAL_MS comment above). The interval itself keeps running so it
+  // doesn't need to be torn down/recreated on every visibility flip, but its
+  // body is gated on document.hidden: a backgrounded tab never triggers a
+  // network call from this timer.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      refresh().catch(() => {
+        // surfaced via `error` state; nothing further to do here
+      });
+    }, SYNC_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   return { lists, items, loading, error, lastSyncAt, deviceId, push, refresh };
 }

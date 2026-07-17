@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSync } from "./useSync";
 import * as api from "../api/client";
@@ -82,5 +82,140 @@ describe("useSync health tracking (T-47)", () => {
 
     expect(result.current.error).toBe("network down");
     expect(result.current.lastSyncAt).toBeNull();
+  });
+});
+
+describe("useSync re-sync triggers (T-90)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    // Tests explicitly set document.hidden per-case; reset to the jsdom default
+    // ("visible") so cases don't bleed into each other.
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("re-syncs when the document becomes visible again", async () => {
+    vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
+    const { result } = renderHook(() => useSync());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    vi.mocked(api.sync).mockClear();
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => expect(api.sync).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not re-sync on a visibilitychange that leaves the tab hidden", async () => {
+    vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
+    const { result } = renderHook(() => useSync());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    vi.mocked(api.sync).mockClear();
+
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(api.sync).not.toHaveBeenCalled();
+  });
+
+  it("re-syncs when the browser reports it's back online", async () => {
+    vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
+    const { result } = renderHook(() => useSync());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    vi.mocked(api.sync).mockClear();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    await waitFor(() => expect(api.sync).toHaveBeenCalledTimes(1));
+  });
+
+  it("polls on an interval while the tab stays visible", async () => {
+    vi.useFakeTimers();
+    vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+
+    renderHook(() => useSync());
+    await vi.advanceTimersByTimeAsync(0); // flush the mount effect's initial sync
+    vi.mocked(api.sync).mockClear();
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(api.sync).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not poll while the tab is hidden", async () => {
+    vi.useFakeTimers();
+    vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+
+    renderHook(() => useSync());
+    await vi.advanceTimersByTimeAsync(0); // flush the mount effect's initial sync
+    vi.mocked(api.sync).mockClear();
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(api.sync).not.toHaveBeenCalled();
+  });
+
+  it("drops an overlapping trigger while a sync is already in flight, instead of queueing it", async () => {
+    let resolveSync!: (value: ReturnType<typeof listResponse>) => void;
+    vi.mocked(api.sync).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSync = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useSync());
+    // The mount effect's initial sync is now in flight and unresolved.
+    await waitFor(() => expect(result.current.loading).toBe(true));
+    vi.mocked(api.sync).mockClear();
+
+    // A trigger firing while that sync is still outstanding must be dropped,
+    // not queued behind it.
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(api.sync).not.toHaveBeenCalled();
+
+    // Let the in-flight sync resolve so it doesn't leak into other tests.
+    await act(async () => {
+      resolveSync(listResponse(1, ["list-1"]));
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
+  it("removes its listeners and interval on unmount", async () => {
+    vi.mocked(api.sync).mockResolvedValue(listResponse(1, ["list-1"]));
+    const docAddSpy = vi.spyOn(document, "addEventListener");
+    const docRemoveSpy = vi.spyOn(document, "removeEventListener");
+    const winAddSpy = vi.spyOn(window, "addEventListener");
+    const winRemoveSpy = vi.spyOn(window, "removeEventListener");
+    const clearIntervalSpy = vi.spyOn(window, "clearInterval");
+
+    const { result, unmount } = renderHook(() => useSync());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const visibilityAdds = docAddSpy.mock.calls.filter((c) => c[0] === "visibilitychange").length;
+    const onlineAdds = winAddSpy.mock.calls.filter((c) => c[0] === "online").length;
+    expect(visibilityAdds).toBeGreaterThan(0);
+    expect(onlineAdds).toBeGreaterThan(0);
+
+    unmount();
+
+    const visibilityRemoves = docRemoveSpy.mock.calls.filter((c) => c[0] === "visibilitychange").length;
+    const onlineRemoves = winRemoveSpy.mock.calls.filter((c) => c[0] === "online").length;
+    expect(visibilityRemoves).toBe(visibilityAdds);
+    expect(onlineRemoves).toBe(onlineAdds);
+    expect(clearIntervalSpy).toHaveBeenCalled();
   });
 });

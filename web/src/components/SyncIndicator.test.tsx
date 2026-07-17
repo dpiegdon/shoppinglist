@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SyncIndicator from "./SyncIndicator";
 import * as SyncContextModule from "../hooks/SyncContext";
@@ -61,5 +62,30 @@ describe("SyncIndicator recency tick (T-54)", () => {
     });
 
     expect(screen.getByRole("status")).toHaveTextContent("Synced just now");
+  });
+});
+
+describe("SyncIndicator manual refresh (T-90)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("triggers a sync when clicked", async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(SyncContextModule.useSyncContext).mockReturnValue({
+      lists: new Map(),
+      items: new Map(),
+      loading: false,
+      error: null,
+      lastSyncAt: Date.now(),
+      deviceId: "dev-1",
+      push: vi.fn(),
+      refresh,
+    });
+
+    render(<SyncIndicator />);
+    await userEvent.click(screen.getByRole("button", { name: "Sync now" }));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
