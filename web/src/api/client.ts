@@ -12,6 +12,7 @@ import type {
   Settings,
   SyncRequest,
   SyncResponse,
+  UpdateSettingsRequest,
 } from "./contract";
 import { appBasename } from "../lib/appConfig";
 
@@ -151,7 +152,7 @@ export function getSettings(): Promise<Settings> {
   return apiFetch("/settings", { method: "GET" });
 }
 
-export function updateSettings(body: Settings): Promise<Settings> {
+export function updateSettings(body: UpdateSettingsRequest): Promise<Settings> {
   return apiFetch("/settings", { method: "PATCH", body });
 }
 

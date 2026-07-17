@@ -103,6 +103,16 @@ export interface Settings {
   initials: string;
 }
 
+// PATCH /settings body: distinct from Settings (the GET/response shape) because the server
+// treats an ABSENT initials key as "leave unchanged" (T-87), whereas Settings always carries a
+// resolved value. A currency-only save must be able to omit initials entirely when the client
+// isn't sure of the current value yet — sending "" would be a real value that clears a custom
+// override (T-101). Present-and-"" still overwrites, so omit the key, don't send an empty string.
+export interface UpdateSettingsRequest {
+  default_currency?: string;
+  initials?: string;
+}
+
 export interface ListSummary {
   id: string;
   name: string;

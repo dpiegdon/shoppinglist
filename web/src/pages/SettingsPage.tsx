@@ -31,7 +31,15 @@ export default function SettingsPage() {
 
   // Not covered by useDefaultCurrency (that hook is currency-only and used well beyond this
   // page) — a small dedicated fetch, mirroring the same on-mount pattern.
-  const [initials, setInitials] = useState("");
+  //
+  // `null` means "preload hasn't resolved yet (or failed)" — distinct from a genuinely empty
+  // string once loaded. This matters because the server now treats an ABSENT `initials` key in
+  // PATCH /settings as "leave unchanged" (T-87), but a *present* "" still overwrites a custom
+  // override. Before that fix, this state started at "" and a currency-only save (below) would
+  // resend that unresolved "" as if it were real, wiping the override (T-101). Keeping the
+  // "not loaded yet" state distinguishable lets the currency save omit the key entirely until we
+  // actually know the value.
+  const [initials, setInitials] = useState<string | null>(null);
   const initialsStatus = useFormStatus();
   useEffect(() => {
     let cancelled = false;
@@ -67,10 +75,16 @@ export default function SettingsPage() {
   async function handleCurrencySave(e: FormEvent) {
     e.preventDefault();
     await currencyStatus.run(async () => {
-      // The server now treats an absent key as "leave unchanged" (T-87), so resending
-      // initials here is no longer required to avoid wiping the override — kept for
-      // parity with the value already shown in the form.
-      const result = await api.updateSettings({ default_currency: currency.toUpperCase(), initials });
+      // Omit `initials` entirely unless the preload has actually resolved (T-101): the server
+      // treats an absent key as "leave unchanged" (T-87), but a *present* "" is a real value
+      // that clears a custom override. We can't tell the difference between "not loaded" and
+      // "loaded and blank" from an empty string alone, so `initials === null` is the signal —
+      // in that case, send only default_currency.
+      const result = await api.updateSettings(
+        initials === null
+          ? { default_currency: currency.toUpperCase() }
+          : { default_currency: currency.toUpperCase(), initials },
+      );
       setCachedDefaultCurrency(result.default_currency);
       setInitials(result.initials);
     });
@@ -79,12 +93,12 @@ export default function SettingsPage() {
   async function handleInitialsSave(e: FormEvent) {
     e.preventDefault();
     await initialsStatus.run(async () => {
-      // No longer required by the server (T-87: absent key = unchanged); kept for parity
-      // with the currency shown in the form. Length is validated server-side (422
-      // invalid_initials), same as currency's format check above.
+      // An explicit save from this form is always a real, user-confirmed value (even if the
+      // preload hadn't resolved and the field was still showing blank) — length is validated
+      // server-side (422 invalid_initials), same as currency's format check above.
       const result = await api.updateSettings({
         default_currency: currency.toUpperCase(),
-        initials: initials.trim().toUpperCase(),
+        initials: (initials ?? "").trim().toUpperCase(),
       });
       setInitials(result.initials);
     });
@@ -156,7 +170,7 @@ export default function SettingsPage() {
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Display initials</h2>
         <form onSubmit={handleInitialsSave} style={{ display: "flex", gap: "0.5rem" }}>
           <input
-            value={initials}
+            value={initials ?? ""}
             maxLength={3}
             onChange={(e) => setInitials(e.target.value.toUpperCase())}
             style={{ width: "6rem" }}
