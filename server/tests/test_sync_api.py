@@ -436,6 +436,37 @@ def test_sync_new_item_list_id_as_dict_422_with_row_id(client):
     assert resp.get_json()["row_id"] == "item-1"
 
 
+def test_sync_status_as_dict_422_not_500(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1",
+                                    name=("Milk", 100, "devA"),
+                                    status=({"weird": 1}, 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["error"] == "invalid_status"
+    assert body["row_id"] == "item-1"
+    assert body["field"] == "status"
+
+
+def test_sync_deleted_non_bool_422(client):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    resp = _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1",
+                                    name=("Milk", 100, "devA"),
+                                    deleted=("yes", 100, "devA"))]},
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["row_id"] == "item-1"
+    assert body["field"] == "deleted"
+
+
 def test_sync_cursor_out_of_int64_range_422_not_500(client):
     token = _register_and_login(client)
     # Membership matters: delta only binds the cursor into SQL when the account

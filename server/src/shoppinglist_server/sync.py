@@ -233,7 +233,9 @@ def _validate_item_field(key, value):
     elif key == "stores":
         _require_str_list(key, value, nullable=True)
     elif key == "status":
-        if value not in STATUS_VALUES:
+        # isinstance first: an unhashable value (dict/list) would TypeError on the set
+        # membership test itself (T-85).
+        if not isinstance(value, str) or value not in STATUS_VALUES:
             raise ApiError(422, "invalid_status", f"status must be one of {sorted(STATUS_VALUES)}.")
     elif key == "price":
         _validate_price(value)
