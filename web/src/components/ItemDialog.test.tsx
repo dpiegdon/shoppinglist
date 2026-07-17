@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ItemDialog from "./ItemDialog";
 import type { ItemObject } from "../api/contract";
+import { ApiError } from "../api/client";
 
 function registryItem(id: string, name: string, category = "dairy"): ItemObject {
   const clock = { updated_at: 1, updated_by: "dev" };
@@ -285,5 +286,63 @@ describe("ItemDialog changed-field tracking (T-88)", () => {
     await userEvent.click(screen.getByText("Save"));
 
     expect([...onSave.mock.calls[0][0].changedFields].sort()).toEqual(["category", "name", "status"]);
+  });
+});
+
+describe("ItemDialog price/currency validation (T-91)", () => {
+  it("shows an inline error and does not push when the price can't be parsed", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Price"), "1,50abc");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(await screen.findByText("Enter an amount like 1.99")).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a comma-decimal price to a dot-decimal in the pushed payload", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Price"), "1,50");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ priceAmount: "1.50" }));
+  });
+
+  it("normalizes a lowercase currency code to uppercase in the pushed payload", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.type(screen.getByLabelText("Price"), "1.99");
+    await userEvent.clear(screen.getByLabelText("Currency"));
+    await userEvent.type(screen.getByLabelText("Currency"), "usd");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ priceCurrency: "USD" }));
+  });
+
+  it("surfaces the ApiError message inline when onSave rejects, and keeps the dialog open", async () => {
+    const onSave = vi.fn().mockRejectedValue(new ApiError(422, "invalid_price", "Price amount is invalid"));
+    const onClose = vi.fn();
+    render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={onSave} />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(await screen.findByText("Price amount is invalid")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

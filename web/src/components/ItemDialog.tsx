@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
+import { ApiError } from "../api/client";
+import { parseCurrency, parsePriceAmount } from "../lib/priceParse";
 
 /** The item fields the dialog can push, as LWW keys (matches the `fieldPatch` keys the pages spread). */
 export type ItemChangedField = "name" | "category" | "stores" | "quantity" | "price" | "note" | "status";
@@ -144,6 +146,9 @@ export default function ItemDialog({
   );
   const [saving, setSaving] = useState(false);
   const [storesInput, setStoresInput] = useState(values.stores.join(", "));
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const suggestions = useMemo(() => {
@@ -177,6 +182,29 @@ export default function ItemDialog({
   async function performSave(closeAfter: boolean) {
     const name = values.name.trim();
     if (!name) return;
+
+    setPriceError(null);
+    setCurrencyError(null);
+    setSaveError(null);
+
+    // Validate/normalize price BEFORE pushing, so a bad value (e.g. "1,50", "2€", "1.999") is
+    // caught with an inline error rather than pushed and 422'd by the server — which would abort
+    // the whole /sync transaction and wedge the push queue (T-32). Mirrors Android's
+    // ItemFormViewModel.performSave (T-91). Currency is validated even without an amount (parity
+    // with Android) but is only meaningful — and only kept — alongside one.
+    const amountParse = parsePriceAmount(values.priceAmount);
+    if (!amountParse.valid) {
+      setPriceError(amountParse.message);
+      return;
+    }
+    const currencyParse = parseCurrency(values.priceCurrency);
+    if (!currencyParse.valid) {
+      setCurrencyError(currencyParse.message);
+      return;
+    }
+    const normalizedAmount = amountParse.value;
+    const normalizedCurrency = normalizedAmount ? currencyParse.value : null;
+
     setSaving(true);
     try {
       const itemId = matchedExisting?.id ?? editingItem?.id ?? crypto.randomUUID();
@@ -186,8 +214,6 @@ export default function ItemDialog({
         .map((s) => s.trim())
         .filter(Boolean);
       const quantity = values.quantity.trim();
-      const priceAmount = values.priceAmount.trim();
-      const priceCurrency = values.priceCurrency.trim();
       const note = values.note.trim();
       // Snapshot the form was seeded from: the item in edit mode (kept even across a rename, which
       // clears matchedExisting), the picked suggestion after an adopt, or null for a brand-new row.
@@ -198,7 +224,7 @@ export default function ItemDialog({
           category: category || null,
           stores,
           quantity: quantity || null,
-          price: priceAmount ? { amount: priceAmount, currency: priceCurrency || null } : null,
+          price: normalizedAmount ? { amount: normalizedAmount, currency: normalizedCurrency } : null,
           note: note || null,
           status,
         },
@@ -210,8 +236,8 @@ export default function ItemDialog({
         category,
         stores,
         quantity,
-        priceAmount,
-        priceCurrency,
+        priceAmount: normalizedAmount ?? "",
+        priceCurrency: normalizedCurrency ?? "",
         note,
         status,
         changedFields,
@@ -225,6 +251,11 @@ export default function ItemDialog({
         setStatus("todo");
         nameInputRef.current?.focus();
       }
+    } catch (err) {
+      // Surface the server's rejection inline and keep the dialog open (T-91) — previously this
+      // escaped as an unhandled rejection, leaving the user with no idea what went wrong or that
+      // nothing was saved.
+      setSaveError(err instanceof ApiError ? err.message : "Failed to save. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -243,6 +274,11 @@ export default function ItemDialog({
     <div className="dialog-overlay" onClick={onClose}>
       <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{isEdit ? "Edit item" : "Add item"}</h2>
+        {saveError && (
+          <p className="error-text" role="alert">
+            {saveError}
+          </p>
+        )}
 
         <div className="form-field" style={{ position: "relative" }}>
           <label htmlFor="item-name">Name</label>
@@ -325,8 +361,12 @@ export default function ItemDialog({
               inputMode="decimal"
               placeholder="0.00"
               value={values.priceAmount}
-              onChange={(e) => setValues((v) => ({ ...v, priceAmount: e.target.value }))}
+              onChange={(e) => {
+                setValues((v) => ({ ...v, priceAmount: e.target.value }));
+                setPriceError(null);
+              }}
             />
+            {priceError && <p className="error-text">{priceError}</p>}
           </div>
           <div className="form-field" style={{ flex: "0 0 6rem", minWidth: 0 }}>
             <label htmlFor="item-currency">Currency</label>
@@ -335,8 +375,12 @@ export default function ItemDialog({
               placeholder={defaultCurrency}
               maxLength={3}
               value={values.priceCurrency}
-              onChange={(e) => setValues((v) => ({ ...v, priceCurrency: e.target.value.toUpperCase() }))}
+              onChange={(e) => {
+                setValues((v) => ({ ...v, priceCurrency: e.target.value }));
+                setCurrencyError(null);
+              }}
             />
+            {currencyError && <p className="error-text">{currencyError}</p>}
           </div>
         </div>
 
