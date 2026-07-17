@@ -365,4 +365,88 @@ class ItemFormViewModelTest {
         assertFalse(viewModel.uiState.value.isSaved)
         assertNull("nothing was written to the mirror", itemsRepo.findByExactName(listId, "Milk"))
     }
+
+    // ---- change-scoped saves (T-88): only re-stamp fields the user actually changed ------------
+
+    /**
+     * A second repo over the SAME dao but a distinct device id, used to seed an item. Every field it
+     * writes carries "seed-device"; a field the ViewModel (device-1) re-stamps flips to "device-1",
+     * so per-field [org.p23q.shoppinglist.data.db.LwwString.updatedBy] tells us exactly which setters ran.
+     */
+    private fun seedRepo(device: String): ItemsRepo =
+        ItemsRepo(db.itemDao(), DeviceIdProvider { device }, FakeSyncTrigger())
+
+    @Test
+    fun `edit changing only the note re-stamps only the note field (T-88)`() = runTest(mainDispatcherRule.dispatcher) {
+        val seed = seedRepo("seed-device")
+        val itemId = seed.createItem(listId, "Milk", status = Status.TODO)
+        seed.setCategory(itemId, "dairy")
+        seed.setStores(itemId, listOf("Rewe"))
+        seed.setQuantity(itemId, "2l")
+        seed.setPrice(itemId, amount = "1.99", currency = "EUR")
+        seed.setNote(itemId, "old note")
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        viewModel.onNoteChange("fresh note")
+        viewModel.save()?.join()
+
+        val saved = itemsRepo.getById(itemId)!!
+        assertTrue(viewModel.uiState.value.isSaved)
+        assertEquals("fresh note", saved.note.value)
+        // Only the note carries this device's stamp; every untouched field keeps the seed clock.
+        assertEquals("device-1", saved.note.updatedBy)
+        assertEquals("seed-device", saved.name.updatedBy)
+        assertEquals("seed-device", saved.category.updatedBy)
+        assertEquals("seed-device", saved.stores.updatedBy)
+        assertEquals("seed-device", saved.quantity.updatedBy)
+        assertEquals("seed-device", saved.price.updatedBy)
+        assertEquals("seed-device", saved.status.updatedBy)
+    }
+
+    @Test
+    fun `adopting an unmodified suggestion re-stamps only the status (T-88)`() = runTest(mainDispatcherRule.dispatcher) {
+        val seed = seedRepo("seed-device")
+        val existingId = seed.createItem(listId, "Cheese", status = Status.BACKLOG)
+        seed.setCategory(existingId, "dairy")
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)
+
+        viewModel.save()?.join()
+
+        val saved = itemsRepo.getById(existingId)!!
+        // The adopt flips backlog -> todo (that one field is stamped) and touches nothing else.
+        assertEquals(Status.TODO.wireValue, saved.status.value)
+        assertEquals("device-1", saved.status.updatedBy)
+        assertEquals("seed-device", saved.name.updatedBy)
+        assertEquals("seed-device", saved.category.updatedBy)
+        assertEquals("seed-device", saved.stores.updatedBy)
+        assertEquals("seed-device", saved.quantity.updatedBy)
+        assertEquals("seed-device", saved.price.updatedBy)
+        assertEquals("seed-device", saved.note.updatedBy)
+    }
+
+    @Test
+    fun `a zero-change edit writes nothing but still closes (T-88)`() = runTest(mainDispatcherRule.dispatcher) {
+        val seed = seedRepo("seed-device")
+        val itemId = seed.createItem(listId, "Milk", status = Status.TODO)
+        seed.setCategory(itemId, "dairy")
+        seed.setNote(itemId, "keep me")
+        // Clear the creation dirty flag so a later dirty row can only come from a save write.
+        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.id })
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        viewModel.save()?.join()
+
+        assertTrue(viewModel.uiState.value.isSaved)
+        val saved = itemsRepo.getById(itemId)!!
+        // No setter ran: every field keeps the seed clock and the row is still not dirty.
+        assertEquals("seed-device", saved.name.updatedBy)
+        assertEquals("seed-device", saved.category.updatedBy)
+        assertEquals("seed-device", saved.status.updatedBy)
+        assertEquals("seed-device", saved.note.updatedBy)
+        assertFalse(saved.dirty)
+    }
 }

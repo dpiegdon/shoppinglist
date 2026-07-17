@@ -66,6 +66,14 @@ class ItemFormViewModel @Inject constructor(
     private val listIdFlow = MutableStateFlow("")
     private val nameQuery = MutableStateFlow("")
 
+    /**
+     * The normalized values the form was seeded with in [startEdit] / [pickSuggestion] — the
+     * baseline [performSave] diffs against so an edit re-stamps only genuinely changed fields and
+     * never reverts a collaborator's concurrent edit to an untouched one (T-88). Null in plain add
+     * mode: a brand-new row has nothing to diff against, so every provided field is a first write.
+     */
+    private var loadedSnapshot: ItemSnapshot? = null
+
     init {
         viewModelScope.launch {
             combine(listIdFlow, nameQuery) { id, query -> id to query }
@@ -85,6 +93,7 @@ class ItemFormViewModel @Inject constructor(
         // isEditMode must land in _uiState BEFORE listIdFlow's new value can trigger the
         // suggestions flow, or it could briefly re-read a stale isEditMode from before this call.
         _uiState.value = ItemFormUiState(isEditMode = false, priceCurrency = sessionState.defaultCurrency ?: "")
+        loadedSnapshot = null
         listIdFlow.value = listId
         loadCategorySuggestions()
     }
@@ -105,6 +114,9 @@ class ItemFormViewModel @Inject constructor(
             note = item.note.value ?: "",
             status = Status.fromWireValue(item.status.value),
         )
+        // Seeded status equals the item's stored status here, so snapshotFrom captures the baseline
+        // to diff against on save (T-88).
+        loadedSnapshot = snapshotFrom(_uiState.value)
         listIdFlow.value = item.listId
         loadCategorySuggestions()
     }
@@ -164,6 +176,10 @@ class ItemFormViewModel @Inject constructor(
                 status = Status.TODO,
             )
         }
+        // Snapshot the picked item's actual field values as the diff baseline. The uiState status
+        // was just set to TODO (the intended new value), so override it with the item's real status
+        // — that way an unmodified adopt correctly diffs as "only status changed" (backlog -> todo).
+        loadedSnapshot = snapshotFrom(_uiState.value).copy(status = Status.fromWireValue(item.status.value))
     }
 
     /** Returns null only for a trivial synchronous validation failure (blank name); Job otherwise. */
@@ -206,24 +222,39 @@ class ItemFormViewModel @Inject constructor(
                 return@launch
             }
             val targetId = state.itemId ?: itemsRepo.createItem(listId, trimmedName, status = Status.TODO)
-            if (state.itemId != null) {
-                itemsRepo.rename(targetId, trimmedName)
+            val category = state.category.trim().ifBlank { null }
+            val quantity = state.quantity.trim().ifBlank { null }
+            val note = state.note.trim().ifBlank { null }
+            // Currency only means something alongside an amount (the server stores price as
+            // amount+currency-or-null), so drop a stray currency when there's no amount.
+            val currency = if (normalizedAmount != null) normalizedCurrency else null
+            if (state.itemId == null) {
+                // Brand-new row: every provided field is a first write on a fresh row, so nothing
+                // here can stomp a collaborator's edit — write them all (unchanged behavior).
+                itemsRepo.setCategory(targetId, category)
+                itemsRepo.setStores(targetId, state.stores)
+                itemsRepo.setQuantity(targetId, quantity)
+                itemsRepo.setPrice(targetId, amount = normalizedAmount, currency = currency)
+                itemsRepo.setNote(targetId, note)
+            } else {
+                // Existing row (edit or adopt): stamp a fresh LWW clock only on fields whose value
+                // actually differs from the snapshot the form was seeded with, so an untouched field
+                // keeps its clock and never reverts a collaborator's concurrent edit to it (T-88). A
+                // zero-change save therefore writes nothing at all (the dialog still closes below).
+                val snap = loadedSnapshot
                 // Apply status on Save, not at pick time (T-33): an edited item takes the chosen
-                // status; a picked existing item joins the list as todo. (A brand-new item was
-                // already created todo above, so this branch — itemId != null — skips it.)
-                itemsRepo.setStatus(targetId, if (state.isEditMode) state.status else Status.TODO)
+                // status; a picked existing item joins the list as todo.
+                val targetStatus = if (state.isEditMode) state.status else Status.TODO
+                if (snap == null || trimmedName != snap.name) itemsRepo.rename(targetId, trimmedName)
+                if (snap == null || targetStatus != snap.status) itemsRepo.setStatus(targetId, targetStatus)
+                if (snap == null || category != snap.category) itemsRepo.setCategory(targetId, category)
+                if (snap == null || state.stores != snap.stores) itemsRepo.setStores(targetId, state.stores)
+                if (snap == null || quantity != snap.quantity) itemsRepo.setQuantity(targetId, quantity)
+                if (snap == null || normalizedAmount != snap.priceAmount || currency != snap.priceCurrency) {
+                    itemsRepo.setPrice(targetId, amount = normalizedAmount, currency = currency)
+                }
+                if (snap == null || note != snap.note) itemsRepo.setNote(targetId, note)
             }
-            itemsRepo.setCategory(targetId, state.category.trim().ifBlank { null })
-            itemsRepo.setStores(targetId, state.stores)
-            itemsRepo.setQuantity(targetId, state.quantity.trim().ifBlank { null })
-            itemsRepo.setPrice(
-                targetId,
-                amount = normalizedAmount,
-                // Currency only means something alongside an amount (the server stores price as
-                // amount+currency-or-null), so drop a stray currency when there's no amount.
-                currency = if (normalizedAmount != null) normalizedCurrency else null,
-            )
-            itemsRepo.setNote(targetId, state.note.trim().ifBlank { null })
             if (closeAfter) {
                 _uiState.update { it.copy(nameError = null, isSaved = true, itemId = targetId) }
             } else {
@@ -234,6 +265,7 @@ class ItemFormViewModel @Inject constructor(
                     priceCurrency = sessionState.defaultCurrency ?: "",
                     focusNameSignal = state.focusNameSignal + 1,
                 )
+                loadedSnapshot = null
                 loadCategorySuggestions()
             }
         }
@@ -251,10 +283,42 @@ class ItemFormViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The form's current values, normalized exactly the way [performSave] normalizes before writing
+     * (trim + blank->null, price parsed to its stored form), so diffing a seeded snapshot against a
+     * save's values reliably reports only genuine changes (T-88).
+     */
+    private fun snapshotFrom(state: ItemFormUiState): ItemSnapshot {
+        val amount = (parsePriceAmount(state.priceAmount) as? PriceParse.Valid)?.value
+        val currency = (parseCurrency(state.priceCurrency) as? PriceParse.Valid)?.value
+        return ItemSnapshot(
+            name = state.name.trim(),
+            category = state.category.trim().ifBlank { null },
+            stores = state.stores,
+            quantity = state.quantity.trim().ifBlank { null },
+            priceAmount = amount,
+            priceCurrency = if (amount != null) currency else null,
+            note = state.note.trim().ifBlank { null },
+            status = state.status,
+        )
+    }
+
     private companion object {
         const val BACKLOG_SUGGESTION_LIMIT = 5
     }
 }
+
+/** Normalized snapshot of an item's editable fields, the diff baseline for change-scoped saves (T-88). */
+private data class ItemSnapshot(
+    val name: String,
+    val category: String?,
+    val stores: List<String>,
+    val quantity: String?,
+    val priceAmount: String?,
+    val priceCurrency: String?,
+    val note: String?,
+    val status: Status,
+)
 
 /** Result of parsing a user-typed price/currency field. [Valid.value] is null when the field is blank. */
 internal sealed interface PriceParse {
