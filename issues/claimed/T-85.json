@@ -10,7 +10,8 @@
     "ready",
     "opus"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Server: /sync input validation \u2014 mis-typed fields poison all members, junk payloads 500 instead of 422",
-  "updated_at": "2026-07-16T22:40:30+00:00"
+  "updated_at": "2026-07-17T06:29:10+00:00"
 }
