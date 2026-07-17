@@ -287,6 +287,38 @@ describe("ItemDialog changed-field tracking (T-88)", () => {
 
     expect([...onSave.mock.calls[0][0].changedFields].sort()).toEqual(["category", "name", "status"]);
   });
+
+  it("editing only the note leaves an untouched non-null price out of changedFields (T-91: no re-stomp)", async () => {
+    // registryItem() hardcodes price null, so build an item carrying a real, already-normalized
+    // price. T-91 normalizes the form's price before diffing; this pins that re-normalizing an
+    // untouched "1.50"/"USD" still diffs as unchanged, so a future refactor can't silently
+    // reintroduce the T-88 stomp by re-stamping price on every save.
+    const base = registryItem("1", "Milk", "dairy");
+    const item: ItemObject = {
+      ...base,
+      fields: {
+        ...base.fields,
+        price: { value: { amount: "1.50", currency: "USD" }, updated_at: 1, updated_by: "dev" },
+      },
+    };
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Note"), "the ripe ones");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["note"]);
+  });
 });
 
 describe("ItemDialog price/currency validation (T-91)", () => {

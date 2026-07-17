@@ -10,8 +10,15 @@ describe("parsePriceAmount", () => {
     expect(parsePriceAmount("1,50")).toEqual({ valid: true, value: "1.50" });
   });
 
-  it("strips whitespace and a currency symbol", () => {
+  it("strips whitespace and a trailing currency symbol", () => {
     expect(parsePriceAmount(" 2€ ")).toEqual({ valid: true, value: "2" });
+  });
+
+  it("strips a leading or trailing currency symbol but not an embedded one", () => {
+    expect(parsePriceAmount("€1.50")).toEqual({ valid: true, value: "1.50" });
+    expect(parsePriceAmount("1.50€")).toEqual({ valid: true, value: "1.50" });
+    // Embedded symbol is left in place, so it fails the amount regex rather than becoming "15".
+    expect(parsePriceAmount("1€5")).toEqual({ valid: false, message: "Enter an amount like 1.99" });
   });
 
   it("treats a blank value as valid with no price", () => {
