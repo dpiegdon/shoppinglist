@@ -1,0 +1,16 @@
+{
+  "body": "Found during T-89 review. _require_password (accounts.py:32, used by change-password / change-email / delete-account) raises 401 invalid_credentials when the CONFIRMATION password is wrong on a token-bearing request. Both clients treat any 401 on a token-bearing request as token-revoked and force-logout (Android ErrorInterceptor since T-38-era; web since T-89) \u2014 so a user who typos their current password in Settings gets logged out of a perfectly valid session. Fix server-side: password-confirmation failures on authed endpoints should be 403 (e.g. keep code invalid_credentials, status 403) so clients surface an inline error instead of nuking the session. Check both clients display the 403 message inline afterward (they already render ApiError messages in those forms). Wire note: shipped clients treat non-401 ApiErrors as ordinary errors, so the status change is safe for old APKs. Files: server/src/shoppinglist_server/accounts.py (_require_password), server/tests/test_account.py; verify web SettingsPage + Android SettingsViewModel error paths still render the message.",
+  "created_at": "2026-07-17T12:34:34+00:00",
+  "id": "T-98",
+  "labels": [
+    "server",
+    "bug",
+    "ux",
+    "agent",
+    "ready",
+    "sonnet"
+  ],
+  "priority": 3,
+  "title": "Server: wrong password confirmation on authed endpoints returns 401 \u2014 force-logs-out both clients",
+  "updated_at": "2026-07-17T12:34:34+00:00"
+}
