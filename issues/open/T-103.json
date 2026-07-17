@@ -1,0 +1,15 @@
+{
+  "body": "Pre-existing (surfaced in the batch-2 whole-branch review, not introduced by T-97/T-101 which only fixed the UNRESOLVED case). Once the initials preload resolves, a currency-only save resends the RESOLVED initials value \u2014 which, if the user never set a custom override, is the email-derived default (e.g. \"BO\" for bob@\u2026). That writes the derived default as an explicit stored override, silently decoupling initials from a later email change (change email -> initials no longer re-derives). Fix idea: only send initials when it differs from the server-derived default, or track whether the loaded value was a real override vs a derived default and omit it otherwise (server already treats absent = leave unchanged, T-87). Files: web SettingsPage.tsx, android SettingsViewModel.kt, server resolve_initials semantics. Low priority.",
+  "created_at": "2026-07-17T23:41:36+00:00",
+  "id": "T-103",
+  "labels": [
+    "web",
+    "android",
+    "bug",
+    "agent",
+    "ready"
+  ],
+  "priority": 5,
+  "title": "Both clients: a resolved currency save persists the email-derived initials default as an explicit override",
+  "updated_at": "2026-07-17T23:41:36+00:00"
+}
