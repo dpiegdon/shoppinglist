@@ -3,3 +3,4 @@
 {"actor": "claude", "at": "2026-07-16T22:40:33+00:00", "kind": "dependency", "ref": "main@416ffda", "text": "T-88"}
 {"actor": "claude", "at": "2026-07-17T18:36:43+00:00", "kind": "claimed", "ref": "main@3663269", "text": "claude"}
 {"actor": "claude", "at": "2026-07-17T19:02:19+00:00", "kind": "closed", "ref": "main@3073d20", "text": ""}
+{"actor": "claude", "at": "2026-07-17T19:02:19+00:00", "kind": "note", "ref": "main@3073d20", "text": "Closed after 2 review rounds. Parity nuance for follow-up (not blocking): the web parsePriceAmount now strips a currency symbol only at the ends (per this brief + reviewer), which is actually STRICTER than Android parsePriceAmount (strips symbols anywhere). \"1\u20ac5\" is rejected on web, accepted->\"15\" on Android. If exact parity is wanted, align Android to the web behavior (web is the more-correct one). Realistic-input impact ~nil."}
