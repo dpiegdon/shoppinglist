@@ -159,7 +159,7 @@ Registered on the host app via `app.cli.add_command(shoppinglist_cli)`:
 
 ```bash
 flask --app app.py shoppinglist init-db               # create the schema (idempotent)
-flask --app app.py shoppinglist reset-password <email> # print a new password (no email flow exists)
+flask --app app.py shoppinglist reset-password <email> # reset the password and sign out all devices (no email flow exists)
 flask --app app.py shoppinglist gc                     # force tombstone garbage collection
 ```
 
@@ -329,7 +329,9 @@ should avoid double-setting):
   `Content-Security-Policy` and `X-Frame-Options: DENY`. All are set with
   `setdefault`, so a header you set at the proxy is not overwritten.
 - **Session revocation on password change** — changing a password revokes all of
-  the account's other sessions, keeping only the one that made the change.
+  the account's other sessions, keeping only the one that made the change. The
+  operator `reset-password` CLI goes further: it resets the password and signs
+  out all devices (there is no trusted "current" session to spare in that flow).
 
 Known, accepted trade-off:
 

@@ -48,6 +48,7 @@ def init_db_command(instance_name):
 @_instance_option
 @with_appcontext
 def reset_password_command(email, instance_name):
+    """Reset the account's password and sign out all of its devices (T-92)."""
     config = _resolve_config(instance_name)
     conn = db_module.connect(config["database_path"])
     try:
@@ -57,6 +58,7 @@ def reset_password_command(email, instance_name):
     finally:
         conn.close()
     click.echo(f"New password for {email}: {new_password}")
+    click.echo("All existing sessions for this account have been signed out.")
 
 
 @shoppinglist_cli.command("gc")

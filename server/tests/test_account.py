@@ -310,6 +310,31 @@ def test_delete_account_after_minting_invite_list_keeps_other_member(db_conn):
     ).fetchone() is not None
 
 
+# ---- service layer: reset password (T-92) -----------------------------------
+
+
+def test_reset_password_revokes_all_sessions_but_not_other_accounts(db_conn):
+    account_id, token = _register_and_login(db_conn)
+    other_id, other_token = _register_and_login(
+        db_conn, email="other@example.com", device="other-device"
+    )
+
+    accounts.reset_password(db_conn, EMAIL)
+
+    # There's no "current session" to spare in the CLI case (unlike change_password,
+    # T-45): a reset means the operator no longer trusts *any* outstanding token for
+    # this account, so all of them go — including the one that was live when it ran.
+    assert db_conn.execute(
+        "SELECT 1 FROM auth_tokens WHERE account_id = ?", (account_id,)
+    ).fetchone() is None
+
+    # The other account's sessions are untouched.
+    remaining = db_conn.execute(
+        "SELECT token_hash FROM auth_tokens WHERE account_id = ?", (other_id,)
+    ).fetchall()
+    assert {row["token_hash"] for row in remaining} == {auth.hash_token(other_token)}
+
+
 # ---- CLI: reset-password -----------------------------------------------------
 
 
@@ -328,8 +353,10 @@ def test_reset_password_cli_allows_login_with_new_password(db_conn, cli_runner, 
     result = cli_runner.invoke(args=["shoppinglist", "reset-password", EMAIL])
     assert result.exit_code == 0
     assert f"New password for {EMAIL}" in result.output
+    # The reset also signs out every device (T-92) and says so.
+    assert "All existing sessions for this account have been signed out." in result.output
 
-    new_password = result.output.strip().rsplit(": ", 1)[1]
+    new_password = result.output.splitlines()[0].rsplit(": ", 1)[1]
 
     app_conn = db_module.connect(config["database_path"])
     token, _ = auth.login(app_conn, EMAIL, new_password, DEVICE)

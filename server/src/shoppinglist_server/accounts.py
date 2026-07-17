@@ -209,5 +209,10 @@ def reset_password(conn: sqlite3.Connection, email: str) -> str:
         "UPDATE accounts SET password_hash = ? WHERE id = ?",
         (generate_password_hash(new_password), row["id"]),
     )
+    # Revoke every session (unlike change_password's T-45 carve-out, there is no
+    # "current session" to spare here — this is an operator resetting a possibly
+    # compromised account from the CLI, not the user acting from a trusted device):
+    # leaving old tokens valid would let a stolen token survive the reset.
+    conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (row["id"],))
     conn.commit()
     return new_password
