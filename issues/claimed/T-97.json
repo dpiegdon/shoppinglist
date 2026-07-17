@@ -9,7 +9,8 @@
     "ready",
     "sonnet"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "Android: currency save can still clobber initials when the preload failed \u2014 omit the initials key",
-  "updated_at": "2026-07-16T23:38:45+00:00"
+  "updated_at": "2026-07-17T20:52:40+00:00"
 }
