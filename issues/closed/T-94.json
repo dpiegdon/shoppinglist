@@ -12,5 +12,5 @@
   "owner": "claude",
   "priority": 4,
   "title": "Server: last_seen_at write + commit on every authed request \u2014 throttle to staleness",
-  "updated_at": "2026-07-17T06:21:47+00:00"
+  "updated_at": "2026-07-17T06:29:10+00:00"
 }
