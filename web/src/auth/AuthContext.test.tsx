@@ -113,6 +113,13 @@ describe("AuthProvider", () => {
       account_id: "acc-1",
       email: "a@example.com",
     });
+    // Mirror the real registry's last-write-wins semantics so we always hold
+    // whatever handler THIS test's AuthProvider registered on mount, immune to
+    // call-history ordering (e.g. unmount cleanup calls from earlier tests).
+    let forcedLogoutHandler: (() => void) | null = null;
+    vi.mocked(api.onForcedLogout).mockImplementation((handler) => {
+      forcedLogoutHandler = handler;
+    });
 
     render(
       <AuthProvider>
@@ -123,14 +130,9 @@ describe("AuthProvider", () => {
     await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("a@example.com"));
     expect(sessionStorage.getItem("shoppinglist_account")).not.toBeNull();
 
-    // Simulate client.ts invoking the handler it registered via onForcedLogout
-    // when a token-bearing request comes back 401 (revoked session, etc.).
-    // Use the most recently registered handler: earlier calls in this mock's
-    // history may be leftover unregister-on-unmount (null) calls from
-    // previous tests' AuthProvider instances.
-    expect(api.onForcedLogout).toHaveBeenCalled();
-    const calls = vi.mocked(api.onForcedLogout).mock.calls;
-    const forcedLogoutHandler = calls[calls.length - 1][0];
+    // Simulate client.ts invoking the registered handler when a token-bearing
+    // request comes back 401 (revoked session, etc.).
+    expect(forcedLogoutHandler).not.toBeNull();
     act(() => {
       forcedLogoutHandler?.();
     });

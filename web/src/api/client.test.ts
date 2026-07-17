@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, getToken, login, onForcedLogout, setToken } from "./client";
+import { ApiError, apiFetch, getToken, login, onForcedLogout, register, setToken } from "./client";
 
 function mockFetchOnce(status: number, body?: unknown, headers?: Record<string, string>) {
   const responseHeaders = new Headers(headers ?? (body !== undefined ? { "content-type": "application/json" } : {}));
@@ -110,6 +110,36 @@ describe("forced logout on 401 (T-89)", () => {
     });
 
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("does not wipe a valid session when a logged-in user fails a /login attempt", async () => {
+    // /login is reachable while logged in (it is not behind ProtectedRoute), so a
+    // credential failure there must not carry the current token — otherwise the
+    // 401 would look like a revoked session and force-logout a valid one.
+    setToken("still-valid-token");
+    mockFetchOnce(401, { error: "invalid_credentials", message: "bad credentials" });
+    const handler = vi.fn();
+    onForcedLogout(handler);
+
+    await expect(login({ email: "a@example.com", password: "wrong", device_label: "web" })).rejects.toMatchObject({
+      status: 401,
+      code: "invalid_credentials",
+    });
+
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.headers.Authorization).toBeUndefined();
+    expect(getToken()).toBe("still-valid-token");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("does not send the current token on /register either", async () => {
+    setToken("still-valid-token");
+    mockFetchOnce(200, { account_id: "acc-2" });
+
+    await register({ email: "b@example.com", password: "pw" });
+
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.headers.Authorization).toBeUndefined();
   });
 
   it("is safe when multiple in-flight token-bearing requests 401 at once (idempotent, no throw)", async () => {

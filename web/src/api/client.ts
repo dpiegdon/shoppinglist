@@ -64,6 +64,12 @@ export function onForcedLogout(handler: (() => void) | null): void {
 interface RequestOptions {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
+  // Credential exchanges (/login, /register) must not carry the current
+  // session token: /login is reachable while logged in, and a wrong-password
+  // 401 there would otherwise look like a revoked session and trip the
+  // forced-logout path, wiping a still-valid session. /logout keeps its token
+  // (the server needs it to know which session to revoke).
+  skipAuth?: boolean;
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions): Promise<T> {
@@ -71,8 +77,8 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  const tokenSent = Boolean(currentToken);
-  if (currentToken) {
+  const tokenSent = !options.skipAuth && Boolean(currentToken);
+  if (tokenSent) {
     headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
@@ -107,11 +113,11 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
 }
 
 export function register(body: RegisterRequest): Promise<RegisterResponse> {
-  return apiFetch("/register", { method: "POST", body });
+  return apiFetch("/register", { method: "POST", body, skipAuth: true });
 }
 
 export function login(body: LoginRequest): Promise<LoginResponse> {
-  return apiFetch("/login", { method: "POST", body });
+  return apiFetch("/login", { method: "POST", body, skipAuth: true });
 }
 
 export function logout(): Promise<void> {
