@@ -9,7 +9,8 @@
     "ready",
     "sonnet"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "Web: a store name containing a comma does not round-trip the stores text input",
-  "updated_at": "2026-07-17T18:36:43+00:00"
+  "updated_at": "2026-07-17T20:41:42+00:00"
 }
