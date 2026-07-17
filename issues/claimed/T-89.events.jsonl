@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-16T22:23:54+00:00", "kind": "created", "ref": "main@416ffda", "text": "Web: no 401 handling \u2014 revoked token leaves the app in a dead logged-in state"}
 {"actor": "claude", "at": "2026-07-16T22:40:31+00:00", "kind": "updated", "ref": "main@416ffda", "text": "fields updated"}
+{"actor": "claude", "at": "2026-07-17T12:12:06+00:00", "kind": "claimed", "ref": "main@818d29d", "text": "claude"}

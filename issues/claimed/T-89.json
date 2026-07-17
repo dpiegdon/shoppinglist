@@ -10,7 +10,8 @@
     "ready",
     "sonnet"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Web: no 401 handling \u2014 revoked token leaves the app in a dead logged-in state",
-  "updated_at": "2026-07-16T22:40:31+00:00"
+  "updated_at": "2026-07-17T12:12:06+00:00"
 }
