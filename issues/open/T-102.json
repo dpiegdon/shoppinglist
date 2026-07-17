@@ -1,0 +1,16 @@
+{
+  "body": "Two low-risk cleanups the final whole-branch review flagged as defer-but-worth-doing:\n1. sync.py:~325 comment (added with T-86) claims the future-timestamp clamp \"bounds merge-survivor gaming too\" \u2014 misleading: the name-merge survivor is min(created_at) (EARLIEST wins), so survivorship is gamed with a small/PAST created_at, which a future-only clamp does NOT bound. Correct or delete the comment.\n2. T-87 made an empty-body {} PATCH /settings return 200 (leave-everything-unchanged) where it previously 422d. Backward-compatible (no client sends {}), but untested \u2014 add a regression test pinning {}->200 no-op so it cannot silently regress.\nAlso optional (parity): give the unknown_list 422 in sync.py the same details={\"row_id\": item_id} its sibling missing_list_id/invalid_row rejections carry, so a new item referencing an unknown list can be row-quarantined too.\nFiles: server/src/shoppinglist_server/sync.py, server/tests/test_account.py, server/tests/test_sync_api.py.",
+  "created_at": "2026-07-17T19:13:06+00:00",
+  "id": "T-102",
+  "labels": [
+    "server",
+    "docs",
+    "chore",
+    "agent",
+    "ready",
+    "sonnet"
+  ],
+  "priority": 4,
+  "title": "Server: two doc/test cleanups from the T-84..T-96 review (merge-survivor comment + {}-PATCH test)",
+  "updated_at": "2026-07-17T19:13:06+00:00"
+}
