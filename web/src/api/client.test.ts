@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, getToken, login, setToken } from "./client";
+import { ApiError, apiFetch, getToken, login, onForcedLogout, setToken } from "./client";
 
 function mockFetchOnce(status: number, body?: unknown, headers?: Record<string, string>) {
   const responseHeaders = new Headers(headers ?? (body !== undefined ? { "content-type": "application/json" } : {}));
@@ -77,6 +77,54 @@ describe("apiFetch", () => {
       expect(err).toBeInstanceOf(ApiError);
       expect(err).toBeInstanceOf(Error);
     }
+  });
+});
+
+describe("forced logout on 401 (T-89)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    onForcedLogout(null);
+    setToken(null);
+  });
+
+  it("clears the token and notifies the forced-logout handler when a token-bearing request gets a 401", async () => {
+    setToken("secret-token");
+    mockFetchOnce(401, { error: "invalid_token", message: "token revoked" });
+    const handler = vi.fn();
+    onForcedLogout(handler);
+
+    await expect(apiFetch("/lists", { method: "GET" })).rejects.toBeInstanceOf(ApiError);
+
+    expect(getToken()).toBeNull();
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not notify the forced-logout handler when a 401 comes back with no token sent (e.g. login failure)", async () => {
+    mockFetchOnce(401, { error: "invalid_credentials", message: "bad credentials" });
+    const handler = vi.fn();
+    onForcedLogout(handler);
+
+    await expect(apiFetch("/login", { method: "POST", body: {} })).rejects.toMatchObject({
+      status: 401,
+      code: "invalid_credentials",
+    });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("is safe when multiple in-flight token-bearing requests 401 at once (idempotent, no throw)", async () => {
+    setToken("secret-token");
+    mockFetchOnce(401, { error: "invalid_token", message: "token revoked" });
+    const handler = vi.fn();
+    onForcedLogout(handler);
+
+    await Promise.all([
+      apiFetch("/sync", { method: "POST", body: {} }).catch(() => {}),
+      apiFetch("/lists", { method: "GET" }).catch(() => {}),
+    ]);
+
+    expect(getToken()).toBeNull();
+    expect(handler).toHaveBeenCalledTimes(2);
   });
 });
 

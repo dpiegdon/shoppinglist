@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "./AuthContext";
@@ -13,6 +13,7 @@ vi.mock("../api/client", async () => {
     logout: vi.fn(),
     setToken: vi.fn(),
     getToken: vi.fn(() => null),
+    onForcedLogout: vi.fn(),
   };
 });
 
@@ -104,5 +105,37 @@ describe("AuthProvider", () => {
 
     await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("none"));
     expect(api.setToken).toHaveBeenCalledWith(null);
+  });
+
+  it("clears the stored account when the client reports a forced logout (T-89)", async () => {
+    vi.mocked(api.login).mockResolvedValue({
+      token: "tok",
+      account_id: "acc-1",
+      email: "a@example.com",
+    });
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+    await userEvent.click(screen.getByText("login"));
+    await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("a@example.com"));
+    expect(sessionStorage.getItem("shoppinglist_account")).not.toBeNull();
+
+    // Simulate client.ts invoking the handler it registered via onForcedLogout
+    // when a token-bearing request comes back 401 (revoked session, etc.).
+    // Use the most recently registered handler: earlier calls in this mock's
+    // history may be leftover unregister-on-unmount (null) calls from
+    // previous tests' AuthProvider instances.
+    expect(api.onForcedLogout).toHaveBeenCalled();
+    const calls = vi.mocked(api.onForcedLogout).mock.calls;
+    const forcedLogoutHandler = calls[calls.length - 1][0];
+    act(() => {
+      forcedLogoutHandler?.();
+    });
+
+    await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("none"));
+    expect(sessionStorage.getItem("shoppinglist_account")).toBeNull();
   });
 });

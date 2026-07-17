@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as api from "../api/client";
 
 interface Account {
@@ -77,6 +77,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storeAccount(null);
       setAccount(null);
     }
+  }, []);
+
+  // Registered once for the app's lifetime: client.ts has no React context of
+  // its own, so it reports a forced logout (401 on a request that sent a
+  // bearer token — revoked/expired session, T-89) through this seam. Clearing
+  // `account` here is all that's needed; ProtectedRoute already redirects to
+  // /login (preserving location state) whenever account is null.
+  useEffect(() => {
+    api.onForcedLogout(() => {
+      storeAccount(null);
+      setAccount(null);
+    });
+    return () => api.onForcedLogout(null);
   }, []);
 
   const value = useMemo(

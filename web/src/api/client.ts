@@ -49,6 +49,18 @@ export function setToken(token: string | null): void {
   }
 }
 
+// client.ts is a plain module with no access to React context, so a forced
+// logout (401 on a request that actually sent a bearer token — mirrors
+// Android's ErrorInterceptor/SessionEvents.notifyForcedLogout) is reported
+// through this subscriber seam instead. AuthContext registers a handler that
+// clears the stored account; ProtectedRoute then redirects to /login on its
+// own once account state goes null (T-89).
+let forcedLogoutHandler: (() => void) | null = null;
+
+export function onForcedLogout(handler: (() => void) | null): void {
+  forcedLogoutHandler = handler;
+}
+
 interface RequestOptions {
   method: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
@@ -59,6 +71,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
+  const tokenSent = Boolean(currentToken);
   if (currentToken) {
     headers["Authorization"] = `Bearer ${currentToken}`;
   }
@@ -77,6 +90,15 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
   const data = contentType.includes("application/json") ? await response.json() : undefined;
 
   if (!response.ok) {
+    // A 401 on a request that carried a bearer token means the server has
+    // rejected the session (revoked, expired, password changed elsewhere —
+    // T-45). Requests that sent no token (e.g. a failed /login) are just a
+    // normal credential rejection and must not trigger this (mirrors
+    // Android's ErrorInterceptor rule).
+    if (response.status === 401 && tokenSent) {
+      setToken(null);
+      forcedLogoutHandler?.();
+    }
     const body = data as ApiErrorBody | undefined;
     throw new ApiError(response.status, body?.error ?? "unknown_error", body?.message ?? response.statusText);
   }
