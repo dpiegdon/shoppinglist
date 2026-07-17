@@ -1,0 +1,15 @@
+{
+  "body": "Surfaced in the T-84..T-96 final whole-branch review. web/src/pages/SettingsPage.tsx handleCurrencySave sends initials from possibly-unresolved state; if getSettings() fails or the user saves currency before it resolves, initials=\"\" is a real value post-T-87 and clears the override server-side. Exact web analogue of the Android T-97. Not a regression (web always sent both keys). Fix: omit the initials key from the updateSettings payload on a currency-only save when the preload has not resolved (server now treats an absent key as leave-unchanged, T-87). Files: web/src/pages/SettingsPage.tsx (+ test). Cross-ref: T-97, T-87.",
+  "created_at": "2026-07-17T19:13:05+00:00",
+  "id": "T-101",
+  "labels": [
+    "web",
+    "bug",
+    "agent",
+    "ready",
+    "sonnet"
+  ],
+  "priority": 4,
+  "title": "Web: currency save can clobber initials when the settings preload failed \u2014 mirror of T-97",
+  "updated_at": "2026-07-17T19:13:05+00:00"
+}
