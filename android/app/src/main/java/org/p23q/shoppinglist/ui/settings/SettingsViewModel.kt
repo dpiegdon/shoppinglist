@@ -118,9 +118,9 @@ class SettingsViewModel @Inject constructor(
     /**
      * Not cached anywhere locally (unlike currency, via sessionState) — a real fetch, opt-in like
      * [loadSessions] rather than in init (this screen's init is local/cached-only by design). The
-     * screen calls this once on open. Best-effort: leaving initials at "" just means a currency
-     * save before this resolves resends an empty string, which the server resolves right back to
-     * the same email-derived default — harmless unless the account already had a custom override.
+     * screen calls this once on open. Best-effort: until it resolves, initials stays null, and a
+     * currency-only save omits the initials key entirely (T-97), so the server leaves any existing
+     * override intact. This fills in the real resolved value once the fetch succeeds.
      */
     fun loadInitials(): Job = viewModelScope.launch {
         try {
