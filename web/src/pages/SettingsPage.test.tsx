@@ -47,7 +47,7 @@ function getInitialsSaveButton() {
   return within(initialsSection()).getByRole("button", { name: "Save" });
 }
 
-describe("SettingsPage currency save vs. unresolved initials preload (T-101)", () => {
+describe("SettingsPage currency save must never write initials (T-101, T-103)", () => {
   beforeEach(() => {
     vi.mocked(api.getToken).mockReturnValue(null);
     vi.mocked(api.listSessions).mockResolvedValue({ sessions: [] });
@@ -98,13 +98,28 @@ describe("SettingsPage currency save vs. unresolved initials preload (T-101)", (
 
     await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
     const body = vi.mocked(api.updateSettings).mock.calls[0][0];
-    // Either omitted, or sent as the now-known-good resolved value - never a blank
-    // string that would clobber the override server-side.
-    if ("initials" in body) {
-      expect(body.initials).toBe("CZ");
-    }
+    // The currency form never sends initials at all (T-103), resolved or not — the server
+    // leaves an absent key unchanged (T-87).
+    expect(body).not.toHaveProperty("initials");
     // The override must still be showing on screen afterwards, not wiped to blank.
     await waitFor(() => expect(getInitialsInput()).toHaveValue("CZ"));
+  });
+
+  it("does not pin the email-derived default as an override on a currency save (T-103)", async () => {
+    // The bug this guards: GET /settings returns the *resolved* value, so an account with no
+    // override reads back the derived default ("BO" for bob@…) looking exactly like a stored
+    // one. Echoing it back on a currency save stored it for real, so a later email change no
+    // longer re-derived the initials.
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "BO" });
+    vi.mocked(api.updateSettings).mockResolvedValue({ default_currency: "USD", initials: "BO" });
+
+    renderSettingsPage();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("BO"));
+
+    await userEvent.click(getCurrencySaveButton());
+
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
+    expect(vi.mocked(api.updateSettings).mock.calls[0][0]).not.toHaveProperty("initials");
   });
 
   it("still sends initials on an explicit initials edit+save", async () => {

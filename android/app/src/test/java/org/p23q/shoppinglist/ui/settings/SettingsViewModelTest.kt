@@ -154,7 +154,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateCurrency resends the currently-loaded initials so it is not wiped (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `updateCurrency never sends initials, and leaves the loaded value on screen (T-103)`() = runTest(mainDispatcherRule.dispatcher) {
         // GET and PATCH share the same /settings path, and either can arrive more than once (e.g.
         // OkHttp's silent retry-on-connection-failure) — a FIFO .enqueue() queue can't guarantee
         // which physical request gets which response, so route by method instead (same pattern as
@@ -174,9 +174,38 @@ class SettingsViewModelTest {
 
         viewModel.updateCurrency("usd")?.join()
 
+        // The key must be absent, not echoed back: the server leaves an absent key unchanged
+        // (T-87). Resending the loaded value pinned an email-derived default as a real override
+        // (T-103) — this test previously asserted the opposite, which was the bug.
         val patchRequest = recordedRequests.first { it.method == "PATCH" }
-        assertTrue(patchRequest.body.readUtf8().contains("\"initials\":\"XY\""))
+        assertFalse(patchRequest.body.readUtf8().contains("initials"))
+        // Still displayed afterwards — omitting it from the write must not blank the field.
         assertEquals("XY", viewModel.uiState.value.initials)
+    }
+
+    @Test
+    fun `updateCurrency does not pin the email-derived default as an override (T-103)`() = runTest(mainDispatcherRule.dispatcher) {
+        // GET /settings returns the *resolved* value, so an account with no override reads back
+        // the derived default ("BO" for bob@…) looking exactly like a stored one. Echoing it back
+        // on a currency save stored it for real, so a later email change no longer re-derived it.
+        val recordedRequests = java.util.concurrent.CopyOnWriteArrayList<RecordedRequest>()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                recordedRequests.add(request)
+                return when (request.method) {
+                    "PATCH" -> MockResponse().setResponseCode(200).setBody("""{"default_currency": "USD", "initials": "BO"}""")
+                    else -> MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "BO"}""")
+                }
+            }
+        }
+        val viewModel = newViewModel()
+        viewModel.loadInitials().join()
+        assertEquals("BO", viewModel.uiState.value.initials)
+
+        viewModel.updateCurrency("usd")?.join()
+
+        val patchRequest = recordedRequests.first { it.method == "PATCH" }
+        assertFalse(patchRequest.body.readUtf8().contains("initials"))
     }
 
     // A standalone "loadInitials populates state" test was removed here: its exact claim (a fresh
@@ -198,7 +227,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `updateCurrency sends the real initials value after an explicit initials save, even without loadInitials (T-97)`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `an explicit initials save sends it, and a later currency save still does not (T-103)`() = runTest(mainDispatcherRule.dispatcher) {
         val recordedRequests = java.util.concurrent.CopyOnWriteArrayList<RecordedRequest>()
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -220,7 +249,11 @@ class SettingsViewModelTest {
 
         val patchRequests = recordedRequests.filter { it.method == "PATCH" }
         assertEquals(2, patchRequests.size)
-        assertTrue(patchRequests[1].body.readUtf8().contains("\"initials\":\"ZZ\""))
+        // The initials form sends it — that's a deliberate user action on that field.
+        assertTrue(patchRequests[0].body.readUtf8().contains("\"initials\":\"ZZ\""))
+        // The currency form does not, even though the value is now known (T-103). The override
+        // survives because the server leaves an absent key unchanged, not because we re-send it.
+        assertFalse(patchRequests[1].body.readUtf8().contains("initials"))
     }
 
     @Test

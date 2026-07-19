@@ -38,10 +38,12 @@ data class SettingsUiState(
     /**
      * Resolved default-or-override (T-64). `null` means the one-time fetch in [SettingsViewModel]
      * hasn't resolved yet (or failed) — distinct from a genuinely blank/no-override value once
-     * loaded. This matters because the server treats an ABSENT `initials` key in PATCH /settings
-     * as "leave unchanged" (T-87), but a *present* "" still overwrites a custom override. Keeping
-     * "not loaded" distinguishable from "" lets a currency-only save omit the key entirely instead
-     * of resending an unresolved "" as if it were real (T-97).
+     * loaded, so the field can render empty without that looking like a value the user chose.
+     *
+     * Note this is the server's *resolved* value: for an account with no override it is the
+     * email-derived default, indistinguishable here from a stored one. That's why only
+     * [SettingsViewModel.updateInitials] ever sends it, as a deliberate user action — see
+     * [SettingsViewModel.updateCurrency] (T-103).
      */
     val initials: String? = null,
     val theme: ThemePreference = ThemePreference.SYSTEM,
@@ -118,9 +120,9 @@ class SettingsViewModel @Inject constructor(
     /**
      * Not cached anywhere locally (unlike currency, via sessionState) — a real fetch, opt-in like
      * [loadSessions] rather than in init (this screen's init is local/cached-only by design). The
-     * screen calls this once on open. Best-effort: until it resolves, initials stays null, and a
-     * currency-only save omits the initials key entirely (T-97), so the server leaves any existing
-     * override intact. This fills in the real resolved value once the fetch succeeds.
+     * screen calls this once on open. Best-effort: until it resolves the field just renders blank.
+     * Nothing else depends on it having resolved — the currency save never sends initials at all
+     * (T-103) — so a failed fetch here can't cause a wrong write, only an empty field.
      */
     fun loadInitials(): Job = viewModelScope.launch {
         try {
@@ -148,15 +150,18 @@ class SettingsViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             try {
-                // The server treats an absent initials key as "leave unchanged" (T-87), not
-                // PUT-style overwrite. uiState.initials is null until [loadInitials] resolves (or
-                // an explicit updateInitials save has completed) — passing that null straight
-                // through here omits the key from the request entirely (kotlinx serialization
-                // elides a property equal to its declared default), so a currency-only save can't
-                // clobber a real override with an unresolved "" (T-97). Once initials is known
-                // (even if genuinely blank), it's resent as the real value.
+                // Never send initials from the currency save. The server treats an absent key as
+                // "leave unchanged" (T-87), not PUT-style overwrite, so passing null here omits it
+                // from the request entirely (kotlinx elides a property equal to its declared
+                // default) and the stored value is untouched.
+                //
+                // Resending it was actively harmful (T-103): GET /settings returns the *resolved*
+                // value, so an account with no override reads back the email-derived default
+                // ("BO" for bob@…) with nothing marking it as derived. Echoing that back stored it
+                // as an explicit override, pinning the initials so a later email change no longer
+                // re-derived them. T-97 fixed only the narrower unresolved-preload case.
                 val response = apiProvider.get().updateSettings(
-                    UpdateSettingsRequest(normalized, _uiState.value.initials),
+                    UpdateSettingsRequest(normalized, initials = null),
                 )
                 sessionState.defaultCurrency = response.defaultCurrency
                 // Also updates the in-memory mirror (T-55) so an already-open list screen picks up

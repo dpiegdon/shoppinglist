@@ -34,12 +34,13 @@ export default function SettingsPage() {
   // page) — a small dedicated fetch, mirroring the same on-mount pattern.
   //
   // `null` means "preload hasn't resolved yet (or failed)" — distinct from a genuinely empty
-  // string once loaded. This matters because the server now treats an ABSENT `initials` key in
-  // PATCH /settings as "leave unchanged" (T-87), but a *present* "" still overwrites a custom
-  // override. Before that fix, this state started at "" and a currency-only save (below) would
-  // resend that unresolved "" as if it were real, wiping the override (T-101). Keeping the
-  // "not loaded yet" state distinguishable lets the currency save omit the key entirely until we
-  // actually know the value.
+  // string once loaded, so the input can render blank without that blank looking like a real
+  // value the user chose.
+  //
+  // Note this value is the server's *resolved* initials: for an account with no override it is
+  // the email-derived default, indistinguishable here from a stored one. That's why only the
+  // initials form below ever sends it, and only as a deliberate user action — see the currency
+  // save (T-103).
   const [initials, setInitials] = useState<string | null>(null);
   const initialsStatus = useFormStatus();
   useEffect(() => {
@@ -76,16 +77,16 @@ export default function SettingsPage() {
   async function handleCurrencySave(e: FormEvent) {
     e.preventDefault();
     await currencyStatus.run(async () => {
-      // Omit `initials` entirely unless the preload has actually resolved (T-101): the server
-      // treats an absent key as "leave unchanged" (T-87), but a *present* "" is a real value
-      // that clears a custom override. We can't tell the difference between "not loaded" and
-      // "loaded and blank" from an empty string alone, so `initials === null` is the signal —
-      // in that case, send only default_currency.
-      const result = await api.updateSettings(
-        initials === null
-          ? { default_currency: currency.toUpperCase() }
-          : { default_currency: currency.toUpperCase(), initials },
-      );
+      // Never send `initials` from this form — it's the currency form, and the server treats an
+      // absent key as "leave unchanged" (T-87), so omitting it is both correct and sufficient.
+      //
+      // Sending it was actively harmful (T-103). GET /settings returns the *resolved* value, so
+      // an account with no override reads back the email-derived default ("BO" for bob@…) with
+      // nothing marking it as derived. Echoing that back stored it as an explicit override,
+      // silently pinning the initials so a later email change no longer re-derived them. T-101
+      // fixed only the narrower case where the preload hadn't resolved; the resolved case had
+      // the same bug.
+      const result = await api.updateSettings({ default_currency: currency.toUpperCase() });
       setCachedDefaultCurrency(result.default_currency);
       setInitials(result.initials);
     });
