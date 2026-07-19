@@ -1,0 +1,14 @@
+{
+  "body": "## Problem\n\n`pip wheel .` reuses setuptools' `server/build/` directory across releases. That\ndirectory is only ever added to \u2014 files deleted from `src/` since the last build\nsurvive in it and get packaged again.\n\nCaught while cutting 1.6.0: the wheel shipped BOTH the new `web_dist/assets/\nindex-DvP9MrsH.js` and the previous release's `index-BHB07Egq.js`, even though\nthe latter no longer exists in the working tree. Fixed for 1.6.0 by\n`rm -rf server/build` before `pip wheel`.\n\nAlmost certainly affected 1.5.0 (and likely earlier releases) the same way \u2014\neach would carry its predecessor's bundle.\n\n## Impact\n\nCosmetic/size only, not a correctness bug: `web_dist/index.html` references the\ncurrent bundle by hash, so the stale file is never served \u2014 it's dead weight\n(~280 KB/release, compounding). Worth fixing because a stale `build/` is exactly\nthe mechanism that WOULD ship a wrong file if a future release renamed or\nremoved something the running code loads by path rather than by hash.\n\n## Fix\n\nAdd `rm -rf server/build server/dist` to the release steps before `pip wheel`\n(or switch to `python -m build`, which builds in an isolated temp dir by\ndefault \u2014 note `build` isn't currently installed in the server venv).\n\nIf a release checklist/script exists, put it there; otherwise this ticket is the\nrecord. Consider also asserting in a test that the wheel's `web_dist/assets/`\ncontains exactly the files referenced by its `index.html`.",
+  "created_at": "2026-07-19T22:43:06+00:00",
+  "id": "T-105",
+  "labels": [
+    "build",
+    "ops",
+    "agent",
+    "ready"
+  ],
+  "priority": 4,
+  "title": "Release wheels carry stale files from a reused setuptools build/ dir",
+  "updated_at": "2026-07-19T22:43:06+00:00"
+}
