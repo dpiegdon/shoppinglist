@@ -1,0 +1,15 @@
+{
+  "body": "## Problem\n\nReported by the user: the web app logs them out \"after more than half a day or so\"\nof not visiting the site, while the Android app never does.\n\nRoot cause is NOT a timeout \u2014 nothing expired at all:\n\n- The web client stored the bearer token and account in `sessionStorage`\n  (`web/src/api/client.ts`, `web/src/auth/AuthContext.tsx`). `sessionStorage` is\n  scoped to the browsing session, so it dies when the tab closes \u2014 and on mobile,\n  whenever the browser reclaims a backgrounded tab. That reclaim is what the user\n  was hitting roughly daily.\n- Server-side, `auth_tokens` had no expiry column and `require_account()` never\n  checked age, so a token lived forever until an explicit logout/revoke. Combined\n  with the above, every reclaimed web tab minted a *new* session row that nothing\n  ever cleaned up, so Settings \u2192 Sessions stacked up phantom \"web\" entries.\n\n## Fix\n\n1. Web token + account move to `localStorage`, so a session survives a tab\n   reclaim / browser restart.\n2. Real server-side sliding **inactivity** expiry, per session, so persisting the\n   token durably doesn't mean forever:\n   - web: 7 days idle\n   - android: 62 days idle\n   New `auth_tokens.idle_ttl_ms` column (migration 3). The window is resolved\n   server-side from a `platform` hint the client sends at login\n   (`auth.resolve_idle_ttl_ms`) \u2014 a client picks a bucket, never a duration.\n   Unknown/absent platform falls back to the long default so a pre-T-104 client\n   is never logged out early.\n3. Expiry is enforced in `require_account()` (401 `session_expired`, row deleted\n   on sight) *and* swept by `gc.run()`, so an abandoned session can't linger\n   forever in the table.\n4. Sessions list hides idle-expired rows, and both clients now show a \"last\n   activity\" line per session (the `last_seen_at` was already on the wire,\n   just never rendered).\n\nSession stacking is fixed from both ends: localStorage stops minting a new row\nper tab reclaim, and the 7-day sweep clears the existing backlog.\n\n## Notes / trade-offs\n\n- A stolen token can still be kept alive indefinitely by polling; idle expiry is\n  a \"forgotten/abandoned device\" control, not an anti-attacker one.\n- The `platform` hint is self-asserted. That's acceptable for the same reason:\n  the client already holds the token and can refresh it at will.\n- First real exercise of the T-57 migration machinery. Verified end-to-end\n  against a database built from the actual v1.5.0 schema: auto-migrates on\n  connect, stamps user_version 3, backfills `device_label = 'web'` rows to 7 days\n  and everything else to 62.",
+  "created_at": "2026-07-19T21:57:11+00:00",
+  "id": "T-104",
+  "labels": [
+    "web",
+    "android",
+    "server",
+    "bug",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Web sessions die with the browser tab; no server-side session expiry at all",
+  "updated_at": "2026-07-19T21:57:11+00:00"
+}
