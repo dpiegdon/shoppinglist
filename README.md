@@ -32,6 +32,13 @@ single version in both `server/pyproject.toml` and `android/app/build.gradle.kts
 (`versionName`, plus an incremented integer `versionCode`), and is tagged once as
 `vX.Y.Z`.
 
+Cutting one: bump both version files, rebuild the web client (`cd web && npm run
+build`) and, if the app changed, the APK (`cd android && ./gradlew
+:app:assembleRelease`, then copy it to `server/src/shoppinglist_server/apk/`).
+Run `./verify-all.sh`, then `./build-wheel.sh` — which cleans stale build output
+and verifies the wheel's contents, neither of which is safe to skip (see
+`server/README.md`). Smoke-test the wheel in a clean venv before tagging.
+
 ## Setup
 
 ### Server

@@ -236,10 +236,27 @@ This makes one build of this package a **single deployable artifact** — API,
 web client, invite landing page, and the app download in one wheel:
 
 ```bash
-cd server
-python -m build --wheel      # -> dist/shoppinglist_server-1.0.0-py3-none-any.whl
-pip install dist/shoppinglist_server-*.whl   # on the deployment host
+./build-wheel.sh             # repo root -> server/dist/shoppinglist_server-1.0.0-py3-none-any.whl
+pip install server/dist/shoppinglist_server-*.whl   # on the deployment host
 ```
+
+Use the script rather than calling `python -m build --wheel` / `pip wheel`
+directly: it removes `build/` first and then checks what actually landed in the
+wheel. **setuptools reuses `build/` across builds and only ever *adds* to it**,
+so a file deleted from `src/` since the last build gets packaged again. That is
+not hypothetical — the first 1.6.0 wheel shipped the previous release's
+`web_dist/assets/index-*.js` alongside the current one, because `npm run build`
+had replaced the content-hashed bundle and the old name lingered in `build/`
+(T-105). `index.html` references bundles by hash, so the stale file was never
+served and it cost size rather than correctness — but the same mechanism would
+ship a wrong file the moment something is loaded by a stable path instead of a
+hash. The script fails the build if `web_dist/assets/` and `index.html` disagree
+in either direction, or if `schema.sql`, the migrations, the invite template, or
+the APK are missing.
+
+The script does *not* rebuild `web_dist` or the APK — those are committed
+inputs with their own, much slower toolchains. Rebuild them first if the
+release changes them (see above and `android/README.md`).
 
 …then mount it from your host app as shown in "Mounting the blueprint" above.
 (Copying the `src/shoppinglist_server/` directory into your Flask project works
