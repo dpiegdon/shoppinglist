@@ -92,9 +92,11 @@ All ids are UUIDs unless noted. Timestamps are UTC.
 Passwords hashed with `werkzeug.security` (scrypt).
 
 ### auth_tokens
-`token_hash`, `account_id`, `device_label`, `created_at`, `last_seen_at`.
+`token_hash`, `account_id`, `device_label`, `created_at`, `last_seen_at`,
+`idle_ttl_ms`.
 Opaque bearer tokens, one row per device login, individually revocable. Only the
-hash of the token is stored.
+hash of the token is stored. `idle_ttl_ms` is the session's sliding inactivity
+window (§4).
 
 ### account_settings
 `account_id` (PK/FK), `default_currency` (ISO-4217, defaults to a configurable
@@ -184,11 +186,30 @@ Opaque bearer tokens, suited to mobile and to per-device revocation.
 
 - `register(email, password)` → creates an account (rejects duplicate email) and
   an `account_settings` row with the server default currency.
-- `login(email, password, device_label)` → verifies password, issues a random
-  256-bit token, stores its hash, returns the token once.
+- `login(email, password, device_label, platform)` → verifies password, issues a
+  random 256-bit token, stores its hash, returns the token once.
 - Clients send `Authorization: Bearer <token>` on every request.
 - `logout` revokes the presented token. Multiple concurrent device logins are
   supported; revoking one does not affect others.
+- **Sliding inactivity expiry.** A session dies once it goes unused for longer
+  than its window; any authed request slides it forward (`last_seen_at`, written
+  at most once per 15 minutes). The window is chosen by the server from the
+  optional `platform` field at login — **web: 7 days, android: 62 days** — with
+  the long window as the fallback for an absent or unrecognized `platform`, so a
+  client too old to declare one is never logged out early. The client picks a
+  bucket, never a duration.
+
+  Web's window is the short one because a browser is more likely to be a shared
+  machine, and because the web app is served by this same process and so always
+  declares itself. Expiry is enforced at authentication time (401
+  `session_expired`, deleting the row on sight) and swept by GC (§6), so an
+  abandoned session neither outlives its window nor lingers in the table.
+  Expired sessions are omitted from `GET /account/sessions`.
+
+  This is not an anti-attacker control — a stolen token can be kept alive by
+  polling. It bounds *abandoned* sessions, and it is what makes it safe for the
+  web client to persist its token durably (`localStorage`) rather than losing it
+  every time the browser reclaims the tab.
 
 **Account management** (backs the client's settings dialog — the dialog UI and
 client-only preferences like theme live in the client spec):
@@ -270,6 +291,11 @@ offline period. GC also hard-deletes orphaned tombstoned lists (§3). The server
 records the highest `change_seq` removed by GC as the **`gc_horizon`**. GC runs
 opportunistically (at most about once a day, piggybacked on a sync request) and
 can be forced via the operator CLI (§2).
+
+The same sweep also hard-deletes auth sessions past their inactivity window
+(§4). Those carry no `change_seq` and so never advance `gc_horizon`, and unlike
+tombstones they get no extra retention — an idled-out session is already dead to
+authentication, the sweep just collects the ones nobody tried to use again.
 
 ### Name-uniqueness merge
 If two devices each add an item with the **same `name`** (compared
@@ -354,7 +380,7 @@ Consistent JSON error envelope: `{ "error": "<code>", "message": "<human text>" 
 | Status | When |
 |--------|------|
 | 400 | Malformed request. |
-| 401 | Missing/invalid/revoked token. |
+| 401 | Missing/invalid/revoked token, or a session idled out (`session_expired`, §4). |
 | 403 | Authenticated but not a member of the target list. |
 | 404 | Unknown resource. |
 | 409 | Conflict — duplicate email on register, or invite expired/revoked/already-used/email-mismatch. |

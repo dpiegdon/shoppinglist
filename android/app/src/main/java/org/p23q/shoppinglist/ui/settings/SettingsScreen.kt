@@ -213,7 +213,17 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text((session.deviceLabel ?: "Unknown device") + if (session.current) " (this device)" else "")
+                Column {
+                    Text((session.deviceLabel ?: "Unknown device") + if (session.current) " (this device)" else "")
+                    // The current session is active by definition — this request is it. Showing
+                    // its stored lastSeenAt instead would read as up to 15 minutes stale, since
+                    // the server throttles that write (auth.LAST_SEEN_REFRESH_MS).
+                    Text(
+                        if (session.current) "Active now" else formatLastSeen(session.lastSeenAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (!session.current) {
                     TextButton(onClick = { viewModel.revokeSession(session.id) }) { Text("Revoke") }
                 }

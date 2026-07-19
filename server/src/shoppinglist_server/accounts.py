@@ -79,10 +79,15 @@ def change_email(
 
 def list_sessions(conn: sqlite3.Connection, account_id: str, current_token: str) -> list:
     current_hash = auth.hash_token(current_token)
+    # Filter out idle-expired sessions (T-104) rather than waiting for the GC
+    # sweep to hard-delete them: they are already dead to require_account, so
+    # listing them would show the account phantom devices it cannot use and
+    # invite pointless "Revoke" taps.
     rows = conn.execute(
         "SELECT id, device_label, created_at, last_seen_at, token_hash "
-        "FROM auth_tokens WHERE account_id = ? ORDER BY created_at",
-        (account_id,),
+        "FROM auth_tokens WHERE account_id = ? AND last_seen_at + idle_ttl_ms >= ? "
+        "ORDER BY created_at",
+        (account_id, auth.now_ms()),
     ).fetchall()
     return [
         {

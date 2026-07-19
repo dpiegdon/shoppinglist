@@ -31,7 +31,7 @@ function Probe() {
 
 describe("AuthProvider", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     vi.mocked(api.getToken).mockReturnValue(null);
   });
 
@@ -64,6 +64,25 @@ describe("AuthProvider", () => {
 
     await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("a@example.com"));
     expect(api.setToken).toHaveBeenCalledWith("tok");
+  });
+
+  it("declares its platform so the server picks the 7-day web idle window", async () => {
+    vi.mocked(api.login).mockResolvedValue({
+      token: "tok",
+      account_id: "acc-1",
+      email: "a@example.com",
+    });
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+    await userEvent.click(screen.getByText("login"));
+
+    await waitFor(() =>
+      expect(api.login).toHaveBeenCalledWith(expect.objectContaining({ platform: "web" })),
+    );
   });
 
   it("register calls register then login", async () => {
@@ -128,7 +147,7 @@ describe("AuthProvider", () => {
     );
     await userEvent.click(screen.getByText("login"));
     await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("a@example.com"));
-    expect(sessionStorage.getItem("shoppinglist_account")).not.toBeNull();
+    expect(localStorage.getItem("shoppinglist_account")).not.toBeNull();
 
     // Simulate client.ts invoking the registered handler when a token-bearing
     // request comes back 401 (revoked session, etc.).
@@ -138,6 +157,6 @@ describe("AuthProvider", () => {
     });
 
     await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("none"));
-    expect(sessionStorage.getItem("shoppinglist_account")).toBeNull();
+    expect(localStorage.getItem("shoppinglist_account")).toBeNull();
   });
 });

@@ -33,6 +33,10 @@ def run(conn, now_ms: int) -> dict:
     (they have no `change_seq` column), so purging them never advances
     `meta.gc_horizon`.
 
+    Auth sessions idle past their inactivity window are purged too — see
+    `_purge_expired_sessions` below. Like invites they carry no `change_seq`,
+    so they never advance `meta.gc_horizon`.
+
     Advances `meta.gc_horizon` to the highest `change_seq` removed and stamps
     `meta.last_gc_at`. Returns purge counts.
     """
@@ -66,13 +70,19 @@ def run(conn, now_ms: int) -> dict:
     items_purged += len(item_rows)
 
     invites_purged = _purge_dead_invites_for_live_lists(conn, cutoff)
+    sessions_purged = _purge_expired_sessions(conn, now_ms)
 
     if max_seq > 0:
         conn.execute("UPDATE meta SET gc_horizon = MAX(gc_horizon, ?) WHERE id = 1", (max_seq,))
     conn.execute("UPDATE meta SET last_gc_at = ? WHERE id = 1", (now_ms,))
     conn.commit()
 
-    return {"items_purged": items_purged, "lists_purged": lists_purged, "invites_purged": invites_purged}
+    return {
+        "items_purged": items_purged,
+        "lists_purged": lists_purged,
+        "invites_purged": invites_purged,
+        "sessions_purged": sessions_purged,
+    }
 
 
 def _purge_dead_invites_for_live_lists(conn, cutoff: int) -> int:
@@ -111,6 +121,24 @@ def _purge_dead_invites_for_live_lists(conn, cutoff: int) -> int:
     for row in rows:
         conn.execute("DELETE FROM invites WHERE id = ?", (row["id"],))
     return len(rows)
+
+
+def _purge_expired_sessions(conn, now_ms: int) -> int:
+    """Hard-delete auth_tokens past their sliding inactivity window (T-104).
+
+    No extra retention window applies (unlike tombstones): once
+    `last_seen_at + idle_ttl_ms` is in the past the session is already dead to
+    `auth.require_account`, which rejects it and deletes it on sight. This sweep
+    just collects the ones nobody has tried to use since they expired — without
+    it, a session abandoned forever would linger in the table forever.
+
+    Does NOT touch `meta.gc_horizon` / `change_seq` — auth_tokens have no
+    `change_seq` column and are not part of the sync stream.
+    """
+    cur = conn.execute(
+        "DELETE FROM auth_tokens WHERE last_seen_at + idle_ttl_ms < ?", (now_ms,)
+    )
+    return cur.rowcount
 
 
 def maybe_run(conn) -> None:

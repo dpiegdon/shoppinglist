@@ -33,8 +33,14 @@ export class ApiError extends Error {
   }
 }
 
+// localStorage, not sessionStorage (T-104): sessionStorage dies with the tab,
+// which on mobile means every time the browser reclaims a backgrounded tab —
+// users were being asked to log in again roughly daily. The session's real
+// lifetime is now enforced server-side instead (a 7-day sliding inactivity
+// window for web), so the token surviving a browser restart doesn't mean it
+// lives forever, and Settings → Sessions can still revoke it.
 let currentToken: string | null =
-  typeof sessionStorage !== "undefined" ? sessionStorage.getItem(TOKEN_STORAGE_KEY) : null;
+  typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
 
 export function getToken(): string | null {
   return currentToken;
@@ -42,11 +48,11 @@ export function getToken(): string | null {
 
 export function setToken(token: string | null): void {
   currentToken = token;
-  if (typeof sessionStorage === "undefined") return;
+  if (typeof localStorage === "undefined") return;
   if (token) {
-    sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
   } else {
-    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 }
 

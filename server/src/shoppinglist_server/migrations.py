@@ -34,6 +34,17 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "ALTER TABLE account_settings ADD COLUMN initials TEXT",
         ],
     ),  # T-64: item last-touched-by + account initials
+    (
+        3,
+        [
+            "ALTER TABLE auth_tokens ADD COLUMN idle_ttl_ms INTEGER NOT NULL DEFAULT 5356800000",
+            # Backfill: web has always logged in with the hardcoded device_label
+            # "web" (AuthContext.tsx), so existing rows can be classified exactly.
+            # Everything else (Android's "MANUFACTURER MODEL", curl/no label)
+            # keeps the 62-day column default.
+            "UPDATE auth_tokens SET idle_ttl_ms = 604800000 WHERE device_label = 'web'",
+        ],
+    ),  # T-104: per-session sliding inactivity expiry
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

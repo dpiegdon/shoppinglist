@@ -170,6 +170,20 @@ class DtoTest {
         assertTrue(encoded.contains(""""initials":"""""))
     }
 
+    // T-104: the server reads "platform" to pick this session's inactivity window (62 days for
+    // android vs 7 for web). Uses the app's real configured Json for the same reason as the T-97
+    // tests above: with encodeDefaults=false a defaulted property would be silently dropped, and
+    // the server would then fall back to its own default window.
+    @Test
+    fun `LoginRequest declares its platform on the wire (T-104)`() {
+        val request = LoginRequest("a@example.com", "pw", "Pixel 8", "android")
+
+        val encoded = JsonModule.provideJson().encodeToString(LoginRequest.serializer(), request)
+
+        assertTrue(encoded.contains(""""platform":"android""""))
+        assertEquals("android", json.decodeFromString<LoginRequest>(encoded).platform)
+    }
+
     @Test
     fun `ErrorEnvelope decodes error and message`() {
         val envelope = json.decodeFromString<ErrorEnvelope>(

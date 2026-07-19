@@ -27,7 +27,13 @@ def register_routes(bp):
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
         token, account_id = auth_login(
-            conn, data.get("email"), data.get("password"), data.get("device_label")
+            conn,
+            data.get("email"),
+            data.get("password"),
+            data.get("device_label"),
+            # Optional (T-104): picks the session's inactivity window. Absent for
+            # pre-T-104 clients, which fall back to the long default.
+            data.get("platform"),
         )
         row = conn.execute(
             "SELECT email FROM accounts WHERE id = ?", (account_id,)

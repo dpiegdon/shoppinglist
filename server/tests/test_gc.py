@@ -81,7 +81,7 @@ def test_fresh_tombstone_survives(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
     assert _item_exists(db_conn, "item-1")
 
 
@@ -107,7 +107,7 @@ def test_89_day_old_tombstone_survives(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
     assert _item_exists(db_conn, "item-1")
 
 
@@ -156,7 +156,7 @@ def test_orphaned_list_and_lingering_membership_purged_together(db_conn):
 
     result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
 
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
+    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0, "sessions_purged": 0}
     assert not _list_exists(db_conn, "list-1")
     assert not _item_exists(db_conn, "item-1")
     assert not _membership_exists(db_conn, account_id, "list-1")
@@ -203,7 +203,7 @@ def test_purging_a_list_also_removes_invites_referencing_it(db_conn):
 
     result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
 
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
+    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0, "sessions_purged": 0}
     assert not _list_exists(db_conn, "list-1")
     assert not _invite_exists(db_conn, minted["invite_id"])
 
@@ -223,7 +223,7 @@ def test_purging_a_list_removes_its_items_even_if_not_independently_old(db_conn)
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
+    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0, "sessions_purged": 0}
     assert not _item_exists(db_conn, "item-1")
 
 
@@ -247,7 +247,7 @@ def test_expired_invite_older_than_retention_is_purged(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1, "sessions_purged": 0}
     assert not _invite_exists(db_conn, "inv-1")
     assert _list_exists(db_conn, "list-1")  # the list itself is untouched, still live
 
@@ -263,7 +263,7 @@ def test_used_invite_older_than_retention_is_purged(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1, "sessions_purged": 0}
     assert not _invite_exists(db_conn, "inv-1")
 
 
@@ -278,7 +278,7 @@ def test_revoked_invite_older_than_retention_is_purged(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1, "sessions_purged": 0}
     assert not _invite_exists(db_conn, "inv-1")
 
 
@@ -292,7 +292,7 @@ def test_pending_unexpired_invite_is_kept(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -307,7 +307,7 @@ def test_recently_expired_invite_within_window_is_kept(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -322,7 +322,7 @@ def test_recently_used_invite_within_window_is_kept(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -361,7 +361,7 @@ def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_c
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0}
+    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -482,3 +482,42 @@ def test_gc_cli_runs(cli_runner, app, monkeypatch):
     conn = db_module.connect(config["database_path"])
     assert not _item_exists(conn, "item-1")
     conn.close()
+
+
+# ---- expired session purge (T-104) -------------------------------------------
+
+
+def _make_session(conn, label, last_seen_at, idle_ttl_ms):
+    import uuid
+
+    account_id = str(uuid.uuid4())
+    conn.execute(
+        "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+        (account_id, f"{label}@example.com", "x", NOW),
+    )
+    conn.execute(
+        "INSERT INTO auth_tokens "
+        "(id, token_hash, account_id, device_label, created_at, last_seen_at, idle_ttl_ms) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (str(uuid.uuid4()), f"hash-{label}", account_id, label, NOW, last_seen_at, idle_ttl_ms),
+    )
+    conn.commit()
+
+
+def test_gc_purges_sessions_past_their_idle_window(db_conn):
+    day = 24 * 60 * 60 * 1000
+    _make_session(db_conn, "stale-web", NOW - 8 * day, 7 * day)
+    _make_session(db_conn, "fresh-web", NOW - 6 * day, 7 * day)
+    # Same 30-day idleness, different windows: only the web one is dead. This is
+    # the split the whole ticket exists for.
+    _make_session(db_conn, "web-30d", NOW - 30 * day, 7 * day)
+    _make_session(db_conn, "android-30d", NOW - 30 * day, 62 * day)
+
+    result = gc.run(db_conn, NOW)
+
+    assert result["sessions_purged"] == 2
+    survivors = {
+        row["device_label"]
+        for row in db_conn.execute("SELECT device_label FROM auth_tokens").fetchall()
+    }
+    assert survivors == {"fresh-web", "android-30d"}

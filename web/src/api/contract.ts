@@ -80,6 +80,10 @@ export interface LoginRequest {
   email: string;
   password: string;
   device_label: string;
+  // Picks the session's server-side inactivity window (T-104). The server maps
+  // this to a duration itself and falls back to its long default for anything
+  // it doesn't recognize, so it is a hint, never a duration.
+  platform: "web";
 }
 
 export interface LoginResponse {

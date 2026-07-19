@@ -59,7 +59,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun login(email: String, password: String) {
         val api = apiProvider.get()
         val deviceLabel = "${Build.MANUFACTURER} ${Build.MODEL}"
-        val response = api.login(LoginRequest(email, password, deviceLabel))
+        val response = api.login(LoginRequest(email, password, deviceLabel, PLATFORM))
         sessionState.token = response.token
         sessionState.accountEmail = response.email
         sessionState.accountId = response.accountId
@@ -81,4 +81,11 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override fun lastOpenedListId(): String? = sessionState.lastOpenedListId
+
+    private companion object {
+        // Selects the server's long (62-day) inactivity window for this session —
+        // appropriate here because the token lives in EncryptedSharedPreferences on a
+        // personal device, unlike the web client's shorter window (T-104).
+        const val PLATFORM = "android"
+    }
 }

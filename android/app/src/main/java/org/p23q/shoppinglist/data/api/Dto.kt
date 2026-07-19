@@ -67,7 +67,16 @@ data class RegisterRequest(val email: String, val password: String)
 data class RegisterResponse(@SerialName("account_id") val accountId: String)
 
 @Serializable
-data class LoginRequest(val email: String, val password: String, @SerialName("device_label") val deviceLabel: String)
+data class LoginRequest(
+    val email: String,
+    val password: String,
+    @SerialName("device_label") val deviceLabel: String,
+    // Picks the session's server-side inactivity window (T-104): "android" buys the
+    // long one. The server maps this to a duration itself and falls back to its own
+    // default for anything it doesn't recognize, so this is a hint, never a duration.
+    // Non-null with no default so kotlinx always emits it (encodeDefaults=false).
+    val platform: String,
+)
 
 @Serializable
 data class LoginResponse(val token: String, @SerialName("account_id") val accountId: String, val email: String)

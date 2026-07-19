@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { getCachedDefaultCurrency, setCachedDefaultCurrency, useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { Session } from "../api/contract";
+import { formatLastSeen } from "../lib/relativeTime";
 
 function useFormStatus() {
   const [error, setError] = useState<string | null>(null);
@@ -247,7 +248,19 @@ export default function SettingsPage() {
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.3rem 0" }}
             >
               <span>
-                {s.device_label} {s.current && <strong>(this device)</strong>}
+                <span>
+                  {s.device_label} {s.current && <strong>(this device)</strong>}
+                </span>
+                {/* The current session is active by definition — this request is it. Showing
+                    its stored last_seen_at instead would read as up to 15 minutes stale, since
+                    the server throttles that write (auth.LAST_SEEN_REFRESH_MS). */}
+                <span
+                  className="muted"
+                  style={{ display: "block", fontSize: "0.8rem" }}
+                  title={new Date(s.last_seen_at).toLocaleString()}
+                >
+                  {s.current ? "Active now" : formatLastSeen(s.last_seen_at)}
+                </span>
               </span>
               {!s.current && (
                 <button type="button" className="btn-icon" onClick={() => handleRevokeSession(s.id)}>

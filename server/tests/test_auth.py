@@ -270,3 +270,159 @@ def test_allow_registration_false_is_advertised_to_the_web_client(tmp_path):
     # Carried as a meta tag, not an inline script: the security CSP blocks inline
     # scripts in a real browser (see routes/webapp.py).
     assert '<meta name="app-allow-registration" content="false">' in body
+
+
+# ---- session idle expiry (T-104) -----------------------------------------
+
+DAY_MS = 24 * 60 * 60 * 1000
+
+
+def _ttl_of(conn, token):
+    return conn.execute(
+        "SELECT idle_ttl_ms FROM auth_tokens WHERE token_hash = ?",
+        (auth.hash_token(token),),
+    ).fetchone()["idle_ttl_ms"]
+
+
+def _age_session(conn, token, ms):
+    """Backdate a session's last_seen_at to simulate `ms` of inactivity."""
+    conn.execute(
+        "UPDATE auth_tokens SET last_seen_at = last_seen_at - ? WHERE token_hash = ?",
+        (ms, auth.hash_token(token)),
+    )
+    conn.commit()
+
+
+@pytest.mark.parametrize(
+    "platform,expected",
+    [
+        ("web", auth.WEB_IDLE_TTL_MS),
+        ("android", auth.ANDROID_IDLE_TTL_MS),
+        ("WEB", auth.WEB_IDLE_TTL_MS),  # case-insensitive
+        (" android ", auth.ANDROID_IDLE_TTL_MS),  # whitespace-tolerant
+        (None, auth.DEFAULT_IDLE_TTL_MS),  # pre-T-104 client
+        ("ios", auth.DEFAULT_IDLE_TTL_MS),  # unknown platform, no hard failure
+        (123, auth.DEFAULT_IDLE_TTL_MS),  # non-string junk
+    ],
+)
+def test_login_resolves_the_idle_window_from_the_declared_platform(
+    db_conn, platform, expected
+):
+    auth.register(db_conn, EMAIL, PASSWORD)
+    token, _ = auth.login(db_conn, EMAIL, PASSWORD, DEVICE, platform)
+
+    assert _ttl_of(db_conn, token) == expected
+
+
+def test_the_ttl_is_server_resolved_never_client_supplied(db_conn):
+    """A client picks a bucket, not a duration: a numeric 'platform' that looks
+    like a 10-year TTL must not become one."""
+    auth.register(db_conn, EMAIL, PASSWORD)
+    token, _ = auth.login(db_conn, EMAIL, PASSWORD, DEVICE, 10 * 365 * DAY_MS)
+
+    assert _ttl_of(db_conn, token) == auth.DEFAULT_IDLE_TTL_MS
+
+
+def test_web_session_survives_6_days_of_inactivity(client, app):
+    conn, token = _account_with_session(client, app, "web")
+
+    _age_session(conn, token, 6 * DAY_MS)
+
+    assert client.get("/api/v1/lists", headers=_bearer(token)).status_code == 200
+
+
+def test_web_session_expires_after_8_days_of_inactivity(client, app):
+    conn, token = _account_with_session(client, app, "web")
+
+    _age_session(conn, token, 8 * DAY_MS)
+
+    resp = client.get("/api/v1/lists", headers=_bearer(token))
+    assert resp.status_code == 401
+    assert resp.get_json()["error"] == "session_expired"
+
+
+def test_android_session_survives_the_web_window(client, app):
+    """The whole point of the split: 30 idle days kills a web session but not
+    an Android one."""
+    conn, token = _account_with_session(client, app, "android")
+
+    _age_session(conn, token, 30 * DAY_MS)
+
+    assert client.get("/api/v1/lists", headers=_bearer(token)).status_code == 200
+
+
+def test_android_session_expires_after_63_days_of_inactivity(client, app):
+    conn, token = _account_with_session(client, app, "android")
+
+    _age_session(conn, token, 63 * DAY_MS)
+
+    resp = client.get("/api/v1/lists", headers=_bearer(token))
+    assert resp.status_code == 401
+    assert resp.get_json()["error"] == "session_expired"
+
+
+def test_activity_slides_the_window_forward(client, app):
+    """Inactivity, not age: a session used every 6 days stays alive well past
+    the 7-day window."""
+    conn, token = _account_with_session(client, app, "web")
+
+    for _ in range(4):
+        _age_session(conn, token, 6 * DAY_MS)
+        assert client.get("/api/v1/lists", headers=_bearer(token)).status_code == 200
+
+    # 24 days of wall-clock later, still authenticated.
+    assert client.get("/api/v1/lists", headers=_bearer(token)).status_code == 200
+
+
+def test_an_expired_session_is_deleted_on_sight_not_left_for_gc(client, app):
+    conn, token = _account_with_session(client, app, "web")
+
+    _age_session(conn, token, 8 * DAY_MS)
+    client.get("/api/v1/lists", headers=_bearer(token))
+
+    assert conn.execute("SELECT COUNT(*) AS n FROM auth_tokens").fetchone()["n"] == 0
+
+
+def test_expired_sessions_are_hidden_from_the_sessions_list(client, app):
+    """A dead session must not show up as a revokable phantom device."""
+    conn, live = _account_with_session(client, app, "android")
+    stale = client.post(
+        "/api/v1/login",
+        json={
+            "email": EMAIL,
+            "password": PASSWORD,
+            "device_label": "old browser",
+            "platform": "web",
+        },
+    ).get_json()["token"]
+
+    _age_session(conn, stale, 8 * DAY_MS)
+
+    sessions = client.get("/api/v1/account/sessions", headers=_bearer(live)).get_json()[
+        "sessions"
+    ]
+    assert [s["device_label"] for s in sessions] == [DEVICE]
+
+
+def _bearer(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _account_with_session(client, app, platform):
+    """Register + log in over HTTP, returning a direct DB connection (for
+    backdating) alongside the token."""
+    from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
+
+    client.post("/api/v1/register", json={"email": EMAIL, "password": PASSWORD})
+    token = client.post(
+        "/api/v1/login",
+        json={
+            "email": EMAIL,
+            "password": PASSWORD,
+            "device_label": DEVICE,
+            "platform": platform,
+        },
+    ).get_json()["token"]
+    conn = db_module.connect(get_config_by_name(app)["database_path"])
+    return conn, token

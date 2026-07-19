@@ -121,7 +121,7 @@ describe("forced logout on 401 (T-89)", () => {
     const handler = vi.fn();
     onForcedLogout(handler);
 
-    await expect(login({ email: "a@example.com", password: "wrong", device_label: "web" })).rejects.toMatchObject({
+    await expect(login({ email: "a@example.com", password: "wrong", device_label: "web", platform: "web" })).rejects.toMatchObject({
       status: 401,
       code: "invalid_credentials",
     });
@@ -159,14 +159,32 @@ describe("forced logout on 401 (T-89)", () => {
 });
 
 describe("token persistence", () => {
-  it("persists the token to sessionStorage and clears it on logout", () => {
+  it("persists the token to localStorage and clears it on logout", () => {
     setToken("abc123");
     expect(getToken()).toBe("abc123");
-    expect(sessionStorage.getItem("shoppinglist_token")).toBe("abc123");
+    expect(localStorage.getItem("shoppinglist_token")).toBe("abc123");
 
     setToken(null);
     expect(getToken()).toBeNull();
+    expect(localStorage.getItem("shoppinglist_token")).toBeNull();
+  });
+
+  it("does not use sessionStorage, which dies with the tab (T-104)", () => {
+    // The regression this guards: a backgrounded mobile tab getting reclaimed
+    // used to silently drop the session, forcing a fresh login ~daily.
+    setToken("abc123");
+
     expect(sessionStorage.getItem("shoppinglist_token")).toBeNull();
+  });
+
+  it("restores a token written by a previous browser session", async () => {
+    // Simulates a browser restart: storage survives, module state does not.
+    localStorage.setItem("shoppinglist_token", "from-last-time");
+    vi.resetModules();
+
+    const freshClient = await import("./client");
+
+    expect(freshClient.getToken()).toBe("from-last-time");
   });
 });
 
@@ -179,7 +197,7 @@ describe("login endpoint", () => {
   it("posts credentials and returns the parsed response", async () => {
     mockFetchOnce(200, { token: "tok", account_id: "acc-1", email: "a@example.com" });
 
-    const result = await login({ email: "a@example.com", password: "pw", device_label: "web" });
+    const result = await login({ email: "a@example.com", password: "pw", device_label: "web", platform: "web" });
 
     expect(result).toEqual({ token: "tok", account_id: "acc-1", email: "a@example.com" });
     const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];

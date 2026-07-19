@@ -12,7 +12,14 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
     account_id TEXT NOT NULL REFERENCES accounts (id),
     device_label TEXT,
     created_at INTEGER NOT NULL,
-    last_seen_at INTEGER NOT NULL
+    last_seen_at INTEGER NOT NULL,
+    -- Sliding inactivity window (T-104): the session dies once
+    -- `last_seen_at + idle_ttl_ms` is in the past. Resolved server-side at
+    -- login from the client's declared platform (auth.PLATFORM_IDLE_TTL_MS),
+    -- never taken from the client directly. The DEFAULT is the conservative
+    -- long (Android) window, used for pre-T-104 rows and for logins from
+    -- clients too old to declare a platform.
+    idle_ttl_ms INTEGER NOT NULL DEFAULT 5356800000
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_tokens_hash ON auth_tokens (token_hash);
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_account ON auth_tokens (account_id);

@@ -124,7 +124,15 @@ def test_full_system_lifecycle(client, app):
     conn = db_module.connect(config["database_path"])
     far_future = auth_module.now_ms() + 91 * 24 * 60 * 60 * 1000
     result = gc.run(conn, far_future)
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0}
+    # Both logins above are 91 days idle at far_future, past even the long
+    # 62-day default window, so the same sweep collects their sessions (T-104).
+    assert result == {
+        "items_purged": 1,
+        "lists_purged": 1,
+        "invites_purged": 0,
+        "sessions_purged": 2,
+    }
+    assert conn.execute("SELECT COUNT(*) AS n FROM auth_tokens").fetchone()["n"] == 0
 
     assert conn.execute("SELECT 1 FROM lists WHERE id = 'list-1'").fetchone() is None
     assert conn.execute("SELECT 1 FROM items WHERE id = 'item-1'").fetchone() is None

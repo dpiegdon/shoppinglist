@@ -2,6 +2,7 @@ import sqlite3
 
 import pytest
 
+from shoppinglist_server import auth
 from shoppinglist_server import db as db_module
 from shoppinglist_server import migrations as migrations_module
 from shoppinglist_server.errors import ApiError
@@ -173,3 +174,54 @@ def test_api_error_renders_error_envelope(app, client):
     resp = client.get("/__test_error__")
     assert resp.status_code == 418
     assert resp.get_json() == {"error": "teapot", "message": "I am a teapot"}
+
+
+def test_migration_3_backfills_idle_ttl_by_device_label(tmp_path):
+    """The T-104 backfill classifies pre-existing sessions: web has always sent
+    the literal device_label "web", everything else keeps the long default."""
+    path = tmp_path / "pre_t104.db"
+    conn = sqlite3.connect(str(path))
+    conn.row_factory = sqlite3.Row
+    # auth_tokens as it existed before migration 3 (no idle_ttl_ms).
+    conn.execute(
+        "CREATE TABLE auth_tokens (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL, "
+        "account_id TEXT NOT NULL, device_label TEXT, created_at INTEGER NOT NULL, "
+        "last_seen_at INTEGER NOT NULL)"
+    )
+    for token_id, label in [("t1", "web"), ("t2", "Google Pixel 8"), ("t3", None)]:
+        conn.execute(
+            "INSERT INTO auth_tokens VALUES (?, ?, ?, ?, 0, 0)", (token_id, token_id, "acct", label)
+        )
+    conn.commit()
+
+    sql_statements = dict(migrations_module.MIGRATIONS)[3]
+    for statement in sql_statements:
+        conn.execute(statement)
+    conn.commit()
+
+    ttls = {
+        row["id"]: row["idle_ttl_ms"]
+        for row in conn.execute("SELECT id, idle_ttl_ms FROM auth_tokens").fetchall()
+    }
+    assert ttls == {
+        "t1": auth.WEB_IDLE_TTL_MS,
+        "t2": auth.ANDROID_IDLE_TTL_MS,
+        "t3": auth.ANDROID_IDLE_TTL_MS,
+    }
+    conn.close()
+
+
+def test_fresh_schema_and_migrations_agree_on_the_idle_ttl_default(tmp_path):
+    """schema.sql and the migration must produce the same end state (see the
+    migrations.py docstring) — including the column DEFAULT, which is what a
+    login from a pre-T-104 client relies on."""
+    conn = db_module.connect(str(tmp_path / "fresh.db"))
+    db_module.init_db(conn)
+
+    default = next(
+        row["dflt_value"]
+        for row in conn.execute("PRAGMA table_info(auth_tokens)").fetchall()
+        if row["name"] == "idle_ttl_ms"
+    )
+    assert int(default) == auth.DEFAULT_IDLE_TTL_MS
+    conn.close()

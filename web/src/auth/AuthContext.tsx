@@ -19,8 +19,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const ACCOUNT_STORAGE_KEY = "shoppinglist_account";
 const DEVICE_LABEL = "web";
 
+// localStorage so a restored tab / browser restart keeps the session — must
+// match the token's storage in client.ts, or one half would survive a restart
+// without the other (T-104).
 function loadStoredAccount(): Account | null {
-  const raw = sessionStorage.getItem(ACCOUNT_STORAGE_KEY);
+  const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as Account;
@@ -31,9 +34,9 @@ function loadStoredAccount(): Account | null {
 
 function storeAccount(account: Account | null) {
   if (account) {
-    sessionStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+    localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
   } else {
-    sessionStorage.removeItem(ACCOUNT_STORAGE_KEY);
+    localStorage.removeItem(ACCOUNT_STORAGE_KEY);
   }
 }
 
@@ -46,7 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
-      const result = await api.login({ email, password, device_label: DEVICE_LABEL });
+      const result = await api.login({
+        email,
+        password,
+        device_label: DEVICE_LABEL,
+        platform: "web",
+      });
       api.setToken(result.token);
       const nextAccount = { id: result.account_id, email: result.email };
       storeAccount(nextAccount);
