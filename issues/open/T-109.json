@@ -1,0 +1,13 @@
+{
+  "body": "Minor web UX. On the web list view, the header shows a back link \"\u2190 All lists\"\n(`web/src/pages/ListPage.tsx:117`, `<Link to=\"/\">`) above the list title `<h1>`\n(line 120). The back link works, but the title itself is inert.\n\nThe Android app makes the top-bar title tappable \u2192 navigates to the Overview\n(`ui/Nav.kt:158`, `AppDrawerScaffold(onTitleClick = { navigate(OVERVIEW) })`,\ncomment: \"Tapping the open list's title jumps back to the overview to pick another\nlist\"). Web should match.\n\nChange: make the list-title `<h1>` on the web list view navigate to `/` (overview)\non click, the same target as the existing \"\u2190 All lists\" link (which stays). Keep\nthe heading's ellipsis/overflow/nowrap styling; add a pointer affordance; keep it a\nreal heading for a11y while being navigable (e.g. wrap the text in the router\n`<Link>`). web-only \u2014 no server/android change.",
+  "created_at": "2026-07-20T19:57:40+00:00",
+  "id": "T-109",
+  "labels": [
+    "web",
+    "ux",
+    "polish"
+  ],
+  "priority": 4,
+  "title": "Web: clicking the list title returns to the overview (match the app)",
+  "updated_at": "2026-07-20T19:57:40+00:00"
+}
