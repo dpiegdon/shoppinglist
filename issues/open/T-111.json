@@ -1,0 +1,13 @@
+{
+  "body": "UI strings are English-only across both clients (e.g. the \"en\" locale I hardcoded\nin web `lib/relativeTime.ts`; all labels/buttons literal English). Currency is\nhandled, but there's no general localization layer.\n\nLow priority / capture-only per the user (\"I don't really care\"). If picked up:\nextract user-facing strings and add a locale layer on each client (web: an i18n\nlib or a lightweight message catalog; android: standard string resources), pick up\nthe device/browser locale, and localize date/relative-time formatting (relativeTime\nweb + android's LastSeen). No server involvement beyond anything already localized.\n\nNot started.",
+  "created_at": "2026-07-20T20:09:56+00:00",
+  "id": "T-111",
+  "labels": [
+    "web",
+    "android",
+    "i18n"
+  ],
+  "priority": 5,
+  "title": "i18n: UI strings are English-only; no localization layer",
+  "updated_at": "2026-07-20T20:09:56+00:00"
+}
