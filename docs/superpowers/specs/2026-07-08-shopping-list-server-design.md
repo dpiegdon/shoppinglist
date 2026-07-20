@@ -224,6 +224,28 @@ client-only preferences like theme live in the client spec):
 - **Delete account** — removes the account, its tokens, settings, and
   memberships; lists left memberless are tombstoned (as in "leave", §7).
 
+### Admin (T-107)
+Admin identity is **static config only** — `create_blueprint(admin_emails=[...])`,
+matched case-insensitively against the account's email at request time. No column,
+no CLI, no API sets it, so there is no privilege-escalation path. The login
+response carries `is_admin` so a client can show the admin tab. Admin-gated
+endpoints (`admin_required`):
+
+- **List users** — every account with a derived `is_admin` + session count.
+- **Registration toggle** — a **runtime, non-durable** override of the
+  `allow_registration` config default. Stored in `server_runtime` tagged with the
+  current **boot id** (the master process's start-time, §2), so it's shared across
+  workers but ignored + cleared after a restart — the config default reasserts.
+  A blueprint has no reliable once-per-start hook, so staleness is judged lazily
+  at read, not cleared at startup. `GET /registration-status` (unauthenticated)
+  exposes the effective flag for the web auth page.
+- **Reset a user's password** — by id; returns the new password once (relayed out
+  of band, like invite tokens), revoking that account's sessions.
+- **Delete a user** — by id; refuses self (use self-service) and other admins.
+
+Both destructive actions re-verify the **admin's own** password (step-up, 403
+`invalid_credentials` on mismatch).
+
 ---
 
 ## 5. Invite scheme (email-bound, fixed 7-day expiry, revocable)
