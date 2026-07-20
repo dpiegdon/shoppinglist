@@ -339,12 +339,15 @@ should avoid double-setting):
 
 - **Request body cap** — a 4 MB `MAX_CONTENT_LENGTH` default (see Configuration
   to override).
-- **Security headers** — every response carries `X-Content-Type-Options:
-  nosniff` and `Referrer-Policy: no-referrer` (the latter keeps the secret token
-  in an `/invite/<token>` URL out of the `Referer` header); HTML responses (the
-  invite landing page and the embedded web client) additionally carry a
-  `Content-Security-Policy` and `X-Frame-Options: DENY`. All are set with
-  `setdefault`, so a header you set at the proxy is not overwritten.
+- **Security headers** — responses for this blueprint's own routes carry
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` (the
+  latter keeps the secret token in an `/invite/<token>` URL out of the `Referer`
+  header); HTML responses (the invite landing page and the embedded web client)
+  additionally carry a `Content-Security-Policy` and `X-Frame-Options: DENY`.
+  All are set with `setdefault`, so a header you set at the proxy is not
+  overwritten. The hook is scoped to the routes this extension owns — its API
+  blueprint plus the site-root pages it serves — so mounting it alongside other
+  blueprints does not impose its CSP or `Referrer-Policy` on their routes.
 - **Session revocation on password change** — changing a password revokes all of
   the account's other sessions, keeping only the one that made the change. The
   operator `reset-password` CLI goes further: it resets the password and signs

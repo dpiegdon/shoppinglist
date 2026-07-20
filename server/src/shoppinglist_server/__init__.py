@@ -8,6 +8,16 @@ from .errors import ApiError
 
 EXTENSION_KEY = "shoppinglist_server"
 
+# Endpoints of the site-root routes we register directly on the host app (outside
+# any blueprint, per Spec §5's root URLs — the invite landing page, the SPA, the
+# APK download). Tracked per-app so _add_security_headers can recognize them as
+# ours: request.blueprint is None for an app-level route, so blueprint identity
+# alone can't tell our own HTML pages apart from another blueprint's (T-106).
+OWNED_ENDPOINTS_KEY = "shoppinglist_owned_endpoints"
+_LANDING_ENDPOINTS = frozenset({"invite_landing_view"})
+_APK_ENDPOINTS = frozenset({"android_apk"})
+_WEBAPP_ENDPOINTS = frozenset({"web_index", "web_asset", "web_favicon"})
+
 # App-level request-body cap (T-45): request.get_json() would otherwise buffer an unbounded body —
 # /sync especially. 4 MB sits comfortably above realistic sync batches; operators can override via
 # the standard Flask MAX_CONTENT_LENGTH config (documented in the README). setdefault, so an
@@ -90,6 +100,12 @@ def create_blueprint(
         # what lets an operator-set value win while still supplying our default.
         if app.config.get("MAX_CONTENT_LENGTH") is None:
             app.config["MAX_CONTENT_LENGTH"] = DEFAULT_MAX_CONTENT_LENGTH
+        # The hook is app-wide (Flask has no way to scope after_request to a
+        # subset of app-level routes), but it self-limits to routes THIS
+        # extension owns via owned_endpoints below — so a co-mounted blueprint's
+        # routes are left untouched (T-106). Guarded so several mounted instances
+        # don't stack duplicate callbacks (T-45).
+        owned_endpoints = app.extensions.setdefault(OWNED_ENDPOINTS_KEY, set())
         if not app.extensions.get("shoppinglist_security_headers"):
             app.extensions["shoppinglist_security_headers"] = True
             app.after_request(_add_security_headers)
@@ -113,6 +129,7 @@ def create_blueprint(
             from .routes.landing import register_routes as register_landing_routes
 
             register_landing_routes(app, invite_hmac_key, base_url, root_path=root_path)
+            owned_endpoints |= _LANDING_ENDPOINTS
 
         # The Android APK download (T-59), also a site-root route, registered
         # BEFORE the landing page's render decisions matter: the landing/login
@@ -127,7 +144,10 @@ def create_blueprint(
                 )
             from .routes.apk import register_routes as register_apk_routes
 
-            register_apk_routes(app, root_path=root_path)
+            # Returns False (no route) when the APK file is absent — only claim
+            # the endpoint as ours if it was actually registered.
+            if register_apk_routes(app, root_path=root_path):
+                owned_endpoints |= _APK_ENDPOINTS
 
         # The embedded web client (Epic W) is likewise registered directly on
         # the app, outside url_prefix, so opening the server's base URL boots
@@ -145,14 +165,18 @@ def create_blueprint(
                 )
             from .routes.webapp import register_routes as register_webapp_routes
 
+            # Returns False (no routes) when no built web bundle is present —
+            # only claim the endpoints as ours if they were actually registered.
             if web_dist_dir is not None:
-                register_webapp_routes(
+                registered = register_webapp_routes(
                     app, web_dist_dir, root_path=root_path, allow_registration=allow_registration
                 )
             else:
-                register_webapp_routes(
+                registered = register_webapp_routes(
                     app, root_path=root_path, allow_registration=allow_registration
                 )
+            if registered:
+                owned_endpoints |= _WEBAPP_ENDPOINTS
 
     @bp.teardown_app_request
     def _close_db(exception=None):
@@ -190,9 +214,31 @@ def _handle_payload_too_large(err: RequestEntityTooLarge):
 
 
 def _add_security_headers(response):
-    # Applied app-wide (T-45). nosniff and no-referrer are safe on every response — no-referrer in
-    # particular keeps the secret token in an /invite/<token> URL out of the Referer header on any
-    # navigation away. CSP and X-Frame-Options are only meaningful for HTML, so scope them there.
+    # Only touch responses for routes THIS extension owns (T-106). A blueprint is
+    # a guest in the host app; imposing our policy on another blueprint's routes
+    # would e.g. block its inline scripts (CSP default-src 'self'), or, via
+    # no-referrer, send Origin: null on its same-site form POSTs and trip its
+    # Origin-checking CSRF guard. setdefault already stops us OVERWRITING a header
+    # the host set, but ADDING one it never set is just as much setting policy for
+    # a route we don't own.
+    #
+    # "Ours" is our API blueprint(s) — request.blueprint — plus the site-root HTML
+    # /APK routes we register directly on the app. Those latter are outside any
+    # url_prefix (Spec §5), so request.blueprint is None for them; scoping by
+    # blueprint alone would wrongly DROP headers there, which is exactly where CSP
+    # and the token-hiding no-referrer matter most (the /invite/<token> page).
+    extensions = current_app.extensions
+    owned = (
+        request.blueprint in extensions.get(EXTENSION_KEY, {})
+        or request.endpoint in extensions.get(OWNED_ENDPOINTS_KEY, ())
+    )
+    if not owned:
+        return response
+
+    # nosniff and no-referrer are safe on all our responses; no-referrer in
+    # particular keeps the secret token in an /invite/<token> URL out of the
+    # Referer header on any navigation away. CSP and X-Frame-Options are only
+    # meaningful for HTML, so scope them to it.
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     if response.mimetype == "text/html":
