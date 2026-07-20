@@ -63,6 +63,7 @@ class AuthRepositoryImpl @Inject constructor(
         sessionState.token = response.token
         sessionState.accountEmail = response.email
         sessionState.accountId = response.accountId
+        sessionState.isAdmin = response.isAdmin
         val currency = api.getSettings().defaultCurrency
         sessionState.defaultCurrency = currency
         defaultCurrencyState.set(currency)

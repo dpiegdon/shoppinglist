@@ -34,6 +34,8 @@ import javax.inject.Inject
 data class SettingsUiState(
     val serverUrl: String = "",
     val accountEmail: String? = null,
+    /** Configured-admin flag from the login response (T-107); gates the admin entry point. */
+    val isAdmin: Boolean = false,
     val defaultCurrency: String = "",
     /**
      * Resolved default-or-override (T-64). `null` means the one-time fetch in [SettingsViewModel]
@@ -88,6 +90,7 @@ class SettingsViewModel @Inject constructor(
                 it.copy(
                     serverUrl = serverConfig.serverUrl.first() ?: "",
                     accountEmail = sessionState.accountEmail,
+                    isAdmin = sessionState.isAdmin,
                     defaultCurrency = sessionState.defaultCurrency ?: "",
                     allowSelfSignedCerts = serverConfig.allowSelfSignedCerts.first(),
                 )

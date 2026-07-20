@@ -55,6 +55,7 @@ import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
 import org.p23q.shoppinglist.ui.redeem.RedeemDialog
 import org.p23q.shoppinglist.ui.redeem.RedeemScreen
+import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
 
@@ -63,6 +64,7 @@ object Routes {
     const val LOGIN = "login"
     const val OVERVIEW = "overview"
     const val SETTINGS = "settings"
+    const val ADMIN = "admin"
 
     const val LIST_ID_ARG = "listId"
     const val LIST_PATTERN = "list/{$LIST_ID_ARG}"
@@ -249,7 +251,13 @@ fun ShoppingListNavHost(
                             launchSingleTop = true
                         }
                     },
+                    onOpenAdmin = { navController.navigate(Routes.ADMIN) },
                 )
+            }
+        }
+        composable(Routes.ADMIN) {
+            AppDrawerScaffold(navController = navController, title = "Server admin") {
+                AdminScreen()
             }
         }
     }

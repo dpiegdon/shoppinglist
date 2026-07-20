@@ -35,6 +35,8 @@ interface SessionState {
     var accountEmail: String?
     /** The logged-in account's server id (T-65) — the basis for "changed by someone else" checks. */
     var accountId: String?
+    /** Whether this account is a configured admin (T-107); from the login response. */
+    var isAdmin: Boolean
     var defaultCurrency: String?
     var lastOpenedListId: String?
     var syncCursor: Long
@@ -69,6 +71,10 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         get() = prefs.getString(KEY_ACCOUNT_ID, null)
         set(value) = prefs.edit().putString(KEY_ACCOUNT_ID, value).apply()
 
+    override var isAdmin: Boolean
+        get() = prefs.getBoolean(KEY_IS_ADMIN, false)
+        set(value) = prefs.edit().putBoolean(KEY_IS_ADMIN, value).apply()
+
     override var defaultCurrency: String?
         get() = prefs.getString(KEY_DEFAULT_CURRENCY, null)
         set(value) = prefs.edit().putString(KEY_DEFAULT_CURRENCY, value).apply()
@@ -97,6 +103,7 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         const val KEY_TOKEN = "token"
         const val KEY_ACCOUNT_EMAIL = "account_email"
         const val KEY_ACCOUNT_ID = "account_id"
+        const val KEY_IS_ADMIN = "is_admin"
         const val KEY_DEFAULT_CURRENCY = "default_currency"
         const val KEY_LAST_OPENED_LIST_ID = "last_opened_list_id"
         const val KEY_SYNC_CURSOR = "sync_cursor"

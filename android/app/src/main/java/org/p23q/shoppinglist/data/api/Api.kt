@@ -6,6 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import java.io.IOException
 
@@ -82,4 +83,24 @@ interface Api {
 
     @POST("api/v1/sync")
     suspend fun sync(@Body body: SyncRequest): SyncResponse
+
+    // --- Admin (T-107) ---
+
+    @GET("api/v1/admin/users")
+    suspend fun adminUsers(): AdminUsersResponse
+
+    @GET("api/v1/admin/server-settings")
+    suspend fun adminGetServerSettings(): ServerSettingsDto
+
+    @PUT("api/v1/admin/server-settings")
+    suspend fun adminSetServerSettings(@Body body: ServerSettingsDto): ServerSettingsDto
+
+    @POST("api/v1/admin/users/{id}/reset-password")
+    suspend fun adminResetPassword(
+        @Path("id") id: String,
+        @Body body: AdminPasswordRequest,
+    ): AdminResetPasswordResponse
+
+    @HTTP(method = "DELETE", path = "api/v1/admin/users/{id}", hasBody = true)
+    suspend fun adminDeleteUser(@Path("id") id: String, @Body body: AdminPasswordRequest)
 }

@@ -79,7 +79,38 @@ data class LoginRequest(
 )
 
 @Serializable
-data class LoginResponse(val token: String, @SerialName("account_id") val accountId: String, val email: String)
+data class LoginResponse(
+    val token: String,
+    @SerialName("account_id") val accountId: String,
+    val email: String,
+    // Whether this account is a configured admin (T-107); drives the admin screen. Defaulted so a
+    // pre-T-107 server that omits it decodes as non-admin.
+    @SerialName("is_admin") val isAdmin: Boolean = false,
+)
+
+// --- Admin (T-107) ---
+
+@Serializable
+data class AdminUserDto(
+    val id: String,
+    val email: String,
+    @SerialName("created_at") val createdAt: Long,
+    @SerialName("session_count") val sessionCount: Int,
+    @SerialName("is_admin") val isAdmin: Boolean,
+)
+
+@Serializable
+data class AdminUsersResponse(val users: List<AdminUserDto>)
+
+@Serializable
+data class ServerSettingsDto(@SerialName("allow_registration") val allowRegistration: Boolean)
+
+/** Step-up: the ADMIN's own password, for a destructive admin action. */
+@Serializable
+data class AdminPasswordRequest(val password: String)
+
+@Serializable
+data class AdminResetPasswordResponse(val password: String)
 
 @Serializable
 data class ChangePasswordRequest(

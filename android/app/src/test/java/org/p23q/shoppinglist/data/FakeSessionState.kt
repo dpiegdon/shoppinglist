@@ -4,6 +4,7 @@ class FakeSessionState : SessionState {
     override var token: String? = null
     override var accountEmail: String? = null
     override var accountId: String? = null
+    override var isAdmin: Boolean = false
     override var defaultCurrency: String? = null
     override var lastOpenedListId: String? = null
     override var syncCursor: Long = 0L
@@ -12,6 +13,7 @@ class FakeSessionState : SessionState {
         token = null
         accountEmail = null
         accountId = null
+        isAdmin = false
         defaultCurrency = null
         lastOpenedListId = null
         syncCursor = 0L

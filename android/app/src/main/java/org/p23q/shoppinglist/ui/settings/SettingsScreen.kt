@@ -44,6 +44,7 @@ import java.io.File
 @Composable
 fun SettingsScreen(
     onAccountDeleted: () -> Unit,
+    onOpenAdmin: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,6 +71,12 @@ fun SettingsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        // Admin-only entry to the server console (T-107); shown from the login response flag.
+        if (state.isAdmin) {
+            Button(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth()) { Text("Server admin") }
+            Spacer(Modifier.height(16.dp))
+        }
+
         Text("Account", style = MaterialTheme.typography.titleMedium)
         state.accountEmail?.let { Text(it) }
         Text("Server: ${state.serverUrl}", style = MaterialTheme.typography.bodySmall)
