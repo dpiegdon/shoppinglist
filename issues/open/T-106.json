@@ -1,0 +1,14 @@
+{
+  "body": "## Problem\n\n`_add_security_headers` was registered with `app.after_request`, so it ran for\nEVERY response in the host application, not just this blueprint's routes. A\nblueprint is a guest in someone else's app; setting response policy for routes it\ndoesn't own is wrong.\n\nConcretely, an app mounting this blueprint alongside another blueprint would get\nour `Content-Security-Policy: default-src 'self'` (on HTML) and\n`Referrer-Policy: no-referrer` on the OTHER blueprint's responses too. CSP breaks\nthe neighbor's inline scripts; `no-referrer` makes browsers send `Origin: null`\non same-site form POSTs, which an Origin-checking CSRF guard rejects (403).\n\n(Reported via external review. Note the report's fix #2 \u2014 use `setdefault` \u2014 was\nalready in place, so we never *overwrote* a header the host set; but we still\n*added* headers to responses we don't own, which is the same category of bug.)\n\n## Why the obvious fix is wrong here\n\nThe report suggested swapping `app.after_request` for `@bp.after_request`\n(Flask scopes it by `request.blueprint`). That does not work for THIS codebase:\nthe HTML routes that most need the headers \u2014 the invite landing page\n(`/invite/<token>`, where `no-referrer` keeps the token out of the Referer\nheader) and the SPA (`/`) \u2014 are registered directly on the app, OUTSIDE any\nurl_prefix, per Spec \u00a75's site-root URLs. `request.blueprint` is None for them,\nso a blueprint-scoped hook would fire only for the `/api/v1/*` JSON routes and\nsilently DROP CSP / X-Frame-Options / no-referrer from exactly the pages that\nneed them.\n\n## Fix (implemented)\n\nKeep the single app-wide `after_request` hook (Flask can't scope after_request\nto a subset of app-level routes), but have it self-limit to routes THIS\nextension owns:\n  - our API blueprint(s): `request.blueprint` in `app.extensions[EXTENSION_KEY]`\n    (already keyed by our blueprint names for multi-mount config isolation), and\n  - our site-root routes: `request.endpoint` in a per-app set of the endpoints we\n    actually registered (invite_landing_view / android_apk / web_index +\n    web_asset + web_favicon), recorded as each is registered.\n\nAnything else \u2014 another blueprint's routes, an unrelated host route, a 404 for a\npath we don't serve \u2014 is left untouched. Behavior is identical in the standalone\nwheel deployment (we own the whole app there).\n\nFiles: server/src/shoppinglist_server/__init__.py (hook + ownership tracking),\ntests/test_hardening.py (co-mounted-blueprint regression tests), server/README.md.",
+  "created_at": "2026-07-20T18:29:39+00:00",
+  "id": "T-106",
+  "labels": [
+    "server",
+    "security",
+    "bug",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "Blueprint set security headers app-wide instead of on its own routes",
+  "updated_at": "2026-07-20T18:29:39+00:00"
+}
