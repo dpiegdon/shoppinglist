@@ -32,6 +32,35 @@
   server field `category_order`). Categories not in the order render after the
   ordered ones, alphabetically.
 
+### Category identity & casing (T-108)
+Categories are matched **case-insensitively** — the identity of a category is
+`category.trim().toLowerCase()`. Both clients MUST use this same key, or they'd
+show different groupings for the same data.
+
+- **Grouping:** items whose categories differ only in case ("Group"/"group")
+  merge into one group. The group's displayed label is the **canonical casing**:
+  a `category_order` entry that matches the key (case-insensitively) wins;
+  otherwise the **most-frequent casing** among the group's items, tie-broken
+  lexicographically (deterministic, so both clients agree).
+- **Autocomplete:** the add/edit dialog offers the list's existing categories
+  (canonical casing) as clickable chips, filtered to those containing the typed
+  text (case-insensitive) minus an exact match. This keeps people from minting
+  new case-variants.
+- **Fixing casing / renaming** happens two ways, both running one shared write —
+  rewrite every item whose category key matches the target to the new spelling,
+  and update the matching `category_order` entry (de-duplicating on a
+  case-insensitive collision, i.e. a merge):
+  - **Item dialog:** editing an item's category to the **same word with
+    different casing** recases the *whole* category (recasing one item alone is a
+    no-op under case-insensitive grouping); a **different word** just
+    re-categorizes that one item. The recase-all shows a brief confirmation
+    ("Fixed casing for N items in X").
+  - **List settings:** the category panel lists the **full** set (items ∪
+    order) and renames any entry (a different word too); a collision-merge is
+    confirmed first.
+- Web renders category headers **verbatim** (no forced uppercase), so the
+  user-controlled casing is what shows — matching Android.
+
 ## First run / connection
 - **Server URL is user-configurable**: entered on the login screen, changeable
   in settings (self-hosted server, no fixed public URL).

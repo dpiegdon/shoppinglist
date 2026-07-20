@@ -76,6 +76,42 @@ describe("groupVisibleItems", () => {
     const groups = groupVisibleItems(items, [], false);
     expect(groups).toEqual([{ category: "—", items: [items[0]] }]);
   });
+
+  it("merges categories differing only in case into one group (T-108)", () => {
+    const items = [
+      item("1", "Milk", "todo", "Group"),
+      item("2", "Bread", "todo", "group"),
+      item("3", "Eggs", "todo", "GROUP"),
+    ];
+    const groups = groupVisibleItems(items, [], false);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].items.map((i) => i.id).sort()).toEqual(["1", "2", "3"]);
+  });
+
+  it("labels a merged group with the most-common casing (T-108)", () => {
+    const items = [
+      item("1", "Milk", "todo", "group"),
+      item("2", "Bread", "todo", "group"),
+      item("3", "Eggs", "todo", "Group"),
+    ];
+    expect(groupVisibleItems(items, [], false)[0].category).toBe("group");
+  });
+
+  it("lets category_order dictate a merged group's casing (T-108)", () => {
+    const items = [item("1", "Milk", "todo", "group"), item("2", "Bread", "todo", "group")];
+    // Even though every item says "group", the order entry's casing wins.
+    expect(groupVisibleItems(items, ["Group"], false)[0].category).toBe("Group");
+  });
+
+  it("matches category_order to a bucket case-insensitively for ordering (T-108)", () => {
+    const items = [
+      item("1", "Bread", "todo", "bakery"),
+      item("2", "Milk", "todo", "Dairy"),
+    ];
+    // order says "dairy" (lowercase), item says "Dairy" — still ordered first.
+    const groups = groupVisibleItems(items, ["dairy"], false);
+    expect(groups.map((g) => g.category)).toEqual(["dairy", "bakery"]);
+  });
 });
 
 describe("checkedItems", () => {

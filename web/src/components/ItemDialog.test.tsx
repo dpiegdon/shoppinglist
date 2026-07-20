@@ -44,6 +44,28 @@ describe("ItemDialog (add mode)", () => {
     expect(screen.queryByText("Bread")).not.toBeInTheDocument();
   });
 
+  it("offers category chips and clicking one fills the field (T-108)", async () => {
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[]}
+        categorySuggestions={["Dairy", "Bakery"]}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const categoryInput = screen.getByLabelText("Category");
+    await userEvent.type(categoryInput, "da");
+    // Only "Dairy" contains "da"; clicking it adopts the canonical casing.
+    const chip = screen.getByRole("button", { name: "Dairy" });
+    expect(screen.queryByRole("button", { name: "Bakery" })).not.toBeInTheDocument();
+
+    await userEvent.click(chip);
+    expect(categoryInput).toHaveValue("Dairy");
+  });
+
   it("picking a suggestion saves with the existing item's id and status todo", async () => {
     const registry = [registryItem("1", "Milk")];
     const onSave = vi.fn().mockResolvedValue(undefined);

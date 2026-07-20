@@ -95,6 +95,8 @@ interface ItemDialogProps {
   listId: string;
   /** All live items in this list (any status) — used for name suggestions. */
   registryItems: ItemObject[];
+  /** Existing categories in this list (canonical casing), for the category autocomplete (T-108). */
+  categorySuggestions?: string[];
   /** Present for edit mode; absent for add mode. */
   editingItem?: ItemObject;
   defaultCurrency: string;
@@ -130,6 +132,7 @@ function valuesFromItem(item: ItemObject): Omit<ItemDialogSaveValues, "itemId" |
 
 export default function ItemDialog({
   registryItems,
+  categorySuggestions = [],
   editingItem,
   defaultCurrency,
   onClose,
@@ -162,6 +165,16 @@ export default function ItemDialog({
       .filter((it) => (itemFieldValue(it, "name") ?? "").toLowerCase().includes(query))
       .slice(0, 8);
   }, [values.name, registryItems, isEdit]);
+
+  // Existing categories to offer as clickable chips (T-108), mirroring Android's AssistChip row:
+  // those containing the typed text (case-insensitive), minus an exact match (nothing to suggest
+  // once you've typed it). Clicking a chip adopts its canonical casing.
+  const categoryChips = useMemo(() => {
+    const typed = values.category.trim().toLowerCase();
+    return categorySuggestions
+      .filter((c) => c.toLowerCase().includes(typed) && c.toLowerCase() !== typed)
+      .slice(0, 8);
+  }, [categorySuggestions, values.category]);
 
   function pickSuggestion(item: ItemObject) {
     setMatchedExisting(item);
@@ -371,8 +384,21 @@ export default function ItemDialog({
             id="item-category"
             value={values.category}
             onChange={(e) => setValues((v) => ({ ...v, category: e.target.value }))}
-            list="category-suggestions"
           />
+          {categoryChips.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
+              {categoryChips.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className="chip-button"
+                  onClick={() => setValues((v) => ({ ...v, category }))}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="form-field">

@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
+import { canonicalCategoryNames, categoryKey, planCategoryRename } from "../lib/categories";
 import type { ItemStatus, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 
@@ -20,6 +21,9 @@ export default function ListPropsPage() {
   );
   const [notes, setNotes] = useState(list ? listFieldValue(list, "notes") ?? "" : "");
   const [newCategory, setNewCategory] = useState("");
+  // Inline category rename (T-108): the key being edited + its draft text.
+  const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
+  const [categoryDraft, setCategoryDraft] = useState("");
   const [members, setMembers] = useState<MembersResponse | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -42,7 +46,28 @@ export default function ListPropsPage() {
   if (!list) return <Navigate to="/" replace />;
   const id: string = listId;
 
-  const allChecked = checkedItems(Array.from(items.values()).filter((i) => i.list_id === id));
+  const liveItems = Array.from(items.values()).filter(
+    (i) => i.list_id === id && !itemFieldValue(i, "deleted"),
+  );
+  const allChecked = checkedItems(liveItems);
+
+  // The full set of categories in this list (T-108) — everything on an item PLUS anything the
+  // user has explicitly ordered — so casing can be fixed here for any of them, not just ordered
+  // ones. Canonical casing, ordered ones first (in order), the rest alphabetically.
+  const canonicalNames = canonicalCategoryNames(
+    liveItems.map((i) => itemFieldValue(i, "category") ?? ""),
+    categoryOrder,
+  );
+  const orderedKeys = categoryOrder
+    .map(categoryKey)
+    .filter((k, i, arr) => k !== "" && arr.indexOf(k) === i);
+  const categoryKeys = [
+    ...orderedKeys.filter((k) => canonicalNames.has(k)),
+    ...Array.from(canonicalNames.keys())
+      .filter((k) => !orderedKeys.includes(k))
+      .sort((a, b) => canonicalNames.get(a)!.localeCompare(canonicalNames.get(b)!)),
+  ];
+  const orderIndexOf = (key: string) => categoryOrder.findIndex((e) => categoryKey(e) === key);
 
   async function saveName(e: FormEvent) {
     e.preventDefault();
@@ -86,9 +111,48 @@ export default function ListPropsPage() {
   function addCategory(e: FormEvent) {
     e.preventDefault();
     const trimmed = newCategory.trim();
-    if (!trimmed || categoryOrder.includes(trimmed)) return;
+    // Case-insensitive dedup (T-108): don't add "Group" when "group" is already ordered.
+    if (!trimmed || categoryOrder.some((c) => categoryKey(c) === categoryKey(trimmed))) return;
     saveCategoryOrder([...categoryOrder, trimmed]);
     setNewCategory("");
+  }
+
+  /**
+   * The central "fix a category's casing / rename it" action (T-108): rewrites every item in the
+   * `fromKey` category to `toRaw` and updates the matching category_order entry. Renaming onto a
+   * different existing category merges them (confirmed first).
+   */
+  async function renameCategory(fromKey: string, toRaw: string) {
+    const to = toRaw.trim();
+    setEditingCategoryKey(null);
+    if (!to) return;
+    if (categoryKey(to) === fromKey && to === canonicalNames.get(fromKey)) return; // unchanged
+    const toKey = categoryKey(to);
+    if (toKey !== fromKey && canonicalNames.has(toKey)) {
+      if (!confirm(`Merge into "${canonicalNames.get(toKey)}"? Both categories will become one.`)) return;
+    }
+    const plan = planCategoryRename(
+      liveItems.map((i) => ({ id: i.id, category: itemFieldValue(i, "category") ?? "" })),
+      categoryOrder,
+      fromKey,
+      to,
+    );
+    if (plan.orderChanged) setCategoryOrder(plan.nextCategoryOrder);
+    await push({
+      lists: plan.orderChanged
+        ? [{ id, fields: fieldPatch(deviceId, "category_order", plan.nextCategoryOrder) }]
+        : [],
+      items: plan.itemIds.map((itemId) => ({
+        id: itemId,
+        list_id: id,
+        fields: fieldPatch(deviceId, "category", to),
+      })),
+    });
+  }
+
+  function startRename(key: string) {
+    setEditingCategoryKey(key);
+    setCategoryDraft(canonicalNames.get(key) ?? "");
   }
 
   async function handleInvite(e: FormEvent) {
@@ -210,28 +274,82 @@ export default function ListPropsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Category order</h2>
-        {categoryOrder.length === 0 && <p className="muted">No custom order set; categories sort alphabetically.</p>}
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Categories</h2>
+        <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
+          Rename to fix casing or merge; use the arrows to set the order items are grouped in.
+        </p>
+        {categoryKeys.length === 0 && <p className="muted">No categories yet.</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          {categoryOrder.map((category, index) => (
-            <div key={category} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <span style={{ flex: 1 }}>{category}</span>
-              <button type="button" className="btn-icon" onClick={() => moveCategory(index, -1)} aria-label="Move up">
-                ↑
-              </button>
-              <button
-                type="button"
-                className="btn-icon"
-                onClick={() => moveCategory(index, 1)}
-                aria-label="Move down"
-              >
-                ↓
-              </button>
-              <button type="button" className="btn-icon" onClick={() => removeCategory(index)} aria-label="Remove">
-                ✕
-              </button>
-            </div>
-          ))}
+          {categoryKeys.map((key) => {
+            const index = orderIndexOf(key);
+            const inOrder = index >= 0;
+            if (editingCategoryKey === key) {
+              return (
+                <form
+                  key={key}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    renameCategory(key, categoryDraft);
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+                >
+                  <input
+                    autoFocus
+                    value={categoryDraft}
+                    onChange={(e) => setCategoryDraft(e.target.value)}
+                    style={{ flex: 1 }}
+                    aria-label={`Rename ${canonicalNames.get(key)}`}
+                  />
+                  <button type="submit" className="btn btn-secondary">
+                    Save
+                  </button>
+                  <button type="button" className="btn-icon" onClick={() => setEditingCategoryKey(null)} aria-label="Cancel">
+                    ✕
+                  </button>
+                </form>
+              );
+            }
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <span style={{ flex: 1 }}>{canonicalNames.get(key)}</span>
+                <button type="button" className="btn-icon" onClick={() => startRename(key)} aria-label={`Rename ${canonicalNames.get(key)}`}>
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="btn-icon"
+                  disabled={!inOrder}
+                  onClick={() => moveCategory(index, -1)}
+                  aria-label="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="btn-icon"
+                  disabled={!inOrder}
+                  onClick={() => moveCategory(index, 1)}
+                  aria-label="Move down"
+                >
+                  ↓
+                </button>
+                {inOrder ? (
+                  <button type="button" className="btn-icon" onClick={() => removeCategory(index)} aria-label="Remove from order">
+                    ✕
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-icon"
+                    onClick={() => saveCategoryOrder([...categoryOrder, canonicalNames.get(key)!])}
+                    aria-label="Add to order"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
         <form onSubmit={addCategory} style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
           <input

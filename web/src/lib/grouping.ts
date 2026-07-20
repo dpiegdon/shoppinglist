@@ -1,12 +1,13 @@
 import type { ItemObject } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
+import { canonicalCategoryNames, categoryKey, UNCATEGORIZED_LABEL } from "./categories";
 
 export interface CategoryGroup {
   category: string;
   items: ItemObject[];
 }
 
-const UNCATEGORIZED = "—";
+const UNCATEGORIZED_KEY = "";
 
 /**
  * Groups the list's visible items by category, ordered per `categoryOrder`;
@@ -16,6 +17,10 @@ const UNCATEGORIZED = "—";
  * same position it would occupy as `todo`, rather than being pulled into a
  * separate "Checked" section. `backlog` items are never visible here.
  * (Spec: client-ui-notes.md List view.)
+ *
+ * Categories are grouped case-insensitively (T-108): "Group" and "group" merge
+ * into one bucket, labelled with the canonical casing (a `category_order` match,
+ * else the most-common casing among the items).
  */
 export function groupVisibleItems(
   items: ItemObject[],
@@ -27,32 +32,45 @@ export function groupVisibleItems(
     return status === "todo" || (showChecked && status === "checked");
   });
 
-  const byCategory = new Map<string, ItemObject[]>();
+  const names = canonicalCategoryNames(
+    visible.map((item) => itemFieldValue(item, "category") ?? ""),
+    categoryOrder,
+  );
+
+  const byKey = new Map<string, ItemObject[]>();
   for (const item of visible) {
-    const category = itemFieldValue(item, "category")?.trim() || UNCATEGORIZED;
-    const bucket = byCategory.get(category);
+    const key = categoryKey(itemFieldValue(item, "category") ?? "");
+    const bucket = byKey.get(key);
     if (bucket) {
       bucket.push(item);
     } else {
-      byCategory.set(category, [item]);
+      byKey.set(key, [item]);
     }
   }
 
-  for (const bucket of byCategory.values()) {
+  for (const bucket of byKey.values()) {
     bucket.sort((a, b) => (itemFieldValue(a, "name") ?? "").localeCompare(itemFieldValue(b, "name") ?? ""));
   }
 
-  const ordered: string[] = [];
-  for (const category of categoryOrder) {
-    if (byCategory.has(category)) ordered.push(category);
-  }
-  const remaining = Array.from(byCategory.keys())
-    .filter((c) => !ordered.includes(c) && c !== UNCATEGORIZED)
-    .sort((a, b) => a.localeCompare(b));
-  ordered.push(...remaining);
-  if (byCategory.has(UNCATEGORIZED)) ordered.push(UNCATEGORIZED);
+  const displayName = (key: string) =>
+    key === UNCATEGORIZED_KEY ? UNCATEGORIZED_LABEL : names.get(key) ?? key;
 
-  return ordered.map((category) => ({ category, items: byCategory.get(category)! }));
+  const orderedKeys: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of categoryOrder) {
+    const key = categoryKey(entry);
+    if (key !== UNCATEGORIZED_KEY && byKey.has(key) && !seen.has(key)) {
+      orderedKeys.push(key);
+      seen.add(key);
+    }
+  }
+  const remaining = Array.from(byKey.keys())
+    .filter((key) => key !== UNCATEGORIZED_KEY && !seen.has(key))
+    .sort((a, b) => displayName(a).localeCompare(displayName(b)));
+  orderedKeys.push(...remaining);
+  if (byKey.has(UNCATEGORIZED_KEY)) orderedKeys.push(UNCATEGORIZED_KEY);
+
+  return orderedKeys.map((key) => ({ category: displayName(key), items: byKey.get(key)! }));
 }
 
 /** Every `checked` item regardless of visibility - used for the "Clear checked" count/bulk action. */

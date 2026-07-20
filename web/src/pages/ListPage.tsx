@@ -4,6 +4,7 @@ import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { groupVisibleItems } from "../lib/grouping";
+import { categoryKey, distinctCanonicalCategories, planCategoryRename } from "../lib/categories";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
@@ -17,6 +18,8 @@ export default function ListPage() {
   const [showChecked, toggleShowChecked] = useShowChecked();
   const [dialogItem, setDialogItem] = useState<ItemObject | "new" | null>(null);
   const [undo, setUndo] = useState<{ itemId: string; previousStatus: ItemStatus } | null>(null);
+  // Transient confirmation for a category recase-all (T-108), since one item edit rewrites many.
+  const [categoryToast, setCategoryToast] = useState<string | null>(null);
   // Fetched once per list open, best-effort (T-64) — an empty roster on error/offline correctly
   // hides the last-touched-by indicator (fewer members shown is a safe default) rather than
   // erroring the whole page. Mirrors the Android ListViewModel's equivalent fetch.
@@ -51,6 +54,11 @@ export default function ListPage() {
 
   const categoryOrder = listFieldValue(list, "category_order") ?? [];
   const groups = groupVisibleItems(listItems, categoryOrder, showChecked);
+  // Existing categories (canonical casing) for the item dialog's autocomplete (T-108).
+  const categorySuggestions = distinctCanonicalCategories(
+    listItems.map((i) => itemFieldValue(i, "category") ?? ""),
+    categoryOrder,
+  );
 
   async function setItemStatus(itemId: string, status: ItemStatus) {
     await push({
@@ -74,33 +82,86 @@ export default function ListPage() {
     setUndo(null);
   }
 
+  // Builds the LWW field patch for a single item from the dialog's values, spreading only the
+  // fields the user actually changed (T-88) so an edit can't stomp a collaborator's concurrent
+  // edit to an untouched field. `includeCategory: false` omits the category — used by the
+  // recase-all path, which stamps category across the whole group separately.
+  function itemFieldsFromValues(values: ItemDialogSaveValues, includeCategory: boolean) {
+    const changed = values.changedFields;
+    return {
+      ...(changed.has("name") ? fieldPatch(deviceId, "name", values.name) : {}),
+      ...(includeCategory && changed.has("category")
+        ? fieldPatch(deviceId, "category", values.category || null)
+        : {}),
+      ...(changed.has("stores") ? fieldPatch(deviceId, "stores", values.stores) : {}),
+      ...(changed.has("quantity") ? fieldPatch(deviceId, "quantity", values.quantity || null) : {}),
+      ...(changed.has("price")
+        ? fieldPatch(
+            deviceId,
+            "price",
+            values.priceAmount ? { amount: values.priceAmount, currency: values.priceCurrency || null } : null,
+          )
+        : {}),
+      ...(changed.has("note") ? fieldPatch(deviceId, "note", values.note || null) : {}),
+      ...(changed.has("status") ? fieldPatch(deviceId, "status", values.status) : {}),
+    };
+  }
+
   async function handleSave(values: ItemDialogSaveValues) {
     const changed = values.changedFields;
     // Zero-change edit (T-88): nothing to stamp, so push nothing — the dialog still closes.
     if (changed.size === 0) return;
+
+    // Category recase-all (T-108): editing an existing item's category to the SAME word with
+    // different casing is the "fix the whole category's casing" gesture, not a one-item change —
+    // recasing just this item would be a visual no-op under case-insensitive grouping. Rewrite
+    // every item in the category to the new casing (folding in this item's other edits), and fix
+    // the category_order entry so the canonical label sticks.
+    const editing = dialogItem !== "new" ? dialogItem : null;
+    const oldCategory = editing ? (itemFieldValue(editing, "category") ?? "").trim() : "";
+    const newCategory = values.category.trim();
+    if (
+      editing &&
+      changed.has("category") &&
+      oldCategory &&
+      newCategory &&
+      categoryKey(oldCategory) === categoryKey(newCategory) &&
+      oldCategory !== newCategory
+    ) {
+      const plan = planCategoryRename(
+        listItems.map((i) => ({ id: i.id, category: itemFieldValue(i, "category") ?? "" })),
+        categoryOrder,
+        categoryKey(oldCategory),
+        newCategory,
+      );
+      const otherFields = itemFieldsFromValues(values, false);
+      await push({
+        lists: plan.orderChanged
+          ? [{ id: listId!, fields: fieldPatch(deviceId, "category_order", plan.nextCategoryOrder) }]
+          : [],
+        items: plan.itemIds.map((id) => ({
+          id,
+          list_id: listId!,
+          created_at: nowMs(),
+          fields: {
+            ...fieldPatch(deviceId, "category", newCategory),
+            ...(id === editing.id ? otherFields : {}),
+          },
+        })),
+      });
+      const n = plan.itemIds.length;
+      setCategoryToast(`Fixed casing for ${n} item${n === 1 ? "" : "s"} in ${newCategory}`);
+      setTimeout(() => setCategoryToast((t) => (t && t.endsWith(newCategory) ? null : t)), 4000);
+      return;
+    }
+
     await push({
       items: [
         {
           id: values.itemId,
           list_id: listId!,
           created_at: nowMs(),
-          // Spread only the fields the user actually changed, so an edit stamps a fresh LWW clock
-          // on those alone and can't stomp a collaborator's concurrent edit to an untouched field.
-          fields: {
-            ...(changed.has("name") ? fieldPatch(deviceId, "name", values.name) : {}),
-            ...(changed.has("category") ? fieldPatch(deviceId, "category", values.category || null) : {}),
-            ...(changed.has("stores") ? fieldPatch(deviceId, "stores", values.stores) : {}),
-            ...(changed.has("quantity") ? fieldPatch(deviceId, "quantity", values.quantity || null) : {}),
-            ...(changed.has("price")
-              ? fieldPatch(
-                  deviceId,
-                  "price",
-                  values.priceAmount ? { amount: values.priceAmount, currency: values.priceCurrency || null } : null,
-                )
-              : {}),
-            ...(changed.has("note") ? fieldPatch(deviceId, "note", values.note || null) : {}),
-            ...(changed.has("status") ? fieldPatch(deviceId, "status", values.status) : {}),
-          },
+          fields: itemFieldsFromValues(values, true),
         },
       ],
     });
@@ -191,7 +252,9 @@ export default function ListPage() {
 
       {groups.map((group) => (
         <section key={group.category} style={{ marginBottom: "1rem" }}>
-          <h2 className="muted" style={{ fontSize: "0.85rem", textTransform: "uppercase", margin: "0 0 0.4rem" }}>
+          {/* Not uppercased (T-108): the category's casing is user-controlled now (fixable in the
+              item dialog / list settings), so render it verbatim like the Android app does. */}
+          <h2 className="muted" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
             {group.category}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -232,10 +295,28 @@ export default function ListPage() {
         </div>
       )}
 
+      {categoryToast && (
+        <div
+          className="card"
+          role="status"
+          style={{
+            position: "fixed",
+            bottom: "1rem",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "0.6rem 1rem",
+            boxShadow: "var(--shadow)",
+          }}
+        >
+          {categoryToast}
+        </div>
+      )}
+
       {dialogItem && (
         <ItemDialog
           listId={listId}
           registryItems={listItems}
+          categorySuggestions={categorySuggestions}
           editingItem={dialogItem === "new" ? undefined : dialogItem}
           defaultCurrency={defaultCurrency}
           onClose={() => setDialogItem(null)}

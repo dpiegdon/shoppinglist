@@ -202,6 +202,58 @@ describe("ListPage item-save pushes only changed fields (T-88)", () => {
   });
 });
 
+describe("ListPage category recase-all (T-108)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [
+          itemObj("item-1", "Milk", "todo", "group"),
+          itemObj("item-2", "Bread", "todo", "group"),
+          itemObj("item-3", "Apple", "todo", "produce"),
+        ],
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  function pushedItemCalls() {
+    return vi
+      .mocked(api.sync)
+      .mock.calls.map((c) => c[0])
+      .filter((req) => (req.changes.items?.length ?? 0) > 0);
+  }
+
+  it("editing one item's category to a same-word different-case value recases the whole group", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    // Two items share the "group" category (differing only in case); edit one to "Group".
+    await userEvent.click(screen.getByRole("button", { name: "Edit Milk" }));
+    const categoryInput = screen.getByLabelText("Category");
+    await userEvent.clear(categoryInput);
+    await userEvent.type(categoryInput, "Group");
+    await userEvent.click(screen.getByText("Save"));
+
+    const push = pushedItemCalls()[0];
+    // Both group items are retargeted to "Group"; the produce item is untouched.
+    const byId = Object.fromEntries(push.changes.items!.map((it) => [it.id, it]));
+    expect(new Set(Object.keys(byId))).toEqual(new Set(["item-1", "item-2"]));
+    expect(byId["item-1"].fields.category.value).toBe("Group");
+    expect(byId["item-2"].fields.category.value).toBe("Group");
+
+    expect(await screen.findByText(/Fixed casing for 2 items in Group/)).toBeInTheDocument();
+  });
+});
+
 describe("ListPage title navigates to the overview (T-109)", () => {
   beforeEach(() => {
     vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
