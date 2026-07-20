@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
@@ -175,12 +176,23 @@ class ListViewModel @Inject constructor(
 }
 
 private fun groupByCategory(items: List<ItemEntity>, categoryOrder: List<String>): List<ItemGroup> {
-    val byCategory = items.groupBy { it.category.value }
-    val ordered = categoryOrder.filter { byCategory.containsKey(it) }
-    val leftover = byCategory.keys.filterNotNull().filter { it !in categoryOrder }.sortedBy { it.lowercase() }
-    val keys = ordered + leftover + (if (byCategory.containsKey(null)) listOf(null) else emptyList())
+    // Case-insensitive (T-108): "Group"/"group" merge into one bucket, keyed by the lowercased
+    // category and labelled with the canonical casing (a category_order match, else the most-common
+    // casing). "" is the uncategorized bucket, rendered last as a null category.
+    val names = CategoryCanon.canonicalNames(items.mapNotNull { it.category.value }, categoryOrder)
+    val byKey = items.groupBy { CategoryCanon.key(it.category.value ?: "") }
+    val orderedKeys = categoryOrder.map { CategoryCanon.key(it) }
+        .filter { it.isNotEmpty() && byKey.containsKey(it) }
+        .distinct()
+    val leftover = byKey.keys
+        .filter { it.isNotEmpty() && it !in orderedKeys }
+        .sortedBy { (names[it] ?: it).lowercase() }
+    val keys = orderedKeys + leftover + (if (byKey.containsKey("")) listOf("") else emptyList())
     return keys.map { key ->
-        ItemGroup(category = key, items = byCategory.getValue(key).sortedBy { it.name.value.lowercase() })
+        ItemGroup(
+            category = if (key.isEmpty()) null else names[key] ?: key,
+            items = byKey.getValue(key).sortedBy { it.name.value.lowercase() },
+        )
     }
 }
 

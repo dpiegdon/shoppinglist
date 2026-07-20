@@ -60,6 +60,16 @@ interface ItemDao {
     )
     fun distinctCategories(listId: String): Flow<List<String>>
 
+    /**
+     * Every non-null category value (WITH duplicates), so the canonical-casing pick can weigh by
+     * frequency (T-108) — unlike distinctCategories, which collapses casings and loses the counts.
+     */
+    @Query(
+        "SELECT category_value FROM items " +
+            "WHERE listId = :listId AND deleted_value = 0 AND category_value IS NOT NULL",
+    )
+    fun categoryValues(listId: String): Flow<List<String>>
+
     /** Rows to push: dirty AND not quarantined by a prior server 422 (T-32). */
     @Query("SELECT * FROM items WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ItemEntity>

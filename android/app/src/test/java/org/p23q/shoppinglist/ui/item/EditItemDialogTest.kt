@@ -40,7 +40,7 @@ class EditItemDialogTest {
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setCategory(itemId, "dairy")
-        val viewModel = ItemFormViewModel(itemsRepo, FakeSessionState())
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
         var dismissed = false
 
         composeTestRule.setContent {

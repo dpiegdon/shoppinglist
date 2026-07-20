@@ -15,10 +15,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
+import org.p23q.shoppinglist.data.repo.ListsRepo
 import javax.inject.Inject
 
 data class ItemFormUiState(
@@ -56,6 +58,7 @@ data class ItemFormUiState(
 @HiltViewModel
 class ItemFormViewModel @Inject constructor(
     private val itemsRepo: ItemsRepo,
+    private val listsRepo: ListsRepo,
     private val sessionState: SessionState,
 ) : ViewModel() {
 
@@ -122,8 +125,26 @@ class ItemFormViewModel @Inject constructor(
     }
 
     private fun loadCategorySuggestions() = viewModelScope.launch {
-        val categories = itemsRepo.distinctCategories(listId).first()
-        _uiState.update { it.copy(categorySuggestions = categories) }
+        // Canonical (case-insensitive-distinct) set, so we never offer "Group" and "group"
+        // separately (T-108). Mirrors the web item dialog's suggestions.
+        val raw = itemsRepo.categoryValues(listId).first()
+        val order = listsRepo.getById(listId)?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) }
+            ?: emptyList()
+        _uiState.update { it.copy(categorySuggestions = CategoryCanon.distinctCanonical(raw, order)) }
+    }
+
+    /**
+     * The shared "canonicalize a category" write (T-108): rewrite every item in the [fromKey]
+     * category to [toName] and fix the matching category_order entry. Used here for the recase-all
+     * gesture; the list-settings rename runs the same plan.
+     */
+    private suspend fun applyCategoryRename(fromKey: String, toName: String) {
+        val items = itemsRepo.activeItemsForListOnce(listId)
+        val order = listsRepo.getById(listId)?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) }
+            ?: emptyList()
+        val plan = CategoryCanon.planRename(items.map { it.id to (it.category.value ?: "") }, order, fromKey, toName)
+        itemsRepo.setCategoryBulk(plan.itemIds, toName.trim())
+        if (plan.orderChanged) listsRepo.setCategoryOrder(listId, plan.nextCategoryOrder)
     }
 
     fun onNameChange(value: String) {
@@ -247,7 +268,17 @@ class ItemFormViewModel @Inject constructor(
                 val targetStatus = if (state.isEditMode) state.status else Status.TODO
                 if (snap == null || trimmedName != snap.name) itemsRepo.rename(targetId, trimmedName)
                 if (snap == null || targetStatus != snap.status) itemsRepo.setStatus(targetId, targetStatus)
-                if (snap == null || category != snap.category) itemsRepo.setCategory(targetId, category)
+                if (snap == null || category != snap.category) {
+                    // Same word, different case (T-108): this is "fix the whole category's casing",
+                    // not a one-item change — a per-item recase is a no-op under case-insensitive
+                    // grouping. Recase every item in the category (incl. this one) + fix the order.
+                    val old = snap?.category
+                    if (old != null && category != null && CategoryCanon.key(old) == CategoryCanon.key(category)) {
+                        applyCategoryRename(CategoryCanon.key(old), category)
+                    } else {
+                        itemsRepo.setCategory(targetId, category)
+                    }
+                }
                 if (snap == null || state.stores != snap.stores) itemsRepo.setStores(targetId, state.stores)
                 if (snap == null || quantity != snap.quantity) itemsRepo.setQuantity(targetId, quantity)
                 if (snap == null || normalizedAmount != snap.priceAmount || currency != snap.priceCurrency) {

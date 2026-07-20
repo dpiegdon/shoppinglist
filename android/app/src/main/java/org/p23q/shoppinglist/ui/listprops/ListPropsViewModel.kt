@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.CreateInviteRequest
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.api.PendingInviteDto
+import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -65,11 +66,11 @@ class ListPropsViewModel @Inject constructor(
         viewModelScope.launch {
             val list = listsRepo.getById(listId)
             val currentOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
-            val allCategories = itemsRepo.distinctCategories(listId).first()
+            val rawCategories = itemsRepo.categoryValues(listId).first()
             _uiState.update {
                 it.copy(
                     name = list?.name?.value ?: "",
-                    categoryOrder = mergeCategoryOrder(currentOrder, allCategories),
+                    categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )
             }
@@ -136,6 +137,31 @@ class ListPropsViewModel @Inject constructor(
     }
 
     fun saveCategoryOrder(): Job = viewModelScope.launch { listsRepo.setCategoryOrder(listId, _uiState.value.categoryOrder) }
+
+    /**
+     * Rename / recase a category (T-108): rewrite every item in it to [newNameRaw] and update the
+     * category_order entry. A different word is a full rename; a case-only change fixes the casing.
+     * Renaming onto another existing category merges them (planRename de-dups the order).
+     */
+    fun renameCategory(index: Int, newNameRaw: String): Job? {
+        val newName = newNameRaw.trim()
+        val current = _uiState.value.categoryOrder
+        if (index !in current.indices || newName.isBlank()) return null
+        val fromKey = CategoryCanon.key(current[index])
+        if (CategoryCanon.key(newName) == fromKey && newName == current[index]) return null // unchanged
+        return viewModelScope.launch {
+            val items = itemsRepo.activeItemsForListOnce(listId)
+            val plan = CategoryCanon.planRename(
+                items.map { it.id to (it.category.value ?: "") },
+                current,
+                fromKey,
+                newName,
+            )
+            itemsRepo.setCategoryBulk(plan.itemIds, newName)
+            listsRepo.setCategoryOrder(listId, plan.nextCategoryOrder)
+            _uiState.update { it.copy(categoryOrder = plan.nextCategoryOrder) }
+        }
+    }
 
     fun onInviteEmailChange(value: String) = _uiState.update { it.copy(inviteEmail = value, errorMessage = null) }
 
@@ -218,12 +244,13 @@ private fun List<String>.swap(i: Int, j: Int): List<String> =
     toMutableList().apply { val tmp = this[i]; this[i] = this[j]; this[j] = tmp }
 
 /**
- * Notes: "drag-reorder of distinctCategories ∪ current order" — a real union. A category
- * previously placed in the order stays there even if no item currently carries it (e.g. its last
- * item was recategorized); a category items actually use but that was never ordered gets appended
- * alphabetically.
+ * The full category set for the settings panel (T-108): distinctCategories ∪ current order, keyed
+ * case-insensitively so "Group"/"group" show once, in canonical casing. Ordered categories keep
+ * their position (even if no item currently carries them); the rest are appended alphabetically.
  */
-private fun mergeCategoryOrder(currentOrder: List<String>, allCategories: List<String>): List<String> {
-    val leftover = allCategories.filterNot { it in currentOrder }.sortedBy { it.lowercase() }
-    return currentOrder + leftover
+private fun buildCategoryDisplay(currentOrder: List<String>, rawCategories: List<String>): List<String> {
+    val names = CategoryCanon.canonicalNames(rawCategories, currentOrder)
+    val orderedKeys = currentOrder.map { CategoryCanon.key(it) }.filter { it.isNotEmpty() }.distinct()
+    val leftover = names.keys.filter { it !in orderedKeys }.sortedBy { names.getValue(it).lowercase() }
+    return (orderedKeys + leftover).mapNotNull { names[it] }
 }

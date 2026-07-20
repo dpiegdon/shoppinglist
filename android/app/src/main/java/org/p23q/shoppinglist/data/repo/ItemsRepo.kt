@@ -38,6 +38,13 @@ class ItemsRepo @Inject constructor(
 
     fun distinctCategories(listId: String): Flow<List<String>> = itemDao.distinctCategories(listId)
 
+    /** Category values with duplicates, for frequency-weighted canonical casing (T-108). */
+    fun categoryValues(listId: String): Flow<List<String>> = itemDao.categoryValues(listId)
+
+    /** All non-deleted items in a list (any status), one-shot — for a category recase (T-108). */
+    suspend fun activeItemsForListOnce(listId: String): List<ItemEntity> =
+        itemDao.activeItemsForListOnce(listId)
+
     suspend fun getById(itemId: String): ItemEntity? = itemDao.getById(itemId)
 
     /** Local pre-check mirroring the server's case-insensitive per-list name uniqueness rule. */
@@ -114,6 +121,20 @@ class ItemsRepo @Inject constructor(
 
     suspend fun setCategory(itemId: String, category: String?) =
         updateField(itemId) { it.copy(category = category.toLwwOptional(deviceId.get())) }
+
+    /** Stamp the same category on many items at once (T-108 recase/rename); one shared clock. */
+    suspend fun setCategoryBulk(itemIds: List<String>, category: String?) {
+        if (itemIds.isEmpty()) return
+        val by = deviceId.get()
+        val now = System.currentTimeMillis()
+        var changed = false
+        itemIds.forEach { id ->
+            val current = itemDao.getById(id) ?: return@forEach
+            itemDao.upsert(current.copy(category = category.toLwwOptional(by, now), dirty = true, syncBlocked = false))
+            changed = true
+        }
+        if (changed) syncTrigger.scheduleAfterEdit()
+    }
 
     suspend fun setStores(itemId: String, stores: List<String>) =
         updateField(itemId) { it.copy(stores = encodeStores(stores).toLww(deviceId.get())) }

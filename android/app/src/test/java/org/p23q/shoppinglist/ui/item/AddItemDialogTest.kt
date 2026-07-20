@@ -44,7 +44,7 @@ class AddItemDialogTest {
         val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
-        val viewModel = ItemFormViewModel(itemsRepo, FakeSessionState())
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
         var dismissed = false
 
         composeTestRule.setContent {

@@ -49,7 +49,38 @@ class ItemFormViewModelTest {
         listId = listsRepo.createList("Groceries")
     }
 
-    private fun newViewModel(): ItemFormViewModel = ItemFormViewModel(itemsRepo, sessionState)
+    private fun newViewModel(): ItemFormViewModel = ItemFormViewModel(itemsRepo, listsRepo, sessionState)
+
+    @Test
+    fun `editing a category to the same word with different case recases the whole category (T-108)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val id1 = itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "group") }
+            val id2 = itemsRepo.createItem(listId, "Bread").also { itemsRepo.setCategory(it, "group") }
+            val viewModel = newViewModel()
+            viewModel.startEdit(id1).join()
+
+            viewModel.onCategoryChange("Group")
+            viewModel.save()?.join()
+
+            // Both items in the "group" category are recased, not just the edited one.
+            assertEquals("Group", itemsRepo.getById(id1)!!.category.value)
+            assertEquals("Group", itemsRepo.getById(id2)!!.category.value)
+        }
+
+    @Test
+    fun `editing a category to a different word only moves that one item (T-108)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val id1 = itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
+            val id2 = itemsRepo.createItem(listId, "Butter").also { itemsRepo.setCategory(it, "dairy") }
+            val viewModel = newViewModel()
+            viewModel.startEdit(id1).join()
+
+            viewModel.onCategoryChange("fridge")
+            viewModel.save()?.join()
+
+            assertEquals("fridge", itemsRepo.getById(id1)!!.category.value)
+            assertEquals("dairy", itemsRepo.getById(id2)!!.category.value) // untouched
+        }
 
     @Test
     fun `suggestions narrow as the name is typed, case-insensitively, across every status`() = runTest(mainDispatcherRule.dispatcher) {

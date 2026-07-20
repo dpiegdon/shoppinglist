@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -21,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -83,9 +85,9 @@ fun ListPropsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        Text("Category order", style = MaterialTheme.typography.titleMedium)
+        Text("Categories", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Drag the handle to reorder",
+            "Drag the handle to reorder; tap ✎ to rename or fix casing",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -93,6 +95,7 @@ fun ListPropsScreen(
             categories = state.categoryOrder,
             onMoveUp = viewModel::moveCategoryUp,
             onMoveDown = viewModel::moveCategoryDown,
+            onRename = { index, newName -> viewModel.renameCategory(index, newName) },
         )
         TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text("Save order") }
         Spacer(Modifier.height(16.dp))
@@ -199,50 +202,76 @@ private fun CategoryOrderList(
     categories: List<String>,
     onMoveUp: (Int) -> Unit,
     onMoveDown: (Int) -> Unit,
+    onRename: (Int, String) -> Unit,
 ) {
     val rowHeightPx = with(LocalDensity.current) { 44.dp.toPx() }
     var draggingCategory by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
+    var editingCategory by remember { mutableStateOf<String?>(null) }
+    var draftName by remember { mutableStateOf("") }
     val currentCategories by rememberUpdatedState(categories)
 
     Column {
         categories.forEach { category ->
             key(category) {
-                val dragging = draggingCategory == category
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .zIndex(if (dragging) 1f else 0f)
-                        .graphicsLayer { translationY = if (dragging) dragOffset else 0f }
-                        .background(if (dragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(category, modifier = Modifier.weight(1f))
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Reorder $category",
-                        modifier = Modifier.pointerInput(category) {
-                            detectDragGestures(
-                                onDragStart = { draggingCategory = category; dragOffset = 0f },
-                                onDragEnd = { draggingCategory = null; dragOffset = 0f },
-                                onDragCancel = { draggingCategory = null; dragOffset = 0f },
-                            ) { change, dragAmount ->
-                                change.consume()
-                                dragOffset += dragAmount.y
-                                val idx = currentCategories.indexOf(category)
-                                if (idx < 0) return@detectDragGestures
-                                if (dragOffset <= -rowHeightPx && idx > 0) {
-                                    onMoveUp(idx)
-                                    dragOffset += rowHeightPx
-                                } else if (dragOffset >= rowHeightPx && idx < currentCategories.size - 1) {
-                                    onMoveDown(idx)
-                                    dragOffset -= rowHeightPx
+                if (editingCategory == category) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedTextField(
+                            value = draftName,
+                            onValueChange = { draftName = it },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = {
+                            onRename(currentCategories.indexOf(category), draftName)
+                            editingCategory = null
+                        }) { Text("Save") }
+                        TextButton(onClick = { editingCategory = null }) { Text("Cancel") }
+                    }
+                } else {
+                    val dragging = draggingCategory == category
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .zIndex(if (dragging) 1f else 0f)
+                            .graphicsLayer { translationY = if (dragging) dragOffset else 0f }
+                            .background(if (dragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(category, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { editingCategory = category; draftName = category }) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Rename $category")
+                        }
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Reorder $category",
+                            modifier = Modifier.pointerInput(category) {
+                                detectDragGestures(
+                                    onDragStart = { draggingCategory = category; dragOffset = 0f },
+                                    onDragEnd = { draggingCategory = null; dragOffset = 0f },
+                                    onDragCancel = { draggingCategory = null; dragOffset = 0f },
+                                ) { change, dragAmount ->
+                                    change.consume()
+                                    dragOffset += dragAmount.y
+                                    val idx = currentCategories.indexOf(category)
+                                    if (idx < 0) return@detectDragGestures
+                                    if (dragOffset <= -rowHeightPx && idx > 0) {
+                                        onMoveUp(idx)
+                                        dragOffset += rowHeightPx
+                                    } else if (dragOffset >= rowHeightPx && idx < currentCategories.size - 1) {
+                                        onMoveDown(idx)
+                                        dragOffset -= rowHeightPx
+                                    }
                                 }
-                            }
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
             }
         }
