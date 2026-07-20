@@ -139,3 +139,13 @@ CREATE TABLE IF NOT EXISTS meta (
     last_gc_at INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO meta (id, change_seq, gc_horizon, last_gc_at) VALUES (1, 0, 0, 0);
+
+-- Single-row table: runtime, NON-durable admin overrides (T-107). registration_override
+-- is NULL (no override, use the config default) or 0/1; boot_id tags which server run set
+-- it, so it's ignored + cleared after a restart (see server_settings.py / boot.py).
+CREATE TABLE IF NOT EXISTS server_runtime (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    registration_override INTEGER,
+    boot_id TEXT
+);
+INSERT OR IGNORE INTO server_runtime (id, registration_override, boot_id) VALUES (1, NULL, NULL);

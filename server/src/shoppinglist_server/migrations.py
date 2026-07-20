@@ -45,6 +45,18 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "UPDATE auth_tokens SET idle_ttl_ms = 604800000 WHERE device_label = 'web'",
         ],
     ),  # T-104: per-session sliding inactivity expiry
+    (
+        4,
+        [
+            "CREATE TABLE server_runtime ("
+            "  id INTEGER PRIMARY KEY CHECK (id = 1),"
+            "  registration_override INTEGER,"
+            "  boot_id TEXT"
+            ")",
+            "INSERT OR IGNORE INTO server_runtime (id, registration_override, boot_id) "
+            "VALUES (1, NULL, NULL)",
+        ],
+    ),  # T-107: runtime registration override (non-durable, boot-id tagged)
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

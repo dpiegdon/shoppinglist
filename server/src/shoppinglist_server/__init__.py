@@ -45,6 +45,7 @@ def create_blueprint(
     serve_android_apk: bool = True,
     web_dist_dir: str | None = None,
     allow_registration: bool = True,
+    admin_emails: list[str] | None = None,
 ) -> Blueprint:
     """Build a mountable blueprint instance.
 
@@ -67,6 +68,14 @@ def create_blueprint(
     `allow_registration=False` rejects `POST /register` with a 403
     `registration_disabled` error and tells the served web client to disable
     its register option (T-61) — for instances that are invite/operator-only.
+    An admin may override this at runtime (T-107), but the override is
+    non-durable: this config value reasserts on restart.
+
+    `admin_emails` (T-107) is the ONLY way to grant admin — a static list, matched
+    case-insensitively against the logged-in account's email, checked live. No API
+    path can set it, so there is no privilege-escalation route. Admins get the
+    server-settings tab (registration toggle, reset a user's password, delete a
+    user).
     """
     # "https://example.com/shopping/" -> "/shopping"; no path -> "".
     root_path = urlsplit(base_url).path.rstrip("/")
@@ -80,6 +89,11 @@ def create_blueprint(
         "invite_hmac_key": invite_hmac_key,
         "base_url": base_url,
         "allow_registration": allow_registration,
+        # Pre-normalized (lower + strip, blanks dropped) so the live admin check is a plain set
+        # membership on the account's lowercased email (T-107).
+        "admin_emails": frozenset(
+            e.strip().lower() for e in (admin_emails or []) if e and e.strip()
+        ),
     }
 
     @bp.record_once
@@ -185,6 +199,7 @@ def create_blueprint(
             conn.close()
 
     from .routes.account import register_routes as register_account_routes
+    from .routes.admin import register_routes as register_admin_routes
     from .routes.auth import register_routes as register_auth_routes
     from .routes.invites import register_routes as register_invites_routes
     from .routes.lists import register_routes as register_lists_routes
@@ -195,6 +210,7 @@ def create_blueprint(
     register_lists_routes(bp)
     register_invites_routes(bp)
     register_sync_routes(bp)
+    register_admin_routes(bp)
 
     return bp
 

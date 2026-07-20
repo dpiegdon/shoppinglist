@@ -176,9 +176,15 @@ def update_settings(
     return get_settings(conn, account_id)
 
 
-def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> None:
+def require_password(conn: sqlite3.Connection, account_id: str, password: str) -> None:
+    """Public step-up check (T-107): admin routes re-verify the ADMIN's own password before a
+    destructive action. Same 403 semantics as the self-service confirmation (see _require_password)."""
     _require_password(conn, account_id, password)
 
+
+def _delete_account_row(conn: sqlite3.Connection, account_id: str) -> None:
+    """Delete an account and everything hanging off it. Does NOT commit — the caller does, so a
+    self-delete (password-checked) and an admin delete (by id) can share this body (T-107)."""
     # No future session of this account can exist to observe a tombstone, so
     # (unlike `invites.leave`) there's nothing to preserve propagation for:
     # remove the membership immediately, then let orphan_check clear+tombstone
@@ -204,26 +210,74 @@ def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> 
     # the invitee (T-84).
     conn.execute("DELETE FROM invites WHERE created_by = ?", (account_id,))
     conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+
+
+def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> None:
+    _require_password(conn, account_id, password)
+    _delete_account_row(conn, account_id)
     conn.commit()
 
 
+def admin_delete_account(conn: sqlite3.Connection, account_id: str) -> None:
+    """Admin removal of another account by id, no password of the target's (T-107). Caller
+    (routes/admin) has already re-verified the admin's own password and the guards."""
+    row = conn.execute("SELECT id FROM accounts WHERE id = ?", (account_id,)).fetchone()
+    if row is None:
+        raise ApiError(404, "account_not_found", "No account with this id exists.")
+    _delete_account_row(conn, account_id)
+    conn.commit()
+
+
+def list_all_accounts(conn: sqlite3.Connection, admin_emails) -> list:
+    """Every account, for the admin users list (T-107). is_admin is derived from the static
+    config set, never stored."""
+    rows = conn.execute(
+        "SELECT accounts.id AS id, accounts.email AS email, accounts.created_at AS created_at, "
+        "COUNT(auth_tokens.id) AS session_count "
+        "FROM accounts LEFT JOIN auth_tokens ON auth_tokens.account_id = accounts.id "
+        "GROUP BY accounts.id ORDER BY accounts.created_at"
+    ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "email": row["email"],
+            "created_at": row["created_at"],
+            "session_count": row["session_count"],
+            "is_admin": auth.is_admin_email(row["email"], admin_emails),
+        }
+        for row in rows
+    ]
+
+
+def _reset_password_for(conn: sqlite3.Connection, account_id: str) -> str:
+    alphabet = string.ascii_letters + string.digits
+    new_password = "".join(secrets.choice(alphabet) for _ in range(RESET_PASSWORD_LENGTH))
+    conn.execute(
+        "UPDATE accounts SET password_hash = ? WHERE id = ?",
+        (generate_password_hash(new_password), account_id),
+    )
+    # Revoke every session (unlike change_password's T-45 carve-out, there is no
+    # "current session" to spare here — this is an operator/admin resetting a possibly
+    # compromised account, not the user acting from a trusted device):
+    # leaving old tokens valid would let a stolen token survive the reset.
+    conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (account_id,))
+    conn.commit()
+    return new_password
+
+
 def reset_password(conn: sqlite3.Connection, email: str) -> str:
+    """Operator CLI reset by email (T-92)."""
     row = conn.execute(
         "SELECT id FROM accounts WHERE lower(email) = lower(?)", (email,)
     ).fetchone()
     if row is None:
         raise ApiError(404, "account_not_found", "No account with this email exists.")
+    return _reset_password_for(conn, row["id"])
 
-    alphabet = string.ascii_letters + string.digits
-    new_password = "".join(secrets.choice(alphabet) for _ in range(RESET_PASSWORD_LENGTH))
-    conn.execute(
-        "UPDATE accounts SET password_hash = ? WHERE id = ?",
-        (generate_password_hash(new_password), row["id"]),
-    )
-    # Revoke every session (unlike change_password's T-45 carve-out, there is no
-    # "current session" to spare here — this is an operator resetting a possibly
-    # compromised account from the CLI, not the user acting from a trusted device):
-    # leaving old tokens valid would let a stolen token survive the reset.
-    conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (row["id"],))
-    conn.commit()
-    return new_password
+
+def admin_reset_password(conn: sqlite3.Connection, account_id: str) -> str:
+    """Admin reset by account id (T-107); the caller has re-verified the admin's own password."""
+    row = conn.execute("SELECT id FROM accounts WHERE id = ?", (account_id,)).fetchone()
+    if row is None:
+        raise ApiError(404, "account_not_found", "No account with this id exists.")
+    return _reset_password_for(conn, account_id)

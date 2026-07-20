@@ -10,7 +10,7 @@ from functools import wraps
 from flask import g, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import get_db
+from . import get_config, get_db
 from .errors import ApiError
 
 DEFAULT_CURRENCY = "EUR"
@@ -211,6 +211,28 @@ def authed(view_func):
         conn = get_db()
         g.account = require_account(conn, request)
         g.token = _extract_token(request)
+        return view_func(*args, **kwargs)
+
+    return wrapper
+
+
+def is_admin_email(email, admin_emails) -> bool:
+    """Admin identity (T-107): membership in the instance's static admin_emails set, matched
+    case-insensitively (login/uniqueness are already case-insensitive). Config is the ONLY source;
+    no API path can grant it."""
+    return isinstance(email, str) and email.strip().lower() in admin_emails
+
+
+def admin_required(view_func):
+    """Like `authed`, plus a 403 unless the account's email is a configured admin (T-107)."""
+
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        conn = get_db()
+        g.account = require_account(conn, request)
+        g.token = _extract_token(request)
+        if not is_admin_email(g.account.email, get_config().get("admin_emails", frozenset())):
+            raise ApiError(403, "not_admin", "Admin access is required.")
         return view_func(*args, **kwargs)
 
     return wrapper
