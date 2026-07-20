@@ -126,7 +126,16 @@ export default function ListPage() {
           margin: "0.25rem 0",
         }}
       >
-        {listFieldValue(list, "name")}
+        {/* Tapping the title also returns to the overview, mirroring the Android app's tappable
+            top-bar title (T-109). The "← All lists" link above stays; this is a second, larger
+            target. Link inherits the heading's type styles rather than looking like body-text. */}
+        <Link
+          to="/"
+          title="Back to all lists"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
+          {listFieldValue(list, "name")}
+        </Link>
       </h1>
 
       {/* Top controls row mirrors the Android app: show-checked on the left, all-items/settings

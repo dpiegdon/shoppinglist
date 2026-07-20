@@ -52,6 +52,7 @@ function renderListPage() {
       <SyncProvider>
         <Routes>
           <Route path="/list/:listId" element={<ListPage />} />
+          <Route path="/" element={<div>Overview page</div>} />
         </Routes>
       </SyncProvider>
     </MemoryRouter>,
@@ -198,6 +199,35 @@ describe("ListPage item-save pushes only changed fields (T-88)", () => {
     expect(pushes).toHaveLength(1);
     expect(pushes[0].changes.items![0].id).toBe("item-2");
     expect(Object.keys(pushes[0].changes.items![0].fields)).toEqual(["status"]);
+  });
+});
+
+describe("ListPage title navigates to the overview (T-109)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [itemObj("item-1", "Milk", "todo")] },
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("clicking the list title returns to all lists, like the app", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    // The title "Groceries" is a link to the overview (distinct from the "← All lists" link above).
+    const titleLink = screen.getByRole("link", { name: "Groceries" });
+    expect(titleLink).toHaveAttribute("href", "/");
+
+    await userEvent.click(titleLink);
+
+    expect(screen.getByText("Overview page")).toBeInTheDocument();
   });
 });
 
