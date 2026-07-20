@@ -1,4 +1,6 @@
 import type {
+  AdminServerSettings,
+  AdminUsersResponse,
   ApiErrorBody,
   ListSummary,
   LoginRequest,
@@ -69,7 +71,7 @@ export function onForcedLogout(handler: (() => void) | null): void {
 }
 
 interface RequestOptions {
-  method: "GET" | "POST" | "PATCH" | "DELETE";
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   // Credential exchanges (/login, /register) must not carry the current
   // session token: /login is reachable while logged in, and a wrong-password
@@ -191,4 +193,36 @@ export function redeemInvite(token: string): Promise<RedeemResponse> {
 
 export function sync(body: SyncRequest): Promise<SyncResponse> {
   return apiFetch("/sync", { method: "POST", body });
+}
+
+// --- Admin (T-107) ---
+
+/** Public: the EFFECTIVE registration flag (reflects an admin's live override), for the auth page. */
+export function getRegistrationStatus(): Promise<AdminServerSettings> {
+  return apiFetch("/registration-status", { method: "GET", skipAuth: true });
+}
+
+export function getAdminUsers(): Promise<AdminUsersResponse> {
+  return apiFetch("/admin/users", { method: "GET" });
+}
+
+export function getServerSettings(): Promise<AdminServerSettings> {
+  return apiFetch("/admin/server-settings", { method: "GET" });
+}
+
+export function setServerSettings(allowRegistration: boolean): Promise<AdminServerSettings> {
+  return apiFetch("/admin/server-settings", {
+    method: "PUT",
+    body: { allow_registration: allowRegistration },
+  });
+}
+
+/** Step-up: `password` is the ADMIN's own password. Returns the new password once. */
+export function adminResetPassword(accountId: string, password: string): Promise<{ password: string }> {
+  return apiFetch(`/admin/users/${accountId}/reset-password`, { method: "POST", body: { password } });
+}
+
+/** Step-up: `password` is the ADMIN's own password. */
+export function adminDeleteUser(accountId: string, password: string): Promise<void> {
+  return apiFetch(`/admin/users/${accountId}`, { method: "DELETE", body: { password } });
 }

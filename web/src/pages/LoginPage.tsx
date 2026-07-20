@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { allowRegistration, appBasename } from "../lib/appConfig";
 
@@ -15,6 +16,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [apkAvailable, setApkAvailable] = useState(false);
+  // Start from the startup-baked meta flag, then refresh with the EFFECTIVE value so an admin's
+  // live registration toggle is reflected without a redeploy (T-107). Falls back to the meta value
+  // if the fetch fails (offline / old server).
+  const [registrationAllowed, setRegistrationAllowed] = useState(allowRegistration());
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getRegistrationStatus()
+      .then((s) => { if (!cancelled) setRegistrationAllowed(s.allow_registration); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Show the app-download link only when this server actually serves the APK (T-59) — the SPA is
   // static, so probe rather than render a link that might 404 on an operator without the artifact.
@@ -92,14 +106,14 @@ export default function LoginPage() {
         </button>
         <button
           type="button"
-          disabled={!allowRegistration()}
+          disabled={!registrationAllowed}
           onClick={() => setMode(mode === "login" ? "register" : "login")}
           className="btn-secondary btn"
           style={{ width: "100%", marginTop: "0.5rem", background: "transparent", border: "none" }}
         >
           {mode === "login" ? "Need an account? Register" : "Have an account? Log in"}
         </button>
-        {!allowRegistration() && (
+        {!registrationAllowed && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.25rem", marginBottom: 0, fontSize: "0.85rem" }}>
             Registration is disabled on this server.
           </p>

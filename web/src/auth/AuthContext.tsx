@@ -4,6 +4,9 @@ import * as api from "../api/client";
 interface Account {
   id: string;
   email: string;
+  // Configured-admin flag from the login response (T-107); gates the admin tab. Persisted with the
+  // account so it survives a reload; refreshed on the next login (config changes need a re-login).
+  isAdmin: boolean;
 }
 
 interface AuthContextValue {
@@ -56,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         platform: "web",
       });
       api.setToken(result.token);
-      const nextAccount = { id: result.account_id, email: result.email };
+      const nextAccount = { id: result.account_id, email: result.email, isAdmin: result.is_admin };
       storeAccount(nextAccount);
       setAccount(nextAccount);
     } finally {

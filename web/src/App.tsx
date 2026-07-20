@@ -7,6 +7,7 @@ import ListPage from "./pages/ListPage";
 import RegistryPage from "./pages/RegistryPage";
 import ListPropsPage from "./pages/ListPropsPage";
 import SettingsPage from "./pages/SettingsPage";
+import AdminPage from "./pages/AdminPage";
 import RedeemPage from "./pages/RedeemPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminPage />
           </ProtectedRoute>
         }
       />

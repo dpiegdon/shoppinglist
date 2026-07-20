@@ -245,10 +245,11 @@ describe("ListPage category recase-all (T-108)", () => {
 
     const push = pushedItemCalls()[0];
     // Both group items are retargeted to "Group"; the produce item is untouched.
-    const byId = Object.fromEntries(push.changes.items!.map((it) => [it.id, it]));
-    expect(new Set(Object.keys(byId))).toEqual(new Set(["item-1", "item-2"]));
-    expect(byId["item-1"].fields.category.value).toBe("Group");
-    expect(byId["item-2"].fields.category.value).toBe("Group");
+    const items = push.changes.items ?? [];
+    const catOf = (id: string) => items.find((it) => it.id === id)?.fields.category?.value;
+    expect(new Set(items.map((it) => it.id))).toEqual(new Set(["item-1", "item-2"]));
+    expect(catOf("item-1")).toBe("Group");
+    expect(catOf("item-2")).toBe("Group");
 
     expect(await screen.findByText(/Fixed casing for 2 items in Group/)).toBeInTheDocument();
   });

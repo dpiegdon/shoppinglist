@@ -53,6 +53,7 @@ describe("AuthProvider", () => {
       token: "tok",
       account_id: "acc-1",
       email: "a@example.com",
+      is_admin: false,
     });
 
     render(
@@ -71,6 +72,7 @@ describe("AuthProvider", () => {
       token: "tok",
       account_id: "acc-1",
       email: "a@example.com",
+      is_admin: false,
     });
 
     render(
@@ -91,6 +93,7 @@ describe("AuthProvider", () => {
       token: "tok",
       account_id: "acc-1",
       email: "a@example.com",
+      is_admin: false,
     });
 
     render(
@@ -109,6 +112,7 @@ describe("AuthProvider", () => {
       token: "tok",
       account_id: "acc-1",
       email: "a@example.com",
+      is_admin: false,
     });
     vi.mocked(api.logout).mockRejectedValue(new Error("network error"));
 
@@ -131,6 +135,7 @@ describe("AuthProvider", () => {
       token: "tok",
       account_id: "acc-1",
       email: "a@example.com",
+      is_admin: false,
     });
     // Mirror the real registry's last-write-wins semantics so we always hold
     // whatever handler THIS test's AuthProvider registered on mount, immune to

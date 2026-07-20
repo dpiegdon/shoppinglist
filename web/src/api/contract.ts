@@ -90,6 +90,26 @@ export interface LoginResponse {
   token: string;
   account_id: string;
   email: string;
+  // Whether this account is a configured admin (T-107); drives the admin tab.
+  is_admin: boolean;
+}
+
+// --- Admin (T-107) ---
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  created_at: number;
+  session_count: number;
+  is_admin: boolean;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+}
+
+export interface AdminServerSettings {
+  allow_registration: boolean;
 }
 
 export interface Session {
