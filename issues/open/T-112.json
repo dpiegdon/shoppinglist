@@ -1,0 +1,14 @@
+{
+  "body": "Post-1.7.0 admin/UX polish, reported by the user testing on-device.\n\n1. Admin delete-user footgun: clicking Delete on a user (among many) deleted\n   immediately with no confirmation on Android (web had only a browser confirm).\n   Now BOTH clients show an explicit confirmation dialog naming the user, even\n   though the admin's step-up password was already entered \u2014 a misclick can't nuke\n   an account. (web: in-page modal, confirm button reads \"Delete <email>\";\n   android: AlertDialog.)\n2. Admin registration control is now a toggle SWITCH on the right (not a text\n   button): green when registration is on, red when denied. Both clients.\n3. Settings \"Delete account\": filled red button (was a plain error-colored\n   TextButton on Android), matching the Clear-checked danger action. (web was\n   already btn-danger.)\n4. List settings \"Unsubscribe\" renamed to \"Leave list\" and made a red button on\n   Android (web already had a red \"Leave list\").\n5. Notifications diagnostic: SyncWorker now records + logs each background\n   (WorkManager) run; Settings \u2192 Diagnostics shows \"Last background sync: <ago>\"\n   so the user can confirm on-device whether background sync runs at all. If it\n   stays \"never\" while the app is closed, the OS is killing background work\n   (battery optimization / Doze) \u2014 the usual reason collaborator-change\n   notifications don't fire on a real device. (Investigation: the notification +\n   WorkManager plumbing is complete and correct \u2014 POST_NOTIFICATIONS requested,\n   periodic/edit/immediate work scheduled \u2014 so this is a runtime/OS issue, not a\n   code gap.)\n\nVerified: web 143 passed + tsc + lint; android testDebugUnitTest + lintDebug\n(pending build at commit time). NOT released \u2014 batched for the next release.",
+  "created_at": "2026-07-21T19:57:39+00:00",
+  "id": "T-112",
+  "labels": [
+    "web",
+    "android",
+    "ux",
+    "bug"
+  ],
+  "priority": 3,
+  "title": "Admin delete footgun + registration switch; red danger buttons; background-sync diagnostic",
+  "updated_at": "2026-07-21T19:57:39+00:00"
+}
