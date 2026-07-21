@@ -64,6 +64,8 @@ data class SettingsUiState(
     val crashLogPath: String? = null,
     /** Global collaborator-change notifications on/off (T-65). */
     val notificationsEnabled: Boolean = true,
+    /** Diagnostics: when the background (WorkManager) sync last ran, humanized (T-112). */
+    val lastBackgroundSyncText: String = "never",
 )
 
 /** Notes: "the usual stuff" — currency, password/email, sessions, delete account, theme, server URL. */
@@ -102,6 +104,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             notificationPrefs.notificationsEnabled.collect { enabled ->
                 _uiState.update { it.copy(notificationsEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            notificationPrefs.lastBackgroundSyncAt.collect { at ->
+                _uiState.update { it.copy(lastBackgroundSyncText = formatBackgroundSync(at)) }
             }
         }
     }
@@ -325,5 +332,17 @@ class SettingsViewModel @Inject constructor(
     private companion object {
         val ISO_CURRENCY = Regex("^[A-Z]{3}$")
         const val INITIALS_MAX_LENGTH = 3
+    }
+}
+
+/** Coarse "how long ago" for the background-sync diagnostic (T-112); 0 = never ran. */
+internal fun formatBackgroundSync(at: Long, now: Long = System.currentTimeMillis()): String {
+    if (at <= 0L) return "never"
+    val elapsed = now - at
+    return when {
+        elapsed < 60_000 -> "just now"
+        elapsed < 3_600_000 -> "${elapsed / 60_000} min ago"
+        elapsed < 86_400_000 -> "${elapsed / 3_600_000} h ago"
+        else -> "${elapsed / 86_400_000} d ago"
     }
 }

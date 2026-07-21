@@ -96,7 +96,7 @@ class ListPropsScreenTest {
         composeTestRule.onNodeWithText("Groceries").assertExists()
         composeTestRule.onNodeWithText("dairy").assertExists()
 
-        composeTestRule.onNodeWithText("Unsubscribe").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Leave list").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Leave this list?").assertExists()

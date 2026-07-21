@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -239,14 +240,26 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
 
         Text("Danger zone", style = MaterialTheme.typography.titleMedium)
-        TextButton(onClick = viewModel::requestDeleteAccount) {
-            Text("Delete account", color = MaterialTheme.colorScheme.error)
-        }
+        // Filled red button (T-112), matching the Clear-checked danger action — not an easy-to-miss
+        // text button. Confirmation still gates the actual delete.
+        Button(
+            onClick = viewModel::requestDeleteAccount,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Delete account") }
         Spacer(Modifier.height(16.dp))
 
         // No telemetry service (T-50) — this is purely local, opt-in, and manual: the crash log
         // never leaves the device unless the user explicitly shares it here.
         Text("Diagnostics", style = MaterialTheme.typography.titleMedium)
+        // On-device way to check that background sync (WorkManager) actually runs (T-112) — if this
+        // stays "never" while the app is closed, the OS is likely killing background work (battery
+        // optimization / Doze), which is also why collaborator-change notifications wouldn't fire.
+        Text(
+            "Last background sync: ${state.lastBackgroundSyncText}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         TextButton(onClick = viewModel::shareLogs) { Text("Share crash logs") }
         Spacer(Modifier.height(16.dp))
 

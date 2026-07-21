@@ -12,6 +12,15 @@ class LastSeenTest {
     private val day = 24 * hour
 
     @Test
+    fun `background-sync diagnostic reads never, just now, then coarsens (T-112)`() {
+        assertEquals("never", formatBackgroundSync(0L, now))
+        assertEquals("just now", formatBackgroundSync(now - 30_000, now))
+        assertEquals("20 min ago", formatBackgroundSync(now - 20 * minute, now))
+        assertEquals("3 h ago", formatBackgroundSync(now - 3 * hour, now))
+        assertEquals("2 d ago", formatBackgroundSync(now - 2 * day, now))
+    }
+
+    @Test
     fun `very recent activity reads as active`() {
         assertEquals("Active now", formatLastSeen(now, now))
         assertEquals("Active now", formatLastSeen(now - 90_000, now))

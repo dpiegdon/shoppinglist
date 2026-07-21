@@ -175,7 +175,11 @@ fun ListPropsScreen(
         TextButton(onClick = viewModel::duplicateList) { Text("Duplicate") }
         Spacer(Modifier.height(8.dp))
 
-        Button(onClick = viewModel::requestLeave) { Text("Unsubscribe") }
+        // "Leave list" (was "Unsubscribe", T-112): red, matching the Clear-checked danger action.
+        Button(
+            onClick = viewModel::requestLeave,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+        ) { Text("Leave list") }
     }
 
     if (state.isLeaveConfirmOpen) {

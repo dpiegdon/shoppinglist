@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import dagger.Module
@@ -55,6 +56,18 @@ class NotificationPrefsStore @Inject constructor(
     val notificationPermissionRequested: Flow<Boolean> =
         dataStore.data.map { it[PERMISSION_REQUESTED_KEY] ?: false }
 
+    /**
+     * Wall-clock time of the last background (WorkManager) sync attempt, or 0 if none since install
+     * (T-112). Surfaced in Settings → Diagnostics so the user can confirm on-device whether
+     * background sync is actually running — if it stays 0/old while the app is closed, the OS is
+     * likely killing background work, which is also why notifications wouldn't fire.
+     */
+    val lastBackgroundSyncAt: Flow<Long> = dataStore.data.map { it[LAST_BG_SYNC_KEY] ?: 0L }
+
+    suspend fun recordBackgroundSync(atMillis: Long) {
+        dataStore.edit { it[LAST_BG_SYNC_KEY] = atMillis }
+    }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[ENABLED_KEY] = enabled }
     }
@@ -74,5 +87,6 @@ class NotificationPrefsStore @Inject constructor(
         val ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
         val MUTED_LISTS_KEY = stringSetPreferencesKey("muted_list_ids")
         val PERMISSION_REQUESTED_KEY = booleanPreferencesKey("notification_permission_requested")
+        val LAST_BG_SYNC_KEY = longPreferencesKey("last_background_sync_at")
     }
 }
