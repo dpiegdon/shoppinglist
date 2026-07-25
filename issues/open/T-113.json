@@ -1,0 +1,14 @@
+{
+  "body": "Reported by the user: in the admin tab, deleting a user with no step-up password\nentered does nothing, with no indication that the password is what's missing.\n\n## What was actually wrong\n\nBoth clients DID set a message \u2014 but rendered it as the page-level error at the\nvery TOP of the screen, far above the user rows. Scrolled down among several\nusers you never see it, so a blocked action reads as \"nothing happened\".\n\nAndroid was worse: the password check ran INSIDE deleteUser(), i.e. AFTER the\nT-112 confirmation dialog. So you tapped Delete, confirmed \"yes, delete this\nuser\", and then silently nothing happened.\n\n## Fix (both clients)\n\n- The missing-password complaint now renders AT the password field (\"Enter your\n  password to reset or delete a user.\"), with the field in an error state \u2014 where\n  the user must act, not at the top of a scrolling page. Applies to reset too.\n- It clears as soon as a password is typed.\n- Android checks the password BEFORE opening the delete confirmation (matching\n  web), so the user is never asked to confirm a deletion that then can't run.\n- Web also focuses the password field so the fix is one keystroke away.\n\nThe page-level error stays for genuine API/network failures.\n\nDeliberately NOT disabling the buttons: a disabled control is another silent\n\"nothing happens\" \u2014 an explicit message that names the missing input teaches what\nto do.\n\nVerified: web 152 passed (3 new AdminPage tests: delete blocked+explained, reset\nblocked+explained, complaint clears on typing) + tsc + lint; android\ntestDebugUnitTest + lintDebug (new AdminViewModel test).",
+  "created_at": "2026-07-25T11:16:49+00:00",
+  "id": "T-113",
+  "labels": [
+    "web",
+    "android",
+    "ux",
+    "bug"
+  ],
+  "priority": 3,
+  "title": "Admin: missing step-up password blocks delete/reset with no visible reason",
+  "updated_at": "2026-07-25T11:16:49+00:00"
+}
