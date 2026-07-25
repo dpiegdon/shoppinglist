@@ -85,6 +85,8 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             label = { Text("Your password (for reset/delete)") },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
+            isError = state.passwordError != null,
+            supportingText = state.passwordError?.let { { Text(it) } },
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -104,7 +106,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 user = user,
                 deletable = !user.isAdmin && user.id != state.currentAccountId,
                 onReset = { viewModel.resetPassword(user) },
-                onDelete = { pendingDelete = user },
+                onDelete = { if (viewModel.requirePassword()) pendingDelete = user },
             )
             HorizontalDivider()
         }

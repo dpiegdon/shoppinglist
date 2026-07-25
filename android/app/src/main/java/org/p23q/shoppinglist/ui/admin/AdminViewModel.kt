@@ -24,6 +24,11 @@ data class AdminUiState(
     val allowRegistration: Boolean? = null,
     /** The admin's own password, entered once for step-up on reset/delete (T-107). */
     val password: String = "",
+    /**
+     * Complaint shown AT the password field (T-113). The page-level [error] sits at the top of a
+     * scrolling screen, so a blocked reset/delete looked like nothing happened at all.
+     */
+    val passwordError: String? = null,
     val error: String? = null,
     /** The most recent reset — its new password is shown once. */
     val resetEmail: String? = null,
@@ -59,7 +64,22 @@ class AdminViewModel @Inject constructor(
         }
     }
 
-    fun onPasswordChange(value: String) = _uiState.update { it.copy(password = value, error = null) }
+    fun onPasswordChange(value: String) =
+        _uiState.update { it.copy(password = value, error = null, passwordError = if (value.isBlank()) it.passwordError else null) }
+
+    /**
+     * True (and complains inline) when the step-up password is missing. Callers check this BEFORE
+     * doing anything else — notably before opening the delete confirmation, so the user is never
+     * asked to confirm a deletion that then can't run (T-113).
+     */
+    fun requirePassword(): Boolean {
+        if (_uiState.value.password.isNotBlank()) {
+            _uiState.update { it.copy(passwordError = null) }
+            return true
+        }
+        _uiState.update { it.copy(passwordError = "Enter your password to reset or delete a user.") }
+        return false
+    }
 
     fun toggleRegistration(): Job? {
         val current = _uiState.value.allowRegistration ?: return null
@@ -76,11 +96,8 @@ class AdminViewModel @Inject constructor(
     }
 
     fun resetPassword(user: AdminUserDto): Job? {
+        if (!requirePassword()) return null
         val pw = _uiState.value.password
-        if (pw.isBlank()) {
-            _uiState.update { it.copy(error = "Enter your password first") }
-            return null
-        }
         return viewModelScope.launch {
             try {
                 val result = apiProvider.get().adminResetPassword(user.id, AdminPasswordRequest(pw))
@@ -96,11 +113,8 @@ class AdminViewModel @Inject constructor(
     }
 
     fun deleteUser(user: AdminUserDto): Job? {
+        if (!requirePassword()) return null
         val pw = _uiState.value.password
-        if (pw.isBlank()) {
-            _uiState.update { it.copy(error = "Enter your password first") }
-            return null
-        }
         return viewModelScope.launch {
             try {
                 apiProvider.get().adminDeleteUser(user.id, AdminPasswordRequest(pw))

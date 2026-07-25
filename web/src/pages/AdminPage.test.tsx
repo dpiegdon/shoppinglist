@@ -87,6 +87,40 @@ describe("AdminPage (T-107)", () => {
     await waitFor(() => expect(screen.queryByText("u@example.com")).not.toBeInTheDocument());
   });
 
+  it("says the password is required instead of silently doing nothing (T-113)", async () => {
+    renderAdmin();
+    await screen.findByText("u@example.com");
+
+    // No password typed: clicking Delete must explain why nothing happened.
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
+    // ...and neither delete nor its confirmation happened.
+    expect(api.adminDeleteUser).not.toHaveBeenCalled();
+    expect(screen.queryByText("Delete user?")).not.toBeInTheDocument();
+  });
+
+  it("says the password is required for a reset too (T-113)", async () => {
+    renderAdmin();
+    await screen.findByText("u@example.com");
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[0]!);
+
+    expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
+    expect(api.adminResetPassword).not.toHaveBeenCalled();
+  });
+
+  it("clears the password complaint once one is typed (T-113)", async () => {
+    renderAdmin();
+    await screen.findByText("u@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
+
+    expect(screen.queryByText(/Enter your password/)).not.toBeInTheDocument();
+  });
+
   it("cancelling the confirmation does not delete", async () => {
     vi.mocked(api.adminDeleteUser).mockResolvedValue(undefined);
     renderAdmin();

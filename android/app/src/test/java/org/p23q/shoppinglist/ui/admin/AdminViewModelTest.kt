@@ -115,6 +115,31 @@ class AdminViewModelTest {
     }
 
     @Test
+    fun `a missing password is reported at the field, not silently ignored (T-113)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            route()
+            val viewModel = newViewModel()
+            val loaded = viewModel.uiState.first { it.users.isNotEmpty() }
+            val victim = loaded.users.first { it.id == "user-2" }
+
+            // requirePassword is what the screen calls before opening the delete confirmation.
+            assertFalse(viewModel.requirePassword())
+            assertEquals(
+                "Enter your password to reset or delete a user.",
+                viewModel.uiState.value.passwordError,
+            )
+
+            // Reset reports it the same way, and doesn't run.
+            assertEquals(null, viewModel.resetPassword(victim))
+            assertTrue(viewModel.uiState.value.passwordError != null)
+
+            // Typing a password clears the complaint and unblocks the action.
+            viewModel.onPasswordChange("adminpw")
+            assertEquals(null, viewModel.uiState.value.passwordError)
+            assertTrue(viewModel.requirePassword())
+        }
+
+    @Test
     fun `deleteUser requires the step-up password and removes the row`() = runTest(mainDispatcherRule.dispatcher) {
         route()
         val viewModel = newViewModel()

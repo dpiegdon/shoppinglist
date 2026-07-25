@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
@@ -66,8 +66,24 @@ export default function AdminPage() {
   const [allowRegistration, setAllowRegistration] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Shown at the password field itself, not with the page-level `error` at the top (T-113): the
+  // top message is easy to miss when you're scrolled down among many users, which made a
+  // blocked reset/delete look like nothing happened at all.
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  /** True (and complains inline) when the step-up password is missing. */
+  function requirePassword(): boolean {
+    if (password) {
+      setPasswordError(null);
+      return true;
+    }
+    setPasswordError("Enter your password to reset or delete a user.");
+    passwordRef.current?.focus();
+    return false;
+  }
 
   async function load() {
     try {
@@ -99,7 +115,7 @@ export default function AdminPage() {
   }
 
   async function resetPassword(user: AdminUser) {
-    if (!password) return setError("Enter your password first.");
+    if (!requirePassword()) return;
     setError(null);
     setResetResult(null);
     try {
@@ -111,7 +127,7 @@ export default function AdminPage() {
   }
 
   function requestDelete(user: AdminUser) {
-    if (!password) return setError("Enter your password first.");
+    if (!requirePassword()) return;
     setError(null);
     setDeleteTarget(user);
   }
@@ -162,10 +178,20 @@ export default function AdminPage() {
           <input
             id="admin-password"
             type="password"
+            ref={passwordRef}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (e.target.value) setPasswordError(null);
+            }}
             autoComplete="current-password"
+            aria-invalid={passwordError ? true : undefined}
           />
+          {passwordError && (
+            <p className="error-text" role="alert">
+              {passwordError}
+            </p>
+          )}
         </div>
 
         {resetResult && (
