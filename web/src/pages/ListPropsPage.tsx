@@ -6,7 +6,8 @@ import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
 import { canonicalCategoryNames, categoryKey, planCategoryRename } from "../lib/categories";
-import type { ItemStatus, MembersResponse } from "../api/contract";
+import { listKind, listKindLabel } from "../lib/listKind";
+import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 
 export default function ListPropsPage() {
@@ -89,6 +90,15 @@ export default function ListPropsPage() {
     } finally {
       setSavingNotes(false);
     }
+  }
+
+  /**
+   * Convert between shopping list and checklist (T-110). Non-destructive: the item schema is the
+   * same for both, so this only changes which fields the clients render — stores/price/quantity
+   * survive a conversion and reappear if you switch back.
+   */
+  async function setKind(kind: ListKind) {
+    await push({ lists: [{ id, fields: fieldPatch(deviceId, "kind", kind) }] });
   }
 
   async function saveCategoryOrder(next: string[]) {
@@ -271,6 +281,30 @@ export default function ListPropsPage() {
             Save
           </button>
         </form>
+      </section>
+
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Type</h2>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+          <div>
+            <div>{listKindLabel(listKind(list))}</div>
+            <p className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
+              {listKind(list) === "checklist"
+                ? "Items have a name, category and note."
+                : "Items also have stores, quantity and price."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setKind(listKind(list) === "checklist" ? "shopping" : "checklist")}
+          >
+            {listKind(list) === "checklist" ? "Make shopping list" : "Make checklist"}
+          </button>
+        </div>
+        <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.8rem" }}>
+          Switching only changes which fields are shown — nothing is deleted, so you can switch back.
+        </p>
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>

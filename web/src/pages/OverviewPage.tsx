@@ -3,6 +3,8 @@ import { Navigate, Link } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
+import { DEFAULT_LIST_KIND, listKind, listKindIcon, listKindLabel } from "../lib/listKind";
+import type { ListKind } from "../api/contract";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
 
@@ -22,6 +24,8 @@ export default function OverviewPage() {
   const { lists, items, loading, push, deviceId } = useSyncContext();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  // Shopping is preselected so creating a list behaves exactly as it always has (T-110).
+  const [newKind, setNewKind] = useState<ListKind>(DEFAULT_LIST_KIND);
   const [redirectTo, setRedirectTo] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -49,9 +53,18 @@ export default function OverviewPage() {
     if (!name) return;
     const id = crypto.randomUUID();
     await push({
-      lists: [{ id, fields: fieldPatch(deviceId, "name", name) }],
+      lists: [
+        {
+          id,
+          fields: {
+            ...fieldPatch(deviceId, "name", name),
+            ...fieldPatch(deviceId, "kind", newKind),
+          },
+        },
+      ],
     });
     setNewName("");
+    setNewKind(DEFAULT_LIST_KIND);
     setCreating(false);
   }
 
@@ -98,6 +111,9 @@ export default function OverviewPage() {
                 gap: "0.5rem",
               }}
             >
+              <span aria-label={listKindLabel(listKind(list))} title={listKindLabel(listKind(list))}>
+                {listKindIcon(listKind(list))}
+              </span>
               <span style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>
               {openCount > 0 && (
                 <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>{openCount}</span>
@@ -121,6 +137,32 @@ export default function OverviewPage() {
                 onChange={(e) => setNewName(e.target.value)}
               />
             </div>
+            {/* Kind is chosen up front (T-110) but isn't permanent — it can be changed later in
+                list properties, and converting never touches item data. */}
+            <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
+              <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
+                Type
+              </legend>
+              {(["shopping", "checklist"] as const).map((kind) => (
+                <label key={kind} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.15rem 0" }}>
+                  <input
+                    type="radio"
+                    name="new-list-kind"
+                    value={kind}
+                    checked={newKind === kind}
+                    onChange={() => setNewKind(kind)}
+                  />
+                  <span>
+                    {listKindIcon(kind)} {listKindLabel(kind)}
+                  </span>
+                </label>
+              ))}
+              <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
+                {newKind === "checklist"
+                  ? "Just names, categories and notes."
+                  : "Adds stores, quantity and price to each item."}
+              </p>
+            </fieldset>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setCreating(false)}>
                 Cancel

@@ -3,6 +3,8 @@ package org.p23q.shoppinglist.ui.overview
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
@@ -21,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -32,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 
@@ -88,6 +93,10 @@ fun OverviewScreen(
                                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
+                                    Text(
+                                        text = ListKind.icon(list.kind.value),
+                                        modifier = Modifier.padding(end = 8.dp),
+                                    )
                                     Text(text = list.name.value, modifier = Modifier.weight(1f))
                                     val openCount = state.openCounts[list.id] ?: 0
                                     if (openCount > 0) {
@@ -112,12 +121,45 @@ fun OverviewScreen(
             onDismissRequest = viewModel::dismissCreateDialog,
             title = { Text("New list") },
             text = {
-                OutlinedTextField(
-                    value = state.newListName,
-                    onValueChange = viewModel::onNewListNameChange,
-                    label = { Text("List name") },
-                    singleLine = true,
-                )
+                Column {
+                    OutlinedTextField(
+                        value = state.newListName,
+                        onValueChange = viewModel::onNewListNameChange,
+                        label = { Text("List name") },
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    // Kind is chosen up front (T-110) but isn't permanent — list properties can
+                    // convert it later, and converting never touches item data.
+                    Text("Type", style = MaterialTheme.typography.labelMedium)
+                    listOf(ListKind.SHOPPING, ListKind.CHECKLIST).forEach { kind ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = state.newListKind == kind,
+                                    onClick = { viewModel.onNewListKindChange(kind) },
+                                )
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = state.newListKind == kind,
+                                onClick = { viewModel.onNewListKindChange(kind) },
+                            )
+                            Text("${ListKind.icon(kind)}  ${ListKind.label(kind)}")
+                        }
+                    }
+                    Text(
+                        if (state.newListKind == ListKind.CHECKLIST) {
+                            "Just names, categories and notes."
+                        } else {
+                            "Adds stores, quantity and price to each item."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = viewModel::createList) { Text("Create") }

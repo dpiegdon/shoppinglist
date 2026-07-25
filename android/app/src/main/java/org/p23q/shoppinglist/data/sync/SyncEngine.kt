@@ -204,6 +204,7 @@ private fun ListEntity.toDto(): ListDto = ListDto(
         name = FieldClock(name.value, name.updatedAt, name.updatedBy),
         categoryOrder = FieldClock(Json.decodeFromString(categoryOrder.value), categoryOrder.updatedAt, categoryOrder.updatedBy),
         notes = FieldClock(notes.value, notes.updatedAt, notes.updatedBy),
+        kind = FieldClock(kind.value, kind.updatedAt, kind.updatedBy),
         deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
     ),
 )
@@ -299,6 +300,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
             name = remote.fields.name.value.toLww(remote.fields.name.updatedBy, remote.fields.name.updatedAt),
             categoryOrder = categoryOrderRemote.value.toLww(categoryOrderRemote.updatedBy, categoryOrderRemote.updatedAt),
             notes = remote.fields.notes.value.toLwwOptional(remote.fields.notes.updatedBy, remote.fields.notes.updatedAt),
+            kind = remote.fields.kind.value.toLww(remote.fields.kind.updatedBy, remote.fields.kind.updatedAt),
             deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
             dirty = false,
         )
@@ -307,6 +309,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
     val name = mergeField(local.name.value, local.name.updatedAt, local.name.updatedBy, remote.fields.name)
     val categoryOrder = mergeField(local.categoryOrder.value, local.categoryOrder.updatedAt, local.categoryOrder.updatedBy, categoryOrderRemote)
     val notes = mergeField(local.notes.value, local.notes.updatedAt, local.notes.updatedBy, remote.fields.notes)
+    val kind = mergeField(local.kind.value, local.kind.updatedAt, local.kind.updatedBy, remote.fields.kind)
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
 
     return ListEntity(
@@ -315,7 +318,8 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
         name = LwwString(name.value, name.updatedAt, name.updatedBy),
         categoryOrder = LwwString(categoryOrder.value, categoryOrder.updatedAt, categoryOrder.updatedBy),
         notes = LwwOptionalString(notes.value, notes.updatedAt, notes.updatedBy),
+        kind = LwwString(kind.value, kind.updatedAt, kind.updatedBy),
         deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
-        dirty = name.dirty || categoryOrder.dirty || notes.dirty || deleted.dirty,
+        dirty = name.dirty || categoryOrder.dirty || notes.dirty || kind.dirty || deleted.dirty,
     )
 }

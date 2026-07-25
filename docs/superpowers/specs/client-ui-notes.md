@@ -32,6 +32,26 @@
   server field `category_order`). Categories not in the order render after the
   ordered ones, alphabetically.
 
+### List kind — shopping list vs checklist (T-110)
+Every list has a `kind`: **`shopping`** (the default, and what every pre-T-110 list
+is) or **`checklist`**. A checklist is a shopping list minus the shopping-only item
+fields; everything else — categories and grouping, notes, statuses, the registry,
+sharing, sync — is identical.
+
+- **Field visibility** is the *whole* difference. A checklist hides **stores,
+  quantity and price**; it keeps **name, category, note, status**. Both clients
+  must apply exactly this rule (web `lib/listKind.ts`, android `data/ListKind.kt`).
+- **The item schema is unchanged.** `kind` is purely a display toggle over one
+  shared schema, so converting a list needs no data migration, and hidden values
+  are preserved — switch back and they reappear.
+- Because a converted list can still hold price/quantity, the item **row** hides
+  its quantity/price detail line on a checklist too; showing values the form won't
+  let you edit would be confusing.
+- **Chosen at creation** (shopping preselected, so creating a list behaves exactly
+  as it always has) and **changeable later** in list properties.
+- The overview marks each list with a small kind glyph (cart vs check).
+- Duplicating a list carries its kind over.
+
 ### Category identity & casing (T-108)
 Categories are matched **case-insensitively** — the identity of a category is
 `category.trim().toLowerCase()`. Both clients MUST use this same key, or they'd

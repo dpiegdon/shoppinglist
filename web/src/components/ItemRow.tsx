@@ -6,19 +6,25 @@ interface ItemRowProps {
   /** Who last touched this item, only when the list has 2+ members (T-64) — undefined hides the
    *  indicator entirely (the common solo-list case, and the pre-T-64 default for every caller). */
   authorMember?: Member;
+  /** False on a checklist (T-110): hides the quantity/price detail line. */
+  showShoppingFields?: boolean;
   onToggle: () => void;
   onEdit: () => void;
 }
 
-export default function ItemRow({ item, authorMember, onToggle, onEdit }: ItemRowProps) {
+export default function ItemRow({ item, authorMember, showShoppingFields = true, onToggle, onEdit }: ItemRowProps) {
   const checked = itemFieldValue(item, "status") === "checked";
   const category = itemFieldValue(item, "category");
   const quantity = itemFieldValue(item, "quantity");
   const price = itemFieldValue(item, "price");
 
-  const details = [quantity, price ? `${price.amount}${price.currency ? " " + price.currency : ""}` : null]
-    .filter(Boolean)
-    .join(" · ");
+  // Suppressed on a checklist (T-110) — a converted list can still hold quantity/price, and showing
+  // values the dialog won't let you edit would be confusing. The data itself is untouched.
+  const details = !showShoppingFields
+    ? ""
+    : [quantity, price ? `${price.amount}${price.currency ? " " + price.currency : ""}` : null]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
     <div

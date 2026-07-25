@@ -152,6 +152,7 @@ fun ListScreen(
                     }
                     itemsIndexed(group.items, key = { _, it -> it.id }) { itemIndex, item ->
                         ItemRow(
+                            showShoppingFields = state.showShoppingFields,
                             item = item,
                             defaultCurrency = state.defaultCurrency,
                             // Only when the list has 2+ members (T-64) — no clutter for the common
@@ -189,6 +190,8 @@ fun ListScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ItemRow(
+    /** False on a checklist (T-110): suppresses the quantity/price detail line. */
+    showShoppingFields: Boolean,
     item: ItemEntity,
     defaultCurrency: String?,
     authorMember: MemberDto?,
@@ -218,8 +221,11 @@ private fun ItemRow(
                     },
                 )
                 // Quantity is the thing you need in-store ("2l milk"), so show it alongside the price.
+                // Suppressed on a checklist (T-110): a converted list can still hold these values, and
+                // showing what the form won't let you edit would be confusing. The data is untouched.
                 val quantity = item.quantity.value?.takeIf { it.isNotBlank() }
-                val detail = listOfNotNull(quantity, formatPrice(item, defaultCurrency)).joinToString(" · ")
+                val detail = if (!showShoppingFields) "" else
+                    listOfNotNull(quantity, formatPrice(item, defaultCurrency)).joinToString(" · ")
                 if (detail.isNotEmpty()) {
                     Text(text = detail, style = MaterialTheme.typography.bodySmall)
                 }

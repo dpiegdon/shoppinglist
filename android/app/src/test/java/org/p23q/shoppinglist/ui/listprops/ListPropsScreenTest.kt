@@ -146,9 +146,12 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Notes").assertExists()
+        // Scroll the field into view first (T-110 added a Type section above it, pushing Notes off
+        // the viewport) — same convention the leave/duplicate tests in this file already use.
         composeTestRule.onNodeWithText("Gate code, store hours, anything worth remembering…")
+            .performScrollTo()
             .performTextInput("Gate code: 4471")
-        composeTestRule.onNodeWithText("Save notes").performClick()
+        composeTestRule.onNodeWithText("Save notes").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         assertEquals("Gate code: 4471", listsRepo.getById(listId)!!.notes.value)

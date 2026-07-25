@@ -57,6 +57,16 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "VALUES (1, NULL, NULL)",
         ],
     ),  # T-107: runtime registration override (non-durable, boot-id tagged)
+    (
+        5,
+        [
+            # Existing lists keep today's behaviour: 'shopping'. ts/by 0/'' so any client's
+            # explicit kind write wins the LWW comparison.
+            "ALTER TABLE lists ADD COLUMN kind TEXT NOT NULL DEFAULT 'shopping'",
+            "ALTER TABLE lists ADD COLUMN kind_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE lists ADD COLUMN kind_by TEXT NOT NULL DEFAULT ''",
+        ],
+    ),  # T-110: list kind (shopping | checklist)
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

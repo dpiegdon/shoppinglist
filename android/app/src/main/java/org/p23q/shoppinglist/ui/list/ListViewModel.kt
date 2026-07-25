@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.DefaultCurrencyState
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.MemberDto
@@ -35,6 +36,8 @@ data class ItemGroup(val category: String?, val items: List<ItemEntity>)
 
 data class ListUiState(
     val listName: String = "",
+    /** False on a checklist (T-110): hides the quantity/price detail line on each row. */
+    val showShoppingFields: Boolean = true,
     val groups: List<ItemGroup> = emptyList(),
     val showChecked: Boolean = false,
     val defaultCurrency: String? = null,
@@ -92,9 +95,10 @@ class ListViewModel @Inject constructor(
                 ::Pair,
             ).collect { (list, items) ->
                 categoryOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
+                val showShopping = ListKind.showsShoppingFields(list?.kind?.value)
                 todoItems = items.filter { it.status.value == Status.TODO.wireValue }
                 checkedItems = items.filter { it.status.value == Status.CHECKED.wireValue }
-                _uiState.update { it.copy(listName = list?.name?.value ?: "") }
+                _uiState.update { it.copy(listName = list?.name?.value ?: "", showShoppingFields = showShopping) }
                 regroup()
             }
         }

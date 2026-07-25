@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 4, exportSchema = false)
+@Database(entities = [ListEntity::class, ItemEntity::class], version = 5, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao
@@ -44,6 +44,16 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/** Adds lists.kind (T-110), an @Embedded LwwString triple. Existing lists default to "shopping"
+ *  with clock 0, so they behave exactly as before and any explicit write wins the LWW compare. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE lists ADD COLUMN kind_value TEXT NOT NULL DEFAULT 'shopping'")
+        db.execSQL("ALTER TABLE lists ADD COLUMN kind_updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE lists ADD COLUMN kind_updatedBy TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -51,7 +61,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDb(@ApplicationContext context: Context): AppDb =
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
 
     @Provides

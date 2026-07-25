@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.CategoryCanon
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
@@ -31,6 +32,8 @@ data class ItemFormUiState(
     val suggestions: List<ItemEntity> = emptyList(),
     val category: String = "",
     val categorySuggestions: List<String> = emptyList(),
+    /** False on a checklist (T-110): hides stores / quantity / price. */
+    val showShoppingFields: Boolean = true,
     val stores: List<String> = emptyList(),
     val storeInput: String = "",
     val quantity: String = "",
@@ -99,6 +102,7 @@ class ItemFormViewModel @Inject constructor(
         loadedSnapshot = null
         listIdFlow.value = listId
         loadCategorySuggestions()
+        loadListKind()
     }
 
     fun startEdit(itemId: String): Job = viewModelScope.launch {
@@ -122,6 +126,13 @@ class ItemFormViewModel @Inject constructor(
         loadedSnapshot = snapshotFrom(_uiState.value)
         listIdFlow.value = item.listId
         loadCategorySuggestions()
+        loadListKind()
+    }
+
+    /** Kind drives which fields the form renders (T-110); resolved per list open. */
+    private fun loadListKind() = viewModelScope.launch {
+        val kind = listsRepo.getById(listId)?.kind?.value
+        _uiState.update { it.copy(showShoppingFields = ListKind.showsShoppingFields(kind)) }
     }
 
     private fun loadCategorySuggestions() = viewModelScope.launch {

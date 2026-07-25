@@ -116,6 +116,15 @@ in it render after the ordered ones, alphabetically. Lists sync exactly like
 items: `name` and `category_order` are LWW fields, and a list carries a
 tombstone so deletion propagates.
 
+`kind` (T-110) is `shopping` (default) or `checklist` — another ordinary LWW
+field, so converting a list is a normal edit and a stale device can't silently
+revert it. **No server logic depends on it**: it exists so the clients know which
+item fields to render (a checklist hides stores/price/quantity, see the client
+spec). The item schema is identical for both kinds, so a conversion moves no data
+and is reversible; a checklist simply never sends the hidden fields, and those
+fields keep their usual validation if a client does send them. An unknown kind is
+rejected 422 rather than coerced.
+
 **Orphaned lists.** A list with **zero memberships** (last member left, or the
 sole member's account was deleted) is orphaned. On becoming orphaned, its
 content (items + metadata) is cleared immediately and the list is **tombstoned**

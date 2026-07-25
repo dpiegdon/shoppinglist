@@ -52,6 +52,9 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     }
     Spacer(Modifier.height(8.dp))
 
+    // Shopping-only fields (T-110): a checklist shows just category / note / status. Existing
+    // values are preserved, merely not rendered, so converting a list is reversible.
+    if (state.showShoppingFields) {
     Text("Stores")
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -117,6 +120,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
     Spacer(Modifier.height(8.dp))
+    }
 
     OutlinedTextField(
         value = state.note,

@@ -38,8 +38,14 @@ LIST_FIELD_META = [
     ("name", "name_ts", "name_by"),
     ("category_order", "category_order_ts", "category_order_by"),
     ("notes", "notes_ts", "notes_by"),
+    ("kind", "kind_ts", "kind_by"),
     ("deleted", "deleted_ts", "deleted_by"),
 ]
+# T-110: which item fields the clients render for a list. The server stores and syncs `kind` but
+# NO server logic depends on it — a checklist simply never sends stores/price/quantity, and those
+# fields keep their existing validation if a client does send them.
+LIST_KINDS = ("shopping", "checklist")
+DEFAULT_LIST_KIND = "shopping"
 NOTES_MAX_LENGTH = 5000
 
 # ---- validation caps (T-85) ------------------------------------------------
@@ -297,6 +303,13 @@ def _validate_list_field(key, value):
             raise ApiError(422, "invalid_field", "List notes must be a string.")
         if value is not None and len(value) > NOTES_MAX_LENGTH:
             raise ApiError(422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer.")
+    elif key == "kind":
+        # Unknown kinds are rejected rather than coerced: a client sending a kind this server
+        # doesn't know would otherwise get silent, surprising display behaviour (T-110).
+        if value not in LIST_KINDS:
+            raise ApiError(
+                422, "invalid_field", f"List kind must be one of: {', '.join(LIST_KINDS)}."
+            )
     elif key == "deleted":
         _validate_deleted(value)
 
@@ -417,6 +430,7 @@ def _new_list_columns(list_id, created_at, fields):
         "name": "", "name_ts": 0, "name_by": "",
         "category_order": "[]", "category_order_ts": 0, "category_order_by": "",
         "notes": None, "notes_ts": 0, "notes_by": "",
+        "kind": DEFAULT_LIST_KIND, "kind_ts": 0, "kind_by": "",
         "deleted": 0, "deleted_ts": 0, "deleted_by": "",
     }
     for key, (value, ts, by) in fields.items():

@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DeviceIdProvider
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.db.ListDao
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.toLww
@@ -28,7 +29,7 @@ class ListsRepo @Inject constructor(
 
     suspend fun clearDirty(ids: List<String>) = listDao.clearDirty(ids)
 
-    suspend fun createList(name: String): String {
+    suspend fun createList(name: String, kind: String = ListKind.DEFAULT): String {
         val id = UUID.randomUUID().toString()
         val by = deviceId.get()
         val now = System.currentTimeMillis()
@@ -39,6 +40,7 @@ class ListsRepo @Inject constructor(
                 name = name.toLww(by, now),
                 categoryOrder = encodeCategoryOrder(emptyList()).toLww(by, now),
                 notes = null.toLwwOptional(by, now),
+                kind = ListKind.of(kind).toLww(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
             ),
@@ -46,6 +48,14 @@ class ListsRepo @Inject constructor(
         syncTrigger.scheduleAfterEdit()
         return id
     }
+
+    /**
+     * Convert between shopping list and checklist (T-110). Non-destructive — the item schema is
+     * identical for both, so hidden fields (stores/price/quantity) survive and reappear on switching
+     * back. An ordinary LWW field write, so a stale device can't silently revert it.
+     */
+    suspend fun setKind(listId: String, kind: String) =
+        updateField(listId) { it.copy(kind = ListKind.of(kind).toLww(deviceId.get())) }
 
     suspend fun rename(listId: String, name: String) =
         updateField(listId) { it.copy(name = name.toLww(deviceId.get())) }
@@ -78,6 +88,7 @@ class ListsRepo @Inject constructor(
                 name = "${source.name.value} (Copy)".toLww(by, now),
                 categoryOrder = source.categoryOrder.value.toLww(by, now),
                 notes = source.notes.value.toLwwOptional(by, now),
+                kind = source.kind.value.toLww(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
             ),

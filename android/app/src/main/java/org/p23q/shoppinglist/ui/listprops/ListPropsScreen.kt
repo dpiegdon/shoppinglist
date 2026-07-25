@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import org.p23q.shoppinglist.data.ListKind
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -83,6 +84,40 @@ fun ListPropsScreen(
             )
             TextButton(onClick = { viewModel.saveName() }) { Text("Save") }
         }
+        Spacer(Modifier.height(16.dp))
+
+        // Convert between shopping list and checklist (T-110) — non-destructive, so it's a plain
+        // switch rather than a guarded action.
+        Text("Type", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("${ListKind.icon(state.kind)}  ${ListKind.label(state.kind)}")
+                Text(
+                    if (state.kind == ListKind.CHECKLIST) {
+                        "Items have a name, category and note."
+                    } else {
+                        "Items also have stores, quantity and price."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = state.kind == ListKind.CHECKLIST,
+                onCheckedChange = { checked ->
+                    viewModel.setKind(if (checked) ListKind.CHECKLIST else ListKind.SHOPPING)
+                },
+            )
+        }
+        Text(
+            "Switching only changes which fields are shown — nothing is deleted.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(16.dp))
 
         Text("Categories", style = MaterialTheme.typography.titleMedium)

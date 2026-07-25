@@ -42,6 +42,12 @@ data class ListFieldsDto(
     val name: FieldClock<String>,
     @SerialName("category_order") val categoryOrder: FieldClock<List<String>>,
     val notes: FieldClock<String?>,
+    /**
+     * List kind (T-110). DEFAULTED so this app still decodes lists from a pre-T-110 server, which
+     * sends no `kind` at all — without the default, kotlinx would throw on every list and break
+     * sync entirely. A missing kind means "shopping", with clock 0 so any real write wins.
+     */
+    val kind: FieldClock<String> = FieldClock(org.p23q.shoppinglist.data.ListKind.DEFAULT, 0, ""),
     val deleted: FieldClock<Boolean>,
 )
 

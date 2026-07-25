@@ -97,6 +97,12 @@ interface ItemDialogProps {
   registryItems: ItemObject[];
   /** Existing categories in this list (canonical casing), for the category autocomplete (T-108). */
   categorySuggestions?: string[];
+  /**
+   * Whether to show the shopping-only fields — stores, quantity, price (T-110). False on a
+   * checklist. The item schema is unchanged either way: hidden fields keep whatever they already
+   * held (e.g. after converting a shopping list), they're just not rendered or edited here.
+   */
+  showShoppingFields?: boolean;
   /** Present for edit mode; absent for add mode. */
   editingItem?: ItemObject;
   defaultCurrency: string;
@@ -133,6 +139,7 @@ function valuesFromItem(item: ItemObject): Omit<ItemDialogSaveValues, "itemId" |
 export default function ItemDialog({
   registryItems,
   categorySuggestions = [],
+  showShoppingFields = true,
   editingItem,
   defaultCurrency,
   onClose,
@@ -401,6 +408,10 @@ export default function ItemDialog({
           )}
         </div>
 
+        {/* Shopping-only fields (T-110): a checklist shows just name / category / note / status.
+            Existing values are preserved, merely not rendered, so converting a list is reversible. */}
+        {showShoppingFields && (
+        <>
         <div className="form-field">
           <label htmlFor="item-stores">Stores</label>
           <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -473,6 +484,8 @@ export default function ItemDialog({
             {currencyError && <p className="error-text">{currencyError}</p>}
           </div>
         </div>
+        </>
+        )}
 
         <div className="form-field">
           <label htmlFor="item-note">Note</label>

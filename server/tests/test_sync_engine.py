@@ -1,5 +1,7 @@
 """Tests for the pure sync engine (no HTTP)."""
 
+import json
+
 import pytest
 
 from shoppinglist_server import auth, sync
@@ -663,3 +665,94 @@ def test_list_notes_at_max_length_accepted(db_conn):
                        {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=exactly_max)]})
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["notes"] == exactly_max
+
+
+# ---- list kind (T-110) -------------------------------------------------------
+
+
+def _mk_list_kind(list_id, name, ts, by, kind, created_at=1000):
+    return {
+        "id": list_id,
+        "created_at": created_at,
+        "fields": {"name": _clock(name, ts, by), "kind": _clock(kind, ts, by)},
+    }
+
+
+def test_new_list_defaults_to_shopping_kind(db_conn):
+    """Every pre-T-110 list, and any list created without an explicit kind, stays a shopping list."""
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["kind"] == "shopping"
+
+    wire = {l["id"]: l for l in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
+    assert wire["list-1"]["fields"]["kind"]["value"] == "shopping"
+
+
+def test_list_kind_set_via_sync_and_returned_on_wire(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    sync.apply_changes(
+        db_conn, account_id, "devA",
+        {"lists": [_mk_list_kind("list-1", "Camping", 100, "devA", "checklist")]},
+    )
+
+    row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["kind"] == "checklist"
+
+    wire = {l["id"]: l for l in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
+    assert wire["list-1"]["fields"]["kind"]["value"] == "checklist"
+
+
+def test_list_kind_is_lww_like_every_other_field(db_conn):
+    """Converting a list is an ordinary field write, so a stale device can't silently revert it."""
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list_kind("list-1", "Groceries", 300, "X", "checklist")]})
+    # Older write loses.
+    sync.apply_changes(db_conn, account_id, "Y",
+                       {"lists": [_mk_list_kind("list-1", "Groceries", 200, "Y", "shopping")]})
+
+    assert db_conn.execute("SELECT kind FROM lists WHERE id = ?", ("list-1",)).fetchone()["kind"] == "checklist"
+
+    # Newer write wins (a genuine conversion back).
+    sync.apply_changes(db_conn, account_id, "Z",
+                       {"lists": [_mk_list_kind("list-1", "Groceries", 400, "Z", "shopping")]})
+    assert db_conn.execute("SELECT kind FROM lists WHERE id = ?", ("list-1",)).fetchone()["kind"] == "shopping"
+
+
+def test_unknown_list_kind_is_rejected_422(db_conn):
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+
+    with pytest.raises(ApiError) as excinfo:
+        sync.apply_changes(
+            db_conn, account_id, "X",
+            {"lists": [_mk_list_kind("list-1", "Groceries", 200, "X", "tasks")]},
+        )
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_field"
+
+
+def test_converting_a_list_to_checklist_preserves_item_fields(db_conn):
+    """kind is a display toggle, not a data migration: stores/price/quantity survive a conversion,
+    so flipping back restores everything (T-110)."""
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+    sync.apply_changes(db_conn, account_id, "devA", {"items": [_mk_item(
+        "item-1", "list-1",
+        name=("Milk", 100, "devA"),
+        quantity=("2l", 100, "devA"),
+        price=({"amount": "1.99", "currency": "EUR"}, 100, "devA"),
+        stores=(["Rewe"], 100, "devA"),
+    )]})
+
+    sync.apply_changes(db_conn, account_id, "X",
+                       {"lists": [_mk_list_kind("list-1", "Groceries", 200, "X", "checklist")]})
+
+    row = _item_row(db_conn, "item-1")
+    assert row["quantity"] == "2l"
+    assert row["price_amount"] == "1.99"
+    assert json.loads(row["stores"]) == ["Rewe"]

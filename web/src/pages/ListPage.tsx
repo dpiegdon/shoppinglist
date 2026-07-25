@@ -5,6 +5,7 @@ import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { groupVisibleItems } from "../lib/grouping";
 import { categoryKey, distinctCanonicalCategories, planCategoryRename } from "../lib/categories";
+import { listKind, showsShoppingFields } from "../lib/listKind";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
@@ -53,6 +54,8 @@ export default function ListPage() {
   }
 
   const categoryOrder = listFieldValue(list, "category_order") ?? [];
+  // Checklists hide the shopping-only item fields (T-110).
+  const showShopping = showsShoppingFields(listKind(list));
   const groups = groupVisibleItems(listItems, categoryOrder, showChecked);
   // Existing categories (canonical casing) for the item dialog's autocomplete (T-108).
   const categorySuggestions = distinctCanonicalCategories(
@@ -262,6 +265,7 @@ export default function ListPage() {
               <ItemRow
                 key={item.id}
                 item={item}
+                showShoppingFields={showShopping}
                 authorMember={
                   members.length >= 2 ? members.find((m) => m.account_id === item.last_touched_by) : undefined
                 }
@@ -317,6 +321,7 @@ export default function ListPage() {
           listId={listId}
           registryItems={listItems}
           categorySuggestions={categorySuggestions}
+          showShoppingFields={showShopping}
           editingItem={dialogItem === "new" ? undefined : dialogItem}
           defaultCurrency={defaultCurrency}
           onClose={() => setDialogItem(null)}

@@ -17,6 +17,7 @@ import org.p23q.shoppinglist.data.api.CreateInviteRequest
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.api.PendingInviteDto
 import org.p23q.shoppinglist.data.CategoryCanon
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -27,6 +28,8 @@ import javax.inject.Inject
 
 data class ListPropsUiState(
     val name: String = "",
+    /** "shopping" | "checklist" (T-110). */
+    val kind: String = ListKind.DEFAULT,
     val categoryOrder: List<String> = emptyList(),
     val notes: String = "",
     val members: List<MemberDto> = emptyList(),
@@ -70,6 +73,7 @@ class ListPropsViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     name = list?.name?.value ?: "",
+                    kind = ListKind.of(list?.kind?.value),
                     categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )
@@ -112,6 +116,15 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: IOException) {
             _uiState.update { it.copy(isMembersLoading = false, membersError = "Members are only available online") }
         }
+    }
+
+    /**
+     * Convert between shopping list and checklist (T-110). Non-destructive: only changes which
+     * fields the clients render — stores/price/quantity survive and reappear on switching back.
+     */
+    fun setKind(kind: String): Job = viewModelScope.launch {
+        listsRepo.setKind(listId, kind)
+        _uiState.update { it.copy(kind = ListKind.of(kind)) }
     }
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value) }

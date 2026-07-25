@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS lists (
     notes_ts INTEGER NOT NULL DEFAULT 0,
     notes_by TEXT NOT NULL DEFAULT '',
 
+    -- 'shopping' | 'checklist' (T-110). Purely a CLIENT-SIDE display toggle: a checklist hides the
+    -- shopping-only item fields (stores/price/quantity) but the item schema is identical, so a list
+    -- can flip kind at any time with no data migration. Default 'shopping' keeps every pre-T-110
+    -- list exactly as it was.
+    kind TEXT NOT NULL DEFAULT 'shopping',
+    kind_ts INTEGER NOT NULL DEFAULT 0,
+    kind_by TEXT NOT NULL DEFAULT '',
+
     deleted INTEGER NOT NULL DEFAULT 0,
     deleted_ts INTEGER NOT NULL DEFAULT 0,
     deleted_by TEXT NOT NULL DEFAULT ''

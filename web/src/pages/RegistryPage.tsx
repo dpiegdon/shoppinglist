@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue } from "../hooks/useSync";
+import { listKind, showsShoppingFields } from "../lib/listKind";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { ItemObject } from "../api/contract";
@@ -115,6 +116,7 @@ export default function RegistryPage() {
         <ItemDialog
           listId={listId}
           registryItems={listItems}
+          showShoppingFields={showsShoppingFields(listKind(list))}
           editingItem={editingItem}
           defaultCurrency={defaultCurrency}
           onClose={() => setEditingItem(null)}

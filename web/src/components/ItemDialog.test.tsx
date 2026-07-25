@@ -66,6 +66,44 @@ describe("ItemDialog (add mode)", () => {
     expect(categoryInput).toHaveValue("Dairy");
   });
 
+  it("hides the shopping-only fields on a checklist, keeping the rest (T-110)", () => {
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[]}
+        showShoppingFields={false}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText("Stores")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Quantity")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Price")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Currency")).not.toBeInTheDocument();
+    // The generic checklist fields stay.
+    expect(screen.getByLabelText("Name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Category")).toBeInTheDocument();
+    expect(screen.getByLabelText("Note")).toBeInTheDocument();
+  });
+
+  it("shows the shopping fields by default (a shopping list is unchanged)", () => {
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[]}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Stores")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quantity")).toBeInTheDocument();
+    expect(screen.getByLabelText("Price")).toBeInTheDocument();
+  });
+
   it("picking a suggestion saves with the existing item's id and status todo", async () => {
     const registry = [registryItem("1", "Milk")];
     const onSave = vi.fn().mockResolvedValue(undefined);

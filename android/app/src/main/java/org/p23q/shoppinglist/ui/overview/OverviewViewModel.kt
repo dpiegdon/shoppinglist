@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
@@ -25,6 +26,8 @@ data class OverviewUiState(
     val openCounts: Map<String, Int> = emptyMap(),
     val isCreateDialogOpen: Boolean = false,
     val newListName: String = "",
+    /** Kind for the list being created (T-110); shopping preselected, as before. */
+    val newListKind: String = ListKind.DEFAULT,
     val sync: SyncState = SyncState(),
     /** The list holding a quarantined row, so the "needs attention" banner can open it (T-47). */
     val attentionListId: String? = null,
@@ -59,19 +62,24 @@ class OverviewViewModel @Inject constructor(
         }
     }
 
-    fun openCreateDialog() = _uiState.update { it.copy(isCreateDialogOpen = true, newListName = "") }
+    fun openCreateDialog() =
+        _uiState.update { it.copy(isCreateDialogOpen = true, newListName = "", newListKind = ListKind.DEFAULT) }
 
     fun dismissCreateDialog() = _uiState.update { it.copy(isCreateDialogOpen = false) }
 
     fun onNewListNameChange(value: String) = _uiState.update { it.copy(newListName = value) }
+
+    fun onNewListKindChange(kind: String) = _uiState.update { it.copy(newListKind = kind) }
 
     /** Returns the launched Job, or null if the name was blank (dialog stays open, no-op). */
     fun createList(): Job? {
         val name = _uiState.value.newListName.trim()
         if (name.isBlank()) return null
         return viewModelScope.launch {
-            listsRepo.createList(name)
-            _uiState.update { it.copy(isCreateDialogOpen = false, newListName = "") }
+            listsRepo.createList(name, _uiState.value.newListKind)
+            _uiState.update {
+                it.copy(isCreateDialogOpen = false, newListName = "", newListKind = ListKind.DEFAULT)
+            }
         }
     }
 

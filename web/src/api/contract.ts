@@ -36,10 +36,18 @@ export interface ItemObject {
   last_touched_by?: string | null;
 }
 
+/**
+ * What a list is (T-110). A checklist is a shopping list minus the shopping-only item fields
+ * (stores/price/quantity) — the item schema is identical either way, so this is purely a
+ * display toggle and a list can be converted at any time without touching item data.
+ */
+export type ListKind = "shopping" | "checklist";
+
 export interface ListFields {
   name: FieldClock<string>;
   category_order: FieldClock<string[]>;
   notes: FieldClock<string | null>;
+  kind: FieldClock<ListKind>;
   deleted: FieldClock<boolean>;
 }
 
