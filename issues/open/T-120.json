@@ -1,0 +1,11 @@
+{
+  "body": "From the pre-release security review of the server's network interface\n(2026-07-26). Post-1.8.1.\n\n## Problem\n\nroutes/lists.py:36 deliberately returns a uniform 403 so a non-member \"can't\ndistinguish 'not found' from 'not yours' (no existence-leak)\". /sync breaks that\nproperty for the same information. Measured, as an account that is a member of\nnothing:\n\n    item push naming a nonexistent list  -> 422 unknown_list\n    item push naming an existing list    -> 403 not_a_member\n\nsync.py:561 checks _list_exists() before the membership check, so the two cases\nare distinguishable.\n\nSeverity is low while list ids are client-generated UUIDs. It is worth fixing\nanyway because ids are attacker-CHOOSABLE (see the invite-delimiter ticket:\n_apply_list accepts any string as an id), so an attacker can create memorable or\nguessable ids and this oracle then confirms which ones exist.\n\n## Fix\n\nReturn 403 not_a_member for both cases in _apply_item \u2014 i.e. do the membership\ncheck first, or collapse the unknown-list case into the same error.\n\nCheck before changing: unknown_list is a documented wire-contract error code\n(docs/wire-contract.md) and the Android quarantine flow (T-32) may branch on it.\nIf a client treats unknown_list as \"drop this row permanently\" but not_a_member\nas \"retry later\", collapsing them changes client behaviour for a genuinely\nunknown list. Confirm both clients' handling before merging, and update\ndocs/wire-contract.md either way.\n\n## Verification\n\nTest that a non-member gets an identical status and body for a nonexistent list\nid and for an existing-but-foreign list id.",
+  "created_at": "2026-07-26T23:46:22+00:00",
+  "id": "T-120",
+  "labels": [
+    "security"
+  ],
+  "priority": 3,
+  "title": "sync: list-existence oracle (422 unknown_list vs 403 not_a_member) defeats the uniform-403 rule",
+  "updated_at": "2026-07-26T23:46:22+00:00"
+}
