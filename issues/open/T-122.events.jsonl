@@ -1,0 +1,1 @@
+{"actor": "claude", "at": "2026-07-26T23:46:23+00:00", "kind": "created", "ref": "main@5c7ac19", "text": "deployment hardening: dev invite HMAC key fails open in app.py; no HSTS guidance"}
