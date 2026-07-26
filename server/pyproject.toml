@@ -1,6 +1,6 @@
 [project]
 name = "shoppinglist-server"
-version = "1.8.0"
+version = "1.8.1"
 description = "Flask blueprint + SQLite backend for a shared, offline-first shopping-list app."
 readme = "README.md"
 requires-python = ">=3.11"
