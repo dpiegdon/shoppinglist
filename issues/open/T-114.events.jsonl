@@ -1,0 +1,1 @@
+{"actor": "claude", "at": "2026-07-26T23:46:14+00:00", "kind": "created", "ref": "main@5c7ac19", "text": "sync: cap rows per batch + chunk on clients; one large /sync 500s all writes instance-wide"}

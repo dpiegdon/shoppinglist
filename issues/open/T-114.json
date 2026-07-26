@@ -1,0 +1,15 @@
+{
+  "body": "From the pre-release security review of the server's network interface\n(2026-07-26). Post-1.8.1: 1.8.1 is already deployed, this is for the next\nrelease.\n\n## Problem\n\nOne authenticated member can wedge every WRITE on the instance for ~12 s per\nrequest, repeatably.\n\nThe 4 MB MAX_CONTENT_LENGTH admits ~38,900 minimal item rows (measured: 108\nbytes/row). apply_changes costs ~0.31 ms/row, and the SQLite write transaction\nis held from the first _bump() until conn.commit() at routes/sync.py:81 \u2014 so the\nwrite lock is held for the whole apply loop.\n\ndb.py:39 uses stock sqlite3.connect(), i.e. a 5000 ms busy timeout, and\nOperationalError is unhandled. Measured against a held write transaction:\n\n    login    during that window -> HTTP 500 after 5.2 s\n    register during that window -> HTTP 500\n    GET registration-status     -> HTTP 200   (WAL keeps reads alive)\n\nSo a single large /sync 500s every login, registration, sync and settings write\ninstance-wide. Reads are unaffected (WAL).\n\nSecondary: name_merge() rescans all live items of every touched list on every\nsync. Measured: a 1-item push into a 7,500-item list already costs 66 ms, and\nthat cost is permanent once a list is large.\n\n## Fix\n\nServer:\n- Cap rows per /sync batch. MAX_CONTENT_LENGTH is the wrong lever \u2014 it bounds\n  bytes, not work. Reject over-cap batches with a 422 carrying a distinct error\n  code so clients can react (and so it is distinguishable from 413).\n- User's constraint: the cap must be AT LEAST 50 rows/sync. Note the measured\n  cost when picking the actual value \u2014 50 rows is ~15 ms, 250 rows ~78 ms, so a\n  value in the low hundreds is comfortably safe and costs far fewer round trips\n  on a large initial sync. 50 is the floor, not necessarily the value.\n- Pass an explicit timeout= to sqlite3.connect() and handle OperationalError\n  (\"database is locked\") as a 503 with Retry-After rather than an unhandled 500.\n\nClients (web + android) \u2014 MUST ship together with the server cap, or an\nover-cap push starts failing with a 422 instead of succeeding:\n- Split larger pending-change sets into chunks at or below the server cap and\n  push them sequentially.\n- Chunking must be resumable: a failed chunk must not lose or double-apply the\n  remaining queue. Field-level LWW makes re-pushing a chunk safe, so retry the\n  failed chunk rather than restarting the batch.\n\n## Verification\n\n- A batch one row over the cap is rejected with the new code; a batch at the cap\n  succeeds.\n- A client with (cap + N) pending changes converges in multiple round trips.\n- Concurrent writers during a slow write get 503, not 500.",
+  "created_at": "2026-07-26T23:46:14+00:00",
+  "id": "T-114",
+  "labels": [
+    "security",
+    "reliability",
+    "perf",
+    "web",
+    "android"
+  ],
+  "priority": 1,
+  "title": "sync: cap rows per batch + chunk on clients; one large /sync 500s all writes instance-wide",
+  "updated_at": "2026-07-26T23:46:14+00:00"
+}
