@@ -2,6 +2,14 @@
 
 **Spec #1 of 3** · Date: 2026-07-08 · Status: approved for planning
 
+> **ARCHIVED — historical record.** This spec was written before implementation
+> and describes the system as designed, not as built; endpoint and field details
+> have since drifted. It remains the clearest statement of *why* the sync model
+> and access model look the way they do. For the maintained interface see
+> [`docs/wire-contract.md`](../../wire-contract.md), for current behavior the
+> [`server/` README](../../../server/README.md), and for context the
+> [archive index](../README.md).
+
 This document specifies the **server and its API contract only**. It is the
 foundation both clients depend on. The Android app and the optional web client
 each get their own spec → plan → build cycle afterward.

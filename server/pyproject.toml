@@ -4,9 +4,25 @@ version = "1.8.0"
 description = "Flask blueprint + SQLite backend for a shared, offline-first shopping-list app."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["../LICENSE"]
+authors = [{ name = "David R. Piegdon", email = "dgit@piegdon.de" }]
+keywords = ["shopping-list", "flask", "blueprint", "sqlite", "offline-first", "self-hosted"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Flask",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+]
 dependencies = [
     "flask>=3.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dpiegdon/shoppinglist"
+Source = "https://github.com/dpiegdon/shoppinglist"
+Issues = "https://github.com/dpiegdon/shoppinglist/issues"
 
 [project.optional-dependencies]
 dev = [

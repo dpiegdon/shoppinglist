@@ -3,9 +3,8 @@
 React + TypeScript SPA for the shopping-list server (`../server/`). Online
 only (no offline storage) — same-origin with its own API by construction, so
 unlike the Android app it needs no server-URL setting. See
-`../docs/superpowers/specs/client-ui-notes.md` for the product requirements
-and `../docs/superpowers/plans/2026-07-08-shopping-list-tickets.md` for the
-Wire Contract this app implements against.
+[`../docs/wire-contract.md`](../docs/wire-contract.md) for the interface this app
+implements against.
 
 **This app is not deployed separately.** `npm run build` writes straight into
 `../server/src/shoppinglist_server/web_dist/`, which the server package embeds

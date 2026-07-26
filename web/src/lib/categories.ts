@@ -1,6 +1,6 @@
 // Category identity is case-insensitive (T-108): "Group" and "group" are one category. Grouping,
 // the settings registry, and the item-dialog autocomplete all key on this. The rule here MUST match
-// the Android client (see docs/superpowers/specs/client-ui-notes.md) or the two would show
+// the Android client (see docs/archive/specs/client-ui-notes.md) or the two would show
 // different canonical casings for the same data.
 
 export const UNCATEGORIZED_LABEL = "—";

@@ -1,5 +1,10 @@
 # T-65: Collaborator-Change Notifications Implementation Plan
 
+> **ARCHIVED — historical record, written 2026-07-15.** T-65 shipped; this plan is
+> kept as a worked example of the plan format, not as instructions. Paths and host
+> details below describe the machine it was written on. See the
+> [archive index](../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** When a sync pulls item changes made by a *different account*, post one local Android notification per sync pass ("3 items changed in Groceries — tap to view"), with a global on/off toggle in app Settings and a per-list mute toggle in list properties.
@@ -14,13 +19,13 @@
 - **This host is a 4-core / 3.7 GB Raspberry Pi.** Run Gradle invocations one at a time, in the background with a generous timeout (≥ 400 s; a cold daemon + KSP can take 5 min). After the final verification round, stop daemons: `./gradlew --stop`.
 - **Gradle caches test runs.** Any verification re-run of an unchanged build MUST use `--rerun`, or `:app:testDebugUnitTest` silently reports `UP-TO-DATE` having executed zero tests.
 - **T-66 test conventions are mandatory** for every new/modified ViewModel test: `runTest(mainDispatcherRule.dispatcher) { … }` (never bare `runTest { }`), and Room built with `.setQueryCoroutineContext(mainDispatcherRule.dispatcher)` (never `Dispatchers.IO`) in any test class that has a `MainDispatcherRule`. `SyncEngineTest` has no rule and keeps `Dispatchers.IO`.
-- **Never stage** `android/app/src/main/res/drawable/ic_brand_logo.xml` or `ic_launcher_foreground.xml` — deliberately uncommitted from earlier work.
+- ~~**Never stage** `android/app/src/main/res/drawable/ic_brand_logo.xml` or `ic_launcher_foreground.xml` — deliberately uncommitted from earlier work.~~ *(No longer true: both files were committed after this plan was written.)*
 - Comparison basis is **account id, never device id** (ticket: two devices on one account must not self-notify).
 - Detection counts only rows pulled in *this* sync pass (cursor delta), and stays fully silent when the pass started from cursor 0 (initial hydration / forced full resync would otherwise mass-notify).
 - One notification per sync pass, fixed notification id (latest replaces prior) — never one per row.
 - minSdk 26 (`NotificationChannel` required unconditionally), targetSdk 36 (`POST_NOTIFICATIONS` runtime permission required on API 33+).
 - UI copy: Settings section "Notifications", toggle label "Collaborator changes"; list-properties section "Notifications", toggle label "Notify about changes to this list".
-- gittoc CLI is at `/home/claude/empty/.agents/skills/gittoc/scripts/gittoc` (not on PATH).
+- gittoc CLI is at `<repo>/.agents/skills/gittoc/scripts/gittoc` (not on PATH).
 
 ## File Structure
 
@@ -56,7 +61,7 @@ android/app/src/test/java/org/p23q/shoppinglist/
 ```
 
 Per-task verification runs only the affected test classes; Task 8 runs the full suite. Each Gradle run:
-`cd /home/claude/empty/android && timeout 500 ./gradlew :app:testDebugUnitTest --rerun --tests "<CLASS>" > <log> 2>&1` in the background.
+`cd <repo>/android && timeout 500 ./gradlew :app:testDebugUnitTest --rerun --tests "<CLASS>" > <log> 2>&1` in the background.
 
 ---
 
@@ -117,7 +122,7 @@ sessionState.accountId = response.accountId
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/claude/empty
+cd <repo>
 git add android/app/src/main/java/org/p23q/shoppinglist/data/SessionStore.kt \
         android/app/src/main/java/org/p23q/shoppinglist/data/AuthRepository.kt \
         android/app/src/test/java/org/p23q/shoppinglist/data/FakeSessionState.kt \
@@ -1030,7 +1035,7 @@ git commit -m "feat(android): per-list notification mute in list properties (T-6
 - [ ] **Step 5: Close the ticket.**
 
 ```bash
-GITTOC=/home/claude/empty/.agents/skills/gittoc/scripts/gittoc
+GITTOC=<repo>/.agents/skills/gittoc/scripts/gittoc
 "$GITTOC" note T-65 "Done. SyncEngine detects pulled items whose last_touched_by differs from the logged-in account (account-scoped per the ticket; silent on cursor-0 hydration, unknown own account, or null last_touched_by) and reports raw per-list counts to a CollaboratorChangeNotifier seam. The Android poster gates on: app-foregrounded (silent - change already on screen), the new global Settings toggle, per-list mutes (list properties), and POST_NOTIFICATIONS (runtime-requested on enable, API 33+). One batched notification per sync pass, fixed id; tap opens the list (or overview when several lists changed). Prefs are DataStore-backed, device-local, survive logout. Commits: <list the task commit hashes>."
 "$GITTOC" close T-65
 ```

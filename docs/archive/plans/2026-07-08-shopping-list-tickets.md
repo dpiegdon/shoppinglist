@@ -1,5 +1,11 @@
 # Shopping List — Implementation Tickets
 
+> **ARCHIVED — historical record, written 2026-07-08.** Every ticket here was
+> completed; ongoing work moved to the gittoc tracker on the `gittoc` branch.
+> Current behavior is documented in the READMEs, and the maintained wire contract
+> is [`docs/wire-contract.md`](../../wire-contract.md). See the
+> [archive index](../README.md).
+
 > **For agentic workers:** Each ticket below is a self-contained work package for a
 > fresh agent session (Opus or Sonnet — suggested model tagged per ticket). Within
 > an epic, use superpowers:subagent-driven-development (recommended) or
@@ -18,9 +24,9 @@ WorkManager sync against the same endpoint. Web = small SPA hitting the same API
 **Tech Stack:** Python 3.11+/Flask 3.x/stdlib `sqlite3`/pytest · Kotlin 2.x/Jetpack
 Compose (Material 3)/Room/Retrofit/Hilt/WorkManager · Vite/React/TypeScript.
 
-**Authoritative spec:** `docs/superpowers/specs/2026-07-08-shopping-list-server-design.md`
+**Authoritative spec:** `docs/archive/specs/2026-07-08-shopping-list-server-design.md`
 (server, referenced below as *Spec §N*).
-**Client requirements:** `docs/superpowers/specs/client-ui-notes.md` (referenced as *Notes*).
+**Client requirements:** `docs/archive/specs/client-ui-notes.md` (referenced as *Notes*).
 Every ticket executor MUST read the spec/notes sections its ticket cites.
 
 ## Global Constraints
@@ -41,6 +47,15 @@ Every ticket executor MUST read the spec/notes sections its ticket cites.
 ---
 
 ## Wire Contract (shared interface — server implements, both clients consume)
+
+> **Moved — and the copy below is outdated.** The maintained, authoritative wire
+> contract now lives in [`docs/wire-contract.md`](../../wire-contract.md). Use that.
+>
+> What follows is the original 2026-07-08 version, kept only so the tickets below
+> still read against the contract they were written for. It has since drifted:
+> it is missing `GET /registration-status` and all five `/admin/*` endpoints, the
+> `notes` and `kind` list fields, the item-level `last_touched_by`, and `is_admin`
+> on the login response, and its `GET /lists/{id}/members` response shape is stale.
 
 Error envelope (every non-2xx JSON response): `{"error": "<code>", "message": "<text>"}`.
 Status codes per Spec §8 (incl. `410` → `{"error": "full_resync_required", ...}`).

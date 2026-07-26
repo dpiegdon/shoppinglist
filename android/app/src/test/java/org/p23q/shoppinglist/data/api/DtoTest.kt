@@ -9,7 +9,7 @@ import org.junit.Test
 
 /**
  * DTO shapes are checked against fully-expanded fixtures of the Wire Contract's Item/List
- * examples (docs/superpowers/plans/2026-07-08-shopping-list-tickets.md) — the doc abbreviates
+ * examples (docs/wire-contract.md) — the doc abbreviates
  * repeated updated_at/updated_by pairs with "...", these fixtures spell every field out in full.
  */
 class DtoTest {

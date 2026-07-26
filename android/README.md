@@ -3,9 +3,8 @@
 Jetpack Compose client for the shopping-list server (`server/`). Offline-first:
 it keeps a full local Room mirror and syncs to the server in the background, so
 the app stays usable with no connection. See
-`../docs/superpowers/specs/client-ui-notes.md` for the product requirements and
-`../docs/superpowers/plans/2026-07-08-shopping-list-tickets.md` for the Wire
-Contract this app implements against.
+[`../docs/wire-contract.md`](../docs/wire-contract.md) for the interface this app
+implements against.
 
 ## Building
 
@@ -83,7 +82,7 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
   the first time.
 
 On first launch the login screen shows the **server URL** — prefilled with
-`https://p23q.org/shopping` (the canonical instance; edit it if you self-host)
+`https://p23q.org/shopping` (the original instance; edit it if you self-host)
 or with whatever you last logged into. It's the base URL where the Flask
 blueprint is mounted, e.g. `https://shopping.example.com/` or
 `https://example.com/apps/shopping/`, and **must be `https`** (the login
@@ -91,6 +90,21 @@ screen rejects plain `http`), so the server needs TLS in front of it — see
 [`../server/README.md`](../server/README.md) for the deployment requirements.
 Confirm it, then register a new account or log in. On later launches the app
 resumes your session and reopens the list you last had open.
+
+### Changing the prefilled URL for your own build
+
+The default is one constant:
+
+```
+app/src/main/java/org/p23q/shoppinglist/ui/login/LoginViewModel.kt
+    const val DEFAULT_SERVER_URL = "https://p23q.org/shopping"
+```
+
+Edit it before building, and update the assertion in
+`app/src/test/java/org/p23q/shoppinglist/ui/login/LoginViewModelTest.kt` to match
+or the test suite fails. It is only a prefill — the field stays editable, and any
+URL a user logs into replaces it — so users of a stock build can always reach your
+server by typing its URL.
 
 ### Testing against a self-signed server (debug builds only)
 

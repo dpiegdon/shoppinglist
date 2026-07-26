@@ -1,10 +1,12 @@
 # Client UI — captured requirements (seed for Spec #2: Android app)
 
-> **Status: raw capture, not yet designed.** These are requirements the user
-> stated while we finalized the *server* spec. They are client concerns and do
-> **not** affect the server. They exist so nothing is lost when we brainstorm
-> the Android client (Spec #2). The server already exposes everything below via
-> the sync data model (`status`, fields, `default_currency`).
+> **ARCHIVED — historical record, captured 2026-07-08.** This was a raw capture of
+> client requirements, written while the *server* spec was being finalized and
+> before either client was designed. Both clients have since been built from it,
+> so it reads as a wish-list that has already been fulfilled (and in places
+> superseded). It is not a description of current behavior — see the
+> [`web/`](../../../web/README.md) and [`android/`](../../../android/README.md)
+> READMEs for that, and the [archive index](../README.md) for context.
 
 ## Navigation & app shell
 - On login, open the **list the user last had open**; if none, show an

@@ -2,7 +2,7 @@ package org.p23q.shoppinglist.data
 
 /**
  * Case-insensitive category identity + canonical casing (T-108). Mirror of the web client's
- * `lib/categories.ts` and the rule in docs/superpowers/specs/client-ui-notes.md — the two clients
+ * `lib/categories.ts` and the rule in docs/archive/specs/client-ui-notes.md — the two clients
  * MUST key categories the same way or they'd show different groupings for the same synced data.
  */
 object CategoryCanon {

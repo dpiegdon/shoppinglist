@@ -1,5 +1,5 @@
 // Types mirroring the server's Wire Contract exactly.
-// See docs/superpowers/plans/2026-07-08-shopping-list-tickets.md#wire-contract
+// See docs/wire-contract.md
 
 export interface FieldClock<T> {
   value: T;

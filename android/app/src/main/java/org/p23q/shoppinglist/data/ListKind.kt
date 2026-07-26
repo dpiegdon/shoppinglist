@@ -7,7 +7,7 @@ package org.p23q.shoppinglist.data
  * needs no data migration and is reversible.
  *
  * Mirror of the web client's `lib/listKind.ts`; the rule lives in
- * docs/superpowers/specs/client-ui-notes.md so the two clients can't drift.
+ * docs/archive/specs/client-ui-notes.md so the two clients can't drift.
  */
 object ListKind {
     const val SHOPPING = "shopping"

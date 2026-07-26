@@ -9,12 +9,12 @@ app — plus a minimal standalone `app.py` for local development.
 the server's base URL in a browser boots the React SPA directly — there is no
 separate static-hosting deployment step. See "Web client" below.
 
-The full design is documented in
-[`docs/superpowers/specs/2026-07-08-shopping-list-server-design.md`](../docs/superpowers/specs/2026-07-08-shopping-list-server-design.md).
 The **wire contract** (every endpoint's exact request/response JSON, the
 field-clock shape, and the invite token format) that both this server and its
-clients implement lives in
-[`docs/superpowers/plans/2026-07-08-shopping-list-tickets.md`](../docs/superpowers/plans/2026-07-08-shopping-list-tickets.md#wire-contract-shared-interface--server-implements-both-clients-consume).
+clients implement lives in [`docs/wire-contract.md`](../docs/wire-contract.md).
+The original design spec, which explains *why* the sync and access models look
+the way they do, is archived at
+[`docs/archive/specs/2026-07-08-shopping-list-server-design.md`](../docs/archive/specs/2026-07-08-shopping-list-server-design.md).
 
 ## Installing
 
@@ -236,7 +236,7 @@ This makes one build of this package a **single deployable artifact** — API,
 web client, invite landing page, and the app download in one wheel:
 
 ```bash
-./build-wheel.sh             # repo root -> server/dist/shoppinglist_server-1.0.0-py3-none-any.whl
+./build-wheel.sh             # repo root -> server/dist/shoppinglist_server-<version>-py3-none-any.whl
 pip install server/dist/shoppinglist_server-*.whl   # on the deployment host
 ```
 

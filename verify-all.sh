@@ -7,7 +7,10 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 
-JAVA_HOME_DEFAULT="/home/claude/.sdkman/candidates/java/current"
+# Fallback for the Android stage when JAVA_HOME isn't already exported. The sdkman
+# path is this project's original dev machine; anywhere else, either export
+# JAVA_HOME yourself or rely on Gradle finding a JDK on PATH.
+JAVA_HOME_DEFAULT="${HOME}/.sdkman/candidates/java/current"
 
 STAGE_NAMES=()
 declare -A STAGE_STATUS
@@ -54,7 +57,12 @@ web_check() (
 
 android_check() (
   cd android
-  JAVA_HOME="${JAVA_HOME:-$JAVA_HOME_DEFAULT}" ./gradlew :app:testDebugUnitTest :app:lintDebug --offline
+  # Only fall back to JAVA_HOME_DEFAULT if it actually exists; otherwise leave
+  # JAVA_HOME unset and let Gradle locate a JDK itself.
+  if [ -z "${JAVA_HOME:-}" ] && [ -d "$JAVA_HOME_DEFAULT" ]; then
+    export JAVA_HOME="$JAVA_HOME_DEFAULT"
+  fi
+  ./gradlew :app:testDebugUnitTest :app:lintDebug --offline
 )
 
 run_stage "server (pytest)" server_check
