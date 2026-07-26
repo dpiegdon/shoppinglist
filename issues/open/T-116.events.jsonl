@@ -1,0 +1,1 @@
+{"actor": "claude", "at": "2026-07-26T23:46:14+00:00", "kind": "created", "ref": "main@5c7ac19", "text": "auth routes: unauthenticated 500s from payload type confusion on /login and /register"}

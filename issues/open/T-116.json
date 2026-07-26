@@ -1,0 +1,13 @@
+{
+  "body": "From the pre-release security review of the server's network interface\n(2026-07-26). Post-1.8.1.\n\n## Problem\n\n/sync was hardened against payload type confusion (T-85), but the auth routes\nnever were. Unauthenticated requests can crash the handler:\n\n    POST /login    {\"email\": {}}  -> 500  sqlite3.ProgrammingError\n                                          (Error binding parameter 0: type\n                                          'dict' is not supported)\n    POST /login    {\"email\": []}  -> 500  same\n    POST /register {\"email\": 5}   -> 500  TypeError: expected string or\n                                          bytes-like object (EMAIL_RE.match)\n\nPOST /register {\"email\": {}} correctly returns 422 only by accident \u2014 {} is\nfalsy, so validate_email's `not email` branch catches it first. A truthy\nnon-string (int/float) reaches the regex and raises.\n\nAlso reachable, but only with valid credentials (so post-authentication):\n\n    POST /login {\"device_label\": {}} -> 500  sqlite3.ProgrammingError at the\n                                             auth_tokens INSERT (auth.py:133)\n\nNo data leak: the generic Flask 500 page carries no traceback outside debug\nmode, confirmed. But these are pre-auth crash paths that produce unactionable\n500s in logs and monitoring, and they are inconsistent with the careful\nrow-scoped 422 discipline the sync engine already applies.\n\n## Fix\n\n- validate_email (auth.py:75): isinstance(email, str) check before the regex,\n  raising the existing 422 invalid_email.\n- validate_password (auth.py:80): same for password \u2014 len() on a non-string\n  raises TypeError today.\n- auth.login (auth.py:116): type-check email and device_label before they bind\n  into SQL. device_label is also currently unvalidated for length \u2014 see the\n  separate length-cap ticket.\n\n`platform` is already handled correctly (resolve_idle_ttl_ms does an isinstance\ncheck and falls back) \u2014 that is the pattern to follow.\n\n## Verification\n\nParametrised test posting each of dict / list / int / float / None for every\ntop-level field of /login and /register, asserting 4xx and never 5xx.",
+  "created_at": "2026-07-26T23:46:14+00:00",
+  "id": "T-116",
+  "labels": [
+    "security",
+    "reliability",
+    "bug"
+  ],
+  "priority": 2,
+  "title": "auth routes: unauthenticated 500s from payload type confusion on /login and /register",
+  "updated_at": "2026-07-26T23:46:14+00:00"
+}
