@@ -1,0 +1,11 @@
+{
+  "body": "From the pre-release security review of the server's network interface\n(2026-07-26). Post-1.8.1.\n\n## Problem\n\n_add_security_headers (__init__.py:232) sets X-Content-Type-Options and\nReferrer-Policy on every owned response, and CSP + X-Frame-Options on HTML \u2014 but\nsets no cache directives at all. Confirmed on a live response:\n\n    GET /api/v1/settings  200\n      Content-Type: application/json\n      X-Content-Type-Options: nosniff\n      Referrer-Policy: no-referrer\n      (no Cache-Control, no Pragma, no Vary)\n\nUnder RFC 9111 a 200 response to a GET with no explicit freshness information\nmay be cached heuristically by a shared cache. A TLS-terminating reverse proxy\nis a mandatory part of this deployment (server/README.md:332), so a shared cache\nis exactly what sits in front of this server.\n\nAffected authenticated GETs: /settings, /lists, /lists/<id>/members (member\nemail addresses), /account/sessions, /admin/users (every account's email).\n\nMost pointed, though POSTs are not heuristically cached and so are lower risk:\n- POST /login returns the bearer token in the body\n- POST /admin/users/<id>/reset-password returns a PLAINTEXT password in the body\n\n## Fix\n\nIn _add_security_headers, add `Cache-Control: no-store` (setdefault, matching\nthe existing convention so an operator-set header still wins) for responses that\nare not the cacheable static assets.\n\nCareful: the hook is app-wide and self-limits to owned endpoints. The web client\nassets deliberately carry long max-age (webapp.py ASSET_MAX_AGE) and the APK\ncarries APK_MAX_AGE, and web_index sets no-cache explicitly \u2014 none of those must\nbe clobbered. setdefault already protects them since each sets Cache-Control\nitself, but this needs an explicit test rather than trust.\n\n## Verification\n\nAssert no-store on the authenticated JSON endpoints above, AND assert the asset\n/ APK / index routes keep their existing caching headers unchanged.",
+  "created_at": "2026-07-26T23:46:22+00:00",
+  "id": "T-119",
+  "labels": [
+    "security"
+  ],
+  "priority": 3,
+  "title": "headers: no Cache-Control on authenticated JSON (tokens and reset passwords included)",
+  "updated_at": "2026-07-26T23:46:22+00:00"
+}
