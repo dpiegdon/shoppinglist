@@ -1,0 +1,12 @@
+{
+  "body": "From the pre-release security review of the server's network interface\n(2026-07-26). Post-1.8.1.\n\n## Problem\n\nserver/README.md:362 claims:\n\n    `/login` itself does *not* enumerate (it returns the same\n    `invalid_credentials` for an unknown email and a wrong password).\n\nThe status code and body are identical, but the TIMING is not. auth.py:127 only\ncalls check_password_hash when the account row was found, so the scrypt work\n(werkzeug 3.1.8 default, scrypt:32768:8:1) happens only for real accounts.\n\nMeasured, median of 12 requests each:\n\n    existing account, wrong password : 196.54 ms\n    unknown account                  :   3.74 ms\n    ratio                            : 52x\n\n52x is trivially observable over a network. This is a working account-existence\noracle, and it contradicts a documented security claim \u2014 which is worse than an\nundocumented gap, because an operator reading the README will not compensate for\nit at the proxy.\n\nRelated note (not a bug, but the reason the gap is expensive): each login\nagainst a KNOWN account costs ~32 MB of RAM and ~195 ms of CPU for scrypt. On a\nmemory-constrained host that is also an unauthenticated resource-amplification\nlever. README already assigns login rate-limiting to the reverse proxy, so that\npart stays the operator's job \u2014 but the timing oracle is fixable here.\n\n## Fix\n\nIn auth.login(), when no account row matches, still perform a\ncheck_password_hash against a fixed dummy hash (generated once at import time)\nbefore raising invalid_credentials, so both paths do the same scrypt work.\n\nThen either keep the README claim (now true) or, if the equalisation is judged\nimperfect, soften it the way the neighbouring \"Known, accepted trade-off\"\nsection handles registration enumeration.\n\n## Verification\n\nTest asserting the two paths' timings are within a small factor of each other\n(a ratio assertion, not an absolute one \u2014 absolute timings vary by host).",
+  "created_at": "2026-07-26T23:46:14+00:00",
+  "id": "T-115",
+  "labels": [
+    "security",
+    "bug"
+  ],
+  "priority": 2,
+  "title": "login: timing side channel enumerates accounts, contradicting the README's no-enumeration claim",
+  "updated_at": "2026-07-26T23:46:14+00:00"
+}
