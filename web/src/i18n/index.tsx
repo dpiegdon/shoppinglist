@@ -21,6 +21,30 @@ export function registerCatalog(locale: Locale, catalog: Catalog): void {
   catalogs.set(locale, catalog);
 }
 
+// Strong right-to-left characters: Hebrew, Arabic (incl. supplement and extended-A), and the
+// Arabic presentation forms. Enough to decide whether a value needs isolating.
+const RTL_CHARS = /[֐-׿؀-ۿ܀-ݏݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/;
+
+// First Strong Isolate / Pop Directional Isolate.
+const FSI = "⁨";
+const PDI = "⁩";
+
+/**
+ * Wraps an interpolated value in bidi isolates when it actually needs them (T-126).
+ *
+ * User-authored text dropped into a sentence reorders the surrounding punctuation without this:
+ * an Arabic list name inside "Casing fixed in {category}: {count}" drags the colon to the wrong
+ * side. Isolating the value tells the bidi algorithm to resolve it independently of its
+ * surroundings.
+ *
+ * Only when RTL is present, deliberately: isolates are invisible but they are real characters, and
+ * adding them unconditionally would change every interpolated string in the app — including in
+ * tests and in copy-pasted text — to buy nothing for the overwhelmingly common all-LTR case.
+ */
+function isolate(value: string): string {
+  return RTL_CHARS.test(value) ? `${FSI}${value}${PDI}` : value;
+}
+
 /**
  * Substitutes `{name}` placeholders. Unknown placeholders are left untouched rather than replaced
  * with "undefined": a translator's typo should degrade to visible, diagnosable text, not to a word
@@ -29,7 +53,7 @@ export function registerCatalog(locale: Locale, catalog: Catalog): void {
 function interpolate(template: string, params?: Record<string, string | number>): string {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (whole, name: string) =>
-    name in params ? String(params[name]) : whole,
+    name in params ? isolate(String(params[name])) : whole,
   );
 }
 

@@ -59,10 +59,15 @@ export default function ItemRow({ item, authorMember, showShoppingFields = true,
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
+          // User-authored text inside UI chrome (T-126): without dir="auto" a Hebrew or Arabic
+          // item name renders with its punctuation on the wrong side in an English UI, and a Latin
+          // name does the same in an Arabic one. The browser picks per-string from first strong
+          // character, which is exactly right for content the app did not author.
+          dir="auto"
         >
           {itemFieldValue(item, "name")}
         </div>
-        {details && <div className="muted" style={{ fontSize: "0.85rem" }}>{details}</div>}
+        {details && <div className="muted" dir="auto" style={{ fontSize: "0.85rem" }}>{details}</div>}
         {!category && null}
       </div>
       {authorMember && (

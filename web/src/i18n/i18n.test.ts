@@ -143,3 +143,29 @@ describe("provider-free defaults", () => {
     expect(() => result.current.setLocale("de")).toThrow(/I18nProvider/);
   });
 });
+
+describe("bidi isolation (T-126)", () => {
+  it("leaves an all-LTR interpolated value untouched", () => {
+    // The common case must stay byte-for-byte unchanged: isolates are invisible but real
+    // characters, and adding them unconditionally would alter every interpolated string.
+    expect(translate("en", "list.categoryFixed", { category: "Dairy", count: 3 })).toBe(
+      "Casing fixed in Dairy: 3",
+    );
+  });
+
+  it("isolates an RTL value so it cannot reorder the surrounding punctuation", () => {
+    // Without isolates the colon in "…{category}: {count}" jumps to the wrong side of an Arabic
+    // category name.
+    const rendered = translate("en", "list.categoryFixed", { category: "ألبان", count: 3 });
+
+    expect(rendered).toContain("⁨ألبان⁩");
+    expect(rendered).toContain("3");
+  });
+
+  it("isolates per-argument, not the whole message", () => {
+    const rendered = translate("en", "list.categoryFixed", { category: "ألبان", count: 3 });
+
+    // The count is plain LTR and must not have been wrapped along with it.
+    expect(rendered).not.toContain("⁨3⁩");
+  });
+});

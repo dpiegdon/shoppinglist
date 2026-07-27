@@ -268,7 +268,7 @@ export default function ListPage() {
         <section key={group.category} style={{ marginBottom: "1rem" }}>
           {/* Not uppercased (T-108): the category's casing is user-controlled now (fixable in the
               item dialog / list settings), so render it verbatim like the Android app does. */}
-          <h2 className="muted" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
+          <h2 className="muted" dir="auto" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
             {group.category}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>

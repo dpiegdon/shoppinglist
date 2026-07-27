@@ -43,12 +43,14 @@ function ToggleSwitch({
         style={{
           position: "absolute",
           top: "0.2rem",
-          left: checked ? "1.6rem" : "0.2rem",
+          // Logical, not `left` (T-126): this knob's POSITION is what says on/off, so in an
+          // RTL layout it has to travel the other way or the switch reads inverted.
+          insetInlineStart: checked ? "1.6rem" : "0.2rem",
           width: "1.2rem",
           height: "1.2rem",
           borderRadius: "50%",
           background: "#fff",
-          transition: "left 0.15s",
+          transition: "inset-inline-start 0.15s",
         }}
       />
     </button>

@@ -22,7 +22,7 @@ export default function SyncIndicator() {
   const label = syncStatusLabel({ loading, error, lastSyncAt }, now, t);
 
   return (
-    <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+    <span style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: "0.35rem" }}>
       <span
         role="status"
         aria-live="polite"

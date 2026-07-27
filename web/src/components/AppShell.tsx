@@ -43,7 +43,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             style={{
               position: "absolute",
               top: "3.2rem",
-              left: "0.5rem",
+              insetInlineStart: "0.5rem",
               zIndex: 50,
               padding: "0.5rem",
               display: "flex",
@@ -69,7 +69,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => logout()}
               className="btn-icon"
-              style={{ textAlign: "left", padding: "0.5rem 0.6rem" }}
+              style={{ textAlign: "start", padding: "0.5rem 0.6rem" }}
             >
               Log out
             </button>

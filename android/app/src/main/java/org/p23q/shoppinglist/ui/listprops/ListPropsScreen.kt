@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.asString
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 @Composable
 fun ListPropsScreen(
@@ -226,7 +227,11 @@ fun ListPropsScreen(
         AlertDialog(
             onDismissRequest = viewModel::cancelLeave,
             title = { Text(stringResource(R.string.listprops_leave_confirm_title)) },
-            text = { Text(stringResource(R.string.listprops_leave_confirm_body, state.name)) },
+            // Through UiText, not stringResource directly, so the list name gets bidi-isolated
+            // (T-126) — this is VISIBLE text with the name embedded mid-sentence in quotes. The
+            // contentDescription sites elsewhere are spoken by TalkBack, where reordering does not
+            // arise, so they stay on plain stringResource.
+            text = { Text(UiText.res(R.string.listprops_leave_confirm_body, state.name).asString()) },
             confirmButton = { TextButton(onClick = viewModel::confirmLeave) { Text(stringResource(R.string.action_leave)) } },
             dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
         )

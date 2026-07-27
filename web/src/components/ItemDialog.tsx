@@ -372,7 +372,7 @@ export default function ItemDialog({
                     style={{
                       display: "block",
                       width: "100%",
-                      textAlign: "left",
+                      textAlign: "start",
                       background: "transparent",
                       border: "none",
                       padding: "0.4rem 0.5rem",

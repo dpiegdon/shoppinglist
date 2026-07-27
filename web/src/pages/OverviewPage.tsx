@@ -116,7 +116,7 @@ export default function OverviewPage() {
               <span aria-label={listKindLabel(listKind(list))} title={listKindLabel(listKind(list))}>
                 {listKindIcon(listKind(list))}
               </span>
-              <span style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>
+              <span dir="auto" style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>
               {openCount > 0 && (
                 <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>{openCount}</span>
               )}

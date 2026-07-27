@@ -101,12 +101,12 @@ export default function RegistryPage() {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "0.6rem 0.75rem",
-              textAlign: "left",
+              textAlign: "start",
               border: "1px solid var(--color-border)",
               color: "var(--color-text)",
             }}
           >
-            <span>{itemFieldValue(item, "name")}</span>
+            <span dir="auto">{itemFieldValue(item, "name")}</span>
             <span className="muted" style={{ fontSize: "0.8rem", textTransform: "capitalize" }}>
               {itemFieldValue(item, "status")}
             </span>

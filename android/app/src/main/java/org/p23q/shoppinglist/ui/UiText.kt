@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.core.text.BidiFormatter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
@@ -50,6 +51,21 @@ fun UiText.asString(context: Context): String = when (this) {
     is UiText.Raw -> value
     is UiText.Res -> context.getString(
         id,
-        *args.map { if (it is UiText) it.asString(context) else it }.toTypedArray(),
+        *args.map {
+            when (it) {
+                is UiText -> it.asString(context)
+                // User-authored text dropped into a sentence reorders the surrounding punctuation
+                // without isolation (T-126): an Arabic list name inside "…updates for \"%1$s\" on
+                // this device." drags the quotes to the wrong side. BidiFormatter adds isolates
+                // only when the run's direction actually differs from the context's, so an all-LTR
+                // app is byte-for-byte unchanged.
+                //
+                // Plain Text(userValue) does NOT need this — Compose resolves an unspecified
+                // TextDirection from the content's first strong character already. Only values
+                // embedded in a larger string are at risk.
+                is String -> BidiFormatter.getInstance().unicodeWrap(it)
+                else -> it
+            }
+        }.toTypedArray(),
     )
 }

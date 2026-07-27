@@ -500,7 +500,7 @@ export default function ListPropsPage() {
         )}
       </section>
 
-      <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginRight: "0.5rem" }}>
+      <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginInlineEnd: "0.5rem" }}>
         Duplicate
       </button>
       <button type="button" className="btn btn-danger" onClick={handleLeave}>
