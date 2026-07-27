@@ -30,6 +30,8 @@ import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import java.io.IOException
 import javax.inject.Inject
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 data class SettingsUiState(
     val serverUrl: String = "",
@@ -57,15 +59,15 @@ data class SettingsUiState(
     val changeEmailPassword: String = "",
     val deleteAccountPassword: String = "",
     val isDeleteConfirmOpen: Boolean = false,
-    val errorMessage: String? = null,
-    val infoMessage: String? = null,
+    val errorMessage: UiText? = null,
+    val infoMessage: UiText? = null,
     val isAccountDeleted: Boolean = false,
     /** Absolute path of the crash log to hand to a share intent (T-50); consumed once fired. */
     val crashLogPath: String? = null,
     /** Global collaborator-change notifications on/off (T-65). */
     val notificationsEnabled: Boolean = true,
     /** Diagnostics: when the background (WorkManager) sync last ran, humanized (T-112). */
-    val lastBackgroundSyncText: String = "never",
+    val lastBackgroundSyncText: UiText = UiText.res(R.string.background_sync_never),
 )
 
 /** Notes: "the usual stuff" — currency, password/email, sessions, delete account, theme, server URL. */
@@ -123,7 +125,7 @@ class SettingsViewModel @Inject constructor(
             val sessions = apiProvider.get().sessions().sessions
             _uiState.update { it.copy(sessions = sessions) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = "Couldn't load sessions") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_sessions_failed)) }
         }
     }
 
@@ -155,7 +157,7 @@ class SettingsViewModel @Inject constructor(
     fun updateCurrency(currency: String): Job? {
         val normalized = currency.trim().uppercase()
         if (!ISO_CURRENCY.matches(normalized)) {
-            _uiState.update { it.copy(errorMessage = "Enter a valid 3-letter currency code") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_currency_invalid)) }
             return null
         }
         return viewModelScope.launch {
@@ -182,13 +184,13 @@ class SettingsViewModel @Inject constructor(
                         defaultCurrency = response.defaultCurrency,
                         initials = response.initials,
                         errorMessage = null,
-                        infoMessage = "Currency updated",
+                        infoMessage = UiText.res(R.string.settings_msg_currency_updated),
                     )
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't update currency") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_currency_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -198,7 +200,7 @@ class SettingsViewModel @Inject constructor(
     fun updateInitials(initials: String): Job? {
         val normalized = initials.trim().uppercase()
         if (normalized.length > INITIALS_MAX_LENGTH) {
-            _uiState.update { it.copy(errorMessage = "Initials must be $INITIALS_MAX_LENGTH characters or fewer") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_initials_too_long, INITIALS_MAX_LENGTH)) }
             return null
         }
         return viewModelScope.launch {
@@ -210,12 +212,12 @@ class SettingsViewModel @Inject constructor(
                     UpdateSettingsRequest(_uiState.value.defaultCurrency, normalized),
                 )
                 _uiState.update {
-                    it.copy(initials = response.initials, errorMessage = null, infoMessage = "Initials updated")
+                    it.copy(initials = response.initials, errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_initials_updated))
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't update initials") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_initials_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -223,21 +225,21 @@ class SettingsViewModel @Inject constructor(
     fun changePassword(): Job? {
         val state = _uiState.value
         if (state.currentPassword.isBlank() || state.newPassword.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Both password fields are required") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_fields_required)) }
             return null
         }
         return viewModelScope.launch {
             try {
                 apiProvider.get().changePassword(ChangePasswordRequest(state.currentPassword, state.newPassword))
                 _uiState.update {
-                    it.copy(currentPassword = "", newPassword = "", errorMessage = null, infoMessage = "Password changed")
+                    it.copy(currentPassword = "", newPassword = "", errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_password_changed))
                 }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(errorMessage = "Current password is incorrect") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't change password") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_password_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -245,7 +247,7 @@ class SettingsViewModel @Inject constructor(
     fun changeEmail(): Job? {
         val state = _uiState.value
         if (state.changeEmailPassword.isBlank() || state.newEmail.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Password and new email are required") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_email_fields_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -258,15 +260,15 @@ class SettingsViewModel @Inject constructor(
                         newEmail = "",
                         changeEmailPassword = "",
                         errorMessage = null,
-                        infoMessage = "Email changed",
+                        infoMessage = UiText.res(R.string.settings_msg_email_changed),
                     )
                 }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(errorMessage = "Password is incorrect") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't change email") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_email_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -275,7 +277,7 @@ class SettingsViewModel @Inject constructor(
         try {
             apiProvider.get().revokeSession(id)
         } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = "Couldn't revoke that session") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_revoke_failed)) }
         }
         loadSessions().join()
     }
@@ -287,7 +289,7 @@ class SettingsViewModel @Inject constructor(
     fun confirmDeleteAccount(): Job? {
         val password = _uiState.value.deleteAccountPassword
         if (password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Password is required") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -297,11 +299,11 @@ class SettingsViewModel @Inject constructor(
                 withContext(Dispatchers.IO) { appDb.clearAllTables() }
                 _uiState.update { it.copy(isAccountDeleted = true, isDeleteConfirmOpen = false) }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(errorMessage = "Password is incorrect") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't delete account") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_delete_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -312,7 +314,7 @@ class SettingsViewModel @Inject constructor(
         if (file.exists() && file.length() > 0) {
             _uiState.update { it.copy(crashLogPath = file.absolutePath) }
         } else {
-            _uiState.update { it.copy(infoMessage = "No crash logs yet") }
+            _uiState.update { it.copy(infoMessage = UiText.res(R.string.settings_msg_no_crash_logs)) }
         }
     }
 
@@ -336,13 +338,13 @@ class SettingsViewModel @Inject constructor(
 }
 
 /** Coarse "how long ago" for the background-sync diagnostic (T-112); 0 = never ran. */
-internal fun formatBackgroundSync(at: Long, now: Long = System.currentTimeMillis()): String {
-    if (at <= 0L) return "never"
+internal fun formatBackgroundSync(at: Long, now: Long = System.currentTimeMillis()): UiText {
+    if (at <= 0L) return UiText.res(R.string.background_sync_never)
     val elapsed = now - at
     return when {
-        elapsed < 60_000 -> "just now"
-        elapsed < 3_600_000 -> "${elapsed / 60_000} min ago"
-        elapsed < 86_400_000 -> "${elapsed / 3_600_000} h ago"
-        else -> "${elapsed / 86_400_000} d ago"
+        elapsed < 60_000 -> UiText.res(R.string.ago_just_now)
+        elapsed < 3_600_000 -> UiText.res(R.string.ago_minutes, (elapsed / 60_000).toInt())
+        elapsed < 86_400_000 -> UiText.res(R.string.ago_hours, (elapsed / 3_600_000).toInt())
+        else -> UiText.res(R.string.ago_days, (elapsed / 86_400_000).toInt())
     }
 }

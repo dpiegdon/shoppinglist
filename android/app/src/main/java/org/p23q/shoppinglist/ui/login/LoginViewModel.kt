@@ -23,6 +23,8 @@ import java.io.IOException
 import java.net.URI
 import javax.inject.Inject
 import javax.net.ssl.SSLException
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 data class LoginUiState(
     val serverUrl: String = "",
@@ -30,7 +32,7 @@ data class LoginUiState(
     val password: String = "",
     val isRegisterMode: Boolean = false,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val loginSucceeded: Boolean = false,
     /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
      *  reach it before they've managed to log in — otherwise it's a bootstrap deadlock (T-38/T-46). */
@@ -107,11 +109,11 @@ class LoginViewModel @Inject constructor(
     fun submit(): Job? {
         val state = _uiState.value
         if (!isValidHttpsUrl(state.serverUrl)) {
-            _uiState.update { it.copy(errorMessage = "Enter a valid https server URL") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.login_msg_invalid_url)) }
             return null
         }
         if (state.email.isBlank() || state.password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Email and password are required") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.login_msg_credentials_required)) }
             return null
         }
 
@@ -129,9 +131,9 @@ class LoginViewModel @Inject constructor(
                 syncTrigger.scheduleImmediate()
                 _uiState.update { it.copy(isLoading = false, loginSucceeded = true) }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Incorrect email or password") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_incorrect_credentials)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Something went wrong") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.error_generic))) }
             } catch (e: SSLException) {
                 // Distinct from the generic reach-the-server case: an untrusted/self-signed cert is the
                 // first thing a self-hoster hits, and it's actionable (T-38). SSLException extends
@@ -139,14 +141,11 @@ class LoginViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "The server's certificate isn't trusted. Use a certificate from a " +
-                            "trusted CA (e.g. via a reverse proxy), or install your own CA on this device. " +
-                            "For a self-signed dev server, enable \"Trust self-signed certificates\" in " +
-                            "Settings (debug builds only).",
+                        errorMessage = UiText.res(R.string.login_msg_untrusted_cert),
                     )
                 }
             } catch (e: IOException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }

@@ -20,6 +20,8 @@ import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.UnauthorizedException
 import java.io.File
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 class LoginViewModelTest {
 
@@ -107,7 +109,7 @@ class LoginViewModelTest {
         viewModel.submit()?.join()
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
-        assertEquals("Incorrect email or password", viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(R.string.login_msg_incorrect_credentials), viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -123,10 +125,12 @@ class LoginViewModelTest {
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
         // Distinct from the generic offline/wrong-URL message.
+        // Since T-111 the ViewModel names the message rather than rendering it, so this asserts
+        // WHICH message was chosen — the wording itself now lives in strings.xml.
         val message = viewModel.uiState.value.errorMessage
         assertNotNull(message)
-        assertTrue(message!!.contains("certificate"))
-        assertNotEquals("Couldn't reach the server", message)
+        assertEquals(UiText.res(R.string.login_msg_untrusted_cert), message)
+        assertNotEquals(UiText.res(R.string.error_offline), message)
     }
 
     @Test
@@ -168,7 +172,7 @@ class LoginViewModelTest {
         viewModel.submit()
 
         assertFalse(repo.loginCalled)
-        assertEquals("Enter a valid https server URL", viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(R.string.login_msg_invalid_url), viewModel.uiState.value.errorMessage)
     }
 
     @Test

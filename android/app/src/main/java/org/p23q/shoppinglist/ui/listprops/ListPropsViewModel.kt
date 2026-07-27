@@ -25,6 +25,8 @@ import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.ui.Routes
 import java.io.IOException
 import javax.inject.Inject
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 data class ListPropsUiState(
     val name: String = "",
@@ -35,7 +37,7 @@ data class ListPropsUiState(
     val members: List<MemberDto> = emptyList(),
     val pendingInvites: List<PendingInviteDto> = emptyList(),
     val isMembersLoading: Boolean = false,
-    val membersError: String? = null,
+    val membersError: UiText? = null,
     val inviteEmail: String = "",
     val inviteShareUrl: String? = null,
     val isLeaveConfirmOpen: Boolean = false,
@@ -45,7 +47,7 @@ data class ListPropsUiState(
     val notificationsEnabledForList: Boolean = true,
     /** Number of checked items — drives the relocated 'Clear checked (N)' button (T-75). */
     val checkedCount: Int = 0,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 /** Notes: rename, category order, members/invites, share, unsubscribe — all "list properties." */
@@ -114,7 +116,7 @@ class ListPropsViewModel @Inject constructor(
                 it.copy(members = response.members, pendingInvites = response.invites, isMembersLoading = false)
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(isMembersLoading = false, membersError = "Members are only available online") }
+            _uiState.update { it.copy(isMembersLoading = false, membersError = UiText.res(R.string.listprops_msg_members_offline)) }
         }
     }
 
@@ -181,7 +183,7 @@ class ListPropsViewModel @Inject constructor(
     fun sendInvite(): Job? {
         val email = _uiState.value.inviteEmail.trim()
         if (email.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Enter an email address") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.listprops_msg_email_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -190,9 +192,9 @@ class ListPropsViewModel @Inject constructor(
                 _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, errorMessage = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't send invite") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.listprops_msg_invite_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -205,11 +207,11 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the invite is already gone — fall through and refresh so it drops off the list.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(errorMessage = e.message ?: "Couldn't revoke the invite") }
+                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.listprops_msg_revoke_failed))) }
                 return@launch
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = "You're offline; try again when connected") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline_retry)) }
             return@launch
         }
         loadMembers().join()
@@ -240,11 +242,11 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = e.message ?: "Couldn't leave the list") }
+                _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.listprops_msg_leave_failed))) }
                 return@launch
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = "You're offline; try again when connected") }
+            _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = UiText.res(R.string.error_offline_retry)) }
             return@launch
         }
         itemsRepo.hardDeleteByListId(listId)

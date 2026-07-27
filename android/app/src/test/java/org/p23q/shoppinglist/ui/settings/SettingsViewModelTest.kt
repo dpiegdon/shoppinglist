@@ -36,6 +36,8 @@ import org.p23q.shoppinglist.data.db.AppDb
 import org.robolectric.RobolectricTestRunner
 import kotlinx.serialization.json.Json
 import java.io.File
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)
 class SettingsViewModelTest {
@@ -294,7 +296,7 @@ class SettingsViewModelTest {
 
         viewModel.changePassword()?.join()
 
-        assertEquals("Current password is incorrect", viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(R.string.settings_msg_password_incorrect), viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -388,7 +390,7 @@ class SettingsViewModelTest {
 
         viewModel.confirmDeleteAccount()?.join()
 
-        assertEquals("Password is incorrect", viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(R.string.settings_msg_delete_password_incorrect), viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isAccountDeleted)
         assertNotNull(sessionState.token)
     }
@@ -445,7 +447,7 @@ class SettingsViewModelTest {
         viewModel.shareLogs()
 
         assertNull(viewModel.uiState.value.crashLogPath)
-        assertEquals("No crash logs yet", viewModel.uiState.value.infoMessage)
+        assertEquals(UiText.res(R.string.settings_msg_no_crash_logs), viewModel.uiState.value.infoMessage)
     }
 
     @Test

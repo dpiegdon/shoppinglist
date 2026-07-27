@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.p23q.shoppinglist.data.sync.SyncState
+import org.p23q.shoppinglist.R
 
 /**
  * The shared sync-health surface (T-47): a quiet recency line ("Synced 5 min ago · 2 pending"), and
@@ -58,12 +59,12 @@ fun SyncStatusBar(
                 ) {
                     Icon(imageVector = Icons.Default.Warning, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(attentionText(state.blockedCount), style = MaterialTheme.typography.bodyMedium)
+                    Text(attentionText(state.blockedCount).asString(), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
         Text(
-            text = syncRecencyText(state, nowMs),
+            text = syncRecencyText(state, nowMs).asString(),
             style = MaterialTheme.typography.labelSmall,
             color = if (state.lastError != null && state.blockedCount == 0) {
                 MaterialTheme.colorScheme.error
@@ -87,9 +88,11 @@ fun SyncStatusBar(
  */
 @Composable
 fun SyncStatusMarker(state: SyncState, nowMs: Long, modifier: Modifier = Modifier) {
+    // Hoisted: a semantics lambda is not a composition, so it cannot resolve a UiText itself.
+    val recencyDescription = syncRecencyText(state, nowMs).asString()
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.semantics { contentDescription = syncRecencyText(state, nowMs) },
+        modifier = modifier.semantics { contentDescription = recencyDescription },
     ) {
         if (state.inProgress) {
             CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -129,7 +132,8 @@ fun rememberTickingNowMs(intervalMs: Long = 60_000L, clock: () -> Long = System:
 // Count after the label, not inside the sentence (T-123): "Items needing attention: 1" is fine
 // English and needs no agreement, whereas "1 items need attention" would force a plural rule the
 // codebase otherwise never needs. A bare plural reads naturally in label position.
-internal fun attentionText(blockedCount: Int): String = "Items needing attention: $blockedCount"
+internal fun attentionText(blockedCount: Int): UiText =
+    UiText.res(R.string.sync_attention, blockedCount)
 
 /**
  * The quiet one-liner: "Syncing…" while in progress, "Not synced yet" before the first success,
@@ -137,16 +141,27 @@ internal fun attentionText(blockedCount: Int): String = "Items needing attention
  * failed), with "· N pending" appended when local changes are still queued. [nowMs] is passed in so
  * this stays a pure, unit-testable function.
  */
-internal fun syncRecencyText(state: SyncState, nowMs: Long): String {
-    if (state.inProgress) return "Syncing…"
-    val last = state.lastSyncAt ?: return "Not synced yet"
+internal fun syncRecencyText(state: SyncState, nowMs: Long): UiText {
+    if (state.inProgress) return UiText.res(R.string.sync_syncing)
+    val last = state.lastSyncAt ?: return UiText.res(R.string.sync_not_synced)
     val ago = (nowMs - last).coerceAtLeast(0)
     val relative = when {
-        ago < 60_000L -> "just now"
-        ago < 3_600_000L -> "${ago / 60_000L} min ago"
-        ago < 86_400_000L -> "${ago / 3_600_000L} h ago"
-        else -> "${ago / 86_400_000L} d ago"
+        ago < 60_000L -> UiText.res(R.string.ago_just_now)
+        ago < 3_600_000L -> UiText.res(R.string.ago_minutes, (ago / 60_000L).toInt())
+        ago < 86_400_000L -> UiText.res(R.string.ago_hours, (ago / 3_600_000L).toInt())
+        else -> UiText.res(R.string.ago_days, (ago / 86_400_000L).toInt())
     }
-    val base = if (state.lastError != null) "Sync failed · last ok $relative" else "Synced $relative"
-    return if (state.pendingCount > 0) "$base · ${state.pendingCount} pending" else base
+    // Nested UiText: the outer message takes the relative label as an ARGUMENT rather than being
+    // concatenated with it, so both halves stay independently translatable and a translator can
+    // put them in whatever order the language wants.
+    val base = if (state.lastError != null) {
+        UiText.res(R.string.sync_failed_since, relative)
+    } else {
+        UiText.res(R.string.sync_synced, relative)
+    }
+    return if (state.pendingCount > 0) {
+        UiText.res(R.string.sync_pending_suffix, base, state.pendingCount)
+    } else {
+        base
+    }
 }

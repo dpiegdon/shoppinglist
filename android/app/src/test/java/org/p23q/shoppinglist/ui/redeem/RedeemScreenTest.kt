@@ -26,6 +26,7 @@ import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)
 class RedeemScreenTest {
@@ -118,7 +119,7 @@ class RedeemScreenTest {
         // each attempt so a response that lands late still gets picked up.
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.waitForIdle()
-            viewModel.uiState.value.errorMessage == "Bad invite link"
+            viewModel.uiState.value.errorMessage == UiText.Raw("Bad invite link")
         }
 
         composeTestRule.onNodeWithText("Bad invite link").assertExists()

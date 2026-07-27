@@ -27,6 +27,8 @@ import org.p23q.shoppinglist.data.api.SessionEvents
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)
 class AdminViewModelTest {
@@ -125,7 +127,7 @@ class AdminViewModelTest {
             // requirePassword is what the screen calls before opening the delete confirmation.
             assertFalse(viewModel.requirePassword())
             assertEquals(
-                "Enter your password to reset or delete a user.",
+                UiText.res(R.string.admin_msg_password_required),
                 viewModel.uiState.value.passwordError,
             )
 

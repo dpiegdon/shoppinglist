@@ -13,6 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.asString
 
 /** Notes: stringResource(R.string.redeem_title) — the paste-a-code fallback for invite links, reachable from the drawer. */
 @Composable
@@ -37,7 +38,7 @@ fun RedeemDialog(
                     singleLine = true,
                 )
                 state.errorMessage?.let { error ->
-                    Text(text = error, color = MaterialTheme.colorScheme.error)
+                    Text(text = error.asString(), color = MaterialTheme.colorScheme.error)
                 }
             }
         },

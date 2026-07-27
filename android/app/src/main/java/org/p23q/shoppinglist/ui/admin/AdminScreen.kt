@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.api.AdminUserDto
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.asString
 
 /** Green track when registration is on, red when it's denied (T-112). */
 private val RegistrationOnColor = Color(0xFF2E7D32)
@@ -48,7 +49,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
     ) {
         state.error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error)
+            Text(it.asString(), color = MaterialTheme.colorScheme.error)
             Spacer(Modifier.height(8.dp))
         }
 
@@ -88,7 +89,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
             isError = state.passwordError != null,
-            supportingText = state.passwordError?.let { { Text(it) } },
+            supportingText = state.passwordError?.let { { Text(it.asString()) } },
             modifier = Modifier.fillMaxWidth(),
         )
 

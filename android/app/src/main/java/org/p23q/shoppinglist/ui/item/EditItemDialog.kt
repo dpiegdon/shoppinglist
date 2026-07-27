@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.db.Status
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.asString
 
 /** Notes (List view): the row edit icon / a long-press opens this — every field including name,
  *  plus delete. Full-screen (T-80) rather than a floating AlertDialog: no tap-outside-to-cancel
@@ -117,7 +118,7 @@ fun EditItemDialog(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         state.nameError?.let { error ->
-                            Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            Text(text = error.asString(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(Modifier.height(8.dp))
                         ItemFormFields(state = state, viewModel = viewModel)

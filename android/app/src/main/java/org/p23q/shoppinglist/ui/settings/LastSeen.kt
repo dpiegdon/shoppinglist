@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.settings
 
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
+
 /**
  * Human-readable staleness for a session's `last_seen_at` (T-104).
  *
@@ -19,13 +22,13 @@ package org.p23q.shoppinglist.ui.settings
  * spelled-out unit they never inflect, which is what keeps plural handling out of the codebase
  * entirely.
  */
-fun formatLastSeen(lastSeenAt: Long, now: Long = System.currentTimeMillis()): String {
+fun formatLastSeen(lastSeenAt: Long, now: Long = System.currentTimeMillis()): UiText {
     val elapsed = now - lastSeenAt
     return when {
-        elapsed < 2 * MINUTE_MS -> "Active now"
-        elapsed < HOUR_MS -> "${elapsed / MINUTE_MS} min ago"
-        elapsed < DAY_MS -> "${elapsed / HOUR_MS} h ago"
-        else -> "${elapsed / DAY_MS} d ago"
+        elapsed < 2 * MINUTE_MS -> UiText.res(R.string.last_seen_active_now)
+        elapsed < HOUR_MS -> UiText.res(R.string.ago_minutes, (elapsed / MINUTE_MS).toInt())
+        elapsed < DAY_MS -> UiText.res(R.string.ago_hours, (elapsed / HOUR_MS).toInt())
+        else -> UiText.res(R.string.ago_days, (elapsed / DAY_MS).toInt())
     }
 }
 

@@ -17,6 +17,8 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.ServerSettingsDto
 import java.io.IOException
 import javax.inject.Inject
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 data class AdminUiState(
     val users: List<AdminUserDto> = emptyList(),
@@ -28,8 +30,8 @@ data class AdminUiState(
      * Complaint shown AT the password field (T-113). The page-level [error] sits at the top of a
      * scrolling screen, so a blocked reset/delete looked like nothing happened at all.
      */
-    val passwordError: String? = null,
-    val error: String? = null,
+    val passwordError: UiText? = null,
+    val error: UiText? = null,
     /** The most recent reset — its new password is shown once. */
     val resetEmail: String? = null,
     val resetPassword: String? = null,
@@ -58,9 +60,9 @@ class AdminViewModel @Inject constructor(
                 it.copy(users = users, allowRegistration = settings.allowRegistration, error = null)
             }
         } catch (e: ApiException) {
-            _uiState.update { it.copy(error = e.message ?: "Couldn't load admin data") }
+            _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_load_failed))) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(error = "You're offline; admin needs a connection") }
+            _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline_admin)) }
         }
     }
 
@@ -77,7 +79,7 @@ class AdminViewModel @Inject constructor(
             _uiState.update { it.copy(passwordError = null) }
             return true
         }
-        _uiState.update { it.copy(passwordError = "Enter your password to reset or delete a user.") }
+        _uiState.update { it.copy(passwordError = UiText.res(R.string.admin_msg_password_required)) }
         return false
     }
 
@@ -88,9 +90,9 @@ class AdminViewModel @Inject constructor(
                 val result = apiProvider.get().adminSetServerSettings(ServerSettingsDto(!current))
                 _uiState.update { it.copy(allowRegistration = result.allowRegistration, error = null) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = e.message ?: "Couldn't update") }
+                _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_update_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = "You're offline") }
+                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
         }
     }
@@ -105,9 +107,9 @@ class AdminViewModel @Inject constructor(
                     it.copy(resetEmail = user.email, resetPassword = result.password, error = null)
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = e.message ?: "Couldn't reset password") }
+                _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_reset_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = "You're offline") }
+                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
         }
     }
@@ -122,9 +124,9 @@ class AdminViewModel @Inject constructor(
                     it.copy(users = it.users.filterNot { u -> u.id == user.id }, error = null)
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = e.message ?: "Couldn't delete user") }
+                _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_delete_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = "You're offline") }
+                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
         }
     }

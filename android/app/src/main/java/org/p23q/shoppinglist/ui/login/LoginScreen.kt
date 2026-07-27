@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.ui.asString
 
 @Composable
 fun LoginScreen(
@@ -113,7 +114,7 @@ fun LoginScreen(
 
         state.errorMessage?.let { message ->
             Spacer(Modifier.height(8.dp))
-            Text(text = message, color = MaterialTheme.colorScheme.error)
+            Text(text = message.asString(), color = MaterialTheme.colorScheme.error)
         }
 
         Spacer(Modifier.height(16.dp))

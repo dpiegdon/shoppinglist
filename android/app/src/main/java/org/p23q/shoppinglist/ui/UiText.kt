@@ -34,17 +34,22 @@ sealed interface UiText {
 
 /** Resolve inside composition, honouring the chosen language via [LocalizedContent]. */
 @Composable
-fun UiText.asString(): String = when (this) {
-    is UiText.Raw -> value
-    is UiText.Res -> LocalContext.current.getString(id, *args.toTypedArray())
-}
+fun UiText.asString(): String = asString(LocalContext.current)
 
 /**
  * Resolve outside composition. [context] must already be localized — see [localizedContext] — or
  * this silently falls back to the system language, which is the exact bug this type exists to
  * prevent.
+ *
+ * An argument may itself be a [UiText] and is resolved first, so a message can be composed from
+ * parts without any call site having to pre-render them: "Synced %1$s" takes "5 min ago" as an
+ * argument, and both halves stay translatable independently. Without this the outer string would
+ * have to be assembled by concatenation, which is precisely what a translator cannot reorder.
  */
 fun UiText.asString(context: Context): String = when (this) {
     is UiText.Raw -> value
-    is UiText.Res -> context.getString(id, *args.toTypedArray())
+    is UiText.Res -> context.getString(
+        id,
+        *args.map { if (it is UiText) it.asString(context) else it }.toTypedArray(),
+    )
 }

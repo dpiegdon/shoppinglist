@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.asString
 
 /** Category/stores/quantity/price/note fields shared by [AddItemDialog] and [EditItemDialog]. */
 @Composable
@@ -119,7 +120,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         )
     }
     (state.priceError ?: state.currencyError)?.let { error ->
-        Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        Text(text = error.asString(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
     Spacer(Modifier.height(8.dp))
     }

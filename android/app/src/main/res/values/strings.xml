@@ -131,7 +131,7 @@
     <string name="listprops_notify_changes">Notify about changes to this list</string>
     <string name="listprops_leave_list">Leave list</string>
     <string name="listprops_leave_confirm_title">Leave this list?</string>
-    <string name="listprops_leave_confirm_body">You\'ll stop receiving updates for “%1$s”.</string>
+    <string name="listprops_leave_confirm_body">You\'ll stop receiving updates for \"%1$s\" on this device.</string>
 
     <!-- settings -->
     <string name="settings_account">Account</string>
@@ -187,6 +187,34 @@
     <string name="settings_msg_delete_failed">Couldn\'t delete account</string>
     <string name="settings_msg_offline">Couldn\'t reach the server</string>
     <string name="settings_msg_no_crash_logs">No crash logs yet</string>
+
+    <!-- shared error messages -->
+    <string name="error_offline">Couldn\'t reach the server</string>
+    <string name="error_offline_retry">You\'re offline; try again when connected</string>
+    <string name="error_generic">Something went wrong</string>
+
+    <!-- login messages -->
+    <string name="login_msg_invalid_url">Enter a valid https server URL</string>
+    <string name="login_msg_credentials_required">Email and password are required</string>
+    <string name="login_msg_incorrect_credentials">Incorrect email or password</string>
+    <string name="login_msg_untrusted_cert">The server\'s certificate isn\'t trusted. Use a certificate from a recognized authority. For a self-signed dev server, enable \"Trust self-signed certificates\" in Settings (debug builds only).</string>
+
+    <!-- redeem messages -->
+    <string name="redeem_msg_code_required">Enter an invite code</string>
+    <string name="redeem_msg_failed">Couldn\'t redeem invite</string>
+
+    <!-- item form messages -->
+    <string name="item_msg_name_required">Name is required</string>
+    <string name="item_msg_duplicate_name">An item named \"%1$s\" already exists</string>
+    <string name="item_msg_price_invalid">Enter an amount like 1.99</string>
+    <string name="item_msg_currency_invalid">Use a 3-letter code like EUR</string>
+
+    <!-- list properties messages -->
+    <string name="listprops_msg_members_offline">Members are only available online</string>
+    <string name="listprops_msg_email_required">Enter an email address</string>
+    <string name="listprops_msg_invite_failed">Couldn\'t send invite</string>
+    <string name="listprops_msg_revoke_failed">Couldn\'t revoke the invite</string>
+    <string name="listprops_msg_leave_failed">Couldn\'t leave the list</string>
 
     <!-- admin -->
     <string name="admin_registration">Registration</string>

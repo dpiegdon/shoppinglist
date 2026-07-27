@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.asString
 
 /** App Link entry point: a tapped `https://<server>/invite/<token>` link lands here and redeems
  * automatically, prefilled from the link's token (Notes).
@@ -48,7 +49,7 @@ fun RedeemScreen(
     ) {
         val error = state.errorMessage
         if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error)
+            Text(error.asString(), color = MaterialTheme.colorScheme.error)
             Spacer(Modifier.height(16.dp))
             Button(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
         } else {

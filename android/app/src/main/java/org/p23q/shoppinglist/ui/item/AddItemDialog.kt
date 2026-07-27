@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.asString
 
 /** Notes (Add-item dialog): name suggestions from the registry; picking one reuses it, else creates new. */
 @Composable
@@ -58,7 +59,7 @@ fun AddItemDialog(
                     modifier = Modifier.fillMaxWidth().focusRequester(nameFocusRequester),
                 )
                 state.nameError?.let { error ->
-                    Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(text = error.asString(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 if (state.itemId == null && state.suggestions.isNotEmpty()) {
                     Column {

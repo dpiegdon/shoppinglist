@@ -17,11 +17,13 @@ import org.p23q.shoppinglist.data.api.RedeemInviteRequest
 import org.p23q.shoppinglist.data.sync.SyncEngine
 import java.io.IOException
 import javax.inject.Inject
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 data class RedeemUiState(
     val token: String = "",
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val redeemedListId: String? = null,
     /** Set when redeem was attempted without a session — the caller should route to Login (T-28). */
     val needsLogin: Boolean = false,
@@ -44,7 +46,7 @@ class RedeemViewModel @Inject constructor(
     fun redeem(): Job? {
         val token = extractInviteToken(_uiState.value.token)
         if (token.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Enter an invite code") }
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.redeem_msg_code_required)) }
             return null
         }
         // Redeem needs a session. Logged out (e.g. tapped an invite link with no account signed in):
@@ -62,9 +64,9 @@ class RedeemViewModel @Inject constructor(
                 syncEngine.syncNow(fullLists = listOf(listId))
                 _uiState.update { it.copy(isLoading = false, redeemedListId = listId) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "Couldn't redeem invite") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.redeem_msg_failed))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Couldn't reach the server") }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
             }
         }
     }

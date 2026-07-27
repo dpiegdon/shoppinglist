@@ -48,6 +48,9 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.p23q.shoppinglist.data.ListKind
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.ui.asString
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 @Composable
 fun ListPropsScreen(
@@ -61,6 +64,8 @@ fun ListPropsScreen(
     LaunchedEffect(Unit) { viewModel.loadMembers() }
     LaunchedEffect(state.hasLeft) { if (state.hasLeft) onLeft() }
     LaunchedEffect(state.duplicatedListId) { state.duplicatedListId?.let(onDuplicated) }
+    // Hoisted above the effect: its body is a coroutine, not a composition.
+    val shareInviteTitle = stringResource(R.string.listprops_share_invite)
     LaunchedEffect(state.inviteShareUrl) {
         val url = state.inviteShareUrl
         if (url != null) {
@@ -68,13 +73,13 @@ fun ListPropsScreen(
                 type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, url)
             }
-            context.startActivity(Intent.createChooser(intent, "Share invite"))
+            context.startActivity(Intent.createChooser(intent, shareInviteTitle))
             viewModel.consumeShareUrl()
         }
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("List name", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.listprops_list_name), style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = state.name,
@@ -82,13 +87,13 @@ fun ListPropsScreen(
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { viewModel.saveName() }) { Text("Save") }
+            TextButton(onClick = { viewModel.saveName() }) { Text(stringResource(R.string.action_save)) }
         }
         Spacer(Modifier.height(16.dp))
 
         // Convert between shopping list and checklist (T-110) — non-destructive, so it's a plain
         // switch rather than a guarded action.
-        Text("Type", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.listprops_type), style = MaterialTheme.typography.titleMedium)
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -98,9 +103,9 @@ fun ListPropsScreen(
                 Text("${ListKind.icon(state.kind)}  ${ListKind.label(state.kind)}")
                 Text(
                     if (state.kind == ListKind.CHECKLIST) {
-                        "Items have a name, category and note."
+                        stringResource(R.string.listprops_kind_checklist)
                     } else {
-                        "Items also have stores, quantity and price."
+                        stringResource(R.string.listprops_kind_shopping)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -114,15 +119,15 @@ fun ListPropsScreen(
             )
         }
         Text(
-            "Switching only changes which fields are shown — nothing is deleted.",
+            stringResource(R.string.listprops_kind_switch_help),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
 
-        Text("Categories", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.listprops_categories), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Drag the handle to reorder; tap ✎ to rename or fix casing",
+            stringResource(R.string.listprops_categories_help),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -132,7 +137,7 @@ fun ListPropsScreen(
             onMoveDown = viewModel::moveCategoryDown,
             onRename = { index, newName -> viewModel.renameCategory(index, newName) },
         )
-        TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text("Save order") }
+        TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text(stringResource(R.string.listprops_save_order)) }
         Spacer(Modifier.height(16.dp))
 
         // Relocated here from the list screen (T-75), where it was too easy to tap by accident: move
@@ -146,28 +151,28 @@ fun ListPropsScreen(
                     contentColor = MaterialTheme.colorScheme.onError,
                 ),
             ) {
-                Text("Clear checked (${state.checkedCount})")
+                Text(stringResource(R.string.listprops_clear_checked, state.checkedCount))
             }
             Spacer(Modifier.height(16.dp))
         }
 
         // Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens.
-        Text("Notes", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.listprops_notes), style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = state.notes,
             onValueChange = viewModel::onNotesChange,
-            placeholder = { Text("Gate code, store hours, anything worth remembering…") },
+            placeholder = { Text(stringResource(R.string.listprops_notes_placeholder)) },
             minLines = 3,
             maxLines = 6,
             modifier = Modifier.fillMaxWidth(),
         )
-        TextButton(onClick = { viewModel.saveNotes() }) { Text("Save notes") }
+        TextButton(onClick = { viewModel.saveNotes() }) { Text(stringResource(R.string.listprops_save_notes)) }
         Spacer(Modifier.height(16.dp))
 
         // Per-list collaborator-change notification mute (T-65); the global switch is in Settings.
-        Text("Notifications", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.listprops_notifications), style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text("Notify about changes to this list", modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.listprops_notify_changes), modifier = Modifier.weight(1f))
             Switch(
                 checked = state.notificationsEnabledForList,
                 onCheckedChange = { viewModel.setListNotificationsEnabled(it) },
@@ -175,11 +180,11 @@ fun ListPropsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        Text("Shared with", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.listprops_shared_with), style = MaterialTheme.typography.titleMedium)
         if (state.isMembersLoading) {
             CircularProgressIndicator()
         }
-        state.membersError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        state.membersError?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
         state.members.forEach { member -> Text(member.email) }
         state.pendingInvites.forEach { invite ->
             Row(
@@ -188,7 +193,7 @@ fun ListPropsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("${invite.invitedEmail} (pending)")
-                TextButton(onClick = { viewModel.revokeInvite(invite.id) }) { Text("Revoke") }
+                TextButton(onClick = { viewModel.revokeInvite(invite.id) }) { Text(stringResource(R.string.action_revoke)) }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -197,33 +202,33 @@ fun ListPropsScreen(
             OutlinedTextField(
                 value = state.inviteEmail,
                 onValueChange = viewModel::onInviteEmailChange,
-                label = { Text("Invite by email") },
+                label = { Text(stringResource(R.string.listprops_invite_by_email)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { viewModel.sendInvite() }) { Text("Invite") }
+            TextButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
         }
-        state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
         Spacer(Modifier.height(16.dp))
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
-        TextButton(onClick = viewModel::duplicateList) { Text("Duplicate") }
+        TextButton(onClick = viewModel::duplicateList) { Text(stringResource(R.string.action_duplicate)) }
         Spacer(Modifier.height(8.dp))
 
-        // "Leave list" (was "Unsubscribe", T-112): red, matching the Clear-checked danger action.
+        // stringResource(R.string.listprops_leave_list) (was stringResource(R.string.action_unsubscribe), T-112): red, matching the Clear-checked danger action.
         Button(
             onClick = viewModel::requestLeave,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-        ) { Text("Leave list") }
+        ) { Text(stringResource(R.string.listprops_leave_list)) }
     }
 
     if (state.isLeaveConfirmOpen) {
         AlertDialog(
             onDismissRequest = viewModel::cancelLeave,
-            title = { Text("Leave this list?") },
-            text = { Text("You'll stop receiving updates for \"${state.name}\" on this device.") },
-            confirmButton = { TextButton(onClick = viewModel::confirmLeave) { Text("Leave") } },
-            dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.listprops_leave_confirm_title)) },
+            text = { Text(stringResource(R.string.listprops_leave_confirm_body, state.name)) },
+            confirmButton = { TextButton(onClick = viewModel::confirmLeave) { Text(stringResource(R.string.action_leave)) } },
+            dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -268,8 +273,8 @@ private fun CategoryOrderList(
                         TextButton(onClick = {
                             onRename(currentCategories.indexOf(category), draftName)
                             editingCategory = null
-                        }) { Text("Save") }
-                        TextButton(onClick = { editingCategory = null }) { Text("Cancel") }
+                        }) { Text(stringResource(R.string.action_save)) }
+                        TextButton(onClick = { editingCategory = null }) { Text(stringResource(R.string.action_cancel)) }
                     }
                 } else {
                     val dragging = draggingCategory == category
@@ -285,11 +290,11 @@ private fun CategoryOrderList(
                     ) {
                         Text(category, modifier = Modifier.weight(1f))
                         IconButton(onClick = { editingCategory = category; draftName = category }) {
-                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Rename $category")
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.listprops_rename_category, category))
                         }
                         Icon(
                             imageVector = Icons.Default.Menu,
-                            contentDescription = "Reorder $category",
+                            contentDescription = stringResource(R.string.listprops_reorder_category, category),
                             modifier = Modifier.pointerInput(category) {
                                 detectDragGestures(
                                     onDragStart = { draggingCategory = category; dragOffset = 0f },

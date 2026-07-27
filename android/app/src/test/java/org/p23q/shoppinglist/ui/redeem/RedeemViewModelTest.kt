@@ -29,6 +29,8 @@ import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)
 class RedeemViewModelTest {
@@ -142,7 +144,8 @@ class RedeemViewModelTest {
 
         viewModel.redeem()?.join()
 
-        assertEquals("This invite was already used", viewModel.uiState.value.errorMessage)
+        // Server-supplied text stays Raw and untranslated — see UiText.
+        assertEquals(UiText.Raw("This invite was already used"), viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.redeemedListId)
     }
 

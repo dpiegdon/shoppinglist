@@ -16,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.data.AppForegroundState
+import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.sync.CollaboratorChange
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -40,7 +41,12 @@ class CollaboratorChangeNotificationPosterTest {
         file.deleteOnExit()
         prefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { file })
         foreground = AppForegroundState()
-        poster = CollaboratorChangeNotificationPoster(context, prefs, foreground)
+        val localeFile = File.createTempFile("poster_locale_test", ".preferences_pb")
+        localeFile.deleteOnExit()
+        // No stored choice, so it follows the device — which under Robolectric is English, i.e.
+        // exactly the strings these assertions expect.
+        val locales = LocalePreferenceStore(PreferenceDataStoreFactory.create { localeFile })
+        poster = CollaboratorChangeNotificationPoster(context, prefs, foreground, locales)
         notificationManager = context.getSystemService(NotificationManager::class.java)
     }
 

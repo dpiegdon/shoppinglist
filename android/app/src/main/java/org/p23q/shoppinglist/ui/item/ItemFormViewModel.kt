@@ -23,12 +23,14 @@ import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import javax.inject.Inject
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 data class ItemFormUiState(
     val isEditMode: Boolean = false,
     val itemId: String? = null,
     val name: String = "",
-    val nameError: String? = null,
+    val nameError: UiText? = null,
     val suggestions: List<ItemEntity> = emptyList(),
     val category: String = "",
     val categorySuggestions: List<String> = emptyList(),
@@ -38,9 +40,9 @@ data class ItemFormUiState(
     val storeInput: String = "",
     val quantity: String = "",
     val priceAmount: String = "",
-    val priceError: String? = null,
+    val priceError: UiText? = null,
     val priceCurrency: String = "",
-    val currencyError: String? = null,
+    val currencyError: UiText? = null,
     val note: String = "",
     val status: Status = Status.TODO,
     val isDeleteConfirmOpen: Boolean = false,
@@ -227,7 +229,7 @@ class ItemFormViewModel @Inject constructor(
         val state = _uiState.value
         val trimmedName = state.name.trim()
         if (trimmedName.isBlank()) {
-            _uiState.update { it.copy(nameError = "Name is required") }
+            _uiState.update { it.copy(nameError = UiText.res(R.string.item_msg_name_required)) }
             return null
         }
         // Validate/normalize price BEFORE writing, so a bad value (e.g. "1,99", "2€", "1.999") is
@@ -250,7 +252,7 @@ class ItemFormViewModel @Inject constructor(
         return viewModelScope.launch {
             val collision = itemsRepo.findByExactName(listId, trimmedName, excludingId = state.itemId ?: "")
             if (collision != null) {
-                _uiState.update { it.copy(nameError = "An item named \"$trimmedName\" already exists") }
+                _uiState.update { it.copy(nameError = UiText.res(R.string.item_msg_duplicate_name, trimmedName)) }
                 return@launch
             }
             val targetId = state.itemId ?: itemsRepo.createItem(listId, trimmedName, status = Status.TODO)
@@ -365,7 +367,7 @@ private data class ItemSnapshot(
 /** Result of parsing a user-typed price/currency field. [Valid.value] is null when the field is blank. */
 internal sealed interface PriceParse {
     data class Valid(val value: String?) : PriceParse
-    data class Invalid(val message: String) : PriceParse
+    data class Invalid(val message: UiText) : PriceParse
 }
 
 private val PRICE_AMOUNT_RE = Regex("^\\d+(\\.\\d{1,2})?$")
@@ -386,7 +388,7 @@ internal fun parsePriceAmount(raw: String): PriceParse {
     }
     if (cleaned.isBlank()) return PriceParse.Valid(null)
     return if (PRICE_AMOUNT_RE.matches(cleaned)) PriceParse.Valid(cleaned)
-    else PriceParse.Invalid("Enter an amount like 1.99")
+    else PriceParse.Invalid(UiText.res(R.string.item_msg_price_invalid))
 }
 
 /** Uppercases and validates a 3-letter ISO-4217 code; blank -> [PriceParse.Valid] with null. */
@@ -394,5 +396,5 @@ internal fun parseCurrency(raw: String): PriceParse {
     val code = raw.trim().uppercase()
     if (code.isBlank()) return PriceParse.Valid(null)
     return if (CURRENCY_RE.matches(code)) PriceParse.Valid(code)
-    else PriceParse.Invalid("Use a 3-letter code like EUR")
+    else PriceParse.Invalid(UiText.res(R.string.item_msg_currency_invalid))
 }

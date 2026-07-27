@@ -23,6 +23,8 @@ import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)
 class ItemFormViewModelTest {
@@ -392,7 +394,7 @@ class ItemFormViewModelTest {
         val job = viewModel.save()
 
         assertNull("synchronous validation failure returns no Job", job)
-        assertEquals("Enter an amount like 1.99", viewModel.uiState.value.priceError)
+        assertEquals(UiText.res(R.string.item_msg_price_invalid), viewModel.uiState.value.priceError)
         assertFalse(viewModel.uiState.value.isSaved)
         assertNull("nothing was written to the mirror", itemsRepo.findByExactName(listId, "Milk"))
     }
