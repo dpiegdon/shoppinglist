@@ -1,0 +1,1 @@
+{"actor": "claude", "at": "2026-07-27T10:02:45+00:00", "kind": "created", "ref": "main@fe527d5", "text": "de-pluralize user-facing strings so no plural layer is ever needed"}
