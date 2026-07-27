@@ -8,5 +8,5 @@
   ],
   "priority": 2,
   "title": "accounts: no length cap on email/password/device_label; reject ':' in email addresses",
-  "updated_at": "2026-07-26T23:46:21+00:00"
+  "updated_at": "2026-07-27T00:39:44+00:00"
 }
