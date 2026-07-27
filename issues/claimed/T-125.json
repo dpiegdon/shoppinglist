@@ -7,7 +7,8 @@
     "bug",
     "ready"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "server accepts non-ASCII digits in a price; both clients reject them",
-  "updated_at": "2026-07-27T10:40:50+00:00"
+  "updated_at": "2026-07-27T21:58:15+00:00"
 }

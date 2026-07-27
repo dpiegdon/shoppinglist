@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-07-27T10:40:50+00:00", "kind": "created", "ref": "main@4efe880", "text": "server accepts non-ASCII digits in a price; both clients reject them"}
+{"actor": "claude", "at": "2026-07-27T21:58:15+00:00", "kind": "claimed", "ref": "main@f20793d", "text": "claude"}
