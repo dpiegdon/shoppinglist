@@ -17,6 +17,23 @@ DEFAULT_CURRENCY = "EUR"
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD_LENGTH = 8
 
+# Upper bounds on credential inputs (T-118). Without these MAX_CONTENT_LENGTH (4 MB) was the only
+# bound, so a 100k-character email registered happily and was then echoed to every co-member via
+# GET /lists/<id>/members and to every admin via GET /admin/users.
+#
+# 254, not 320: RFC 5321 §4.5.3.1.1/§4.5.3.1.2 cap the local-part at 64 octets and the domain at
+# 255, which sums to the widely-quoted 320 — but §4.5.3.1.3 caps a whole reverse-path/forward-path
+# at 256 octets *including* the angle brackets, i.e. 254 for the address itself. The two limits
+# can't both be saturated, so 320 describes an address that no SMTP path can carry. 254 must also
+# stay <= invites.MAX_INVITED_EMAIL_LENGTH, or an account could exist that mint() can never invite.
+MAX_EMAIL_LENGTH = 254
+# No RFC governs this one; scrypt has no short-input limit (unlike bcrypt's 72 bytes), so this is
+# purely an anti-bloat bound and can be generous.
+MAX_PASSWORD_LENGTH = 320
+# A client-supplied device name for the sessions list. Same scale as the sync engine's
+# UPDATED_BY_MAX_LENGTH, for the same reason: it is an identifier-ish label, not free text.
+MAX_DEVICE_LABEL_LENGTH = 128
+
 # last_seen_at feeds the sessions list in Settings and the idle expiry below,
 # neither of which cares about minute-level precision (the shortest window is 7
 # days). Throttle the write (and its commit) to this staleness window instead of
@@ -58,6 +75,14 @@ def resolve_idle_ttl_ms(platform) -> int:
     return PLATFORM_IDLE_TTL_MS.get(platform.strip().lower(), DEFAULT_IDLE_TTL_MS)
 
 
+# Verified against when no account matches, so a failed login costs the same scrypt work whether
+# or not the address exists (T-115 — see login()). Generated once at import rather than per miss:
+# generate_password_hash is ~200 ms, far too slow to run on every failed login, and a lazily-built
+# one would make the process's first unknown-address login measurably different from the rest.
+# The password below is not a secret and guards nothing — the hash exists only to be burned.
+_TIMING_EQUALIZER_HASH = generate_password_hash("not-a-secret-this-hash-exists-only-to-burn-time")
+
+
 @dataclass
 class Account:
     id: str
@@ -73,16 +98,49 @@ def hash_token(token: str) -> str:
 
 
 def validate_email(email):
-    if not email or not EMAIL_RE.match(email):
+    # isinstance first (T-116): EMAIL_RE.match() raises TypeError on a non-string, which used to
+    # surface as an unauthenticated 500 on POST /register with e.g. {"email": 5}. A falsy non-string
+    # ({}, []) happened to be caught by the old `not email` guard; a truthy one was not.
+    if not isinstance(email, str) or not EMAIL_RE.match(email):
         raise ApiError(422, "invalid_email", "Email address is not valid.")
+    if len(email) > MAX_EMAIL_LENGTH:
+        raise ApiError(
+            422, "invalid_email", f"Email address must be {MAX_EMAIL_LENGTH} characters or fewer."
+        )
+    # EMAIL_RE permits ':' (it only excludes '@' and whitespace), but invites.mint() rejects a
+    # colon in invited_email because the token payload is colon-delimited. An account whose address
+    # contained one could therefore never be invited to any list — a silent, permanent dead end.
+    # Reject it at the source instead (T-118).
+    if ":" in email:
+        raise ApiError(422, "invalid_email", "Email address must not contain a colon.")
 
 
 def validate_password(password):
-    if not password or len(password) < MIN_PASSWORD_LENGTH:
+    # isinstance first (T-116): len() on a non-string raises TypeError.
+    if not isinstance(password, str) or len(password) < MIN_PASSWORD_LENGTH:
         raise ApiError(
             422,
             "invalid_password",
             f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
+        )
+    if len(password) > MAX_PASSWORD_LENGTH:
+        raise ApiError(
+            422, "invalid_password", f"Password must be {MAX_PASSWORD_LENGTH} characters or fewer."
+        )
+
+
+def validate_device_label(device_label):
+    """A device label is optional (NULL is a legitimate stored value), but when present it must be
+    a string within cap (T-116/T-118) — a dict used to reach the INSERT and 500 at bind time."""
+    if device_label is None:
+        return
+    if not isinstance(device_label, str):
+        raise ApiError(422, "invalid_device_label", "device_label must be a string.")
+    if len(device_label) > MAX_DEVICE_LABEL_LENGTH:
+        raise ApiError(
+            422,
+            "invalid_device_label",
+            f"device_label must be {MAX_DEVICE_LABEL_LENGTH} characters or fewer.",
         )
 
 
@@ -120,11 +178,27 @@ def login(
     device_label: str,
     platform=None,
 ):
+    # A malformed credential is simply an incorrect one: answering 422 here would hand back a
+    # response that a correct-shaped guess never gets, so keep the uniform 401 (T-116). Without the
+    # type check a dict/list email reached the SQL bind below and 500'd, unauthenticated.
+    if not isinstance(email, str) or not isinstance(password, str):
+        raise ApiError(401, "invalid_credentials", "Email or password is incorrect.")
+    # Checked before the lookup: the answer doesn't depend on the account, so it leaks nothing.
+    validate_device_label(device_label)
+
     row = conn.execute(
         "SELECT id, password_hash FROM accounts WHERE lower(email) = lower(?)",
         (email,),
     ).fetchone()
-    if row is None or not check_password_hash(row["password_hash"], password):
+    if row is None:
+        # Hash against a throwaway digest so an unknown address costs the same scrypt work as a
+        # real one (T-115). Previously check_password_hash ran only when a row was found, and the
+        # resulting 52x timing gap (196 ms vs 3.7 ms, measured) enumerated accounts — while
+        # server/README.md claimed /login does not enumerate. The status and body were already
+        # identical; only the clock gave it away.
+        check_password_hash(_TIMING_EQUALIZER_HASH, password)
+        raise ApiError(401, "invalid_credentials", "Email or password is incorrect.")
+    if not check_password_hash(row["password_hash"], password):
         raise ApiError(401, "invalid_credentials", "Email or password is incorrect.")
 
     token = secrets.token_urlsafe(32)  # 256 bits of randomness

@@ -144,8 +144,11 @@ key, and later verifies redemptions against it — no invite state has to exist
 server-side for the *link* to be checkable. Consequences:
 
 - **Any byte string works; use a real random one** (32+ bytes), e.g.
-  `python -c 'import secrets; print(secrets.token_hex(32))'`. Never ship the
-  dev default.
+  `python -c 'import secrets; print(secrets.token_hex(32))'`. The dev `app.py`
+  now **refuses to start** when `INVITE_HMAC_KEY` is unset or still the published
+  dev default, rather than running perfectly and wholly insecurely: a forgotten
+  variable is an operator mistake that has to be loud. A host app that builds the
+  blueprint itself is responsible for the same check.
 - **Keep it secret.** Anyone holding the key can mint valid invite tokens for
   arbitrary lists.
 - **Keep it stable, and back it up alongside the database.** Rotating (or
@@ -332,7 +335,18 @@ they are the deploying operator's responsibility:
 - **A TLS-terminating reverse proxy is mandatory.** Bearer tokens must never
   travel in plaintext.
 - **Login rate-limiting** should be added at the proxy; the blueprint does not
-  rate-limit `/login` itself.
+  rate-limit `/login` itself. Note each attempt against an existing account costs
+  a full scrypt verify (~32 MB, ~200 ms), so this is a resource lever as well as
+  a guessing one.
+- **`Strict-Transport-Security` belongs at the proxy.** The blueprint sets the
+  other security headers itself (below) but deliberately not this one: it cannot
+  tell whether it was actually reached over HTTPS, and asserting HSTS over plain
+  HTTP is wrong.
+- **`ProxyFix` if you want meaningful client IPs.** The audit log records
+  `request.remote_addr`, which behind a proxy is the *proxy's* address unless the
+  host app wraps the WSGI app in
+  `werkzeug.middleware.proxy_fix.ProxyFix`. Only do so if the proxy is trusted to
+  set `X-Forwarded-For` — otherwise clients can forge it.
 
 What the blueprint *does* handle itself (so you don't have to at the proxy, and
 should avoid double-setting):
@@ -353,14 +367,52 @@ should avoid double-setting):
   operator `reset-password` CLI goes further: it resets the password and signs
   out all devices (there is no trusted "current" session to spare in that flow).
 
+- **Request-body row cap** — a `/sync` push carries at most 250 rows; larger
+  batches get `422 too_many_changes` and clients split them. `MAX_CONTENT_LENGTH`
+  bounds bytes, which is the wrong unit: applying a batch holds SQLite's single
+  write lock throughout, so an unbounded one stalls every other write.
+- **Write contention** answers `503 server_busy` + `Retry-After`, not an opaque
+  500, so a client knows retrying is worthwhile.
+- **`Cache-Control: no-store`** on every response except the ones that chose
+  their own caching (hashed assets, the APK, the SPA index).
+
 Known, accepted trade-off:
 
 - **Account enumeration.** Registration returns `409 email_taken` for an
   address already in use, and the operator `reset-password` CLI reports whether
   an email exists — both reveal account existence. This is deliberate: with no
   outbound email infrastructure (see Out of scope) there's no non-enumerating
-  alternative for these flows. `/login` itself does *not* enumerate (it returns
-  the same `invalid_credentials` for an unknown email and a wrong password).
+  alternative for these flows. `/login` itself does *not* enumerate: it returns
+  the same `invalid_credentials` for an unknown email and a wrong password, and
+  performs the same scrypt verify either way, so the two are not distinguishable
+  by timing. (Before v1.9.0 the hash ran only when the account existed, which
+  made the response ~50x faster for an unknown address — a working oracle.)
+
+## Audit log
+
+Security-relevant events go to the standard `logging` logger
+`shoppinglist_server.audit` at INFO. The blueprint only *emits* — routing is the
+host app's job:
+
+```python
+import logging
+handler = logging.FileHandler("/var/log/shoppinglist/audit.log")
+handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+logging.getLogger("shoppinglist_server.audit").addHandler(handler)
+```
+
+Recorded: `account.registered`, `auth.login`, `auth.logout`,
+`auth.session_revoked`, `account.password_changed`, `account.email_changed`,
+`account.deleted`, `invite.minted`, `invite.redeemed`, `invite.revoked`,
+`admin.registration_toggled`, `admin.password_reset`, `admin.user_deleted`,
+`db.contention`, and `authz.denied` for every 401/403 (carrying the error code,
+so failed logins and cross-account attempts are both visible).
+
+**The log contains no email addresses and no credentials**, by construction —
+accounts appear as opaque ids and forbidden keys are redacted even if a future
+call site passes them. That is deliberate: logs are usually retained longer and
+guarded less than the database, and everything this server stores is personal
+data. Resolve an id to a person via `GET /admin/users` when you actually need to.
 
 ## Out of scope (v1)
 

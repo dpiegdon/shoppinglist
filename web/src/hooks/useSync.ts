@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import type { ItemFields, ItemObject, ListFields, ListObject, SyncResponse } from "../api/contract";
+import { MAX_CHANGES_PER_SYNC } from "../api/contract";
 
 const DEVICE_ID_STORAGE_KEY = "shoppinglist_device_id";
 
@@ -28,6 +29,47 @@ export function fieldPatch<K extends string, V>(
     K,
     { value: V; updated_at: number; updated_by: string }
   >;
+}
+
+export interface SyncChanges {
+  lists?: ListObject[];
+  items?: ItemObject[];
+}
+
+/**
+ * Splits a push into batches the server will accept (T-114).
+ *
+ * The server caps a /sync push at MAX_CHANGES_PER_SYNC rows and answers `too_many_changes`
+ * beyond it, because applying a batch holds SQLite's single write lock for its whole duration —
+ * an unbounded batch could stall every other write on the instance.
+ *
+ * Lists are packed first and in order, so a batch that creates a list and its items never sends
+ * the items in an earlier request than the list they belong to: the server registers membership
+ * when it applies the list, and an item naming an unknown list is refused.
+ *
+ * Always returns at least one batch, so a pull-only sync (no changes) still makes one request.
+ */
+export function splitChanges(
+  changes: SyncChanges,
+  max: number = MAX_CHANGES_PER_SYNC,
+): Array<{ lists: ListObject[]; items: ItemObject[] }> {
+  const lists = changes.lists ?? [];
+  const items = changes.items ?? [];
+  if (lists.length + items.length === 0) {
+    return [{ lists: [], items: [] }];
+  }
+
+  const batches: Array<{ lists: ListObject[]; items: ItemObject[] }> = [];
+  let listCursor = 0;
+  let itemCursor = 0;
+  while (listCursor < lists.length || itemCursor < items.length) {
+    const batchLists = lists.slice(listCursor, listCursor + max);
+    listCursor += batchLists.length;
+    const batchItems = items.slice(itemCursor, itemCursor + (max - batchLists.length));
+    itemCursor += batchItems.length;
+    batches.push({ lists: batchLists, items: batchItems });
+  }
+  return batches;
 }
 
 export interface SyncState {
@@ -115,42 +157,65 @@ export function useSync(): SyncState {
     });
   }, []);
 
+  // One request. Split out of runSync so a chunked push can reuse it — including its 410 recovery,
+  // which must be handled per request rather than per push (T-114).
+  const sendBatch = useCallback(
+    async (changes: SyncChanges, fullLists: string[]) => {
+      try {
+        applyResponse(
+          await api.sync({
+            cursor: cursorRef.current,
+            device_id: deviceId,
+            full_lists: fullLists,
+            changes,
+          }),
+        );
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 410) {
+          // Full resync required: drop cursor and mirror, then retry from 0. The retry pushes
+          // nothing because the server applies a batch before rejecting a stale cursor (Wire
+          // Contract), so this batch's changes are already stored — re-sending them would be
+          // harmless under LWW but pointless.
+          cursorRef.current = 0;
+          setLists(new Map());
+          setItems(new Map());
+          applyResponse(
+            await api.sync({
+              cursor: 0,
+              device_id: deviceId,
+              full_lists: fullLists,
+              changes: {},
+            }),
+          );
+        } else {
+          throw err;
+        }
+      }
+    },
+    [deviceId, applyResponse],
+  );
+
   const runSync = useCallback(
-    async (changes: { lists?: ListObject[]; items?: ItemObject[] }, fullLists: string[] = []) => {
+    async (changes: SyncChanges, fullLists: string[] = []) => {
       inFlightRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        const response = await api.sync({
-          cursor: cursorRef.current,
-          device_id: deviceId,
-          full_lists: fullLists,
-          changes,
-        });
-        applyResponse(response);
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 410) {
-          // Full resync required: drop cursor and mirror, then retry from 0.
-          cursorRef.current = 0;
-          setLists(new Map());
-          setItems(new Map());
-          const response = await api.sync({
-            cursor: 0,
-            device_id: deviceId,
-            full_lists: fullLists,
-            changes: {},
-          });
-          applyResponse(response);
-        } else {
-          setError(err instanceof Error ? err.message : "Sync failed.");
-          throw err;
+        const batches = splitChanges(changes);
+        for (let i = 0; i < batches.length; i += 1) {
+          // full_lists rides on the last batch only: it asks for a snapshot of the named lists,
+          // which is only worth taking once everything this push carries has been applied.
+          await sendBatch(batches[i], i === batches.length - 1 ? fullLists : []);
         }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Sync failed.");
+        throw err;
       } finally {
         setLoading(false);
         inFlightRef.current = false;
       }
     },
-    [deviceId, applyResponse],
+    [sendBatch],
   );
 
   const push = useCallback(

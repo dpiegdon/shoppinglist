@@ -426,3 +426,162 @@ def _account_with_session(client, app, platform):
     ).get_json()["token"]
     conn = db_module.connect(get_config_by_name(app)["database_path"])
     return conn, token
+
+
+# ---- credential input validation (T-116 type confusion, T-118 length caps) ----
+
+
+@pytest.mark.parametrize("bad", [{}, [], 5, 5.5, True, None])
+def test_register_rejects_non_string_email_with_422_not_500(client, bad):
+    # EMAIL_RE.match() raises TypeError on a non-string, which used to surface as an
+    # unauthenticated 500. A falsy non-string was caught by the old `not email` guard;
+    # a truthy one (5, 5.5, True) was not.
+    resp = client.post("/api/v1/register", json={"email": bad, "password": "password123"})
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_email"
+
+
+@pytest.mark.parametrize("bad", [{}, [], 5, True])
+def test_register_rejects_non_string_password_with_422_not_500(client, bad):
+    resp = client.post("/api/v1/register", json={"email": "typed@example.com", "password": bad})
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_password"
+
+
+@pytest.mark.parametrize("field", ["email", "password", "device_label"])
+@pytest.mark.parametrize("bad", [{}, []])
+def test_login_never_500s_on_a_wrongly_typed_field(client, field, bad):
+    body = {"email": EMAIL, "password": PASSWORD, "device_label": DEVICE}
+    body[field] = bad
+
+    resp = client.post("/api/v1/login", json=body)
+
+    assert resp.status_code < 500
+
+
+def test_login_answers_a_malformed_email_exactly_like_a_wrong_one(client):
+    # 401, not 422: a type-checked rejection would be a response that a correctly-shaped
+    # guess never receives, which is itself a signal. Keep the uniform 401.
+    malformed = client.post("/api/v1/login", json={"email": {}, "password": "x"})
+    wrong = client.post("/api/v1/login", json={"email": "nobody@example.com", "password": "x"})
+
+    assert malformed.status_code == wrong.status_code == 401
+    assert malformed.get_json() == wrong.get_json()
+
+
+def test_email_at_the_cap_is_accepted_and_one_over_is_rejected(client):
+    local = "a" * (auth.MAX_EMAIL_LENGTH - len("@example.com"))
+    at_cap = f"{local}@example.com"
+    assert len(at_cap) == auth.MAX_EMAIL_LENGTH
+
+    assert client.post(
+        "/api/v1/register", json={"email": at_cap, "password": "password123"}
+    ).status_code == 201
+
+    over = f"a{at_cap}"
+    resp = client.post("/api/v1/register", json={"email": over, "password": "password123"})
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_email"
+
+
+def test_the_email_cap_never_exceeds_what_an_invite_can_carry(db_conn):
+    """An account that mint() could never invite would be a silent dead end (T-118)."""
+    from shoppinglist_server.invites import MAX_INVITED_EMAIL_LENGTH
+
+    assert auth.MAX_EMAIL_LENGTH <= MAX_INVITED_EMAIL_LENGTH
+
+
+def test_password_at_the_cap_is_accepted_and_one_over_is_rejected(client):
+    at_cap = "p" * auth.MAX_PASSWORD_LENGTH
+
+    assert client.post(
+        "/api/v1/register", json={"email": "atcap@example.com", "password": at_cap}
+    ).status_code == 201
+
+    resp = client.post(
+        "/api/v1/register", json={"email": "over@example.com", "password": at_cap + "p"}
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_password"
+
+
+def test_overlong_device_label_is_rejected(client):
+    client.post("/api/v1/register", json={"email": EMAIL, "password": PASSWORD})
+
+    resp = client.post(
+        "/api/v1/login",
+        json={
+            "email": EMAIL,
+            "password": PASSWORD,
+            "device_label": "d" * (auth.MAX_DEVICE_LABEL_LENGTH + 1),
+        },
+    )
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_device_label"
+
+
+def test_email_with_a_colon_is_rejected_so_it_can_still_be_invited(client):
+    # EMAIL_RE itself permits ':' (it only excludes '@' and whitespace), but invites.mint()
+    # rejects it — such an account could never be invited to any list.
+    resp = client.post(
+        "/api/v1/register", json={"email": "we:rd@example.com", "password": "password123"}
+    )
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_email"
+
+
+def test_change_email_inherits_every_registration_email_rule(client):
+    client.post("/api/v1/register", json={"email": EMAIL, "password": PASSWORD})
+    token = client.post(
+        "/api/v1/login", json={"email": EMAIL, "password": PASSWORD, "device_label": DEVICE}
+    ).get_json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    for bad in ("co:lon@example.com", "a" * 300 + "@example.com"):
+        resp = client.post(
+            "/api/v1/account/change-email",
+            json={"password": PASSWORD, "new_email": bad},
+            headers=headers,
+        )
+        assert resp.status_code == 422, bad
+        assert resp.get_json()["error"] == "invalid_email"
+
+
+# ---- login timing does not enumerate accounts (T-115) ------------------------
+
+
+def test_login_does_the_same_password_hashing_work_whether_or_not_the_account_exists(
+    db_conn, monkeypatch
+):
+    """The scrypt verify used to run only when a row was found, and the resulting ~52x timing gap
+    enumerated accounts. Asserting call COUNT rather than wall-clock: a timing assertion on a
+    loaded CI box is flaky, while "both paths verify exactly once" is the property that closes it.
+    """
+    auth.register(db_conn, EMAIL, PASSWORD)
+
+    calls = []
+    real_check = auth.check_password_hash
+
+    def counting_check(pwhash, password):
+        calls.append(pwhash)
+        return real_check(pwhash, password)
+
+    monkeypatch.setattr(auth, "check_password_hash", counting_check)
+
+    with pytest.raises(ApiError):
+        auth.login(db_conn, EMAIL, "wrong-password", DEVICE)
+    known_calls = len(calls)
+
+    calls.clear()
+    with pytest.raises(ApiError):
+        auth.login(db_conn, "no-such-account@example.com", "wrong-password", DEVICE)
+    unknown_calls = len(calls)
+
+    assert known_calls == unknown_calls == 1
+    # And the unknown-address path must burn a REAL hash, not a cheap sentinel.
+    assert calls[0] == auth._TIMING_EQUALIZER_HASH
+    assert calls[0].startswith("scrypt:")

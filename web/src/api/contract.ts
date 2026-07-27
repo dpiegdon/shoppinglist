@@ -184,3 +184,12 @@ export interface ApiErrorBody {
   error: string;
   message: string;
 }
+
+/**
+ * Server cap on rows per /sync push (sync.MAX_CHANGES_PER_SYNC, T-114). Over-cap batches are
+ * rejected with `too_many_changes`, so clients split larger pushes — see splitChanges in
+ * hooks/useSync.ts. Kept in step with the server by
+ * server/tests/test_sync_api.py::test_a_batch_at_the_cap_is_accepted; lowering it here is safe
+ * (smaller batches), raising it above the server's value is not.
+ */
+export const MAX_CHANGES_PER_SYNC = 250;

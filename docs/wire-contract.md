@@ -16,8 +16,19 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
   `POST /register`, `POST /login`, `GET /registration-status`, and the site-root
   pages.
 - **Error envelope.** Every non-2xx JSON response is
-  `{"error": "<code>", "message": "<text>"}`.
+  `{"error": "<code>", "message": "<text>"}`, sometimes with extra keys (never
+  shadowing those two) — e.g. `row_id`/`field` on a `/sync` validation failure.
 - **Timestamps** are integer milliseconds since the Unix epoch.
+- **Caching.** Every response carries `Cache-Control: no-store` unless the route
+  chose otherwise (the hashed `/assets/*` bundle and the APK are cacheable, the
+  SPA index is `no-cache`). API responses must never enter a shared cache: some
+  carry personal data, and `POST /login` and the admin password reset carry a
+  credential in the body.
+- **Congestion.** Any endpoint may answer `503 server_busy` with `Retry-After`
+  when the database is momentarily locked by another writer. It is always safe to
+  retry — nothing was applied.
+- **Input caps.** `email` ≤ 254 bytes and may not contain `:`; `password` ≤ 320
+  bytes (≥ 8); `device_label` ≤ 128 bytes. Over-cap values are `422`.
 
 ## Field clock
 
@@ -169,6 +180,20 @@ all live rows of any `full_lists`, plus the new cursor.
 - Cursor `0` means initial full sync.
 - A cursor below the server's `gc_horizon` returns `410 full_resync_required`.
   Pushed changes in that same request are still applied first.
+- **A push carries at most 250 rows** (`lists` + `items` counted together).
+  Beyond that the whole batch is refused with `422 too_many_changes`, carrying
+  `max_changes` and — deliberately — **no** `row_id`: no single row is at fault,
+  so a client must split the push rather than quarantine anything. Clients drain
+  a larger backlog over consecutive requests, lists first (a list must never
+  arrive in a later request than items referencing it). The cap exists because
+  applying a batch holds SQLite's single write lock for its whole duration.
+- **A row naming a list the caller cannot write to** gets
+  `422 unknown_list` + `row_id` — the *same* answer whether the list does not
+  exist or exists but belongs to someone else, so a non-member cannot probe which
+  list ids are in use. It is a `422` rather than a `403` so clients quarantine
+  just that row (see below) instead of wedging the whole push queue.
+- A `422` naming a `row_id` means *that row* is unacceptable: quarantine it,
+  keep syncing the rest, and retry it once the user edits it.
 
 ### Admin
 
@@ -214,6 +239,12 @@ token   = payload + "." + base64url(HMAC_SHA256(INVITE_HMAC_KEY, payload))
 ```
 
 Share URL: `https://<server>/invite/<token>`. Tokens are **stateless and signed**,
-so a link is checkable without server-side invite state; the payload is
-colon-delimited, which is why an invited email may not contain a colon. Invites
-expire 7 days after minting.
+so a link is checkable without server-side invite state. Invites expire 7 days
+after minting.
+
+The payload is colon-delimited, so **no component may contain a colon**: neither
+the invited email (`422 invalid_email`) nor the list id (`422 invalid_list_id`,
+reachable because list ids are client-minted strings). Registration rejects
+colon-bearing addresses for the same reason. Redemption grants membership in the
+list recorded on the **invite row**, not the one carried by the token — the two
+agree, but only the row is authoritative by construction.

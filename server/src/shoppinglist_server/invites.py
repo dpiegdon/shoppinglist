@@ -72,10 +72,22 @@ def is_member(conn, account_id, list_id) -> bool:
 def mint(conn, key: bytes, base_url: str, list_id: str, invited_email: str, created_by: str) -> dict:
     if not is_member(conn, created_by, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
+    # The token payload is colon-delimited (see _encode_token/decode_token), so NO component may
+    # contain a colon. invited_email was always checked; list_id was not — and list ids are
+    # client-minted arbitrary strings (sync._parse_row accepts any non-empty string up to 128
+    # chars), so a caller could create a list whose id embedded extra colons and have the server
+    # sign a payload that re-splits into different fields. That was never redeemable, because the
+    # trailing int(expires_at) cast always failed on the re-split — but the whole defence rested on
+    # that cast, and a refactor of decode_token would have turned it into arbitrary list-membership
+    # theft. Reject both components explicitly instead (T-117).
+    if ":" in list_id:
+        raise ApiError(
+            422, "invalid_list_id", "List id must not contain a colon and cannot be invited to."
+        )
     if (
         not invited_email
         or len(invited_email) > MAX_INVITED_EMAIL_LENGTH
-        or ":" in invited_email  # token payload is colon-delimited; see decode_token
+        or ":" in invited_email
         or not EMAIL_RE.match(invited_email)
     ):
         raise ApiError(422, "invalid_email", "invited_email is not valid.")
@@ -108,13 +120,19 @@ def revoke(conn, account_id: str, invite_id: str) -> None:
 
 
 def redeem(conn, key: bytes, account, token: str) -> str:
-    invite_id, list_id, invited_email, expires_at = decode_token(key, token)
+    invite_id, _token_list_id, invited_email, expires_at = decode_token(key, token)
 
     row = conn.execute(
-        "SELECT revoked, used_at FROM invites WHERE id = ?", (invite_id,)
+        "SELECT list_id, revoked, used_at FROM invites WHERE id = ?", (invite_id,)
     ).fetchone()
     if row is None:
         raise ApiError(400, "invalid_token", "Invite not found.")
+
+    # Defence in depth (T-117): join the list recorded in the DB, not the one carried by the token.
+    # The token is HMAC-signed so the two agree, but "the token's list_id is trustworthy" depends
+    # on the colon-delimited payload never re-splitting ambiguously. The invite row is
+    # authoritative by construction, so reading it here makes that question moot.
+    list_id = row["list_id"]
 
     if account.email.lower() != invited_email.lower():
         raise ApiError(

@@ -227,7 +227,12 @@ describe("useSync re-sync triggers (T-90)", () => {
     });
 
     expect(api.sync).toHaveBeenCalledTimes(2);
-    expect(api.sync).toHaveBeenLastCalledWith(expect.objectContaining({ changes: pushedChanges }));
+    // splitChanges (T-114) normalises a push to both keys, so the payload is
+    // {lists: [], items: [...]} rather than the caller's {items: [...]}. Semantically identical —
+    // the server reads `changes.lists or []` — and the point here is that the items survived.
+    expect(api.sync).toHaveBeenLastCalledWith(
+      expect.objectContaining({ changes: { lists: [], items: pushedChanges.items } }),
+    );
 
     // Drain both outstanding requests so nothing leaks into other tests.
     await act(async () => {

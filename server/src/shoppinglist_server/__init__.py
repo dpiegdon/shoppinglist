@@ -1,8 +1,10 @@
+import sqlite3
 from urllib.parse import urlsplit
 
 from flask import Blueprint, current_app, g, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
+from . import audit
 from . import db as db_module
 from .errors import ApiError
 
@@ -107,6 +109,7 @@ def create_blueprint(
         app.extensions.setdefault(EXTENSION_KEY, {})[bp.name] = config
         app.register_error_handler(ApiError, _handle_api_error)
         app.register_error_handler(RequestEntityTooLarge, _handle_payload_too_large)
+        app.register_error_handler(sqlite3.OperationalError, _handle_db_unavailable)
 
         # App-wide, not per-instance: cap the body size and attach security headers once. Guarded so
         # mounting several instances doesn't stack duplicate after_request callbacks (T-45).
@@ -216,6 +219,18 @@ def create_blueprint(
 
 
 def _handle_api_error(err: ApiError):
+    # Every rejected-for-authorization outcome funnels through here, which makes this the one place
+    # that sees all of them — cheaper and far harder to forget than a record() call at each of the
+    # dozen-odd raise sites (T-121). Successes are logged at their route instead, where the
+    # meaningful detail lives.
+    if err.status in (401, 403):
+        audit.record(
+            "authz.denied",
+            account_id=getattr(g, "account", None) and g.account.id,
+            outcome="denied",
+            code=err.code,
+            path=request.path,
+        )
     body = {"error": err.code, "message": err.message}
     if err.details:
         # Additive only — never let details shadow the canonical error/message keys.
@@ -227,6 +242,27 @@ def _handle_api_error(err: ApiError):
 def _handle_payload_too_large(err: RequestEntityTooLarge):
     # Same JSON envelope shape as ApiError, so API clients parse it the same way (T-45).
     return jsonify({"error": "payload_too_large", "message": "Request body is too large."}), 413
+
+
+def _handle_db_unavailable(err: sqlite3.OperationalError):
+    """A busy/locked SQLite database is congestion, not a bug — answer 503 + Retry-After, not 500
+    (T-114).
+
+    SQLite allows a single writer, and stock `sqlite3` gives up after a 5 s busy timeout. Before
+    this, one slow write made every concurrent write raise here and surface as an opaque 500,
+    telling the client to give up when retrying was exactly the right move. Only contention is
+    remapped: any other OperationalError (missing table, malformed schema) is a genuine fault and
+    is re-raised so it still fails loudly rather than hiding behind a soothing 503.
+    """
+    message = str(err).lower()
+    if "locked" not in message and "busy" not in message:
+        raise err
+    audit.record("db.contention", outcome="error", path=request.path)
+    response = jsonify(
+        {"error": "server_busy", "message": "The server is busy; please retry in a moment."}
+    )
+    response.headers["Retry-After"] = "2"
+    return response, 503
 
 
 def _add_security_headers(response):
@@ -257,6 +293,16 @@ def _add_security_headers(response):
     # meaningful for HTML, so scope them to it.
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
+    # Nothing we serve may sit in a shared cache unless the route asked for it (T-119). RFC 9111
+    # lets a cache store a 200 GET carrying no freshness information on its own judgement, and a
+    # TLS-terminating reverse proxy — mandatory for this deployment — is exactly such a cache. What
+    # would land there: member email addresses (/lists/<id>/members), every account
+    # (/admin/users), and, in a response body, a bearer token (POST /login) and a freshly reset
+    # plaintext password (POST /admin/users/<id>/reset-password).
+    #
+    # setdefault, so the routes that HAVE made a caching decision keep it: the content-hashed SPA
+    # assets and the APK are deliberately long-lived, and the SPA index is deliberately no-cache.
+    response.headers.setdefault("Cache-Control", "no-store")
     if response.mimetype == "text/html":
         response.headers.setdefault("Content-Security-Policy", HTML_SECURITY_CSP)
         response.headers.setdefault("X-Frame-Options", "DENY")

@@ -1,6 +1,6 @@
 from flask import g, jsonify, request
 
-from .. import get_config, get_db, server_settings
+from .. import audit, get_config, get_db, server_settings
 from ..auth import authed, is_admin_email
 from ..auth import login as auth_login
 from ..auth import logout as auth_logout
@@ -22,6 +22,7 @@ def register_routes(bp):
             )
         data = request.get_json(force=True, silent=True) or {}
         account_id = auth_register(conn, data.get("email"), data.get("password"))
+        audit.record("account.registered", account_id=account_id)
         return jsonify({"account_id": account_id}), 201
 
     @bp.route("/registration-status", methods=["GET"])
@@ -51,6 +52,10 @@ def register_routes(bp):
         row = conn.execute(
             "SELECT email FROM accounts WHERE id = ?", (account_id,)
         ).fetchone()
+        # A failed login is already recorded centrally as authz.denied by the 401 path in
+        # _handle_api_error; this is the matching success, so the two together show a brute-force
+        # run and whether it eventually landed (T-121).
+        audit.record("auth.login", account_id=account_id, platform=data.get("platform"))
         return (
             jsonify(
                 {
@@ -71,4 +76,5 @@ def register_routes(bp):
     def logout_view():
         conn = get_db()
         auth_logout(conn, g.token)
+        audit.record("auth.logout", account_id=g.account.id)
         return "", 204

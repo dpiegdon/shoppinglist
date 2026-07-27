@@ -1,5 +1,7 @@
 """HTTP-layer integration tests for POST /sync and GET /lists."""
 
+from shoppinglist_server import sync
+
 EMAIL = "carol@example.com"
 PW = "password123"
 
@@ -646,20 +648,21 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
     resp = client.get("/api/v1/lists/list-victim/members", headers=_auth(token_b))
     assert resp.status_code == 403
 
-    # (e) Push a brand-new item into A's list: refused.
+    # (e) Push a brand-new item into A's list: refused. Item writes answer 422 unknown_list, not
+    # 403 — see (j) for why the two cases must be indistinguishable (T-120).
     resp = _sync(
         client, token_b, cursor=0, device_id="devB",
         changes={"items": [_mk_item("item-intruder", "list-victim", name=("Intruder", 200, "devB"))]},
     )
-    assert resp.status_code == 403
-    assert resp.get_json()["error"] == "not_a_member"
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "unknown_list"
 
     # (f) Edit A's existing item: refused.
     resp = _sync(
         client, token_b, cursor=0, device_id="devB",
         changes={"items": [_mk_item("item-victim", "list-victim", name=("Hacked", 999, "devB"))]},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 422
 
     # (g) Hijack via mislabelled list_id: the server authorizes against the item's
     # STORED list, not the client-supplied one, so this is still refused.
@@ -667,7 +670,22 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
         client, token_b, cursor=0, device_id="devB",
         changes={"items": [_mk_item("item-victim", "some-other-list", name=("Hacked", 1000, "devB"))]},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 422
+
+    # (j) No existence oracle (T-120): pushing an item at a list id that does NOT exist and at one
+    # that exists but belongs to A must be answered identically, or B can probe which ids are in
+    # use. Compare the whole envelope, not just the status — a differing error code leaks just as
+    # much as a differing status.
+    resp_absent = _sync(
+        client, token_b, cursor=0, device_id="devB",
+        changes={"items": [_mk_item("probe", "no-such-list-at-all", name=("P", 300, "devB"))]},
+    )
+    resp_foreign = _sync(
+        client, token_b, cursor=0, device_id="devB",
+        changes={"items": [_mk_item("probe", "list-victim", name=("P", 300, "devB"))]},
+    )
+    assert resp_absent.status_code == resp_foreign.status_code == 422
+    assert resp_absent.get_json() == resp_foreign.get_json()
 
     # (h) Invite themselves in: refused (only members can mint invites).
     resp = client.post(
@@ -695,3 +713,70 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
 
     # And B still has no lists at all — nothing leaked into their world.
     assert client.get("/api/v1/lists", headers=_auth(token_b)).get_json()["lists"] == []
+
+
+# ---- batch size cap (T-114) --------------------------------------------------
+
+
+def _n_items(n, list_id="list-1", start=0):
+    return [
+        _mk_item(f"bulk-{i}", list_id, name=(f"Item {i}", 100 + i, "devA"))
+        for i in range(start, start + n)
+    ]
+
+
+def test_a_batch_at_the_cap_is_accepted(client):
+    token = _register_and_login(client, email="cap@example.com", device="devA")
+    _sync(client, token, cursor=0, device_id="devA",
+          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+
+    resp = _sync(client, token, cursor=0, device_id="devA",
+                 changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC)})
+
+    assert resp.status_code == 200
+
+
+def test_a_batch_one_over_the_cap_is_rejected_and_applies_nothing(client):
+    token = _register_and_login(client, email="over@example.com", device="devA")
+    _sync(client, token, cursor=0, device_id="devA",
+          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+
+    resp = _sync(client, token, cursor=0, device_id="devA",
+                 changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)})
+
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["error"] == "too_many_changes"
+    assert body["max_changes"] == sync.MAX_CHANGES_PER_SYNC
+    # Rejected before any row was applied, so the cap costs nothing to enforce.
+    after = _sync(client, token, cursor=0, device_id="devA").get_json()
+    assert [i for i in after["changes"]["items"] if i["id"].startswith("bulk-")] == []
+
+
+def test_the_cap_counts_lists_and_items_together(client):
+    # Two half-size batches are fine individually but must not pass as one combined push.
+    token = _register_and_login(client, email="both@example.com", device="devA")
+    half = sync.MAX_CHANGES_PER_SYNC // 2 + 1
+    lists = [_mk_list(f"l-{i}", f"L{i}", 100 + i, "devA") for i in range(half)]
+    items = [
+        _mk_item(f"i-{i}", "l-0", name=(f"I{i}", 100 + i, "devA")) for i in range(half)
+    ]
+
+    resp = _sync(client, token, cursor=0, device_id="devA",
+                 changes={"lists": lists, "items": items})
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "too_many_changes"
+
+
+def test_the_over_cap_error_names_no_row_so_clients_chunk_instead_of_quarantining(client):
+    """Both clients quarantine a 422 that names a row_id (T-32). The batch being too big is not
+    any single row's fault, so naming one would park an innocent row forever."""
+    token = _register_and_login(client, email="norow@example.com", device="devA")
+    _sync(client, token, cursor=0, device_id="devA",
+          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+
+    body = _sync(client, token, cursor=0, device_id="devA",
+                 changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)}).get_json()
+
+    assert "row_id" not in body

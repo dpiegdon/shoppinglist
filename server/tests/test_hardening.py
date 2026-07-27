@@ -148,3 +148,104 @@ def test_a_host_route_the_extension_does_not_own_is_left_alone(tmp_path):
     assert resp.status_code == 200
     assert "Content-Security-Policy" not in resp.headers
     assert "Referrer-Policy" not in resp.headers
+
+
+# ---- no-store on everything except the routes that chose their own caching (T-119) ----
+
+
+def _authed(client):
+    client.post("/api/v1/register", json={"email": "cache@example.com", "password": "password123"})
+    token = client.post(
+        "/api/v1/login",
+        json={"email": "cache@example.com", "password": "password123", "device_label": "d"},
+    ).get_json()["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_authenticated_json_is_never_stored_by_a_shared_cache(client):
+    headers = _authed(client)
+
+    for path in ("/api/v1/settings", "/api/v1/lists", "/api/v1/account/sessions"):
+        resp = client.get(path, headers=headers)
+        assert resp.status_code == 200, path
+        assert resp.headers["Cache-Control"] == "no-store", path
+
+
+def test_the_login_response_carrying_a_bearer_token_is_not_cacheable(client):
+    client.post("/api/v1/register", json={"email": "tok@example.com", "password": "password123"})
+
+    resp = client.post(
+        "/api/v1/login",
+        json={"email": "tok@example.com", "password": "password123", "device_label": "d"},
+    )
+
+    assert "token" in resp.get_json()
+    assert resp.headers["Cache-Control"] == "no-store"
+
+
+def test_the_invite_landing_page_carrying_a_token_in_its_url_is_not_cacheable(client):
+    resp = client.get("/invite/not-a-real-token")
+
+    assert resp.headers["Cache-Control"] == "no-store"
+
+
+def test_no_store_does_not_clobber_a_route_that_chose_its_own_caching(client):
+    # The content-hashed SPA assets are deliberately immutable-cacheable, and the SPA index
+    # deliberately must-revalidate. Blanket no-store would silently undo both.
+    index = client.get("/")
+    assert index.status_code == 200
+    assert "no-store" not in index.headers["Cache-Control"]
+    assert "no-cache" in index.headers["Cache-Control"]
+
+    asset_url = None
+    for line in index.get_data(as_text=True).splitlines():
+        if "/assets/" in line and ".js" in line:
+            asset_url = line.split('src="', 1)[1].split('"', 1)[0]
+            break
+    assert asset_url, "no hashed asset found in the served index.html"
+
+    asset = client.get(asset_url)
+    assert asset.status_code == 200
+    assert "max-age=31536000" in asset.headers["Cache-Control"]
+    assert "no-store" not in asset.headers["Cache-Control"]
+
+
+# ---- write contention answers 503, not 500 (T-114) ---------------------------
+
+
+def test_a_locked_database_answers_503_with_retry_after_not_500(app, client, monkeypatch):
+    import sqlite3
+
+    from shoppinglist_server.routes import auth as auth_routes
+
+    def locked(*args, **kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    # The route module binds `register` at import time, so patch it there, not on the source module.
+    monkeypatch.setattr(auth_routes, "auth_register", locked)
+
+    resp = client.post("/api/v1/register", json={"email": "x@example.com", "password": "password123"})
+
+    assert resp.status_code == 503
+    assert resp.get_json()["error"] == "server_busy"
+    assert resp.headers["Retry-After"] == "2"
+
+
+def test_a_genuine_operational_error_is_not_disguised_as_congestion(app, client, monkeypatch):
+    """Only contention is remapped — a real fault must still fail loudly rather than telling the
+    client to retry something that will never succeed."""
+    import sqlite3
+
+    from shoppinglist_server.routes import auth as auth_routes
+
+    def broken(*args, **kwargs):
+        raise sqlite3.OperationalError("no such table: accounts")
+
+    monkeypatch.setattr(auth_routes, "auth_register", broken)
+    # PROPAGATE_EXCEPTIONS follows TESTING when unset; leave it on and the re-raise escapes the
+    # test client instead of becoming the 500 a real deployment would return.
+    app.config["TESTING"] = False
+
+    resp = client.post("/api/v1/register", json={"email": "x@example.com", "password": "password123"})
+
+    assert resp.status_code == 500

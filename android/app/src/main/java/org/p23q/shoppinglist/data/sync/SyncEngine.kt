@@ -53,10 +53,29 @@ class SyncEngine @Inject constructor(
     private val syncStatus: SyncStatus,
     private val notifier: CollaboratorChangeNotifier,
 ) {
+    companion object {
+        /**
+         * Server cap on rows per /sync push (sync.MAX_CHANGES_PER_SYNC, T-114). A larger batch is
+         * rejected with `too_many_changes`, because applying one holds SQLite's single write lock
+         * for its whole duration and an unbounded batch could stall every other write on the
+         * instance. A backlog past this is pushed over several passes — see syncNow. Lowering this
+         * is safe (smaller batches); raising it above the server's value is not.
+         */
+        const val MAX_CHANGES_PER_SYNC = 250
+    }
+
     suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
-        val dirtyItems = itemDao.dirtyRows()
-        val dirtyLists = listDao.dirtyRows()
-        val pendingBefore = dirtyItems.size + dirtyLists.size
+        val allDirtyItems = itemDao.dirtyRows()
+        val allDirtyLists = listDao.dirtyRows()
+        val pendingBefore = allDirtyItems.size + allDirtyLists.size
+
+        // Take at most one batch's worth, lists first (T-114). Lists lead because the server
+        // registers membership when it applies one, and an item naming a list the server has not
+        // seen is refused — so the list must never arrive in a later pass than its items.
+        val dirtyLists = allDirtyLists.take(MAX_CHANGES_PER_SYNC)
+        val dirtyItems = allDirtyItems.take(MAX_CHANGES_PER_SYNC - dirtyLists.size)
+        val hasMoreToPush = dirtyLists.size < allDirtyLists.size || dirtyItems.size < allDirtyItems.size
+
         // Surface "syncing…" plus the counts as they stand now (T-47). Recursive retries below
         // re-enter this and re-report, so the innermost outcome is what the UI settles on.
         syncStatus.started(pending = pendingBefore, blocked = itemDao.blockedRowCount())
@@ -121,9 +140,29 @@ class SyncEngine @Inject constructor(
         reportCollaboratorChanges(requestCursor = request.cursor, pulledItems = response.changes.items)
 
         // Recompute pending after the merge: a local edit that raced the request may still be dirty.
+        val pendingAfter = itemDao.dirtyRows().size + listDao.dirtyRows().size
+
+        // More backlog than one batch could carry: go round again (T-114). Guarded on the backlog
+        // having actually SHRUNK, not merely on rows remaining — a pushed row is only marked clean
+        // when the server echoes it back, and an entirely-stale push it had no reason to bump
+        // wouldn't come back at all. Without the guard that row would spin here forever; with it,
+        // pending strictly decreases each pass and the recursion is bounded by the backlog size.
+        // fullLists is deliberately not repeated: it asks for a snapshot, this pass already took it.
+        if (hasMoreToPush && pendingAfter < pendingBefore) {
+            return when (val rest = syncNow()) {
+                is SyncResult.Success -> SyncResult.Success(
+                    pushedItems = dirtyItems.size + rest.pushedItems,
+                    pushedLists = dirtyLists.size + rest.pushedLists,
+                    pulledItems = response.changes.items.size + rest.pulledItems,
+                    pulledLists = response.changes.lists.size + rest.pulledLists,
+                )
+                else -> rest
+            }
+        }
+
         syncStatus.succeeded(
             at = System.currentTimeMillis(),
-            pending = itemDao.dirtyRows().size + listDao.dirtyRows().size,
+            pending = pendingAfter,
             blocked = itemDao.blockedRowCount(),
         )
         return SyncResult.Success(

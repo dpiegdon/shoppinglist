@@ -82,6 +82,19 @@ STRING_LIST_ELEM_MAX_LENGTH = 200  # each store name / category label, same scal
 # quarantine an innocent device whose clock is merely wrong).
 CLOCK_SKEW_ALLOWANCE_MS = 60 * 60 * 1000  # 1 hour
 
+# ---- batch size cap (T-114) -------------------------------------------------
+# MAX_CONTENT_LENGTH bounds the request in BYTES, which is the wrong unit: 4 MB of minimal item
+# rows is ~38,900 of them (108 bytes each, measured), and applying them costs ~0.31 ms/row while
+# holding SQLite's single write lock from the first change_seq bump to the final commit. That is
+# ~12 s during which every other write on the instance — every login, registration, sync and
+# settings change — blocks and then fails, because stock sqlite3 gives up after a 5 s busy timeout.
+# One authenticated member could therefore stall the whole server at will, repeatedly.
+#
+# 250 rows is ~78 ms of work: comfortably below the busy timeout with room for a slow host, and far
+# above any real edit burst. Only a bulk import exceeds it, and clients chunk to stay under.
+# Note this bounds PUSHES only — a first-sync pull is a delta, which this does not touch.
+MAX_CHANGES_PER_SYNC = 250
+
 ITEM_TSBY = {key: (ts, by) for key, ts, by in ITEM_FIELD_META}
 LIST_TSBY = {key: (ts, by) for key, ts, by in LIST_FIELD_META}
 ITEM_KEYS = set(ITEM_TSBY)
@@ -366,10 +379,6 @@ def _parse_row(obj, keys, tsby, validate, device_id):
 # ---- membership helpers ----------------------------------------------------
 
 
-def _list_exists(conn, list_id) -> bool:
-    return conn.execute("SELECT 1 FROM lists WHERE id = ?", (list_id,)).fetchone() is not None
-
-
 def _is_member(conn, account_id, list_id) -> bool:
     return (
         conn.execute(
@@ -527,6 +536,12 @@ def _apply_list(conn, account_id, device_id, obj):
         )
         return
 
+    # Residual, deliberate (T-120): unlike _apply_item above, this branch cannot be made uniform.
+    # Pushing an unused list id CREATES the list, so "created" vs "403" still distinguishes a free
+    # id from a taken one — and it can't be closed without either refusing legitimate creates or
+    # lying about them. Closing it properly means the server minting list ids instead of accepting
+    # client-minted ones, which the offline-first model rules out. Real clients use UUIDs, so what
+    # leaks is only whether a *guessed* id is in use.
     if not _is_member(conn, account_id, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
     set_cols = _lww_update_columns(existing, fields, _list_field_to_columns, LIST_TSBY)
@@ -558,13 +573,20 @@ def _apply_item(conn, account_id, device_id, obj):
                 422, "invalid_row", "Item list_id must be a string.",
                 details={"row_id": item_id},
             )
-        if not _list_exists(conn, list_id):
-            raise ApiError(
-                422, "unknown_list", "Item refers to an unknown list_id.",
-                details={"row_id": item_id},
-            )
+    # One answer for "no such list" and "exists, but not yours" (T-120). Splitting them — 422
+    # unknown_list vs 403 not_a_member — let a non-member probe which list ids are in use, which is
+    # exactly the leak routes/lists.py's uniform 403 on GET /members exists to prevent. Membership
+    # implies existence (memberships.list_id is a FK), so the single check covers both.
+    #
+    # 422-with-row_id, not 403: both clients quarantine a 422 naming a row (T-32) and hard-fail a
+    # 403, so answering 403 here would wedge the whole push queue behind one unpushable row. This
+    # also improves the legitimate case — a device pushing items for a list the account has since
+    # left now parks that row instead of blocking every later edit.
     if not _is_member(conn, account_id, list_id):
-        raise ApiError(403, "not_a_member", "You are not a member of this list.")
+        raise ApiError(
+            422, "unknown_list", "Item refers to an unknown list_id.",
+            details={"row_id": item_id},
+        )
 
     if existing is None:
         if "name" not in fields:
@@ -626,6 +648,18 @@ def apply_changes(conn, account_id, device_id, changes) -> None:
         raise ApiError(422, "invalid_changes", "changes.lists must be a list.")
     if not isinstance(items, list):
         raise ApiError(422, "invalid_changes", "changes.items must be a list.")
+    # Checked before any row is applied, so an over-cap batch costs nothing (T-114). Deliberately
+    # carries NO row_id: the batch is too big, no individual row is at fault, and a row_id would
+    # make the clients quarantine an innocent row instead of chunking.
+    total = len(lists) + len(items)
+    if total > MAX_CHANGES_PER_SYNC:
+        raise ApiError(
+            422,
+            "too_many_changes",
+            f"A sync batch may contain at most {MAX_CHANGES_PER_SYNC} changes; "
+            f"got {total}. Split the push into smaller batches.",
+            details={"max_changes": MAX_CHANGES_PER_SYNC},
+        )
     for obj in lists:
         _apply_list(conn, account_id, device_id, obj)
     for obj in items:

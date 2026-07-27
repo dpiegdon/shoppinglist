@@ -450,3 +450,47 @@ def test_invite_routes_without_token_401(client):
     assert resp.status_code == 401
     resp = client.post("/api/v1/lists/list-x/leave")
     assert resp.status_code == 401
+
+
+# ---- token payload delimiter safety (T-117) ---------------------------------
+
+
+def test_mint_rejects_a_list_id_containing_a_colon(db_conn):
+    """The token payload is colon-delimited, and list ids are client-minted arbitrary strings —
+    so a list id carrying extra colons made the server sign a payload that re-splits into
+    different fields. Never redeemable (the trailing int(expires_at) cast always failed), but the
+    whole defence rested on that cast."""
+    owner = _register(db_conn, "owner@example.com")
+    evil_id = "TARGETLIST:attacker@evil.com:99999999999999"
+    _create_list(db_conn, owner, "devOwner", list_id=evil_id, name="Evil")
+
+    with pytest.raises(ApiError) as excinfo:
+        invites.mint(
+            db_conn, KEY, BASE_URL, evil_id, "owner@example.com", owner
+        )
+
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_list_id"
+
+
+def test_redeem_joins_the_list_recorded_in_the_db_not_the_one_in_the_token(db_conn):
+    """Defence in depth: even a token whose payload names a different list must only ever grant
+    the membership the invite row records."""
+    owner = _register(db_conn, "owner@example.com")
+    invitee = _register(db_conn, "guest@example.com")
+    _create_list(db_conn, owner, "devOwner", list_id="list-real", name="Real")
+    _create_list(db_conn, owner, "devOwner", list_id="list-other", name="Other")
+
+    minted = invites.mint(db_conn, KEY, BASE_URL, "list-real", "guest@example.com", owner)
+
+    # Re-sign a payload naming a DIFFERENT list with the server's own key, so the HMAC is valid
+    # and only the DB lookup can catch the mismatch.
+    forged = invites._encode_token(
+        KEY, minted["invite_id"], "list-other", "guest@example.com", minted["expires_at"]
+    )
+    account = auth.Account(id=invitee, email="guest@example.com")
+    joined = invites.redeem(db_conn, KEY, account, forged)
+
+    assert joined == "list-real"
+    assert _membership_exists(db_conn, invitee, "list-real")
+    assert not _membership_exists(db_conn, invitee, "list-other")

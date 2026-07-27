@@ -441,4 +441,100 @@ class SyncEngineTest {
         assertEquals("acc-me", sessionState.accountId)
         assertEquals(listOf(CollaboratorChange("list-1", "Groceries", 1)), notifier.calls.single())
     }
+
+    // ---- batch chunking (T-114) ---------------------------------------------
+
+    /** Echo of a row created by [dummyItem], so the merge clears its dirty flag. */
+    private fun echoDirtyItemJson(id: String, name: String, at: Long = 1_000L): String = """
+        {"id": "$id", "list_id": "list-1", "created_at": $at, "fields": {
+          "name": {"value": "$name", "updated_at": $at, "updated_by": "this-device"},
+          "category": {"value": null, "updated_at": $at, "updated_by": "this-device"},
+          "stores": {"value": [], "updated_at": $at, "updated_by": "this-device"},
+          "quantity": {"value": null, "updated_at": $at, "updated_by": "this-device"},
+          "price": {"value": null, "updated_at": $at, "updated_by": "this-device"},
+          "note": {"value": null, "updated_at": $at, "updated_by": "this-device"},
+          "status": {"value": "todo", "updated_at": $at, "updated_by": "this-device"},
+          "deleted": {"value": false, "updated_at": $at, "updated_by": "this-device"}
+        }}
+    """.trimIndent()
+
+    @Test
+    fun `a backlog larger than the server cap is pushed across several requests, none over the cap`() = runTest {
+        pointAtServer()
+        val cap = SyncEngine.MAX_CHANGES_PER_SYNC
+        val total = cap + 3
+        val ids = (0 until total).map { "item-$it" }
+        ids.forEach { db.itemDao().upsert(dummyItem(it, "Name $it", dirty = true)) }
+
+        // Each response echoes exactly the rows that pass sent, so their dirty flags clear and the
+        // backlog shrinks — which is what licenses the next pass.
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(1, emptyList(), ids.take(cap).map { echoDirtyItemJson(it, "Name ${it.removePrefix("item-")}") }),
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(2, emptyList(), ids.drop(cap).map { echoDirtyItemJson(it, "Name ${it.removePrefix("item-")}") }),
+            ),
+        )
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        assertEquals(total, (result as SyncResult.Success).pushedItems)
+
+        val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val second = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(cap, first.changes.items.size + first.changes.lists.size)
+        assertEquals(3, second.changes.items.size + second.changes.lists.size)
+        // Every row went exactly once, none lost or duplicated.
+        assertEquals(ids.toSet(), (first.changes.items + second.changes.items).map { it.id }.toSet())
+        assertEquals(total, first.changes.items.size + second.changes.items.size)
+        assertEquals(0, db.itemDao().dirtyRows().size)
+    }
+
+    @Test
+    fun `full_lists is requested once, not repeated on every chunk`() = runTest {
+        pointAtServer()
+        val cap = SyncEngine.MAX_CHANGES_PER_SYNC
+        val ids = (0 until cap + 1).map { "item-$it" }
+        ids.forEach { db.itemDao().upsert(dummyItem(it, "Name $it", dirty = true)) }
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(1, emptyList(), ids.take(cap).map { echoDirtyItemJson(it, "Name ${it.removePrefix("item-")}") }),
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(2, emptyList(), ids.drop(cap).map { echoDirtyItemJson(it, "Name ${it.removePrefix("item-")}") }),
+            ),
+        )
+
+        syncEngine.syncNow(fullLists = listOf("list-1"))
+
+        val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val second = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(listOf("list-1"), first.fullLists)
+        assertEquals(emptyList<String>(), second.fullLists)
+    }
+
+    @Test
+    fun `a backlog that does not shrink stops after one pass instead of spinning forever`() = runTest {
+        // A pushed row is only marked clean when the server echoes it back. If it never does, the
+        // backlog never shrinks — and chunking must not turn that into an infinite request loop.
+        // Exactly one response is enqueued: a second pass would block on an empty MockWebServer.
+        pointAtServer()
+        val total = SyncEngine.MAX_CHANGES_PER_SYNC + 5
+        (0 until total).forEach { db.itemDao().upsert(dummyItem("item-$it", "Name $it", dirty = true)) }
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(syncResponseJson(1, emptyList(), emptyList())),
+        )
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        assertEquals(1, server.requestCount)
+        assertEquals(total, db.itemDao().dirtyRows().size)
+    }
 }

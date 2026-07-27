@@ -112,7 +112,9 @@ def test_create_item_unknown_list_raises_422(db_conn):
     assert excinfo.value.status == 422
 
 
-def test_edit_item_in_non_member_list_raises_403(db_conn):
+def test_edit_item_in_non_member_list_is_refused_as_unknown_list(db_conn):
+    # 422 unknown_list, not 403 not_a_member: an item write must answer the same whether the list
+    # is absent or merely someone else's, or a non-member can probe which list ids exist (T-120).
     owner = _register(db_conn, "owner@example.com")
     intruder = _register(db_conn, "intruder@example.com")
     _create_list(db_conn, owner, "devOwner")
@@ -125,7 +127,11 @@ def test_edit_item_in_non_member_list_raises_403(db_conn):
             db_conn, intruder, "devIntruder",
             {"items": [_mk_item("item-1", "list-1", category=("x", 200, "devIntruder"))]},
         )
-    assert excinfo.value.status == 403
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "unknown_list"
+    # Still row-scoped, so the client quarantines just this row instead of wedging its queue (T-32).
+    assert excinfo.value.details == {"row_id": "item-1"}
+    assert _item_row(db_conn, "item-1")["category"] is None
 
 
 def test_existing_item_authorized_against_its_stored_list_not_payload(db_conn):
@@ -144,7 +150,8 @@ def test_existing_item_authorized_against_its_stored_list_not_payload(db_conn):
             {"items": [{"id": "secret", "list_id": "list-attacker",
                         "fields": {"name": _clock("Hacked", 999, "devA")}}]},
         )
-    assert excinfo.value.status == 403
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "unknown_list"
     assert _item_row(db_conn, "secret")["name"] == "Milk"
 
 

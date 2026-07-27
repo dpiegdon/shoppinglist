@@ -1,6 +1,6 @@
 from flask import g, jsonify, request
 
-from .. import accounts, get_db
+from .. import accounts, audit, get_db
 from ..auth import authed
 
 
@@ -17,6 +17,7 @@ def register_routes(bp):
             data.get("new_password"),
             g.token,
         )
+        audit.record("account.password_changed", account_id=g.account.id)
         return "", 204
 
     @bp.route("/account/change-email", methods=["POST"])
@@ -25,6 +26,8 @@ def register_routes(bp):
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
         accounts.change_email(conn, g.account.id, data.get("password"), data.get("new_email"))
+        # The new address itself is deliberately not logged — see audit.py on keeping PII out.
+        audit.record("account.email_changed", account_id=g.account.id)
         return "", 204
 
     @bp.route("/account/sessions", methods=["GET"])
@@ -39,6 +42,9 @@ def register_routes(bp):
     def revoke_session_view(session_id):
         conn = get_db()
         accounts.revoke_session(conn, g.account.id, session_id)
+        # The auth_tokens row id, never the token itself — it names the session without being
+        # usable as a credential (T-121).
+        audit.record("auth.session_revoked", account_id=g.account.id, session_id=session_id)
         return "", 204
 
     @bp.route("/account", methods=["DELETE"])
@@ -47,6 +53,7 @@ def register_routes(bp):
         data = request.get_json(force=True, silent=True) or {}
         conn = get_db()
         accounts.delete_account(conn, g.account.id, data.get("password"))
+        audit.record("account.deleted", account_id=g.account.id)
         return "", 204
 
     @bp.route("/settings", methods=["GET"])
