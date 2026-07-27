@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-07-26T23:46:14+00:00", "kind": "created", "ref": "main@5c7ac19", "text": "auth routes: unauthenticated 500s from payload type confusion on /login and /register"}
 {"actor": "claude", "at": "2026-07-27T00:39:41+00:00", "kind": "note", "ref": "main@fe527d5", "text": "Done in fe527d5. isinstance guards in validate_email/validate_password plus a new validate_device_label. login() answers a malformed email with the same 401 invalid_credentials as a wrong one - a 422 would be a response a correctly-shaped guess never gets, which is itself a signal. Parametrised tests assert no field of /login or /register can produce a 5xx."}
+{"actor": "claude", "at": "2026-07-27T00:39:44+00:00", "kind": "closed", "ref": "main@fe527d5", "text": ""}

@@ -9,5 +9,5 @@
   ],
   "priority": 2,
   "title": "auth routes: unauthenticated 500s from payload type confusion on /login and /register",
-  "updated_at": "2026-07-26T23:46:14+00:00"
+  "updated_at": "2026-07-27T00:39:44+00:00"
 }
