@@ -1,3 +1,5 @@
+import type { TranslateFn } from "../i18n";
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -18,14 +20,18 @@ const DAY = 24 * HOUR;
  * Intl.RelativeTimeFormat, which handled plurals correctly for free but produced
  * different wording from the Android client — and the two are deliberately kept
  * in step. The trade is intentional: we give up Intl's built-in localization for
- * four short unit labels that a message catalog translates once (German
+ * four short unit labels that the message catalog translates once (German
  * Min/Std/T), and in exchange the codebase needs no plural machinery at all.
  * Matches Android's formatLastSeen and formatBackgroundSync.
+ *
+ * `t` is passed in rather than pulled from a hook so this stays a pure function:
+ * it is the reason the unit tests can assert exact wording without rendering a
+ * component or standing up a provider.
  */
-export function formatLastSeen(lastSeenAt: number, now: number = Date.now()): string {
+export function formatLastSeen(lastSeenAt: number, now: number, t: TranslateFn): string {
   const elapsed = now - lastSeenAt;
-  if (elapsed < 2 * MINUTE) return "Active now";
-  if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)} min ago`;
-  if (elapsed < DAY) return `${Math.floor(elapsed / HOUR)} h ago`;
-  return `${Math.floor(elapsed / DAY)} d ago`;
+  if (elapsed < 2 * MINUTE) return t("lastSeen.activeNow");
+  if (elapsed < HOUR) return t("lastSeen.minutes", { count: Math.floor(elapsed / MINUTE) });
+  if (elapsed < DAY) return t("lastSeen.hours", { count: Math.floor(elapsed / HOUR) });
+  return t("lastSeen.days", { count: Math.floor(elapsed / DAY) });
 }

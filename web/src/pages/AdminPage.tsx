@@ -4,6 +4,7 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { AdminUser } from "../api/contract";
+import { useT } from "../i18n";
 
 /** Accessible on/off switch (T-112): green track when on, red when off. */
 function ToggleSwitch({
@@ -61,6 +62,7 @@ function ToggleSwitch({
  * confirmation naming them so a stray click can't nuke an account (T-112).
  */
 export default function AdminPage() {
+  const t = useT();
   const { account } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [allowRegistration, setAllowRegistration] = useState<boolean | null>(null);
@@ -226,9 +228,9 @@ export default function AdminPage() {
             >
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                 {user.email}
-                {user.is_admin && <strong> (admin)</strong>}
+                {user.is_admin && <strong> {t("admin.isAdmin")}</strong>}
                 <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
-                  Sessions: {user.session_count}
+                  {t("admin.sessionCount", { count: user.session_count })}
                 </span>
               </span>
               <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>

@@ -11,8 +11,10 @@ import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog"
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useShowChecked } from "../hooks/useShowChecked";
 import type { ItemObject, ItemStatus, Member } from "../api/contract";
+import { useT } from "../i18n";
 
 export default function ListPage() {
+  const t = useT();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId } = useSyncContext();
   const defaultCurrency = useDefaultCurrency();
@@ -156,9 +158,14 @@ export default function ListPage() {
       // guard now compares the whole message rather than its tail: it only ever meant "don't clear
       // a toast that has since been replaced", and an exact match says that directly — and does
       // not quietly stop working when the message no longer ends with the category name.
-      const categoryMessage = `Casing fixed in ${newCategory}: ${plan.itemIds.length}`;
+      const categoryMessage = t("list.categoryFixed", {
+        category: newCategory,
+        count: plan.itemIds.length,
+      });
       setCategoryToast(categoryMessage);
-      setTimeout(() => setCategoryToast((t) => (t === categoryMessage ? null : t)), 4000);
+      // `prev`, not `t` — `t` is now the translate function in this scope, and shadowing it here
+      // would read as a bug even though it isn't.
+      setTimeout(() => setCategoryToast((prev) => (prev === categoryMessage ? null : prev)), 4000);
       return;
     }
 

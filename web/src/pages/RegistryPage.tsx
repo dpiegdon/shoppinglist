@@ -6,8 +6,10 @@ import { listKind, showsShoppingFields } from "../lib/listKind";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { ItemObject } from "../api/contract";
+import { useT } from "../i18n";
 
 export default function RegistryPage() {
+  const t = useT();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId } = useSyncContext();
   const defaultCurrency = useDefaultCurrency();
@@ -85,7 +87,7 @@ export default function RegistryPage() {
         style={{ width: "100%", marginBottom: "1rem" }}
       />
 
-      {filtered.length === 0 && <p className="muted">No items found.</p>}
+      {filtered.length === 0 && <p className="muted">{t("list.registry.empty")}</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {filtered.map((item) => (

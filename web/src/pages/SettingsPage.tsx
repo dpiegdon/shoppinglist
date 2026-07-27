@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useT } from "../i18n";
 import { getCachedDefaultCurrency, setCachedDefaultCurrency, useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { Session } from "../api/contract";
 import { formatLastSeen } from "../lib/relativeTime";
@@ -24,6 +25,7 @@ function useFormStatus() {
 }
 
 export default function SettingsPage() {
+  const t = useT();
   const { account, logout } = useAuth();
   const navigate = useNavigate();
   const currentCurrency = useDefaultCurrency();
@@ -270,7 +272,7 @@ export default function SettingsPage() {
                   style={{ display: "block", fontSize: "0.8rem" }}
                   title={new Date(s.last_seen_at).toLocaleString()}
                 >
-                  {s.current ? "Active now" : formatLastSeen(s.last_seen_at)}
+                  {s.current ? t("lastSeen.activeNow") : formatLastSeen(s.last_seen_at, Date.now(), t)}
                 </span>
               </span>
               {!s.current && (

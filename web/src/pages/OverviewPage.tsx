@@ -5,6 +5,7 @@ import { fieldPatch } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { DEFAULT_LIST_KIND, listKind, listKindIcon, listKindLabel } from "../lib/listKind";
 import type { ListKind } from "../api/contract";
+import { useT } from "../i18n";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
 
@@ -21,6 +22,7 @@ export function _resetInitialResumeForTests() {
 }
 
 export default function OverviewPage() {
+  const t = useT();
   const { lists, items, loading, push, deviceId } = useSyncContext();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -89,8 +91,8 @@ export default function OverviewPage() {
         </button>
       </div>
 
-      {loading && listArray.length === 0 && <p className="muted">Loading…</p>}
-      {!loading && listArray.length === 0 && <p className="muted">No lists yet. Create one to get started.</p>}
+      {loading && listArray.length === 0 && <p className="muted">{t("common.loading")}</p>}
+      {!loading && listArray.length === 0 && <p className="muted">{t("overview.empty")}</p>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "1rem" }}>
         {listArray.map((list) => {
