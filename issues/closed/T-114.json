@@ -11,5 +11,5 @@
   ],
   "priority": 1,
   "title": "sync: cap rows per batch + chunk on clients; one large /sync 500s all writes instance-wide",
-  "updated_at": "2026-07-26T23:46:14+00:00"
+  "updated_at": "2026-07-27T00:39:43+00:00"
 }
