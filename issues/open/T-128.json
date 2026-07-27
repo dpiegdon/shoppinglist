@@ -1,0 +1,8 @@
+{
+  "body": "check if push synchronization is feasible while the app is active or has been recently active",
+  "created_at": "2026-07-27T19:08:23+00:00",
+  "id": "T-128",
+  "priority": 2,
+  "title": "push synchronization",
+  "updated_at": "2026-07-27T19:08:23+00:00"
+}
