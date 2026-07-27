@@ -3,6 +3,7 @@ import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { ApiError } from "../api/client";
 import { parseCurrency, parsePriceAmount } from "../lib/priceParse";
+import { useT } from "../i18n";
 
 /** The item fields the dialog can push, as LWW keys (matches the `fieldPatch` keys the pages spread). */
 export type ItemChangedField = "name" | "category" | "stores" | "quantity" | "price" | "note" | "status";
@@ -146,6 +147,7 @@ export default function ItemDialog({
   onSave,
   onDelete,
 }: ItemDialogProps) {
+  const t = useT();
   const isEdit = Boolean(editingItem);
   const [matchedExisting, setMatchedExisting] = useState<ItemObject | null>(editingItem ?? null);
   const [values, setValues] = useState(() =>
@@ -311,7 +313,7 @@ export default function ItemDialog({
       // Surface the server's rejection inline and keep the dialog open (T-91) — previously this
       // escaped as an unhandled rejection, leaving the user with no idea what went wrong or that
       // nothing was saved.
-      setSaveError(err instanceof ApiError ? err.message : "Failed to save. Please try again.");
+      setSaveError(err instanceof ApiError ? err.message : t("item.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -329,7 +331,7 @@ export default function ItemDialog({
   return (
     <div className="dialog-overlay" onClick={onClose}>
       <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{isEdit ? "Edit item" : "Add item"}</h2>
+        <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{isEdit ? t("item.edit") : t("item.add")}</h2>
         {saveError && (
           <p className="error-text" role="alert">
             {saveError}
@@ -337,7 +339,7 @@ export default function ItemDialog({
         )}
 
         <div className="form-field" style={{ position: "relative" }}>
-          <label htmlFor="item-name">Name</label>
+          <label htmlFor="item-name">{t("item.name")}</label>
           <input
             id="item-name"
             ref={nameInputRef}
@@ -386,7 +388,7 @@ export default function ItemDialog({
         </div>
 
         <div className="form-field">
-          <label htmlFor="item-category">Category</label>
+          <label htmlFor="item-category">{t("item.category")}</label>
           <input
             id="item-category"
             value={values.category}
@@ -413,14 +415,14 @@ export default function ItemDialog({
         {showShoppingFields && (
         <>
         <div className="form-field">
-          <label htmlFor="item-stores">Stores</label>
+          <label htmlFor="item-stores">{t("item.stores")}</label>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <input
               id="item-stores"
               value={storeInput}
               onChange={(e) => setStoreInput(e.target.value)}
               onKeyDown={handleStoreInputKeyDown}
-              placeholder="Add a store"
+              placeholder={t("item.addStore")}
             />
             <button type="button" className="btn btn-secondary" onClick={addStore}>
               Add
@@ -446,7 +448,7 @@ export default function ItemDialog({
         </div>
 
         <div className="form-field">
-          <label htmlFor="item-quantity">Quantity</label>
+          <label htmlFor="item-quantity">{t("item.quantity")}</label>
           <input
             id="item-quantity"
             value={values.quantity}
@@ -456,7 +458,7 @@ export default function ItemDialog({
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
-            <label htmlFor="item-price">Price</label>
+            <label htmlFor="item-price">{t("item.price")}</label>
             <input
               id="item-price"
               inputMode="decimal"
@@ -470,7 +472,7 @@ export default function ItemDialog({
             {priceError && <p className="error-text">{priceError}</p>}
           </div>
           <div className="form-field" style={{ flex: "0 0 6rem", minWidth: 0 }}>
-            <label htmlFor="item-currency">Currency</label>
+            <label htmlFor="item-currency">{t("item.currency")}</label>
             <input
               id="item-currency"
               placeholder={defaultCurrency}
@@ -488,7 +490,7 @@ export default function ItemDialog({
         )}
 
         <div className="form-field">
-          <label htmlFor="item-note">Note</label>
+          <label htmlFor="item-note">{t("item.note")}</label>
           <textarea
             id="item-note"
             rows={2}
@@ -499,11 +501,11 @@ export default function ItemDialog({
 
         {isEdit && (
           <div className="form-field">
-            <label htmlFor="item-status">Status</label>
+            <label htmlFor="item-status">{t("item.statusLabel")}</label>
             <select id="item-status" value={status} onChange={(e) => setStatus(e.target.value as ItemStatus)}>
-              <option value="todo">Todo</option>
-              <option value="checked">Checked</option>
-              <option value="backlog">Backlog (not on list)</option>
+              <option value="todo">{t("item.status.todo")}</option>
+              <option value="checked">{t("item.status.checked")}</option>
+              <option value="backlog">{t("item.status.backlog")}</option>
             </select>
           </div>
         )}

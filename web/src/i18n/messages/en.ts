@@ -62,6 +62,56 @@ export const en = {
   // ---- sessions ----
   "lastSeen.activeNow": "Active now",
 
+  // ---- item dialog ----
+  "item.add": "Add item",
+  "item.edit": "Edit item",
+  "item.name": "Name",
+  "item.category": "Category",
+  "item.stores": "Stores",
+  "item.addStore": "Add a store",
+  "item.quantity": "Quantity",
+  "item.price": "Price",
+  "item.currency": "Currency",
+  "item.note": "Note",
+  "item.statusLabel": "Status",
+  "item.status.todo": "Todo",
+  "item.status.checked": "Checked",
+  // The wire value is the English identifier `backlog` (see docs/wire-contract.md); only this
+  // label is translated. The parenthetical is what makes the status legible — "backlog" alone is
+  // the term this app is least likely to survive machine translation (T-124).
+  "item.status.backlog": "Backlog (not on list)",
+  "item.saveFailed": "Failed to save. Please try again.",
+
+  // ---- list properties ----
+  "listProps.title": "List properties",
+  "listProps.name": "Name",
+  "listProps.type": "Type",
+  "listProps.kind.checklist": "Items have a name, category and note.",
+  "listProps.kind.shopping": "Items also have stores, quantity and price.",
+  "listProps.makeShopping": "Make shopping list",
+  "listProps.makeChecklist": "Make checklist",
+  "listProps.categories": "Categories",
+  "listProps.noCategories": "No categories yet.",
+  "listProps.moveUp": "Move up",
+  "listProps.moveDown": "Move down",
+  "listProps.removeFromOrder": "Remove from order",
+  "listProps.addToOrder": "Add to order",
+  "listProps.addCategory": "Add category…",
+  "listProps.clearChecked": "Clear checked",
+  "listProps.notes": "Notes",
+  "listProps.notesPlaceholder": "Gate code, store hours, anything worth remembering…",
+  "listProps.members": "Members",
+  "listProps.inviteByEmail": "Invite by email…",
+  "listProps.inviteLink": "Invite link",
+  "listProps.membersFailed": "Failed to load members.",
+  "listProps.inviteFailed": "Failed to send invite.",
+  "listProps.leaveConfirm": "Leave this list? You will lose access to it.",
+
+  // ---- generic actions ----
+  "action.cancel": "Cancel",
+  "action.copy": "Copy",
+  "action.copied": "Copied!",
+
   // ---- admin ----
   "admin.sessionCount": "Sessions: {count}",
   "admin.isAdmin": "(admin)",

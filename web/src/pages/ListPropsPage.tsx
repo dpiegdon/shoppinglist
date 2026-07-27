@@ -9,8 +9,10 @@ import { canonicalCategoryNames, categoryKey, planCategoryRename } from "../lib/
 import { listKind, listKindLabel } from "../lib/listKind";
 import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
+import { useT } from "../i18n";
 
 export default function ListPropsPage() {
+  const t = useT();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId, refresh } = useSyncContext();
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ export default function ListPropsPage() {
     api
       .getMembers(listId)
       .then(setMembers)
-      .catch((err) => setMembersError(err instanceof ApiError ? err.message : "Failed to load members."));
+      .catch((err) => setMembersError(err instanceof ApiError ? err.message : t("listProps.membersFailed")));
   }, [listId]);
 
   if (!listId) return <Navigate to="/" replace />;
@@ -179,7 +181,7 @@ export default function ListPropsPage() {
       const refreshed = await api.getMembers(id);
       setMembers(refreshed);
     } catch (err) {
-      setMembersError(err instanceof ApiError ? err.message : "Failed to send invite.");
+      setMembersError(err instanceof ApiError ? err.message : t("listProps.inviteFailed"));
     }
   }
 
@@ -257,7 +259,7 @@ export default function ListPropsPage() {
   }
 
   async function handleLeave() {
-    if (!confirm("Leave this list? You will lose access to it.")) return;
+    if (!confirm(t("listProps.leaveConfirm"))) return;
     await api.leaveList(id);
     if (localStorage.getItem(LAST_LIST_STORAGE_KEY) === id) {
       localStorage.removeItem(LAST_LIST_STORAGE_KEY);
@@ -271,10 +273,10 @@ export default function ListPropsPage() {
       <Link to={`/list/${listId}`} className="muted" style={{ fontSize: "0.85rem" }}>
         ← {listFieldValue(list, "name")}
       </Link>
-      <h1 style={{ fontSize: "1.3rem" }}>List properties</h1>
+      <h1 style={{ fontSize: "1.3rem" }}>{t("listProps.title")}</h1>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Name</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.name")}</h2>
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
           <input value={name} onChange={(e) => setName(e.target.value)} style={{ flex: 1 }} />
           <button type="submit" className="btn" disabled={savingName}>
@@ -284,14 +286,14 @@ export default function ListPropsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Type</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.type")}</h2>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
             <div>{listKindLabel(listKind(list))}</div>
             <p className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
               {listKind(list) === "checklist"
-                ? "Items have a name, category and note."
-                : "Items also have stores, quantity and price."}
+                ? t("listProps.kind.checklist")
+                : t("listProps.kind.shopping")}
             </p>
           </div>
           <button
@@ -299,7 +301,7 @@ export default function ListPropsPage() {
             className="btn btn-secondary"
             onClick={() => setKind(listKind(list) === "checklist" ? "shopping" : "checklist")}
           >
-            {listKind(list) === "checklist" ? "Make shopping list" : "Make checklist"}
+            {listKind(list) === "checklist" ? t("listProps.makeShopping") : t("listProps.makeChecklist")}
           </button>
         </div>
         <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.8rem" }}>
@@ -308,11 +310,11 @@ export default function ListPropsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Categories</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
           Rename to fix casing or merge; use the arrows to set the order items are grouped in.
         </p>
-        {categoryKeys.length === 0 && <p className="muted">No categories yet.</p>}
+        {categoryKeys.length === 0 && <p className="muted">{t("listProps.noCategories")}</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
           {categoryKeys.map((key) => {
             const index = orderIndexOf(key);
@@ -337,7 +339,7 @@ export default function ListPropsPage() {
                   <button type="submit" className="btn btn-secondary">
                     Save
                   </button>
-                  <button type="button" className="btn-icon" onClick={() => setEditingCategoryKey(null)} aria-label="Cancel">
+                  <button type="button" className="btn-icon" onClick={() => setEditingCategoryKey(null)} aria-label={t("action.cancel")}>
                     ✕
                   </button>
                 </form>
@@ -354,7 +356,7 @@ export default function ListPropsPage() {
                   className="btn-icon"
                   disabled={!inOrder}
                   onClick={() => moveCategory(index, -1)}
-                  aria-label="Move up"
+                  aria-label={t("listProps.moveUp")}
                 >
                   ↑
                 </button>
@@ -363,12 +365,12 @@ export default function ListPropsPage() {
                   className="btn-icon"
                   disabled={!inOrder}
                   onClick={() => moveCategory(index, 1)}
-                  aria-label="Move down"
+                  aria-label={t("listProps.moveDown")}
                 >
                   ↓
                 </button>
                 {inOrder ? (
-                  <button type="button" className="btn-icon" onClick={() => removeCategory(index)} aria-label="Remove from order">
+                  <button type="button" className="btn-icon" onClick={() => removeCategory(index)} aria-label={t("listProps.removeFromOrder")}>
                     ✕
                   </button>
                 ) : (
@@ -376,7 +378,7 @@ export default function ListPropsPage() {
                     type="button"
                     className="btn-icon"
                     onClick={() => saveCategoryOrder([...categoryOrder, canonicalNames.get(key)!])}
-                    aria-label="Add to order"
+                    aria-label={t("listProps.addToOrder")}
                   >
                     +
                   </button>
@@ -387,7 +389,7 @@ export default function ListPropsPage() {
         </div>
         <form onSubmit={addCategory} style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
           <input
-            placeholder="Add category…"
+            placeholder={t("listProps.addCategory")}
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
             style={{ flex: 1 }}
@@ -402,7 +404,7 @@ export default function ListPropsPage() {
           when there's something to clear. */}
       {allChecked.length > 0 && (
         <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Clear checked</h2>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
           <p className="muted" style={{ margin: "0 0 0.6rem" }}>
             Move every checked item back to the backlog.
           </p>
@@ -414,12 +416,12 @@ export default function ListPropsPage() {
 
       {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Notes</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.notes")}</h2>
         <form onSubmit={saveNotes} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Gate code, store hours, anything worth remembering…"
+            placeholder={t("listProps.notesPlaceholder")}
             rows={4}
             style={{ resize: "vertical", font: "inherit" }}
           />
@@ -430,7 +432,7 @@ export default function ListPropsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Members</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.members")}</h2>
         {membersError && <p className="error-text">{membersError}</p>}
         {members && (
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 0.75rem" }}>
@@ -459,7 +461,7 @@ export default function ListPropsPage() {
         <form onSubmit={handleInvite} style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
           <input
             type="email"
-            placeholder="Invite by email…"
+            placeholder={t("listProps.inviteByEmail")}
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             style={{ flex: 1 }}
@@ -488,10 +490,10 @@ export default function ListPropsPage() {
                 value={inviteLink.url}
                 onFocus={(e) => e.target.select()}
                 style={{ flex: 1, fontSize: "0.8rem" }}
-                aria-label="Invite link"
+                aria-label={t("listProps.inviteLink")}
               />
               <button type="button" className="btn" onClick={copyInviteLink}>
-                {linkCopied ? "Copied!" : "Copy"}
+                {linkCopied ? t("action.copied") : t("action.copy")}
               </button>
             </div>
           </div>
