@@ -4,10 +4,12 @@ import { useAuth } from "../auth/AuthContext";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { allowRegistration, appBasename } from "../lib/appConfig";
+import { useT } from "../i18n";
 
 const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
 export default function LoginPage() {
+  const t = useT();
   const { login, register, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,7 +58,7 @@ export default function LoginPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t("login.error.generic"));
       }
     }
   }
@@ -72,9 +74,9 @@ export default function LoginPage() {
       }}
     >
       <form onSubmit={handleSubmit} className="card" style={{ padding: "2rem", width: "100%", maxWidth: "22rem" }}>
-        <h1 style={{ fontSize: "1.4rem", marginTop: 0 }}>Shopping List</h1>
+        <h1 style={{ fontSize: "1.4rem", marginTop: 0 }}>{t("app.title")}</h1>
         <div className="form-field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t("login.email")}</label>
           <input
             id="email"
             type="email"
@@ -85,7 +87,7 @@ export default function LoginPage() {
           />
         </div>
         <div className="form-field">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t("login.password")}</label>
           <input
             id="password"
             type="password"
@@ -102,7 +104,7 @@ export default function LoginPage() {
           </p>
         )}
         <button type="submit" className="btn" disabled={loading} style={{ width: "100%", marginTop: "0.5rem" }}>
-          {mode === "login" ? "Log in" : "Create account"}
+          {mode === "login" ? t("login.submit") : t("login.register")}
         </button>
         <button
           type="button"
@@ -111,11 +113,11 @@ export default function LoginPage() {
           className="btn-secondary btn"
           style={{ width: "100%", marginTop: "0.5rem", background: "transparent", border: "none" }}
         >
-          {mode === "login" ? "Need an account? Register" : "Have an account? Log in"}
+          {mode === "login" ? t("login.toggleToRegister") : t("login.toggleToLogin")}
         </button>
         {!registrationAllowed && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.25rem", marginBottom: 0, fontSize: "0.85rem" }}>
-            Registration is disabled on this server.
+            {t("login.registrationDisabled")}
           </p>
         )}
         {apkAvailable && (

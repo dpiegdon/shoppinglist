@@ -31,7 +31,7 @@ const DAY = 24 * HOUR;
 export function formatLastSeen(lastSeenAt: number, now: number, t: TranslateFn): string {
   const elapsed = now - lastSeenAt;
   if (elapsed < 2 * MINUTE) return t("lastSeen.activeNow");
-  if (elapsed < HOUR) return t("lastSeen.minutes", { count: Math.floor(elapsed / MINUTE) });
-  if (elapsed < DAY) return t("lastSeen.hours", { count: Math.floor(elapsed / HOUR) });
-  return t("lastSeen.days", { count: Math.floor(elapsed / DAY) });
+  if (elapsed < HOUR) return t("ago.minutes", { count: Math.floor(elapsed / MINUTE) });
+  if (elapsed < DAY) return t("ago.hours", { count: Math.floor(elapsed / HOUR) });
+  return t("ago.days", { count: Math.floor(elapsed / DAY) });
 }

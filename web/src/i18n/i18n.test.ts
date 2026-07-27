@@ -75,12 +75,12 @@ describe("translate", () => {
   });
 
   it("returns the English text for English", () => {
-    expect(translate("en", "action.cancel")).toBe("Cancel");
+    expect(translate("en", "login.email")).toBe("Email");
   });
 
   it("substitutes placeholders", () => {
     expect(translate("en", "admin.sessionCount", { count: 3 })).toBe("Sessions: 3");
-    expect(translate("en", "lastSeen.minutes", { count: 1 })).toBe("1 min ago");
+    expect(translate("en", "ago.minutes", { count: 1 })).toBe("1 min ago");
   });
 
   it("reads identically at one as at many — no key branches on a number (T-123)", () => {
@@ -90,14 +90,14 @@ describe("translate", () => {
 
   it("falls back to English for a key a translation has not covered yet", () => {
     // This is what lets a translation land incrementally instead of having to be complete.
-    registerCatalog("de", { "action.save": "Speichern" });
+    registerCatalog("de", { "login.submit": "Anmelden" });
 
-    expect(translate("de", "action.save")).toBe("Speichern");
-    expect(translate("de", "action.cancel")).toBe("Cancel");
+    expect(translate("de", "login.submit")).toBe("Anmelden");
+    expect(translate("de", "login.email")).toBe("Email");
   });
 
   it("falls back to English for a language with no catalog at all", () => {
-    expect(translate("ja", "action.cancel")).toBe("Cancel");
+    expect(translate("ja", "login.email")).toBe("Email");
   });
 
   it("interpolates into a translated string, not just the English one", () => {
@@ -107,10 +107,10 @@ describe("translate", () => {
   });
 
   it("leaves an unknown placeholder visible rather than rendering 'undefined'", () => {
-    registerCatalog("de", { "action.save": "{nope} speichern" });
+    registerCatalog("de", { "login.submit": "{nope} anmelden" });
 
     // A translator's typo should be diagnosable on sight, not silently become a real-looking word.
-    expect(translate("de", "action.save")).toBe("{nope} speichern");
+    expect(translate("de", "login.submit")).toBe("{nope} anmelden");
   });
 
   it("has no empty message in the English catalog", () => {
@@ -129,7 +129,7 @@ describe("provider-free defaults", () => {
 
     const { result } = renderHook(() => useT());
 
-    expect(result.current("action.cancel")).toBe("Cancel");
+    expect(result.current("login.email")).toBe("Email");
   });
 
   it("refuses to change language outside a provider instead of silently not doing it", async () => {

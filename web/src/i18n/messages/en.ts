@@ -7,54 +7,62 @@
  * to land incrementally instead of having to be complete before it can be merged (T-124).
  *
  * Conventions:
- * - Keys are dotted and grouped by screen, so a translator can work through a file in the order a
- *   user meets the strings.
+ * - Keys are dotted and grouped by screen, so a translator can work through the file in roughly
+ *   the order a user meets the strings.
  * - `{placeholder}` interpolation. Placeholders carry no grammatical agreement — see T-123: every
  *   count sits after a label rather than inside a sentence, which is why this catalog needs no
  *   plural machinery at all and translators get free word order.
  * - No string is assembled from fragments at a call site. A sentence built by concatenation cannot
  *   be reordered by a translator, and word order is exactly what differs between languages.
+ * - Every key here is actually used. An unused key is a string a translator will be asked to
+ *   translate for nothing, so the catalog is pruned rather than pre-populated.
  */
 export const en = {
-  // ---- generic actions & states, reused across screens ----
-  "action.cancel": "Cancel",
-  "action.save": "Save",
-  "action.delete": "Delete",
-  "action.close": "Close",
-  "action.retry": "Retry",
-  "action.back": "Back",
-  "common.loading": "Loading…",
+  "app.title": "Shopping List",
+
+  // ---- shared relative-time labels ----
+  // One set, used by both the session list and the sync indicator: the wording is identical, so
+  // separate keys would mean translating the same four labels twice and inviting them to drift.
+  // Abbreviated units never inflect, in any language (T-123).
+  "ago.justNow": "just now",
+  "ago.minutes": "{count} min ago",
+  "ago.hours": "{count} h ago",
+  "ago.days": "{count} d ago",
 
   // ---- login / register ----
-  "login.title": "Sign in",
   "login.email": "Email",
   "login.password": "Password",
-  "login.submit": "Sign in",
+  "login.submit": "Log in",
   "login.register": "Create account",
-  "login.serverUrl": "Server URL",
-  "login.language": "Language",
+  "login.toggleToRegister": "Need an account? Register",
+  "login.toggleToLogin": "Have an account? Log in",
+  "login.registrationDisabled": "Registration is disabled on this server.",
+  "login.error.generic": "Something went wrong. Please try again.",
 
-  // ---- overview ----
-  "overview.title": "Lists",
+  // ---- redeem an invite ----
+  "redeem.title": "Join a shopping list",
+  "redeem.hint": "Paste the invite code, or open the invite link directly.",
+  "redeem.code": "Invite code",
+  "redeem.error": "Could not redeem this invite.",
+
+  // ---- overview / list ----
+  "common.loading": "Loading…",
   "overview.empty": "No lists yet. Create one to get started.",
-
-  // ---- list ----
   "list.registry.empty": "No items found.",
   "list.categoryFixed": "Casing fixed in {category}: {count}",
 
-  // ---- last seen (T-123: abbreviated units never inflect, so no plural rule is needed) ----
-  "lastSeen.activeNow": "Active now",
-  "lastSeen.minutes": "{count} min ago",
-  "lastSeen.hours": "{count} h ago",
-  "lastSeen.days": "{count} d ago",
+  // ---- sync health ----
+  "sync.syncing": "Syncing…",
+  "sync.synced": "Synced {ago}",
+  "sync.failed": "Sync failed",
+  "sync.failedSince": "Sync failed · last ok {ago}",
+  "sync.never": "Not synced yet",
+  "sync.now": "Sync now",
 
-  // ---- settings ----
-  "settings.title": "Settings",
-  "settings.language": "Language",
-  "settings.sessions": "Sessions",
+  // ---- sessions ----
+  "lastSeen.activeNow": "Active now",
 
   // ---- admin ----
-  "admin.title": "Admin",
   "admin.sessionCount": "Sessions: {count}",
   "admin.isAdmin": "(admin)",
 } as const;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSyncContext } from "../hooks/SyncContext";
 import { syncStatusLabel } from "../lib/syncStatus";
+import { useT } from "../i18n";
 
 /**
  * A quiet sync-health line in the app header (T-47): "Syncing… / Synced 5 min ago / Sync failed".
@@ -8,6 +9,7 @@ import { syncStatusLabel } from "../lib/syncStatus";
  * show, just recency and failure. Reads live loading/error/lastSyncAt from the sync context.
  */
 export default function SyncIndicator() {
+  const t = useT();
   const { loading, error, lastSyncAt, refresh } = useSyncContext();
   // Without this, "now" is only re-evaluated when loading/error/lastSyncAt changes, so a label
   // like "Synced just now" would freeze indefinitely between syncs (T-54). A 60s tick is enough
@@ -17,7 +19,7 @@ export default function SyncIndicator() {
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
-  const label = syncStatusLabel({ loading, error, lastSyncAt }, now);
+  const label = syncStatusLabel({ loading, error, lastSyncAt }, now, t);
 
   return (
     <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.35rem" }}>
@@ -36,7 +38,7 @@ export default function SyncIndicator() {
       <button
         type="button"
         className="btn-icon"
-        aria-label="Sync now"
+        aria-label={t("sync.now")}
         onClick={() => {
           refresh().catch(() => {
             // surfaced via `error` state; nothing further to do here

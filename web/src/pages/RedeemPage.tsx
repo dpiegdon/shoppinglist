@@ -5,8 +5,10 @@ import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { extractInviteToken } from "../lib/inviteToken";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
+import { useT } from "../i18n";
 
 export default function RedeemPage() {
+  const t = useT();
   const [searchParams] = useSearchParams();
   const [token, setToken] = useState(searchParams.get("token") ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function RedeemPage() {
       localStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
       navigate(`/list/${list_id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not redeem this invite.");
+      setError(err instanceof ApiError ? err.message : t("redeem.error"));
     } finally {
       setRedeeming(false);
     }
@@ -43,10 +45,10 @@ export default function RedeemPage() {
       }}
     >
       <form onSubmit={handleSubmit} className="card" style={{ padding: "2rem", width: "100%", maxWidth: "26rem" }}>
-        <h1 style={{ fontSize: "1.3rem", marginTop: 0 }}>Join a shopping list</h1>
-        <p className="muted">Paste the invite code, or open the invite link directly.</p>
+        <h1 style={{ fontSize: "1.3rem", marginTop: 0 }}>{t("redeem.title")}</h1>
+        <p className="muted">{t("redeem.hint")}</p>
         <div className="form-field">
-          <label htmlFor="invite-token">Invite code</label>
+          <label htmlFor="invite-token">{t("redeem.code")}</label>
           <textarea
             id="invite-token"
             required
