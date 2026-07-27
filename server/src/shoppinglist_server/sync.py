@@ -20,7 +20,21 @@ from . import db as db_module
 from .errors import ApiError
 
 STATUS_VALUES = {"backlog", "todo", "checked"}
-PRICE_AMOUNT_RE = re.compile(r"^\d+(\.\d{1,2})?$")
+
+# [0-9], NOT \d (T-125). Python's `\d` is Unicode-aware for str patterns, so it matches Eastern
+# Arabic, Devanagari and every other Unicode decimal digit — while JS's `\d` and Java/Kotlin's are
+# ASCII-only. The same-looking pattern therefore meant three different things, and the SERVER was
+# the permissive one: it accepted "٥.٩٩", stored it, and served it to every member of the list,
+# where both clients then failed to parse it (`parseFloat("٥.٩٩")` is NaN). One crafted row could
+# render as NaN for everyone and survive in the database.
+#
+# The explicit character class is deliberate over `re.ASCII`: it is local and obvious, and cannot
+# be undone by someone later recompiling the pattern without the flag.
+#
+# The identical constants live in web/src/lib/priceParse.ts and android's ItemFormViewModel.kt.
+# Keep all three in step — the failure mode here was precisely that they LOOK identical and were
+# not.
+PRICE_AMOUNT_RE = re.compile(r"^[0-9]+(\.[0-9]{1,2})?$")
 SERVER_MERGE = "server-merge"
 
 # (wire key, timestamp column, author column). Order matters for INSERT building.

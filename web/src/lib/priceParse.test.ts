@@ -49,3 +49,20 @@ describe("parseCurrency", () => {
     expect(parseCurrency("USDD")).toEqual({ valid: false, message: "Use a 3-letter code like EUR" });
   });
 });
+
+describe("non-ASCII digits (T-125)", () => {
+  it("rejects digits from other scripts, matching the server", () => {
+    // The three copies of this pattern (here, server sync.py, android ItemFormViewModel) looked
+    // identical but did not agree: Python's \d is Unicode-aware, so the SERVER accepted these and
+    // then served back a price no client could parse. All three now spell out [0-9].
+    for (const amount of ["٥.٩٩", "١٩٩", "५.९९", "５.９９"]) {
+      expect(parsePriceAmount(amount).valid, amount).toBe(false);
+    }
+  });
+
+  it("still accepts ordinary ASCII decimals", () => {
+    for (const amount of ["1.99", "0", "12", "1234.5"]) {
+      expect(parsePriceAmount(amount).valid, amount).toBe(true);
+    }
+  });
+});

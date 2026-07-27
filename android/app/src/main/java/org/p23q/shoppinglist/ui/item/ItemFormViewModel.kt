@@ -370,7 +370,11 @@ internal sealed interface PriceParse {
     data class Invalid(val message: UiText) : PriceParse
 }
 
-private val PRICE_AMOUNT_RE = Regex("^\\d+(\\.\\d{1,2})?$")
+// [0-9] rather than \d, to stay explicitly in step with the server (T-125). Java's \d is already
+// ASCII-only so this is a no-op here — but the server's Python \d is NOT, which is how the three
+// copies of this "identical" pattern came to mean different things.
+// Siblings: server sync.py PRICE_AMOUNT_RE, web src/lib/priceParse.ts PRICE_AMOUNT_RE.
+private val PRICE_AMOUNT_RE = Regex("^[0-9]+(\\.[0-9]{1,2})?$")
 private val CURRENCY_RE = Regex("^[A-Z]{3}$")
 private const val CURRENCY_SYMBOLS = "€\$£¥"
 

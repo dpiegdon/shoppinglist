@@ -9,7 +9,12 @@ export type PriceParseResult = { valid: true; value: string | null } | { valid: 
 const WHITESPACE_RE = /\s/g;
 const LEADING_CURRENCY_RE = /^[€$£¥]/;
 const TRAILING_CURRENCY_RE = /[€$£¥]$/;
-const PRICE_AMOUNT_RE = /^\d+(\.\d{1,2})?$/;
+// [0-9] rather than \d, to stay explicitly in step with the server (T-125). JS's \d is already
+// ASCII-only so this is a no-op here — but the server's Python \d is NOT, which is exactly how the
+// three copies of this "identical" pattern came to mean different things. Spelling it out removes
+// the trap rather than relying on each language's default.
+// Siblings: server sync.py PRICE_AMOUNT_RE, android ItemFormViewModel.kt PRICE_AMOUNT_RE.
+const PRICE_AMOUNT_RE = /^[0-9]+(\.[0-9]{1,2})?$/;
 const CURRENCY_RE = /^[A-Z]{3}$/;
 
 /**

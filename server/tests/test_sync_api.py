@@ -1,5 +1,7 @@
 """HTTP-layer integration tests for POST /sync and GET /lists."""
 
+import pytest
+
 from shoppinglist_server import sync
 
 EMAIL = "carol@example.com"
@@ -780,3 +782,57 @@ def test_the_over_cap_error_names_no_row_so_clients_chunk_instead_of_quarantinin
                  changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)}).get_json()
 
     assert "row_id" not in body
+
+
+# ---- price amounts are ASCII decimals only (T-125) ---------------------------
+
+
+def _push_price(client, token, amount):
+    return _sync(
+        client, token, cursor=0, device_id="devA",
+        changes={"items": [_mk_item(
+            "price-probe", "list-1",
+            name=("Milk", 100, "devA"),
+            price=({"amount": amount, "currency": "EUR"}, 100, "devA"),
+        )]},
+    )
+
+
+@pytest.mark.parametrize(
+    "amount",
+    [
+        "٥.٩٩",   # Eastern Arabic-Indic
+        "١٩٩",    # Eastern Arabic-Indic, no decimal
+        "५.९९",   # Devanagari
+        "５.９９",  # fullwidth
+    ],
+)
+def test_non_ascii_digits_are_rejected_as_a_price(client, amount):
+    """Python's `\\d` is Unicode-aware, so the server used to ACCEPT these while both clients
+    reject them — one crafted row then rendered as NaN for every member of the list (T-125)."""
+    token = _register_and_login(client, email="digits@example.com", device="devA")
+    _sync(client, token, cursor=0, device_id="devA",
+          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+
+    resp = _push_price(client, token, amount)
+
+    assert resp.status_code == 422, amount
+    assert resp.get_json()["error"] == "invalid_price"
+
+
+def test_ordinary_ascii_prices_still_pass(client):
+    token = _register_and_login(client, email="ascii@example.com", device="devA")
+    _sync(client, token, cursor=0, device_id="devA",
+          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+
+    for amount in ("1.99", "0", "12", "1234.5"):
+        assert _push_price(client, token, amount).status_code == 200, amount
+
+
+def test_the_price_pattern_is_ascii_by_construction_not_by_flag(db_conn):
+    """Guards the actual fix: an explicit [0-9] class, so it cannot be silently undone by someone
+    recompiling the pattern without an ASCII flag."""
+    assert "[0-9]" in sync.PRICE_AMOUNT_RE.pattern
+    assert "\\d" not in sync.PRICE_AMOUNT_RE.pattern
+    assert sync.PRICE_AMOUNT_RE.match("٥") is None
+    assert sync.PRICE_AMOUNT_RE.match("5") is not None
