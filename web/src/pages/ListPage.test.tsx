@@ -251,7 +251,7 @@ describe("ListPage category recase-all (T-108)", () => {
     expect(catOf("item-1")).toBe("Group");
     expect(catOf("item-2")).toBe("Group");
 
-    expect(await screen.findByText(/Fixed casing for 2 items in Group/)).toBeInTheDocument();
+    expect(await screen.findByText(/Casing fixed in Group: 2/)).toBeInTheDocument();
   });
 });
 

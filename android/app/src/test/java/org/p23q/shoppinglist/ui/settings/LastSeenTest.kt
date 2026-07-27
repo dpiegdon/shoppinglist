@@ -28,17 +28,19 @@ class LastSeenTest {
 
     @Test
     fun `falls back to minutes, hours, then days as it ages`() {
-        assertEquals("20 minutes ago", formatLastSeen(now - 20 * minute, now))
-        assertEquals("5 hours ago", formatLastSeen(now - 5 * hour, now))
-        assertEquals("yesterday", formatLastSeen(now - 25 * hour, now))
-        assertEquals("3 days ago", formatLastSeen(now - 3 * day, now))
+        assertEquals("20 min ago", formatLastSeen(now - 20 * minute, now))
+        assertEquals("5 h ago", formatLastSeen(now - 5 * hour, now))
+        assertEquals("1 d ago", formatLastSeen(now - 25 * hour, now))
+        assertEquals("3 d ago", formatLastSeen(now - 3 * day, now))
     }
 
     @Test
-    fun `singular units are not pluralized`() {
-        // Hours is the only reachable singular: "1 minute ago" is swallowed by the 2-minute
-        // "Active now" floor, and "1 day ago" by the "yesterday" branch.
-        assertEquals("1 hour ago", formatLastSeen(now - hour - minute, now))
+    fun `a count of one reads exactly like any other count (T-123)`() {
+        // The whole point of abbreviated units: no branch on the number, so no language ever
+        // needs a plural rule here. Same word at 1 as at 20.
+        assertEquals("1 h ago", formatLastSeen(now - hour - minute, now))
+        assertEquals("1 d ago", formatLastSeen(now - day - hour, now))
+        assertEquals("2 min ago", formatLastSeen(now - 2 * minute, now))
     }
 
     @Test
@@ -48,6 +50,6 @@ class LastSeenTest {
 
     @Test
     fun `an android session nearing its 62-day window still reads in days`() {
-        assertEquals("61 days ago", formatLastSeen(now - 61 * day, now))
+        assertEquals("61 d ago", formatLastSeen(now - 61 * day, now))
     }
 }

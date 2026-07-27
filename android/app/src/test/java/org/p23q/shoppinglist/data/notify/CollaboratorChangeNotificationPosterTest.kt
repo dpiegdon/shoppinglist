@@ -55,7 +55,7 @@ class CollaboratorChangeNotificationPosterTest {
         assertEquals(1, posted.size)
         val n = posted.single()
         assertEquals("Groceries", n.title())
-        assertEquals("3 items changed", n.text())
+        assertEquals("Changed items: 3", n.text())
         val tapIntent = shadowOf(n.contentIntent).savedIntent
         assertEquals("list-1", tapIntent.getStringExtra(MainActivity.EXTRA_OPEN_LIST_ID))
     }
@@ -69,7 +69,7 @@ class CollaboratorChangeNotificationPosterTest {
         val posted = shadowOf(notificationManager).allNotifications
         assertEquals(1, posted.size)
         val n = posted.single()
-        assertEquals("3 items changed across 2 lists", n.text())
+        assertEquals("Changed items: 3 · Lists: 2", n.text())
         assertNull(shadowOf(n.contentIntent).savedIntent.getStringExtra(MainActivity.EXTRA_OPEN_LIST_ID))
     }
 
@@ -117,6 +117,6 @@ class CollaboratorChangeNotificationPosterTest {
     fun `singular item count reads naturally`() = runTest {
         poster.notifyCollaboratorChanges(listOf(CollaboratorChange("list-1", "Groceries", 1)))
 
-        assertEquals("1 item changed", shadowOf(notificationManager).allNotifications.single().text())
+        assertEquals("Changed items: 1", shadowOf(notificationManager).allNotifications.single().text())
     }
 }

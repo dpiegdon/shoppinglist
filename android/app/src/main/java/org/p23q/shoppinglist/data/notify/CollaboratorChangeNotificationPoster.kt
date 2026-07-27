@@ -65,7 +65,9 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
         val text = if (singleList != null) {
             itemsChangedText(singleList.changedItemCount)
         } else {
-            "${itemsChangedText(totalItems)} across ${audible.size} lists"
+            // Two counts, so two labels (T-123) — "N items changed across M lists" would have
+            // needed plural agreement twice over.
+            "${itemsChangedText(totalItems)} · Lists: ${audible.size}"
         }
         val tapIntent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -102,8 +104,9 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
         )
     }
 
-    private fun itemsChangedText(count: Int): String =
-        if (count == 1) "1 item changed" else "$count items changed"
+    // Label-then-count (T-123), so neither string has to agree with its number. The notification
+    // still carries the list name as its title, so the body losing its verb costs little.
+    private fun itemsChangedText(count: Int): String = "Changed items: $count"
 
     private companion object {
         const val CHANNEL_ID = "collaborator_changes"

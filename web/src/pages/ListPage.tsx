@@ -152,9 +152,13 @@ export default function ListPage() {
           },
         })),
       });
-      const n = plan.itemIds.length;
-      setCategoryToast(`Fixed casing for ${n} item${n === 1 ? "" : "s"} in ${newCategory}`);
-      setTimeout(() => setCategoryToast((t) => (t && t.endsWith(newCategory) ? null : t)), 4000);
+      // Count after the label (T-123) so the string needs no plural agreement. The auto-dismiss
+      // guard now compares the whole message rather than its tail: it only ever meant "don't clear
+      // a toast that has since been replaced", and an exact match says that directly — and does
+      // not quietly stop working when the message no longer ends with the category name.
+      const categoryMessage = `Casing fixed in ${newCategory}: ${plan.itemIds.length}`;
+      setCategoryToast(categoryMessage);
+      setTimeout(() => setCategoryToast((t) => (t === categoryMessage ? null : t)), 4000);
       return;
     }
 

@@ -126,8 +126,10 @@ fun rememberTickingNowMs(intervalMs: Long = 60_000L, clock: () -> Long = System:
     return state.value
 }
 
-internal fun attentionText(blockedCount: Int): String =
-    if (blockedCount == 1) "1 item needs attention" else "$blockedCount items need attention"
+// Count after the label, not inside the sentence (T-123): "Items needing attention: 1" is fine
+// English and needs no agreement, whereas "1 items need attention" would force a plural rule the
+// codebase otherwise never needs. A bare plural reads naturally in label position.
+internal fun attentionText(blockedCount: Int): String = "Items needing attention: $blockedCount"
 
 /**
  * The quiet one-liner: "Syncing…" while in progress, "Not synced yet" before the first success,

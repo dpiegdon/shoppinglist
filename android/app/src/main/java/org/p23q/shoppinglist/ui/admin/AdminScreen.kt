@@ -145,7 +145,7 @@ private fun UserRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(user.email + if (user.isAdmin) " (admin)" else "")
             Text(
-                "${user.sessionCount} session" + if (user.sessionCount == 1) "" else "s",
+                "Sessions: ${user.sessionCount}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

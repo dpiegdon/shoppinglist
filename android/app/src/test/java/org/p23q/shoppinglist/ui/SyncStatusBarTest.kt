@@ -45,7 +45,8 @@ class SyncStatusBarTest {
 
     @Test
     fun `attention text is singular for one and plural otherwise`() {
-        assertEquals("1 item needs attention", attentionText(1))
-        assertEquals("3 items need attention", attentionText(3))
+        // Label-then-count (T-123): identical wording at 1 and at 3, so no plural rule is needed.
+        assertEquals("Items needing attention: 1", attentionText(1))
+        assertEquals("Items needing attention: 3", attentionText(3))
     }
 }

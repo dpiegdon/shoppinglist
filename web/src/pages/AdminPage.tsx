@@ -228,7 +228,7 @@ export default function AdminPage() {
                 {user.email}
                 {user.is_admin && <strong> (admin)</strong>}
                 <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
-                  {user.session_count} session{user.session_count === 1 ? "" : "s"}
+                  Sessions: {user.session_count}
                 </span>
               </span>
               <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
