@@ -518,21 +518,21 @@ export default function ItemDialog({
                 className="btn btn-danger"
                 onClick={() => onDelete(editingItem.id).then(onClose)}
               >
-                Delete
+                {t("action.delete")}
               </button>
             )}
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancel
+              {t("action.cancel")}
             </button>
             {!isEdit && (
               <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleSaveAndAddAnother}>
-                Add another
+                {t("item.addAnother")}
               </button>
             )}
             <button type="submit" className="btn" disabled={saving}>
-              Save
+              {t("action.save")}
             </button>
           </div>
         </div>

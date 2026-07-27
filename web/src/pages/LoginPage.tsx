@@ -5,6 +5,7 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { allowRegistration, appBasename } from "../lib/appConfig";
 import { useT } from "../i18n";
+import LanguagePicker from "../components/LanguagePicker";
 
 const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
@@ -115,6 +116,11 @@ export default function LoginPage() {
         >
           {mode === "login" ? t("login.toggleToRegister") : t("login.toggleToLogin")}
         </button>
+        {/* Before login, deliberately: the chooser has to be reachable without an account
+            (T-127), which is also why the preference is device-local. */}
+        <div style={{ marginTop: "1rem" }}>
+          <LanguagePicker id="login-language" />
+        </div>
         {!registrationAllowed && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.25rem", marginBottom: 0, fontSize: "0.85rem" }}>
             {t("login.registrationDisabled")}
@@ -123,7 +129,7 @@ export default function LoginPage() {
         {apkAvailable && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.75rem", marginBottom: 0, fontSize: "0.85rem" }}>
             <a href={apkUrl()} style={{ color: "var(--color-accent)" }}>
-              Get the Android app
+              {t("login.getAndroidApp")}
             </a>
           </p>
         )}

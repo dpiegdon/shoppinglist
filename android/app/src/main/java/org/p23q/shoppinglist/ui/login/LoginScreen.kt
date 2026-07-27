@@ -40,11 +40,20 @@ import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.LanguagePicker
+import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.data.deviceLocale
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: (startDestination: String) -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
+    // Plain hoisted state rather than a second hiltViewModel() default (T-127): this screen is
+    // rendered directly in unit tests against a fake LoginViewModel, and a Hilt-resolved default
+    // fails there because the test host is a bare ComponentActivity, not a Hilt component. The
+    // defaults keep those tests needing no new wiring; Nav supplies the real values.
+    selectedLocale: AppLocale = deviceLocale(),
+    onSelectLocale: (AppLocale) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var passwordVisible by remember { mutableStateOf(false) }
@@ -129,6 +138,11 @@ fun LoginScreen(
         TextButton(onClick = viewModel::onToggleRegisterMode) {
             Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
         }
+
+        Spacer(Modifier.height(24.dp))
+        // Before login, deliberately: the chooser must be reachable without an account (T-127),
+        // which is also why the preference is device-local.
+        LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
 
         // Debug-only self-signed-cert opt-in, mirrored from Settings so it's reachable before login —
         // Settings is post-auth, which would otherwise be a bootstrap deadlock for a self-signed

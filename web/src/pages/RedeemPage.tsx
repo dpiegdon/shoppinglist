@@ -64,7 +64,7 @@ export default function RedeemPage() {
           </p>
         )}
         <button type="submit" className="btn" disabled={redeeming} style={{ width: "100%" }}>
-          Join list
+          {t("redeem.join")}
         </button>
       </form>
     </main>

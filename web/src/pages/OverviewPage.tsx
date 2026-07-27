@@ -143,7 +143,7 @@ export default function OverviewPage() {
                 list properties, and converting never touches item data. */}
             <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
               <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
-                Type
+                {t("overview.type")}
               </legend>
               {(["shopping", "checklist"] as const).map((kind) => (
                 <label key={kind} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.15rem 0" }}>
@@ -167,10 +167,10 @@ export default function OverviewPage() {
             </fieldset>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setCreating(false)}>
-                Cancel
+                {t("action.cancel")}
               </button>
               <button type="submit" className="btn">
-                Create
+                {t("action.create")}
               </button>
             </div>
           </form>

@@ -237,12 +237,12 @@ export default function AdminPage() {
               </span>
               <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => resetPassword(user)}>
-                  Reset password
+                  {t("admin.resetPassword")}
                 </button>
                 {/* Admins and your own account can't be deleted here (the server enforces this too). */}
                 {!user.is_admin && user.id !== account?.id && (
                   <button type="button" className="btn btn-danger" onClick={() => requestDelete(user)}>
-                    Delete
+                    {t("action.delete")}
                   </button>
                 )}
               </span>
@@ -261,7 +261,7 @@ export default function AdminPage() {
             </p>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>
-                Cancel
+                {t("action.cancel")}
               </button>
               <button type="button" className="btn btn-danger" onClick={confirmDelete}>
                 Delete {deleteTarget.email}

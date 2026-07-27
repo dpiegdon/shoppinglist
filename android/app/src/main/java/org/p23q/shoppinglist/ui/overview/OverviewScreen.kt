@@ -149,7 +149,7 @@ fun OverviewScreen(
                                 selected = state.newListKind == kind,
                                 onClick = { viewModel.onNewListKindChange(kind) },
                             )
-                            Text("${ListKind.icon(kind)}  ${ListKind.label(kind)}")
+                            Text("${ListKind.icon(kind)}  ${stringResource(ListKind.label(kind))}")
                         }
                     }
                     Text(

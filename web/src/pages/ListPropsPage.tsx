@@ -280,7 +280,7 @@ export default function ListPropsPage() {
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
           <input value={name} onChange={(e) => setName(e.target.value)} style={{ flex: 1 }} />
           <button type="submit" className="btn" disabled={savingName}>
-            Save
+            {t("action.save")}
           </button>
         </form>
       </section>
@@ -337,7 +337,7 @@ export default function ListPropsPage() {
                     aria-label={`Rename ${canonicalNames.get(key)}`}
                   />
                   <button type="submit" className="btn btn-secondary">
-                    Save
+                    {t("action.save")}
                   </button>
                   <button type="button" className="btn-icon" onClick={() => setEditingCategoryKey(null)} aria-label={t("action.cancel")}>
                     ✕
@@ -406,7 +406,7 @@ export default function ListPropsPage() {
         <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
           <p className="muted" style={{ margin: "0 0 0.6rem" }}>
-            Move every checked item back to the backlog.
+            {t("listProps.clearCheckedHelp")}
           </p>
           <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
             Clear checked ({allChecked.length})
@@ -426,7 +426,7 @@ export default function ListPropsPage() {
             style={{ resize: "vertical", font: "inherit" }}
           />
           <button type="submit" className="btn" disabled={savingNotes} style={{ alignSelf: "flex-start" }}>
-            Save notes
+            {t("listProps.saveNotes")}
           </button>
         </form>
       </section>
@@ -444,14 +444,14 @@ export default function ListPropsPage() {
         {members && members.invites.length > 0 && (
           <>
             <h3 className="muted" style={{ fontSize: "0.85rem" }}>
-              Pending invites
+              {t("listProps.pendingInvites")}
             </h3>
             <ul style={{ listStyle: "none", padding: 0 }}>
               {members.invites.map((inv) => (
                 <li key={inv.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
                   <span>{inv.invited_email}</span>
                   <button type="button" className="btn-icon" onClick={() => handleRevoke(inv.id)}>
-                    Revoke
+                    {t("action.revoke")}
                   </button>
                 </li>
               ))}
@@ -467,7 +467,7 @@ export default function ListPropsPage() {
             style={{ flex: 1 }}
           />
           <button type="submit" className="btn btn-secondary">
-            Invite
+            {t("action.invite")}
           </button>
         </form>
 
@@ -501,10 +501,10 @@ export default function ListPropsPage() {
       </section>
 
       <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginInlineEnd: "0.5rem" }}>
-        Duplicate
+        {t("action.duplicate")}
       </button>
       <button type="button" className="btn btn-danger" onClick={handleLeave}>
-        Leave list
+        {t("listProps.leaveList")}
       </button>
     </main>
   );

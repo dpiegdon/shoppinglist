@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.data
 
+import androidx.annotation.StringRes
+import org.p23q.shoppinglist.R
+
 /**
  * What a list is (T-110). A checklist is a shopping list minus the shopping-only item fields
  * (stores/price/quantity); everything else — categories, notes, statuses, registry, sharing,
@@ -22,7 +25,11 @@ object ListKind {
     /** Whether the shopping-only item fields (stores, quantity, price) are shown for this kind. */
     fun showsShoppingFields(kind: String?): Boolean = of(kind) == SHOPPING
 
-    fun label(kind: String?): String = if (of(kind) == CHECKLIST) "Checklist" else "Shopping list"
+    /** A string RESOURCE, not a String: this is user-facing and must follow the chosen language
+     *  (T-111), and this object has no Context to resolve one with. */
+    @StringRes
+    fun label(kind: String?): Int =
+        if (of(kind) == CHECKLIST) R.string.list_kind_checklist else R.string.list_kind_shopping
 
     /** Overview glyph — a cart for shopping, a check for a plain checklist. */
     fun icon(kind: String?): String = if (of(kind) == CHECKLIST) "✓" else "🛒"

@@ -59,6 +59,14 @@
     <string name="login_trust_self_signed">Trust self-signed certificates</string>
     <string name="login_trust_self_signed_help">Developer option for a self-signed dev server. Insecure; debug builds only.</string>
 
+    <!-- Registry chip labels. Deliberately distinct from the item dialog's radio options. -->
+    <string name="status_chip_backlog">Backlog</string>
+    <string name="status_chip_todo">To buy</string>
+    <string name="status_chip_checked">Done</string>
+
+    <string name="list_kind_shopping">Shopping list</string>
+    <string name="list_kind_checklist">Checklist</string>
+
     <!-- overview -->
     <string name="overview_new_list">New list</string>
     <string name="overview_no_lists">No lists yet</string>
@@ -134,6 +142,7 @@
     <string name="listprops_leave_confirm_body">You\'ll stop receiving updates for \"%1$s\" on this device.</string>
 
     <!-- settings -->
+    <string name="settings_language">Language</string>
     <string name="settings_account">Account</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_system">System</string>

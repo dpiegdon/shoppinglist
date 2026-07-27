@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             ☰
           </button>
           <Link to="/" style={{ fontWeight: 700, textDecoration: "none", color: "var(--color-text)" }}>
-            Shopping List
+            {t("app.title")}
           </Link>
           <SyncIndicator />
         </header>
@@ -57,13 +57,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
               {account?.email}
             </span>
             <Link to="/" style={navLinkStyle}>
-              Overview
+              {t("nav.overview")}
             </Link>
             <Link to="/redeem" style={navLinkStyle}>
-              Join a list
+              {t("nav.joinList")}
             </Link>
             <Link to="/settings" style={navLinkStyle}>
-              Account settings
+              {t("settings.title")}
             </Link>
             <button
               type="button"
@@ -71,7 +71,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               className="btn-icon"
               style={{ textAlign: "start", padding: "0.5rem 0.6rem" }}
             >
-              Log out
+              {t("nav.logOut")}
             </button>
           </nav>
         )}

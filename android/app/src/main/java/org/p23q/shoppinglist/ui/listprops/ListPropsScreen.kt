@@ -101,7 +101,7 @@ fun ListPropsScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("${ListKind.icon(state.kind)}  ${ListKind.label(state.kind)}")
+                Text("${ListKind.icon(state.kind)}  ${stringResource(ListKind.label(state.kind))}")
                 Text(
                     if (state.kind == ListKind.CHECKLIST) {
                         stringResource(R.string.listprops_kind_checklist)

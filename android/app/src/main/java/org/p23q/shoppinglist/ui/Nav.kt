@@ -130,9 +130,16 @@ fun ShoppingListNavHost(
         }
     }
 
+    // Obtained here, not inside each screen: Nav is already inside the Hilt graph, and keeping
+    // the screens Hilt-free is what lets them be rendered directly in unit tests (T-127).
+    val localeViewModel: LocaleViewModel = hiltViewModel()
+    val selectedLocale by localeViewModel.locale.collectAsStateWithLifecycle()
+
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Routes.LOGIN) {
             LoginScreen(
+                selectedLocale = selectedLocale,
+                onSelectLocale = localeViewModel::setLocale,
                 onLoginSuccess = { destination ->
                     navController.navigate(destination) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
@@ -247,6 +254,8 @@ fun ShoppingListNavHost(
         composable(Routes.SETTINGS) {
             AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_settings)) {
                 SettingsScreen(
+                    selectedLocale = selectedLocale,
+                    onSelectLocale = localeViewModel::setLocale,
                     onAccountDeleted = {
                         navController.navigate(Routes.LOGIN) {
                             popUpTo(navController.graph.id) { inclusive = true }

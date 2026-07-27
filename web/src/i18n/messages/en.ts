@@ -37,12 +37,14 @@ export const en = {
   "login.toggleToRegister": "Need an account? Register",
   "login.toggleToLogin": "Have an account? Log in",
   "login.registrationDisabled": "Registration is disabled on this server.",
+  "login.getAndroidApp": "Get the Android app",
   "login.error.generic": "Something went wrong. Please try again.",
 
   // ---- redeem an invite ----
   "redeem.title": "Join a shopping list",
   "redeem.hint": "Paste the invite code, or open the invite link directly.",
   "redeem.code": "Invite code",
+  "redeem.join": "Join list",
   "redeem.error": "Could not redeem this invite.",
 
   // ---- overview / list ----
@@ -80,6 +82,7 @@ export const en = {
   // label is translated. The parenthetical is what makes the status legible — "backlog" alone is
   // the term this app is least likely to survive machine translation (T-124).
   "item.status.backlog": "Backlog (not on list)",
+  "item.addAnother": "Add another",
   "item.saveFailed": "Failed to save. Please try again.",
 
   // ---- list properties ----
@@ -103,12 +106,29 @@ export const en = {
   "listProps.members": "Members",
   "listProps.inviteByEmail": "Invite by email…",
   "listProps.inviteLink": "Invite link",
+  "listProps.clearCheckedHelp": "Move every checked item back to the backlog.",
+  "listProps.saveNotes": "Save notes",
+  "listProps.pendingInvites": "Pending invites",
+  "listProps.leaveList": "Leave list",
   "listProps.membersFailed": "Failed to load members.",
   "listProps.inviteFailed": "Failed to send invite.",
   "listProps.leaveConfirm": "Leave this list? You will lose access to it.",
 
   // ---- generic actions ----
   "action.cancel": "Cancel",
+  "action.save": "Save",
+  "action.delete": "Delete",
+  "action.revoke": "Revoke",
+  "action.undo": "Undo",
+  "action.invite": "Invite",
+  "action.create": "Create",
+  "action.duplicate": "Duplicate",
+  "common.saved": "Saved.",
+
+  // ---- navigation ----
+  "nav.overview": "Overview",
+  "nav.joinList": "Join a list",
+  "nav.logOut": "Log out",
   "action.copy": "Copy",
   "action.copied": "Copied!",
 
@@ -119,6 +139,7 @@ export const en = {
   "overview.title": "Your lists",
   "overview.newList": "New list",
   "overview.name": "Name",
+  "overview.type": "Type",
   "overview.kind.checklist": "Just names, categories and notes.",
   "overview.kind.shopping": "Adds stores, quantity and price to each item.",
 
@@ -132,6 +153,7 @@ export const en = {
   "list.checkedOff": "Item checked off.",
 
   // ---- settings ----
+  "settings.language": "Language",
   "settings.title": "Account settings",
   "settings.serverAdmin": "Server admin",
   "settings.defaultCurrency": "Default currency",
@@ -145,6 +167,9 @@ export const en = {
   "settings.emailChanged": "Email changed.",
   "settings.sessions": "Sessions",
   "settings.deleteAccount": "Delete account",
+  "settings.openServerAdmin": "Open server admin",
+  "settings.deleteMyAccount": "Delete my account",
+  "settings.password": "Password",
   "settings.deleteConfirm": "This permanently deletes your account. Are you sure?",
 
   // ---- admin ----
@@ -154,6 +179,7 @@ export const en = {
   "admin.users": "Users",
   "admin.yourPassword": "Your password (required for reset/delete)",
   "admin.deleteUserTitle": "Delete user?",
+  "admin.resetPassword": "Reset password",
   "admin.passwordRequired": "Enter your password to reset or delete a user.",
   "admin.loadFailed": "Failed to load admin data.",
   "admin.updateFailed": "Failed to update.",

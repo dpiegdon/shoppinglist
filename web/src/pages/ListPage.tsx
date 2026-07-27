@@ -305,7 +305,7 @@ export default function ListPage() {
         >
           <span>{t("list.checkedOff")}</span>
           <button type="button" className="btn-secondary btn" onClick={handleUndo}>
-            Undo
+            {t("action.undo")}
           </button>
         </div>
       )}

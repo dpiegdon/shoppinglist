@@ -118,6 +118,11 @@ class SyncEngine @Inject constructor(
         } catch (e: SSLException) {
             // Distinct, actionable message for an untrusted cert (T-38); SSLException extends
             // IOException, so this catch must precede it.
+            //
+            // Deliberately NOT a string resource: nothing renders it. SyncStatus.lastError is only
+            // ever null-checked (SyncStatusBar picks a colour from it), and SyncWorker discards
+            // SyncResult.Failed's message entirely. It is a diagnostic, so translating it would be
+            // work with no user-visible effect (T-111).
             val message = "Server certificate not trusted"
             syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
             return SyncResult.Failed(message)

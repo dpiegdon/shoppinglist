@@ -44,12 +44,18 @@ import java.io.File
 import org.p23q.shoppinglist.ui.asString
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.LanguagePicker
+import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.data.deviceLocale
 
 @Composable
 fun SettingsScreen(
     onAccountDeleted: () -> Unit,
     onOpenAdmin: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
+    // Plain hoisted state, not a second hiltViewModel() default — see LoginScreen (T-127).
+    selectedLocale: AppLocale = deviceLocale(),
+    onSelectLocale: (AppLocale) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -82,6 +88,9 @@ fun SettingsScreen(
             Button(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.nav_server_admin)) }
             Spacer(Modifier.height(16.dp))
         }
+
+        LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
+        Spacer(Modifier.height(16.dp))
 
         Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleMedium)
         state.accountEmail?.let { Text(it) }

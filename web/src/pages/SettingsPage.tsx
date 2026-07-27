@@ -4,6 +4,7 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useT } from "../i18n";
+import LanguagePicker from "../components/LanguagePicker";
 import { getCachedDefaultCurrency, setCachedDefaultCurrency, useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { Session } from "../api/contract";
 import { formatLastSeen } from "../lib/relativeTime";
@@ -149,6 +150,8 @@ export default function SettingsPage() {
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <h1 style={{ fontSize: "1.3rem" }}>{t("settings.title")}</h1>
+
+      <LanguagePicker />
       <p className="muted">{account?.email}</p>
 
       {/* Admin-only entry point to the server console (T-107); shown from the login response flag. */}
@@ -156,7 +159,7 @@ export default function SettingsPage() {
         <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.serverAdmin")}</h2>
           <Link to="/admin" className="btn btn-secondary" style={{ display: "inline-block" }}>
-            Open server admin
+            {t("settings.openServerAdmin")}
           </Link>
         </section>
       )}
@@ -171,11 +174,11 @@ export default function SettingsPage() {
             style={{ width: "6rem" }}
           />
           <button type="submit" className="btn">
-            Save
+            {t("action.save")}
           </button>
         </form>
         {currencyStatus.error && <p className="error-text">{currencyStatus.error}</p>}
-        {currencyStatus.ok && <p className="muted">Saved.</p>}
+        {currencyStatus.ok && <p className="muted">{t("common.saved")}</p>}
         <p className="muted" style={{ fontSize: "0.8rem" }}>
           Currently cached: {getCachedDefaultCurrency()}
         </p>
@@ -193,11 +196,11 @@ export default function SettingsPage() {
             style={{ width: "6rem" }}
           />
           <button type="submit" className="btn">
-            Save
+            {t("action.save")}
           </button>
         </form>
         {initialsStatus.error && <p className="error-text">{initialsStatus.error}</p>}
-        {initialsStatus.ok && <p className="muted">Saved.</p>}
+        {initialsStatus.ok && <p className="muted">{t("common.saved")}</p>}
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
@@ -225,7 +228,7 @@ export default function SettingsPage() {
           {passwordStatus.error && <p className="error-text">{passwordStatus.error}</p>}
           {passwordStatus.ok && <p className="muted">{t("settings.passwordChanged")}</p>}
           <button type="submit" className="btn">
-            Change password
+            {t("settings.changePassword")}
           </button>
         </form>
       </section>
@@ -234,7 +237,7 @@ export default function SettingsPage() {
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.changeEmail")}</h2>
         <form onSubmit={handleEmailSave}>
           <div className="form-field">
-            <label htmlFor="email-password">Password</label>
+            <label htmlFor="email-password">{t("settings.password")}</label>
             <input
               id="email-password"
               type="password"
@@ -249,7 +252,7 @@ export default function SettingsPage() {
           {emailStatus.error && <p className="error-text">{emailStatus.error}</p>}
           {emailStatus.ok && <p className="muted">{t("settings.emailChanged")}</p>}
           <button type="submit" className="btn">
-            Change email
+            {t("settings.changeEmail")}
           </button>
         </form>
       </section>
@@ -280,7 +283,7 @@ export default function SettingsPage() {
               </span>
               {!s.current && (
                 <button type="button" className="btn-icon" onClick={() => handleRevokeSession(s.id)}>
-                  Revoke
+                  {t("action.revoke")}
                 </button>
               )}
             </li>
@@ -292,7 +295,7 @@ export default function SettingsPage() {
         <h2 style={{ fontSize: "1rem", marginTop: 0, color: "var(--color-danger)" }}>{t("settings.deleteAccount")}</h2>
         <form onSubmit={handleDeleteAccount}>
           <div className="form-field">
-            <label htmlFor="delete-password">Password</label>
+            <label htmlFor="delete-password">{t("settings.password")}</label>
             <input
               id="delete-password"
               type="password"
@@ -302,7 +305,7 @@ export default function SettingsPage() {
           </div>
           {deleteStatus.error && <p className="error-text">{deleteStatus.error}</p>}
           <button type="submit" className="btn btn-danger">
-            Delete my account
+            {t("settings.deleteMyAccount")}
           </button>
         </form>
       </section>
