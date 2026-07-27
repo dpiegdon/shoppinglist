@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -58,6 +59,7 @@ import org.p23q.shoppinglist.ui.redeem.RedeemScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
+import androidx.compose.ui.res.stringResource
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -102,11 +104,11 @@ fun authedStartDestination(lastOpenedListId: String?): String =
     lastOpenedListId?.let { Routes.list(it) } ?: Routes.OVERVIEW
 
 /** Destinations reachable from the drawer menu (Notes: overview + account entries). */
-private data class DrawerDestination(val route: String, val label: String)
+private data class DrawerDestination(val route: String, @param:StringRes val label: Int)
 
 private val drawerDestinations = listOf(
-    DrawerDestination(Routes.OVERVIEW, "Overview"),
-    DrawerDestination(Routes.SETTINGS, "Account"),
+    DrawerDestination(Routes.OVERVIEW, R.string.nav_overview),
+    DrawerDestination(Routes.SETTINGS, R.string.nav_account),
 )
 
 @Composable
@@ -141,7 +143,7 @@ fun ShoppingListNavHost(
         composable(Routes.OVERVIEW) {
             AppDrawerScaffold(
                 navController = navController,
-                title = "Overview",
+                title = stringResource(R.string.nav_overview),
                 actions = {
                     Image(
                         painter = painterResource(R.drawable.ic_brand_logo),
@@ -157,7 +159,7 @@ fun ShoppingListNavHost(
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
             AppDrawerScaffold(
                 navController = navController,
-                title = liveListTitle("List"),
+                title = liveListTitle(stringResource(R.string.nav_list)),
                 // Tapping the open list's title jumps back to the overview to pick another list.
                 onTitleClick = {
                     navController.navigate(Routes.OVERVIEW) {
@@ -185,7 +187,7 @@ fun ShoppingListNavHost(
             }
         }
         composable(Routes.REGISTRY_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = liveListTitle("Registry")) {
+            AppDrawerScaffold(navController = navController, title = liveListTitle(stringResource(R.string.nav_registry))) {
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
                 RegistryScreen(onEditItem = { itemId -> editingItemId = itemId })
@@ -196,7 +198,7 @@ fun ShoppingListNavHost(
             }
         }
         composable(Routes.LIST_PROPS_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = liveListTitle("List properties")) {
+            AppDrawerScaffold(navController = navController, title = liveListTitle(stringResource(R.string.nav_list_properties))) {
                 ListPropsScreen(
                     onLeft = {
                         navController.navigate(Routes.OVERVIEW) {
@@ -243,7 +245,7 @@ fun ShoppingListNavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            AppDrawerScaffold(navController = navController, title = "Settings") {
+            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_settings)) {
                 SettingsScreen(
                     onAccountDeleted = {
                         navController.navigate(Routes.LOGIN) {
@@ -256,7 +258,7 @@ fun ShoppingListNavHost(
             }
         }
         composable(Routes.ADMIN) {
-            AppDrawerScaffold(navController = navController, title = "Server admin") {
+            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_server_admin)) {
                 AdminScreen()
             }
         }
@@ -304,7 +306,7 @@ internal fun AppDrawerScaffold(
                                 contentDescription = null,
                             )
                         },
-                        label = { Text(destination.label) },
+                        label = { Text(stringResource(destination.label)) },
                         selected = destination.route == currentRoute,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -317,7 +319,7 @@ internal fun AppDrawerScaffold(
                 }
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                    label = { Text("Join list") },
+                    label = { Text(stringResource(R.string.nav_join_list)) },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -327,7 +329,7 @@ internal fun AppDrawerScaffold(
                 )
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
-                    label = { Text("Log out") },
+                    label = { Text(stringResource(R.string.nav_log_out)) },
                     selected = false,
                     onClick = {
                         scope.launch {
@@ -354,7 +356,7 @@ internal fun AppDrawerScaffold(
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
                         }
                     },
                     actions = actions,

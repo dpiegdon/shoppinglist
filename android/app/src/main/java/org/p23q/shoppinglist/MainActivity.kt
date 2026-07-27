@@ -20,10 +20,13 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.deviceLocale
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.ui.LocalizedContent
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ShoppingListNavHost
 import org.p23q.shoppinglist.ui.authedStartDestination
@@ -34,6 +37,8 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var themePreferenceStore: ThemePreferenceStore
+
+    @Inject lateinit var localePreferenceStore: LocalePreferenceStore
 
     @Inject lateinit var session: SessionState
 
@@ -68,13 +73,27 @@ class MainActivity : ComponentActivity() {
                 ThemePreference.LIGHT -> false
                 ThemePreference.DARK -> true
             }
-            ShoppingListTheme(darkTheme = darkTheme) {
-                // The base Android theme (themes.xml) is a fixed light theme, not day/night — so
-                // without this Surface, dark mode paints the DarkColors palette's light-on-dark text
-                // over the window's still-white background ("light gray on white"). Surface is the
-                // one composable that actually fills the screen with colorScheme.background.
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    ShoppingListNavHost(startDestination = startDestination)
+            // Seeded with the device language rather than a fixed default, so the very first
+            // frame is already in the right language for a user who has never chosen one — an
+            // English flash before the stored value arrives would be visible on every cold start.
+            val locale by localePreferenceStore.effective.collectAsStateWithLifecycle(
+                initialValue = deviceLocale(),
+            )
+            // Outermost, so the theme and every screen below resolve strings — and layout
+            // direction — in the chosen language (T-111/T-126).
+            LocalizedContent(locale) {
+                ShoppingListTheme(darkTheme = darkTheme) {
+                    // The base Android theme (themes.xml) is a fixed light theme, not day/night — so
+                    // without this Surface, dark mode paints the DarkColors palette's light-on-dark
+                    // text over the window's still-white background ("light gray on white"). Surface
+                    // is the one composable that actually fills the screen with
+                    // colorScheme.background.
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        ShoppingListNavHost(startDestination = startDestination)
+                    }
                 }
             }
         }

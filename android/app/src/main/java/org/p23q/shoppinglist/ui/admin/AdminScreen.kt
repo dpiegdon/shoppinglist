@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.api.AdminUserDto
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 /** Green track when registration is on, red when it's denied (T-112). */
 private val RegistrationOnColor = Color(0xFF2E7D32)
@@ -50,16 +52,16 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             Spacer(Modifier.height(8.dp))
         }
 
-        Text("Registration", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.admin_registration), style = MaterialTheme.typography.titleMedium)
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Allow new accounts")
+                Text(stringResource(R.string.admin_allow_new_accounts))
                 Text(
-                    "Runtime override — resets to the server's configured default on restart.",
+                    stringResource(R.string.admin_registration_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -78,11 +80,11 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
         }
         Spacer(Modifier.height(16.dp))
 
-        Text("Users", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.admin_users), style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text("Your password (for reset/delete)") },
+            label = { Text(stringResource(R.string.admin_your_password)) },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
             isError = state.passwordError != null,
@@ -93,7 +95,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
         if (state.resetPassword != null) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "New password for ${state.resetEmail} — shown once, send it securely:",
+                stringResource(R.string.admin_new_password_for, state.resetEmail ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -115,17 +117,17 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
     pendingDelete?.let { user ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete user?") },
-            text = { Text("Permanently delete ${user.email} and all of their data. This can't be undone.") },
+            title = { Text(stringResource(R.string.admin_delete_user_title)) },
+            text = { Text(stringResource(R.string.admin_delete_user_body, user.email)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteUser(user)
                     pendingDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -143,17 +145,17 @@ private fun UserRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(user.email + if (user.isAdmin) " (admin)" else "")
+            Text(user.email + if (user.isAdmin) stringResource(R.string.admin_is_admin_suffix) else "")
             Text(
-                "Sessions: ${user.sessionCount}",
+                stringResource(R.string.admin_session_count, user.sessionCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onReset) { Text("Reset") }
+        TextButton(onClick = onReset) { Text(stringResource(R.string.action_reset)) }
         if (deletable) {
             TextButton(onClick = onDelete) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
             }
         }
     }

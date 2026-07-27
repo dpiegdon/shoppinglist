@@ -24,6 +24,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 /** Notes (Add-item dialog): name suggestions from the registry; picking one reuses it, else creates new. */
 @Composable
@@ -37,20 +39,20 @@ fun AddItemDialog(
 
     LaunchedEffect(listId) { viewModel.startAdd(listId) }
     LaunchedEffect(state.isSaved) { if (state.isSaved) onDismiss() }
-    // After a "Add another" the form resets and bumps this signal; put the cursor back in Name.
+    // After a stringResource(R.string.item_add_another) the form resets and bumps this signal; put the cursor back in Name.
     LaunchedEffect(state.focusNameSignal) {
         if (state.focusNameSignal > 0) runCatching { nameFocusRequester.requestFocus() }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add item") },
+        title = { Text(stringResource(R.string.item_add)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChange,
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.item_name)) },
                     singleLine = true,
                     isError = state.nameError != null,
                     modifier = Modifier.fillMaxWidth().focusRequester(nameFocusRequester),
@@ -77,10 +79,10 @@ fun AddItemDialog(
         },
         confirmButton = {
             Row {
-                TextButton(onClick = viewModel::saveAndAddAnother) { Text("Add another") }
+                TextButton(onClick = viewModel::saveAndAddAnother) { Text(stringResource(R.string.item_add_another)) }
                 TextButton(onClick = viewModel::save) { Text("Add") }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

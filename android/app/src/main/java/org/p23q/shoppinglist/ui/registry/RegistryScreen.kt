@@ -35,6 +35,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 @Composable
 fun RegistryScreen(
@@ -44,13 +46,16 @@ fun RegistryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val undoLabel = stringResource(R.string.action_undo)
+    val deletedTemplate = stringResource(R.string.registry_item_deleted)
     LaunchedEffect(state.undoItemId) {
         val name = state.undoItemName
         val itemId = state.undoItemId
         if (itemId != null && name != null) {
             val result = snackbarHostState.showSnackbar(
-                message = "$name deleted",
-                actionLabel = "Undo",
+                // Hoisted above the effect: this body is a coroutine, not a composition.
+                message = String.format(deletedTemplate, name),
+                actionLabel = undoLabel,
                 duration = SnackbarDuration.Short,
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -66,7 +71,7 @@ fun RegistryScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                label = { Text("Search") },
+                label = { Text(stringResource(R.string.registry_search)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
@@ -97,7 +102,7 @@ private fun RegistryRow(item: ItemEntity, onClick: () -> Unit, onDelete: () -> U
         AssistChip(onClick = onClick, label = { Text(Status.fromWireValue(item.status.value).label) })
         Spacer(Modifier.width(4.dp))
         IconButton(onClick = onDelete) {
-            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete ${item.name.value}")
+            Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(R.string.registry_delete_item, item.name.value))
         }
     }
 }

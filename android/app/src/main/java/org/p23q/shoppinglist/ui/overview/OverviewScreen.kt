@@ -39,6 +39,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +53,7 @@ fun OverviewScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = viewModel::openCreateDialog) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "New list")
+                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.overview_new_list))
             }
         },
     ) { innerPadding ->
@@ -72,7 +74,7 @@ fun OverviewScreen(
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("No lists yet")
+                        Text(stringResource(R.string.overview_no_lists))
                     }
                 } else {
                     LazyColumn(
@@ -119,19 +121,19 @@ fun OverviewScreen(
     if (state.isCreateDialogOpen) {
         AlertDialog(
             onDismissRequest = viewModel::dismissCreateDialog,
-            title = { Text("New list") },
+            title = { Text(stringResource(R.string.overview_new_list)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = state.newListName,
                         onValueChange = viewModel::onNewListNameChange,
-                        label = { Text("List name") },
+                        label = { Text(stringResource(R.string.overview_list_name)) },
                         singleLine = true,
                     )
                     Spacer(Modifier.height(12.dp))
                     // Kind is chosen up front (T-110) but isn't permanent — list properties can
                     // convert it later, and converting never touches item data.
-                    Text("Type", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.overview_type), style = MaterialTheme.typography.labelMedium)
                     listOf(ListKind.SHOPPING, ListKind.CHECKLIST).forEach { kind ->
                         Row(
                             modifier = Modifier
@@ -152,9 +154,9 @@ fun OverviewScreen(
                     }
                     Text(
                         if (state.newListKind == ListKind.CHECKLIST) {
-                            "Just names, categories and notes."
+                            stringResource(R.string.overview_kind_checklist)
                         } else {
-                            "Adds stores, quantity and price to each item."
+                            stringResource(R.string.overview_kind_shopping)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -162,10 +164,10 @@ fun OverviewScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = viewModel::createList) { Text("Create") }
+                TextButton(onClick = viewModel::createList) { Text(stringResource(R.string.action_create)) }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::dismissCreateDialog) { Text("Cancel") }
+                TextButton(onClick = viewModel::dismissCreateDialog) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }

@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun LoginScreen(
@@ -67,7 +68,7 @@ fun LoginScreen(
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Shopping List",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         )
@@ -76,7 +77,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = viewModel::onServerUrlChange,
-            label = { Text("Server URL") },
+            label = { Text(stringResource(R.string.login_server_url)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
@@ -86,7 +87,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.login_email)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
@@ -96,7 +97,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.login_password)) },
             singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
@@ -104,7 +105,7 @@ fun LoginScreen(
             keyboardActions = KeyboardActions(onDone = { viewModel.submit() }),
             trailingIcon = {
                 TextButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Text(if (passwordVisible) "Hide" else "Show")
+                    Text(if (passwordVisible) stringResource(R.string.action_hide) else stringResource(R.string.action_show))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -121,11 +122,11 @@ fun LoginScreen(
             enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (state.isRegisterMode) "Register" else "Log in")
+            Text(if (state.isRegisterMode) stringResource(R.string.login_register) else stringResource(R.string.login_log_in))
         }
 
         TextButton(onClick = viewModel::onToggleRegisterMode) {
-            Text(if (state.isRegisterMode) "Already have an account? Log in" else "New here? Register")
+            Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
         }
 
         // Debug-only self-signed-cert opt-in, mirrored from Settings so it's reachable before login —
@@ -135,9 +136,9 @@ fun LoginScreen(
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Trust self-signed certificates", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.login_trust_self_signed), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "Developer option for a self-signed dev server. Insecure; debug builds only.",
+                        stringResource(R.string.login_trust_self_signed_help),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }

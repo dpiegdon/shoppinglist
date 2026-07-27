@@ -1,4 +1,215 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  User-facing strings (T-111). English is the default locale and the fallback for every
+  other: an untranslated key resolves here rather than rendering blank.
+
+  No <plurals> anywhere, deliberately. T-123 moved every count out of its sentence
+  ("Items needing attention: 3"), so no string has to agree with a number and no language
+  needs a plural rule here - which is what makes Ukrainian (3 forms) and Arabic (6) cost
+  nothing extra beyond translation.
+-->
 <resources>
     <string name="app_name">Shopping List</string>
+
+    <!-- generic actions, reused across screens -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_revoke">Revoke</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_back">Back</string>
+    <string name="action_show">Show</string>
+    <string name="action_hide">Hide</string>
+    <string name="action_create">Create</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_leave">Leave</string>
+    <string name="action_invite">Invite</string>
+    <string name="action_join">Join</string>
+    <string name="action_duplicate">Duplicate</string>
+    <string name="action_unsubscribe">Unsubscribe</string>
+
+    <!-- navigation -->
+    <string name="nav_menu">Menu</string>
+    <string name="nav_overview">Overview</string>
+    <string name="nav_list">List</string>
+    <string name="nav_registry">Registry</string>
+    <string name="nav_list_properties">List properties</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_account">Account</string>
+    <string name="nav_server_admin">Server admin</string>
+    <string name="nav_log_out">Log out</string>
+    <string name="nav_join_list">Join list</string>
+
+    <!-- relative time. Abbreviated units never inflect, so no plural rule is needed (T-123). -->
+    <string name="ago_just_now">just now</string>
+    <string name="ago_minutes">%1$d min ago</string>
+    <string name="ago_hours">%1$d h ago</string>
+    <string name="ago_days">%1$d d ago</string>
+    <string name="last_seen_active_now">Active now</string>
+    <string name="background_sync_never">never</string>
+
+    <!-- login -->
+    <string name="login_email">Email</string>
+    <string name="login_password">Password</string>
+    <string name="login_server_url">Server URL</string>
+    <string name="login_log_in">Log in</string>
+    <string name="login_register">Register</string>
+    <string name="login_to_register">New here? Register</string>
+    <string name="login_to_login">Already have an account? Log in</string>
+    <string name="login_trust_self_signed">Trust self-signed certificates</string>
+    <string name="login_trust_self_signed_help">Developer option for a self-signed dev server. Insecure; debug builds only.</string>
+
+    <!-- overview -->
+    <string name="overview_new_list">New list</string>
+    <string name="overview_no_lists">No lists yet</string>
+    <string name="overview_list_name">List name</string>
+    <string name="overview_type">Type</string>
+    <string name="overview_kind_checklist">Just names, categories and notes.</string>
+    <string name="overview_kind_shopping">Adds stores, quantity and price to each item.</string>
+
+    <!-- list -->
+    <string name="list_add_item">Add item</string>
+    <string name="list_clear_checked">Clear checked</string>
+    <string name="list_show_checked">Show checked</string>
+    <string name="list_edit_item">Edit %1$s</string>
+    <string name="list_item_checked">%1$s checked</string>
+    <string name="list_last_touched_by">Last touched by %1$s</string>
+
+    <!-- item form -->
+    <string name="item_name">Name</string>
+    <string name="item_category">Category</string>
+    <string name="item_stores">Stores</string>
+    <string name="item_add_store">Add store</string>
+    <string name="item_remove_store">Remove %1$s</string>
+    <string name="item_quantity">Quantity</string>
+    <string name="item_price">Price</string>
+    <string name="item_currency">Currency</string>
+    <string name="item_note">Note</string>
+    <string name="item_status">Status</string>
+    <string name="item_add">Add item</string>
+    <string name="item_add_another">Add another</string>
+    <string name="item_edit">Edit item</string>
+    <string name="item_delete_title">Delete item?</string>
+
+    <!-- registry -->
+    <string name="registry_search">Search</string>
+    <string name="registry_item_deleted">%1$s deleted</string>
+    <string name="registry_delete_item">Delete %1$s</string>
+
+    <!-- redeem an invite -->
+    <string name="redeem_title">Join list</string>
+    <string name="redeem_code">Invite code or link</string>
+    <string name="redeem_joining">Joining list…</string>
+
+    <!-- sync health -->
+    <string name="sync_syncing">Syncing…</string>
+    <string name="sync_synced">Synced %1$s</string>
+    <string name="sync_not_synced">Not synced yet</string>
+    <string name="sync_failed_since">Sync failed · last ok %1$s</string>
+    <string name="sync_pending_suffix">%1$s · %2$d pending</string>
+    <string name="sync_attention">Items needing attention: %1$d</string>
+
+    <!-- list properties -->
+    <string name="listprops_list_name">List name</string>
+    <string name="listprops_type">Type</string>
+    <string name="listprops_kind_checklist">Items have a name, category and note.</string>
+    <string name="listprops_kind_shopping">Items also have stores, quantity and price.</string>
+    <string name="listprops_kind_switch_help">Switching only changes which fields are shown — nothing is deleted.</string>
+    <string name="listprops_categories">Categories</string>
+    <string name="listprops_categories_help">Drag the handle to reorder; tap ✎ to rename or fix casing</string>
+    <string name="listprops_rename_category">Rename %1$s</string>
+    <string name="listprops_reorder_category">Reorder %1$s</string>
+    <string name="listprops_save_order">Save order</string>
+    <string name="listprops_clear_checked">Clear checked (%1$d)</string>
+    <string name="listprops_notes">Notes</string>
+    <string name="listprops_notes_placeholder">Gate code, store hours, anything worth remembering…</string>
+    <string name="listprops_save_notes">Save notes</string>
+    <string name="listprops_shared_with">Shared with</string>
+    <string name="listprops_invite_by_email">Invite by email</string>
+    <string name="listprops_share_invite">Share invite</string>
+    <string name="listprops_notifications">Notifications</string>
+    <string name="listprops_notify_changes">Notify about changes to this list</string>
+    <string name="listprops_leave_list">Leave list</string>
+    <string name="listprops_leave_confirm_title">Leave this list?</string>
+    <string name="listprops_leave_confirm_body">You\'ll stop receiving updates for “%1$s”.</string>
+
+    <!-- settings -->
+    <string name="settings_account">Account</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_currency">Currency</string>
+    <string name="settings_default_currency">Default currency</string>
+    <string name="settings_initials">Initials</string>
+    <string name="settings_display_initials">Display initials</string>
+    <string name="settings_change_password">Change password</string>
+    <string name="settings_current_password">Current password</string>
+    <string name="settings_new_password">New password</string>
+    <string name="settings_confirm_password">Confirm password</string>
+    <string name="settings_change_email">Change email</string>
+    <string name="settings_new_email">New email</string>
+    <string name="settings_password">Password</string>
+    <string name="settings_sessions">Sessions</string>
+    <string name="settings_unknown_device">Unknown device</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_collaborator_changes">Collaborator changes</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_last_background_sync">Last background sync: %1$s</string>
+    <string name="settings_server">Server: %1$s</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_share_crash_logs">Share crash logs</string>
+    <string name="settings_trust_self_signed">Trust self-signed certificates</string>
+    <string name="settings_trust_self_signed_help">Developer option — skips TLS certificate checks. Insecure; debug builds only.</string>
+    <string name="settings_danger_zone">Danger zone</string>
+    <string name="settings_delete_account">Delete account</string>
+    <string name="settings_delete_account_title">Delete account?</string>
+    <string name="settings_delete_account_body">This permanently deletes your account and all data. Enter your password to confirm.</string>
+
+    <!-- settings status messages (surfaced from the ViewModel via UiText) -->
+    <string name="settings_msg_currency_updated">Currency updated</string>
+    <string name="settings_msg_currency_invalid">Enter a valid 3-letter currency code</string>
+    <string name="settings_msg_currency_failed">Couldn\'t update currency</string>
+    <string name="settings_msg_initials_updated">Initials updated</string>
+    <string name="settings_msg_initials_too_long">Initials must be %1$d characters or fewer</string>
+    <string name="settings_msg_initials_failed">Couldn\'t update initials</string>
+    <string name="settings_msg_password_changed">Password changed</string>
+    <string name="settings_msg_password_fields_required">Both password fields are required</string>
+    <string name="settings_msg_password_incorrect">Current password is incorrect</string>
+    <string name="settings_msg_password_failed">Couldn\'t change password</string>
+    <string name="settings_msg_email_changed">Email changed</string>
+    <string name="settings_msg_email_fields_required">Password and new email are required</string>
+    <string name="settings_msg_email_failed">Couldn\'t change email</string>
+    <string name="settings_msg_sessions_failed">Couldn\'t load sessions</string>
+    <string name="settings_msg_revoke_failed">Couldn\'t revoke that session</string>
+    <string name="settings_msg_password_required">Password is required</string>
+    <string name="settings_msg_delete_password_incorrect">Password is incorrect</string>
+    <string name="settings_msg_delete_failed">Couldn\'t delete account</string>
+    <string name="settings_msg_offline">Couldn\'t reach the server</string>
+    <string name="settings_msg_no_crash_logs">No crash logs yet</string>
+
+    <!-- admin -->
+    <string name="admin_registration">Registration</string>
+    <string name="admin_allow_new_accounts">Allow new accounts</string>
+    <string name="admin_registration_help">Runtime override — resets to the server\'s configured default on restart.</string>
+    <string name="admin_is_admin_suffix"> (admin)</string>
+    <string name="admin_users">Users</string>
+    <string name="admin_your_password">Your password (for reset/delete)</string>
+    <string name="admin_session_count">Sessions: %1$d</string>
+    <string name="admin_new_password_for">New password for %1$s — shown once, send it securely:</string>
+    <string name="admin_delete_user_title">Delete user?</string>
+    <string name="admin_delete_user_body">Permanently delete %1$s and all of their data. This can\'t be undone.</string>
+    <string name="admin_msg_password_required">Enter your password to reset or delete a user.</string>
+    <string name="admin_msg_load_failed">Couldn\'t load admin data</string>
+    <string name="admin_msg_update_failed">Couldn\'t update</string>
+    <string name="admin_msg_reset_failed">Couldn\'t reset password</string>
+    <string name="admin_msg_delete_failed">Couldn\'t delete user</string>
+    <string name="admin_msg_offline">You\'re offline</string>
+    <string name="admin_msg_offline_admin">You\'re offline; admin needs a connection</string>
+
+    <!-- collaborator-change notification (resolved OUTSIDE composition - see localizedContext) -->
+    <string name="notif_channel_collaborator">Collaborator changes</string>
+    <string name="notif_shopping_lists">Shopping lists</string>
+    <string name="notif_changed_items">Changed items: %1$d</string>
+    <string name="notif_changed_items_lists">Changed items: %1$d · Lists: %2$d</string>
 </resources>

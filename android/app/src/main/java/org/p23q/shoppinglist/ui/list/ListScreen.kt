@@ -55,6 +55,8 @@ import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.ui.SyncStatusMarker
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.data.db.Status
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,13 +70,18 @@ fun ListScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val undoLabel = stringResource(R.string.action_undo)
+    val checkedTemplate = stringResource(R.string.list_item_checked)
+    val checkedMessage = { name: String -> String.format(checkedTemplate, name) }
     LaunchedEffect(state.undoItemId) {
         val name = state.undoItemName
         val itemId = state.undoItemId
         if (itemId != null && name != null) {
             val result = snackbarHostState.showSnackbar(
-                message = "$name checked",
-                actionLabel = "Undo",
+                // Hoisted above the effect: this body is a coroutine, not a composition, so it
+                // cannot call stringResource itself.
+                message = checkedMessage(name),
+                actionLabel = undoLabel,
                 duration = SnackbarDuration.Short,
             )
             if (result == SnackbarResult.ActionPerformed) {
@@ -94,7 +101,7 @@ fun ListScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             // Slim controls row: show-checked toggle-button on the left; the registry and
-            // list-settings actions on the right (T-35). "Clear checked" moved into list properties
+            // list-settings actions on the right (T-35). stringResource(R.string.list_clear_checked) moved into list properties
             // (T-75) — too easy to tap here by accident.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
@@ -104,7 +111,7 @@ fun ListScreen(
                 FilterChip(
                     selected = state.showChecked,
                     onClick = { viewModel.toggleShowChecked() },
-                    label = { Text("Show checked") },
+                    label = { Text(stringResource(R.string.list_show_checked)) },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Folded into this row instead of its own line (T-63): a quiet dot rather than a
@@ -113,10 +120,10 @@ fun ListScreen(
                     SyncStatusMarker(state = state.sync, nowMs = rememberTickingNowMs())
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = "Registry")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.nav_registry))
                     }
                     IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "List properties")
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = stringResource(R.string.nav_list_properties))
                     }
                 }
             }
@@ -126,7 +133,7 @@ fun ListScreen(
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
-                Text("Add item")
+                Text(stringResource(R.string.list_add_item))
             }
 
             PullToRefreshBox(
@@ -244,7 +251,7 @@ private fun ItemRow(
                 Spacer(Modifier.width(4.dp))
             }
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit ${item.name.value}")
+                Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.list_edit_item, item.name.value))
             }
         }
         // A per-word LineThrough only crossed the name, leaving quantity/note/icon untouched; one
@@ -266,11 +273,12 @@ private fun ItemRow(
  *  accessibility content description since there's no hover on touch devices. */
 @Composable
 private fun AuthorBadge(member: MemberDto) {
+    val touchedByDescription = stringResource(R.string.list_last_touched_by, member.email)
     Box(
         modifier = Modifier
             .size(24.dp)
             .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-            .semantics { contentDescription = "Last touched by ${member.email}" },
+            .semantics { contentDescription = touchedByDescription },
         contentAlignment = Alignment.Center,
     ) {
         Text(

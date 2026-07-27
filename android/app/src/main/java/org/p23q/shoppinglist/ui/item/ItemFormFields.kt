@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 /** Category/stores/quantity/price/note fields shared by [AddItemDialog] and [EditItemDialog]. */
 @Composable
@@ -32,7 +34,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     OutlinedTextField(
         value = state.category,
         onValueChange = viewModel::onCategoryChange,
-        label = { Text("Category") },
+        label = { Text(stringResource(R.string.item_category)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -55,17 +57,17 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     // Shopping-only fields (T-110): a checklist shows just category / note / status. Existing
     // values are preserved, merely not rendered, so converting a list is reversible.
     if (state.showShoppingFields) {
-    Text("Stores")
+    Text(stringResource(R.string.item_stores))
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = state.storeInput,
             onValueChange = viewModel::onStoreInputChange,
-            label = { Text("Add store") },
+            label = { Text(stringResource(R.string.item_add_store)) },
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = viewModel::addStore) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = "Add store")
+            Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.item_add_store))
         }
     }
     if (state.stores.isNotEmpty()) {
@@ -77,7 +79,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
                     label = { Text(store) },
                     trailingIcon = {
                         IconButton(onClick = { viewModel.removeStore(store) }, modifier = Modifier.width(18.dp)) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Remove $store")
+                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.item_remove_store, store))
                         }
                     },
                     modifier = Modifier.padding(end = 4.dp),
@@ -90,7 +92,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     OutlinedTextField(
         value = state.quantity,
         onValueChange = viewModel::onQuantityChange,
-        label = { Text("Quantity") },
+        label = { Text(stringResource(R.string.item_quantity)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -100,7 +102,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         OutlinedTextField(
             value = state.priceAmount,
             onValueChange = viewModel::onPriceAmountChange,
-            label = { Text("Price") },
+            label = { Text(stringResource(R.string.item_price)) },
             singleLine = true,
             isError = state.priceError != null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -110,7 +112,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         OutlinedTextField(
             value = state.priceCurrency,
             onValueChange = viewModel::onPriceCurrencyChange,
-            label = { Text("Currency") },
+            label = { Text(stringResource(R.string.item_currency)) },
             singleLine = true,
             isError = state.currencyError != null,
             modifier = Modifier.widthIn(min = 88.dp),
@@ -125,7 +127,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     OutlinedTextField(
         value = state.note,
         onValueChange = viewModel::onNoteChange,
-        label = { Text("Note") },
+        label = { Text(stringResource(R.string.item_note)) },
         modifier = Modifier.fillMaxWidth(),
     )
 }

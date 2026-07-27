@@ -11,8 +11,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
-/** Notes: "Join list" — the paste-a-code fallback for invite links, reachable from the drawer. */
+/** Notes: stringResource(R.string.redeem_title) — the paste-a-code fallback for invite links, reachable from the drawer. */
 @Composable
 fun RedeemDialog(
     onRedeemed: (listId: String) -> Unit,
@@ -25,13 +27,13 @@ fun RedeemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Join list") },
+        title = { Text(stringResource(R.string.redeem_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = state.token,
                     onValueChange = viewModel::onTokenChange,
-                    label = { Text("Invite code or link") },
+                    label = { Text(stringResource(R.string.redeem_code)) },
                     singleLine = true,
                 )
                 state.errorMessage?.let { error ->
@@ -40,8 +42,8 @@ fun RedeemDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { viewModel.redeem() }, enabled = !state.isLoading) { Text("Join") }
+            TextButton(onClick = { viewModel.redeem() }, enabled = !state.isLoading) { Text(stringResource(R.string.action_join)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

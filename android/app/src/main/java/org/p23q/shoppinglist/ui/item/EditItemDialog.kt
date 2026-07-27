@@ -40,6 +40,8 @@ import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.data.db.Status
+import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.R
 
 /** Notes (List view): the row edit icon / a long-press opens this — every field including name,
  *  plus delete. Full-screen (T-80) rather than a floating AlertDialog: no tap-outside-to-cancel
@@ -61,10 +63,10 @@ fun EditItemDialog(
     if (state.isDeleteConfirmOpen) {
         AlertDialog(
             onDismissRequest = viewModel::cancelDelete,
-            title = { Text("Delete item?") },
+            title = { Text(stringResource(R.string.item_delete_title)) },
             text = { Text("\"${state.name}\" will be removed from the registry.") },
-            confirmButton = { TextButton(onClick = viewModel::confirmDelete) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
+            dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text(stringResource(R.string.action_cancel)) } },
         )
     } else {
         Dialog(
@@ -88,10 +90,10 @@ fun EditItemDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = onDismiss) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Cancel")
+                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
                         }
                         Text(
-                            "Edit item",
+                            stringResource(R.string.item_edit),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f).padding(start = 4.dp),
                         )
@@ -109,7 +111,7 @@ fun EditItemDialog(
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::onNameChange,
-                            label = { Text("Name") },
+                            label = { Text(stringResource(R.string.item_name)) },
                             singleLine = true,
                             isError = state.nameError != null,
                             modifier = Modifier.fillMaxWidth(),
@@ -121,7 +123,7 @@ fun EditItemDialog(
                         ItemFormFields(state = state, viewModel = viewModel)
                         Spacer(Modifier.height(8.dp))
 
-                        Text("Status", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.item_status), style = MaterialTheme.typography.labelMedium)
                         Row {
                             Status.entries.forEach { status ->
                                 FilterChip(
@@ -134,7 +136,7 @@ fun EditItemDialog(
                         }
                         Spacer(Modifier.height(8.dp))
 
-                        TextButton(onClick = viewModel::requestDelete) { Text("Delete") }
+                        TextButton(onClick = viewModel::requestDelete) { Text(stringResource(R.string.action_delete)) }
                     }
 
                     HorizontalDivider()
@@ -143,9 +145,9 @@ fun EditItemDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = viewModel::save) { Text("Save") }
+                        Button(onClick = viewModel::save) { Text(stringResource(R.string.action_save)) }
                     }
                 }
             }
