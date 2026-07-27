@@ -82,7 +82,7 @@ export default function AdminPage() {
       setPasswordError(null);
       return true;
     }
-    setPasswordError("Enter your password to reset or delete a user.");
+    setPasswordError(t("admin.passwordRequired"));
     passwordRef.current?.focus();
     return false;
   }
@@ -93,7 +93,7 @@ export default function AdminPage() {
       setUsers(usersResp.users);
       setAllowRegistration(settings.allow_registration);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load admin data.");
+      setError(err instanceof ApiError ? err.message : t("admin.loadFailed"));
     }
   }
 
@@ -112,7 +112,7 @@ export default function AdminPage() {
       const result = await api.setServerSettings(!allowRegistration);
       setAllowRegistration(result.allow_registration);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to update.");
+      setError(err instanceof ApiError ? err.message : t("admin.updateFailed"));
     }
   }
 
@@ -124,7 +124,7 @@ export default function AdminPage() {
       const result = await api.adminResetPassword(user.id, password);
       setResetResult({ email: user.email, password: result.password });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to reset password.");
+      setError(err instanceof ApiError ? err.message : t("admin.resetFailed"));
     }
   }
 
@@ -142,7 +142,7 @@ export default function AdminPage() {
       await api.adminDeleteUser(user.id, password);
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to delete user.");
+      setError(err instanceof ApiError ? err.message : t("admin.deleteFailed"));
     }
   }
 
@@ -151,15 +151,15 @@ export default function AdminPage() {
       <Link to="/settings" className="muted" style={{ fontSize: "0.85rem" }}>
         ← Settings
       </Link>
-      <h1 style={{ fontSize: "1.3rem" }}>Server admin</h1>
+      <h1 style={{ fontSize: "1.3rem" }}>{t("admin.title")}</h1>
 
       {error && <p className="error-text">{error}</p>}
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Registration</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("admin.registration")}</h2>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
-            <div>Allow new accounts</div>
+            <div>{t("admin.allowNewAccounts")}</div>
             <p className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
               Runtime override — resets to the server's configured default on restart.
             </p>
@@ -168,15 +168,15 @@ export default function AdminPage() {
             checked={allowRegistration === true}
             disabled={allowRegistration === null}
             onChange={toggleRegistration}
-            label="Allow new accounts"
+            label={t("admin.allowNewAccounts")}
           />
         </div>
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Users</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("admin.users")}</h2>
         <div className="form-field">
-          <label htmlFor="admin-password">Your password (required for reset/delete)</label>
+          <label htmlFor="admin-password">{t("admin.yourPassword")}</label>
           <input
             id="admin-password"
             type="password"
@@ -252,7 +252,7 @@ export default function AdminPage() {
       {deleteTarget && (
         <div className="dialog-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>Delete user?</h2>
+            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.deleteUserTitle")}</h2>
             <p>
               Permanently delete <strong>{deleteTarget.email}</strong> and all of their data. This
               can't be undone.

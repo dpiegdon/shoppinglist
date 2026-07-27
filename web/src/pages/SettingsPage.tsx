@@ -9,6 +9,9 @@ import type { Session } from "../api/contract";
 import { formatLastSeen } from "../lib/relativeTime";
 
 function useFormStatus() {
+  // A custom hook, so it takes the translate function itself rather than being handed one — the
+  // component's `t` is not in scope here.
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   async function run(fn: () => Promise<void>) {
@@ -18,7 +21,7 @@ function useFormStatus() {
       await fn();
       setOk(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong.");
+      setError(err instanceof ApiError ? err.message : t("error.generic"));
     }
   }
   return { error, ok, run };
@@ -135,7 +138,7 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount(e: FormEvent) {
     e.preventDefault();
-    if (!confirm("This permanently deletes your account. Are you sure?")) return;
+    if (!confirm(t("settings.deleteConfirm"))) return;
     await deleteStatus.run(async () => {
       await api.deleteAccount({ password: deletePassword });
       await logout();
@@ -145,13 +148,13 @@ export default function SettingsPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
-      <h1 style={{ fontSize: "1.3rem" }}>Account settings</h1>
+      <h1 style={{ fontSize: "1.3rem" }}>{t("settings.title")}</h1>
       <p className="muted">{account?.email}</p>
 
       {/* Admin-only entry point to the server console (T-107); shown from the login response flag. */}
       {account?.isAdmin && (
         <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Server admin</h2>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.serverAdmin")}</h2>
           <Link to="/admin" className="btn btn-secondary" style={{ display: "inline-block" }}>
             Open server admin
           </Link>
@@ -159,7 +162,7 @@ export default function SettingsPage() {
       )}
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Default currency</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.defaultCurrency")}</h2>
         <form onSubmit={handleCurrencySave} style={{ display: "flex", gap: "0.5rem" }}>
           <input
             value={currency}
@@ -181,7 +184,7 @@ export default function SettingsPage() {
       {/* Shown as a small indicator on shared-list item rows so collaborators can see who last
           touched an item (T-64); defaults to the email's initials until customized here. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Display initials</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.initials")}</h2>
         <form onSubmit={handleInitialsSave} style={{ display: "flex", gap: "0.5rem" }}>
           <input
             value={initials ?? ""}
@@ -198,10 +201,10 @@ export default function SettingsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Change password</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.changePassword")}</h2>
         <form onSubmit={handlePasswordSave}>
           <div className="form-field">
-            <label htmlFor="current-password">Current password</label>
+            <label htmlFor="current-password">{t("settings.currentPassword")}</label>
             <input
               id="current-password"
               type="password"
@@ -210,7 +213,7 @@ export default function SettingsPage() {
             />
           </div>
           <div className="form-field">
-            <label htmlFor="new-password">New password</label>
+            <label htmlFor="new-password">{t("settings.newPassword")}</label>
             <input
               id="new-password"
               type="password"
@@ -220,7 +223,7 @@ export default function SettingsPage() {
             />
           </div>
           {passwordStatus.error && <p className="error-text">{passwordStatus.error}</p>}
-          {passwordStatus.ok && <p className="muted">Password changed.</p>}
+          {passwordStatus.ok && <p className="muted">{t("settings.passwordChanged")}</p>}
           <button type="submit" className="btn">
             Change password
           </button>
@@ -228,7 +231,7 @@ export default function SettingsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Change email</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.changeEmail")}</h2>
         <form onSubmit={handleEmailSave}>
           <div className="form-field">
             <label htmlFor="email-password">Password</label>
@@ -240,11 +243,11 @@ export default function SettingsPage() {
             />
           </div>
           <div className="form-field">
-            <label htmlFor="new-email">New email</label>
+            <label htmlFor="new-email">{t("settings.newEmail")}</label>
             <input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
           </div>
           {emailStatus.error && <p className="error-text">{emailStatus.error}</p>}
-          {emailStatus.ok && <p className="muted">Email changed.</p>}
+          {emailStatus.ok && <p className="muted">{t("settings.emailChanged")}</p>}
           <button type="submit" className="btn">
             Change email
           </button>
@@ -252,7 +255,7 @@ export default function SettingsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>Sessions</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.sessions")}</h2>
         {sessionsStatus.error && <p className="error-text">{sessionsStatus.error}</p>}
         <ul style={{ listStyle: "none", padding: 0 }}>
           {sessions.map((s) => (
@@ -286,7 +289,7 @@ export default function SettingsPage() {
       </section>
 
       <section className="card" style={{ padding: "1rem", borderColor: "var(--color-danger)" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0, color: "var(--color-danger)" }}>Delete account</h2>
+        <h2 style={{ fontSize: "1rem", marginTop: 0, color: "var(--color-danger)" }}>{t("settings.deleteAccount")}</h2>
         <form onSubmit={handleDeleteAccount}>
           <div className="form-field">
             <label htmlFor="delete-password">Password</label>

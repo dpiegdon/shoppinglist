@@ -112,7 +112,53 @@ export const en = {
   "action.copy": "Copy",
   "action.copied": "Copied!",
 
+  "error.generic": "Something went wrong.",
+  "nav.menu": "Menu",
+
+  // ---- overview ----
+  "overview.title": "Your lists",
+  "overview.newList": "New list",
+  "overview.name": "Name",
+  "overview.kind.checklist": "Just names, categories and notes.",
+  "overview.kind.shopping": "Adds stores, quantity and price to each item.",
+
+  // ---- list ----
+  "list.notFound": "List not found (or you no longer have access).",
+  "list.backToOverview": "Back to overview",
+  "list.backToAllLists": "Back to all lists",
+  "list.allItems": "All items",
+  "list.search": "Search items…",
+  "list.empty": "Nothing on this list yet. Add an item to get started.",
+  "list.checkedOff": "Item checked off.",
+
+  // ---- settings ----
+  "settings.title": "Account settings",
+  "settings.serverAdmin": "Server admin",
+  "settings.defaultCurrency": "Default currency",
+  "settings.initials": "Display initials",
+  "settings.changePassword": "Change password",
+  "settings.currentPassword": "Current password",
+  "settings.newPassword": "New password",
+  "settings.passwordChanged": "Password changed.",
+  "settings.changeEmail": "Change email",
+  "settings.newEmail": "New email",
+  "settings.emailChanged": "Email changed.",
+  "settings.sessions": "Sessions",
+  "settings.deleteAccount": "Delete account",
+  "settings.deleteConfirm": "This permanently deletes your account. Are you sure?",
+
   // ---- admin ----
+  "admin.title": "Server admin",
+  "admin.registration": "Registration",
+  "admin.allowNewAccounts": "Allow new accounts",
+  "admin.users": "Users",
+  "admin.yourPassword": "Your password (required for reset/delete)",
+  "admin.deleteUserTitle": "Delete user?",
+  "admin.passwordRequired": "Enter your password to reset or delete a user.",
+  "admin.loadFailed": "Failed to load admin data.",
+  "admin.updateFailed": "Failed to update.",
+  "admin.resetFailed": "Failed to reset password.",
+  "admin.deleteFailed": "Failed to delete user.",
   "admin.sessionCount": "Sessions: {count}",
   "admin.isAdmin": "(admin)",
 } as const;

@@ -85,7 +85,7 @@ export default function OverviewPage() {
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ fontSize: "1.3rem" }}>Your lists</h1>
+        <h1 style={{ fontSize: "1.3rem" }}>{t("overview.title")}</h1>
         <button type="button" className="btn" onClick={() => setCreating(true)}>
           + New list
         </button>
@@ -128,9 +128,9 @@ export default function OverviewPage() {
       {creating && (
         <div className="dialog-overlay" onClick={() => setCreating(false)}>
           <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleCreate}>
-            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>New list</h2>
+            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("overview.newList")}</h2>
             <div className="form-field">
-              <label htmlFor="new-list-name">Name</label>
+              <label htmlFor="new-list-name">{t("overview.name")}</label>
               <input
                 id="new-list-name"
                 autoFocus
@@ -161,8 +161,8 @@ export default function OverviewPage() {
               ))}
               <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
                 {newKind === "checklist"
-                  ? "Just names, categories and notes."
-                  : "Adds stores, quantity and price to each item."}
+                  ? t("overview.kind.checklist")
+                  : t("overview.kind.shopping")}
               </p>
             </fieldset>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>

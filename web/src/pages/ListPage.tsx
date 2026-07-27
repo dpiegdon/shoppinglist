@@ -49,8 +49,8 @@ export default function ListPage() {
   if (!list) {
     return (
       <main style={{ padding: "1rem" }}>
-        <p className="muted">List not found (or you no longer have access).</p>
-        <Link to="/">Back to overview</Link>
+        <p className="muted">{t("list.notFound")}</p>
+        <Link to="/">{t("list.backToOverview")}</Link>
       </main>
     );
   }
@@ -206,7 +206,7 @@ export default function ListPage() {
             target. Link inherits the heading's type styles rather than looking like body-text. */}
         <Link
           to="/"
-          title="Back to all lists"
+          title={t("list.backToAllLists")}
           style={{ color: "inherit", textDecoration: "none" }}
         >
           {listFieldValue(list, "name")}
@@ -237,14 +237,14 @@ export default function ListPage() {
           </button>
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
-          <Link to={`/list/${listId}/registry`} className="btn-icon" aria-label="All items" title="All items">
+          <Link to={`/list/${listId}/registry`} className="btn-icon" aria-label={t("list.allItems")} title={t("list.allItems")}>
             ☰
           </Link>
           <Link
             to={`/list/${listId}/properties`}
             className="btn-icon"
-            aria-label="List properties"
-            title="List properties"
+            aria-label={t("listProps.title")}
+            title={t("listProps.title")}
           >
             ⚙
           </Link>
@@ -261,7 +261,7 @@ export default function ListPage() {
       </button>
 
       {groups.length === 0 && (
-        <p className="muted">Nothing on this list yet. Add an item to get started.</p>
+        <p className="muted">{t("list.empty")}</p>
       )}
 
       {groups.map((group) => (
@@ -303,7 +303,7 @@ export default function ListPage() {
             boxShadow: "var(--shadow)",
           }}
         >
-          <span>Item checked off.</span>
+          <span>{t("list.checkedOff")}</span>
           <button type="button" className="btn-secondary btn" onClick={handleUndo}>
             Undo
           </button>

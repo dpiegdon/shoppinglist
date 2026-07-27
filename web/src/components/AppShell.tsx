@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { SyncProvider } from "../hooks/SyncContext";
 import SyncIndicator from "./SyncIndicator";
+import { useT } from "../i18n";
 
 export default function AppShell({ children }: { children: ReactNode }) {
+  const t = useT();
   const [menuOpen, setMenuOpen] = useState(false);
   const { account, logout } = useAuth();
 
@@ -23,7 +25,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             className="btn-icon"
-            aria-label="Menu"
+            aria-label={t("nav.menu")}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
           >

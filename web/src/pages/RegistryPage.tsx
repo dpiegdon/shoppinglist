@@ -78,10 +78,10 @@ export default function RegistryPage() {
       <Link to={`/list/${listId}`} className="muted" style={{ fontSize: "0.85rem" }}>
         ← {listFieldValue(list, "name")}
       </Link>
-      <h1 style={{ fontSize: "1.3rem" }}>All items</h1>
+      <h1 style={{ fontSize: "1.3rem" }}>{t("list.allItems")}</h1>
       <input
         type="search"
-        placeholder="Search items…"
+        placeholder={t("list.search")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         style={{ width: "100%", marginBottom: "1rem" }}
