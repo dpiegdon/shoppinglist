@@ -1,0 +1,13 @@
+{
+  "body": "The app died on its first frame with:\n\n    java.lang.IllegalStateException: Expected an activity context for creating a\n    HiltViewModelFactory but instead found: android.app.ContextImpl\n\nIntroduced by T-111. `LocalizedContent` overrides `LocalContext` so that\n`stringResource` resolves in the chosen UI language, and it built that context\nwith `base.createConfigurationContext(configuration)`.\n\n`createConfigurationContext` returns a bare `ContextImpl`, which is NOT a\n`ContextWrapper`, so it has no `getBaseContext()`. Anything that walks up the\ncontext chain looking for the Activity therefore dead-ends at it. `hiltViewModel()`\ndoes exactly that walk. Because `LocalizedContent` wraps the whole app, EVERY\nscreen's `viewModel: X = hiltViewModel()` default parameter blew up \u2014 so the crash\nwas not screen-specific, it was \"the app cannot start\".\n\nWhy the existing tests did not catch it: the Compose UI tests pass their view\nmodels in explicitly (that is what the T-127 fix did), so no test ever exercised\nthe `hiltViewModel()` default underneath `LocalizedContent`. The unit tests for\nthe locale layer only asserted that strings resolved in the right language, which\n`createConfigurationContext` does correctly \u2014 the localization worked, only the\ncontext chain was broken.\n\nFix: build the context as `ContextThemeWrapper(base, 0)` +\n`applyOverrideConfiguration(configuration)`. A `ContextThemeWrapper` IS a\n`ContextWrapper`, so `base` stays reachable and the walk still finds the Activity,\nwhile the override configuration supplies the localized resources.\n\nRegression test: `LocalizedContextTest` asserts the returned context unwraps to\nthe Activity via the same `findActivity` walk HiltViewModelFactory performs, that\nGerman and Arabic strings still resolve, and that an application context (the\nnotification poster's caller) is still accepted. Confirmed the test FAILS against\nthe old `createConfigurationContext` implementation before being kept.\n\nShipped in the v1.9.0 build, which was retagged rather than released.",
+  "created_at": "2026-07-28T22:14:20+00:00",
+  "id": "T-129",
+  "labels": [
+    "android",
+    "i18n",
+    "bug"
+  ],
+  "priority": 1,
+  "title": "Android: app crashes on launch \u2014 LocalizedContent hid the Activity from hiltViewModel()",
+  "updated_at": "2026-07-28T22:14:20+00:00"
+}
