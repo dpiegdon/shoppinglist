@@ -8,11 +8,21 @@ interface ItemRowProps {
   authorMember?: Member;
   /** False on a checklist (T-110): hides the quantity/price detail line. */
   showShoppingFields?: boolean;
+  /** True while this row is animating away after being checked off (T-128). The row is already
+   *  logically gone — it is still mounted only so the exit can be seen — so it is inert. */
+  exiting?: boolean;
   onToggle: () => void;
   onEdit: () => void;
 }
 
-export default function ItemRow({ item, authorMember, showShoppingFields = true, onToggle, onEdit }: ItemRowProps) {
+export default function ItemRow({
+  item,
+  authorMember,
+  showShoppingFields = true,
+  exiting = false,
+  onToggle,
+  onEdit,
+}: ItemRowProps) {
   const checked = itemFieldValue(item, "status") === "checked";
   const category = itemFieldValue(item, "category");
   const quantity = itemFieldValue(item, "quantity");
@@ -28,11 +38,15 @@ export default function ItemRow({ item, authorMember, showShoppingFields = true,
 
   return (
     <div
-      className="card"
+      className={exiting ? "card item-exiting" : "card"}
       role="button"
-      tabIndex={0}
-      onClick={onToggle}
+      // Inert while exiting: without this a fast double-tap re-toggles a row that is on its way
+      // out, and the second tap lands on something the user can no longer really see.
+      tabIndex={exiting ? -1 : 0}
+      aria-hidden={exiting || undefined}
+      onClick={exiting ? undefined : onToggle}
       onKeyDown={(e) => {
+        if (exiting) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onToggle();

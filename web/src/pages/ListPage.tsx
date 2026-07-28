@@ -10,6 +10,8 @@ import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useShowChecked } from "../hooks/useShowChecked";
+import { useLiveListSync } from "../hooks/useLiveListSync";
+import { useExitingItems } from "../hooks/useExitingItems";
 import type { ItemObject, ItemStatus, Member } from "../api/contract";
 import { useT } from "../i18n";
 
@@ -38,12 +40,39 @@ export default function ListPage() {
     return () => { cancelled = true; };
   }, [listId]);
 
+  // Five-second refresh while this list is open and the tab is visible (T-128), so two people
+  // shopping together see each other's picks without either of them doing anything.
+  useLiveListSync();
+
   const list = listId ? lists.get(listId) : undefined;
 
   const listItems = useMemo(
     () => (listId ? Array.from(items.values()).filter((i) => i.list_id === listId) : []),
     [items, listId],
   );
+
+  const categoryOrder = list ? listFieldValue(list, "category_order") ?? [] : [];
+  // Checklists hide the shopping-only item fields (T-110).
+  const showShopping = showsShoppingFields(listKind(list));
+  const groups = useMemo(
+    () => (list ? groupVisibleItems(listItems, categoryOrder, showChecked) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [list, listItems, showChecked, JSON.stringify(categoryOrder)],
+  );
+  // Ids that just left the visible set stay rendered briefly so they can animate away (T-128).
+  // With "show checked" ON nothing ever leaves on a check-off, so this is naturally empty and the
+  // row simply gains its strike-through in place — which is what that setting asks for.
+  //
+  // Computed BEFORE the early returns below: these are hooks, so they have to run on every render
+  // or React sees a different hook count between renders ("Rendered more hooks than during the
+  // previous render") the first time a list fails to resolve.
+  const visibleIds = useMemo(
+    () => groups.flatMap((group) => group.items.map((item) => item.id)),
+    [groups],
+  );
+  // showChecked is the reset key: flipping it changes WHICH rows this view shows, so the rows it
+  // removes were not checked off and must not animate away.
+  const exitingIds = useExitingItems(visibleIds, showChecked);
 
   if (!listId) return <Navigate to="/" replace />;
   if (!list) {
@@ -55,10 +84,7 @@ export default function ListPage() {
     );
   }
 
-  const categoryOrder = listFieldValue(list, "category_order") ?? [];
-  // Checklists hide the shopping-only item fields (T-110).
-  const showShopping = showsShoppingFields(listKind(list));
-  const groups = groupVisibleItems(listItems, categoryOrder, showChecked);
+  const exitingItems = listItems.filter((item) => exitingIds.has(item.id));
   // Existing categories (canonical casing) for the item dialog's autocomplete (T-108).
   const categorySuggestions = distinctCanonicalCategories(
     listItems.map((i) => itemFieldValue(i, "category") ?? ""),
@@ -284,6 +310,14 @@ export default function ListPage() {
                 onEdit={() => setDialogItem(item)}
               />
             ))}
+            {/* Rows on their way out (T-128). Rendered in their old category so the animation
+                happens where the row actually was, rather than jumping to the end of the list. */}
+            {exitingItems
+              .filter((item) => categoryKey(itemFieldValue(item, "category") ?? "") === group.key)
+              .map((item) => (
+                <ItemRow key={item.id} item={item} showShoppingFields={showShopping} exiting
+                  onToggle={() => {}} onEdit={() => {}} />
+              ))}
           </div>
         </section>
       ))}

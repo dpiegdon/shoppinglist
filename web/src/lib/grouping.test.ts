@@ -74,7 +74,9 @@ describe("groupVisibleItems", () => {
   it("treats an empty-string category the same as uncategorized", () => {
     const items = [item("1", "Mystery item", "todo", "")];
     const groups = groupVisibleItems(items, [], false);
-    expect(groups).toEqual([{ category: "—", items: [items[0]] }]);
+    // `key` is the case-insensitive grouping key ("" = uncategorized), exposed in T-128 so a
+    // caller can match an item to its bucket without reverse-engineering the display symbol.
+    expect(groups).toEqual([{ key: "", category: "—", items: [items[0]] }]);
   });
 
   it("merges categories differing only in case into one group (T-108)", () => {

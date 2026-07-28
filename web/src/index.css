@@ -253,3 +253,55 @@ textarea:focus {
   max-height: 90vh;
   overflow-y: auto;
 }
+
+/* Check-off exit animation (T-128).
+   The row is struck through the moment its status changes, holds still briefly so the strike is
+   readable, then slides away and collapses. Deliberately short — this confirms a tap landed, it is
+   not a performance. Kept in step with EXIT_ANIMATION_MS in hooks/useExitingItems.ts. */
+@keyframes item-check-off {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 4rem;
+  }
+  to {
+    opacity: 0;
+    /* Toward the inline START, so it mirrors under RTL (T-126). CSS transforms are physical, so
+       the RTL direction is flipped explicitly below rather than by a logical property. */
+    transform: translateX(-100%);
+    max-height: 0;
+  }
+}
+
+@keyframes item-check-off-rtl {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 4rem;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+    max-height: 0;
+  }
+}
+
+.item-exiting {
+  /* 120ms of struck-through-but-still-there, then a 180ms slide. */
+  animation: item-check-off 180ms ease-in 120ms forwards;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+html[dir="rtl"] .item-exiting {
+  animation-name: item-check-off-rtl;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Instant, not slow: someone who has asked for less motion still needs to see the row go, they
+     just should not watch it travel. */
+  .item-exiting {
+    animation: none;
+    display: none;
+  }
+}

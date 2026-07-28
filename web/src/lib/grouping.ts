@@ -3,6 +3,11 @@ import { itemFieldValue } from "../hooks/useSync";
 import { canonicalCategoryNames, categoryKey, UNCATEGORIZED_LABEL } from "./categories";
 
 export interface CategoryGroup {
+  /** Case-insensitive grouping key ("" = uncategorized), as produced by `categoryKey`. Exposed
+   *  so a caller can match an item to its group without reverse-engineering the display name —
+   *  which is lossy, since the uncategorized bucket is labelled with a symbol (T-128). */
+  key: string;
+  /** Canonical display casing for this bucket. */
   category: string;
   items: ItemObject[];
 }
@@ -70,7 +75,7 @@ export function groupVisibleItems(
   orderedKeys.push(...remaining);
   if (byKey.has(UNCATEGORIZED_KEY)) orderedKeys.push(UNCATEGORIZED_KEY);
 
-  return orderedKeys.map((key) => ({ category: displayName(key), items: byKey.get(key)! }));
+  return orderedKeys.map((key) => ({ key, category: displayName(key), items: byKey.get(key)! }));
 }
 
 /** Every `checked` item regardless of visibility - used for the "Clear checked" count/bulk action. */
