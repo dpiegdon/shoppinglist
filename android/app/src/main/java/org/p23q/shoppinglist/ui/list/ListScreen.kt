@@ -57,6 +57,19 @@ import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.data.db.Status
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +81,17 @@ fun ListScreen(
     viewModel: ListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Five-second refresh while this list is on screen (T-128), so two people shopping together
+    // see each other's picks unattended. repeatOnLifecycle(RESUMED) is what makes "while the app
+    // is active" literal: the loop is cancelled the moment the app backgrounds or the screen
+    // leaves, so a pocketed phone makes no requests.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.liveSyncLoop()
+        }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val undoLabel = stringResource(R.string.action_undo)
@@ -161,6 +185,7 @@ fun ListScreen(
                         ItemRow(
                             showShoppingFields = state.showShoppingFields,
                             item = item,
+                            exiting = item.id in state.exitingItemIds,
                             defaultCurrency = state.defaultCurrency,
                             // Only when the list has 2+ members (T-64) — no clutter for the common
                             // solo case, where "who touched this" has exactly one possible answer.
@@ -202,10 +227,32 @@ private fun ItemRow(
     item: ItemEntity,
     defaultCurrency: String?,
     authorMember: MemberDto?,
+    /** True while this row is animating away after being checked off (T-128). It is already
+     *  logically gone — still on screen only so the exit can be seen — so it is inert. */
+    exiting: Boolean = false,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
 ) {
     val isChecked = item.status.value == Status.CHECKED.wireValue
+
+    // Toward the inline START, so it mirrors under RTL (T-126): sliding left is right in English
+    // and wrong in Arabic. slideOutHorizontally takes a physical offset, so the direction is
+    // resolved from the layout rather than hardcoded.
+    val towardStart = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1 else -1
+    // 120 ms of struck-through-but-still-there so the strike is readable, then a 180 ms slide.
+    val slide = tween<IntOffset>(durationMillis = 180, delayMillis = 120)
+    val collapse = tween<IntSize>(durationMillis = 180, delayMillis = 120)
+    val dim = tween<Float>(durationMillis = 180, delayMillis = 120)
+
+    AnimatedVisibility(
+        visible = !exiting,
+        // No enter transition: rows appear as part of a normal list update, and animating every
+        // arrival would make an ordinary sync look busy.
+        enter = EnterTransition.None,
+        exit = slideOutHorizontally(animationSpec = slide) { width -> towardStart * width } +
+            shrinkVertically(animationSpec = collapse) +
+            fadeOut(animationSpec = dim),
+    ) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -266,6 +313,7 @@ private fun ItemRow(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+    }
     }
 }
 

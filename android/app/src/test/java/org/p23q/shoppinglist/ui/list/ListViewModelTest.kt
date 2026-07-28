@@ -43,6 +43,8 @@ import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.launch
 
 @RunWith(RobolectricTestRunner::class)
 class ListViewModelTest {
@@ -399,5 +401,82 @@ class ListViewModelTest {
         viewModel.uiState.first { it.listName == "Groceries" }
 
         assertTrue(viewModel.uiState.value.members.isEmpty())
+    }
+
+    // ---- check-off exit animation + live sync (T-128) ------------------------
+
+    @Test
+    fun `a checked-off row stays on screen briefly so it can animate away`() = runTest(mainDispatcherRule.dispatcher) {
+        // groupByCategory drops a checked item as soon as its status changes, so without this hold
+        // the row leaves in the same frame it changes and simply vanishes — there is nothing to
+        // animate.
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.id == itemId } } }
+
+        viewModel.checkOff(itemId).join()
+
+        val exiting = viewModel.uiState.first { it.exitingItemIds.contains(itemId) }
+        assertTrue(
+            "the exiting row must still be rendered, not just flagged",
+            exiting.groups.any { group -> group.items.any { it.id == itemId } },
+        )
+
+        advanceTimeBy(EXIT_ANIMATION_MS + 50)
+        val settled = viewModel.uiState.value
+        assertTrue(settled.exitingItemIds.isEmpty())
+        assertTrue(settled.groups.none { group -> group.items.any { it.id == itemId } })
+    }
+
+    @Test
+    fun `turning show-checked off does not animate every checked row away`() = runTest(mainDispatcherRule.dispatcher) {
+        // A view change is not a check-off. Sliding twenty rows away because a filter flipped is
+        // slow and misrepresents what happened.
+        val a = itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
+        val b = itemsRepo.createItem(listId, "Bread", status = Status.CHECKED)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.listName == "Groceries" }
+
+        viewModel.toggleShowChecked().join()
+        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.id == a } } }
+
+        viewModel.toggleShowChecked().join()
+
+        val hidden = viewModel.uiState.value
+        assertTrue("no row should be exiting after a mere view change", hidden.exitingItemIds.isEmpty())
+        assertTrue(hidden.groups.none { group -> group.items.any { it.id == a || it.id == b } })
+    }
+
+    @Test
+    fun `a row unchecked mid-animation stops exiting instead of rendering twice`() = runTest(mainDispatcherRule.dispatcher) {
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.id == itemId } } }
+
+        viewModel.checkOff(itemId).join()
+        viewModel.uiState.first { it.exitingItemIds.contains(itemId) }
+
+        viewModel.uncheck(itemId).join()
+
+        val back = viewModel.uiState.first { it.exitingItemIds.isEmpty() }
+        val occurrences = back.groups.sumOf { group -> group.items.count { it.id == itemId } }
+        assertEquals("the row must appear exactly once, not live plus a ghost", 1, occurrences)
+    }
+
+    @Test
+    fun `the live sync loop re-syncs on its interval and stops when cancelled`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.listName == "Groceries" }
+        val before = syncer.calls
+
+        val loop = launch { viewModel.liveSyncLoop() }
+        advanceTimeBy(LIVE_SYNC_INTERVAL_MS * 3 + 100)
+        val during = syncer.calls
+        assertEquals("expected one sync per interval", 3, during - before)
+
+        // The screen cancels this when it stops being RESUMED; a pocketed phone must go quiet.
+        loop.cancel()
+        advanceTimeBy(LIVE_SYNC_INTERVAL_MS * 3)
+        assertEquals(during, syncer.calls)
     }
 }

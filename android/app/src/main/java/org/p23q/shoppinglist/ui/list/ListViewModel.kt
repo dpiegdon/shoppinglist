@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,6 +54,12 @@ data class ListUiState(
      * safe default, never wrong data) rather than erroring the whole screen.
      */
     val members: List<MemberDto> = emptyList(),
+    /**
+     * Rows that have just been checked off and are animating away (T-128). They are still in
+     * [groups] — logically gone, kept on screen only long enough for the exit to be seen, since a
+     * row removed from the list in the same frame it changes simply vanishes.
+     */
+    val exitingItemIds: Set<String> = emptySet(),
 )
 
 @HiltViewModel
@@ -78,6 +85,14 @@ class ListViewModel @Inject constructor(
 
     /** Guards the async restore below from clobbering a toggle that raced it (e.g. in a fast test). */
     private var showCheckedTouched = false
+
+    // --- check-off exit animation bookkeeping (T-128) ---
+    /** What was on screen last time, so a departure can be told from a first render. */
+    private var visibleIds: Set<String> = emptySet()
+    /** Detects a VIEW change rather than a check-off — see regroup(). */
+    private var lastShowChecked: Boolean? = null
+    /** One pending removal per exiting row. */
+    private val exitTimers = mutableMapOf<String, Job>()
 
     init {
         // Combine the list row with a SINGLE items stream (todo + checked together — ItemsRepo
@@ -172,12 +187,85 @@ class ListViewModel @Inject constructor(
     fun dismissUndo() = _uiState.update { it.copy(undoItemId = null, undoItemName = null) }
 
     private fun regroup() {
+        val showChecked = _uiState.value.showChecked
+        val visible = if (showChecked) todoItems + checkedItems else todoItems
+        val newIds = visible.mapTo(mutableSetOf()) { it.id }
+
+        // A change of VIEW is not a check-off. Turning "show checked" off removes every checked row
+        // at once; animating twenty rows sliding away would be slow and would misrepresent what
+        // happened. Adopt the new baseline silently instead.
+        val viewChanged = lastShowChecked != null && lastShowChecked != showChecked
+        lastShowChecked = showChecked
+        if (viewChanged) {
+            exitTimers.values.forEach { it.cancel() }
+            exitTimers.clear()
+        } else {
+            (visibleIds - newIds).forEach { startExit(it) }
+            // A row that came BACK mid-animation (rapid check/uncheck, or a collaborator undoing
+            // within the window) must stop exiting at once, or it renders twice.
+            newIds.intersect(exitTimers.keys).forEach { cancelExit(it) }
+        }
+        visibleIds = newIds
+
+        val exiting = exitTimers.keys.toSet()
+        val ghosts = (todoItems + checkedItems).filter { it.id in exiting }
         _uiState.update { state ->
-            val visible = if (state.showChecked) todoItems + checkedItems else todoItems
-            state.copy(groups = groupByCategory(visible, categoryOrder))
+            state.copy(
+                groups = groupByCategory(visible + ghosts, categoryOrder),
+                exitingItemIds = exiting,
+            )
+        }
+    }
+
+    private fun startExit(itemId: String) {
+        exitTimers[itemId]?.cancel()
+        exitTimers[itemId] = viewModelScope.launch {
+            delay(EXIT_ANIMATION_MS)
+            exitTimers.remove(itemId)
+            regroup()
+        }
+    }
+
+    private fun cancelExit(itemId: String) {
+        exitTimers.remove(itemId)?.cancel()
+    }
+
+    /**
+     * Re-syncs every [LIVE_SYNC_INTERVAL_MS] for as long as it is collected (T-128).
+     *
+     * A suspend loop rather than a WorkManager job on purpose: WorkManager's floor is 15 minutes
+     * and it is the wrong tool for a foreground loop — it stays responsible for background sync.
+     * The caller runs this inside repeatOnLifecycle(RESUMED), so it starts when the list is on
+     * screen and is cancelled the moment the app backgrounds or the screen leaves.
+     *
+     * Failures are swallowed: this is an unattended background refresh, and surfacing a transient
+     * network blip as an error every five seconds would be worse than the staleness it reports.
+     * SyncStatus already carries the health for the recency line.
+     */
+    suspend fun liveSyncLoop() {
+        while (true) {
+            delay(LIVE_SYNC_INTERVAL_MS)
+            runCatching { syncer.syncNow(emptyList()) }
         }
     }
 }
+
+/**
+ * How often an OPEN list re-syncs while the app is foregrounded (T-128).
+ *
+ * Five seconds is chosen for one scenario: two people shopping the same list in the same shop.
+ * Whoever picks the milk first must be visible to the other before they reach for it, and walking
+ * between aisles takes longer than this. Affordable because an already-up-to-date /sync measured
+ * 3.66 ms server-side — two shoppers at this interval cost well under 0.25% of one core.
+ */
+const val LIVE_SYNC_INTERVAL_MS = 5_000L
+
+/**
+ * How long a checked-off row stays on screen so it can animate away (T-128). Kept in step with the
+ * animation in ListScreen — if these disagree the row either vanishes mid-slide or lingers as a
+ * dead gap.
+ */
+const val EXIT_ANIMATION_MS = 300L
 
 private fun groupByCategory(items: List<ItemEntity>, categoryOrder: List<String>): List<ItemGroup> {
     // Case-insensitive (T-108): "Group"/"group" merge into one bucket, keyed by the lowercased
