@@ -1,0 +1,12 @@
+{
+  "body": "T-129 was a crash on the very first frame of the app, in code that had a green\ntest suite. The gap that let it through is structural, not a one-off oversight.\n\nEvery Compose UI test passes its view model in explicitly:\n\n    ListScreen(viewModel = fakeViewModel, ...)\n\nThat was the right fix for T-127 (the screens render in a bare ComponentActivity\nunder Robolectric, where `hiltViewModel()` cannot work). But it means the\n`viewModel: X = hiltViewModel()` DEFAULT \u2014 the path every real launch takes \u2014 is\nexecuted by no test at all. T-129 broke exactly that default, for every screen at\nonce, and nothing went red.\n\nThe locale unit tests did not catch it either, because they asserted the thing\nthat still worked: `createConfigurationContext` resolves strings in the right\nlanguage perfectly well. It only broke the context CHAIN, which nothing asserted\nuntil `LocalizedContextTest` was added.\n\nWanted: one smoke test that launches the real `MainActivity` through\n`HiltAndroidRule` / `createAndroidComposeRule<MainActivity>()` and asserts the\nfirst screen composes. It does not need to assert any behaviour \u2014 \"the app\nstarts\" is the entire point, and that single assertion would have failed loudly\non T-129.\n\nOpen question worth deciding first: whether this belongs in the Robolectric unit\nsuite (fast, runs in verify-all, but needs Hilt test wiring and a stand-in for\nthe server) or as an instrumented androidTest (realistic, but needs a device or\nemulator and so would not run in verify-all on this machine). The Robolectric\nroute is the one that would actually gate a release here.\n\nNot urgent \u2014 the specific bug is fixed and now has its own regression test. This\nis about the class of bug.",
+  "created_at": "2026-07-28T22:33:54+00:00",
+  "id": "T-130",
+  "labels": [
+    "android",
+    "testing"
+  ],
+  "priority": 3,
+  "title": "Android: no test exercises the hiltViewModel() default \u2014 the path every real launch takes",
+  "updated_at": "2026-07-28T22:33:54+00:00"
+}
