@@ -99,7 +99,7 @@
     <string name="listprops_type">Тип</string>
     <string name="listprops_kind_checklist">Товари мають назву, категорію та нотатку.</string>
     <string name="listprops_kind_shopping">Товари також мають магазини, кількість і ціну.</string>
-    <string name="listprops_kind_switch_help">Перемикання лише змінює, які поля показано — нічого не видаляється.</string>
+    <string name="listprops_kind_switch_help">Перемикання лише змінює, які поля показано — нічого не видаляється, тож ти можеш перемкнутися назад.</string>
     <string name="listprops_categories">Категорії</string>
     <string name="listprops_categories_help">Перетягни, щоб змінити порядок; торкнись ✎ , щоб перейменувати або виправити регістр</string>
     <string name="listprops_rename_category">Перейменувати %1$s</string>
@@ -126,7 +126,7 @@
     <string name="settings_currency">Валюта</string>
     <string name="settings_default_currency">Валюта за замовчуванням</string>
     <string name="settings_initials">Ініціали</string>
-    <string name="settings_display_initials">Показувати ініціали</string>
+    <string name="settings_display_initials">Показувані ініціали</string>
     <string name="settings_change_password">Змінити пароль</string>
     <string name="settings_current_password">Поточний пароль</string>
     <string name="settings_new_password">Новий пароль</string>

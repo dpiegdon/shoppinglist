@@ -151,7 +151,7 @@ export default function AdminPage() {
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <Link to="/settings" className="muted" style={{ fontSize: "0.85rem" }}>
-        ← Settings
+        {t("admin.backToSettings")}
       </Link>
       <h1 style={{ fontSize: "1.3rem" }}>{t("admin.title")}</h1>
 
@@ -163,7 +163,7 @@ export default function AdminPage() {
           <div>
             <div>{t("admin.allowNewAccounts")}</div>
             <p className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
-              Runtime override — resets to the server's configured default on restart.
+              {t("admin.registrationHelp")}
             </p>
           </div>
           <ToggleSwitch
@@ -208,8 +208,7 @@ export default function AdminPage() {
             }}
           >
             <p className="muted" style={{ margin: "0 0 0.3rem", fontSize: "0.85rem" }}>
-              New password for <strong>{resetResult.email}</strong> — shown once, send it to them
-              securely:
+              {t("admin.newPasswordFor", { email: resetResult.email })}
             </p>
             <code style={{ userSelect: "all" }}>{resetResult.password}</code>
           </div>
@@ -256,15 +255,14 @@ export default function AdminPage() {
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.deleteUserTitle")}</h2>
             <p>
-              Permanently delete <strong>{deleteTarget.email}</strong> and all of their data. This
-              can't be undone.
+              {t("admin.deleteUserBody", { email: deleteTarget.email })}
             </p>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>
                 {t("action.cancel")}
               </button>
               <button type="button" className="btn btn-danger" onClick={confirmDelete}>
-                Delete {deleteTarget.email}
+                {t("admin.deleteUserConfirm", { email: deleteTarget.email })}
               </button>
             </div>
           </div>

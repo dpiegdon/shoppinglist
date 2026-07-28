@@ -99,7 +99,7 @@
     <string name="listprops_type">类型</string>
     <string name="listprops_kind_checklist">物品包含名称、分类和备注。</string>
     <string name="listprops_kind_shopping">物品还包含商店、数量和价格。</string>
-    <string name="listprops_kind_switch_help">切换只改变显示哪些字段 — 不会删除任何内容。</string>
+    <string name="listprops_kind_switch_help">切换只改变显示哪些字段 — 不会删除任何内容，你可以随时切换回来。</string>
     <string name="listprops_categories">分类</string>
     <string name="listprops_categories_help">拖动手柄可重新排序；点按 ✎ 可重命名或修正大小写</string>
     <string name="listprops_rename_category">重命名 %1$s</string>
@@ -126,7 +126,7 @@
     <string name="settings_currency">货币</string>
     <string name="settings_default_currency">默认货币</string>
     <string name="settings_initials">缩写</string>
-    <string name="settings_display_initials">显示缩写</string>
+    <string name="settings_display_initials">显示的缩写</string>
     <string name="settings_change_password">修改密码</string>
     <string name="settings_current_password">当前密码</string>
     <string name="settings_new_password">新密码</string>

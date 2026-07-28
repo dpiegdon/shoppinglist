@@ -87,7 +87,7 @@ export default function OverviewPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ fontSize: "1.3rem" }}>{t("overview.title")}</h1>
         <button type="button" className="btn" onClick={() => setCreating(true)}>
-          + New list
+          {t("overview.newListButton")}
         </button>
       </div>
 

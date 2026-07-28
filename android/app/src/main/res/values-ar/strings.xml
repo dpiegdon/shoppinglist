@@ -99,7 +99,7 @@
     <string name="listprops_type">النوع</string>
     <string name="listprops_kind_checklist">العناصر لها اسم وفئة وملاحظة.</string>
     <string name="listprops_kind_shopping">العناصر لها أيضًا متاجر وكمية وسعر.</string>
-    <string name="listprops_kind_switch_help">التبديل يغيّر الحقول المعروضة فقط — لا يُحذف أي شيء.</string>
+    <string name="listprops_kind_switch_help">التبديل يغيّر الحقول المعروضة فقط — لا يُحذف أي شيء، ويمكنك التبديل مرة أخرى.</string>
     <string name="listprops_categories">الفئات</string>
     <string name="listprops_categories_help">اسحب المقبض لإعادة الترتيب؛ انقر ✎ لإعادة التسمية أو تصحيح الأحرف</string>
     <string name="listprops_rename_category">إعادة تسمية %1$s</string>
@@ -126,7 +126,7 @@
     <string name="settings_currency">العملة</string>
     <string name="settings_default_currency">العملة الافتراضية</string>
     <string name="settings_initials">الأحرف الأولى</string>
-    <string name="settings_display_initials">إظهار الأحرف الأولى</string>
+    <string name="settings_display_initials">الأحرف الأولى المعروضة</string>
     <string name="settings_change_password">تغيير كلمة المرور</string>
     <string name="settings_current_password">كلمة المرور الحالية</string>
     <string name="settings_new_password">كلمة المرور الجديدة</string>

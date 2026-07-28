@@ -128,7 +128,7 @@
     <string name="listprops_type">Type</string>
     <string name="listprops_kind_checklist">Items have a name, category and note.</string>
     <string name="listprops_kind_shopping">Items also have stores, quantity and price.</string>
-    <string name="listprops_kind_switch_help">Switching only changes which fields are shown — nothing is deleted.</string>
+    <string name="listprops_kind_switch_help">Switching only changes which fields are shown — nothing is deleted, so you can switch back.</string>
     <string name="listprops_categories">Categories</string>
     <string name="listprops_categories_help">Drag the handle to reorder; tap ✎ to rename or fix casing</string>
     <string name="listprops_rename_category">Rename %1$s</string>
@@ -157,7 +157,7 @@
     <string name="settings_currency">Currency</string>
     <string name="settings_default_currency">Default currency</string>
     <string name="settings_initials">Initials</string>
-    <string name="settings_display_initials">Display initials</string>
+    <string name="settings_display_initials">Displayed initials</string>
     <string name="settings_change_password">Change password</string>
     <string name="settings_current_password">Current password</string>
     <string name="settings_new_password">New password</string>

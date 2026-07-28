@@ -92,14 +92,14 @@
     <string name="sync_syncing">Wird synchronisiert…</string>
     <string name="sync_synced">Synchronisiert %1$s</string>
     <string name="sync_not_synced">Noch nicht synchronisiert</string>
-    <string name="sync_failed_since">Synchronisierung fehlgeschlagen · zuletzt erfolgreich %1$s</string>
+    <string name="sync_failed_since">Sync fehlgeschlagen · zuletzt erfolgreich %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d ausstehend</string>
     <string name="sync_attention">Artikel, die Aufmerksamkeit brauchen: %1$d</string>
     <string name="listprops_list_name">Listenname</string>
     <string name="listprops_type">Typ</string>
     <string name="listprops_kind_checklist">Artikel haben Name, Kategorie und Notiz.</string>
     <string name="listprops_kind_shopping">Artikel haben zusätzlich Geschäfte, Menge und Preis.</string>
-    <string name="listprops_kind_switch_help">Das Umschalten ändert nur, welche Felder angezeigt werden — es wird nichts gelöscht.</string>
+    <string name="listprops_kind_switch_help">Das Umschalten ändert nur, welche Felder angezeigt werden — es wird nichts gelöscht, du kannst also zurückwechseln.</string>
     <string name="listprops_categories">Kategorien</string>
     <string name="listprops_categories_help">Zum Umsortieren ziehen; auf ✎ tippen, um umzubenennen oder die Schreibweise zu korrigieren</string>
     <string name="listprops_rename_category">%1$s umbenennen</string>
@@ -126,7 +126,7 @@
     <string name="settings_currency">Währung</string>
     <string name="settings_default_currency">Standardwährung</string>
     <string name="settings_initials">Initialen</string>
-    <string name="settings_display_initials">Initialen anzeigen</string>
+    <string name="settings_display_initials">Anzuzeigende Initialen</string>
     <string name="settings_change_password">Passwort ändern</string>
     <string name="settings_current_password">Aktuelles Passwort</string>
     <string name="settings_new_password">Neues Passwort</string>

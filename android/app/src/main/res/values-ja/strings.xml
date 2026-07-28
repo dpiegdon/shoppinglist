@@ -99,7 +99,7 @@
     <string name="listprops_type">種類</string>
     <string name="listprops_kind_checklist">アイテムには名前、カテゴリ、メモがあります。</string>
     <string name="listprops_kind_shopping">アイテムには店舗、数量、価格もあります。</string>
-    <string name="listprops_kind_switch_help">切り替えても表示される項目が変わるだけで、削除はされません。</string>
+    <string name="listprops_kind_switch_help">切り替えても表示される項目が変わるだけで、削除はされません。元に戻すこともできます。</string>
     <string name="listprops_categories">カテゴリ</string>
     <string name="listprops_categories_help">ドラッグして並べ替え、✎ をタップして名前や表記を変更できます</string>
     <string name="listprops_rename_category">%1$s の名前を変更</string>
@@ -126,7 +126,7 @@
     <string name="settings_currency">通貨</string>
     <string name="settings_default_currency">デフォルトの通貨</string>
     <string name="settings_initials">イニシャル</string>
-    <string name="settings_display_initials">イニシャルを表示</string>
+    <string name="settings_display_initials">表示するイニシャル</string>
     <string name="settings_change_password">パスワードを変更</string>
     <string name="settings_current_password">現在のパスワード</string>
     <string name="settings_new_password">新しいパスワード</string>

@@ -305,14 +305,14 @@ export default function ListPropsPage() {
           </button>
         </div>
         <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.8rem" }}>
-          Switching only changes which fields are shown — nothing is deleted, so you can switch back.
+          {t("listProps.kindSwitchHelp")}
         </p>
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
-          Rename to fix casing or merge; use the arrows to set the order items are grouped in.
+          {t("listProps.categoriesHelp")}
         </p>
         {categoryKeys.length === 0 && <p className="muted">{t("listProps.noCategories")}</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
@@ -395,7 +395,7 @@ export default function ListPropsPage() {
             style={{ flex: 1 }}
           />
           <button type="submit" className="btn btn-secondary">
-            Add
+            {t("action.add")}
           </button>
         </form>
       </section>
@@ -409,7 +409,7 @@ export default function ListPropsPage() {
             {t("listProps.clearCheckedHelp")}
           </p>
           <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
-            Clear checked ({allChecked.length})
+            {t("listProps.clearCheckedCount", { count: allChecked.length })}
           </button>
         </section>
       )}
@@ -481,8 +481,7 @@ export default function ListPropsPage() {
             }}
           >
             <p className="muted" style={{ margin: "0 0 0.4rem", fontSize: "0.85rem" }}>
-              Invite link for <strong>{inviteLink.email}</strong> — send it to them. Only that email
-              can redeem it, and it expires in 7 days.
+              {t("listProps.inviteLinkFor", { email: inviteLink.email })}
             </p>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input

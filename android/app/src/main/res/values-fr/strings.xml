@@ -99,7 +99,7 @@
     <string name="listprops_type">Type</string>
     <string name="listprops_kind_checklist">Les articles ont un nom, une catégorie et une note.</string>
     <string name="listprops_kind_shopping">Les articles ont aussi magasins, quantité et prix.</string>
-    <string name="listprops_kind_switch_help">Le changement n\'affecte que les champs affichés — rien n\'est supprimé.</string>
+    <string name="listprops_kind_switch_help">Le changement n\'affecte que les champs affichés — rien n\'est supprimé, tu peux donc revenir en arrière.</string>
     <string name="listprops_categories">Catégories</string>
     <string name="listprops_categories_help">Fais glisser pour réordonner ; touche ✎ pour renommer ou corriger la casse</string>
     <string name="listprops_rename_category">Renommer %1$s</string>
@@ -126,7 +126,7 @@
     <string name="settings_currency">Devise</string>
     <string name="settings_default_currency">Devise par défaut</string>
     <string name="settings_initials">Initiales</string>
-    <string name="settings_display_initials">Afficher les initiales</string>
+    <string name="settings_display_initials">Initiales affichées</string>
     <string name="settings_change_password">Changer le mot de passe</string>
     <string name="settings_current_password">Mot de passe actuel</string>
     <string name="settings_new_password">Nouveau mot de passe</string>

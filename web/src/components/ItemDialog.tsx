@@ -425,7 +425,7 @@ export default function ItemDialog({
               placeholder={t("item.addStore")}
             />
             <button type="button" className="btn btn-secondary" onClick={addStore}>
-              Add
+              {t("action.add")}
             </button>
           </div>
           {values.stores.length > 0 && (

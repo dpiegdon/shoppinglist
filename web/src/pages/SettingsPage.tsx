@@ -180,7 +180,7 @@ export default function SettingsPage() {
         {currencyStatus.error && <p className="error-text">{currencyStatus.error}</p>}
         {currencyStatus.ok && <p className="muted">{t("common.saved")}</p>}
         <p className="muted" style={{ fontSize: "0.8rem" }}>
-          Currently cached: {getCachedDefaultCurrency()}
+          {t("settings.currentlyCached", { currency: getCachedDefaultCurrency() })}
         </p>
       </section>
 
@@ -268,7 +268,7 @@ export default function SettingsPage() {
             >
               <span>
                 <span>
-                  {s.device_label} {s.current && <strong>(this device)</strong>}
+                  {s.device_label} {s.current && <strong>{t("settings.thisDevice")}</strong>}
                 </span>
                 {/* The current session is active by definition — this request is it. Showing
                     its stored last_seen_at instead would read as up to 15 minutes stale, since

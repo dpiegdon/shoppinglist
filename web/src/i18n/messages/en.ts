@@ -98,6 +98,7 @@ export const en = {
   "listProps.makeShopping": "Make shopping list",
   "listProps.makeChecklist": "Make checklist",
   "listProps.categories": "Categories",
+  "listProps.categoriesHelp": "Rename to fix casing or merge; use the arrows to set the order items are grouped in.",
   "listProps.noCategories": "No categories yet.",
   "listProps.moveUp": "Move up",
   "listProps.moveDown": "Move down",
@@ -105,11 +106,15 @@ export const en = {
   "listProps.addToOrder": "Add to order",
   "listProps.addCategory": "Add category…",
   "listProps.clearChecked": "Clear checked",
+  // Separate from the heading above: the BUTTON carries the count, the section title must not.
+  "listProps.clearCheckedCount": "Clear checked ({count})",
+  "listProps.kindSwitchHelp": "Switching only changes which fields are shown — nothing is deleted, so you can switch back.",
   "listProps.notes": "Notes",
   "listProps.notesPlaceholder": "Gate code, store hours, anything worth remembering…",
   "listProps.members": "Members",
   "listProps.inviteByEmail": "Invite by email…",
   "listProps.inviteLink": "Invite link",
+  "listProps.inviteLinkFor": "Invite link for {email} — send it to them. Only that email can redeem it, and it expires in 7 days.",
   "listProps.clearCheckedHelp": "Move every checked item back to the backlog.",
   "listProps.saveNotes": "Save notes",
   "listProps.pendingInvites": "Pending invites",
@@ -127,21 +132,22 @@ export const en = {
   "action.invite": "Invite",
   "action.create": "Create",
   "action.duplicate": "Duplicate",
+  "action.add": "Add",
+  "action.copy": "Copy",
+  "action.copied": "Copied!",
   "common.saved": "Saved.",
+  "error.generic": "Something went wrong.",
 
   // ---- navigation ----
   "nav.overview": "Overview",
   "nav.joinList": "Join a list",
   "nav.logOut": "Log out",
-  "action.copy": "Copy",
-  "action.copied": "Copied!",
-
-  "error.generic": "Something went wrong.",
   "nav.menu": "Menu",
 
   // ---- overview ----
   "overview.title": "Your lists",
   "overview.newList": "New list",
+  "overview.newListButton": "+ New list",
   "overview.name": "Name",
   "overview.type": "Type",
   "overview.kind.checklist": "Just names, categories and notes.",
@@ -150,18 +156,27 @@ export const en = {
   // ---- list ----
   "list.notFound": "List not found (or you no longer have access).",
   "list.backToOverview": "Back to overview",
+  // Two routes back to the overview, worded differently on purpose: this is the visible breadcrumb
+  // above the title, `backToAllLists` below is the tooltip on the title itself (T-109).
+  // The arrow is part of the translation rather than the markup so that a right-to-left language
+  // can turn it around — "back" points rightward in Arabic. Same for `admin.backToSettings`.
+  "list.allListsLink": "← All lists",
   "list.backToAllLists": "Back to all lists",
   "list.allItems": "All items",
   "list.search": "Search items…",
   "list.empty": "Nothing on this list yet. Add an item to get started.",
   "list.checkedOff": "Item checked off.",
+  "list.showChecked": "Show checked",
+  "list.addItem": "+ Add item",
 
   // ---- settings ----
   "settings.language": "Language",
   "settings.title": "Account settings",
   "settings.serverAdmin": "Server admin",
   "settings.defaultCurrency": "Default currency",
-  "settings.initials": "Display initials",
+  "settings.currentlyCached": "Currently cached: {currency}",
+  "settings.thisDevice": "(this device)",
+  "settings.initials": "Displayed initials",
   "settings.changePassword": "Change password",
   "settings.currentPassword": "Current password",
   "settings.newPassword": "New password",
@@ -178,7 +193,12 @@ export const en = {
 
   // ---- admin ----
   "admin.title": "Server admin",
+  "admin.backToSettings": "← Settings",
   "admin.registration": "Registration",
+  "admin.registrationHelp": "Runtime override — resets to the server\'s configured default on restart.",
+  "admin.newPasswordFor": "New password for {email} — shown once, send it to them securely:",
+  "admin.deleteUserBody": "Permanently delete {email} and all of their data. This can\'t be undone.",
+  "admin.deleteUserConfirm": "Delete {email}",
   "admin.allowNewAccounts": "Allow new accounts",
   "admin.users": "Users",
   "admin.yourPassword": "Your password (required for reset/delete)",

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "./SettingsPage";
 import { AuthProvider } from "../auth/AuthContext";
 import * as api from "../api/client";
+import { en } from "../i18n/messages/en";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
@@ -27,16 +28,23 @@ function renderSettingsPage() {
   );
 }
 
+// Sections are located through the catalog rather than by literal text: these tests are about
+// which section a save came from, not about its wording, and a hardcoded copy of the heading
+// silently turns a copy edit into a test failure (it already did once, for "Displayed initials").
 function currencySection() {
-  return screen.getByRole("heading", { name: "Default currency" }).closest("section") as HTMLElement;
+  return screen
+    .getByRole("heading", { name: en["settings.defaultCurrency"] })
+    .closest("section") as HTMLElement;
 }
 
 function initialsSection() {
-  return screen.getByRole("heading", { name: "Display initials" }).closest("section") as HTMLElement;
+  return screen
+    .getByRole("heading", { name: en["settings.initials"] })
+    .closest("section") as HTMLElement;
 }
 
 function getCurrencySaveButton() {
-  return within(currencySection()).getByRole("button", { name: "Save" });
+  return within(currencySection()).getByRole("button", { name: en["action.save"] });
 }
 
 function getInitialsInput() {
@@ -44,7 +52,7 @@ function getInitialsInput() {
 }
 
 function getInitialsSaveButton() {
-  return within(initialsSection()).getByRole("button", { name: "Save" });
+  return within(initialsSection()).getByRole("button", { name: en["action.save"] });
 }
 
 describe("SettingsPage currency save must never write initials (T-101, T-103)", () => {

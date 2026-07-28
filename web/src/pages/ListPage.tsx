@@ -216,7 +216,7 @@ export default function ListPage() {
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <Link to="/" className="muted" style={{ fontSize: "0.85rem" }}>
-        ← All lists
+        {t("list.allListsLink")}
       </Link>
       <h1
         style={{
@@ -259,7 +259,8 @@ export default function ListPage() {
             aria-pressed={showChecked}
             onClick={toggleShowChecked}
           >
-            {showChecked ? "✓ " : ""}Show checked
+            {showChecked ? "✓ " : ""}
+            {t("list.showChecked")}
           </button>
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
@@ -283,7 +284,7 @@ export default function ListPage() {
         style={{ width: "100%", marginBottom: "0.75rem" }}
         onClick={() => setDialogItem("new")}
       >
-        + Add item
+        {t("list.addItem")}
       </button>
 
       {groups.length === 0 && (
