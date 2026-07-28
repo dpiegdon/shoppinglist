@@ -4,6 +4,12 @@ import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "
 import type { Locale } from "./locales";
 import { ar } from "./messages/ar";
 import { de } from "./messages/de";
+import { es } from "./messages/es";
+import { fr } from "./messages/fr";
+import { ja } from "./messages/ja";
+import { ptBR } from "./messages/pt-BR";
+import { uk } from "./messages/uk";
+import { zhHans } from "./messages/zh-Hans";
 import { en } from "./messages/en";
 import type { Catalog, MessageKey } from "./messages/en";
 
@@ -20,6 +26,12 @@ const STORAGE_KEY = "shoppinglist_locale";
 const catalogs = new Map<Locale, Catalog>([
   ["en", en],
   ["de", de],
+  ["es", es],
+  ["fr", fr],
+  ["pt-BR", ptBR],
+  ["zh-Hans", zhHans],
+  ["ja", ja],
+  ["uk", uk],
   ["ar", ar],
 ]);
 

@@ -1,8 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "./locales";
 import { registerCatalog, translate } from "./index";
 import { ar } from "./messages/ar";
 import { de } from "./messages/de";
+import { es } from "./messages/es";
+import { fr as frCatalog } from "./messages/fr";
+import { ja } from "./messages/ja";
+import { ptBR } from "./messages/pt-BR";
+import { uk } from "./messages/uk";
+import { zhHans } from "./messages/zh-Hans";
 import { en } from "./messages/en";
 
 describe("locale matching", () => {
@@ -71,11 +77,15 @@ describe("language list", () => {
 });
 
 describe("translate", () => {
-  // French, not German: registerCatalog mutates a module-level map shared by the whole file, so
-  // experimenting on a locale that ships a real catalog silently blanks it for every test that
-  // runs afterwards. Using a locale with no shipped catalog keeps these self-contained.
+  // registerCatalog mutates a module-level map shared by the whole file, so these tests MUST put
+  // it back. Picking a victim locale that ships no catalog used to work and no longer can — every
+  // shipped language now has one. Restoring is the only approach that stays correct as catalogs
+  // are added, which is exactly why the earlier version broke twice.
   beforeEach(() => {
     registerCatalog("fr", {});
+  });
+  afterEach(() => {
+    registerCatalog("fr", frCatalog);
   });
 
   it("returns the English text for English", () => {
@@ -101,7 +111,10 @@ describe("translate", () => {
   });
 
   it("falls back to English for a language with no catalog at all", () => {
-    expect(translate("ja", "login.email")).toBe("Email");
+    // Every shipped locale now has a catalog, so this needs a tag that is deliberately absent from
+    // the registry — the fallback still has to hold for one, or a future language would render its
+    // own key identifiers until someone noticed.
+    expect(translate("xx" as never, "login.email")).toBe("Email");
   });
 
   it("interpolates into a translated string, not just the English one", () => {
@@ -185,6 +198,12 @@ describe("translation catalogs (T-124)", () => {
   // to escape these checks — and that omission is itself caught by the registration test below.
   const catalogs: Array<[string, Record<string, string>]> = [
     ["de", de as Record<string, string>],
+    ["es", es as Record<string, string>],
+    ["fr", frCatalog as Record<string, string>],
+    ["pt-BR", ptBR as Record<string, string>],
+    ["zh-Hans", zhHans as Record<string, string>],
+    ["ja", ja as Record<string, string>],
+    ["uk", uk as Record<string, string>],
     ["ar", ar as Record<string, string>],
   ];
 
@@ -236,9 +255,15 @@ describe("catalog registration (T-124)", () => {
     // Any locale whose translate() output is identical to English for a key it demonstrably
     // translates is a locale that was never registered.
     const withCatalogs: Array<[string, Record<string, string>]> = [
-      ["de", de as Record<string, string>],
-      ["ar", ar as Record<string, string>],
-    ];
+    ["de", de as Record<string, string>],
+    ["es", es as Record<string, string>],
+    ["fr", frCatalog as Record<string, string>],
+    ["pt-BR", ptBR as Record<string, string>],
+    ["zh-Hans", zhHans as Record<string, string>],
+    ["ja", ja as Record<string, string>],
+    ["uk", uk as Record<string, string>],
+    ["ar", ar as Record<string, string>],
+  ];
     for (const [tag, catalog] of withCatalogs) {
       const [key, translated] = Object.entries(catalog).find(
         ([k, v]) => v !== (en as Record<string, string>)[k],

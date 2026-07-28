@@ -1,0 +1,167 @@
+import type { Catalog } from "./en";
+
+/**
+ * French (T-124). Needs a native review before being relied on.
+ *
+ * Tu-form throughout, matching the register the other catalogs use.
+ *
+ * `backlog` becomes "Plus tard" for the same reason as the Spanish catalog: the English word means
+ * nothing to a consumer audience here, and the literal options collide with "À acheter". The hint
+ * string carries the precise definition.
+ *
+ * Note French spacing: a narrow no-break space precedes ; : ! ? in French typography. These use a
+ * regular space rather than U+202F, since the invisible character is easy to lose in editing and
+ * the difference is typographic rather than semantic — worth raising with a native reviewer.
+ */
+export const fr: Catalog = {
+  "app.title": "Liste de courses",
+
+  "ago.justNow": "à l'instant",
+  "ago.minutes": "il y a {count} min",
+  "ago.hours": "il y a {count} h",
+  "ago.days": "il y a {count} j",
+
+  "login.email": "E-mail",
+  "login.password": "Mot de passe",
+  "login.submit": "Se connecter",
+  "login.register": "Créer un compte",
+  "login.toggleToRegister": "Pas encore de compte ? S'inscrire",
+  "login.toggleToLogin": "Déjà un compte ? Se connecter",
+  "login.registrationDisabled": "L'inscription est désactivée sur ce serveur.",
+  "login.getAndroidApp": "Télécharger l'application Android",
+  "login.error.generic": "Une erreur est survenue. Réessaie.",
+
+  "redeem.title": "Rejoindre une liste de courses",
+  "redeem.hint": "Colle le code d'invitation, ou ouvre directement le lien.",
+  "redeem.code": "Code d'invitation",
+  "redeem.join": "Rejoindre la liste",
+  "redeem.error": "Impossible d'utiliser cette invitation.",
+
+  "common.loading": "Chargement…",
+  "overview.empty": "Aucune liste pour l'instant. Crées-en une pour commencer.",
+  "list.registry.empty": "Aucun article trouvé.",
+  "list.categoryFixed": "Casse corrigée dans {category} : {count}",
+
+  "sync.syncing": "Synchronisation…",
+  "sync.synced": "Synchronisé {ago}",
+  "sync.failed": "Échec de la synchronisation",
+  "sync.failedSince": "Échec de la synchronisation · dernier succès {ago}",
+  "sync.never": "Pas encore synchronisé",
+  "sync.now": "Synchroniser maintenant",
+
+  "lastSeen.activeNow": "Actif maintenant",
+
+  "item.add": "Ajouter un article",
+  "item.edit": "Modifier l'article",
+  "item.name": "Nom",
+  "item.category": "Catégorie",
+  "item.stores": "Magasins",
+  "item.addStore": "Ajouter un magasin",
+  "item.quantity": "Quantité",
+  "item.price": "Prix",
+  "item.currency": "Devise",
+  "item.note": "Note",
+  "item.statusLabel": "Statut",
+  "item.status.todo": "À acheter",
+  "item.status.checked": "Fait",
+  "item.status.backlog": "Plus tard",
+  "item.status.backlogHint": "Pas encore sur la liste",
+  "item.addAnother": "Ajouter un autre",
+  "item.saveFailed": "Échec de l'enregistrement. Réessaie.",
+
+  "listProps.title": "Propriétés de la liste",
+  "listProps.name": "Nom",
+  "listProps.type": "Type",
+  "listProps.kind.checklist": "Les articles ont un nom, une catégorie et une note.",
+  "listProps.kind.shopping": "Les articles ont aussi magasins, quantité et prix.",
+  "listProps.makeShopping": "Convertir en liste de courses",
+  "listProps.makeChecklist": "Convertir en check-list",
+  "listProps.categories": "Catégories",
+  "listProps.noCategories": "Aucune catégorie pour l'instant.",
+  "listProps.moveUp": "Monter",
+  "listProps.moveDown": "Descendre",
+  "listProps.removeFromOrder": "Retirer de l'ordre",
+  "listProps.addToOrder": "Ajouter à l'ordre",
+  "listProps.addCategory": "Ajouter une catégorie…",
+  "listProps.clearChecked": "Réinitialiser les articles faits",
+  "listProps.notes": "Notes",
+  "listProps.notesPlaceholder": "Code du portail, horaires, tout ce qui mérite d'être noté…",
+  "listProps.members": "Membres",
+  "listProps.inviteByEmail": "Inviter par e-mail…",
+  "listProps.inviteLink": "Lien d'invitation",
+  "listProps.clearCheckedHelp": "Renvoie tous les articles faits vers « Plus tard ».",
+  "listProps.saveNotes": "Enregistrer les notes",
+  "listProps.pendingInvites": "Invitations en attente",
+  "listProps.leaveList": "Quitter la liste",
+  "listProps.membersFailed": "Impossible de charger les membres.",
+  "listProps.inviteFailed": "Impossible d'envoyer l'invitation.",
+  "listProps.leaveConfirm": "Quitter cette liste ? Tu en perdras l'accès.",
+
+  "action.cancel": "Annuler",
+  "action.save": "Enregistrer",
+  "action.delete": "Supprimer",
+  "action.revoke": "Révoquer",
+  "action.undo": "Annuler",
+  "action.invite": "Inviter",
+  "action.create": "Créer",
+  "action.duplicate": "Dupliquer",
+  "action.copy": "Copier",
+  "action.copied": "Copié !",
+  "common.saved": "Enregistré.",
+
+  "nav.overview": "Vue d'ensemble",
+  "nav.joinList": "Rejoindre une liste",
+  "nav.logOut": "Se déconnecter",
+  "nav.menu": "Menu",
+
+  "error.generic": "Une erreur est survenue.",
+
+  "overview.title": "Tes listes",
+  "overview.newList": "Nouvelle liste",
+  "overview.name": "Nom",
+  "overview.type": "Type",
+  "overview.kind.checklist": "Uniquement noms, catégories et notes.",
+  "overview.kind.shopping": "Ajoute magasins, quantité et prix à chaque article.",
+
+  "list.notFound": "Liste introuvable (ou tu n'y as plus accès).",
+  "list.backToOverview": "Retour à la vue d'ensemble",
+  "list.backToAllLists": "Retour à toutes les listes",
+  "list.allItems": "Tous les articles",
+  "list.search": "Rechercher des articles…",
+  "list.empty": "Rien sur cette liste pour l'instant. Ajoute un article pour commencer.",
+  "list.checkedOff": "Article coché.",
+
+  "settings.language": "Langue",
+  "settings.title": "Paramètres du compte",
+  "settings.serverAdmin": "Administration du serveur",
+  "settings.defaultCurrency": "Devise par défaut",
+  "settings.initials": "Initiales",
+  "settings.changePassword": "Changer le mot de passe",
+  "settings.currentPassword": "Mot de passe actuel",
+  "settings.newPassword": "Nouveau mot de passe",
+  "settings.passwordChanged": "Mot de passe modifié.",
+  "settings.changeEmail": "Changer l'e-mail",
+  "settings.newEmail": "Nouvel e-mail",
+  "settings.emailChanged": "E-mail modifié.",
+  "settings.sessions": "Sessions",
+  "settings.deleteAccount": "Supprimer le compte",
+  "settings.openServerAdmin": "Ouvrir l'administration du serveur",
+  "settings.deleteMyAccount": "Supprimer mon compte",
+  "settings.password": "Mot de passe",
+  "settings.deleteConfirm": "Cela supprimera définitivement ton compte. Es-tu sûr ?",
+
+  "admin.title": "Administration du serveur",
+  "admin.registration": "Inscription",
+  "admin.allowNewAccounts": "Autoriser les nouveaux comptes",
+  "admin.users": "Utilisateurs",
+  "admin.yourPassword": "Ton mot de passe (requis pour réinitialiser ou supprimer)",
+  "admin.deleteUserTitle": "Supprimer l'utilisateur ?",
+  "admin.resetPassword": "Réinitialiser le mot de passe",
+  "admin.passwordRequired": "Saisis ton mot de passe pour réinitialiser ou supprimer un utilisateur.",
+  "admin.loadFailed": "Impossible de charger les données d'administration.",
+  "admin.updateFailed": "Échec de la mise à jour.",
+  "admin.resetFailed": "Impossible de réinitialiser le mot de passe.",
+  "admin.deleteFailed": "Impossible de supprimer l'utilisateur.",
+  "admin.sessionCount": "Sessions : {count}",
+  "admin.isAdmin": "(admin)",
+};
