@@ -1,0 +1,13 @@
+{
+  "body": "Reported: burger menu -> \"Liste beitreten\" opened a dialog still in English\n(\"Join a list\", \"Invite code or link\", \"Cancel\", \"Join\") with the app set to\nGerman. The German strings all existed and the dialog used stringResource\nthroughout \u2014 the strings were never reaching it.\n\nA Compose Dialog/Popup does not compose into its caller's window. It builds a new\none from LocalView.current.context \u2014 the Activity \u2014 and that window's ComposeView\nre-provides the Android composition locals (LocalContext, LocalConfiguration,\nLocalResources) from that context on the way in. LocalizedContent's LocalContext\noverride is therefore discarded at the window boundary, and every stringResource\ninside ANY dialog resolved in the system language.\n\nThis affected all seven AlertDialogs plus the full-screen edit-item Dialog, not\nonly the reported one \u2014 the report was just the first dialog opened in German.\n\nCustom CompositionLocals are not overwritten that way, so the fix is a\nLocalAppLocale compositionLocal that survives the crossing, plus LocalizedOverlay\nto re-provide the Android locals from it inside the new window, and a\nLocalizedAlertDialog wrapper that applies it to every content slot. Dialogs now\nuse the wrapper; the edit-item Dialog and the language DropdownMenu wrap their\ncontent directly.\n\nSame family as T-129: LocalizedContent reaches only what is composed in the main\nwindow, and anything that opens a window of its own needs the override applied\nagain.\n\nAlso found and fixed while here: EditItemDialog had a hardcoded English sentence\n(\"...will be removed from the registry.\") that was not in strings.xml at all. Now\nitem_delete_registry_body, translated into all nine languages.\n\nRegression test: LocalizedDialogTest. It asserts the wrapper resolves German\ninside a dialog, AND that a plain AlertDialog under the same provider does not \u2014\nso the reason the wrapper exists is asserted rather than only commented.",
+  "created_at": "2026-07-28T23:27:04+00:00",
+  "id": "T-131",
+  "labels": [
+    "android",
+    "i18n",
+    "bug"
+  ],
+  "priority": 2,
+  "title": "Android: dialogs and popups ignored the chosen UI language",
+  "updated_at": "2026-07-28T23:27:04+00:00"
+}
