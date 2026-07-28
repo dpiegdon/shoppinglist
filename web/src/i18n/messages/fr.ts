@@ -135,7 +135,7 @@ export const fr: Catalog = {
   "settings.title": "Paramètres du compte",
   "settings.serverAdmin": "Administration du serveur",
   "settings.defaultCurrency": "Devise par défaut",
-  "settings.initials": "Initiales",
+  "settings.initials": "Afficher les initiales",
   "settings.changePassword": "Changer le mot de passe",
   "settings.currentPassword": "Mot de passe actuel",
   "settings.newPassword": "Nouveau mot de passe",

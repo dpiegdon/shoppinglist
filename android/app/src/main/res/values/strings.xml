@@ -38,7 +38,7 @@
     <string name="nav_account">Account</string>
     <string name="nav_server_admin">Server admin</string>
     <string name="nav_log_out">Log out</string>
-    <string name="nav_join_list">Join list</string>
+    <string name="nav_join_list">Join a list</string>
 
     <!-- relative time. Abbreviated units never inflect, so no plural rule is needed (T-123). -->
     <string name="ago_just_now">just now</string>
@@ -111,7 +111,7 @@
     <string name="registry_delete_item">Delete %1$s</string>
 
     <!-- redeem an invite -->
-    <string name="redeem_title">Join list</string>
+    <string name="redeem_title">Join a list</string>
     <string name="redeem_code">Invite code or link</string>
     <string name="redeem_joining">Joining list…</string>
 

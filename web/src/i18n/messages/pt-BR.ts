@@ -136,7 +136,7 @@ export const ptBR: Catalog = {
   "settings.title": "Configurações da conta",
   "settings.serverAdmin": "Administração do servidor",
   "settings.defaultCurrency": "Moeda padrão",
-  "settings.initials": "Iniciais",
+  "settings.initials": "Mostrar iniciais",
   "settings.changePassword": "Alterar senha",
   "settings.currentPassword": "Senha atual",
   "settings.newPassword": "Nova senha",

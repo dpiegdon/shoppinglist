@@ -138,7 +138,7 @@ export const ja: Catalog = {
   "settings.title": "アカウント設定",
   "settings.serverAdmin": "サーバー管理",
   "settings.defaultCurrency": "デフォルトの通貨",
-  "settings.initials": "表示イニシャル",
+  "settings.initials": "イニシャルを表示",
   "settings.changePassword": "パスワードを変更",
   "settings.currentPassword": "現在のパスワード",
   "settings.newPassword": "新しいパスワード",

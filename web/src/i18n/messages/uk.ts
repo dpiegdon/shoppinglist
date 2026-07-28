@@ -137,7 +137,7 @@ export const uk: Catalog = {
   "settings.title": "Налаштування облікового запису",
   "settings.serverAdmin": "Адміністрування сервера",
   "settings.defaultCurrency": "Валюта за замовчуванням",
-  "settings.initials": "Ініціали",
+  "settings.initials": "Показувати ініціали",
   "settings.changePassword": "Змінити пароль",
   "settings.currentPassword": "Поточний пароль",
   "settings.newPassword": "Новий пароль",

@@ -131,8 +131,8 @@
     <string name="settings_current_password">Contraseña actual</string>
     <string name="settings_new_password">Contraseña nueva</string>
     <string name="settings_confirm_password">Confirmar contraseña</string>
-    <string name="settings_change_email">Cambiar correo</string>
-    <string name="settings_new_email">Nuevo correo</string>
+    <string name="settings_change_email">Cambiar correo electrónico</string>
+    <string name="settings_new_email">Nuevo correo electrónico</string>
     <string name="settings_password">Contraseña</string>
     <string name="settings_sessions">Sesiones</string>
     <string name="settings_unknown_device">Dispositivo desconocido</string>

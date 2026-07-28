@@ -139,7 +139,7 @@ export const ar: Catalog = {
   "settings.title": "إعدادات الحساب",
   "settings.serverAdmin": "إدارة الخادم",
   "settings.defaultCurrency": "العملة الافتراضية",
-  "settings.initials": "الأحرف الأولى",
+  "settings.initials": "إظهار الأحرف الأولى",
   "settings.changePassword": "تغيير كلمة المرور",
   "settings.currentPassword": "كلمة المرور الحالية",
   "settings.newPassword": "كلمة المرور الجديدة",

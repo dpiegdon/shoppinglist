@@ -86,7 +86,7 @@
     <string name="registry_search">Buscar</string>
     <string name="registry_item_deleted">%1$s excluído</string>
     <string name="registry_delete_item">Excluir %1$s</string>
-    <string name="redeem_title">Entrar na lista</string>
+    <string name="redeem_title">Entrar em uma lista</string>
     <string name="redeem_code">Código ou link do convite</string>
     <string name="redeem_joining">Entrando na lista…</string>
     <string name="sync_syncing">Sincronizando…</string>
