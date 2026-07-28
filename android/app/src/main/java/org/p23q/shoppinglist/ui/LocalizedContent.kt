@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui
 
 import android.content.Context
 import android.content.res.Configuration
+import android.view.ContextThemeWrapper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -54,5 +55,18 @@ fun localizedContext(base: Context, locale: AppLocale): Context {
         setLocale(javaLocale)
         setLayoutDirection(javaLocale)
     }
-    return base.createConfigurationContext(configuration)
+    // ContextThemeWrapper + applyOverrideConfiguration, NOT createConfigurationContext.
+    //
+    // createConfigurationContext returns a bare ContextImpl, which is NOT a ContextWrapper — so
+    // anything that walks up the context chain looking for the Activity dead-ends at it.
+    // hiltViewModel() does exactly that walk, and since LocalizedContent overrides LocalContext
+    // for the whole app, EVERY screen's `viewModel: X = hiltViewModel()` default blew up on the
+    // first frame: "Expected an activity context for creating a HiltViewModelFactory but instead
+    // found: android.app.ContextImpl". The app could not start.
+    //
+    // A ContextThemeWrapper keeps `base` reachable through getBaseContext(), so the walk still
+    // finds the Activity, while applyOverrideConfiguration supplies the localized resources.
+    return ContextThemeWrapper(base, /* themeResId = */ 0).apply {
+        applyOverrideConfiguration(configuration)
+    }
 }
