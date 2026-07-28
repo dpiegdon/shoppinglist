@@ -1,0 +1,171 @@
+import type { Catalog } from "./en";
+
+/**
+ * Arabic (T-124). NEEDS A NATIVE REVIEW before being relied on — see the ticket.
+ *
+ * This is the catalog that exercises the RTL work from T-126 rather than merely adding strings:
+ * selecting it flips `<html dir>` and every logical CSS property in one commit, so if the layout
+ * mirroring or the bidi isolation is wrong, it shows up here first.
+ *
+ * Conventions:
+ * - Modern Standard Arabic, informal register to match the app's tone.
+ * - Latin-script terms that users will actually see elsewhere (currency codes, the wire values)
+ *   are left alone; only labels are translated.
+ * - Unit abbreviations use the Arabic conventional short forms. They do not inflect, which is what
+ *   keeps plural handling out of the codebase (T-123) — and matters more here than anywhere else,
+ *   since Arabic otherwise needs six plural forms.
+ * - Digits stay ASCII. The wire format for a price is an ASCII decimal string (T-125), and mixing
+ *   Eastern Arabic numerals into UI labels next to ASCII-only inputs reads inconsistently.
+ */
+export const ar: Catalog = {
+  "app.title": "قائمة التسوق",
+
+  "ago.justNow": "الآن",
+  "ago.minutes": "قبل {count} د",
+  "ago.hours": "قبل {count} س",
+  "ago.days": "قبل {count} ي",
+
+  "login.email": "البريد الإلكتروني",
+  "login.password": "كلمة المرور",
+  "login.submit": "تسجيل الدخول",
+  "login.register": "إنشاء حساب",
+  "login.toggleToRegister": "لا تملك حسابًا؟ سجّل الآن",
+  "login.toggleToLogin": "لديك حساب؟ سجّل الدخول",
+  "login.registrationDisabled": "التسجيل معطّل على هذا الخادم.",
+  "login.getAndroidApp": "تنزيل تطبيق أندرويد",
+  "login.error.generic": "حدث خطأ ما. حاول مرة أخرى.",
+
+  "redeem.title": "الانضمام إلى قائمة تسوق",
+  "redeem.hint": "الصق رمز الدعوة، أو افتح رابط الدعوة مباشرة.",
+  "redeem.code": "رمز الدعوة",
+  "redeem.join": "الانضمام إلى القائمة",
+  "redeem.error": "تعذّر استخدام هذه الدعوة.",
+
+  "common.loading": "جارٍ التحميل…",
+  "overview.empty": "لا توجد قوائم بعد. أنشئ واحدة للبدء.",
+  "list.registry.empty": "لم يتم العثور على عناصر.",
+  "list.categoryFixed": "تم تصحيح الأحرف في {category}: {count}",
+
+  "sync.syncing": "جارٍ المزامنة…",
+  "sync.synced": "تمت المزامنة {ago}",
+  "sync.failed": "فشلت المزامنة",
+  "sync.failedSince": "فشلت المزامنة · آخر نجاح {ago}",
+  "sync.never": "لم تتم المزامنة بعد",
+  "sync.now": "مزامنة الآن",
+
+  "lastSeen.activeNow": "نشط الآن",
+
+  "item.add": "إضافة عنصر",
+  "item.edit": "تعديل العنصر",
+  "item.name": "الاسم",
+  "item.category": "الفئة",
+  "item.stores": "المتاجر",
+  "item.addStore": "إضافة متجر",
+  "item.quantity": "الكمية",
+  "item.price": "السعر",
+  "item.currency": "العملة",
+  "item.note": "ملاحظة",
+  "item.statusLabel": "الحالة",
+  "item.status.todo": "للشراء",
+  "item.status.checked": "تم",
+  "item.status.backlog": "قائمة الانتظار",
+  "item.status.backlogHint": "ليس على القائمة بعد",
+  "item.addAnother": "إضافة عنصر آخر",
+  "item.saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
+
+  "listProps.title": "خصائص القائمة",
+  "listProps.name": "الاسم",
+  "listProps.type": "النوع",
+  "listProps.kind.checklist": "العناصر لها اسم وفئة وملاحظة.",
+  "listProps.kind.shopping": "العناصر لها أيضًا متاجر وكمية وسعر.",
+  "listProps.makeShopping": "تحويل إلى قائمة تسوق",
+  "listProps.makeChecklist": "تحويل إلى قائمة مهام",
+  "listProps.categories": "الفئات",
+  "listProps.noCategories": "لا توجد فئات بعد.",
+  "listProps.moveUp": "نقل لأعلى",
+  "listProps.moveDown": "نقل لأسفل",
+  "listProps.removeFromOrder": "إزالة من الترتيب",
+  "listProps.addToOrder": "إضافة إلى الترتيب",
+  "listProps.addCategory": "إضافة فئة…",
+  "listProps.clearChecked": "إعادة المكتملة",
+  "listProps.notes": "ملاحظات",
+  "listProps.notesPlaceholder": "رمز البوابة، ساعات العمل، أي شيء يستحق التذكّر…",
+  "listProps.members": "الأعضاء",
+  "listProps.inviteByEmail": "دعوة عبر البريد الإلكتروني…",
+  "listProps.inviteLink": "رابط الدعوة",
+  "listProps.clearCheckedHelp": "إعادة كل العناصر المكتملة إلى قائمة الانتظار.",
+  "listProps.saveNotes": "حفظ الملاحظات",
+  "listProps.pendingInvites": "الدعوات المعلّقة",
+  "listProps.leaveList": "مغادرة القائمة",
+  "listProps.membersFailed": "تعذّر تحميل الأعضاء.",
+  "listProps.inviteFailed": "تعذّر إرسال الدعوة.",
+  "listProps.leaveConfirm": "مغادرة هذه القائمة؟ ستفقد إمكانية الوصول إليها.",
+
+  "action.cancel": "إلغاء",
+  "action.save": "حفظ",
+  "action.delete": "حذف",
+  "action.revoke": "إبطال",
+  "action.undo": "تراجع",
+  "action.invite": "دعوة",
+  "action.create": "إنشاء",
+  "action.duplicate": "تكرار",
+  "action.copy": "نسخ",
+  "action.copied": "تم النسخ!",
+  "common.saved": "تم الحفظ.",
+
+  "nav.overview": "نظرة عامة",
+  "nav.joinList": "الانضمام إلى قائمة",
+  "nav.logOut": "تسجيل الخروج",
+  "nav.menu": "القائمة",
+
+  "error.generic": "حدث خطأ ما.",
+
+  "overview.title": "قوائمك",
+  "overview.newList": "قائمة جديدة",
+  "overview.name": "الاسم",
+  "overview.type": "النوع",
+  "overview.kind.checklist": "أسماء وفئات وملاحظات فقط.",
+  "overview.kind.shopping": "يضيف المتاجر والكمية والسعر لكل عنصر.",
+
+  "list.notFound": "لم يتم العثور على القائمة (أو لم يعد لديك وصول إليها).",
+  "list.backToOverview": "العودة إلى النظرة العامة",
+  "list.backToAllLists": "العودة إلى كل القوائم",
+  "list.allItems": "كل العناصر",
+  "list.search": "البحث عن عناصر…",
+  "list.empty": "لا يوجد شيء في هذه القائمة بعد. أضف عنصرًا للبدء.",
+  "list.checkedOff": "تم شطب العنصر.",
+
+  "settings.language": "اللغة",
+  "settings.title": "إعدادات الحساب",
+  "settings.serverAdmin": "إدارة الخادم",
+  "settings.defaultCurrency": "العملة الافتراضية",
+  "settings.initials": "الأحرف الأولى",
+  "settings.changePassword": "تغيير كلمة المرور",
+  "settings.currentPassword": "كلمة المرور الحالية",
+  "settings.newPassword": "كلمة المرور الجديدة",
+  "settings.passwordChanged": "تم تغيير كلمة المرور.",
+  "settings.changeEmail": "تغيير البريد الإلكتروني",
+  "settings.newEmail": "البريد الإلكتروني الجديد",
+  "settings.emailChanged": "تم تغيير البريد الإلكتروني.",
+  "settings.sessions": "الجلسات",
+  "settings.deleteAccount": "حذف الحساب",
+  "settings.openServerAdmin": "فتح إدارة الخادم",
+  "settings.deleteMyAccount": "حذف حسابي",
+  "settings.password": "كلمة المرور",
+  "settings.deleteConfirm": "سيؤدي هذا إلى حذف حسابك نهائيًا. هل أنت متأكد؟",
+
+  "admin.title": "إدارة الخادم",
+  "admin.registration": "التسجيل",
+  "admin.allowNewAccounts": "السماح بحسابات جديدة",
+  "admin.users": "المستخدمون",
+  "admin.yourPassword": "كلمة المرور الخاصة بك (مطلوبة لإعادة التعيين/الحذف)",
+  "admin.deleteUserTitle": "حذف المستخدم؟",
+  "admin.resetPassword": "إعادة تعيين كلمة المرور",
+  "admin.passwordRequired": "أدخل كلمة المرور لإعادة تعيين مستخدم أو حذفه.",
+  "admin.loadFailed": "تعذّر تحميل بيانات الإدارة.",
+  "admin.updateFailed": "تعذّر التحديث.",
+  "admin.resetFailed": "تعذّرت إعادة تعيين كلمة المرور.",
+  "admin.deleteFailed": "تعذّر حذف المستخدم.",
+  "admin.sessionCount": "الجلسات: {count}",
+  "admin.isAdmin": "(مسؤول)",
+};

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "./locales";
 import { registerCatalog, translate } from "./index";
+import { ar } from "./messages/ar";
 import { de } from "./messages/de";
 import { en } from "./messages/en";
 
@@ -180,7 +181,12 @@ describe("translation catalogs (T-124)", () => {
   const PLACEHOLDER = /\{(\w+)\}/g;
   const placeholdersOf = (s: string) => new Set(Array.from(s.matchAll(PLACEHOLDER), (m) => m[1]));
 
-  const catalogs: Array<[string, Record<string, string>]> = [["de", de as Record<string, string>]];
+    // Every shipped catalog, so adding one to the registry without adding it here is the only way
+  // to escape these checks — and that omission is itself caught by the registration test below.
+  const catalogs: Array<[string, Record<string, string>]> = [
+    ["de", de as Record<string, string>],
+    ["ar", ar as Record<string, string>],
+  ];
 
   for (const [name, catalog] of catalogs) {
     it(`${name}: every translated string keeps its source placeholders`, () => {
@@ -229,12 +235,51 @@ describe("catalog registration (T-124)", () => {
   it("every shipped locale with a catalog file is actually registered", () => {
     // Any locale whose translate() output is identical to English for a key it demonstrably
     // translates is a locale that was never registered.
-    const withCatalogs: Array<[string, Record<string, string>]> = [["de", de as Record<string, string>]];
+    const withCatalogs: Array<[string, Record<string, string>]> = [
+      ["de", de as Record<string, string>],
+      ["ar", ar as Record<string, string>],
+    ];
     for (const [tag, catalog] of withCatalogs) {
       const [key, translated] = Object.entries(catalog).find(
         ([k, v]) => v !== (en as Record<string, string>)[k],
       )!;
       expect(translate(tag as never, key as never), `${tag} is not registered`).toBe(translated);
+    }
+  });
+});
+
+describe("Arabic engages the RTL machinery end-to-end (T-126/T-124)", () => {
+  it("flips the document direction when Arabic is selected", async () => {
+    // The point of shipping Arabic early: everything RTL in T-126 was built without a single real
+    // Arabic string to test against. This asserts the provider actually drives <html dir>, which
+    // is what every logical CSS property in the app keys off.
+    const { renderHook, act } = await import("@testing-library/react");
+    const { I18nProvider, useI18n } = await import("./index");
+
+    const { result } = renderHook(() => useI18n(), { wrapper: I18nProvider });
+
+    act(() => result.current.setLocale("ar"));
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(document.documentElement.lang).toBe("ar");
+
+    act(() => result.current.setLocale("de"));
+    expect(document.documentElement.dir).toBe("ltr");
+  });
+
+  it("translates and isolates in the same pass", () => {
+    // An Arabic UI string with a Latin user value embedded: the value must be isolated so it
+    // cannot drag the Arabic punctuation around it.
+    const rendered = translate("ar", "list.categoryFixed", { category: "Dairy", count: 3 });
+
+    expect(rendered).toContain("Dairy");
+    expect(rendered).not.toBe("Casing fixed in Dairy: 3");
+  });
+
+  it("keeps prices ASCII, matching the wire format", () => {
+    // T-125: price amounts are ASCII decimals on the wire. Eastern Arabic numerals in UI labels
+    // next to an ASCII-only input would read inconsistently, so the catalog stays ASCII-digit.
+    for (const value of Object.values(ar)) {
+      expect(value, `non-ASCII digit in: ${value}`).not.toMatch(/[٠-٩۰-۹]/);
     }
   });
 });
