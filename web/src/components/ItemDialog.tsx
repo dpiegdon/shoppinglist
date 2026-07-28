@@ -507,6 +507,14 @@ export default function ItemDialog({
               <option value="checked">{t("item.status.checked")}</option>
               <option value="backlog">{t("item.status.backlog")}</option>
             </select>
+            {/* The gloss lives beside the control rather than inside the option label (T-124):
+                "Backlog" alone does not survive translation, but welding the explanation into the
+                label would drag it onto the Registry chips too, where there is no room. */}
+            {status === "backlog" && (
+              <p className="muted" style={{ fontSize: "0.8rem", margin: "0.25rem 0 0" }}>
+                {t("item.status.backlogHint")}
+              </p>
+            )}
           </div>
         )}
 

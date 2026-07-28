@@ -11,14 +11,13 @@ import org.p23q.shoppinglist.R
  * A resource id rather than a String since T-111: this enum has no Context to resolve one with,
  * and the label has to follow the chosen language like everything else.
  *
- * Note these are the Registry screen's short chip labels ("To buy", "Done") and are deliberately
- * NOT the same strings as the item dialog's radio options ("Todo", "Checked", "Backlog (not on
- * list)"). Unifying that wording is a UX decision, not a mechanical one.
+ * One canonical wording, shared by the Registry chips and the item dialog and matching the web
+ * client word for word (T-124).
  */
 enum class Status(val wireValue: String, @param:StringRes val label: Int) {
-    BACKLOG("backlog", R.string.status_chip_backlog),
-    TODO("todo", R.string.status_chip_todo),
-    CHECKED("checked", R.string.status_chip_checked);
+    BACKLOG("backlog", R.string.status_backlog),
+    TODO("todo", R.string.status_todo),
+    CHECKED("checked", R.string.status_checked);
 
     companion object {
         fun fromWireValue(value: String): Status = entries.first { it.wireValue == value }

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "./locales";
 import type { Locale } from "./locales";
+import { de } from "./messages/de";
 import { en } from "./messages/en";
 import type { Catalog, MessageKey } from "./messages/en";
 
@@ -15,7 +16,10 @@ const STORAGE_KEY = "shoppinglist_locale";
  * translation — it must always be present, synchronously, or a missing key would render as its
  * own identifier. Others are registered by [[registerCatalog]] as T-124 adds them.
  */
-const catalogs = new Map<Locale, Catalog>([["en", en]]);
+const catalogs = new Map<Locale, Catalog>([
+  ["en", en],
+  ["de", de],
+]);
 
 export function registerCatalog(locale: Locale, catalog: Catalog): void {
   catalogs.set(locale, catalog);

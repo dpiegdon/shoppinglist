@@ -76,12 +76,16 @@ export const en = {
   "item.currency": "Currency",
   "item.note": "Note",
   "item.statusLabel": "Status",
+  // The ONE canonical wording for the three item states, matching the Android client word for
+  // word (T-124). The wire values stay the English identifiers backlog/todo/checked (see
+  // docs/wire-contract.md); only these labels are translated.
   "item.status.todo": "Todo",
   "item.status.checked": "Checked",
-  // The wire value is the English identifier `backlog` (see docs/wire-contract.md); only this
-  // label is translated. The parenthetical is what makes the status legible — "backlog" alone is
-  // the term this app is least likely to survive machine translation (T-124).
-  "item.status.backlog": "Backlog (not on list)",
+  "item.status.backlog": "Backlog",
+  // Shown beside the Backlog option where there is room. "Backlog" alone is the term this app is
+  // least likely to survive translation without a gloss, so the gloss is a string of its own
+  // rather than being welded into the label and dragged onto space-constrained surfaces.
+  "item.status.backlogHint": "Not on the list yet",
   "item.addAnother": "Add another",
   "item.saveFailed": "Failed to save. Please try again.",
 

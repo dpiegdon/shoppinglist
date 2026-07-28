@@ -130,10 +130,23 @@ fun EditItemDialog(
                                 FilterChip(
                                     selected = state.status == status,
                                     onClick = { viewModel.onStatusChange(status) },
-                                    label = { Text(status.wireValue) },
+                                    // The LABEL, not the wire value (T-124). This rendered the raw
+                                    // identifier — "backlog", "todo", "checked" — which is exactly
+                                    // what Status's docstring says never to surface, and would have
+                                    // stayed untranslated English in every language.
+                                    label = { Text(stringResource(status.label)) },
                                     modifier = Modifier.padding(end = 4.dp),
                                 )
                             }
+                        }
+                        if (state.status == Status.BACKLOG) {
+                            // The gloss sits beside the control, not inside the label, so it never
+                            // reaches the space-constrained Registry chip (T-124).
+                            Text(
+                                text = stringResource(R.string.status_backlog_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         Spacer(Modifier.height(8.dp))
 

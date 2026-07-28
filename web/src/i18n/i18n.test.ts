@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "./locales";
 import { registerCatalog, translate } from "./index";
+import { de } from "./messages/de";
 import { en } from "./messages/en";
 
 describe("locale matching", () => {
@@ -69,9 +70,11 @@ describe("language list", () => {
 });
 
 describe("translate", () => {
+  // French, not German: registerCatalog mutates a module-level map shared by the whole file, so
+  // experimenting on a locale that ships a real catalog silently blanks it for every test that
+  // runs afterwards. Using a locale with no shipped catalog keeps these self-contained.
   beforeEach(() => {
-    // Each test registers what it needs; start from a known-empty German catalog.
-    registerCatalog("de", {});
+    registerCatalog("fr", {});
   });
 
   it("returns the English text for English", () => {
@@ -90,10 +93,10 @@ describe("translate", () => {
 
   it("falls back to English for a key a translation has not covered yet", () => {
     // This is what lets a translation land incrementally instead of having to be complete.
-    registerCatalog("de", { "login.submit": "Anmelden" });
+    registerCatalog("fr", { "login.submit": "Connexion" });
 
-    expect(translate("de", "login.submit")).toBe("Anmelden");
-    expect(translate("de", "login.email")).toBe("Email");
+    expect(translate("fr", "login.submit")).toBe("Connexion");
+    expect(translate("fr", "login.email")).toBe("Email");
   });
 
   it("falls back to English for a language with no catalog at all", () => {
@@ -101,16 +104,16 @@ describe("translate", () => {
   });
 
   it("interpolates into a translated string, not just the English one", () => {
-    registerCatalog("de", { "admin.sessionCount": "Sitzungen: {count}" });
+    registerCatalog("fr", { "admin.sessionCount": "Sessions : {count}" });
 
-    expect(translate("de", "admin.sessionCount", { count: 4 })).toBe("Sitzungen: 4");
+    expect(translate("fr", "admin.sessionCount", { count: 4 })).toBe("Sessions : 4");
   });
 
   it("leaves an unknown placeholder visible rather than rendering 'undefined'", () => {
-    registerCatalog("de", { "login.submit": "{nope} anmelden" });
+    registerCatalog("fr", { "login.submit": "{nope} connexion" });
 
     // A translator's typo should be diagnosable on sight, not silently become a real-looking word.
-    expect(translate("de", "login.submit")).toBe("{nope} anmelden");
+    expect(translate("fr", "login.submit")).toBe("{nope} connexion");
   });
 
   it("has no empty message in the English catalog", () => {
@@ -140,7 +143,7 @@ describe("provider-free defaults", () => {
 
     const { result } = renderHook(() => useI18n());
 
-    expect(() => result.current.setLocale("de")).toThrow(/I18nProvider/);
+    expect(() => result.current.setLocale("fr")).toThrow(/I18nProvider/);
   });
 });
 
@@ -167,5 +170,71 @@ describe("bidi isolation (T-126)", () => {
 
     // The count is plain LTR and must not have been wrapped along with it.
     expect(rendered).not.toContain("⁨3⁩");
+  });
+});
+
+describe("translation catalogs (T-124)", () => {
+  // Placeholders are the translation bug that actually bites: a translator who drops {count}
+  // produces a sentence that reads fine and silently loses the number. TypeScript cannot catch it
+  // — the value is still a string — so it has to be a test.
+  const PLACEHOLDER = /\{(\w+)\}/g;
+  const placeholdersOf = (s: string) => new Set(Array.from(s.matchAll(PLACEHOLDER), (m) => m[1]));
+
+  const catalogs: Array<[string, Record<string, string>]> = [["de", de as Record<string, string>]];
+
+  for (const [name, catalog] of catalogs) {
+    it(`${name}: every translated string keeps its source placeholders`, () => {
+      for (const [key, translated] of Object.entries(catalog)) {
+        const source = (en as Record<string, string>)[key];
+        expect(
+          [...placeholdersOf(translated)].sort(),
+          `${name}.${key}: placeholders differ from English`,
+        ).toEqual([...placeholdersOf(source)].sort());
+      }
+    });
+
+    it(`${name}: has no key English does not have`, () => {
+      // Belt and braces — tsc enforces this via Catalog's Partial<Record<MessageKey, …>>, but a
+      // stale key surviving a rename would otherwise sit there translated and unreachable.
+      for (const key of Object.keys(catalog)) {
+        expect(en, `${name}.${key} is not a key in English`).toHaveProperty(key);
+      }
+    });
+
+    it(`${name}: leaves no string empty`, () => {
+      for (const [key, value] of Object.entries(catalog)) {
+        expect(value.trim(), `${name}.${key} is empty`).not.toBe("");
+      }
+    });
+  }
+
+  it("German covers the whole catalog", () => {
+    // German is the one language with real users today, so it is held to completeness; the others
+    // fall back per-key to English while they are still being reviewed (T-124).
+    const missing = Object.keys(en).filter((k) => !(k in de));
+    expect(missing, `untranslated keys: ${missing.join(", ")}`).toEqual([]);
+  });
+});
+
+describe("catalog registration (T-124)", () => {
+  // Regression: `de.ts` existed, was complete, and every test passed — while the app still
+  // rendered English, because nothing had added it to the registry and the tests imported the
+  // catalog directly. A translation file that is not wired up is invisible to any test that does
+  // not go through translate(), so this asserts the wiring rather than the content.
+  it("resolves German through translate(), not just from the imported module", () => {
+    expect(translate("de", "action.save")).toBe("Speichern");
+    expect(translate("de", "app.title")).toBe("Einkaufsliste");
+  });
+
+  it("every shipped locale with a catalog file is actually registered", () => {
+    // Any locale whose translate() output is identical to English for a key it demonstrably
+    // translates is a locale that was never registered.
+    const withCatalogs: Array<[string, Record<string, string>]> = [["de", de as Record<string, string>]];
+    for (const [tag, catalog] of withCatalogs) {
+      const [key, translated] = Object.entries(catalog).find(
+        ([k, v]) => v !== (en as Record<string, string>)[k],
+      )!;
+      expect(translate(tag as never, key as never), `${tag} is not registered`).toBe(translated);
+    }
   });
 });
