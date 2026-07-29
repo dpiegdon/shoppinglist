@@ -13,6 +13,7 @@
     <string name="app_name">買い物リスト</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_save">保存</string>
+    <string name="action_add">追加</string>
     <string name="action_delete">削除</string>
     <string name="action_revoke">取り消す</string>
     <string name="action_undo">元に戻す</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">続けて追加</string>
     <string name="item_edit">アイテムを編集</string>
     <string name="item_delete_title">アイテムを削除しますか？</string>
+    <string name="item_delete_registry_body">「%1$s」を一覧から削除します。</string>
     <string name="registry_search">検索</string>
     <string name="registry_item_deleted">%1$s を削除しました</string>
     <string name="registry_delete_item">%1$s を削除</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">共有相手</string>
     <string name="listprops_invite_by_email">メールで招待</string>
     <string name="listprops_share_invite">招待を共有</string>
+    <string name="listprops_invite_pending">%1$s（保留中）</string>
     <string name="listprops_notifications">通知</string>
     <string name="listprops_notify_changes">このリストの変更を通知する</string>
     <string name="listprops_leave_list">リストから退出</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">不明な端末</string>
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">メンバーによる変更</string>
+    <string name="settings_collaborator_changes_help">共有リストが他の人に編集されたときに通知します。リストごとの通知はリストのプロパティでオフにできます。</string>
     <string name="settings_diagnostics">診断</string>
     <string name="settings_last_background_sync">最後のバックグラウンド同期：%1$s</string>
     <string name="settings_server">サーバー：%1$s</string>

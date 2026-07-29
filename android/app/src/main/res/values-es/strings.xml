@@ -13,6 +13,7 @@
     <string name="app_name">Lista de la compra</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_save">Guardar</string>
+    <string name="action_add">Añadir</string>
     <string name="action_delete">Eliminar</string>
     <string name="action_revoke">Revocar</string>
     <string name="action_undo">Deshacer</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">Añadir otro</string>
     <string name="item_edit">Editar artículo</string>
     <string name="item_delete_title">¿Eliminar artículo?</string>
+    <string name="item_delete_registry_body">«%1$s» se eliminará del registro.</string>
     <string name="registry_search">Buscar</string>
     <string name="registry_item_deleted">%1$s eliminado</string>
     <string name="registry_delete_item">Eliminar %1$s</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">Compartida con</string>
     <string name="listprops_invite_by_email">Invitar por correo</string>
     <string name="listprops_share_invite">Compartir invitación</string>
+    <string name="listprops_invite_pending">%1$s (pendiente)</string>
     <string name="listprops_notifications">Notificaciones</string>
     <string name="listprops_notify_changes">Avisar de los cambios en esta lista</string>
     <string name="listprops_leave_list">Salir de la lista</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">Dispositivo desconocido</string>
     <string name="settings_notifications">Notificaciones</string>
     <string name="settings_collaborator_changes">Cambios de otros miembros</string>
+    <string name="settings_collaborator_changes_help">Avisar cuando otra persona edite una lista compartida. Puedes silenciar listas concretas en sus propiedades.</string>
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_last_background_sync">Última sincronización en segundo plano: %1$s</string>
     <string name="settings_server">Servidor: %1$s</string>

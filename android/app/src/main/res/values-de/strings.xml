@@ -13,6 +13,7 @@
     <string name="app_name">Einkaufsliste</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_save">Speichern</string>
+    <string name="action_add">Hinzufügen</string>
     <string name="action_delete">Löschen</string>
     <string name="action_revoke">Widerrufen</string>
     <string name="action_undo">Rückgängig</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">Weiteren hinzufügen</string>
     <string name="item_edit">Artikel bearbeiten</string>
     <string name="item_delete_title">Artikel löschen?</string>
+    <string name="item_delete_registry_body">„%1$s“ wird aus der Übersicht entfernt.</string>
     <string name="registry_search">Suchen</string>
     <string name="registry_item_deleted">%1$s gelöscht</string>
     <string name="registry_delete_item">%1$s löschen</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">Geteilt mit</string>
     <string name="listprops_invite_by_email">Per E-Mail einladen</string>
     <string name="listprops_share_invite">Einladung teilen</string>
+    <string name="listprops_invite_pending">%1$s (ausstehend)</string>
     <string name="listprops_notifications">Benachrichtigungen</string>
     <string name="listprops_notify_changes">Über Änderungen an dieser Liste benachrichtigen</string>
     <string name="listprops_leave_list">Liste verlassen</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">Unbekanntes Gerät</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_collaborator_changes">Änderungen von Mitgliedern</string>
+    <string name="settings_collaborator_changes_help">Benachrichtigen, wenn jemand anderes eine geteilte Liste bearbeitet. Einzelne Listen lassen sich in ihren Listeneigenschaften stummschalten.</string>
     <string name="settings_diagnostics">Diagnose</string>
     <string name="settings_last_background_sync">Letzte Hintergrundsynchronisierung: %1$s</string>
     <string name="settings_server">Server: %1$s</string>

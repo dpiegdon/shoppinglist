@@ -13,6 +13,7 @@
     <string name="app_name">قائمة التسوق</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_save">حفظ</string>
+    <string name="action_add">إضافة</string>
     <string name="action_delete">حذف</string>
     <string name="action_revoke">إبطال</string>
     <string name="action_undo">تراجع</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">إضافة عنصر آخر</string>
     <string name="item_edit">تعديل العنصر</string>
     <string name="item_delete_title">حذف العنصر؟</string>
+    <string name="item_delete_registry_body">«%1$s» ستتم إزالته من السجل.</string>
     <string name="registry_search">بحث</string>
     <string name="registry_item_deleted">تم حذف %1$s</string>
     <string name="registry_delete_item">حذف %1$s</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">مشتركة مع</string>
     <string name="listprops_invite_by_email">دعوة عبر البريد الإلكتروني</string>
     <string name="listprops_share_invite">مشاركة الدعوة</string>
+    <string name="listprops_invite_pending">%1$s (قيد الانتظار)</string>
     <string name="listprops_notifications">الإشعارات</string>
     <string name="listprops_notify_changes">إشعاري بالتغييرات في هذه القائمة</string>
     <string name="listprops_leave_list">مغادرة القائمة</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">جهاز غير معروف</string>
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_collaborator_changes">تغييرات الأعضاء</string>
+    <string name="settings_collaborator_changes_help">التنبيه عندما يعدّل شخص آخر قائمة مشتركة. يمكنك كتم قوائم بعينها من خصائصها.</string>
     <string name="settings_diagnostics">التشخيص</string>
     <string name="settings_last_background_sync">آخر مزامنة في الخلفية: %1$s</string>
     <string name="settings_server">الخادم: %1$s</string>

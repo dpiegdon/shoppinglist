@@ -13,6 +13,7 @@
     <string name="app_name">Liste de courses</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_save">Enregistrer</string>
+    <string name="action_add">Ajouter</string>
     <string name="action_delete">Supprimer</string>
     <string name="action_revoke">Révoquer</string>
     <string name="action_undo">Annuler</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">Ajouter un autre</string>
     <string name="item_edit">Modifier l\'article</string>
     <string name="item_delete_title">Supprimer l\'article ?</string>
+    <string name="item_delete_registry_body">« %1$s » sera retiré du registre.</string>
     <string name="registry_search">Rechercher</string>
     <string name="registry_item_deleted">%1$s supprimé</string>
     <string name="registry_delete_item">Supprimer %1$s</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">Partagée avec</string>
     <string name="listprops_invite_by_email">Inviter par e-mail</string>
     <string name="listprops_share_invite">Partager l\'invitation</string>
+    <string name="listprops_invite_pending">%1$s (en attente)</string>
     <string name="listprops_notifications">Notifications</string>
     <string name="listprops_notify_changes">Me notifier des changements de cette liste</string>
     <string name="listprops_leave_list">Quitter la liste</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">Appareil inconnu</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Changements des autres membres</string>
+    <string name="settings_collaborator_changes_help">Prévenir quand quelqu\'un d\'autre modifie une liste partagée. Chaque liste peut être mise en sourdine dans ses propriétés.</string>
     <string name="settings_diagnostics">Diagnostic</string>
     <string name="settings_last_background_sync">Dernière synchronisation en arrière-plan : %1$s</string>
     <string name="settings_server">Serveur : %1$s</string>

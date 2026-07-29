@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -38,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.data.ThemePreference
 import java.io.File
@@ -148,7 +148,7 @@ fun SettingsScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.settings_collaborator_changes))
                 Text(
-                    "Notify when someone else edits a shared list. Mute individual lists in their list properties.",
+                    stringResource(R.string.settings_collaborator_changes_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -285,7 +285,7 @@ fun SettingsScreen(
     }
 
     if (state.isDeleteConfirmOpen) {
-        AlertDialog(
+        LocalizedAlertDialog(
             onDismissRequest = viewModel::cancelDeleteAccount,
             title = { Text(stringResource(R.string.settings_delete_account_title)) },
             text = {

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
+import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
 
@@ -45,7 +45,7 @@ fun AddItemDialog(
         if (state.focusNameSignal > 0) runCatching { nameFocusRequester.requestFocus() }
     }
 
-    AlertDialog(
+    LocalizedAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.item_add)) },
         text = {
@@ -81,7 +81,7 @@ fun AddItemDialog(
         confirmButton = {
             Row {
                 TextButton(onClick = viewModel::saveAndAddAnother) { Text(stringResource(R.string.item_add_another)) }
-                TextButton(onClick = viewModel::save) { Text("Add") }
+                TextButton(onClick = viewModel::save) { Text(stringResource(R.string.action_add)) }
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },

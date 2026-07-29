@@ -13,6 +13,7 @@
     <string name="app_name">购物清单</string>
     <string name="action_cancel">取消</string>
     <string name="action_save">保存</string>
+    <string name="action_add">添加</string>
     <string name="action_delete">删除</string>
     <string name="action_revoke">撤销</string>
     <string name="action_undo">撤消</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">继续添加</string>
     <string name="item_edit">编辑物品</string>
     <string name="item_delete_title">删除物品？</string>
+    <string name="item_delete_registry_body">“%1$s”将从记录中移除。</string>
     <string name="registry_search">搜索</string>
     <string name="registry_item_deleted">已删除 %1$s</string>
     <string name="registry_delete_item">删除 %1$s</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">共享给</string>
     <string name="listprops_invite_by_email">通过邮箱邀请</string>
     <string name="listprops_share_invite">分享邀请</string>
+    <string name="listprops_invite_pending">%1$s（待接受）</string>
     <string name="listprops_notifications">通知</string>
     <string name="listprops_notify_changes">在此清单有变动时通知我</string>
     <string name="listprops_leave_list">退出清单</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">未知设备</string>
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">其他成员的变动</string>
+    <string name="settings_collaborator_changes_help">当其他人编辑共享列表时通知你。可在各列表的属性中单独关闭通知。</string>
     <string name="settings_diagnostics">诊断</string>
     <string name="settings_last_background_sync">上次后台同步：%1$s</string>
     <string name="settings_server">服务器：%1$s</string>

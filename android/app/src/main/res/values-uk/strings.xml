@@ -13,6 +13,7 @@
     <string name="app_name">Список покупок</string>
     <string name="action_cancel">Скасувати</string>
     <string name="action_save">Зберегти</string>
+    <string name="action_add">Додати</string>
     <string name="action_delete">Видалити</string>
     <string name="action_revoke">Відкликати</string>
     <string name="action_undo">Скасувати дію</string>
@@ -83,6 +84,7 @@
     <string name="item_add_another">Додати ще</string>
     <string name="item_edit">Редагувати товар</string>
     <string name="item_delete_title">Видалити товар?</string>
+    <string name="item_delete_registry_body">«%1$s» буде вилучено з реєстру.</string>
     <string name="registry_search">Пошук</string>
     <string name="registry_item_deleted">%1$s видалено</string>
     <string name="registry_delete_item">Видалити %1$s</string>
@@ -112,6 +114,7 @@
     <string name="listprops_shared_with">Спільний доступ</string>
     <string name="listprops_invite_by_email">Запросити електронною поштою</string>
     <string name="listprops_share_invite">Поділитися запрошенням</string>
+    <string name="listprops_invite_pending">%1$s (очікує)</string>
     <string name="listprops_notifications">Сповіщення</string>
     <string name="listprops_notify_changes">Сповіщати про зміни в цьому списку</string>
     <string name="listprops_leave_list">Покинути список</string>
@@ -138,6 +141,7 @@
     <string name="settings_unknown_device">Невідомий пристрій</string>
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_collaborator_changes">Зміни інших учасників</string>
+    <string name="settings_collaborator_changes_help">Сповіщати, коли хтось інший редагує спільний список. Окремі списки можна вимкнути в їхніх властивостях.</string>
     <string name="settings_diagnostics">Діагностика</string>
     <string name="settings_last_background_sync">Остання фонова синхронізація: %1$s</string>
     <string name="settings_server">Сервер: %1$s</string>

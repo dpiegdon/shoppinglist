@@ -15,7 +15,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 
 /**
- * T-128 regression: the localized context must stay unwrappable to the Activity.
+ * T-129 regression: the localized context must stay unwrappable to the Activity.
  *
  * This existed as createConfigurationContext(), which returns a bare ContextImpl — NOT a
  * ContextWrapper. Anything that walks up the context chain looking for an Activity therefore

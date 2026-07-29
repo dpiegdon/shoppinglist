@@ -14,6 +14,7 @@
     <!-- generic actions, reused across screens -->
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
+    <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
     <string name="action_revoke">Revoke</string>
     <string name="action_undo">Undo</string>
@@ -104,6 +105,7 @@
     <string name="item_add_another">Add another</string>
     <string name="item_edit">Edit item</string>
     <string name="item_delete_title">Delete item?</string>
+    <string name="item_delete_registry_body">“%1$s” will be removed from the registry.</string>
 
     <!-- registry -->
     <string name="registry_search">Search</string>
@@ -141,6 +143,7 @@
     <string name="listprops_shared_with">Shared with</string>
     <string name="listprops_invite_by_email">Invite by email</string>
     <string name="listprops_share_invite">Share invite</string>
+    <string name="listprops_invite_pending">%1$s (pending)</string>
     <string name="listprops_notifications">Notifications</string>
     <string name="listprops_notify_changes">Notify about changes to this list</string>
     <string name="listprops_leave_list">Leave list</string>
@@ -169,6 +172,7 @@
     <string name="settings_unknown_device">Unknown device</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Collaborator changes</string>
+    <string name="settings_collaborator_changes_help">Notify when someone else edits a shared list. Mute individual lists in their list properties.</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_last_background_sync">Last background sync: %1$s</string>
     <string name="settings_server">Server: %1$s</string>

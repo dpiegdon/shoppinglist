@@ -57,14 +57,19 @@ fun LanguagePicker(
                 .padding(vertical = 8.dp),
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            AppLocale.entries.forEach { locale ->
-                DropdownMenuItem(
-                    text = { Text(locale.displayName) },
-                    onClick = {
-                        expanded = false
-                        onSelect(locale)
-                    },
-                )
+            // The entries are endonyms and so need no translating, but a popup is still its own
+            // window (T-131) — this is what carries the layout direction in, so the list reads
+            // right-to-left when the app is set to Arabic.
+            LocalizedOverlay {
+                AppLocale.entries.forEach { locale ->
+                    DropdownMenuItem(
+                        text = { Text(locale.displayName) },
+                        onClick = {
+                            expanded = false
+                            onSelect(locale)
+                        },
+                    )
+                }
             }
         }
     }
