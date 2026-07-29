@@ -309,6 +309,20 @@ export default function ListPropsPage() {
         </p>
       </section>
 
+      {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
+          when there's something to clear. */}
+      {allChecked.length > 0 && (
+        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
+          <p className="muted" style={{ margin: "0 0 0.6rem" }}>
+            {t("listProps.clearCheckedHelp")}
+          </p>
+          <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
+            {t("listProps.clearCheckedCount", { count: allChecked.length })}
+          </button>
+        </section>
+      )}
+
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
@@ -399,20 +413,6 @@ export default function ListPropsPage() {
           </button>
         </form>
       </section>
-
-      {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
-          when there's something to clear. */}
-      {allChecked.length > 0 && (
-        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
-          <p className="muted" style={{ margin: "0 0 0.6rem" }}>
-            {t("listProps.clearCheckedHelp")}
-          </p>
-          <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
-            {t("listProps.clearCheckedCount", { count: allChecked.length })}
-          </button>
-        </section>
-      )}
 
       {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>

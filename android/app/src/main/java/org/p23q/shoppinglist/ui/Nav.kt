@@ -1,6 +1,5 @@
 package org.p23q.shoppinglist.ui
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -102,14 +101,6 @@ private fun liveListTitle(fallback: String): String {
  */
 fun authedStartDestination(lastOpenedListId: String?): String =
     lastOpenedListId?.let { Routes.list(it) } ?: Routes.OVERVIEW
-
-/** Destinations reachable from the drawer menu (Notes: overview + account entries). */
-private data class DrawerDestination(val route: String, @param:StringRes val label: Int)
-
-private val drawerDestinations = listOf(
-    DrawerDestination(Routes.OVERVIEW, R.string.nav_overview),
-    DrawerDestination(Routes.SETTINGS, R.string.nav_account),
-)
 
 @Composable
 fun ShoppingListNavHost(
@@ -303,29 +294,23 @@ internal fun AppDrawerScaffold(
                     )
                     HorizontalDivider()
                 }
-                drawerDestinations.forEach { destination ->
-                    NavigationDrawerItem(
-                        icon = {
-                            Icon(
-                                imageVector = if (destination.route == Routes.OVERVIEW) {
-                                    Icons.Default.List
-                                } else {
-                                    Icons.Default.AccountCircle
-                                },
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text(stringResource(destination.label)) },
-                        selected = destination.route == currentRoute,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            if (destination.route != currentRoute) {
-                                navController.navigate(destination.route)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
+                // Listed one by one rather than driven off a list of destinations: two of these
+                // navigate and one opens a dialog, so a data-driven loop could only ever cover
+                // part of the menu and the odd one out had to be appended after it — which is how
+                // "Join a list" ended up below "Account". Written out, the source order IS the
+                // drawer order.
+                fun navigateTo(route: String) {
+                    scope.launch { drawerState.close() }
+                    if (route != currentRoute) navController.navigate(route)
                 }
+
+                NavigationDrawerItem(
+                    icon = { Icon(imageVector = Icons.Default.List, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_overview)) },
+                    selected = currentRoute == Routes.OVERVIEW,
+                    onClick = { navigateTo(Routes.OVERVIEW) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_join_list)) },
@@ -334,6 +319,13 @@ internal fun AppDrawerScaffold(
                         scope.launch { drawerState.close() }
                         isJoinDialogOpen = true
                     },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_account)) },
+                    selected = currentRoute == Routes.SETTINGS,
+                    onClick = { navigateTo(Routes.SETTINGS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
                 NavigationDrawerItem(
