@@ -102,6 +102,25 @@ private fun liveListTitle(fallback: String): String {
 fun authedStartDestination(lastOpenedListId: String?): String =
     lastOpenedListId?.let { Routes.list(it) } ?: Routes.OVERVIEW
 
+/**
+ * Go back to [listId] from one of its sub-screens — properties or the registry.
+ *
+ * Both of those show the list's own name in the top bar (see [liveListTitle]), so tapping that
+ * name reads as "back to this list", mirroring the web client's "← <list name>" link above the
+ * heading. The list screen already uses the same gesture to go up to the overview.
+ *
+ * `popUpTo` WITHOUT `inclusive` is the point: it returns to the list entry already on the back
+ * stack instead of pushing a second copy, so this behaves as Back rather than as forward
+ * navigation that happens to land on the list. `launchSingleTop` then reuses that entry rather
+ * than recreating it.
+ */
+private fun NavHostController.backToList(listId: String) {
+    navigate(Routes.list(listId)) {
+        popUpTo(Routes.list(listId))
+        launchSingleTop = true
+    }
+}
+
 @Composable
 fun ShoppingListNavHost(
     navController: NavHostController = rememberNavController(),
@@ -184,8 +203,13 @@ fun ShoppingListNavHost(
                 }
             }
         }
-        composable(Routes.REGISTRY_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = liveListTitle(stringResource(R.string.nav_registry))) {
+        composable(Routes.REGISTRY_PATTERN) { backStackEntry ->
+            val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
+            AppDrawerScaffold(
+                navController = navController,
+                title = liveListTitle(stringResource(R.string.nav_registry)),
+                onTitleClick = { navController.backToList(listId) },
+            ) {
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
                 RegistryScreen(onEditItem = { itemId -> editingItemId = itemId })
@@ -195,8 +219,13 @@ fun ShoppingListNavHost(
                 }
             }
         }
-        composable(Routes.LIST_PROPS_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = liveListTitle(stringResource(R.string.nav_list_properties))) {
+        composable(Routes.LIST_PROPS_PATTERN) { backStackEntry ->
+            val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
+            AppDrawerScaffold(
+                navController = navController,
+                title = liveListTitle(stringResource(R.string.nav_list_properties)),
+                onTitleClick = { navController.backToList(listId) },
+            ) {
                 ListPropsScreen(
                     onLeft = {
                         navController.navigate(Routes.OVERVIEW) {
