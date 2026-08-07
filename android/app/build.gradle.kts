@@ -25,8 +25,8 @@ android {
         applicationId = "org.p23q.shoppinglist"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.9.3"
+        versionCode = 17
+        versionName = "1.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
