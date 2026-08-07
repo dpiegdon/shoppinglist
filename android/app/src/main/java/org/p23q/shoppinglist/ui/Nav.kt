@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -145,7 +147,20 @@ fun ShoppingListNavHost(
     val localeViewModel: LocaleViewModel = hiltViewModel()
     val selectedLocale by localeViewModel.locale.collectAsStateWithLifecycle()
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        // Screens swap on the next frame instead of crossfading. NavHost's defaults are
+        // fadeIn/fadeOut(tween(700)) — over twice Material's duration for a transition of this
+        // kind, and long enough to read as lag rather than as polish once the list title became a
+        // one-tap jump back to the overview. All four are set explicitly: popEnter/popExit only
+        // fall back to enter/exit while they are left unspecified, and a fade reappearing on Back
+        // alone would be the subtler bug.
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
+    ) {
         composable(Routes.LOGIN) {
             LoginScreen(
                 selectedLocale = selectedLocale,
