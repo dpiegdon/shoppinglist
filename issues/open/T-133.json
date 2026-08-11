@@ -1,0 +1,13 @@
+{
+  "body": "Add item was a floating AlertDialog. Three problems on the screen reached most often\nin the app:\n\n1. Opening it left the Name field unfocused, so adding an item took an extra tap\n   before you could type.\n2. The soft keyboard covered Add and Cancel -- adding one item meant dismissing the\n   keyboard first to reach the button.\n3. It looked and behaved unlike Edit item, which had already been made full-screen\n   for exactly reason 2 (T-80).\n\nFix: rebuild Add item on the same full-screen layout as Edit item -- fixed header,\nscrolling field area, fixed action bar, decorFitsSystemWindows(false) so the IME is a\nreal inset. Focus Name on open after a frame wait (the dialog is its own window; a\nfocus request issued before that window exists is dropped, and the keyboard with it).\n\nAlso drops \"Add another\" at the user's request, so the two dialogs match: Cancel then\nthe primary action. That removes ItemFormViewModel.saveAndAddAnother, the closeAfter\nparameter, ItemFormUiState.focusNameSignal, the T-41 test, and item_add_another from\nall nine locales.\n\nNote: the web client keeps its own \"Add another\" (ItemDialog.tsx), so the clients\ndeliberately diverge here for now.",
+  "created_at": "2026-08-11T18:27:46+00:00",
+  "id": "T-133",
+  "labels": [
+    "ux",
+    "bug",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Android: Add-item dialog needs a tap to focus and hides its buttons behind the keyboard",
+  "updated_at": "2026-08-11T18:27:46+00:00"
+}
