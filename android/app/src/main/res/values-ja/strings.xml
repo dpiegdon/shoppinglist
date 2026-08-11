@@ -81,7 +81,6 @@
     <string name="item_note">メモ</string>
     <string name="item_status">ステータス</string>
     <string name="item_add">アイテムを追加</string>
-    <string name="item_add_another">続けて追加</string>
     <string name="item_edit">アイテムを編集</string>
     <string name="item_delete_title">アイテムを削除しますか？</string>
     <string name="item_delete_registry_body">「%1$s」を一覧から削除します。</string>

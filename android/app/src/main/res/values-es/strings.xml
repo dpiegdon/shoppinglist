@@ -81,7 +81,6 @@
     <string name="item_note">Nota</string>
     <string name="item_status">Estado</string>
     <string name="item_add">Añadir artículo</string>
-    <string name="item_add_another">Añadir otro</string>
     <string name="item_edit">Editar artículo</string>
     <string name="item_delete_title">¿Eliminar artículo?</string>
     <string name="item_delete_registry_body">«%1$s» se eliminará del registro.</string>

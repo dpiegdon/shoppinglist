@@ -81,7 +81,6 @@
     <string name="item_note">Нотатка</string>
     <string name="item_status">Статус</string>
     <string name="item_add">Додати товар</string>
-    <string name="item_add_another">Додати ще</string>
     <string name="item_edit">Редагувати товар</string>
     <string name="item_delete_title">Видалити товар?</string>
     <string name="item_delete_registry_body">«%1$s» буде вилучено з реєстру.</string>

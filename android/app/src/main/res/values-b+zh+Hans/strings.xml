@@ -81,7 +81,6 @@
     <string name="item_note">备注</string>
     <string name="item_status">状态</string>
     <string name="item_add">添加物品</string>
-    <string name="item_add_another">继续添加</string>
     <string name="item_edit">编辑物品</string>
     <string name="item_delete_title">删除物品？</string>
     <string name="item_delete_registry_body">“%1$s”将从记录中移除。</string>

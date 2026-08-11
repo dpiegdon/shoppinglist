@@ -102,7 +102,6 @@
     <string name="item_note">Note</string>
     <string name="item_status">Status</string>
     <string name="item_add">Add item</string>
-    <string name="item_add_another">Add another</string>
     <string name="item_edit">Edit item</string>
     <string name="item_delete_title">Delete item?</string>
     <string name="item_delete_registry_body">“%1$s” will be removed from the registry.</string>

@@ -81,7 +81,6 @@
     <string name="item_note">Observação</string>
     <string name="item_status">Status</string>
     <string name="item_add">Adicionar item</string>
-    <string name="item_add_another">Adicionar outro</string>
     <string name="item_edit">Editar item</string>
     <string name="item_delete_title">Excluir item?</string>
     <string name="item_delete_registry_body">“%1$s” será removido do registro.</string>

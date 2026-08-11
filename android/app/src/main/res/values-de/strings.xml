@@ -81,7 +81,6 @@
     <string name="item_note">Notiz</string>
     <string name="item_status">Status</string>
     <string name="item_add">Artikel hinzufügen</string>
-    <string name="item_add_another">Weiteren hinzufügen</string>
     <string name="item_edit">Artikel bearbeiten</string>
     <string name="item_delete_title">Artikel löschen?</string>
     <string name="item_delete_registry_body">„%1$s“ wird aus der Übersicht entfernt.</string>

@@ -81,7 +81,6 @@
     <string name="item_note">ملاحظة</string>
     <string name="item_status">الحالة</string>
     <string name="item_add">إضافة عنصر</string>
-    <string name="item_add_another">إضافة عنصر آخر</string>
     <string name="item_edit">تعديل العنصر</string>
     <string name="item_delete_title">حذف العنصر؟</string>
     <string name="item_delete_registry_body">«%1$s» ستتم إزالته من السجل.</string>

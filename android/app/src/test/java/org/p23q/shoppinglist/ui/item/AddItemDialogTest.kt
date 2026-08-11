@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.item
 
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -69,5 +70,35 @@ class AddItemDialogTest {
 
         assertEquals(true, dismissed)
         assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
+    }
+
+    /**
+     * Opening the dialog should leave you able to type immediately.
+     *
+     * Only the focus half is asserted: whether the soft keyboard is actually on screen is decided
+     * by the real IME and the dialog window, neither of which Robolectric simulates. Focus is the
+     * part this code controls — the keyboard follows it — so it's the part worth pinning.
+     */
+    // runBlocking<Unit>, not runBlocking: this body ends in an assertIsFocused() that returns a
+    // SemanticsNodeInteraction, and JUnit rejects a test method that doesn't return void — as an
+    // InvalidTestClassError that takes the whole class down, not just this method.
+    @Test
+    fun `the name field is focused as soon as the dialog opens`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
+
+        composeTestRule.setContent {
+            AddItemDialog(listId = listId, onDismiss = {}, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Name").assertIsFocused()
     }
 }
