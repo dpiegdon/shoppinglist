@@ -1,0 +1,11 @@
+{
+  "body": "Cut 1.11.0, carrying the full-screen Add-item dialog (T-133). 1.10.0 already shipped\nthe instant screen switches (T-132), so this release is the dialog work alone.\n\nMinor, not patch: it changes behaviour beyond a fix -- \"Add another\" is gone from the\nAndroid client. Nothing in the wire contract, HTTP API or blueprint mount interface\nchanges, so an operator upgrading has nothing to do.",
+  "created_at": "2026-08-11T18:42:38+00:00",
+  "id": "T-134",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 1.11.0",
+  "updated_at": "2026-08-11T18:42:38+00:00"
+}
