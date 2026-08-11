@@ -141,6 +141,13 @@
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_collaborator_changes">تغييرات الأعضاء</string>
     <string name="settings_collaborator_changes_help">التنبيه عندما يعدّل شخص آخر قائمة مشتركة. يمكنك كتم قوائم بعينها من خصائصها.</string>
+    <string name="settings_updates">تحديثات التطبيق</string>
+    <string name="settings_auto_update_check">البحث عن التحديثات تلقائيًا</string>
+    <string name="settings_auto_update_check_help">سؤال هذا الخادم عمّا إذا كان هناك إصدار أحدث من التطبيق. يؤثر على هذا الجهاز فقط.</string>
+    <string name="update_available_title">يتوفر تحديث</string>
+    <string name="update_available_body">الإصدار %1$s من التطبيق متوفر. لديك %2$s.</string>
+    <string name="action_update">تحديث</string>
+    <string name="action_skip">تخطٍ</string>
     <string name="settings_diagnostics">التشخيص</string>
     <string name="settings_last_background_sync">آخر مزامنة في الخلفية: %1$s</string>
     <string name="settings_server">الخادم: %1$s</string>

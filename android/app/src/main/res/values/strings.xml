@@ -172,6 +172,13 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Collaborator changes</string>
     <string name="settings_collaborator_changes_help">Notify when someone else edits a shared list. Mute individual lists in their list properties.</string>
+    <string name="settings_updates">App updates</string>
+    <string name="settings_auto_update_check">Check for updates automatically</string>
+    <string name="settings_auto_update_check_help">Ask this server whether a newer version of the app is available. Only this device is affected.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Version %1$s of the app is available. You have %2$s.</string>
+    <string name="action_update">Update</string>
+    <string name="action_skip">Skip</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_last_background_sync">Last background sync: %1$s</string>
     <string name="settings_server">Server: %1$s</string>

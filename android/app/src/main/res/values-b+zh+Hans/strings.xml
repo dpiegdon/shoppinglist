@@ -141,6 +141,13 @@
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">其他成员的变动</string>
     <string name="settings_collaborator_changes_help">当其他人编辑共享列表时通知你。可在各列表的属性中单独关闭通知。</string>
+    <string name="settings_updates">应用更新</string>
+    <string name="settings_auto_update_check">自动检查更新</string>
+    <string name="settings_auto_update_check_help">向此服务器查询是否有更新版本的应用。仅影响本设备。</string>
+    <string name="update_available_title">有可用更新</string>
+    <string name="update_available_body">应用版本 %1$s 已可用。当前版本为 %2$s。</string>
+    <string name="action_update">更新</string>
+    <string name="action_skip">跳过</string>
     <string name="settings_diagnostics">诊断</string>
     <string name="settings_last_background_sync">上次后台同步：%1$s</string>
     <string name="settings_server">服务器：%1$s</string>

@@ -91,6 +91,9 @@ def create_blueprint(
         "invite_hmac_key": invite_hmac_key,
         "base_url": base_url,
         "allow_registration": allow_registration,
+        # Read at request time by routes/app_version.py: the APK route is registered from
+        # record_once, too late for the blueprint's own routes to branch on it (T-135).
+        "serve_android_apk": serve_android_apk,
         # Pre-normalized (lower + strip, blanks dropped) so the live admin check is a plain set
         # membership on the account's lowercased email (T-107).
         "admin_emails": frozenset(
@@ -203,6 +206,7 @@ def create_blueprint(
 
     from .routes.account import register_routes as register_account_routes
     from .routes.admin import register_routes as register_admin_routes
+    from .routes.app_version import register_routes as register_app_version_routes
     from .routes.auth import register_routes as register_auth_routes
     from .routes.invites import register_routes as register_invites_routes
     from .routes.lists import register_routes as register_lists_routes
@@ -210,6 +214,7 @@ def create_blueprint(
 
     register_auth_routes(bp)
     register_account_routes(bp)
+    register_app_version_routes(bp)
     register_lists_routes(bp)
     register_invites_routes(bp)
     register_sync_routes(bp)

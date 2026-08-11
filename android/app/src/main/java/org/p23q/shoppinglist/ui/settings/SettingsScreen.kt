@@ -166,6 +166,26 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
+        // App updates (T-135). Device-local like the notification toggle above — whether this
+        // phone checks is a property of the phone, not the account, so it isn't synced. Off
+        // means no request at all, not a silent check.
+        Text(stringResource(R.string.settings_updates), style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_auto_update_check))
+                Text(
+                    stringResource(R.string.settings_auto_update_check_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = state.autoUpdateCheckEnabled,
+                onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+
         // Developer-only escape hatch for testing against a self-signed dev server. Present only in
         // debug builds; even if this flag were somehow set, release builds ignore it (DevCertTrust).
         if (BuildConfig.DEBUG) {

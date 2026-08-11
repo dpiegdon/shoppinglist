@@ -33,6 +33,7 @@ import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.data.update.UpdatePrefsStore
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -106,6 +107,11 @@ class SettingsScreenTest {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
+            UpdatePrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("settings_screen_update_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         )
         var deleted = false
 
@@ -177,6 +183,11 @@ class SettingsScreenTest {
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            UpdatePrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("settings_screen_update_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
         )
@@ -256,6 +267,11 @@ class SettingsScreenTest {
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            UpdatePrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("settings_screen_update_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
         )

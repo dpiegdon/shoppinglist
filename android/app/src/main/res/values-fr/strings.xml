@@ -141,6 +141,13 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Changements des autres membres</string>
     <string name="settings_collaborator_changes_help">Prévenir quand quelqu\'un d\'autre modifie une liste partagée. Chaque liste peut être mise en sourdine dans ses propriétés.</string>
+    <string name="settings_updates">Mises à jour de l\'application</string>
+    <string name="settings_auto_update_check">Rechercher les mises à jour automatiquement</string>
+    <string name="settings_auto_update_check_help">Demander à ce serveur si une version plus récente de l\'application est disponible. Concerne uniquement cet appareil.</string>
+    <string name="update_available_title">Mise à jour disponible</string>
+    <string name="update_available_body">La version %1$s de l\'application est disponible. Vous avez la %2$s.</string>
+    <string name="action_update">Mettre à jour</string>
+    <string name="action_skip">Ignorer</string>
     <string name="settings_diagnostics">Diagnostic</string>
     <string name="settings_last_background_sync">Dernière synchronisation en arrière-plan : %1$s</string>
     <string name="settings_server">Serveur : %1$s</string>

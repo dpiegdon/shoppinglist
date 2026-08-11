@@ -141,6 +141,13 @@
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_collaborator_changes">Зміни інших учасників</string>
     <string name="settings_collaborator_changes_help">Сповіщати, коли хтось інший редагує спільний список. Окремі списки можна вимкнути в їхніх властивостях.</string>
+    <string name="settings_updates">Оновлення застосунку</string>
+    <string name="settings_auto_update_check">Автоматично перевіряти оновлення</string>
+    <string name="settings_auto_update_check_help">Запитувати цей сервер, чи доступна новіша версія застосунку. Стосується лише цього пристрою.</string>
+    <string name="update_available_title">Доступне оновлення</string>
+    <string name="update_available_body">Доступна версія %1$s застосунку. У вас %2$s.</string>
+    <string name="action_update">Оновити</string>
+    <string name="action_skip">Пропустити</string>
     <string name="settings_diagnostics">Діагностика</string>
     <string name="settings_last_background_sync">Остання фонова синхронізація: %1$s</string>
     <string name="settings_server">Сервер: %1$s</string>

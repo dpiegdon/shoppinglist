@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import androidx.core.net.toUri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
@@ -26,6 +29,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -36,9 +40,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -47,6 +54,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.item.AddItemDialog
 import org.p23q.shoppinglist.ui.item.EditItemDialog
@@ -60,6 +68,7 @@ import org.p23q.shoppinglist.ui.redeem.RedeemScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
+import org.p23q.shoppinglist.ui.update.UpdateViewModel
 import androidx.compose.ui.res.stringResource
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
@@ -146,6 +155,13 @@ fun ShoppingListNavHost(
     // the screens Hilt-free is what lets them be rendered directly in unit tests (T-127).
     val localeViewModel: LocaleViewModel = hiltViewModel()
     val selectedLocale by localeViewModel.locale.collectAsStateWithLifecycle()
+
+    // Update check (T-135). ON_START rather than a one-shot LaunchedEffect: a phone that stays on
+    // this app for days would otherwise never notice a release. UpdateChecker owns the rate limit,
+    // so firing this on every foreground costs nothing.
+    val updateViewModel: UpdateViewModel = hiltViewModel()
+    val availableUpdate by updateViewModel.availableUpdate.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { updateViewModel.check() }
 
     NavHost(
         navController = navController,
@@ -306,6 +322,48 @@ fun ShoppingListNavHost(
                 AdminScreen()
             }
         }
+    }
+
+    // Rendered outside the NavHost so it survives a screen change, but suppressed on Login: an
+    // update prompt stacked on "please log in" is noise, and there is nothing to update to until
+    // a server is configured anyway.
+    val onLoginScreen = navController.currentBackStackEntryAsState().value?.destination?.route == Routes.LOGIN
+    // Bound to a local rather than used through ?.let { }: that lambda is not a @Composable
+    // context, so neither the dialog nor LocalContext.current can be called inside one.
+    val update = availableUpdate
+    if (update != null && !onLoginScreen) {
+        val context = LocalContext.current
+        LocalizedAlertDialog(
+            // Dismissing by tapping outside counts as having been asked, same as Skip.
+            onDismissRequest = { updateViewModel.dismiss() },
+            title = { Text(stringResource(R.string.update_available_title)) },
+            text = {
+                Text(stringResource(R.string.update_available_body, update.version, BuildConfig.VERSION_NAME))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Handed to the system rather than downloaded in-app: no extra permission, no
+                    // installer session to babysit, and the user gets the standard install flow
+                    // they already know. NEW_TASK because this leaves our task entirely.
+                    try {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri())
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    } catch (e: ActivityNotFoundException) {
+                        // No browser/download handler on this device. Nothing useful to say, and
+                        // crashing over an optional convenience would be worse.
+                    }
+                    updateViewModel.dismiss()
+                }) { Text(stringResource(R.string.action_update)) }
+            },
+            dismissButton = {
+                // "Skip", not "Later": declining is final for this version.
+                TextButton(onClick = { updateViewModel.dismiss() }) {
+                    Text(stringResource(R.string.action_skip))
+                }
+            },
+        )
     }
 }
 

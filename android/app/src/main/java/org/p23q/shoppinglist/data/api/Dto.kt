@@ -226,3 +226,10 @@ data class SyncResponse(
     val cursor: Long,
     val changes: SyncChanges,
 )
+
+/** Response of GET /api/v1/app-version (T-135): the app package this server offers. */
+@Serializable
+data class AppVersionResponse(
+    val version: String,
+    @SerialName("download_url") val downloadUrl: String,
+)

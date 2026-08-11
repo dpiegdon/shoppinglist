@@ -42,6 +42,14 @@ interface Api {
     @POST("api/v1/logout")
     suspend fun logout()
 
+    /**
+     * The app version this server carries (T-135). Unauthenticated. A 404 means "no app package
+     * here" — which is also what every server released before this endpoint existed returns, so
+     * the client needs only one code path for "nothing to say".
+     */
+    @GET("api/v1/app-version")
+    suspend fun appVersion(): AppVersionResponse
+
     @POST("api/v1/account/change-password")
     suspend fun changePassword(@Body body: ChangePasswordRequest)
 

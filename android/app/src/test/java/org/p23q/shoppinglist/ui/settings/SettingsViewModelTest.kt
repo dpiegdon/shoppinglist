@@ -24,6 +24,7 @@ import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.data.update.UpdatePrefsStore
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
@@ -54,6 +55,7 @@ class SettingsViewModelTest {
     private lateinit var crashLogWriter: CrashLogWriter
     private lateinit var defaultCurrencyState: DefaultCurrencyState
     private lateinit var notificationPrefs: NotificationPrefsStore
+    private lateinit var updatePrefs: UpdatePrefsStore
 
     @Before
     fun setUp() = runTest(mainDispatcherRule.dispatcher) {
@@ -97,6 +99,10 @@ class SettingsViewModelTest {
         val notifPrefsFile = File.createTempFile("settings_vm_notif_prefs", ".preferences_pb")
         notifPrefsFile.deleteOnExit()
         notificationPrefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { notifPrefsFile })
+
+        val updatePrefsFile = File.createTempFile("settings_vm_update_prefs", ".preferences_pb")
+        updatePrefsFile.deleteOnExit()
+        updatePrefs = UpdatePrefsStore(PreferenceDataStoreFactory.create { updatePrefsFile })
     }
 
     @After
@@ -108,7 +114,7 @@ class SettingsViewModelTest {
     private fun newViewModel(): SettingsViewModel =
         SettingsViewModel(
             apiProvider, sessionState, serverConfig, themePreferenceStore, db,
-            crashLogWriter, defaultCurrencyState, notificationPrefs,
+            crashLogWriter, defaultCurrencyState, notificationPrefs, updatePrefs,
         )
 
     @Test
@@ -438,6 +444,19 @@ class SettingsViewModelTest {
 
         assertFalse(viewModel.uiState.first { !it.notificationsEnabled }.notificationsEnabled)
         assertFalse(notificationPrefs.notificationsEnabled.first())
+    }
+
+    @Test
+    fun `the automatic update check defaults on and the toggle persists it (T-135)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        // Defaults on: a self-hosted app has no store to nag you, so off-by-default would mean
+        // never hearing about a release at all.
+        assertTrue(viewModel.uiState.first { it.autoUpdateCheckEnabled }.autoUpdateCheckEnabled)
+
+        viewModel.setAutoUpdateCheckEnabled(false).join()
+
+        assertFalse(viewModel.uiState.first { !it.autoUpdateCheckEnabled }.autoUpdateCheckEnabled)
+        assertFalse(updatePrefs.autoCheckEnabled.first())
     }
 
     @Test

@@ -141,6 +141,13 @@
     <string name="settings_notifications">Notificações</string>
     <string name="settings_collaborator_changes">Mudanças de outros membros</string>
     <string name="settings_collaborator_changes_help">Avisar quando outra pessoa editar uma lista compartilhada. Você pode silenciar listas específicas nas propriedades delas.</string>
+    <string name="settings_updates">Atualizações do aplicativo</string>
+    <string name="settings_auto_update_check">Buscar atualizações automaticamente</string>
+    <string name="settings_auto_update_check_help">Perguntar a este servidor se há uma versão mais recente do aplicativo. Afeta apenas este dispositivo.</string>
+    <string name="update_available_title">Atualização disponível</string>
+    <string name="update_available_body">A versão %1$s do aplicativo está disponível. Você tem a %2$s.</string>
+    <string name="action_update">Atualizar</string>
+    <string name="action_skip">Ignorar</string>
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_last_background_sync">Última sincronização em segundo plano: %1$s</string>
     <string name="settings_server">Servidor: %1$s</string>

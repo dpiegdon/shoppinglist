@@ -141,6 +141,13 @@
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">メンバーによる変更</string>
     <string name="settings_collaborator_changes_help">共有リストが他の人に編集されたときに通知します。リストごとの通知はリストのプロパティでオフにできます。</string>
+    <string name="settings_updates">アプリの更新</string>
+    <string name="settings_auto_update_check">自動的に更新を確認</string>
+    <string name="settings_auto_update_check_help">アプリの新しいバージョンがあるかこのサーバーに確認します。この端末にのみ適用されます。</string>
+    <string name="update_available_title">更新があります</string>
+    <string name="update_available_body">アプリのバージョン %1$s が利用できます。現在は %2$s です。</string>
+    <string name="action_update">更新</string>
+    <string name="action_skip">スキップ</string>
     <string name="settings_diagnostics">診断</string>
     <string name="settings_last_background_sync">最後のバックグラウンド同期：%1$s</string>
     <string name="settings_server">サーバー：%1$s</string>
