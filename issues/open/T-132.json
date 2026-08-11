@@ -1,0 +1,12 @@
+{
+  "body": "NavHost's enter/exit transitions were never configured, so every screen switch used\nthe navigation-compose default of fadeIn/fadeOut(tween(700)) -- over twice Material's\nusual duration for a transition of this kind. Present since the scaffold (19cd02f);\nit only became noticeable once the list title became a one-tap jump to the overview\nand the props/registry titles a one-tap jump back.\n\nFix: set all four transitions to None. popEnter/popExit fall back to enter/exit only\nwhile unspecified, so setting just the first two would have left a fade on Back.\n\nFiled retroactively: this shipped in 1.10.0 before the ticket-per-change rule existed.\nHistory is not rewritten, so commit a63c56b carries no ticket reference.",
+  "created_at": "2026-08-11T18:27:31+00:00",
+  "id": "T-132",
+  "labels": [
+    "ux",
+    "android"
+  ],
+  "priority": 3,
+  "title": "Android: screen switches crossfade for 700ms",
+  "updated_at": "2026-08-11T18:27:31+00:00"
+}
