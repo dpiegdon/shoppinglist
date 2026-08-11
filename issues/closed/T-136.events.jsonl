@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-08-11T20:50:27+00:00", "kind": "created", "ref": "main@e02ee5a", "text": "Release 1.12.0"}
 {"actor": "claude", "at": "2026-08-11T20:50:28+00:00", "kind": "claimed", "ref": "main@e02ee5a", "text": "claude"}
 {"actor": "claude", "at": "2026-08-11T20:51:02+00:00", "kind": "note", "ref": "main@2605d21", "text": "Released in 2605d21, tagged v1.12.0. verify-all all three suites PASS; APK versionCode 19 / versionName 1.12.0 via aapt2, apksigner-verified under the same release key; 19/19 SMOKE_OK."}
+{"actor": "claude", "at": "2026-08-11T20:51:02+00:00", "kind": "closed", "ref": "main@2605d21", "text": ""}
