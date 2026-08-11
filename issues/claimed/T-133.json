@@ -7,7 +7,8 @@
     "bug",
     "android"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "Android: Add-item dialog needs a tap to focus and hides its buttons behind the keyboard",
-  "updated_at": "2026-08-11T18:27:46+00:00"
+  "updated_at": "2026-08-11T18:27:50+00:00"
 }
