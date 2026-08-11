@@ -1,0 +1,13 @@
+{
+  "body": "The app should notice when the server carries a newer APK than the installed one and\noffer to update -- once per version, never nagging twice for the same one.\n\nDesign: docs/superpowers/specs/2026-08-11-android-update-check-design.md\n\nServer: unauthenticated GET /api/v1/app-version returning the package version and the\nabsolute APK URL. Registered ONLY when the APK is actually served, reusing routes/apk.py's\ngraceful degradation -- so a server without the Android artifact, and every server released\nbefore this feature, simply 404s and the client stays quiet.\n\nClient: check on foreground, rate-limited to once per 12h; semver-compare the server's\nversion against BuildConfig.VERSION_NAME; prompt once per version; \"Update\" hands off to\nthe system with ACTION_VIEW on the APK URL (no new permissions, no in-app download).\nSettings gains a device-local \"check automatically\" switch, default on, below the\nnotification switch -- off means no request at all.\n\nNot verifiable in this sandbox: that ACTION_VIEW actually reaches a browser and the\ninstall completes. Device-only, and the riskiest part of the feature.",
+  "created_at": "2026-08-11T19:52:56+00:00",
+  "id": "T-135",
+  "labels": [
+    "feature",
+    "android",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Android: in-app update check with a per-device opt-out",
+  "updated_at": "2026-08-11T19:52:56+00:00"
+}
