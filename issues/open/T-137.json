@@ -1,0 +1,13 @@
+{
+  "body": "The registry (\"all items ever seen\", reached from the list's top bar) renders whatever order\nSQLite happens to return -- Daos.searchRegistry has no ORDER BY at all, so the order is\neffectively insertion order and formally unspecified. On a list with any history that makes\nfinding a known item a scan rather than a lookup.\n\nSort by name, case-insensitively.\n\nSorted in RegistryViewModel with a java.text.Collator rather than in SQL: SQLite's\nCOLLATE NOCASE only case-folds ASCII, so in any of the eight non-English locales this app\nships, accented and non-Latin names would sort by code point -- \"Apfel\", \"Butter\", \"Zucker\",\n\"\u00c4pfel\". A registry is one list's items, so sorting it in memory is cheap.",
+  "created_at": "2026-08-13T22:41:15+00:00",
+  "id": "T-137",
+  "labels": [
+    "ux",
+    "android",
+    "bug"
+  ],
+  "priority": 3,
+  "title": "Android: the registry lists items in no particular order",
+  "updated_at": "2026-08-13T22:41:15+00:00"
+}
