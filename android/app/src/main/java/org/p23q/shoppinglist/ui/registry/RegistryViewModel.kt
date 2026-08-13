@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.ui.Routes
+import java.text.Collator
 import javax.inject.Inject
 
 data class RegistryUiState(
@@ -39,10 +40,27 @@ class RegistryViewModel @Inject constructor(
 
     private val query = MutableStateFlow("")
 
+    /**
+     * Case-insensitive name order (T-137).
+     *
+     * A Collator rather than an ORDER BY ... COLLATE NOCASE, because SQLite's NOCASE only
+     * case-folds ASCII: in the eight non-English locales this app ships, anything accented or
+     * non-Latin would fall back to code-point order and land after every plain-ASCII name —
+     * "Apfel", "Butter", "Zucker", "Äpfel". SECONDARY strength is what makes it ignore case
+     * while still telling accented letters apart.
+     *
+     * Held per instance, not shared: Collator is mutable and not thread-safe.
+     */
+    private val byName = compareBy(Collator.getInstance().apply { strength = Collator.SECONDARY }) {
+        item: ItemEntity -> item.name.value
+    }
+
     init {
         viewModelScope.launch {
             query.flatMapLatest { q -> itemsRepo.searchRegistry(listId, q) }
-                .collect { items -> _uiState.update { it.copy(items = items) } }
+                // Sorted here rather than in the DAO so the ordering rule sits with the screen
+                // that wants it; a registry is one list's items, so this is cheap.
+                .collect { items -> _uiState.update { it.copy(items = items.sortedWith(byName)) } }
         }
     }
 

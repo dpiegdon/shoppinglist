@@ -48,6 +48,49 @@ class RegistryViewModelTest {
         RegistryViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), itemsRepo)
 
     @Test
+    fun `items come out in name order, ignoring case (T-137)`() = runTest(mainDispatcherRule.dispatcher) {
+        // Inserted deliberately out of order and with mixed case: the DAO query has no ORDER BY,
+        // so without the ViewModel's sort this arrives in insertion order.
+        itemsRepo.createItem(listId, "cherries", status = Status.TODO)
+        itemsRepo.createItem(listId, "Apples", status = Status.BACKLOG)
+        itemsRepo.createItem(listId, "bananas", status = Status.CHECKED)
+
+        val items = newViewModel().uiState.first { it.items.size == 3 }.items
+
+        assertEquals(listOf("Apples", "bananas", "cherries"), items.map { it.name.value })
+    }
+
+    @Test
+    fun `accented names sort with their base letter, not after Z (T-137)`() = runTest(mainDispatcherRule.dispatcher) {
+        // The reason this is a Collator and not SQLite's COLLATE NOCASE: NOCASE case-folds ASCII
+        // only, so "Äpfel" would compare by code point and land after every plain-ASCII name.
+        // This app ships eight non-English locales, so that is the common case, not the exotic one.
+        itemsRepo.createItem(listId, "Zucker", status = Status.TODO)
+        itemsRepo.createItem(listId, "Äpfel", status = Status.TODO)
+        itemsRepo.createItem(listId, "Butter", status = Status.TODO)
+
+        val items = newViewModel().uiState.first { it.items.size == 3 }.items
+
+        assertEquals(listOf("Äpfel", "Butter", "Zucker"), items.map { it.name.value })
+    }
+
+    @Test
+    fun `the sort survives a search (T-137)`() = runTest(mainDispatcherRule.dispatcher) {
+        itemsRepo.createItem(listId, "milk chocolate", status = Status.TODO)
+        itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        itemsRepo.createItem(listId, "buttermilk", status = Status.TODO)
+
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.items.size == 3 }
+        viewModel.onQueryChange("milk")
+
+        // Filtering re-runs the query, so the ordering has to be applied to the filtered flow too,
+        // not once at load.
+        val items = viewModel.uiState.first { it.query == "milk" && it.items.size == 3 }.items
+        assertEquals(listOf("buttermilk", "Milk", "milk chocolate"), items.map { it.name.value })
+    }
+
+    @Test
     fun `shows every item regardless of status when the query is empty`() = runTest(mainDispatcherRule.dispatcher) {
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "Bread", status = Status.CHECKED)
