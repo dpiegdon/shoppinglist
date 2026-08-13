@@ -6,7 +6,8 @@
     "ux",
     "android"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Android: no suggestions when typing a store, unlike name and category",
-  "updated_at": "2026-08-13T22:48:10+00:00"
+  "updated_at": "2026-08-13T22:48:11+00:00"
 }
