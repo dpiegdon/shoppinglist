@@ -1,0 +1,12 @@
+{
+  "body": "The add/edit item form suggests existing values for name (registry search) and category\n(chips under the field), but the store field offers nothing -- you retype \"Aldi\" from memory\nevery time, and a typo silently creates a second store that then shows up as its own chip\nforever.\n\nOffer the list's existing stores as chips under the store field, filtered by what's typed,\nexcluding stores already on this item. Tapping one adds it.\n\nstores_value holds a JSON array per item, so \"distinct stores\" cannot be a SELECT DISTINCT;\nthe values are decoded and flattened, then deduped case-insensitively through the same\ncanonical-casing vote categories use.",
+  "created_at": "2026-08-13T22:48:10+00:00",
+  "id": "T-138",
+  "labels": [
+    "ux",
+    "android"
+  ],
+  "priority": 3,
+  "title": "Android: no suggestions when typing a store, unlike name and category",
+  "updated_at": "2026-08-13T22:48:10+00:00"
+}
