@@ -71,6 +71,24 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
             Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.item_add_store))
         }
     }
+    // Existing stores on this list, offered the same way categories are (T-138) — retyping "Aldi"
+    // from memory is how a typo becomes a second store that then haunts the chip row forever.
+    // Already-added stores drop out rather than being offered as a no-op.
+    val storeSuggestions = state.storeSuggestions.filter { suggestion ->
+        suggestion.contains(state.storeInput, ignoreCase = true) &&
+            state.stores.none { it.equals(suggestion, ignoreCase = true) }
+    }
+    if (storeSuggestions.isNotEmpty()) {
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            storeSuggestions.forEach { suggestion ->
+                AssistChip(
+                    onClick = { viewModel.pickStore(suggestion) },
+                    label = { Text(suggestion) },
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+            }
+        }
+    }
     if (state.stores.isNotEmpty()) {
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             state.stores.forEach { store ->

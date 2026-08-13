@@ -201,6 +201,68 @@ class ItemFormViewModelTest {
     }
 
     @Test
+    fun `existing stores on the list are offered as suggestions (T-138)`() = runTest(mainDispatcherRule.dispatcher) {
+        val milk = itemsRepo.createItem(listId, "Milk")
+        itemsRepo.setStores(milk, listOf("Aldi", "Rewe"))
+        val bread = itemsRepo.createItem(listId, "Bread")
+        itemsRepo.setStores(bread, listOf("Rewe"))
+
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+
+        // Flattened across items and deduplicated: stores_value is a JSON array per row, so "Rewe"
+        // appears twice in the raw data.
+        assertEquals(listOf("Aldi", "Rewe"), viewModel.uiState.first { it.storeSuggestions.isNotEmpty() }.storeSuggestions)
+    }
+
+    @Test
+    fun `store suggestions collapse casing variants into one entry (T-138)`() = runTest(mainDispatcherRule.dispatcher) {
+        val a = itemsRepo.createItem(listId, "A")
+        itemsRepo.setStores(a, listOf("Aldi"))
+        val b = itemsRepo.createItem(listId, "B")
+        itemsRepo.setStores(b, listOf("aldi"))
+        val c = itemsRepo.createItem(listId, "C")
+        itemsRepo.setStores(c, listOf("Aldi"))
+
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+
+        // One chip, in the casing that appears most often — offering "Aldi" and "aldi" separately
+        // is how you end up with both on real items.
+        assertEquals(listOf("Aldi"), viewModel.uiState.first { it.storeSuggestions.isNotEmpty() }.storeSuggestions)
+    }
+
+    @Test
+    fun `picking a store adds it, and never twice (T-138)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+
+        viewModel.pickStore("Aldi")
+        assertEquals(listOf("Aldi"), viewModel.uiState.value.stores)
+
+        // Same store by a different casing — the guard is case-insensitive, so an item can't end
+        // up carrying "Aldi" and "aldi" as two chips.
+        viewModel.pickStore("aldi")
+        assertEquals(listOf("Aldi"), viewModel.uiState.value.stores)
+    }
+
+    @Test
+    fun `the plus button still adds and clears the field, and skips duplicates (T-138)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId)
+
+        viewModel.onStoreInputChange("  Rewe  ")
+        viewModel.addStore()
+        assertEquals(listOf("Rewe"), viewModel.uiState.value.stores)
+        assertEquals("", viewModel.uiState.value.storeInput)
+
+        viewModel.onStoreInputChange("REWE")
+        viewModel.addStore()
+        assertEquals(listOf("Rewe"), viewModel.uiState.value.stores)
+        assertEquals("", viewModel.uiState.value.storeInput)
+    }
+
+    @Test
     fun `save with no picked suggestion creates a new todo item with the entered fields`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.startAdd(listId)

@@ -41,6 +41,9 @@ class ItemsRepo @Inject constructor(
     /** Category values with duplicates, for frequency-weighted canonical casing (T-108). */
     fun categoryValues(listId: String): Flow<List<String>> = itemDao.categoryValues(listId)
 
+    /** Encoded stores lists, one JSON array per item — decode with [decodeStores] (T-138). */
+    fun storeValues(listId: String): Flow<List<String>> = itemDao.storeValues(listId)
+
     /** All non-deleted items in a list (any status), one-shot — for a category recase (T-108). */
     suspend fun activeItemsForListOnce(listId: String): List<ItemEntity> =
         itemDao.activeItemsForListOnce(listId)

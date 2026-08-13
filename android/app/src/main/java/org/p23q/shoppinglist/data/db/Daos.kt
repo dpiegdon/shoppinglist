@@ -70,6 +70,13 @@ interface ItemDao {
     )
     fun categoryValues(listId: String): Flow<List<String>>
 
+    /**
+     * Every item's encoded stores list (T-138). Each row holds a JSON array, not one store, so
+     * the distinct set can't be a SELECT DISTINCT — the caller decodes and flattens these.
+     */
+    @Query("SELECT stores_value FROM items WHERE listId = :listId AND deleted_value = 0")
+    fun storeValues(listId: String): Flow<List<String>>
+
     /** Rows to push: dirty AND not quarantined by a prior server 422 (T-32). */
     @Query("SELECT * FROM items WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ItemEntity>

@@ -34,6 +34,8 @@ data class ItemFormUiState(
     val suggestions: List<ItemEntity> = emptyList(),
     val category: String = "",
     val categorySuggestions: List<String> = emptyList(),
+    /** The list's existing stores, offered under the store field (T-138). */
+    val storeSuggestions: List<String> = emptyList(),
     /** False on a checklist (T-110): hides stores / quantity / price. */
     val showShoppingFields: Boolean = true,
     val stores: List<String> = emptyList(),
@@ -102,6 +104,7 @@ class ItemFormViewModel @Inject constructor(
         loadedSnapshot = null
         listIdFlow.value = listId
         loadCategorySuggestions()
+        loadStoreSuggestions()
         loadListKind()
     }
 
@@ -126,6 +129,7 @@ class ItemFormViewModel @Inject constructor(
         loadedSnapshot = snapshotFrom(_uiState.value)
         listIdFlow.value = item.listId
         loadCategorySuggestions()
+        loadStoreSuggestions()
         loadListKind()
     }
 
@@ -142,6 +146,19 @@ class ItemFormViewModel @Inject constructor(
         val order = listsRepo.getById(listId)?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) }
             ?: emptyList()
         _uiState.update { it.copy(categorySuggestions = CategoryCanon.distinctCanonical(raw, order)) }
+    }
+
+    private fun loadStoreSuggestions() = viewModelScope.launch {
+        // stores_value is a JSON array per item, so the distinct set has to be decoded and
+        // flattened rather than SELECT DISTINCTed. runCatching per row: one unparseable value
+        // (a hand-edited DB, a future wire change) should cost its own suggestions, not crash
+        // the dialog.
+        val raw = itemsRepo.storeValues(listId).first()
+            .flatMap { runCatching { itemsRepo.decodeStores(it) }.getOrDefault(emptyList()) }
+        // CategoryCanon despite the name: the rule wanted here is exactly the one categories
+        // use — one entry per case-insensitive name, most common casing wins, sorted — and
+        // stores have no user-defined order to honour, hence the empty order list.
+        _uiState.update { it.copy(storeSuggestions = CategoryCanon.distinctCanonical(raw, emptyList())) }
     }
 
     /**
@@ -168,9 +185,20 @@ class ItemFormViewModel @Inject constructor(
     fun onStoreInputChange(value: String) = _uiState.update { it.copy(storeInput = value) }
 
     fun addStore() {
-        val store = _uiState.value.storeInput.trim()
+        addStoreValue(_uiState.value.storeInput)
+        _uiState.update { it.copy(storeInput = "") }
+    }
+
+    /** Tapping an existing-store chip (T-138) — same add, without going through the text field. */
+    fun pickStore(store: String) = addStoreValue(store)
+
+    private fun addStoreValue(raw: String) {
+        val store = raw.trim()
         if (store.isBlank()) return
-        _uiState.update { it.copy(stores = it.stores + store, storeInput = "") }
+        // Case-insensitive, so tapping a suggestion you already typed by hand doesn't leave the
+        // item carrying "Aldi" and "aldi" as two chips.
+        if (_uiState.value.stores.any { it.equals(store, ignoreCase = true) }) return
+        _uiState.update { it.copy(stores = it.stores + store) }
     }
 
     fun removeStore(store: String) = _uiState.update { it.copy(stores = it.stores - store) }
