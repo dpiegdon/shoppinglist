@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-08-13T22:48:10+00:00", "kind": "created", "ref": "main@e72c815", "text": "Android: no suggestions when typing a store, unlike name and category"}
 {"actor": "claude", "at": "2026-08-13T22:48:11+00:00", "kind": "claimed", "ref": "main@e72c815", "text": "claude"}
+{"actor": "claude", "at": "2026-08-13T23:00:32+00:00", "kind": "note", "ref": "main@22d176b", "text": "Implemented in 22d176b; 4 new ItemFormViewModel tests. Full Android leg green: 349 tests, 0 failures, lint clean."}
