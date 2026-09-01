@@ -13,8 +13,8 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
   which defaults to `<base_url path>/api/v1` (override with `url_prefix`). The
   site-root routes at the bottom deliberately sit *outside* it.
 - **Auth.** `Authorization: Bearer <token>` on every endpoint except
-  `POST /register`, `POST /login`, `GET /registration-status`, and the site-root
-  pages.
+  `POST /register`, `POST /login`, `GET /registration-status`,
+  `GET /app-version`, and the site-root pages.
 - **Error envelope.** Every non-2xx JSON response is
   `{"error": "<code>", "message": "<text>"}`, sometimes with extra keys (never
   shadowing those two) — e.g. `row_id`/`field` on a `/sync` validation failure.
@@ -214,6 +214,31 @@ The reset-password response carries the newly generated password, shown once to
 the admin and relayed out of band — the same trust model as invite tokens.
 Deleting yourself returns `403 cannot_delete_self`; deleting another admin
 returns `403 cannot_delete_admin` (remove them from the config instead).
+
+### App package
+
+| Endpoint | Request body | Success response |
+|---|---|---|
+| `GET /app-version` | — | `200 {"version", "download_url"}` |
+
+Unauthenticated, like `/registration-status`: checking for an update is not an
+account operation, and the download it points at is public anyway. The Android
+client polls it on foreground (rate-limited) and offers an update when `version`
+is newer than its own build.
+
+`version` is the **server package's** version, not a value parsed out of the
+APK. One built wheel is a single deployable artifact whose parts share one
+version number, so the two are the same thing by construction.
+
+`download_url` is **absolute**, built from the instance's `base_url`, so it
+survives a prefix mount and can be handed straight to an Android intent. It
+points at the site-root `GET /shoppinglist.apk` below.
+
+`404 no_app_package` when this instance serves no APK — because
+`serve_android_apk` is off, no APK is packaged, or the server is running from a
+source checkout with no installed package version to report. That is also what
+every server released before this endpoint existed answers, so a client can
+treat "no update information" as one case rather than two.
 
 ### Site-root routes (outside the API prefix)
 

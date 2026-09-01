@@ -13,7 +13,7 @@ no central service.
 The **wire contract** — every endpoint, the field-clock shape, and the invite
 token format, which the server implements and both clients consume — is
 [`docs/wire-contract.md`](docs/wire-contract.md). Point-in-time design and
-planning documents from the original build are kept in
+planning documents are kept in
 [`docs/archive/`](docs/archive/README.md) as history.
 
 ## Parts

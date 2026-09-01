@@ -275,6 +275,26 @@ cp android/app/build/outputs/apk/release/app-release.apk \
 The download URL is stable (no content hash) and served with a short cache
 lifetime, so updated APKs propagate promptly.
 
+### Telling the app an update exists
+
+Installed apps have no app store to ask, so they ask the server they already
+sync with. `GET /api/v1/app-version` answers with the version this server
+carries and the absolute URL to fetch it:
+
+```json
+{"version": "1.12.0", "download_url": "https://example.com/shopping/shoppinglist.apk"}
+```
+
+It is unauthenticated (like `/registration-status`), and the version reported is
+this **package's** version rather than one parsed out of the APK — the single
+artifact shares one version number, so those are the same thing. The Android
+client checks on foreground, at most twice a day, and offers each new version
+once; users can turn the check off entirely in the app's settings.
+
+Nothing needs configuring: the endpoint exists whenever the APK does. It answers
+`404 no_app_package` when the instance serves no APK — the same answer servers
+older than the feature give, so old servers need no special-casing.
+
 ## TLS dev server (for client-side testing)
 
 `server/dev_tls_server.py` serves the same app over **HTTPS on port 8723**

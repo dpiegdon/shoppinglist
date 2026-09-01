@@ -1,7 +1,7 @@
 # Archive
 
-Point-in-time design and planning documents from the original build, kept as a
-record of how the project got here. **They are not maintained and are not a
+Point-in-time design and planning documents — most from the original build, a
+few from later features — kept as a record of how the project got here. **They are not maintained and are not a
 description of current behavior.**
 
 For anything you actually need:
@@ -22,6 +22,7 @@ For anything you actually need:
 | [`specs/client-ui-notes.md`](specs/client-ui-notes.md) | Raw capture of client requirements, gathered while the server spec was being finalized. Both clients were subsequently built from it. |
 | [`plans/2026-07-08-shopping-list-tickets.md`](plans/2026-07-08-shopping-list-tickets.md) | The original ticket breakdown for the whole system (server, Android, web epics). Ongoing work moved to the gittoc tracker on the `gittoc` branch afterward. |
 | [`plans/2026-07-15-t65-collaborator-change-notifications.md`](plans/2026-07-15-t65-collaborator-change-notifications.md) | Implementation plan for one feature (collaborator-change notifications), kept as a worked example of the plan format. |
+| [`specs/2026-08-11-android-update-check-design.md`](specs/2026-08-11-android-update-check-design.md) | Design for the in-app update check (T-135), written before it was built. Later than the rest of this directory. The endpoint it describes is documented for real in [`../wire-contract.md`](../wire-contract.md). |
 
 These documents were written to be executed by AI coding agents, so they carry
 agent-directed instructions ("use this skill", model tags per ticket, host-specific

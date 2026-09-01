@@ -81,6 +81,15 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
   it in a file manager. You'll be prompted to allow installs from that source
   the first time.
 
+Once installed, the app keeps itself current on its own: on foreground (at most
+twice a day) it asks the server via `GET /api/v1/app-version` whether a newer
+version is available, and offers each new version once. Accepting hands the APK
+URL to the system, which installs it the same way a sideload does — the app
+never downloads or installs anything itself, and asks for no extra permissions.
+Declining is remembered for that version and not asked again. The whole check
+can be turned off under Settings → Account. Servers that carry no APK, or that
+predate the feature, simply answer 404 and the app stays quiet.
+
 On first launch the login screen shows the **server URL** — prefilled with
 `https://p23q.org/shopping` (the original instance; edit it if you self-host)
 or with whatever you last logged into. It's the base URL where the Flask
