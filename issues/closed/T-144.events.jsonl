@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-09-01T20:06:33+00:00", "kind": "created", "ref": "main@22d176b", "text": "web still has Add another; Android no longer does"}
 {"actor": "claude", "at": "2026-09-01T21:39:11+00:00", "kind": "claimed", "ref": "main@23923ee", "text": "claude"}
 {"actor": "claude", "at": "2026-09-01T21:51:53+00:00", "kind": "closed", "ref": "main@52a6223", "text": ""}
+{"actor": "claude", "at": "2026-09-01T21:55:01+00:00", "kind": "note", "ref": "main@fac8df9", "text": "Landed as fac8df9. The close event above points at e0bdb6b, which no longer exists: that commit had swept in leftovers from an aborted release.sh run, and history was rewritten to drop them."}
