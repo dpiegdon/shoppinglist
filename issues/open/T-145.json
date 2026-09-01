@@ -1,0 +1,11 @@
+{
+  "body": "RegistryPage renders ItemDialog without categorySuggestions, so the category\nchips (T-108) silently do nothing there \u2014 while the same dialog opened from the\nlist screen has them. Pre-existing oversight, found while adding store\nsuggestions ([[T-139]]).",
+  "created_at": "2026-09-01T20:10:49+00:00",
+  "id": "T-145",
+  "labels": [
+    "bug"
+  ],
+  "priority": 4,
+  "title": "web: editing an item from the registry screen has no category autocomplete",
+  "updated_at": "2026-09-01T20:10:49+00:00"
+}
