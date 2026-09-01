@@ -1,0 +1,12 @@
+{
+  "body": "Reported after 1.13.0 went out: the phone on 1.12.0 showed no update prompt\ndespite syncing, restarting and waiting.\n\nNothing is broken. The server answers correctly\n(GET /api/v1/app-version -> 1.13.0 with a working download_url, verified), and\nthe client logic is right. UpdateChecker returns before making any request when\nthe last ATTEMPT was under 12h ago, and the timestamp is recorded before the\nrequest, so an attempt made while the server still carried the old version burns\nthe window just as effectively as a successful one. Restarting the app does not\nreset it; the value lives in the update_prefs DataStore.\n\nSo the common case is exactly the one that just happened: open the app at some\npoint during the day, roll out a release an hour later, and the app cannot\nnotice for up to twelve hours. There is no way to ask it to look.\n\nThere is a second dead end in the same area: dismiss() records the version as\nasked-about for BOTH answers, so a prompt tapped away by accident can never\nreappear for that version. Neither state is reachable from the UI.\n\nWanted: a \"Check for updates now\" action in Account settings, next to the\nexisting auto-check toggle, that bypasses the interval and clears\nlastPromptedVersion for the version it finds. That makes the feature testable,\ngives the user an escape hatch from an accidental Skip, and is the natural place\nto report \"you are up to date\" \u2014 the only context where the silence-on-failure\nrule should not apply, because the user asked.",
+  "created_at": "2026-09-01T22:58:55+00:00",
+  "id": "T-149",
+  "labels": [
+    "ux",
+    "feature"
+  ],
+  "priority": 2,
+  "title": "update check cannot be triggered on demand, so a fresh release stays invisible for up to 12h",
+  "updated_at": "2026-09-01T22:58:55+00:00"
+}
