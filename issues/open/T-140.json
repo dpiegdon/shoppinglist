@@ -1,0 +1,12 @@
+{
+  "body": "Both clients. Today, typing part of a name in the Add-item dialog and picking a\nsuggestion only PREFILLS the form from that item and binds its id; the item\njoins the list only after pressing Add. That was a deliberate choice in T-33\n(pick no longer persists immediately, so Cancel leaves the item untouched), but\nit costs a second press on the overwhelmingly common path.\n\nThe usual workflow is: add straight from the backlog. So picking a suggestion\nshould immediately put that item on the list (status -> todo) and close the\ndialog. If the previous settings carried over from the backlog are unwanted,\nthe item can be edited afterwards.\n\nNotes:\n- Only the NAME suggestions behave this way. The category and store chips still\n  just fill their field.\n- Only in add mode. Edit mode has no name suggestions.\n- Adopting writes only what actually changed, i.e. the status clock. Picking an\n  item that is already `todo` therefore writes nothing and simply closes.\n- This re-reverses the T-33 decision on the pick path, on purpose.",
+  "created_at": "2026-09-01T20:06:03+00:00",
+  "id": "T-140",
+  "labels": [
+    "feature",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Add item: picking a name suggestion adds it straight away",
+  "updated_at": "2026-09-01T20:06:03+00:00"
+}
