@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-09-01T20:31:18+00:00", "kind": "created", "ref": "main@4039aec", "text": "Release 1.13.0"}
 {"actor": "claude", "at": "2026-09-01T21:24:29+00:00", "kind": "note", "ref": "main@23923ee", "text": "Held: user wants T-143 (APK repo growth) decided before 1.13.0 is cut."}
 {"actor": "claude", "at": "2026-09-01T21:24:29+00:00", "kind": "updated", "ref": "main@23923ee", "text": "fields updated"}
+{"actor": "claude", "at": "2026-09-01T21:30:58+00:00", "kind": "updated", "ref": "main@23923ee", "text": "fields updated"}
