@@ -1,0 +1,12 @@
+{
+  "body": "DISCUSS BEFORE STARTING \u2014 no approach chosen yet.\n\nserver/src/shoppinglist_server/apk/shoppinglist.apk is committed on every\nrelease and nothing ever leaves history. Measured today:\n\n  .git                      52 MB\n  19 committed APK blobs    ~45 MB of it\n  per release               ~2.4 MB, growing with the app\n\nThe APK is a committed input on purpose \u2014 build-wheel.sh does not rebuild it,\nand a fresh clone can build a complete wheel with no Android toolchain. That\nproperty is worth keeping; the question is only how the bytes are stored.\n\nForward-only options (history is not to be rewritten):\n\n1. git LFS from the next release on. Keeps the checkout property, moves new\n   blobs out of the pack. Adds an LFS dependency for anyone cloning.\n2. Stop tracking the APK; release.sh copies it from the Android build output\n   and it ships as a release asset instead. Smallest repo, but a clone can no\n   longer build the full wheel without the Android toolchain.\n3. Accept it. ~2.4 MB per release is not a real problem yet at this rate.\n\nNote option 2 conflicts with the single-deployable-artifact story in the README\nas currently written, so picking it means rewriting that section too.",
+  "created_at": "2026-09-01T20:06:33+00:00",
+  "id": "T-143",
+  "labels": [
+    "chore",
+    "human"
+  ],
+  "priority": 4,
+  "title": "Embedded APK blobs grow the repo ~2.4 MB per release \u2014 decide a policy",
+  "updated_at": "2026-09-01T20:06:33+00:00"
+}
