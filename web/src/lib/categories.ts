@@ -60,6 +60,16 @@ export function distinctCanonicalCategories(rawCategories: string[], categoryOrd
   );
 }
 
+/**
+ * The distinct stores in use (canonical casing), sorted — for the item dialog's store chips
+ * (T-139). Canonicalization is the category rule verbatim: same case-insensitive identity, same
+ * most-frequent-casing vote, only the domain differs. Android reuses CategoryCanon here for
+ * exactly the same reason, so the two clients canonicalize stores identically.
+ */
+export function distinctCanonicalStores(rawStores: string[]): string[] {
+  return distinctCanonicalCategories(rawStores, []);
+}
+
 export interface CategoryRenamePlan {
   /** Ids of items whose `category` should be rewritten to `toName` (excludes ones already equal). */
   itemIds: string[];

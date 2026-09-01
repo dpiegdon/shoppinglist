@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue } from "../hooks/useSync";
+import { distinctCanonicalCategories, distinctCanonicalStores } from "../lib/categories";
 import { listKind, showsShoppingFields } from "../lib/listKind";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
@@ -23,6 +24,21 @@ export default function RegistryPage() {
     [items, listId],
   );
 
+  // Same autocomplete data the list screen's dialog gets: store chips (T-139), and the category
+  // chips this screen was silently rendering without (T-145).
+  const categorySuggestions = useMemo(
+    () =>
+      distinctCanonicalCategories(
+        listItems.map((i) => itemFieldValue(i, "category") ?? ""),
+        (list ? listFieldValue(list, "category_order") : null) ?? [],
+      ),
+    [listItems, list],
+  );
+  const storeSuggestions = useMemo(
+    () => distinctCanonicalStores(listItems.flatMap((i) => itemFieldValue(i, "stores") ?? [])),
+    [listItems],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matching = q
@@ -34,7 +50,19 @@ export default function RegistryPage() {
   }, [listItems, query]);
 
   if (!listId) return <Navigate to="/" replace />;
-  if (!list) return <Navigate to="/" replace />;
+  // Not a redirect (T-146): `list` is undefined on the FIRST render of every visit, because the
+  // web client has no local mirror and lists only exist once the first sync response lands.
+  // Navigating away here therefore bounced anyone who reloaded or deep-linked this URL out to the
+  // overview. Rendering a placeholder instead lets the page survive the wait, exactly as ListPage
+  // already does — and still says something sensible if the list really is gone.
+  if (!list) {
+    return (
+      <main style={{ padding: "1rem" }}>
+        <p className="muted">{t("list.notFound")}</p>
+        <Link to="/">{t("list.backToOverview")}</Link>
+      </main>
+    );
+  }
 
   async function handleSave(values: ItemDialogSaveValues) {
     const changed = values.changedFields;
@@ -118,6 +146,8 @@ export default function RegistryPage() {
         <ItemDialog
           listId={listId}
           registryItems={listItems}
+          categorySuggestions={categorySuggestions}
+          storeSuggestions={storeSuggestions}
           showShoppingFields={showsShoppingFields(listKind(list))}
           editingItem={editingItem}
           defaultCurrency={defaultCurrency}

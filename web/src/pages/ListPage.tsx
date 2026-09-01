@@ -4,7 +4,12 @@ import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { groupVisibleItems } from "../lib/grouping";
-import { categoryKey, distinctCanonicalCategories, planCategoryRename } from "../lib/categories";
+import {
+  categoryKey,
+  distinctCanonicalCategories,
+  distinctCanonicalStores,
+  planCategoryRename,
+} from "../lib/categories";
 import { listKind, showsShoppingFields } from "../lib/listKind";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
@@ -89,6 +94,11 @@ export default function ListPage() {
   const categorySuggestions = distinctCanonicalCategories(
     listItems.map((i) => itemFieldValue(i, "category") ?? ""),
     categoryOrder,
+  );
+  // Existing stores (canonical casing) for the item dialog's store chips (T-139). Every item's
+  // stores array flattened, so a store used once anywhere in the list is offered everywhere in it.
+  const storeSuggestions = distinctCanonicalStores(
+    listItems.flatMap((i) => itemFieldValue(i, "stores") ?? []),
   );
 
   async function setItemStatus(itemId: string, status: ItemStatus) {
@@ -367,6 +377,7 @@ export default function ListPage() {
           listId={listId}
           registryItems={listItems}
           categorySuggestions={categorySuggestions}
+          storeSuggestions={storeSuggestions}
           showShoppingFields={showShopping}
           editingItem={dialogItem === "new" ? undefined : dialogItem}
           defaultCurrency={defaultCurrency}

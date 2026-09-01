@@ -32,6 +32,15 @@ function optEqual(a: string | null, b: string | null): boolean {
   return (a || null) === (b || null);
 }
 
+/**
+ * Whether this store is already on the item, compared case-insensitively (T-139) — so tapping a
+ * suggestion you had already typed by hand doesn't leave two spellings of one shop. Matches
+ * Android's ItemFormViewModel.addStoreValue.
+ */
+function containsStore(stores: string[], store: string): boolean {
+  return stores.some((s) => s.toLowerCase() === store.toLowerCase());
+}
+
 function storesEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
@@ -98,6 +107,8 @@ interface ItemDialogProps {
   registryItems: ItemObject[];
   /** Existing categories in this list (canonical casing), for the category autocomplete (T-108). */
   categorySuggestions?: string[];
+  /** Existing stores in this list (canonical casing), offered under the store input (T-139). */
+  storeSuggestions?: string[];
   /**
    * Whether to show the shopping-only fields — stores, quantity, price (T-110). False on a
    * checklist. The item schema is unchanged either way: hidden fields keep whatever they already
@@ -140,6 +151,7 @@ function valuesFromItem(item: ItemObject): Omit<ItemDialogSaveValues, "itemId" |
 export default function ItemDialog({
   registryItems,
   categorySuggestions = [],
+  storeSuggestions = [],
   showShoppingFields = true,
   editingItem,
   defaultCurrency,
@@ -185,6 +197,20 @@ export default function ItemDialog({
       .slice(0, 8);
   }, [categorySuggestions, values.category]);
 
+  // Existing stores to offer as clickable chips (T-139), the store-field twin of categoryChips
+  // and of Android's AssistChip row: those containing the typed text (case-insensitive), minus the
+  // ones already on this item. An exact match is kept, unlike categories — clicking it still does
+  // something (it commits the chip), whereas re-picking the category you already typed is a no-op.
+  const storeChips = useMemo(() => {
+    const typed = storeInput.trim().toLowerCase();
+    return storeSuggestions
+      .filter(
+        (store) =>
+          store.toLowerCase().includes(typed) && !containsStore(values.stores, store),
+      )
+      .slice(0, 8);
+  }, [storeSuggestions, storeInput, values.stores]);
+
   function pickSuggestion(item: ItemObject) {
     setMatchedExisting(item);
     const next = valuesFromItem(item);
@@ -197,8 +223,17 @@ export default function ItemDialog({
   function addStore() {
     const trimmed = storeInput.trim();
     setStoreInput("");
-    if (!trimmed) return;
-    setValues((v) => (v.stores.includes(trimmed) ? v : { ...v, stores: [...v.stores, trimmed] }));
+    addStoreValue(trimmed);
+  }
+
+  /** Clicking an existing-store chip (T-139) — the same append, without going via the text box. */
+  function pickStore(store: string) {
+    addStoreValue(store);
+  }
+
+  function addStoreValue(store: string) {
+    if (!store) return;
+    setValues((v) => (containsStore(v.stores, store) ? v : { ...v, stores: [...v.stores, store] }));
   }
 
   function removeStore(store: string) {
@@ -266,7 +301,7 @@ export default function ItemDialog({
       // out of changedFields (T-88 no re-stomp).
       const pendingStore = storeInput.trim();
       const stores =
-        pendingStore && !values.stores.includes(pendingStore)
+        pendingStore && !containsStore(values.stores, pendingStore)
           ? [...values.stores, pendingStore]
           : values.stores;
       const quantity = values.quantity.trim();
@@ -428,6 +463,20 @@ export default function ItemDialog({
               {t("action.add")}
             </button>
           </div>
+          {storeChips.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
+              {storeChips.map((store) => (
+                <button
+                  key={store}
+                  type="button"
+                  className="chip-button"
+                  onClick={() => pickStore(store)}
+                >
+                  {store}
+                </button>
+              ))}
+            </div>
+          )}
           {values.stores.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
               {values.stores.map((store) => (

@@ -5,7 +5,7 @@ import ItemDialog from "./ItemDialog";
 import type { ItemObject } from "../api/contract";
 import { ApiError } from "../api/client";
 
-function registryItem(id: string, name: string, category = "dairy"): ItemObject {
+function registryItem(id: string, name: string, category = "dairy", stores: string[] = []): ItemObject {
   const clock = { updated_at: 1, updated_by: "dev" };
   return {
     id,
@@ -15,7 +15,7 @@ function registryItem(id: string, name: string, category = "dairy"): ItemObject 
       name: { value: name, ...clock },
       category: { value: category, ...clock },
       status: { value: "backlog", ...clock },
-      stores: { value: [], ...clock },
+      stores: { value: stores, ...clock },
       quantity: { value: null, ...clock },
       price: { value: null, ...clock },
       note: { value: null, ...clock },
@@ -64,6 +64,50 @@ describe("ItemDialog (add mode)", () => {
 
     await userEvent.click(chip);
     expect(categoryInput).toHaveValue("Dairy");
+  });
+
+  it("offers store chips and clicking one adds it as a chip (T-139)", async () => {
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[]}
+        storeSuggestions={["Rewe", "Aldi"]}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    // Untyped, both are offered; typing narrows to the matching one.
+    expect(screen.getByRole("button", { name: "Rewe" })).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Stores"), "al");
+    expect(screen.queryByRole("button", { name: "Rewe" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Aldi" }));
+    // Now a committed chip with a remove button, and no longer offered as a suggestion.
+    expect(screen.getByRole("button", { name: "Remove Aldi" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aldi" })).not.toBeInTheDocument();
+  });
+
+  it("does not offer a store already on the item, whatever its casing (T-139)", async () => {
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[]}
+        storeSuggestions={["Rewe"]}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    // Typed by hand in a different casing than the suggestion carries.
+    await userEvent.type(screen.getByLabelText("Stores"), "rewe");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(screen.getByRole("button", { name: "Remove rewe" })).toBeInTheDocument();
+    // The suggestion is gone rather than offering a second spelling of one shop.
+    expect(screen.queryByRole("button", { name: "Rewe" })).not.toBeInTheDocument();
   });
 
   it("hides the shopping-only fields on a checklist, keeping the rest (T-110)", () => {
