@@ -6,7 +6,8 @@
     "ops",
     "chore"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Python linting: ruff + ty + black + isort, wired into verify-all",
-  "updated_at": "2026-09-01T20:06:18+00:00"
+  "updated_at": "2026-09-01T20:18:59+00:00"
 }

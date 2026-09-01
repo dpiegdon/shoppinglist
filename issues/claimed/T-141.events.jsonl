@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-09-01T20:06:18+00:00", "kind": "created", "ref": "main@22d176b", "text": "Python linting: ruff + ty + black + isort, wired into verify-all"}
+{"actor": "claude", "at": "2026-09-01T20:18:59+00:00", "kind": "claimed", "ref": "main@fbc8690", "text": "claude"}
