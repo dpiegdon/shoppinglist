@@ -142,14 +142,20 @@ def test_revoke_session_unknown_id_raises_404(db_conn):
 def test_get_settings_default_currency_is_eur(db_conn):
     account_id, _ = _register_and_login(db_conn)
     # initials default to the email's local-part when never set (T-64) — bob@... -> "BO".
-    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "EUR", "initials": "BO"}
+    assert accounts.get_settings(db_conn, account_id) == {
+        "default_currency": "EUR",
+        "initials": "BO",
+    }
 
 
 def test_update_settings_valid_currency(db_conn):
     account_id, _ = _register_and_login(db_conn)
     result = accounts.update_settings(db_conn, account_id, "USD")
     assert result == {"default_currency": "USD", "initials": "BO"}
-    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "USD", "initials": "BO"}
+    assert accounts.get_settings(db_conn, account_id) == {
+        "default_currency": "USD",
+        "initials": "BO",
+    }
 
 
 @pytest.mark.parametrize("bad_currency", ["usd", "US", "USDD", "", None])
@@ -203,7 +209,10 @@ def test_update_settings_currency_only_preserves_custom_initials_override(db_con
     result = accounts.update_settings(db_conn, account_id, "USD")
 
     assert result == {"default_currency": "USD", "initials": "CZ"}
-    assert accounts.get_settings(db_conn, account_id) == {"default_currency": "USD", "initials": "CZ"}
+    assert accounts.get_settings(db_conn, account_id) == {
+        "default_currency": "USD",
+        "initials": "CZ",
+    }
 
 
 def test_update_settings_initials_only_leaves_currency_unchanged(db_conn):
@@ -253,18 +262,21 @@ def test_delete_account_cascades_and_orphans_memberships(db_conn):
 
     accounts.delete_account(db_conn, account_id, PASSWORD)
 
-    assert db_conn.execute(
-        "SELECT 1 FROM accounts WHERE id = ?", (account_id,)
-    ).fetchone() is None
-    assert db_conn.execute(
-        "SELECT 1 FROM account_settings WHERE account_id = ?", (account_id,)
-    ).fetchone() is None
-    assert db_conn.execute(
-        "SELECT 1 FROM auth_tokens WHERE account_id = ?", (account_id,)
-    ).fetchone() is None
-    assert db_conn.execute(
-        "SELECT 1 FROM memberships WHERE account_id = ?", (account_id,)
-    ).fetchone() is None
+    assert db_conn.execute("SELECT 1 FROM accounts WHERE id = ?", (account_id,)).fetchone() is None
+    assert (
+        db_conn.execute(
+            "SELECT 1 FROM account_settings WHERE account_id = ?", (account_id,)
+        ).fetchone()
+        is None
+    )
+    assert (
+        db_conn.execute("SELECT 1 FROM auth_tokens WHERE account_id = ?", (account_id,)).fetchone()
+        is None
+    )
+    assert (
+        db_conn.execute("SELECT 1 FROM memberships WHERE account_id = ?", (account_id,)).fetchone()
+        is None
+    )
 
 
 def test_delete_account_after_minting_invite_does_not_500(db_conn):
@@ -277,12 +289,11 @@ def test_delete_account_after_minting_invite_does_not_500(db_conn):
 
     accounts.delete_account(db_conn, account_id, PASSWORD)
 
-    assert db_conn.execute(
-        "SELECT 1 FROM accounts WHERE id = ?", (account_id,)
-    ).fetchone() is None
-    assert db_conn.execute(
-        "SELECT 1 FROM invites WHERE created_by = ?", (account_id,)
-    ).fetchone() is None
+    assert db_conn.execute("SELECT 1 FROM accounts WHERE id = ?", (account_id,)).fetchone() is None
+    assert (
+        db_conn.execute("SELECT 1 FROM invites WHERE created_by = ?", (account_id,)).fetchone()
+        is None
+    )
 
 
 def test_delete_account_after_minting_invite_list_keeps_other_member(db_conn):
@@ -290,9 +301,7 @@ def test_delete_account_after_minting_invite_list_keeps_other_member(db_conn):
     invite the departed account minted must still be revoked so a since-gone
     creator can't leave a live invite that would still admit the invitee."""
     account_id, _ = _register_and_login(db_conn)
-    other_id, _ = _register_and_login(
-        db_conn, email="other@example.com", device="other-device"
-    )
+    other_id, _ = _register_and_login(db_conn, email="other@example.com", device="other-device")
     _insert_list_and_membership(db_conn, "list-1", account_id)
     db_conn.execute(
         "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, ?, ?)",
@@ -303,19 +312,21 @@ def test_delete_account_after_minting_invite_list_keeps_other_member(db_conn):
 
     accounts.delete_account(db_conn, account_id, PASSWORD)
 
-    assert db_conn.execute(
-        "SELECT 1 FROM accounts WHERE id = ?", (account_id,)
-    ).fetchone() is None
-    assert db_conn.execute(
-        "SELECT 1 FROM invites WHERE created_by = ?", (account_id,)
-    ).fetchone() is None
+    assert db_conn.execute("SELECT 1 FROM accounts WHERE id = ?", (account_id,)).fetchone() is None
+    assert (
+        db_conn.execute("SELECT 1 FROM invites WHERE created_by = ?", (account_id,)).fetchone()
+        is None
+    )
     # The list survives — orphan_check must not have tombstoned it.
     row = db_conn.execute("SELECT deleted FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["deleted"] == 0
-    assert db_conn.execute(
-        "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?",
-        (other_id, "list-1"),
-    ).fetchone() is not None
+    assert (
+        db_conn.execute(
+            "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?",
+            (other_id, "list-1"),
+        ).fetchone()
+        is not None
+    )
 
 
 # ---- service layer: reset password (T-92) -----------------------------------
@@ -332,9 +343,10 @@ def test_reset_password_revokes_all_sessions_but_not_other_accounts(db_conn):
     # There's no "current session" to spare in the CLI case (unlike change_password,
     # T-45): a reset means the operator no longer trusts *any* outstanding token for
     # this account, so all of them go — including the one that was live when it ran.
-    assert db_conn.execute(
-        "SELECT 1 FROM auth_tokens WHERE account_id = ?", (account_id,)
-    ).fetchone() is None
+    assert (
+        db_conn.execute("SELECT 1 FROM auth_tokens WHERE account_id = ?", (account_id,)).fetchone()
+        is None
+    )
 
     # The other account's sessions are untouched.
     remaining = db_conn.execute(
@@ -418,9 +430,7 @@ def test_change_password_http_wrong_current_403(client):
     assert resp.get_json()["error"] == "invalid_credentials"
 
     # And the session must still be usable afterwards — the point of the fix.
-    resp = client.get(
-        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
-    )
+    resp = client.get("/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
 
 
@@ -439,12 +449,18 @@ def test_change_password_http_invalidates_other_devices(client):
     )
 
     # The other device's token is now revoked; the changing device stays authenticated.
-    assert client.get(
-        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {other}"}
-    ).status_code == 401
-    assert client.get(
-        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
-    ).status_code == 200
+    assert (
+        client.get(
+            "/api/v1/account/sessions", headers={"Authorization": f"Bearer {other}"}
+        ).status_code
+        == 401
+    )
+    assert (
+        client.get(
+            "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
+        ).status_code
+        == 200
+    )
 
 
 def test_change_email_http_flow(client):
@@ -480,9 +496,7 @@ def test_change_email_http_wrong_password_403(client):
     assert resp.get_json()["error"] == "invalid_credentials"
 
     # And the session must still be usable afterwards — the email was NOT changed.
-    resp = client.get(
-        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
-    )
+    resp = client.get("/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
 
 
@@ -588,7 +602,10 @@ def test_settings_http_patch_explicit_null_initials_clears_override(client):
     )
 
     assert resp.status_code == 200
-    assert resp.get_json() == {"default_currency": "EUR", "initials": "BO"}  # bob@... derived default
+    assert resp.get_json() == {
+        "default_currency": "EUR",
+        "initials": "BO",
+    }  # bob@... derived default
 
 
 def test_settings_http_patch_non_string_initials_422_not_500(client):
@@ -608,9 +625,7 @@ def test_settings_http_patch_empty_body_is_noop_200(client):
         json={"default_currency": "USD", "initials": "ZZ"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    before = client.get(
-        "/api/v1/settings", headers={"Authorization": f"Bearer {token}"}
-    ).get_json()
+    before = client.get("/api/v1/settings", headers={"Authorization": f"Bearer {token}"}).get_json()
 
     resp = client.patch(
         "/api/v1/settings",
@@ -650,7 +665,5 @@ def test_delete_account_http_wrong_password_403(client):
     assert resp.get_json()["error"] == "invalid_credentials"
 
     # And the session must still be usable afterwards — the account was NOT deleted.
-    resp = client.get(
-        "/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"}
-    )
+    resp = client.get("/api/v1/account/sessions", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200

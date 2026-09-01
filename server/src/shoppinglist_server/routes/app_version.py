@@ -49,7 +49,7 @@ def register_routes(bp):
                 404,
                 "no_app_package",
                 "This server cannot determine its app package version.",
-            )
+            ) from None
         return (
             jsonify(
                 {

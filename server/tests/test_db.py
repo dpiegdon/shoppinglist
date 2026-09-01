@@ -27,8 +27,19 @@ def _insert_item(conn, item_id, list_id, name, change_seq, deleted=0):
         " status, status_ts, status_by, deleted, deleted_ts, deleted_by) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
-            item_id, list_id, NOW, change_seq, name, NOW, "dev-1",
-            "todo", NOW, "dev-1", deleted, NOW, "dev-1",
+            item_id,
+            list_id,
+            NOW,
+            change_seq,
+            name,
+            NOW,
+            "dev-1",
+            "todo",
+            NOW,
+            "dev-1",
+            deleted,
+            NOW,
+            "dev-1",
         ),
     )
     conn.commit()
@@ -47,7 +58,9 @@ def test_fresh_init_db_stamps_current_version_without_running_migrations(tmp_pat
     # (the column already exists from schema.sql) — proves init_db() on a
     # brand-new file skips straight to CURRENT_VERSION rather than replaying it.
     monkeypatch.setattr(
-        migrations_module, "MIGRATIONS", [(1, ["ALTER TABLE lists ADD COLUMN nonexistent_marker TEXT"])]
+        migrations_module,
+        "MIGRATIONS",
+        [(1, ["ALTER TABLE lists ADD COLUMN nonexistent_marker TEXT"])],
     )
     monkeypatch.setattr(migrations_module, "CURRENT_VERSION", 1)
 

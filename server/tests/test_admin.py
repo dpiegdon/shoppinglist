@@ -118,7 +118,10 @@ def test_admin_can_disable_registration_at_runtime(tmp_path):
     )
     assert resp.status_code == 200
     assert client.get("/api/v1/registration-status").get_json()["allow_registration"] is False
-    assert client.post("/api/v1/register", json={"email": "n@example.com", "password": PW}).status_code == 403
+    assert (
+        client.post("/api/v1/register", json={"email": "n@example.com", "password": PW}).status_code
+        == 403
+    )
 
 
 def test_registration_override_resets_after_a_restart(tmp_path, monkeypatch):
@@ -221,7 +224,9 @@ def test_admin_cannot_delete_themselves_via_admin(tmp_path):
     token = session["token"]
 
     resp = client.delete(
-        f"/api/v1/admin/users/{session['account_id']}", json={"password": PW}, headers=_bearer(token)
+        f"/api/v1/admin/users/{session['account_id']}",
+        json={"password": PW},
+        headers=_bearer(token),
     )
     assert resp.status_code == 403
     assert resp.get_json()["error"] == "cannot_delete_self"

@@ -4,8 +4,7 @@ from flask.cli import with_appcontext
 
 from . import accounts
 from . import db as db_module
-from . import gc
-from . import get_config_by_name
+from . import gc, get_config_by_name
 from .auth import now_ms
 from .errors import ApiError
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs all three verification suites (server pytest, web vitest+tsc+lint, Android
+# Runs every verification suite (server lint + pytest, web vitest+tsc+lint, Android
 # test+lint) in one command — three separate invocations were easy to skip one of
 # (T-56). Fails fast: stops at the first failing stage, ordered fastest-first so a
 # broken server/web change is caught before burning time on the much slower
@@ -48,6 +48,24 @@ server_check() (
   .venv/bin/python -m pytest -q
 )
 
+# Lint/format gate for the server (T-141). Check-only — this verifies, it does not
+# rewrite your tree; run `.venv/bin/isort . && .venv/bin/black .` to fix layout.
+# Order matters: isort first, then black, because black has the final say on layout
+# and isort runs in black's profile precisely so it can never disagree.
+server_lint() (
+  cd server
+  for tool in isort black ruff ty; do
+    if [ ! -x ".venv/bin/$tool" ]; then
+      echo "server/.venv missing $tool — run: cd server && .venv/bin/pip install -e '.[dev]'" >&2
+      return 1
+    fi
+  done
+  .venv/bin/isort --check-only . &&
+    .venv/bin/black --check . &&
+    .venv/bin/ruff check . &&
+    .venv/bin/ty check .
+)
+
 web_check() (
   cd web
   npx vitest run &&
@@ -65,6 +83,7 @@ android_check() (
   ./gradlew :app:testDebugUnitTest :app:lintDebug --offline
 )
 
+run_stage "server (isort + black + ruff + ty)" server_lint
 run_stage "server (pytest)" server_check
 run_stage "web (vitest + tsc + lint)" web_check
 run_stage "android (test + lint)" android_check

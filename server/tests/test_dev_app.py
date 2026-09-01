@@ -16,6 +16,9 @@ APP_PY = pathlib.Path(__file__).resolve().parent.parent / "app.py"
 def _load_app_module():
     """Fresh import of app.py each time — it builds the app at module scope."""
     spec = importlib.util.spec_from_file_location("_dev_app_under_test", APP_PY)
+    # Both are Optional in the stubs; neither can be None for a real file path, and asserting says
+    # so once instead of letting the failure surface as an AttributeError three lines later.
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

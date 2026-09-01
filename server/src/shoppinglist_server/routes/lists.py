@@ -59,7 +59,11 @@ def register_routes(bp):
             )
         ]
         pending_invites = [
-            {"id": row["id"], "invited_email": row["invited_email"], "expires_at": row["expires_at"]}
+            {
+                "id": row["id"],
+                "invited_email": row["invited_email"],
+                "expires_at": row["expires_at"],
+            }
             for row in conn.execute(
                 "SELECT id, invited_email, expires_at FROM invites "
                 "WHERE list_id = ? AND revoked = 0 AND used_at IS NULL "

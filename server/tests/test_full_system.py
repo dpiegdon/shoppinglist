@@ -41,14 +41,26 @@ def test_full_system_lifecycle(client, app):
 
     # 2. A creates a list with one item.
     body = _sync(
-        client, token_a, cursor=0, device_id="devA",
+        client,
+        token_a,
+        cursor=0,
+        device_id="devA",
         changes={
-            "lists": [{"id": "list-1", "fields": {
-                "name": {"value": "Groceries", "updated_at": 100, "updated_by": "devA"}
-            }}],
-            "items": [{"id": "item-1", "list_id": "list-1", "fields": {
-                "name": {"value": "Milk", "updated_at": 100, "updated_by": "devA"}
-            }}],
+            "lists": [
+                {
+                    "id": "list-1",
+                    "fields": {
+                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "devA"}
+                    },
+                }
+            ],
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "fields": {"name": {"value": "Milk", "updated_at": 100, "updated_by": "devA"}},
+                }
+            ],
         },
     )
     cursor_a = body["cursor"]
@@ -72,22 +84,44 @@ def test_full_system_lifecycle(client, app):
     # 5. B pulls the list via full_lists (join-flow snapshot sync).
     body = _sync(client, token_b, cursor=0, device_id="devB", full_lists=["list-1"])
     cursor_b = body["cursor"]
-    assert {l["id"] for l in body["changes"]["lists"]} == {"list-1"}
+    assert {row["id"] for row in body["changes"]["lists"]} == {"list-1"}
     item = next(i for i in body["changes"]["items"] if i["id"] == "item-1")
     assert item["fields"]["name"]["value"] == "Milk"
 
     # 6. Concurrent offline edits: A edits category, B edits quantity.
     _sync(
-        client, token_a, cursor=cursor_a, device_id="devA",
-        changes={"items": [{"id": "item-1", "list_id": "list-1", "fields": {
-            "category": {"value": "dairy", "updated_at": 200, "updated_by": "devA"}
-        }}]},
+        client,
+        token_a,
+        cursor=cursor_a,
+        device_id="devA",
+        changes={
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "fields": {
+                        "category": {"value": "dairy", "updated_at": 200, "updated_by": "devA"}
+                    },
+                }
+            ]
+        },
     )
     _sync(
-        client, token_b, cursor=cursor_b, device_id="devB",
-        changes={"items": [{"id": "item-1", "list_id": "list-1", "fields": {
-            "quantity": {"value": "2l", "updated_at": 210, "updated_by": "devB"}
-        }}]},
+        client,
+        token_b,
+        cursor=cursor_b,
+        device_id="devB",
+        changes={
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "fields": {
+                        "quantity": {"value": "2l", "updated_at": 210, "updated_by": "devB"}
+                    },
+                }
+            ]
+        },
     )
 
     # 7. Both pull fresh; mirrors are identical and correctly field-merged.
@@ -136,7 +170,5 @@ def test_full_system_lifecycle(client, app):
 
     assert conn.execute("SELECT 1 FROM lists WHERE id = 'list-1'").fetchone() is None
     assert conn.execute("SELECT 1 FROM items WHERE id = 'item-1'").fetchone() is None
-    assert conn.execute(
-        "SELECT 1 FROM memberships WHERE list_id = 'list-1'"
-    ).fetchone() is None
+    assert conn.execute("SELECT 1 FROM memberships WHERE list_id = 'list-1'").fetchone() is None
     conn.close()

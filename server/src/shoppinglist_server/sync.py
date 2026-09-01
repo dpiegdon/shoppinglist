@@ -73,19 +73,31 @@ NOTES_MAX_LENGTH = 5000
 
 # SQLite stores integers as signed 64-bit; anything outside this range raises
 # OverflowError at bind time. Timestamps (ms epoch) and created_at live here.
-SQLITE_INT_MIN = -(2 ** 63)
-SQLITE_INT_MAX = 2 ** 63 - 1
+SQLITE_INT_MIN = -(2**63)
+SQLITE_INT_MAX = 2**63 - 1
 
-ID_MAX_LENGTH = 128  # client-minted row ids are UUID/ULID-scale (~26-36 chars); 128 is ample headroom.
-NAME_MAX_LENGTH = 500  # item/list names are short labels; 500 covers verbose entries, blocks KB-scale bloat.
+ID_MAX_LENGTH = (
+    128  # client-minted row ids are UUID/ULID-scale (~26-36 chars); 128 is ample headroom.
+)
+NAME_MAX_LENGTH = (
+    500  # item/list names are short labels; 500 covers verbose entries, blocks KB-scale bloat.
+)
 CATEGORY_MAX_LENGTH = 200  # a single category label; dozens of them fit in a list's category_order.
-QUANTITY_MAX_LENGTH = 200  # free text like "2 l" / "3 boxes"; 200 is generous for any real quantity.
+QUANTITY_MAX_LENGTH = (
+    200  # free text like "2 l" / "3 boxes"; 200 is generous for any real quantity.
+)
 ITEM_NOTE_MAX_LENGTH = 5000  # freeform per-item annotation; same generosity as list notes.
 UPDATED_BY_MAX_LENGTH = 128  # device/author id string, same scale as a row id.
-PRICE_AMOUNT_MAX_LENGTH = 32  # decimal string; 32 digits is billions-with-cents, far beyond any real price.
+PRICE_AMOUNT_MAX_LENGTH = (
+    32  # decimal string; 32 digits is billions-with-cents, far beyond any real price.
+)
 PRICE_CURRENCY_MAX_LENGTH = 16  # ISO 4217 codes are 3 chars; 16 leaves room for any sane variant.
-STRING_LIST_MAX_ITEMS = 200  # element cap for stores / category_order; dozens are normal, 200 is comfortable.
-STRING_LIST_ELEM_MAX_LENGTH = 200  # each store name / category label, same scale as a category label.
+STRING_LIST_MAX_ITEMS = (
+    200  # element cap for stores / category_order; dozens are normal, 200 is comfortable.
+)
+STRING_LIST_ELEM_MAX_LENGTH = (
+    200  # each store name / category label, same scale as a category label.
+)
 
 # ---- clock clamping (T-86) --------------------------------------------------
 # A client-supplied updated_at/created_at that is wildly in the future (broken
@@ -236,14 +248,17 @@ def _require_str_list(key, value, *, nullable):
         raise ApiError(422, "invalid_field", f"Field '{key}' must be a list of strings.")
     if len(value) > STRING_LIST_MAX_ITEMS:
         raise ApiError(
-            422, "invalid_field", f"Field '{key}' may contain at most {STRING_LIST_MAX_ITEMS} entries."
+            422,
+            "invalid_field",
+            f"Field '{key}' may contain at most {STRING_LIST_MAX_ITEMS} entries.",
         )
     for elem in value:
         if not isinstance(elem, str):
             raise ApiError(422, "invalid_field", f"Field '{key}' entries must be strings.")
         if len(elem) > STRING_LIST_ELEM_MAX_LENGTH:
             raise ApiError(
-                422, "invalid_field",
+                422,
+                "invalid_field",
                 f"Field '{key}' entries must be {STRING_LIST_ELEM_MAX_LENGTH} characters or fewer.",
             )
 
@@ -259,7 +274,9 @@ def _parse_clock(key, clock, device_id):
         raise ApiError(422, "invalid_field", f"Field '{key}' updated_by must be a string.")
     if len(by) > UPDATED_BY_MAX_LENGTH:
         raise ApiError(
-            422, "invalid_field", f"Field '{key}' updated_by must be {UPDATED_BY_MAX_LENGTH} characters or fewer."
+            422,
+            "invalid_field",
+            f"Field '{key}' updated_by must be {UPDATED_BY_MAX_LENGTH} characters or fewer.",
         )
     updated_at = _clamp_future_ms(clock["updated_at"])
     return clock["value"], updated_at, by
@@ -300,19 +317,27 @@ def _validate_price(value):
     if value is None:
         return
     if not isinstance(value, dict):
-        raise ApiError(422, "invalid_price", "price must be an object with a decimal amount string.")
+        raise ApiError(
+            422, "invalid_price", "price must be an object with a decimal amount string."
+        )
     amount = value.get("amount")
     if not isinstance(amount, str) or not PRICE_AMOUNT_RE.match(amount):
         raise ApiError(422, "invalid_price", "price amount must be a decimal string.")
     if len(amount) > PRICE_AMOUNT_MAX_LENGTH:
-        raise ApiError(422, "invalid_price", f"price amount must be {PRICE_AMOUNT_MAX_LENGTH} characters or fewer.")
+        raise ApiError(
+            422,
+            "invalid_price",
+            f"price amount must be {PRICE_AMOUNT_MAX_LENGTH} characters or fewer.",
+        )
     currency = value.get("currency")
     if currency is not None:
         if not isinstance(currency, str):
             raise ApiError(422, "invalid_price", "price currency must be a string or null.")
         if len(currency) > PRICE_CURRENCY_MAX_LENGTH:
             raise ApiError(
-                422, "invalid_price", f"price currency must be {PRICE_CURRENCY_MAX_LENGTH} characters or fewer."
+                422,
+                "invalid_price",
+                f"price currency must be {PRICE_CURRENCY_MAX_LENGTH} characters or fewer.",
             )
 
 
@@ -329,7 +354,9 @@ def _validate_list_field(key, value):
         if value is not None and not isinstance(value, str):
             raise ApiError(422, "invalid_field", "List notes must be a string.")
         if value is not None and len(value) > NOTES_MAX_LENGTH:
-            raise ApiError(422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer.")
+            raise ApiError(
+                422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer."
+            )
     elif key == "kind":
         # Unknown kinds are rejected rather than coerced: a client sending a kind this server
         # doesn't know would otherwise get silent, surprising display behaviour (T-110).
@@ -351,16 +378,22 @@ def _parse_row(obj, keys, tsby, validate, device_id):
         raise ApiError(422, "invalid_row", "Change id must be a non-empty string.")
     if len(row_id) > ID_MAX_LENGTH:
         raise ApiError(
-            422, "invalid_row", f"Change id must be {ID_MAX_LENGTH} characters or fewer.",
+            422,
+            "invalid_row",
+            f"Change id must be {ID_MAX_LENGTH} characters or fewer.",
             details={"row_id": row_id},
         )
     created_at = obj.get("created_at")
     if created_at is None:
         created_at = _now_ms()  # absent/null created_at is a legitimate client shape.
     elif not _is_int(created_at):
-        raise ApiError(422, "invalid_row", "created_at must be an integer.", details={"row_id": row_id})
+        raise ApiError(
+            422, "invalid_row", "created_at must be an integer.", details={"row_id": row_id}
+        )
     elif not (SQLITE_INT_MIN <= created_at <= SQLITE_INT_MAX):
-        raise ApiError(422, "invalid_row", "created_at is out of range.", details={"row_id": row_id})
+        raise ApiError(
+            422, "invalid_row", "created_at is out of range.", details={"row_id": row_id}
+        )
     else:
         # T-86: bounds a far-future created_at (same _clamp_future_ms mechanism as
         # each field's updated_at in _parse_clock). Unlike updated_at, created_at
@@ -422,16 +455,36 @@ def _update(conn, table, row_id, cols):
 
 def _new_item_columns(item_id, list_id, created_at, fields, account_id):
     cols = {
-        "id": item_id, "list_id": list_id, "created_at": created_at,
-        "name": "", "name_ts": 0, "name_by": "",
-        "category": None, "category_ts": 0, "category_by": "",
-        "stores": "[]", "stores_ts": 0, "stores_by": "",
-        "quantity": None, "quantity_ts": 0, "quantity_by": "",
-        "price_amount": None, "price_currency": None, "price_ts": 0, "price_by": "",
-        "note": None, "note_ts": 0, "note_by": "",
-        "status": "todo", "status_ts": 0, "status_by": "",
-        "last_touched_by_account_id": None, "last_touched_ts": 0,
-        "deleted": 0, "deleted_ts": 0, "deleted_by": "",
+        "id": item_id,
+        "list_id": list_id,
+        "created_at": created_at,
+        "name": "",
+        "name_ts": 0,
+        "name_by": "",
+        "category": None,
+        "category_ts": 0,
+        "category_by": "",
+        "stores": "[]",
+        "stores_ts": 0,
+        "stores_by": "",
+        "quantity": None,
+        "quantity_ts": 0,
+        "quantity_by": "",
+        "price_amount": None,
+        "price_currency": None,
+        "price_ts": 0,
+        "price_by": "",
+        "note": None,
+        "note_ts": 0,
+        "note_by": "",
+        "status": "todo",
+        "status_ts": 0,
+        "status_by": "",
+        "last_touched_by_account_id": None,
+        "last_touched_ts": 0,
+        "deleted": 0,
+        "deleted_ts": 0,
+        "deleted_by": "",
     }
     for key, (value, ts, by) in fields.items():
         cols.update(_item_field_to_columns(key, value))
@@ -449,12 +502,23 @@ def _new_item_columns(item_id, list_id, created_at, fields, account_id):
 
 def _new_list_columns(list_id, created_at, fields):
     cols = {
-        "id": list_id, "created_at": created_at,
-        "name": "", "name_ts": 0, "name_by": "",
-        "category_order": "[]", "category_order_ts": 0, "category_order_by": "",
-        "notes": None, "notes_ts": 0, "notes_by": "",
-        "kind": DEFAULT_LIST_KIND, "kind_ts": 0, "kind_by": "",
-        "deleted": 0, "deleted_ts": 0, "deleted_by": "",
+        "id": list_id,
+        "created_at": created_at,
+        "name": "",
+        "name_ts": 0,
+        "name_by": "",
+        "category_order": "[]",
+        "category_order_ts": 0,
+        "category_order_by": "",
+        "notes": None,
+        "notes_ts": 0,
+        "notes_by": "",
+        "kind": DEFAULT_LIST_KIND,
+        "kind_ts": 0,
+        "kind_by": "",
+        "deleted": 0,
+        "deleted_ts": 0,
+        "deleted_by": "",
     }
     for key, (value, ts, by) in fields.items():
         cols.update(_list_field_to_columns(key, value))
@@ -521,13 +585,21 @@ def _merge_group(conn, list_id, item_ids):
     merged["last_touched_ts"] = last_touched_source["last_touched_ts"]
 
     for loser in losers:
-        _update(conn, "items", loser["id"], {
-            "deleted": 1, "deleted_ts": now, "deleted_by": SERVER_MERGE,
-            "change_seq": _bump(conn),
-        })
+        _update(
+            conn,
+            "items",
+            loser["id"],
+            {
+                "deleted": 1,
+                "deleted_ts": now,
+                "deleted_by": SERVER_MERGE,
+                "change_seq": _bump(conn),
+            },
+        )
 
-    merged.update({"deleted": 0, "deleted_ts": now, "deleted_by": SERVER_MERGE,
-                   "change_seq": _bump(conn)})
+    merged.update(
+        {"deleted": 0, "deleted_ts": now, "deleted_by": SERVER_MERGE, "change_seq": _bump(conn)}
+    )
     _update(conn, "items", survivor["id"], merged)
 
 
@@ -535,7 +607,9 @@ def _merge_group(conn, list_id, item_ids):
 
 
 def _apply_list(conn, account_id, device_id, obj):
-    list_id, created_at, fields = _parse_row(obj, LIST_KEYS, LIST_TSBY, _validate_list_field, device_id)
+    list_id, created_at, fields = _parse_row(
+        obj, LIST_KEYS, LIST_TSBY, _validate_list_field, device_id
+    )
     existing = conn.execute("SELECT * FROM lists WHERE id = ?", (list_id,)).fetchone()
 
     if existing is None:
@@ -565,7 +639,9 @@ def _apply_list(conn, account_id, device_id, obj):
 
 
 def _apply_item(conn, account_id, device_id, obj):
-    item_id, created_at, fields = _parse_row(obj, ITEM_KEYS, ITEM_TSBY, _validate_item_field, device_id)
+    item_id, created_at, fields = _parse_row(
+        obj, ITEM_KEYS, ITEM_TSBY, _validate_item_field, device_id
+    )
     existing = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
 
     # Authorize against the item's *actual* list: for an existing item that is
@@ -577,14 +653,18 @@ def _apply_item(conn, account_id, device_id, obj):
         list_id = obj.get("list_id")
         if not list_id:
             raise ApiError(
-                422, "missing_list_id", "Each item change requires a list_id.",
+                422,
+                "missing_list_id",
+                "Each item change requires a list_id.",
                 details={"row_id": item_id},
             )
         # A mis-typed list_id (dict/list/…) would crash at the SQL bind below; reject it
         # with the row-scoped 422 the quarantine flow needs (T-85).
         if not isinstance(list_id, str):
             raise ApiError(
-                422, "invalid_row", "Item list_id must be a string.",
+                422,
+                "invalid_row",
+                "Item list_id must be a string.",
                 details={"row_id": item_id},
             )
     # One answer for "no such list" and "exists, but not yours" (T-120). Splitting them — 422
@@ -598,7 +678,9 @@ def _apply_item(conn, account_id, device_id, obj):
     # left now parks that row instead of blocking every later edit.
     if not _is_member(conn, account_id, list_id):
         raise ApiError(
-            422, "unknown_list", "Item refers to an unknown list_id.",
+            422,
+            "unknown_list",
+            "Item refers to an unknown list_id.",
             details={"row_id": item_id},
         )
 
@@ -627,7 +709,9 @@ def _apply_item(conn, account_id, device_id, obj):
     # Whole-item authorship (T-64): only among the fields that actually WON this round —
     # a losing (stale) field write must not look like a more recent "touch" than really
     # happened. account_id is the whole push's authenticated account, not a per-field device.
-    won_ts = max((set_cols[ts_col] for ts_col, _ in ITEM_TSBY.values() if ts_col in set_cols), default=None)
+    won_ts = max(
+        (set_cols[ts_col] for ts_col, _ in ITEM_TSBY.values() if ts_col in set_cols), default=None
+    )
     if won_ts is not None and won_ts > existing["last_touched_ts"]:
         set_cols["last_touched_by_account_id"] = account_id
         set_cols["last_touched_ts"] = won_ts
@@ -719,9 +803,7 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
     full_lists = full_lists or []
     member_ids = {
         r["list_id"]
-        for r in conn.execute(
-            "SELECT list_id FROM memberships WHERE account_id = ?", (account_id,)
-        )
+        for r in conn.execute("SELECT list_id FROM memberships WHERE account_id = ?", (account_id,))
     }
     for list_id in full_lists:
         if list_id not in member_ids:

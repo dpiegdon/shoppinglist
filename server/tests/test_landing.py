@@ -19,12 +19,17 @@ def _mint_invite(client, token, list_id="list-1", invited_email="invitee@example
     client.post(
         "/api/v1/sync",
         json={
-            "cursor": 0, "device_id": "dev", "full_lists": [],
+            "cursor": 0,
+            "device_id": "dev",
+            "full_lists": [],
             "changes": {
                 "lists": [
-                    {"id": list_id, "fields": {
-                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-                    }}
+                    {
+                        "id": list_id,
+                        "fields": {
+                            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                        },
+                    }
                 ]
             },
         },
@@ -138,8 +143,6 @@ def test_json_api_prefix_unaffected(client):
     resp = client.get("/api/v1/lists")
     assert resp.status_code == 401
 
-    resp = client.post(
-        "/api/v1/register", json={"email": "checkjson@example.com", "password": PW}
-    )
+    resp = client.post("/api/v1/register", json={"email": "checkjson@example.com", "password": PW})
     assert resp.status_code == 201
     assert resp.content_type.startswith("application/json")

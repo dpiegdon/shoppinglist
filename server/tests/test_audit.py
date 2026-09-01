@@ -78,8 +78,12 @@ def test_an_authorization_failure_is_recorded_with_the_account_that_attempted_it
             "cursor": 0,
             "device_id": "devO",
             "changes": {
-                "lists": [{"id": "l1", "fields": {
-                    "name": {"value": "L", "updated_at": 1, "updated_by": "devO"}}}]
+                "lists": [
+                    {
+                        "id": "l1",
+                        "fields": {"name": {"value": "L", "updated_at": 1, "updated_by": "devO"}},
+                    }
+                ]
             },
         },
         headers=_auth(owner_token),
@@ -123,8 +127,12 @@ def test_invite_mint_and_redeem_are_recorded(client, records):
             "cursor": 0,
             "device_id": "devO",
             "changes": {
-                "lists": [{"id": "l2", "fields": {
-                    "name": {"value": "L", "updated_at": 1, "updated_by": "devO"}}}]
+                "lists": [
+                    {
+                        "id": "l2",
+                        "fields": {"name": {"value": "L", "updated_at": 1, "updated_by": "devO"}},
+                    }
+                ]
             },
         },
         headers=_auth(owner_token),
@@ -153,8 +161,11 @@ def test_invite_mint_and_redeem_are_recorded(client, records):
 
 def test_no_email_address_ever_reaches_the_log(client, records):
     token, _ = _register_and_login(client)
-    client.post("/api/v1/account/change-email",
-                json={"password": PW, "new_email": "another@example.com"}, headers=_auth(token))
+    client.post(
+        "/api/v1/account/change-email",
+        json={"password": PW, "new_email": "another@example.com"},
+        headers=_auth(token),
+    )
     client.post("/api/v1/login", json={"email": EMAIL, "password": "wrong", "device_label": "d"})
 
     blob = "\n".join(_messages(records))

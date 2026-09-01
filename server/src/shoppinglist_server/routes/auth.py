@@ -17,9 +17,7 @@ def register_routes(bp):
         conn = get_db()
         default = get_config().get("allow_registration", True)
         if not server_settings.effective_allow_registration(conn, default):
-            raise ApiError(
-                403, "registration_disabled", "Registration is disabled on this server."
-            )
+            raise ApiError(403, "registration_disabled", "Registration is disabled on this server.")
         data = request.get_json(force=True, silent=True) or {}
         account_id = auth_register(conn, data.get("email"), data.get("password"))
         audit.record("account.registered", account_id=account_id)
@@ -32,7 +30,9 @@ def register_routes(bp):
         conn = get_db()
         default = get_config().get("allow_registration", True)
         return (
-            jsonify({"allow_registration": server_settings.effective_allow_registration(conn, default)}),
+            jsonify(
+                {"allow_registration": server_settings.effective_allow_registration(conn, default)}
+            ),
             200,
         )
 
@@ -49,9 +49,7 @@ def register_routes(bp):
             # pre-T-104 clients, which fall back to the long default.
             data.get("platform"),
         )
-        row = conn.execute(
-            "SELECT email FROM accounts WHERE id = ?", (account_id,)
-        ).fetchone()
+        row = conn.execute("SELECT email FROM accounts WHERE id = ?", (account_id,)).fetchone()
         # A failed login is already recorded centrally as authz.denied by the 401 path in
         # _handle_api_error; this is the matching success, so the two together show a brute-force
         # run and whether it eventually landed (T-121).

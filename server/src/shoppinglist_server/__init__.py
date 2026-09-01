@@ -285,10 +285,9 @@ def _add_security_headers(response):
     # blueprint alone would wrongly DROP headers there, which is exactly where CSP
     # and the token-hiding no-referrer matter most (the /invite/<token> page).
     extensions = current_app.extensions
-    owned = (
-        request.blueprint in extensions.get(EXTENSION_KEY, {})
-        or request.endpoint in extensions.get(OWNED_ENDPOINTS_KEY, ())
-    )
+    owned = request.blueprint in extensions.get(
+        EXTENSION_KEY, {}
+    ) or request.endpoint in extensions.get(OWNED_ENDPOINTS_KEY, ())
     if not owned:
         return response
 

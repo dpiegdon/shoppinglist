@@ -1,8 +1,9 @@
 """Tests for tombstone GC (S8)."""
 
+import pytest
+
 from shoppinglist_server import auth, gc, invites, sync
 from shoppinglist_server.errors import ApiError
-import pytest
 
 PW = "password123"
 KEY = b"test-invite-hmac-key"
@@ -30,25 +31,53 @@ def _register(conn, email):
 
 def _create_list(conn, account_id, device, list_id="list-1", name="Groceries"):
     sync.apply_changes(
-        conn, account_id, device,
-        {"lists": [{"id": list_id, "created_at": 1000,
-                   "fields": {"name": {"value": name, "updated_at": 100, "updated_by": device}}}]},
+        conn,
+        account_id,
+        device,
+        {
+            "lists": [
+                {
+                    "id": list_id,
+                    "created_at": 1000,
+                    "fields": {"name": {"value": name, "updated_at": 100, "updated_by": device}},
+                }
+            ]
+        },
     )
 
 
 def _create_item(conn, account_id, device, item_id, list_id="list-1", name="Milk"):
     sync.apply_changes(
-        conn, account_id, device,
-        {"items": [{"id": item_id, "list_id": list_id, "created_at": 1000,
-                   "fields": {"name": {"value": name, "updated_at": 100, "updated_by": device}}}]},
+        conn,
+        account_id,
+        device,
+        {
+            "items": [
+                {
+                    "id": item_id,
+                    "list_id": list_id,
+                    "created_at": 1000,
+                    "fields": {"name": {"value": name, "updated_at": 100, "updated_by": device}},
+                }
+            ]
+        },
     )
 
 
 def _delete_item(conn, account_id, device, item_id, list_id, ts):
     sync.apply_changes(
-        conn, account_id, device,
-        {"items": [{"id": item_id, "list_id": list_id,
-                   "fields": {"deleted": {"value": True, "updated_at": ts, "updated_by": device}}}]},
+        conn,
+        account_id,
+        device,
+        {
+            "items": [
+                {
+                    "id": item_id,
+                    "list_id": list_id,
+                    "fields": {"deleted": {"value": True, "updated_at": ts, "updated_by": device}},
+                }
+            ]
+        },
     )
 
 
@@ -61,9 +90,12 @@ def _list_exists(conn, list_id):
 
 
 def _membership_exists(conn, account_id, list_id):
-    return conn.execute(
-        "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?", (account_id, list_id)
-    ).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?", (account_id, list_id)
+        ).fetchone()
+        is not None
+    )
 
 
 def _meta(conn):
@@ -81,7 +113,12 @@ def test_fresh_tombstone_survives(db_conn):
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert _item_exists(db_conn, "item-1")
 
 
@@ -89,7 +126,9 @@ def test_91_day_old_item_tombstone_is_purged(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000))
+    _delete_item(
+        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
+    )
 
     result = gc.run(db_conn, NOW)
 
@@ -103,11 +142,18 @@ def test_89_day_old_tombstone_survives(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (89 * 24 * 60 * 60 * 1000))
+    _delete_item(
+        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (89 * 24 * 60 * 60 * 1000)
+    )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert _item_exists(db_conn, "item-1")
 
 
@@ -119,7 +165,9 @@ def test_gc_horizon_advances_and_stale_cursor_then_gets_410(db_conn):
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
     baseline_cursor = sync.delta(db_conn, account_id, cursor=0, full_lists=[])["cursor"]
-    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000))
+    _delete_item(
+        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
+    )
 
     gc.run(db_conn, NOW)
 
@@ -145,18 +193,19 @@ def test_orphaned_list_and_lingering_membership_purged_together(db_conn):
     # so it's eligible for purge.
     invites.leave(db_conn, account_id, "list-1")
     old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
-    db_conn.execute(
-        "UPDATE lists SET deleted_ts = ? WHERE id = ?", (old_ts, "list-1")
-    )
-    db_conn.execute(
-        "UPDATE items SET deleted_ts = ? WHERE list_id = ?", (old_ts, "list-1")
-    )
+    db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = ?", (old_ts, "list-1"))
+    db_conn.execute("UPDATE items SET deleted_ts = ? WHERE list_id = ?", (old_ts, "list-1"))
     db_conn.commit()
     assert _membership_exists(db_conn, account_id, "list-1")  # precondition
 
     result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
 
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 1,
+        "lists_purged": 1,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert not _list_exists(db_conn, "list-1")
     assert not _item_exists(db_conn, "item-1")
     assert not _membership_exists(db_conn, account_id, "list-1")
@@ -167,8 +216,15 @@ def _invite_exists(conn, invite_id):
 
 
 def _insert_invite(
-    conn, invite_id, list_id, created_by, email="invitee@example.com",
-    created_at=NOW - 1000, expires_at=NOW + 1000, revoked=0, used_at=None,
+    conn,
+    invite_id,
+    list_id,
+    created_by,
+    email="invitee@example.com",
+    created_at=NOW - 1000,
+    expires_at=NOW + 1000,
+    revoked=0,
+    used_at=None,
 ):
     """Insert an invite row with fully-controlled timestamps, bypassing
     invites.mint() (which stamps real wall-clock time, not the synthetic
@@ -203,7 +259,12 @@ def test_purging_a_list_also_removes_invites_referencing_it(db_conn):
 
     result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
 
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 1,
+        "lists_purged": 1,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert not _list_exists(db_conn, "list-1")
     assert not _invite_exists(db_conn, minted["invite_id"])
 
@@ -223,7 +284,12 @@ def test_purging_a_list_removes_its_items_even_if_not_independently_old(db_conn)
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 1, "lists_purged": 1, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 1,
+        "lists_purged": 1,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert not _item_exists(db_conn, "item-1")
 
 
@@ -241,13 +307,22 @@ def test_expired_invite_older_than_retention_is_purged(db_conn):
     _create_list(db_conn, account_id, "dev")
     old_expiry = NOW - NINETY_DAYS_MS - 1000
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=old_expiry,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000),
+        expires_at=old_expiry,
     )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 1,
+        "sessions_purged": 0,
+    }
     assert not _invite_exists(db_conn, "inv-1")
     assert _list_exists(db_conn, "list-1")  # the list itself is untouched, still live
 
@@ -257,13 +332,22 @@ def test_used_invite_older_than_retention_is_purged(db_conn):
     _create_list(db_conn, account_id, "dev")
     old_used_at = NOW - NINETY_DAYS_MS - 1000
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        expires_at=old_used_at + 1000, used_at=old_used_at,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        expires_at=old_used_at + 1000,
+        used_at=old_used_at,
     )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 1,
+        "sessions_purged": 0,
+    }
     assert not _invite_exists(db_conn, "inv-1")
 
 
@@ -272,13 +356,22 @@ def test_revoked_invite_older_than_retention_is_purged(db_conn):
     _create_list(db_conn, account_id, "dev")
     old_expiry = NOW - NINETY_DAYS_MS - 1000
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        expires_at=old_expiry, revoked=1,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        expires_at=old_expiry,
+        revoked=1,
     )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 1, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 1,
+        "sessions_purged": 0,
+    }
     assert not _invite_exists(db_conn, "inv-1")
 
 
@@ -286,13 +379,22 @@ def test_pending_unexpired_invite_is_kept(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        created_at=NOW - 1000, expires_at=NOW + (6 * 24 * 60 * 60 * 1000),
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        created_at=NOW - 1000,
+        expires_at=NOW + (6 * 24 * 60 * 60 * 1000),
     )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -301,13 +403,22 @@ def test_recently_expired_invite_within_window_is_kept(db_conn):
     _create_list(db_conn, account_id, "dev")
     recent_expiry = NOW - (10 * 24 * 60 * 60 * 1000)  # expired 10 days ago
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        created_at=recent_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=recent_expiry,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        created_at=recent_expiry - (7 * 24 * 60 * 60 * 1000),
+        expires_at=recent_expiry,
     )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -316,13 +427,22 @@ def test_recently_used_invite_within_window_is_kept(db_conn):
     _create_list(db_conn, account_id, "dev")
     recent_used_at = NOW - (10 * 24 * 60 * 60 * 1000)
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        expires_at=recent_used_at + 1000, used_at=recent_used_at,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        expires_at=recent_used_at + 1000,
+        used_at=recent_used_at,
     )
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -331,15 +451,21 @@ def test_dead_invite_purge_does_not_advance_gc_horizon(db_conn):
     _create_list(db_conn, account_id, "dev")
     old_expiry = NOW - NINETY_DAYS_MS - 1000
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=old_expiry,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000),
+        expires_at=old_expiry,
     )
     horizon_before = _meta(db_conn)["gc_horizon"]
 
     result = gc.run(db_conn, NOW)
 
     assert result["invites_purged"] == 1
-    assert _meta(db_conn)["gc_horizon"] == horizon_before  # invites are not in the change_seq stream
+    assert (
+        _meta(db_conn)["gc_horizon"] == horizon_before
+    )  # invites are not in the change_seq stream
 
 
 def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_conn):
@@ -350,8 +476,12 @@ def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_c
     _create_list(db_conn, account_id, "dev")
     old_expiry = NOW - NINETY_DAYS_MS - 1000
     _insert_invite(
-        db_conn, "inv-1", "list-1", account_id,
-        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000), expires_at=old_expiry,
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        created_at=old_expiry - (7 * 24 * 60 * 60 * 1000),
+        expires_at=old_expiry,
     )
     # Orphan + tombstone the list, but keep its deleted_ts recent (well within
     # the list's own retention window).
@@ -361,7 +491,12 @@ def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_c
 
     result = gc.run(db_conn, NOW)
 
-    assert result == {"items_purged": 0, "lists_purged": 0, "invites_purged": 0, "sessions_purged": 0}
+    assert result == {
+        "items_purged": 0,
+        "lists_purged": 0,
+        "invites_purged": 0,
+        "sessions_purged": 0,
+    }
     assert _invite_exists(db_conn, "inv-1")
 
 
@@ -372,7 +507,9 @@ def test_maybe_run_noops_within_24h(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000))
+    _delete_item(
+        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
+    )
     db_conn.execute("UPDATE meta SET last_gc_at = ? WHERE id = 1", (NOW - 1000,))  # 1s ago
     db_conn.commit()
 
@@ -386,7 +523,9 @@ def test_maybe_run_runs_after_24h(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000))
+    _delete_item(
+        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
+    )
     day = 24 * 60 * 60 * 1000
     db_conn.execute("UPDATE meta SET last_gc_at = ? WHERE id = 1", (NOW - day - 1,))
     db_conn.commit()
@@ -402,9 +541,7 @@ def test_maybe_run_runs_after_24h(db_conn, monkeypatch):
 
 
 def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
-    resp = client.post(
-        "/api/v1/register", json={"email": "gchttp@example.com", "password": PW}
-    )
+    resp = client.post("/api/v1/register", json={"email": "gchttp@example.com", "password": PW})
     resp = client.post(
         "/api/v1/login",
         json={"email": "gchttp@example.com", "password": PW, "device_label": "dev"},
@@ -413,14 +550,30 @@ def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
 
     resp = client.post(
         "/api/v1/sync",
-        json={"cursor": 0, "device_id": "dev", "full_lists": [], "changes": {
-            "lists": [{"id": "list-http", "fields": {
-                "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-            }}],
-            "items": [{"id": "item-http", "list_id": "list-http", "fields": {
-                "name": {"value": "Milk", "updated_at": 100, "updated_by": "dev"}
-            }}],
-        }},
+        json={
+            "cursor": 0,
+            "device_id": "dev",
+            "full_lists": [],
+            "changes": {
+                "lists": [
+                    {
+                        "id": "list-http",
+                        "fields": {
+                            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                        },
+                    }
+                ],
+                "items": [
+                    {
+                        "id": "item-http",
+                        "list_id": "list-http",
+                        "fields": {
+                            "name": {"value": "Milk", "updated_at": 100, "updated_by": "dev"}
+                        },
+                    }
+                ],
+            },
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
@@ -431,9 +584,7 @@ def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
     config = get_config_by_name(app)
     conn = db_module.connect(config["database_path"])
     old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
-    conn.execute(
-        "UPDATE items SET deleted = 1, deleted_ts = ? WHERE id = 'item-http'", (old_ts,)
-    )
+    conn.execute("UPDATE items SET deleted = 1, deleted_ts = ? WHERE id = 'item-http'", (old_ts,))
     conn.execute("UPDATE meta SET last_gc_at = 0")  # force opportunistic GC eligible
     conn.commit()
     conn.close()

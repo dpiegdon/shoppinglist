@@ -28,6 +28,11 @@ Issues = "https://github.com/dpiegdon/shoppinglist/issues"
 dev = [
     "pytest>=8.0",
     "cryptography>=42.0",  # only for the ad-hoc TLS dev server (dev_tls_server.py)
+    # Lint/format stack (T-141), run by ../verify-all.sh.
+    "black>=26.0",
+    "isort>=9.0",
+    "ruff>=0.16",
+    "ty>=0.0.77",
 ]
 
 [build-system]
@@ -39,3 +44,45 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 shoppinglist_server = ["schema.sql", "templates/*.html", "web_dist/*", "web_dist/assets/*", "apk/*.apk"]
+
+# ---------------------------------------------------------------------------
+# Lint / format configuration (T-141)
+#
+# black is the authority on layout. isort runs in black's profile so the two can
+# never disagree about imports, and ruff is a LINTER here only — its formatter is
+# not used and its import-sorting rules are off, so nothing competes for the same
+# job. Line length is set in all three because each reads its own setting.
+# ---------------------------------------------------------------------------
+
+[tool.black]
+line-length = 100
+# Pinned rather than inferred: black otherwise guesses a target from the syntax it
+# sees and can pick a version newer than the interpreter running it, which makes it
+# skip its own AST equivalence check with a warning.
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes — real errors: undefined names, unused imports, shadowing
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "B",    # bugbear — mutable defaults, except-without-raise-from, loop-variable capture
+    "C4",   # comprehension rewrites
+    "UP",   # pyupgrade — this package is >=3.11, so old idioms are just noise
+]
+ignore = [
+    # Layout belongs to black. These are the rules that argue with a formatter:
+    # line length, and every indentation/whitespace opinion.
+    "E501",
+    "E111", "E114", "E117",
+    "W191",
+    # Ruff's isort rules would duplicate (and could contradict) isort itself.
+    "I001",
+]

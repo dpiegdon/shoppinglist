@@ -24,10 +24,8 @@ def resolve_initials(email: str, initials: str | None) -> str:
     return initials or _default_initials(email)
 
 
-def _require_password(conn: sqlite3.Connection, account_id: str, password: str) -> None:
-    row = conn.execute(
-        "SELECT password_hash FROM accounts WHERE id = ?", (account_id,)
-    ).fetchone()
+def _require_password(conn: sqlite3.Connection, account_id: str, password: str | None) -> None:
+    row = conn.execute("SELECT password_hash FROM accounts WHERE id = ?", (account_id,)).fetchone()
     if row is None or not check_password_hash(row["password_hash"], password or ""):
         # 403, not 401 (T-98): this guards a CONFIRMATION password on an already-authed,
         # token-bearing request (change-password / change-email / delete-account), not a
@@ -41,12 +39,15 @@ def _require_password(conn: sqlite3.Connection, account_id: str, password: str) 
 def change_password(
     conn: sqlite3.Connection,
     account_id: str,
-    current_password: str,
-    new_password: str,
+    current_password: str | None,
+    new_password: str | None,
     current_token: str,
 ) -> None:
     _require_password(conn, account_id, current_password)
     auth.validate_password(new_password)
+    # validate_password rejects non-strings, so this is narrowed by here — the helper is untyped,
+    # so a type checker cannot see that.
+    assert isinstance(new_password, str)
     conn.execute(
         "UPDATE accounts SET password_hash = ? WHERE id = ?",
         (generate_password_hash(new_password), account_id),
@@ -62,7 +63,7 @@ def change_password(
 
 
 def change_email(
-    conn: sqlite3.Connection, account_id: str, password: str, new_email: str
+    conn: sqlite3.Connection, account_id: str, password: str | None, new_email: str | None
 ) -> None:
     _require_password(conn, account_id, password)
     auth.validate_email(new_email)
@@ -71,9 +72,7 @@ def change_email(
     try:
         conn.execute("UPDATE accounts SET email = ? WHERE id = ?", (new_email, account_id))
     except sqlite3.IntegrityError as exc:
-        raise ApiError(
-            409, "email_taken", "An account with this email already exists."
-        ) from exc
+        raise ApiError(409, "email_taken", "An account with this email already exists.") from exc
     conn.commit()
 
 
@@ -176,9 +175,10 @@ def update_settings(
     return get_settings(conn, account_id)
 
 
-def require_password(conn: sqlite3.Connection, account_id: str, password: str) -> None:
+def require_password(conn: sqlite3.Connection, account_id: str, password: str | None) -> None:
     """Public step-up check (T-107): admin routes re-verify the ADMIN's own password before a
-    destructive action. Same 403 semantics as the self-service confirmation (see _require_password)."""
+    destructive action. Same 403 semantics as the self-service confirmation (see _require_password).
+    """
     _require_password(conn, account_id, password)
 
 
@@ -212,7 +212,7 @@ def _delete_account_row(conn: sqlite3.Connection, account_id: str) -> None:
     conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
 
 
-def delete_account(conn: sqlite3.Connection, account_id: str, password: str) -> None:
+def delete_account(conn: sqlite3.Connection, account_id: str, password: str | None) -> None:
     _require_password(conn, account_id, password)
     _delete_account_row(conn, account_id)
     conn.commit()
@@ -267,9 +267,7 @@ def _reset_password_for(conn: sqlite3.Connection, account_id: str) -> str:
 
 def reset_password(conn: sqlite3.Connection, email: str) -> str:
     """Operator CLI reset by email (T-92)."""
-    row = conn.execute(
-        "SELECT id FROM accounts WHERE lower(email) = lower(?)", (email,)
-    ).fetchone()
+    row = conn.execute("SELECT id FROM accounts WHERE lower(email) = lower(?)", (email,)).fetchone()
     if row is None:
         raise ApiError(404, "account_not_found", "No account with this email exists.")
     return _reset_password_for(conn, row["id"])

@@ -114,10 +114,19 @@ def test_invite_landing_page_unaffected_by_spa_catchall(tmp_path):
     client.post(
         "/api/v1/sync",
         json={
-            "cursor": 0, "device_id": "dev", "full_lists": [],
-            "changes": {"lists": [{"id": "list-1", "fields": {
-                "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-            }}]},
+            "cursor": 0,
+            "device_id": "dev",
+            "full_lists": [],
+            "changes": {
+                "lists": [
+                    {
+                        "id": "list-1",
+                        "fields": {
+                            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                        },
+                    }
+                ]
+            },
         },
         headers=auth,
     )

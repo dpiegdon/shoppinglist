@@ -16,9 +16,18 @@ def _register(conn, email):
 
 def _create_list(conn, account_id, device, list_id="list-1", name="Groceries"):
     sync.apply_changes(
-        conn, account_id, device,
-        {"lists": [{"id": list_id, "created_at": 1000,
-                   "fields": {"name": {"value": name, "updated_at": 100, "updated_by": device}}}]},
+        conn,
+        account_id,
+        device,
+        {
+            "lists": [
+                {
+                    "id": list_id,
+                    "created_at": 1000,
+                    "fields": {"name": {"value": name, "updated_at": 100, "updated_by": device}},
+                }
+            ]
+        },
     )
 
 
@@ -29,9 +38,12 @@ def _live_items(conn, list_id):
 
 
 def _membership_exists(conn, account_id, list_id):
-    return conn.execute(
-        "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?", (account_id, list_id)
-    ).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM memberships WHERE account_id = ? AND list_id = ?", (account_id, list_id)
+        ).fetchone()
+        is not None
+    )
 
 
 def _list_row(conn, list_id):
@@ -46,9 +58,21 @@ def test_full_invite_lifecycle_mint_redeem_membership_sync(db_conn):
     invitee = _register(db_conn, "invitee@example.com")
     _create_list(db_conn, owner, "devOwner")
     sync.apply_changes(
-        db_conn, owner, "devOwner",
-        {"items": [{"id": "item-1", "list_id": "list-1", "created_at": 1000,
-                   "fields": {"name": {"value": "Milk", "updated_at": 100, "updated_by": "devOwner"}}}]},
+        db_conn,
+        owner,
+        "devOwner",
+        {
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "created_at": 1000,
+                    "fields": {
+                        "name": {"value": "Milk", "updated_at": 100, "updated_by": "devOwner"}
+                    },
+                }
+            ]
+        },
     )
 
     result = invites.mint(db_conn, KEY, BASE_URL, "list-1", "invitee@example.com", owner)
@@ -62,7 +86,7 @@ def test_full_invite_lifecycle_mint_redeem_membership_sync(db_conn):
 
     # sync delivers the list to the invitee via full_lists, regardless of cursor.
     delivered = sync.delta(db_conn, invitee, cursor=9999, full_lists=["list-1"])
-    assert {l["id"] for l in delivered["changes"]["lists"]} == {"list-1"}
+    assert {row["id"] for row in delivered["changes"]["lists"]} == {"list-1"}
     assert {i["id"] for i in delivered["changes"]["items"]} == {"item-1"}
 
 
@@ -90,7 +114,7 @@ def test_redeem_forged_hmac_raises_400(db_conn):
 
 
 def test_redeem_garbage_token_raises_400(db_conn):
-    owner = _register(db_conn, "owner@example.com")
+    _register(db_conn, "owner@example.com")
     invitee = _register(db_conn, "invitee@example.com")
     invitee_account = auth.Account(id=invitee, email="invitee@example.com")
     with pytest.raises(ApiError) as excinfo:
@@ -261,14 +285,24 @@ def test_last_leave_orphans_clears_items_tombstones_list_and_other_device_sees_i
     owner = _register(db_conn, "owner@example.com")
     _create_list(db_conn, owner, "devA")
     sync.apply_changes(
-        db_conn, owner, "devA",
-        {"items": [{"id": "item-1", "list_id": "list-1", "created_at": 1000,
-                   "fields": {"name": {"value": "Milk", "updated_at": 100, "updated_by": "devA"}}}]},
+        db_conn,
+        owner,
+        "devA",
+        {
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "created_at": 1000,
+                    "fields": {"name": {"value": "Milk", "updated_at": 100, "updated_by": "devA"}},
+                }
+            ]
+        },
     )
     # A second device of the SAME account does a cold sync and gets the list.
     initial_b = sync.delta(db_conn, owner, cursor=0, full_lists=[])
     cursor_b = initial_b["cursor"]
-    assert {l["id"] for l in initial_b["changes"]["lists"]} == {"list-1"}
+    assert {row["id"] for row in initial_b["changes"]["lists"]} == {"list-1"}
 
     # Device A leaves — this is the sole membership, so it orphans the list.
     invites.leave(db_conn, owner, "list-1")
@@ -285,7 +319,7 @@ def test_last_leave_orphans_clears_items_tombstones_list_and_other_device_sees_i
 
     # Device B's next incremental sync (no full_lists needed) sees the tombstone.
     update_b = sync.delta(db_conn, owner, cursor=cursor_b, full_lists=[])
-    tombstoned_list = next(l for l in update_b["changes"]["lists"] if l["id"] == "list-1")
+    tombstoned_list = next(row for row in update_b["changes"]["lists"] if row["id"] == "list-1")
     assert tombstoned_list["fields"]["deleted"]["value"] is True
     tombstoned_item = next(i for i in update_b["changes"]["items"] if i["id"] == "item-1")
     assert tombstoned_item["fields"]["deleted"]["value"] is True
@@ -295,9 +329,19 @@ def test_delete_account_orphan_cascade_clears_and_tombstones(db_conn):
     owner = _register(db_conn, "owner@example.com")
     _create_list(db_conn, owner, "devA")
     sync.apply_changes(
-        db_conn, owner, "devA",
-        {"items": [{"id": "item-1", "list_id": "list-1", "created_at": 1000,
-                   "fields": {"name": {"value": "Milk", "updated_at": 100, "updated_by": "devA"}}}]},
+        db_conn,
+        owner,
+        "devA",
+        {
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "created_at": 1000,
+                    "fields": {"name": {"value": "Milk", "updated_at": 100, "updated_by": "devA"}},
+                }
+            ]
+        },
     )
 
     accounts.delete_account(db_conn, owner, PW)
@@ -355,10 +399,18 @@ def test_mint_revoke_redeem_members_leave_http_flow(client):
     invitee_token = _register_and_login_http(client, "invitee3@example.com")
 
     _sync_http(
-        client, owner_token,
-        {"lists": [{"id": "list-h1", "fields": {
-            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-        }}]},
+        client,
+        owner_token,
+        {
+            "lists": [
+                {
+                    "id": "list-h1",
+                    "fields": {
+                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                    },
+                }
+            ]
+        },
     )
 
     resp = client.post(
@@ -399,10 +451,18 @@ def test_mint_revoke_redeem_members_leave_http_flow(client):
 def test_members_response_includes_account_id_and_initials(client):
     owner_token = _register_and_login_http(client, "owner5@example.com")
     _sync_http(
-        client, owner_token,
-        {"lists": [{"id": "list-h5", "fields": {
-            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-        }}]},
+        client,
+        owner_token,
+        {
+            "lists": [
+                {
+                    "id": "list-h5",
+                    "fields": {
+                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                    },
+                }
+            ]
+        },
     )
 
     resp = client.get("/api/v1/lists/list-h5/members", headers=_auth(owner_token))
@@ -418,10 +478,18 @@ def test_revoke_invite_http(client):
     owner_token = _register_and_login_http(client, "owner4@example.com")
     invitee_token = _register_and_login_http(client, "invitee4@example.com")
     _sync_http(
-        client, owner_token,
-        {"lists": [{"id": "list-h2", "fields": {
-            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-        }}]},
+        client,
+        owner_token,
+        {
+            "lists": [
+                {
+                    "id": "list-h2",
+                    "fields": {
+                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                    },
+                }
+            ]
+        },
     )
     resp = client.post(
         "/api/v1/lists/list-h2/invites",
@@ -465,9 +533,7 @@ def test_mint_rejects_a_list_id_containing_a_colon(db_conn):
     _create_list(db_conn, owner, "devOwner", list_id=evil_id, name="Evil")
 
     with pytest.raises(ApiError) as excinfo:
-        invites.mint(
-            db_conn, KEY, BASE_URL, evil_id, "owner@example.com", owner
-        )
+        invites.mint(db_conn, KEY, BASE_URL, evil_id, "owner@example.com", owner)
 
     assert excinfo.value.status == 422
     assert excinfo.value.code == "invalid_list_id"

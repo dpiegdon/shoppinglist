@@ -144,12 +144,18 @@ def validate_device_label(device_label):
         )
 
 
-def register(conn: sqlite3.Connection, email: str, password: str) -> str:
+# email/password (here and in login below) are whatever arrived in the JSON body, so they are
+# genuinely Optional at the boundary and the validators below are what narrow them. Annotating
+# them `str` claimed a guarantee the callers cannot make.
+def register(conn: sqlite3.Connection, email: str | None, password: str | None) -> str:
     validate_email(email)
     validate_password(password)
 
     account_id = str(uuid.uuid4())
     now = now_ms()
+    # validate_password above rejects anything that is not a str, so this is narrowed by then —
+    # but it is an untyped helper, so the narrowing is invisible to a type checker.
+    assert isinstance(password, str)
     password_hash = generate_password_hash(password)
 
     try:
@@ -158,9 +164,7 @@ def register(conn: sqlite3.Connection, email: str, password: str) -> str:
             (account_id, email, password_hash, now),
         )
     except sqlite3.IntegrityError as exc:
-        raise ApiError(
-            409, "email_taken", "An account with this email already exists."
-        ) from exc
+        raise ApiError(409, "email_taken", "An account with this email already exists.") from exc
 
     conn.execute(
         "INSERT INTO account_settings (account_id, default_currency, updated_at) "
@@ -173,9 +177,9 @@ def register(conn: sqlite3.Connection, email: str, password: str) -> str:
 
 def login(
     conn: sqlite3.Connection,
-    email: str,
-    password: str,
-    device_label: str,
+    email: str | None,
+    password: str | None,
+    device_label: str | None,
     platform=None,
 ):
     # A malformed credential is simply an incorrect one: answering 422 here would hand back a
@@ -233,7 +237,7 @@ def _extract_token(req) -> str:
         raise ApiError(
             401, "missing_token", "Authorization header with a bearer token is required."
         )
-    token = auth_header[len("Bearer "):].strip()
+    token = auth_header[len("Bearer ") :].strip()
     if not token:
         raise ApiError(
             401, "missing_token", "Authorization header with a bearer token is required."
@@ -266,9 +270,7 @@ def require_account(conn: sqlite3.Connection, req) -> Account:
     if now - row["last_seen_at"] > row["idle_ttl_ms"]:
         conn.execute("DELETE FROM auth_tokens WHERE token_hash = ?", (token_hash,))
         conn.commit()
-        raise ApiError(
-            401, "session_expired", "This session expired after a period of inactivity."
-        )
+        raise ApiError(401, "session_expired", "This session expired after a period of inactivity.")
 
     if now - row["last_seen_at"] > LAST_SEEN_REFRESH_MS:
         conn.execute(

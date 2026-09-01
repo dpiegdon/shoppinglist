@@ -146,9 +146,13 @@ wheel in a clean venv, then tag.
 
 ## Testing
 
-`./verify-all.sh` runs all three suites (server pytest, web vitest + tsc + lint,
-Android unit tests + lint) in one command, fastest-first, and stops at the first
-failure. Each can also be run on its own — see the per-part READMEs.
+`./verify-all.sh` runs every suite (server lint + pytest, web vitest + tsc +
+lint, Android unit tests + lint) in one command, fastest-first, and stops at the
+first failure. Each can also be run on its own — see the per-part READMEs.
+
+The server's lint stage is isort, black, ruff and ty, in `--check` mode: it
+reports, it does not rewrite. `cd server && .venv/bin/isort . && .venv/bin/black .`
+fixes layout.
 
 The Android stage needs a JDK: export `JAVA_HOME`, or leave it unset and let
 Gradle find one on your `PATH`.

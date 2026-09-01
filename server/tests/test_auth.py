@@ -129,9 +129,7 @@ def test_require_account_first_request_after_login_keeps_sane_last_seen_at(
     assert _last_seen_at(db_conn, token) == login_time
 
 
-def test_require_account_within_threshold_does_not_update_last_seen_at(
-    app, db_conn, monkeypatch
-):
+def test_require_account_within_threshold_does_not_update_last_seen_at(app, db_conn, monkeypatch):
     login_time = 1_000_000
     monkeypatch.setattr(auth, "now_ms", lambda: login_time)
     auth.register(db_conn, EMAIL, PASSWORD)
@@ -247,8 +245,8 @@ def test_allow_registration_false_still_allows_login(tmp_path, monkeypatch):
 
     # Seed an account directly (registration is closed), then log in normally.
     from shoppinglist_server import auth as auth_module
-    from shoppinglist_server import get_config_by_name
     from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
 
     config = get_config_by_name(app)
     conn = db_module.connect(config["database_path"])
@@ -305,9 +303,7 @@ def _age_session(conn, token, ms):
         (123, auth.DEFAULT_IDLE_TTL_MS),  # non-string junk
     ],
 )
-def test_login_resolves_the_idle_window_from_the_declared_platform(
-    db_conn, platform, expected
-):
+def test_login_resolves_the_idle_window_from_the_declared_platform(db_conn, platform, expected):
     auth.register(db_conn, EMAIL, PASSWORD)
     token, _ = auth.login(db_conn, EMAIL, PASSWORD, DEVICE, platform)
 
@@ -398,9 +394,7 @@ def test_expired_sessions_are_hidden_from_the_sessions_list(client, app):
 
     _age_session(conn, stale, 8 * DAY_MS)
 
-    sessions = client.get("/api/v1/account/sessions", headers=_bearer(live)).get_json()[
-        "sessions"
-    ]
+    sessions = client.get("/api/v1/account/sessions", headers=_bearer(live)).get_json()["sessions"]
     assert [s["device_label"] for s in sessions] == [DEVICE]
 
 
@@ -476,9 +470,12 @@ def test_email_at_the_cap_is_accepted_and_one_over_is_rejected(client):
     at_cap = f"{local}@example.com"
     assert len(at_cap) == auth.MAX_EMAIL_LENGTH
 
-    assert client.post(
-        "/api/v1/register", json={"email": at_cap, "password": "password123"}
-    ).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/register", json={"email": at_cap, "password": "password123"}
+        ).status_code
+        == 201
+    )
 
     over = f"a{at_cap}"
     resp = client.post("/api/v1/register", json={"email": over, "password": "password123"})
@@ -496,9 +493,12 @@ def test_the_email_cap_never_exceeds_what_an_invite_can_carry(db_conn):
 def test_password_at_the_cap_is_accepted_and_one_over_is_rejected(client):
     at_cap = "p" * auth.MAX_PASSWORD_LENGTH
 
-    assert client.post(
-        "/api/v1/register", json={"email": "atcap@example.com", "password": at_cap}
-    ).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/register", json={"email": "atcap@example.com", "password": at_cap}
+        ).status_code
+        == 201
+    )
 
     resp = client.post(
         "/api/v1/register", json={"email": "over@example.com", "password": at_cap + "p"}

@@ -20,16 +20,15 @@ def _touched_list_ids(conn, changes):
     ids = set()
     if isinstance(lists, list):
         ids = {
-            obj["id"] for obj in lists
+            obj["id"]
+            for obj in lists
             if isinstance(obj, dict) and isinstance(obj.get("id"), str) and obj["id"]
         }
     if isinstance(items, list):
         for obj in items:
             if not isinstance(obj, dict) or not isinstance(obj.get("id"), str):
                 continue
-            row = conn.execute(
-                "SELECT list_id FROM items WHERE id = ?", (obj["id"],)
-            ).fetchone()
+            row = conn.execute("SELECT list_id FROM items WHERE id = ?", (obj["id"],)).fetchone()
             if row is not None:
                 ids.add(row["list_id"])
     return ids

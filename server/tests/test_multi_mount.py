@@ -6,12 +6,16 @@ than using conftest's single-instance `app`/`client` fixtures, since the
 whole point here is exercising configurations conftest doesn't cover.
 """
 
+from typing import Any
+
 import pytest
 from flask import Flask
 
-from shoppinglist_server import create_blueprint, get_config_by_name
+from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
+from shoppinglist_server import get_config_by_name
 from shoppinglist_server.cli import shoppinglist_cli
+from shoppinglist_server.errors import ApiError
 
 PW = "password123"
 
@@ -33,7 +37,7 @@ def _mount_two(tmp_path, **overrides):
     app = Flask(__name__)
     app.config["TESTING"] = True
 
-    args_a = {
+    args_a: dict[str, Any] = {
         "database_path": db_a,
         "invite_hmac_key": b"key-a",
         "base_url": "http://a.example.com",
@@ -44,7 +48,7 @@ def _mount_two(tmp_path, **overrides):
         "serve_android_apk": False,
         **overrides.get("a", {}),
     }
-    args_b = {
+    args_b: dict[str, Any] = {
         "database_path": db_b,
         "invite_hmac_key": b"key-b",
         "base_url": "http://b.example.com",
@@ -78,15 +82,25 @@ def test_same_name_twice_raises_flasks_own_clear_error(tmp_path):
     db_path = _init_db(tmp_path, "x.db")
     app.register_blueprint(
         create_blueprint(
-            database_path=db_path, invite_hmac_key=b"k", base_url="http://x",
-            url_prefix="/a", serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
+            database_path=db_path,
+            invite_hmac_key=b"k",
+            base_url="http://x",
+            url_prefix="/a",
+            serve_web_client=False,
+            serve_invite_landing_page=False,
+            serve_android_apk=False,
         )
     )
     with pytest.raises(ValueError, match="already registered"):
         app.register_blueprint(
             create_blueprint(
-                database_path=db_path, invite_hmac_key=b"k", base_url="http://x",
-                url_prefix="/b", serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
+                database_path=db_path,
+                invite_hmac_key=b"k",
+                base_url="http://x",
+                url_prefix="/b",
+                serve_web_client=False,
+                serve_invite_landing_page=False,
+                serve_android_apk=False,
             )
         )
 
@@ -102,12 +116,17 @@ def test_accounts_are_isolated_per_instance(tmp_path):
 
     # The account exists in A's database...
     conn_a = db_module.connect(db_a)
-    assert conn_a.execute("SELECT 1 FROM accounts WHERE email = ?", ("alice@example.com",)).fetchone()
+    assert conn_a.execute(
+        "SELECT 1 FROM accounts WHERE email = ?", ("alice@example.com",)
+    ).fetchone()
     conn_a.close()
 
     # ...and does NOT exist in B's database, nor can B log in with it.
     conn_b = db_module.connect(db_b)
-    assert conn_b.execute("SELECT 1 FROM accounts WHERE email = ?", ("alice@example.com",)).fetchone() is None
+    assert (
+        conn_b.execute("SELECT 1 FROM accounts WHERE email = ?", ("alice@example.com",)).fetchone()
+        is None
+    )
     conn_b.close()
 
     resp = client.post(
@@ -175,11 +194,21 @@ def test_invite_key_isolation(tmp_path):
     ).get_json()["token"]
     client.post(
         "/tenant-a/api/sync",
-        json={"cursor": 0, "device_id": "dev", "full_lists": [], "changes": {
-            "lists": [{"id": "list-1", "fields": {
-                "name": {"value": "Groceries", "updated_at": 1, "updated_by": "dev"}
-            }}]
-        }},
+        json={
+            "cursor": 0,
+            "device_id": "dev",
+            "full_lists": [],
+            "changes": {
+                "lists": [
+                    {
+                        "id": "list-1",
+                        "fields": {
+                            "name": {"value": "Groceries", "updated_at": 1, "updated_by": "dev"}
+                        },
+                    }
+                ]
+            },
+        },
         headers={"Authorization": f"Bearer {token_a}"},
     )
     resp = client.post(
@@ -189,8 +218,9 @@ def test_invite_key_isolation(tmp_path):
     )
     minted_token = resp.get_json()["token"]
 
-    with pytest.raises(Exception):
+    with pytest.raises(ApiError) as excinfo:
         invites.decode_token(b"key-b", minted_token)
+    assert excinfo.value.code == "invalid_token"
     # But it decodes fine under the key it was actually minted with.
     invites.decode_token(b"key-a", minted_token)
 
@@ -201,15 +231,27 @@ def test_serve_web_client_twice_on_one_app_raises_clear_error(tmp_path):
     db_2 = _init_db(tmp_path, "2.db")
     app.register_blueprint(
         create_blueprint(
-            database_path=db_1, invite_hmac_key=b"k1", base_url="http://x",
-            url_prefix="/a", name="a", serve_web_client=True, serve_invite_landing_page=False, serve_android_apk=False,
+            database_path=db_1,
+            invite_hmac_key=b"k1",
+            base_url="http://x",
+            url_prefix="/a",
+            name="a",
+            serve_web_client=True,
+            serve_invite_landing_page=False,
+            serve_android_apk=False,
         )
     )
     with pytest.raises(ValueError, match="serve_web_client"):
         app.register_blueprint(
             create_blueprint(
-                database_path=db_2, invite_hmac_key=b"k2", base_url="http://y",
-                url_prefix="/b", name="b", serve_web_client=True, serve_invite_landing_page=False, serve_android_apk=False,
+                database_path=db_2,
+                invite_hmac_key=b"k2",
+                base_url="http://y",
+                url_prefix="/b",
+                name="b",
+                serve_web_client=True,
+                serve_invite_landing_page=False,
+                serve_android_apk=False,
             )
         )
 
@@ -220,15 +262,27 @@ def test_serve_invite_landing_page_twice_on_one_app_raises_clear_error(tmp_path)
     db_2 = _init_db(tmp_path, "2.db")
     app.register_blueprint(
         create_blueprint(
-            database_path=db_1, invite_hmac_key=b"k1", base_url="http://x",
-            url_prefix="/a", name="a", serve_web_client=False, serve_invite_landing_page=True, serve_android_apk=False,
+            database_path=db_1,
+            invite_hmac_key=b"k1",
+            base_url="http://x",
+            url_prefix="/a",
+            name="a",
+            serve_web_client=False,
+            serve_invite_landing_page=True,
+            serve_android_apk=False,
         )
     )
     with pytest.raises(ValueError, match="serve_invite_landing_page"):
         app.register_blueprint(
             create_blueprint(
-                database_path=db_2, invite_hmac_key=b"k2", base_url="http://y",
-                url_prefix="/b", name="b", serve_web_client=False, serve_invite_landing_page=True, serve_android_apk=False,
+                database_path=db_2,
+                invite_hmac_key=b"k2",
+                base_url="http://y",
+                url_prefix="/b",
+                name="b",
+                serve_web_client=False,
+                serve_invite_landing_page=True,
+                serve_android_apk=False,
             )
         )
 
@@ -239,15 +293,25 @@ def test_serve_android_apk_twice_on_one_app_raises_clear_error(tmp_path):
     db_2 = _init_db(tmp_path, "2.db")
     app.register_blueprint(
         create_blueprint(
-            database_path=db_1, invite_hmac_key=b"k1", base_url="http://x",
-            url_prefix="/a", name="a", serve_web_client=False, serve_invite_landing_page=False,
+            database_path=db_1,
+            invite_hmac_key=b"k1",
+            base_url="http://x",
+            url_prefix="/a",
+            name="a",
+            serve_web_client=False,
+            serve_invite_landing_page=False,
         )
     )
     with pytest.raises(ValueError, match="serve_android_apk"):
         app.register_blueprint(
             create_blueprint(
-                database_path=db_2, invite_hmac_key=b"k2", base_url="http://y",
-                url_prefix="/b", name="b", serve_web_client=False, serve_invite_landing_page=False,
+                database_path=db_2,
+                invite_hmac_key=b"k2",
+                base_url="http://y",
+                url_prefix="/b",
+                name="b",
+                serve_web_client=False,
+                serve_invite_landing_page=False,
             )
         )
 
@@ -256,9 +320,7 @@ def test_landing_page_enabled_on_only_one_instance_uses_that_instances_key(tmp_p
     from shoppinglist_server import auth as auth_module
     from shoppinglist_server import invites
 
-    app, db_a, db_b = _mount_two(
-        tmp_path, a={"serve_invite_landing_page": True}
-    )
+    app, db_a, db_b = _mount_two(tmp_path, a={"serve_invite_landing_page": True})
     client = app.test_client()
 
     conn_a = db_module.connect(db_a)
@@ -272,7 +334,9 @@ def test_landing_page_enabled_on_only_one_instance_uses_that_instances_key(tmp_p
         (account_id,),
     )
     conn_a.commit()
-    result = invites.mint(conn_a, b"key-a", "http://a.example.com", "list-1", "bob@example.com", account_id)
+    result = invites.mint(
+        conn_a, b"key-a", "http://a.example.com", "list-1", "bob@example.com", account_id
+    )
     conn_a.close()
 
     resp = client.get(f"/invite/{result['token']}")
@@ -288,8 +352,13 @@ def test_get_config_by_name_single_instance_needs_no_name(tmp_path):
     db_path = _init_db(tmp_path, "x.db")
     app.register_blueprint(
         create_blueprint(
-            database_path=db_path, invite_hmac_key=b"k", base_url="http://x",
-            url_prefix="/a", serve_web_client=False, serve_invite_landing_page=False, serve_android_apk=False,
+            database_path=db_path,
+            invite_hmac_key=b"k",
+            base_url="http://x",
+            url_prefix="/a",
+            serve_web_client=False,
+            serve_invite_landing_page=False,
+            serve_android_apk=False,
         )
     )
     with app.app_context():

@@ -23,7 +23,9 @@ def register_routes(bp):
         conn = get_db()
         default = get_config().get("allow_registration", True)
         return (
-            jsonify({"allow_registration": server_settings.effective_allow_registration(conn, default)}),
+            jsonify(
+                {"allow_registration": server_settings.effective_allow_registration(conn, default)}
+            ),
             200,
         )
 
@@ -51,9 +53,7 @@ def register_routes(bp):
         new_password = accounts.admin_reset_password(conn, account_id)
         # Both parties recorded: who did it and to whom. The password itself never goes near the
         # log (audit.py redacts the key even if a future edit passes it).
-        audit.record(
-            "admin.password_reset", account_id=g.account.id, target_account_id=account_id
-        )
+        audit.record("admin.password_reset", account_id=g.account.id, target_account_id=account_id)
         # Shown once to the admin, relayed out of band — same trust model as invite tokens.
         return jsonify({"password": new_password}), 200
 
@@ -67,9 +67,7 @@ def register_routes(bp):
             raise ApiError(
                 403, "cannot_delete_self", "Delete your own account from your settings, not here."
             )
-        target = conn.execute(
-            "SELECT email FROM accounts WHERE id = ?", (account_id,)
-        ).fetchone()
+        target = conn.execute("SELECT email FROM accounts WHERE id = ?", (account_id,)).fetchone()
         if target is None:
             raise ApiError(404, "account_not_found", "No account with this id exists.")
         # An admin's email would stay admin-listed but point at nothing — and admins shouldn't be

@@ -6,7 +6,6 @@ from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
 from shoppinglist_server.cli import shoppinglist_cli
 
-
 # Never a usable value — only a marker for the check in create_app() below (T-122).
 _REJECTED_INVITE_HMAC_KEY = "dev-invite-hmac-key"
 

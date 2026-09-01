@@ -39,7 +39,7 @@ def _encode_token(key: bytes, invite_id: str, list_id: str, email: str, expires_
     return f"{payload_b64}.{signature_b64}"
 
 
-def decode_token(key: bytes, token: str):
+def decode_token(key: bytes, token: str | None):
     try:
         payload_b64, signature_b64 = (token or "").split(".", 1)
         expected = _sign(key, payload_b64)
@@ -69,7 +69,9 @@ def is_member(conn, account_id, list_id) -> bool:
 # ---- mint / revoke / redeem ---------------------------------------------------
 
 
-def mint(conn, key: bytes, base_url: str, list_id: str, invited_email: str, created_by: str) -> dict:
+def mint(
+    conn, key: bytes, base_url: str, list_id: str, invited_email: str | None, created_by: str
+) -> dict:
     if not is_member(conn, created_by, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
     # The token payload is colon-delimited (see _encode_token/decode_token), so NO component may
@@ -119,7 +121,7 @@ def revoke(conn, account_id: str, invite_id: str) -> None:
     conn.execute("UPDATE invites SET revoked = 1 WHERE id = ?", (invite_id,))
 
 
-def redeem(conn, key: bytes, account, token: str) -> str:
+def redeem(conn, key: bytes, account, token: str | None) -> str:
     invite_id, _token_list_id, invited_email, expires_at = decode_token(key, token)
 
     row = conn.execute(

@@ -58,12 +58,16 @@ def test_two_devices_converge_after_sync(client):
 
     # Device A creates a list with one item.
     resp = _sync(
-        client, token_a, cursor=0, device_id="devA",
+        client,
+        token_a,
+        cursor=0,
+        device_id="devA",
         changes={
             "lists": [_mk_list("list-1", "Groceries", 100, "devA")],
             "items": [
                 _mk_item(
-                    "item-1", "list-1",
+                    "item-1",
+                    "list-1",
                     name=("Milk", 100, "devA"),
                     category=("dairy", 100, "devA"),
                 )
@@ -78,7 +82,7 @@ def test_two_devices_converge_after_sync(client):
     assert resp.status_code == 200
     body_b = resp.get_json()
     cursor_b = body_b["cursor"]
-    assert {l["id"] for l in body_b["changes"]["lists"]} == {"list-1"}
+    assert {row["id"] for row in body_b["changes"]["lists"]} == {"list-1"}
     item = next(i for i in body_b["changes"]["items"] if i["id"] == "item-1")
     assert item["fields"]["name"]["value"] == "Milk"
     assert item["fields"]["category"]["value"] == "dairy"
@@ -86,11 +90,15 @@ def test_two_devices_converge_after_sync(client):
     # Both edit "offline": A changes category + renames (ts=200); B changes
     # quantity + renames with a later ts=210 -> same-field (name) conflict.
     resp = _sync(
-        client, token_a, cursor=cursor_a, device_id="devA",
+        client,
+        token_a,
+        cursor=cursor_a,
+        device_id="devA",
         changes={
             "items": [
                 _mk_item(
-                    "item-1", "list-1",
+                    "item-1",
+                    "list-1",
                     category=("fridge", 200, "devA"),
                     name=("MilkA", 200, "devA"),
                 )
@@ -100,11 +108,15 @@ def test_two_devices_converge_after_sync(client):
     assert resp.status_code == 200
 
     resp = _sync(
-        client, token_b, cursor=cursor_b, device_id="devB",
+        client,
+        token_b,
+        cursor=cursor_b,
+        device_id="devB",
         changes={
             "items": [
                 _mk_item(
-                    "item-1", "list-1",
+                    "item-1",
+                    "list-1",
                     quantity=("2l", 210, "devB"),
                     name=("MilkB", 210, "devB"),
                 )
@@ -123,15 +135,13 @@ def test_two_devices_converge_after_sync(client):
 
     item = next(i for i in changes_a["items"] if i["id"] == "item-1")
     assert item["fields"]["category"] == {
-        "value": "fridge", "updated_at": 200, "updated_by": "devA"
+        "value": "fridge",
+        "updated_at": 200,
+        "updated_by": "devA",
     }
-    assert item["fields"]["quantity"] == {
-        "value": "2l", "updated_at": 210, "updated_by": "devB"
-    }
+    assert item["fields"]["quantity"] == {"value": "2l", "updated_at": 210, "updated_by": "devB"}
     # Later timestamp (devB, ts=210) wins the same-field name conflict.
-    assert item["fields"]["name"] == {
-        "value": "MilkB", "updated_at": 210, "updated_by": "devB"
-    }
+    assert item["fields"]["name"] == {"value": "MilkB", "updated_at": 210, "updated_by": "devB"}
 
 
 # ---- error paths ------------------------------------------------------------
@@ -146,7 +156,10 @@ def test_sync_full_lists_non_member_403(client):
     token_a = _register_and_login(client, "owner@example.com", "devA")
     token_b = _register_and_login(client, "outsider@example.com", "devB")
     _sync(
-        client, token_a, cursor=0, device_id="devA",
+        client,
+        token_a,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [_mk_list("list-1", "Groceries", 100, "devA")]},
     )
     resp = _sync(client, token_b, cursor=0, device_id="devB", full_lists=["list-1"])
@@ -156,7 +169,10 @@ def test_sync_full_lists_non_member_403(client):
 def test_sync_stale_cursor_410_but_still_applies_pushed_changes(client, app):
     token = _register_and_login(client)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [_mk_list("list-1", "Groceries", 100, "devA")]},
     )
     assert resp.status_code == 200
@@ -171,10 +187,11 @@ def test_sync_stale_cursor_410_but_still_applies_pushed_changes(client, app):
     conn.close()
 
     resp = _sync(
-        client, token, cursor=1, device_id="devA",
-        changes={
-            "items": [_mk_item("item-1", "list-1", name=("Milk", 500, "devA"))]
-        },
+        client,
+        token,
+        cursor=1,
+        device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1", name=("Milk", 500, "devA"))]},
     )
     assert resp.status_code == 410
     assert resp.get_json()["error"] == "full_resync_required"
@@ -189,15 +206,22 @@ def test_sync_stale_cursor_410_but_still_applies_pushed_changes(client, app):
 def test_sync_invalid_status_422(client):
     token = _register_and_login(client)
     _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [_mk_list("list-1", "Groceries", 100, "devA")]},
     )
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={
             "items": [
                 _mk_item(
-                    "item-1", "list-1",
+                    "item-1",
+                    "list-1",
                     name=("Milk", 100, "devA"),
                     status=("bought", 100, "devA"),
                 )
@@ -210,15 +234,22 @@ def test_sync_invalid_status_422(client):
 def test_sync_validation_422_names_the_offending_row_and_field(client):
     token = _register_and_login(client)
     _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [_mk_list("list-1", "Groceries", 100, "devA")]},
     )
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={
             "items": [
                 _mk_item(
-                    "item-1", "list-1",
+                    "item-1",
+                    "list-1",
                     name=("Milk", 100, "devA"),
                     price=({"amount": "1,99", "currency": "EUR"}, 100, "devA"),
                 )
@@ -253,7 +284,10 @@ def test_sync_missing_cursor_422(client):
 
 def _seed_list(client, token, list_id="list-1", ts=100):
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [_mk_list(list_id, "Groceries", ts, "devA")]},
     )
     assert resp.status_code == 200
@@ -263,8 +297,11 @@ def test_sync_updated_at_out_of_int64_range_422_not_500(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item("item-1", "list-1", name=("Milk", 2 ** 65, "devA"))]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"items": [_mk_item("item-1", "list-1", name=("Milk", 2**65, "devA"))]},
     )
     assert resp.status_code == 422
     body = resp.get_json()
@@ -276,9 +313,19 @@ def test_sync_id_as_dict_422_invalid_row(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [{"id": {"weird": 1}, "list_id": "list-1",
-                            "fields": {"name": _clock("Milk", 100, "devA")}}]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                {
+                    "id": {"weird": 1},
+                    "list_id": "list-1",
+                    "fields": {"name": _clock("Milk", 100, "devA")},
+                }
+            ]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["error"] == "invalid_row"
@@ -298,9 +345,20 @@ def test_sync_created_at_as_string_422(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [{"id": "item-1", "list_id": "list-1", "created_at": "yesterday",
-                            "fields": {"name": _clock("Milk", 100, "devA")}}]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "created_at": "yesterday",
+                    "fields": {"name": _clock("Milk", 100, "devA")},
+                }
+            ]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["row_id"] == "item-1"
@@ -310,10 +368,20 @@ def test_sync_stores_as_string_422_with_row_and_field(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item("item-1", "list-1",
-                                    name=("Milk", 100, "devA"),
-                                    stores=("not-a-list", 100, "devA"))]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "item-1",
+                    "list-1",
+                    name=("Milk", 100, "devA"),
+                    stores=("not-a-list", 100, "devA"),
+                )
+            ]
+        },
     )
     assert resp.status_code == 422
     body = resp.get_json()
@@ -325,9 +393,18 @@ def test_sync_category_order_as_dict_422_with_row_and_field(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"lists": [{"id": "list-1",
-                            "fields": {"category_order": _clock({"not": "a list"}, 200, "devA")}}]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "lists": [
+                {
+                    "id": "list-1",
+                    "fields": {"category_order": _clock({"not": "a list"}, 200, "devA")},
+                }
+            ]
+        },
     )
     assert resp.status_code == 422
     body = resp.get_json()
@@ -339,10 +416,17 @@ def test_sync_stores_element_not_a_string_422(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item("item-1", "list-1",
-                                    name=("Milk", 100, "devA"),
-                                    stores=(["ok", 5], 100, "devA"))]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "item-1", "list-1", name=("Milk", 100, "devA"), stores=(["ok", 5], 100, "devA")
+                )
+            ]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["field"] == "stores"
@@ -353,7 +437,10 @@ def test_sync_oversized_name_422(client):
     _seed_list(client, token)
     huge = "x" * 100_000
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"items": [_mk_item("item-1", "list-1", name=(huge, 100, "devA"))]},
     )
     assert resp.status_code == 422
@@ -364,10 +451,17 @@ def test_sync_quantity_as_int_rejected_not_coerced(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item("item-1", "list-1",
-                                    name=("Milk", 100, "devA"),
-                                    quantity=(12345, 100, "devA"))]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "item-1", "list-1", name=("Milk", 100, "devA"), quantity=(12345, 100, "devA")
+                )
+            ]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["field"] == "quantity"
@@ -377,10 +471,21 @@ def test_sync_updated_by_non_string_422(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [{"id": "item-1", "list_id": "list-1",
-                            "fields": {"name": {"value": "Milk", "updated_at": 100,
-                                                "updated_by": {"nope": 1}}}}]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": "list-1",
+                    "fields": {
+                        "name": {"value": "Milk", "updated_at": 100, "updated_by": {"nope": 1}}
+                    },
+                }
+            ]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["field"] == "name"
@@ -410,7 +515,10 @@ def test_sync_item_fields_as_string_422_with_row_id(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"items": [{"id": "item-1", "list_id": "list-1", "fields": "junk"}]},
     )
     assert resp.status_code == 422
@@ -421,7 +529,10 @@ def test_sync_list_fields_as_list_422_with_row_id(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [{"id": "list-1", "fields": [1, 2, 3]}]},
     )
     assert resp.status_code == 422
@@ -432,9 +543,19 @@ def test_sync_new_item_list_id_as_dict_422_with_row_id(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [{"id": "item-1", "list_id": {"weird": 1},
-                            "fields": {"name": _clock("Milk", 100, "devA")}}]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                {
+                    "id": "item-1",
+                    "list_id": {"weird": 1},
+                    "fields": {"name": _clock("Milk", 100, "devA")},
+                }
+            ]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["row_id"] == "item-1"
@@ -443,7 +564,10 @@ def test_sync_new_item_list_id_as_dict_422_with_row_id(client):
 def test_sync_new_item_unknown_list_422_with_row_id(client):
     token = _register_and_login(client)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"items": [_mk_item("item-1", "no-such-list", name=("Milk", 100, "devA"))]},
     )
     assert resp.status_code == 422
@@ -458,10 +582,20 @@ def test_sync_status_as_dict_422_not_500(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item("item-1", "list-1",
-                                    name=("Milk", 100, "devA"),
-                                    status=({"weird": 1}, 100, "devA"))]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "item-1",
+                    "list-1",
+                    name=("Milk", 100, "devA"),
+                    status=({"weird": 1}, 100, "devA"),
+                )
+            ]
+        },
     )
     assert resp.status_code == 422
     body = resp.get_json()
@@ -474,10 +608,17 @@ def test_sync_deleted_non_bool_422(client):
     token = _register_and_login(client)
     _seed_list(client, token)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item("item-1", "list-1",
-                                    name=("Milk", 100, "devA"),
-                                    deleted=("yes", 100, "devA"))]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "item-1", "list-1", name=("Milk", 100, "devA"), deleted=("yes", 100, "devA")
+                )
+            ]
+        },
     )
     assert resp.status_code == 422
     body = resp.get_json()
@@ -492,7 +633,7 @@ def test_sync_cursor_out_of_int64_range_422_not_500(client):
     _seed_list(client, token)
     resp = client.post(
         "/api/v1/sync",
-        json={"cursor": 2 ** 65, "device_id": "devA", "full_lists": [], "changes": {}},
+        json={"cursor": 2**65, "device_id": "devA", "full_lists": [], "changes": {}},
         headers=_auth(token),
     )
     assert resp.status_code == 422
@@ -504,19 +645,27 @@ def test_sync_maximal_valid_payload_applies_cleanly(client):
     exercising nulls on every nullable field) still applies and round-trips."""
     token = _register_and_login(client)
     resp = _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={
-            "lists": [{
-                "id": "list-1", "created_at": 1000,
-                "fields": {
-                    "name": _clock("Groceries", 100, "devA"),
-                    "category_order": _clock(["dairy", "produce", "bakery"], 100, "devA"),
-                    "notes": _clock("weekly shop", 100, "devA"),
-                },
-            }],
+            "lists": [
+                {
+                    "id": "list-1",
+                    "created_at": 1000,
+                    "fields": {
+                        "name": _clock("Groceries", 100, "devA"),
+                        "category_order": _clock(["dairy", "produce", "bakery"], 100, "devA"),
+                        "notes": _clock("weekly shop", 100, "devA"),
+                    },
+                }
+            ],
             "items": [
                 {
-                    "id": "item-full", "list_id": "list-1", "created_at": 1000,
+                    "id": "item-full",
+                    "list_id": "list-1",
+                    "created_at": 1000,
                     "fields": {
                         "name": _clock("Milk", 100, "devA"),
                         "category": _clock("dairy", 100, "devA"),
@@ -529,7 +678,9 @@ def test_sync_maximal_valid_payload_applies_cleanly(client):
                     },
                 },
                 {
-                    "id": "item-nulls", "list_id": "list-1", "created_at": 1000,
+                    "id": "item-nulls",
+                    "list_id": "list-1",
+                    "created_at": 1000,
                     "fields": {
                         "name": _clock("Bread", 100, "devA"),
                         "category": _clock(None, 100, "devA"),
@@ -554,7 +705,7 @@ def test_sync_maximal_valid_payload_applies_cleanly(client):
     assert nulls["category"]["value"] is None
     assert nulls["price"]["value"] is None
     assert nulls["stores"]["value"] == []
-    lst = next(l for l in pull["changes"]["lists"] if l["id"] == "list-1")
+    lst = next(row for row in pull["changes"]["lists"] if row["id"] == "list-1")
     assert lst["fields"]["category_order"]["value"] == ["dairy", "produce", "bakery"]
     assert lst["fields"]["notes"]["value"] == "weekly shop"
 
@@ -566,12 +717,11 @@ def test_get_lists_returns_only_member_lists(client):
     token_a = _register_and_login(client, "owner2@example.com", "devA")
     token_b = _register_and_login(client, "outsider2@example.com", "devB")
     _sync(
-        client, token_a, cursor=0, device_id="devA",
-        changes={
-            "lists": [
-                _mk_list("list-x", "Groceries", 100, "devA", category_order=["dairy"])
-            ]
-        },
+        client,
+        token_a,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [_mk_list("list-x", "Groceries", 100, "devA", category_order=["dairy"])]},
     )
 
     resp = client.get("/api/v1/lists", headers=_auth(token_a))
@@ -586,16 +736,18 @@ def test_get_lists_returns_only_member_lists(client):
 def test_get_lists_excludes_deleted(client):
     token = _register_and_login(client, "deleter@example.com", "devA")
     _sync(
-        client, token, cursor=0, device_id="devA",
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
         changes={"lists": [_mk_list("list-y", "ToDelete", 100, "devA")]},
     )
     _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={
-            "lists": [
-                {"id": "list-y", "fields": {"deleted": _clock(True, 200, "devA")}}
-            ]
-        },
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [{"id": "list-y", "fields": {"deleted": _clock(True, 200, "devA")}}]},
     )
     resp = client.get("/api/v1/lists", headers=_auth(token))
     assert resp.get_json()["lists"] == []
@@ -621,7 +773,10 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
     # Account A owns a private list with one item.
     token_a = _register_and_login(client, email="alice@example.com", device="devA")
     resp = _sync(
-        client, token_a, cursor=0, device_id="devA",
+        client,
+        token_a,
+        cursor=0,
+        device_id="devA",
         changes={
             "lists": [_mk_list("list-victim", "Alice's list", 100, "devA")],
             "items": [_mk_item("item-victim", "list-victim", name=("Milk", 100, "devA"))],
@@ -653,15 +808,23 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
     # (e) Push a brand-new item into A's list: refused. Item writes answer 422 unknown_list, not
     # 403 — see (j) for why the two cases must be indistinguishable (T-120).
     resp = _sync(
-        client, token_b, cursor=0, device_id="devB",
-        changes={"items": [_mk_item("item-intruder", "list-victim", name=("Intruder", 200, "devB"))]},
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
+        changes={
+            "items": [_mk_item("item-intruder", "list-victim", name=("Intruder", 200, "devB"))]
+        },
     )
     assert resp.status_code == 422
     assert resp.get_json()["error"] == "unknown_list"
 
     # (f) Edit A's existing item: refused.
     resp = _sync(
-        client, token_b, cursor=0, device_id="devB",
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
         changes={"items": [_mk_item("item-victim", "list-victim", name=("Hacked", 999, "devB"))]},
     )
     assert resp.status_code == 422
@@ -669,8 +832,13 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
     # (g) Hijack via mislabelled list_id: the server authorizes against the item's
     # STORED list, not the client-supplied one, so this is still refused.
     resp = _sync(
-        client, token_b, cursor=0, device_id="devB",
-        changes={"items": [_mk_item("item-victim", "some-other-list", name=("Hacked", 1000, "devB"))]},
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
+        changes={
+            "items": [_mk_item("item-victim", "some-other-list", name=("Hacked", 1000, "devB"))]
+        },
     )
     assert resp.status_code == 422
 
@@ -679,11 +847,17 @@ def test_non_member_cannot_access_a_list_in_any_way(client):
     # use. Compare the whole envelope, not just the status — a differing error code leaks just as
     # much as a differing status.
     resp_absent = _sync(
-        client, token_b, cursor=0, device_id="devB",
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
         changes={"items": [_mk_item("probe", "no-such-list-at-all", name=("P", 300, "devB"))]},
     )
     resp_foreign = _sync(
-        client, token_b, cursor=0, device_id="devB",
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
         changes={"items": [_mk_item("probe", "list-victim", name=("P", 300, "devB"))]},
     )
     assert resp_absent.status_code == resp_foreign.status_code == 422
@@ -729,22 +903,42 @@ def _n_items(n, list_id="list-1", start=0):
 
 def test_a_batch_at_the_cap_is_accepted(client):
     token = _register_and_login(client, email="cap@example.com", device="devA")
-    _sync(client, token, cursor=0, device_id="devA",
-          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+    _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [_mk_list("list-1", "L", 100, "devA")]},
+    )
 
-    resp = _sync(client, token, cursor=0, device_id="devA",
-                 changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC)})
+    resp = _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC)},
+    )
 
     assert resp.status_code == 200
 
 
 def test_a_batch_one_over_the_cap_is_rejected_and_applies_nothing(client):
     token = _register_and_login(client, email="over@example.com", device="devA")
-    _sync(client, token, cursor=0, device_id="devA",
-          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+    _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [_mk_list("list-1", "L", 100, "devA")]},
+    )
 
-    resp = _sync(client, token, cursor=0, device_id="devA",
-                 changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)})
+    resp = _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)},
+    )
 
     assert resp.status_code == 422
     body = resp.get_json()
@@ -760,12 +954,11 @@ def test_the_cap_counts_lists_and_items_together(client):
     token = _register_and_login(client, email="both@example.com", device="devA")
     half = sync.MAX_CHANGES_PER_SYNC // 2 + 1
     lists = [_mk_list(f"l-{i}", f"L{i}", 100 + i, "devA") for i in range(half)]
-    items = [
-        _mk_item(f"i-{i}", "l-0", name=(f"I{i}", 100 + i, "devA")) for i in range(half)
-    ]
+    items = [_mk_item(f"i-{i}", "l-0", name=(f"I{i}", 100 + i, "devA")) for i in range(half)]
 
-    resp = _sync(client, token, cursor=0, device_id="devA",
-                 changes={"lists": lists, "items": items})
+    resp = _sync(
+        client, token, cursor=0, device_id="devA", changes={"lists": lists, "items": items}
+    )
 
     assert resp.status_code == 422
     assert resp.get_json()["error"] == "too_many_changes"
@@ -775,11 +968,21 @@ def test_the_over_cap_error_names_no_row_so_clients_chunk_instead_of_quarantinin
     """Both clients quarantine a 422 that names a row_id (T-32). The batch being too big is not
     any single row's fault, so naming one would park an innocent row forever."""
     token = _register_and_login(client, email="norow@example.com", device="devA")
-    _sync(client, token, cursor=0, device_id="devA",
-          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+    _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [_mk_list("list-1", "L", 100, "devA")]},
+    )
 
-    body = _sync(client, token, cursor=0, device_id="devA",
-                 changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)}).get_json()
+    body = _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"items": _n_items(sync.MAX_CHANGES_PER_SYNC + 1)},
+    ).get_json()
 
     assert "row_id" not in body
 
@@ -789,21 +992,29 @@ def test_the_over_cap_error_names_no_row_so_clients_chunk_instead_of_quarantinin
 
 def _push_price(client, token, amount):
     return _sync(
-        client, token, cursor=0, device_id="devA",
-        changes={"items": [_mk_item(
-            "price-probe", "list-1",
-            name=("Milk", 100, "devA"),
-            price=({"amount": amount, "currency": "EUR"}, 100, "devA"),
-        )]},
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={
+            "items": [
+                _mk_item(
+                    "price-probe",
+                    "list-1",
+                    name=("Milk", 100, "devA"),
+                    price=({"amount": amount, "currency": "EUR"}, 100, "devA"),
+                )
+            ]
+        },
     )
 
 
 @pytest.mark.parametrize(
     "amount",
     [
-        "٥.٩٩",   # Eastern Arabic-Indic
-        "١٩٩",    # Eastern Arabic-Indic, no decimal
-        "५.९९",   # Devanagari
+        "٥.٩٩",  # Eastern Arabic-Indic
+        "١٩٩",  # Eastern Arabic-Indic, no decimal
+        "५.९९",  # Devanagari
         "５.９９",  # fullwidth
     ],
 )
@@ -811,8 +1022,13 @@ def test_non_ascii_digits_are_rejected_as_a_price(client, amount):
     """Python's `\\d` is Unicode-aware, so the server used to ACCEPT these while both clients
     reject them — one crafted row then rendered as NaN for every member of the list (T-125)."""
     token = _register_and_login(client, email="digits@example.com", device="devA")
-    _sync(client, token, cursor=0, device_id="devA",
-          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+    _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [_mk_list("list-1", "L", 100, "devA")]},
+    )
 
     resp = _push_price(client, token, amount)
 
@@ -822,8 +1038,13 @@ def test_non_ascii_digits_are_rejected_as_a_price(client, amount):
 
 def test_ordinary_ascii_prices_still_pass(client):
     token = _register_and_login(client, email="ascii@example.com", device="devA")
-    _sync(client, token, cursor=0, device_id="devA",
-          changes={"lists": [_mk_list("list-1", "L", 100, "devA")]})
+    _sync(
+        client,
+        token,
+        cursor=0,
+        device_id="devA",
+        changes={"lists": [_mk_list("list-1", "L", 100, "devA")]},
+    )
 
     for amount in ("1.99", "0", "12", "1234.5"):
         assert _push_price(client, token, amount).status_code == 200, amount

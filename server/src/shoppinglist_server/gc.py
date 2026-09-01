@@ -135,9 +135,7 @@ def _purge_expired_sessions(conn, now_ms: int) -> int:
     Does NOT touch `meta.gc_horizon` / `change_seq` — auth_tokens have no
     `change_seq` column and are not part of the sync stream.
     """
-    cur = conn.execute(
-        "DELETE FROM auth_tokens WHERE last_seen_at + idle_ttl_ms < ?", (now_ms,)
-    )
+    cur = conn.execute("DELETE FROM auth_tokens WHERE last_seen_at + idle_ttl_ms < ?", (now_ms,))
     return cur.rowcount
 
 

@@ -6,7 +6,9 @@ from . import migrations as migrations_module
 
 def _has_meta_table(conn: sqlite3.Connection) -> bool:
     return (
-        conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'").fetchone()
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'"
+        ).fetchone()
         is not None
     )
 

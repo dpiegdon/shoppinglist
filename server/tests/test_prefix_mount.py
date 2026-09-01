@@ -36,9 +36,7 @@ def _make_app(tmp_path, **kwargs):
 def test_api_defaults_under_the_prefix(tmp_path):
     client = _make_app(tmp_path).test_client()
 
-    resp = client.post(
-        "/shopping/api/v1/register", json={"email": "a@example.com", "password": PW}
-    )
+    resp = client.post("/shopping/api/v1/register", json={"email": "a@example.com", "password": PW})
     assert resp.status_code == 201
 
     # ...and is NOT at the domain root.
@@ -49,9 +47,7 @@ def test_api_defaults_under_the_prefix(tmp_path):
 def test_explicit_url_prefix_still_wins(tmp_path):
     client = _make_app(tmp_path, url_prefix="/elsewhere/api").test_client()
 
-    resp = client.post(
-        "/elsewhere/api/register", json={"email": "a@example.com", "password": PW}
-    )
+    resp = client.post("/elsewhere/api/register", json={"email": "a@example.com", "password": PW})
     assert resp.status_code == 201
 
 
@@ -83,7 +79,9 @@ def test_config_is_a_meta_tag_not_an_inline_script(tmp_path):
     # And the CSP on that very response really is script-src-strict (no 'unsafe-inline'),
     # so nobody "fixes" a future inline script by weakening the policy instead.
     csp = resp.headers.get("Content-Security-Policy", "")
-    assert "'unsafe-inline'" not in csp.split("style-src")[0]  # scripts fall back to default-src 'self'
+    assert (
+        "'unsafe-inline'" not in csp.split("style-src")[0]
+    )  # scripts fall back to default-src 'self'
 
 
 def test_spa_fallback_for_deep_routes_under_the_prefix(tmp_path):
@@ -125,10 +123,19 @@ def test_invite_landing_and_its_links_live_under_the_prefix(tmp_path):
     client.post(
         "/shopping/api/v1/sync",
         json={
-            "cursor": 0, "device_id": "dev", "full_lists": [],
-            "changes": {"lists": [{"id": "list-1", "fields": {
-                "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
-            }}]},
+            "cursor": 0,
+            "device_id": "dev",
+            "full_lists": [],
+            "changes": {
+                "lists": [
+                    {
+                        "id": "list-1",
+                        "fields": {
+                            "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                        },
+                    }
+                ]
+            },
         },
         headers=auth,
     )

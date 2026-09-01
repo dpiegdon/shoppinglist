@@ -224,7 +224,9 @@ def test_a_locked_database_answers_503_with_retry_after_not_500(app, client, mon
     # The route module binds `register` at import time, so patch it there, not on the source module.
     monkeypatch.setattr(auth_routes, "auth_register", locked)
 
-    resp = client.post("/api/v1/register", json={"email": "x@example.com", "password": "password123"})
+    resp = client.post(
+        "/api/v1/register", json={"email": "x@example.com", "password": "password123"}
+    )
 
     assert resp.status_code == 503
     assert resp.get_json()["error"] == "server_busy"
@@ -246,6 +248,8 @@ def test_a_genuine_operational_error_is_not_disguised_as_congestion(app, client,
     # test client instead of becoming the 500 a real deployment would return.
     app.config["TESTING"] = False
 
-    resp = client.post("/api/v1/register", json={"email": "x@example.com", "password": "password123"})
+    resp = client.post(
+        "/api/v1/register", json={"email": "x@example.com", "password": "password123"}
+    )
 
     assert resp.status_code == 500

@@ -327,6 +327,24 @@ accounts, list creation, invite + redeem, concurrent offline edits, sync
 convergence, both members leaving (the second leave orphans the list), and
 tombstone purge via `gc.run`.
 
+### Linting and formatting
+
+Four tools, all installed by the `dev` extra and all configured in
+`pyproject.toml`:
+
+```bash
+isort . && black .          # fix layout and import order
+ruff check . && ty check .  # lint and type-check
+```
+
+**black is the authority on layout.** isort runs in black's profile so the two
+can never disagree about imports, and ruff is a linter only here — its formatter
+is unused and its import rules are off, so nothing competes for the same job.
+Run isort before black.
+
+`../verify-all.sh` runs all four in `--check` mode as its first stage, so a
+badly formatted tree fails the build without anything being rewritten under you.
+
 ## Backups
 
 The database is a single SQLite file (`DATABASE_PATH`), running in WAL mode

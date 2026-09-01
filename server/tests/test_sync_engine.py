@@ -36,9 +36,7 @@ def _mk_item(item_id, list_id, created_at=1000, **field_clocks):
 
 
 def _create_list(conn, account_id, device, list_id="list-1", name="Groceries", ts=100):
-    sync.apply_changes(
-        conn, account_id, device, {"lists": [_mk_list(list_id, name, ts, device)]}
-    )
+    sync.apply_changes(conn, account_id, device, {"lists": [_mk_list(list_id, name, ts, device)]})
 
 
 def _item_row(conn, item_id):
@@ -119,12 +117,16 @@ def test_edit_item_in_non_member_list_is_refused_as_unknown_list(db_conn):
     intruder = _register(db_conn, "intruder@example.com")
     _create_list(db_conn, owner, "devOwner")
     sync.apply_changes(
-        db_conn, owner, "devOwner",
+        db_conn,
+        owner,
+        "devOwner",
         {"items": [_mk_item("item-1", "list-1", name=("Milk", 100, "devOwner"))]},
     )
     with pytest.raises(ApiError) as excinfo:
         sync.apply_changes(
-            db_conn, intruder, "devIntruder",
+            db_conn,
+            intruder,
+            "devIntruder",
             {"items": [_mk_item("item-1", "list-1", category=("x", 200, "devIntruder"))]},
         )
     assert excinfo.value.status == 422
@@ -140,15 +142,28 @@ def test_existing_item_authorized_against_its_stored_list_not_payload(db_conn):
     victim = _register(db_conn, "victim@example.com")
     attacker = _register(db_conn, "attacker@example.com")
     _create_list(db_conn, victim, "devV", "list-victim", "Victim")
-    sync.apply_changes(db_conn, victim, "devV",
-                       {"items": [_mk_item("secret", "list-victim", name=("Milk", 100, "devV"))]})
+    sync.apply_changes(
+        db_conn,
+        victim,
+        "devV",
+        {"items": [_mk_item("secret", "list-victim", name=("Milk", 100, "devV"))]},
+    )
     _create_list(db_conn, attacker, "devA", "list-attacker", "Attacker")
 
     with pytest.raises(ApiError) as excinfo:
         sync.apply_changes(
-            db_conn, attacker, "devA",
-            {"items": [{"id": "secret", "list_id": "list-attacker",
-                        "fields": {"name": _clock("Hacked", 999, "devA")}}]},
+            db_conn,
+            attacker,
+            "devA",
+            {
+                "items": [
+                    {
+                        "id": "secret",
+                        "list_id": "list-attacker",
+                        "fields": {"name": _clock("Hacked", 999, "devA")},
+                    }
+                ]
+            },
         )
     assert excinfo.value.status == 422
     assert excinfo.value.code == "unknown_list"
@@ -160,7 +175,9 @@ def test_empty_item_name_raises_422(db_conn):
     _create_list(db_conn, account_id, "devA")
     with pytest.raises(ApiError) as excinfo:
         sync.apply_changes(
-            db_conn, account_id, "devA",
+            db_conn,
+            account_id,
+            "devA",
             {"items": [_mk_item("item-1", "list-1", name=("   ", 100, "devA"))]},
         )
     assert excinfo.value.status == 422
@@ -171,10 +188,19 @@ def test_invalid_status_raises_422(db_conn):
     _create_list(db_conn, account_id, "devA")
     with pytest.raises(ApiError) as excinfo:
         sync.apply_changes(
-            db_conn, account_id, "devA",
-            {"items": [_mk_item("item-1", "list-1",
-                                name=("Milk", 100, "devA"),
-                                status=("bought", 100, "devA"))]},
+            db_conn,
+            account_id,
+            "devA",
+            {
+                "items": [
+                    _mk_item(
+                        "item-1",
+                        "list-1",
+                        name=("Milk", 100, "devA"),
+                        status=("bought", 100, "devA"),
+                    )
+                ]
+            },
         )
     assert excinfo.value.status == 422
 
@@ -184,10 +210,19 @@ def test_invalid_price_amount_raises_422(db_conn):
     _create_list(db_conn, account_id, "devA")
     with pytest.raises(ApiError) as excinfo:
         sync.apply_changes(
-            db_conn, account_id, "devA",
-            {"items": [_mk_item("item-1", "list-1",
-                                name=("Milk", 100, "devA"),
-                                price=({"amount": "1.999", "currency": "EUR"}, 100, "devA"))]},
+            db_conn,
+            account_id,
+            "devA",
+            {
+                "items": [
+                    _mk_item(
+                        "item-1",
+                        "list-1",
+                        name=("Milk", 100, "devA"),
+                        price=({"amount": "1.999", "currency": "EUR"}, 100, "devA"),
+                    )
+                ]
+            },
         )
     assert excinfo.value.status == 422
 
@@ -199,7 +234,9 @@ def _setup_item(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
     sync.apply_changes(
-        db_conn, account_id, "devA",
+        db_conn,
+        account_id,
+        "devA",
         {"items": [_mk_item("item-1", "list-1", name=("Milk", 100, "devA"))]},
     )
     return account_id
@@ -207,10 +244,18 @@ def _setup_item(db_conn):
 
 def test_different_field_edits_both_survive(db_conn):
     account_id = _setup_item(db_conn)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("item-1", "list-1", category=("food", 200, "X"))]})
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"items": [_mk_item("item-1", "list-1", quantity=("2l", 201, "Y"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"items": [_mk_item("item-1", "list-1", category=("food", 200, "X"))]},
+    )
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {"items": [_mk_item("item-1", "list-1", quantity=("2l", 201, "Y"))]},
+    )
     row = _item_row(db_conn, "item-1")
     assert row["category"] == "food"
     assert row["quantity"] == "2l"
@@ -242,21 +287,47 @@ def test_equal_timestamp_tiebreak_by_updated_by(db_conn, order):
 
 def test_stores_array_replace_wins(db_conn):
     account_id = _setup_item(db_conn)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("item-1", "list-1", stores=(["Rewe"], 100, "X"))]})
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"items": [_mk_item("item-1", "list-1", stores=(["Aldi", "Lidl"], 200, "Y"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"items": [_mk_item("item-1", "list-1", stores=(["Rewe"], 100, "X"))]},
+    )
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {"items": [_mk_item("item-1", "list-1", stores=(["Aldi", "Lidl"], 200, "Y"))]},
+    )
     assert _item_row(db_conn, "item-1")["stores"] == '["Aldi", "Lidl"]'
 
 
 def test_price_amount_and_currency_move_as_one_field(db_conn):
     account_id = _setup_item(db_conn)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("item-1", "list-1",
-                                           price=({"amount": "1.99", "currency": "EUR"}, 100, "X"))]})
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"items": [_mk_item("item-1", "list-1",
-                                           price=({"amount": "2.50", "currency": "USD"}, 200, "Y"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {
+            "items": [
+                _mk_item(
+                    "item-1", "list-1", price=({"amount": "1.99", "currency": "EUR"}, 100, "X")
+                )
+            ]
+        },
+    )
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {
+            "items": [
+                _mk_item(
+                    "item-1", "list-1", price=({"amount": "2.50", "currency": "USD"}, 200, "Y")
+                )
+            ]
+        },
+    )
     row = _item_row(db_conn, "item-1")
     assert row["price_amount"] == "2.50"
     assert row["price_currency"] == "USD"
@@ -264,28 +335,48 @@ def test_price_amount_and_currency_move_as_one_field(db_conn):
 
 def test_status_transition_conflict_resolves_latest(db_conn):
     account_id = _setup_item(db_conn)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("item-1", "list-1", status=("todo", 200, "X"))]})
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"items": [_mk_item("item-1", "list-1", status=("checked", 300, "Y"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"items": [_mk_item("item-1", "list-1", status=("todo", 200, "X"))]},
+    )
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {"items": [_mk_item("item-1", "list-1", status=("checked", 300, "Y"))]},
+    )
     assert _item_row(db_conn, "item-1")["status"] == "checked"
 
 
 def test_tombstone_beats_older_edit_and_loses_to_newer_resurrect(db_conn):
     account_id = _setup_item(db_conn)
     # Delete at ts=200.
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("item-1", "list-1", deleted=(True, 200, "X"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"items": [_mk_item("item-1", "list-1", deleted=(True, 200, "X"))]},
+    )
     assert _item_row(db_conn, "item-1")["deleted"] == 1
 
     # Older resurrect (ts=150 < 200) does NOT bring it back.
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"items": [_mk_item("item-1", "list-1", deleted=(False, 150, "Y"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {"items": [_mk_item("item-1", "list-1", deleted=(False, 150, "Y"))]},
+    )
     assert _item_row(db_conn, "item-1")["deleted"] == 1
 
     # Newer resurrect (ts=300 > 200) brings it back.
-    sync.apply_changes(db_conn, account_id, "Z",
-                       {"items": [_mk_item("item-1", "list-1", deleted=(False, 300, "Z"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Z",
+        {"items": [_mk_item("item-1", "list-1", deleted=(False, 300, "Z"))]},
+    )
     assert _item_row(db_conn, "item-1")["deleted"] == 0
 
 
@@ -306,7 +397,9 @@ def test_far_future_updated_at_is_clamped_on_store(db_conn, monkeypatch):
     account_id = _setup_item(db_conn)  # creates item-1, name="Milk" @ ts=100
 
     sync.apply_changes(
-        db_conn, account_id, "bad-clock",
+        db_conn,
+        account_id,
+        "bad-clock",
         {"items": [_mk_item("item-1", "list-1", name=("Wedged", FAR_FUTURE, "bad-clock"))]},
     )
     row = _item_row(db_conn, "item-1")
@@ -322,7 +415,9 @@ def test_clamped_far_future_field_is_beatable_by_a_later_honest_edit(db_conn, mo
     account_id = _setup_item(db_conn)
 
     sync.apply_changes(
-        db_conn, account_id, "bad-clock",
+        db_conn,
+        account_id,
+        "bad-clock",
         {"items": [_mk_item("item-1", "list-1", name=("Wedged", FAR_FUTURE, "bad-clock"))]},
     )
     assert _item_row(db_conn, "item-1")["name"] == "Wedged"
@@ -331,7 +426,9 @@ def test_clamped_far_future_field_is_beatable_by_a_later_honest_edit(db_conn, mo
     later = NOW + sync.CLOCK_SKEW_ALLOWANCE_MS + 1_000
     monkeypatch.setattr(sync, "_now_ms", lambda: later)
     sync.apply_changes(
-        db_conn, account_id, "devA",
+        db_conn,
+        account_id,
+        "devA",
         {"items": [_mk_item("item-1", "list-1", name=("Honest Rename", later, "devA"))]},
     )
     assert _item_row(db_conn, "item-1")["name"] == "Honest Rename"
@@ -342,7 +439,9 @@ def test_past_updated_at_is_stored_unmodified(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
     sync.apply_changes(
-        db_conn, account_id, "devA",
+        db_conn,
+        account_id,
+        "devA",
         {"items": [_mk_item("item-1", "list-1", name=("Milk", 12345, "devA"))]},
     )
     assert _item_row(db_conn, "item-1")["name_ts"] == 12345
@@ -352,7 +451,9 @@ def test_list_far_future_updated_at_is_clamped_too(db_conn, monkeypatch):
     monkeypatch.setattr(sync, "_now_ms", lambda: NOW)
     account_id = _register(db_conn, "a@example.com")
     sync.apply_changes(
-        db_conn, account_id, "devA",
+        db_conn,
+        account_id,
+        "devA",
         {"lists": [_mk_list("list-1", "Groceries", FAR_FUTURE, "devA")]},
     )
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
@@ -364,8 +465,14 @@ def test_far_future_created_at_is_clamped(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
     sync.apply_changes(
-        db_conn, account_id, "devA",
-        {"items": [_mk_item("item-1", "list-1", created_at=FAR_FUTURE, name=("Milk", 100, "devA"))]},
+        db_conn,
+        account_id,
+        "devA",
+        {
+            "items": [
+                _mk_item("item-1", "list-1", created_at=FAR_FUTURE, name=("Milk", 100, "devA"))
+            ]
+        },
     )
     assert _item_row(db_conn, "item-1")["created_at"] == NOW + sync.CLOCK_SKEW_ALLOWANCE_MS
 
@@ -375,7 +482,9 @@ def test_past_created_at_is_untouched(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
     sync.apply_changes(
-        db_conn, account_id, "devA",
+        db_conn,
+        account_id,
+        "devA",
         {"items": [_mk_item("item-1", "list-1", created_at=1000, name=("Milk", 100, "devA"))]},
     )
     assert _item_row(db_conn, "item-1")["created_at"] == 1000
@@ -392,15 +501,19 @@ def test_item_last_touched_by_set_to_creating_account(db_conn):
 
 
 def test_item_last_touched_by_updates_when_a_different_account_edits(db_conn):
-    account_a = _setup_item(db_conn)
+    _setup_item(db_conn)
     account_b = _register(db_conn, "b@example.com")
     db_conn.execute(
         "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, 'list-1', 0)",
         (account_b,),
     )
 
-    sync.apply_changes(db_conn, account_b, "devB",
-                       {"items": [_mk_item("item-1", "list-1", status=("checked", 200, "devB"))]})
+    sync.apply_changes(
+        db_conn,
+        account_b,
+        "devB",
+        {"items": [_mk_item("item-1", "list-1", status=("checked", 200, "devB"))]},
+    )
 
     row = _item_row(db_conn, "item-1")
     assert row["last_touched_by_account_id"] == account_b
@@ -416,8 +529,12 @@ def test_item_last_touched_by_unaffected_by_a_stale_losing_write(db_conn):
     )
 
     # Older than the item's existing name write (ts=100) — loses, no field actually changes.
-    sync.apply_changes(db_conn, account_b, "devB",
-                       {"items": [_mk_item("item-1", "list-1", name=("Stale", 50, "devB"))]})
+    sync.apply_changes(
+        db_conn,
+        account_b,
+        "devB",
+        {"items": [_mk_item("item-1", "list-1", name=("Stale", 50, "devB"))]},
+    )
 
     row = _item_row(db_conn, "item-1")
     assert row["name"] == "Milk"  # the stale write really did lose
@@ -431,15 +548,23 @@ def test_item_last_touched_by_does_not_regress_even_when_another_field_wins(db_c
         "INSERT INTO memberships (account_id, list_id, joined_at) VALUES (?, 'list-1', 0)",
         (account_b,),
     )
-    sync.apply_changes(db_conn, account_b, "devB",
-                       {"items": [_mk_item("item-1", "list-1", status=("checked", 300, "devB"))]})
+    sync.apply_changes(
+        db_conn,
+        account_b,
+        "devB",
+        {"items": [_mk_item("item-1", "list-1", status=("checked", 300, "devB"))]},
+    )
     # last_touched is now (account_b, 300).
 
     # account_a's write wins its OWN field (note's prior ts was 0, so 150 > 0 wins) but 150 is
     # still less than the item's current last_touched_ts (300) — last_touched must not regress
     # to account_a just because *some* field in this push happened to win.
-    sync.apply_changes(db_conn, account_a, "devA",
-                       {"items": [_mk_item("item-1", "list-1", note=("ripe ones", 150, "devA"))]})
+    sync.apply_changes(
+        db_conn,
+        account_a,
+        "devA",
+        {"items": [_mk_item("item-1", "list-1", note=("ripe ones", 150, "devA"))]},
+    )
 
     row = _item_row(db_conn, "item-1")
     assert row["note"] == "ripe ones"  # the field itself did win
@@ -474,15 +599,39 @@ def test_same_name_merge_picks_deterministic_survivor_and_merges_fields(db_conn)
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
     # Device A creates "Milk" (created earlier), with a category.
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("a1", "list-1", created_at=1000,
-                                           name=("Milk", 100, "X"),
-                                           category=("food", 100, "X"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {
+            "items": [
+                _mk_item(
+                    "a1",
+                    "list-1",
+                    created_at=1000,
+                    name=("Milk", 100, "X"),
+                    category=("food", 100, "X"),
+                )
+            ]
+        },
+    )
     # Device B independently creates "milk" (created later), with a quantity.
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"items": [_mk_item("b1", "list-1", created_at=2000,
-                                           name=("milk", 110, "Y"),
-                                           quantity=("2l", 110, "Y"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {
+            "items": [
+                _mk_item(
+                    "b1",
+                    "list-1",
+                    created_at=2000,
+                    name=("milk", 110, "Y"),
+                    quantity=("2l", 110, "Y"),
+                )
+            ]
+        },
+    )
 
     live = _live_items(db_conn, "list-1")
     assert len(live) == 1
@@ -498,7 +647,7 @@ def test_same_name_merge_picks_deterministic_survivor_and_merges_fields(db_conn)
 
 
 def test_name_merge_is_idempotent_noop_when_no_duplicates(db_conn):
-    account_id = _setup_item(db_conn)
+    _setup_item(db_conn)
     sync.name_merge(db_conn, "list-1")  # must not raise or change anything
     assert len(_live_items(db_conn, "list-1")) == 1
 
@@ -510,14 +659,22 @@ def test_delta_excludes_non_member_rows(db_conn):
     account_a = _register(db_conn, "a@example.com")
     account_b = _register(db_conn, "b@example.com")
     _create_list(db_conn, account_a, "devA", "list-a", "A's list")
-    sync.apply_changes(db_conn, account_a, "devA",
-                       {"items": [_mk_item("ia", "list-a", name=("Milk", 100, "devA"))]})
+    sync.apply_changes(
+        db_conn,
+        account_a,
+        "devA",
+        {"items": [_mk_item("ia", "list-a", name=("Milk", 100, "devA"))]},
+    )
     _create_list(db_conn, account_b, "devB", "list-b", "B's list")
-    sync.apply_changes(db_conn, account_b, "devB",
-                       {"items": [_mk_item("ib", "list-b", name=("Bread", 100, "devB"))]})
+    sync.apply_changes(
+        db_conn,
+        account_b,
+        "devB",
+        {"items": [_mk_item("ib", "list-b", name=("Bread", 100, "devB"))]},
+    )
 
     result = sync.delta(db_conn, account_b, cursor=0, full_lists=[])
-    list_ids = {l["id"] for l in result["changes"]["lists"]}
+    list_ids = {row["id"] for row in result["changes"]["lists"]}
     item_ids = {i["id"] for i in result["changes"]["items"]}
     assert list_ids == {"list-b"}
     assert item_ids == {"ib"}
@@ -526,10 +683,14 @@ def test_delta_excludes_non_member_rows(db_conn):
 def test_cursor_zero_returns_everything_visible(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
-    sync.apply_changes(db_conn, account_id, "devA",
-                       {"items": [_mk_item("item-1", "list-1", name=("Milk", 100, "devA"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"items": [_mk_item("item-1", "list-1", name=("Milk", 100, "devA"))]},
+    )
     result = sync.delta(db_conn, account_id, cursor=0, full_lists=[])
-    assert {l["id"] for l in result["changes"]["lists"]} == {"list-1"}
+    assert {row["id"] for row in result["changes"]["lists"]} == {"list-1"}
     assert {i["id"] for i in result["changes"]["items"]} == {"item-1"}
     # Full round-trip: response field clocks match what went in.
     item = result["changes"]["items"][0]
@@ -539,15 +700,19 @@ def test_cursor_zero_returns_everything_visible(db_conn):
 def test_full_lists_returns_rows_older_than_cursor(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
-    sync.apply_changes(db_conn, account_id, "devA",
-                       {"items": [_mk_item("item-1", "list-1", name=("Milk", 100, "devA"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"items": [_mk_item("item-1", "list-1", name=("Milk", 100, "devA"))]},
+    )
     # A cursor far above any row's change_seq: a plain delta returns nothing...
     plain = sync.delta(db_conn, account_id, cursor=9999, full_lists=[])
     assert plain["changes"]["items"] == []
     # ...but full_lists forces a snapshot regardless of cursor.
     snapshot = sync.delta(db_conn, account_id, cursor=9999, full_lists=["list-1"])
     assert {i["id"] for i in snapshot["changes"]["items"]} == {"item-1"}
-    assert {l["id"] for l in snapshot["changes"]["lists"]} == {"list-1"}
+    assert {row["id"] for row in snapshot["changes"]["lists"]} == {"list-1"}
 
 
 def test_full_lists_non_member_raises_403(db_conn):
@@ -562,8 +727,12 @@ def test_full_lists_non_member_raises_403(db_conn):
 def test_delta_returns_tombstones_incrementally(db_conn):
     account_id = _setup_item(db_conn)
     baseline = sync.delta(db_conn, account_id, cursor=0, full_lists=[])["cursor"]
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"items": [_mk_item("item-1", "list-1", deleted=(True, 500, "X"))]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"items": [_mk_item("item-1", "list-1", deleted=(True, 500, "X"))]},
+    )
     result = sync.delta(db_conn, account_id, cursor=baseline, full_lists=[])
     tomb = [i for i in result["changes"]["items"] if i["id"] == "item-1"]
     assert len(tomb) == 1
@@ -583,7 +752,7 @@ def test_check_cursor_below_gc_horizon_raises_410(db_conn):
 
 def test_check_cursor_zero_and_recent_are_allowed(db_conn):
     db_conn.execute("UPDATE meta SET gc_horizon = 50 WHERE id = 1")
-    sync.check_cursor(db_conn, 0)   # initial full sync always allowed
+    sync.check_cursor(db_conn, 0)  # initial full sync always allowed
     sync.check_cursor(db_conn, 60)  # at/above horizon allowed
 
 
@@ -593,9 +762,12 @@ def test_check_cursor_zero_and_recent_are_allowed(db_conn):
 def test_list_name_and_category_order_lww(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list("list-1", "Food", 200, "X",
-                                           category_order=["freezer", "produce"])]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list("list-1", "Food", 200, "X", category_order=["freezer", "produce"])]},
+    )
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["name"] == "Food"
     assert row["category_order"] == '["freezer", "produce"]'
@@ -605,9 +777,12 @@ def test_list_notes_set_via_sync_and_returned_on_wire(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
 
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list("list-1", "Groceries", 200, "X",
-                                           notes="Gate code: 4471")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes="Gate code: 4471")]},
+    )
 
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["notes"] == "Gate code: 4471"
@@ -619,12 +794,20 @@ def test_list_notes_set_via_sync_and_returned_on_wire(db_conn):
 def test_list_notes_lww_older_write_loses(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list("list-1", "Groceries", 300, "X", notes="new note")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list("list-1", "Groceries", 300, "X", notes="new note")]},
+    )
 
     # A stale write (earlier timestamp) must not overwrite the newer note.
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"lists": [_mk_list("list-1", "Groceries", 200, "Y", notes="stale note")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {"lists": [_mk_list("list-1", "Groceries", 200, "Y", notes="stale note")]},
+    )
 
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["notes"] == "new note"
@@ -633,20 +816,33 @@ def test_list_notes_lww_older_write_loses(db_conn):
 def test_list_notes_can_be_cleared_to_null(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes="temporary")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes="temporary")]},
+    )
 
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list("list-1", "Groceries", 300, "X", notes=None)]})
+    sync.apply_changes(
+        db_conn, account_id, "X", {"lists": [_mk_list("list-1", "Groceries", 300, "X", notes=None)]}
+    )
 
     # notes wasn't included in this push's fields (notes=None short-circuits _mk_list's
     # helper), so re-send explicitly via the raw payload to actually clear it.
-    sync.apply_changes(db_conn, account_id, "X", {
-        "lists": [{
-            "id": "list-1", "created_at": 1000,
-            "fields": {"notes": {"value": None, "updated_at": 400, "updated_by": "X"}},
-        }],
-    })
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {
+            "lists": [
+                {
+                    "id": "list-1",
+                    "created_at": 1000,
+                    "fields": {"notes": {"value": None, "updated_at": 400, "updated_by": "X"}},
+                }
+            ],
+        },
+    )
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["notes"] is None
 
@@ -657,8 +853,12 @@ def test_list_notes_over_max_length_rejected(db_conn):
 
     too_long = "x" * (sync.NOTES_MAX_LENGTH + 1)
     with pytest.raises(ApiError) as exc_info:
-        sync.apply_changes(db_conn, account_id, "X",
-                           {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=too_long)]})
+        sync.apply_changes(
+            db_conn,
+            account_id,
+            "X",
+            {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=too_long)]},
+        )
     assert exc_info.value.status == 422
     assert exc_info.value.code == "invalid_notes"
 
@@ -668,8 +868,12 @@ def test_list_notes_at_max_length_accepted(db_conn):
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
 
     exactly_max = "x" * sync.NOTES_MAX_LENGTH
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=exactly_max)]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list("list-1", "Groceries", 200, "X", notes=exactly_max)]},
+    )
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["notes"] == exactly_max
 
@@ -693,21 +897,23 @@ def test_new_list_defaults_to_shopping_kind(db_conn):
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["kind"] == "shopping"
 
-    wire = {l["id"]: l for l in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
+    wire = {row["id"]: row for row in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
     assert wire["list-1"]["fields"]["kind"]["value"] == "shopping"
 
 
 def test_list_kind_set_via_sync_and_returned_on_wire(db_conn):
     account_id = _register(db_conn, "a@example.com")
     sync.apply_changes(
-        db_conn, account_id, "devA",
+        db_conn,
+        account_id,
+        "devA",
         {"lists": [_mk_list_kind("list-1", "Camping", 100, "devA", "checklist")]},
     )
 
     row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
     assert row["kind"] == "checklist"
 
-    wire = {l["id"]: l for l in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
+    wire = {row["id"]: row for row in sync.delta(db_conn, account_id, 0)["changes"]["lists"]}
     assert wire["list-1"]["fields"]["kind"]["value"] == "checklist"
 
 
@@ -716,18 +922,36 @@ def test_list_kind_is_lww_like_every_other_field(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
 
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list_kind("list-1", "Groceries", 300, "X", "checklist")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list_kind("list-1", "Groceries", 300, "X", "checklist")]},
+    )
     # Older write loses.
-    sync.apply_changes(db_conn, account_id, "Y",
-                       {"lists": [_mk_list_kind("list-1", "Groceries", 200, "Y", "shopping")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Y",
+        {"lists": [_mk_list_kind("list-1", "Groceries", 200, "Y", "shopping")]},
+    )
 
-    assert db_conn.execute("SELECT kind FROM lists WHERE id = ?", ("list-1",)).fetchone()["kind"] == "checklist"
+    assert (
+        db_conn.execute("SELECT kind FROM lists WHERE id = ?", ("list-1",)).fetchone()["kind"]
+        == "checklist"
+    )
 
     # Newer write wins (a genuine conversion back).
-    sync.apply_changes(db_conn, account_id, "Z",
-                       {"lists": [_mk_list_kind("list-1", "Groceries", 400, "Z", "shopping")]})
-    assert db_conn.execute("SELECT kind FROM lists WHERE id = ?", ("list-1",)).fetchone()["kind"] == "shopping"
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "Z",
+        {"lists": [_mk_list_kind("list-1", "Groceries", 400, "Z", "shopping")]},
+    )
+    assert (
+        db_conn.execute("SELECT kind FROM lists WHERE id = ?", ("list-1",)).fetchone()["kind"]
+        == "shopping"
+    )
 
 
 def test_unknown_list_kind_is_rejected_422(db_conn):
@@ -736,7 +960,9 @@ def test_unknown_list_kind_is_rejected_422(db_conn):
 
     with pytest.raises(ApiError) as excinfo:
         sync.apply_changes(
-            db_conn, account_id, "X",
+            db_conn,
+            account_id,
+            "X",
             {"lists": [_mk_list_kind("list-1", "Groceries", 200, "X", "tasks")]},
         )
     assert excinfo.value.status == 422
@@ -748,16 +974,30 @@ def test_converting_a_list_to_checklist_preserves_item_fields(db_conn):
     so flipping back restores everything (T-110)."""
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
-    sync.apply_changes(db_conn, account_id, "devA", {"items": [_mk_item(
-        "item-1", "list-1",
-        name=("Milk", 100, "devA"),
-        quantity=("2l", 100, "devA"),
-        price=({"amount": "1.99", "currency": "EUR"}, 100, "devA"),
-        stores=(["Rewe"], 100, "devA"),
-    )]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {
+            "items": [
+                _mk_item(
+                    "item-1",
+                    "list-1",
+                    name=("Milk", 100, "devA"),
+                    quantity=("2l", 100, "devA"),
+                    price=({"amount": "1.99", "currency": "EUR"}, 100, "devA"),
+                    stores=(["Rewe"], 100, "devA"),
+                )
+            ]
+        },
+    )
 
-    sync.apply_changes(db_conn, account_id, "X",
-                       {"lists": [_mk_list_kind("list-1", "Groceries", 200, "X", "checklist")]})
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "X",
+        {"lists": [_mk_list_kind("list-1", "Groceries", 200, "X", "checklist")]},
+    )
 
     row = _item_row(db_conn, "item-1")
     assert row["quantity"] == "2l"
