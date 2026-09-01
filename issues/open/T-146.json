@@ -1,0 +1,11 @@
+{
+  "body": "RegistryPage renders `<Navigate to=\"/\" replace />` while `list` is still\nundefined, which it always is on the first render \u2014 the web client has no local\nmirror, so lists only exist after the first sync response. Reloading or deep-\nlinking /list/<id>/registry therefore lands the user on the overview instead of\nthe registry.\n\nListPage has the same guard but renders its \"list not found\" page instead of\nnavigating, so it survives the wait and resolves normally. RegistryPage should\ndo the same.\n\nFound while writing the first tests for this screen ([[T-139]], [[T-145]]) \u2014 the\nbounce is what made it untestable.",
+  "created_at": "2026-09-01T20:17:51+00:00",
+  "id": "T-146",
+  "labels": [
+    "bug"
+  ],
+  "priority": 3,
+  "title": "web: opening the registry screen directly bounces to the overview",
+  "updated_at": "2026-09-01T20:17:51+00:00"
+}
