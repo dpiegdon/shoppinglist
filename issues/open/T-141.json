@@ -1,0 +1,12 @@
+{
+  "body": "The web has oxlint and Android has AGP lint, but the server has no linter or\nformatter at all \u2014 the only Python gate is pytest.\n\nAdopt, as server dev dependencies and as a stage in verify-all.sh:\n\n- black   \u2014 formatter, and the authority on layout\n- isort   \u2014 import ordering, configured profile=\"black\" so black wins every\n            disagreement (explicit user instruction: black has priority)\n- ruff    \u2014 linter only (no formatting, no import sorting; black and isort own\n            those), so its rule selection must not fight them\n- ty      \u2014 type checker (Astral, early preview)\n\nFormatting the existing tree is a large but mechanical diff; keep it in its own\ncommit, separate from the config, so the config change stays reviewable.",
+  "created_at": "2026-09-01T20:06:18+00:00",
+  "id": "T-141",
+  "labels": [
+    "ops",
+    "chore"
+  ],
+  "priority": 3,
+  "title": "Python linting: ruff + ty + black + isort, wired into verify-all",
+  "updated_at": "2026-09-01T20:06:18+00:00"
+}
