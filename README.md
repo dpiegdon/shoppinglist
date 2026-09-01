@@ -126,7 +126,14 @@ cp android/app/build/outputs/apk/release/app-release.apk \
 Steps 1 and 2 are only needed when the web client or the app actually changed —
 but if you skip one after changing it, the wheel silently ships the *previous*
 build of that part. `build-wheel.sh` catches a stale or mismatched web bundle and
-a missing APK; it cannot catch a bundle you simply forgot to rebuild.
+a missing APK; it cannot catch a bundle you simply forgot to rebuild. That is why
+`release.sh` (below) always rebuilds both rather than deciding whether it needs to.
+
+`./smoke-wheel.sh [wheel] [expected-version]` is the other half of the check:
+`build-wheel.sh` verifies what *landed* in the wheel, and this installs it into a
+throwaway venv and exercises it — schema, register, login, a sync round-trip, and
+every embedded artifact actually being served. Failures of that kind are invisible
+from the source tree the test suite runs in.
 
 Then install the wheel on the deployment host and mount the blueprint from your
 Flask app — see [`server/README.md`](server/README.md).
@@ -140,9 +147,27 @@ version in both `server/pyproject.toml` and `android/app/build.gradle.kts`
 (`versionName`, plus an incremented integer `versionCode`), and is tagged once as
 `vX.Y.Z`.
 
-Cutting one: bump both version files, run the **full bundle build above** (all four
-steps — the rebuilds are what make the artifact match the tag), smoke-test the
-wheel in a clean venv, then tag.
+Cutting one is `./release.sh`:
+
+```bash
+./release.sh 1.13.0 T-147     # version, and the ticket the release is filed under
+```
+
+It refuses to start on a dirty tree, off `main`, or if the tag already exists;
+bumps every version file (`server/pyproject.toml`, `android/app/build.gradle.kts`,
+`web/package.json`); rebuilds the web bundle; runs `verify-all.sh`; builds the
+signed release APK; and only then embeds it — after checking with `aapt2` that the
+APK really carries the new `versionName`/`versionCode`, and with `apksigner` that
+it is signed **with the same key as the release it replaces** (Android will not
+update an installed app across a key change, so that mistake would strand every
+existing user). Finally it builds the wheel, smoke-tests it in a clean venv, then
+commits and writes the annotated `vX.Y.Z` tag.
+
+`--notes FILE` supplies the tag message; otherwise it is the commit subjects since
+the previous tag.
+
+Everything it does is the sequence above, in order, without the opportunity to
+skip a step — which is the point. It stops at the tag.
 
 ## Testing
 
