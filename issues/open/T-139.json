@@ -1,0 +1,12 @@
+{
+  "body": "Web parity for [[T-138]], which added store suggestions to the Android item\ndialog only. The web item dialog already suggests names (registry) and\ncategories (T-108) but offers nothing for stores, so the two clients now\ndisagree about what the same dialog does.\n\nSame rule as Android: the distinct stores already used anywhere in this list,\ncanonical casing, offered as clickable chips under the store input; filtered by\nwhat has been typed; already-added stores excluded. Reuse\ndistinctCanonicalCategories(raw, []) \u2014 the canonicalization rule wanted here is\nexactly the one categories use, as on Android (CategoryCanon).",
+  "created_at": "2026-09-01T20:05:53+00:00",
+  "id": "T-139",
+  "labels": [
+    "feature",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "web: suggest the list's existing stores while typing one",
+  "updated_at": "2026-09-01T20:05:53+00:00"
+}
