@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-09-01T21:24:29+00:00", "kind": "note", "ref": "main@23923ee", "text": "Held: user wants T-143 (APK repo growth) decided before 1.13.0 is cut."}
 {"actor": "claude", "at": "2026-09-01T21:24:29+00:00", "kind": "updated", "ref": "main@23923ee", "text": "fields updated"}
 {"actor": "claude", "at": "2026-09-01T21:30:58+00:00", "kind": "updated", "ref": "main@23923ee", "text": "fields updated"}
+{"actor": "claude", "at": "2026-09-01T21:31:12+00:00", "kind": "note", "ref": "main@23923ee", "text": "Unblocked: T-143 decided (rejected \u2014 keep committing the APK)."}
