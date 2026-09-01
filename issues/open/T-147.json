@@ -1,0 +1,11 @@
+{
+  "body": "Cuts 1.13.0, the first release built by [[T-142]]'s release.sh rather than by\nhand.\n\nCarries, since v1.12.0:\n- T-137 registry sorted by name (android)\n- T-138 store suggestions (android)\n- T-139 store suggestions (web), plus T-145 and T-146 found alongside\n- T-140 picking a name suggestion adds the item straight away (both clients)\n- T-141 python lint/format gate\n- T-142 release.sh + smoke-wheel.sh\n- T-135 docs for the app-version endpoint\n\nMinor, not patch: new user-facing behaviour, no breaking change to the wire\ncontract, the HTTP API, or the blueprint mount interface.\n\nIt is also the first release the 1.12.0 in-app update check can actually notice,\nso the update prompt gets its first real-world exercise here.",
+  "created_at": "2026-09-01T20:31:18+00:00",
+  "id": "T-147",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 1.13.0",
+  "updated_at": "2026-09-01T20:31:18+00:00"
+}
