@@ -86,7 +86,6 @@ export const en = {
   // least likely to survive translation without a gloss, so the gloss is a string of its own
   // rather than being welded into the label and dragged onto space-constrained surfaces.
   "item.status.backlogHint": "Not on the list yet",
-  "item.addAnother": "Add another",
   "item.saveFailed": "Failed to save. Please try again.",
 
   // ---- list properties ----

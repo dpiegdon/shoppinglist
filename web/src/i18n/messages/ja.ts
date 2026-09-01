@@ -69,7 +69,6 @@ export const ja: Catalog = {
   "item.status.checked": "完了",
   "item.status.backlog": "あとで",
   "item.status.backlogHint": "まだリストに入っていません",
-  "item.addAnother": "続けて追加",
   "item.saveFailed": "保存できませんでした。もう一度お試しください。",
 
   "listProps.title": "リストのプロパティ",

@@ -109,11 +109,30 @@ describe("ItemDialog (add mode)", () => {
 
     // Typed by hand in a different casing than the suggestion carries.
     await userEvent.type(screen.getByLabelText("Stores"), "rewe");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a store" }));
 
     expect(screen.getByRole("button", { name: "Remove rewe" })).toBeInTheDocument();
     // The suggestion is gone rather than offering a second spelling of one shop.
     expect(screen.queryByRole("button", { name: "Rewe" })).not.toBeInTheDocument();
+  });
+
+  it("offers only Cancel and Add, with no Add another (T-144)", () => {
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[]}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    // Matches the app: the dialog is titled "Add item", so its confirm button says Add, and the
+    // burst-add button the app dropped is gone from here too.
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.queryByText("Add another")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
   });
 
   it("hides the shopping-only fields on a checklist, keeping the rest (T-110)", () => {
@@ -252,86 +271,13 @@ describe("ItemDialog (add mode)", () => {
     );
 
     await userEvent.type(screen.getByLabelText("Name"), "Brand new item");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Brand new item", status: "todo" }),
     );
     const call = onSave.mock.calls[0][0];
     expect(call.itemId).toMatch(/^[0-9a-f-]{36}$/);
-  });
-});
-
-describe("ItemDialog add-another mode (T-53)", () => {
-  it("saves, clears the form, and keeps the dialog open instead of closing it", async () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    const onClose = vi.fn();
-    render(
-      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={onSave} />,
-    );
-
-    await userEvent.type(screen.getByLabelText("Name"), "Milk");
-    await userEvent.type(screen.getByLabelText("Category"), "dairy");
-    await userEvent.click(screen.getByText("Add another"));
-
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "Milk", category: "dairy" }));
-    expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Name")).toHaveValue("");
-    expect(screen.getByLabelText("Category")).toHaveValue("");
-  });
-
-  it("refocuses the name field after saving so another item can be typed immediately", async () => {
-    const onSave = vi.fn().mockResolvedValue(undefined);
-    render(
-      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
-    );
-
-    await userEvent.type(screen.getByLabelText("Name"), "Milk");
-    await userEvent.click(screen.getByText("Add another"));
-
-    expect(screen.getByLabelText("Name")).toHaveFocus();
-  });
-
-  it("clears a matched-existing suggestion pick so the next item isn't bound to the same id", async () => {
-    const registry = [registryItem("1", "Milk")];
-    // Since T-140 a successful pick saves and closes, so the only way add mode still ends up
-    // holding an existing item's id is a pick that FAILED and left the form seeded with it. That
-    // is the case this invariant now has to survive.
-    const onSave = vi
-      .fn()
-      .mockRejectedValueOnce(new ApiError(503, "server_busy", "Try again."))
-      .mockResolvedValue(undefined);
-    render(
-      <ItemDialog listId="list-1" registryItems={registry} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
-    );
-    await userEvent.type(screen.getByLabelText("Name"), "Mi");
-    await userEvent.click(await screen.findByText("Milk"));
-    // Retry the adopt from the seeded form, then move on to a brand-new item.
-    await userEvent.click(screen.getByText("Add another"));
-
-    await userEvent.type(screen.getByLabelText("Name"), "Bread");
-    await userEvent.click(screen.getByText("Add another"));
-
-    expect(onSave.mock.calls[1][0].itemId).toBe("1");
-    const thirdCall = onSave.mock.calls[2][0];
-    expect(thirdCall.name).toBe("Bread");
-    expect(thirdCall.itemId).not.toBe("1");
-  });
-
-  it("is not shown in edit mode", () => {
-    const item = registryItem("1", "Milk");
-    render(
-      <ItemDialog
-        listId="list-1"
-        registryItems={[item]}
-        editingItem={item}
-        defaultCurrency="EUR"
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByText("Add another")).not.toBeInTheDocument();
   });
 });
 
@@ -434,7 +380,7 @@ describe("ItemDialog changed-field tracking (T-88)", () => {
 
     await userEvent.type(screen.getByLabelText("Name"), "Mi");
     await userEvent.click(await screen.findByText("Milk"));
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["status"]);
   });
@@ -470,7 +416,7 @@ describe("ItemDialog changed-field tracking (T-88)", () => {
 
     await userEvent.type(screen.getByLabelText("Name"), "Brand new item");
     await userEvent.type(screen.getByLabelText("Category"), "misc");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect([...onSave.mock.calls[0][0].changedFields].sort()).toEqual(["category", "name", "status"]);
   });
@@ -517,7 +463,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
 
     await userEvent.type(screen.getByLabelText("Name"), "Toilet paper");
     await userEvent.type(screen.getByLabelText("Stores"), "Costco, Inc{enter}");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Costco, Inc"] }));
   });
@@ -532,7 +478,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
     // Type a second store but do NOT commit it via Enter/Add before saving.
     await userEvent.type(screen.getByLabelText("Stores"), "Walmart");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Aldi", "Walmart"] }));
   });
@@ -546,7 +492,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     await userEvent.type(screen.getByLabelText("Name"), "Milk");
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
     await userEvent.type(screen.getByLabelText("Stores"), "Lidl{enter}");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Aldi", "Lidl"] }));
   });
@@ -557,7 +503,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     );
 
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi");
-    await userEvent.click(screen.getByText("Add"));
+    await userEvent.click(screen.getByText("Add a store"));
 
     expect(screen.getByText("Aldi")).toBeInTheDocument();
     expect(screen.getByLabelText("Stores")).toHaveValue("");
@@ -573,7 +519,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
     await userEvent.type(screen.getByLabelText("Stores"), "Lidl{enter}");
     await userEvent.click(screen.getByLabelText("Remove Aldi"));
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Lidl"] }));
   });
@@ -588,7 +534,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     await userEvent.type(screen.getByLabelText("Stores"), "   {enter}");
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi{enter}");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ stores: ["Aldi"] }));
   });
@@ -635,7 +581,7 @@ describe("ItemDialog price/currency validation (T-91)", () => {
 
     await userEvent.type(screen.getByLabelText("Name"), "Milk");
     await userEvent.type(screen.getByLabelText("Price"), "1,50abc");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(await screen.findByText("Enter an amount like 1.99")).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
@@ -649,7 +595,7 @@ describe("ItemDialog price/currency validation (T-91)", () => {
 
     await userEvent.type(screen.getByLabelText("Name"), "Milk");
     await userEvent.type(screen.getByLabelText("Price"), "1,50");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ priceAmount: "1.50" }));
   });
@@ -664,7 +610,7 @@ describe("ItemDialog price/currency validation (T-91)", () => {
     await userEvent.type(screen.getByLabelText("Price"), "1.99");
     await userEvent.clear(screen.getByLabelText("Currency"));
     await userEvent.type(screen.getByLabelText("Currency"), "usd");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ priceCurrency: "USD" }));
   });
@@ -677,7 +623,7 @@ describe("ItemDialog price/currency validation (T-91)", () => {
     );
 
     await userEvent.type(screen.getByLabelText("Name"), "Milk");
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(screen.getByText("Add"));
 
     expect(await screen.findByText("Price amount is invalid")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();

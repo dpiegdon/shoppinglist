@@ -69,7 +69,6 @@ export const de: Catalog = {
   "item.status.checked": "Erledigt",
   "item.status.backlog": "Backlog",
   "item.status.backlogHint": "Noch nicht auf der Liste",
-  "item.addAnother": "Weiteren hinzufügen",
   "item.saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
 
   "listProps.title": "Listeneigenschaften",

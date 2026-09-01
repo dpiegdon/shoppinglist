@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { ApiError } from "../api/client";
@@ -177,7 +177,6 @@ export default function ItemDialog({
   const [priceError, setPriceError] = useState<string | null>(null);
   const [currencyError, setCurrencyError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const suggestions = useMemo(() => {
     if (isEdit || !values.name.trim()) return [];
@@ -298,11 +297,11 @@ export default function ItemDialog({
   }
 
   /**
-   * closeAfter=false is "Add another" (T-53, parity with Android's T-41): saves, then resets to a
-   * blank add form and refocuses Name instead of closing, for adding several items in a burst
-   * without reopening the dialog each time. Add mode only.
+   * Saves and closes. There is no save-without-closing any more: "Add another" (T-53) was removed
+   * from this dialog in T-144 to match Android, which dropped it first. Re-adding something the
+   * list already knows is a single tap since T-140, which is what that button was mostly used for.
    */
-  async function performSave(closeAfter: boolean) {
+  async function performSave() {
     const name = values.name.trim();
     if (!name) return;
 
@@ -374,14 +373,7 @@ export default function ItemDialog({
       // A pending store name was folded into the pushed payload above, so clear the add-store box
       // now that it's committed (consistent with adding a chip).
       setStoreInput("");
-      if (closeAfter) {
-        onClose();
-      } else {
-        setMatchedExisting(null);
-        setValues(emptyValues(defaultCurrency));
-        setStatus("todo");
-        nameInputRef.current?.focus();
-      }
+      onClose();
     } catch (err) {
       // Surface the server's rejection inline and keep the dialog open (T-91) — previously this
       // escaped as an unhandled rejection, leaving the user with no idea what went wrong or that
@@ -394,11 +386,7 @@ export default function ItemDialog({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    performSave(true);
-  }
-
-  function handleSaveAndAddAnother() {
-    performSave(false);
+    performSave();
   }
 
   return (
@@ -415,7 +403,6 @@ export default function ItemDialog({
           <label htmlFor="item-name">{t("item.name")}</label>
           <input
             id="item-name"
-            ref={nameInputRef}
             autoFocus
             required
             autoComplete="off"
@@ -497,8 +484,11 @@ export default function ItemDialog({
               onKeyDown={handleStoreInputKeyDown}
               placeholder={t("item.addStore")}
             />
+            {/* Named, not a bare "Add" (T-144): the confirm button below now says Add in add
+                mode, and two buttons reading "Add" in one dialog is worse than the inconsistency
+                this change set out to fix. The app names this control the same way. */}
             <button type="button" className="btn btn-secondary" onClick={addStore}>
-              {t("action.add")}
+              {t("item.addStore")}
             </button>
           </div>
           {storeChips.length > 0 && (
@@ -621,13 +611,10 @@ export default function ItemDialog({
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               {t("action.cancel")}
             </button>
-            {!isEdit && (
-              <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleSaveAndAddAnother}>
-                {t("item.addAnother")}
-              </button>
-            )}
+            {/* Add / Save, following the app (T-144): the dialog is titled "Add item", so
+                labelling its confirm button "Save" there read as saving an edit. */}
             <button type="submit" className="btn" disabled={saving}>
-              {t("action.save")}
+              {isEdit ? t("action.save") : t("action.add")}
             </button>
           </div>
         </div>

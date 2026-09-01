@@ -68,7 +68,6 @@ export const uk: Catalog = {
   "item.status.checked": "Готово",
   "item.status.backlog": "Пізніше",
   "item.status.backlogHint": "Ще не в списку",
-  "item.addAnother": "Додати ще",
   "item.saveFailed": "Не вдалося зберегти. Спробуй ще раз.",
 
   "listProps.title": "Властивості списку",

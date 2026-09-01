@@ -68,7 +68,6 @@ export const zhHans: Catalog = {
   "item.status.checked": "已完成",
   "item.status.backlog": "稍后",
   "item.status.backlogHint": "尚未加入清单",
-  "item.addAnother": "继续添加",
   "item.saveFailed": "保存失败，请重试。",
 
   "listProps.title": "清单属性",

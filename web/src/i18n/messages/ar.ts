@@ -70,7 +70,6 @@ export const ar: Catalog = {
   "item.status.checked": "تم",
   "item.status.backlog": "قائمة الانتظار",
   "item.status.backlogHint": "ليس على القائمة بعد",
-  "item.addAnother": "إضافة عنصر آخر",
   "item.saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
 
   "listProps.title": "خصائص القائمة",

@@ -64,7 +64,6 @@ export const es: Catalog = {
   "item.status.checked": "Hecho",
   "item.status.backlog": "Más tarde",
   "item.status.backlogHint": "Todavía no está en la lista",
-  "item.addAnother": "Añadir otro",
   "item.saveFailed": "No se ha podido guardar. Inténtalo de nuevo.",
 
   "listProps.title": "Propiedades de la lista",
