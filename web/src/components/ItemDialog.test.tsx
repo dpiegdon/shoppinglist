@@ -2,10 +2,16 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ItemDialog from "./ItemDialog";
-import type { ItemObject } from "../api/contract";
+import type { ItemObject, ItemStatus } from "../api/contract";
 import { ApiError } from "../api/client";
 
-function registryItem(id: string, name: string, category = "dairy", stores: string[] = []): ItemObject {
+function registryItem(
+  id: string,
+  name: string,
+  category = "dairy",
+  stores: string[] = [],
+  status: ItemStatus = "backlog",
+): ItemObject {
   const clock = { updated_at: 1, updated_by: "dev" };
   return {
     id,
@@ -14,7 +20,7 @@ function registryItem(id: string, name: string, category = "dairy", stores: stri
     fields: {
       name: { value: name, ...clock },
       category: { value: category, ...clock },
-      status: { value: "backlog", ...clock },
+      status: { value: status, ...clock },
       stores: { value: stores, ...clock },
       quantity: { value: null, ...clock },
       price: { value: null, ...clock },
@@ -148,8 +154,32 @@ describe("ItemDialog (add mode)", () => {
     expect(screen.getByLabelText("Price")).toBeInTheDocument();
   });
 
-  it("picking a suggestion saves with the existing item's id and status todo", async () => {
+  it("picking a suggestion adds it there and then, with no second press (T-140)", async () => {
     const registry = [registryItem("1", "Milk")];
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={registry}
+        defaultCurrency="EUR"
+        onClose={onClose}
+        onSave={onSave}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Mi");
+    await userEvent.click(await screen.findByText("Milk"));
+
+    // No Save click: the pick IS the add, reusing the existing item rather than duplicating it.
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ itemId: "1", name: "Milk", status: "todo" }),
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("adopting an unchanged suggestion only stamps its status (T-140, T-88)", async () => {
+    const registry = [registryItem("1", "Milk", "Dairy", ["Rewe"])];
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(
       <ItemDialog
@@ -163,11 +193,56 @@ describe("ItemDialog (add mode)", () => {
 
     await userEvent.type(screen.getByLabelText("Name"), "Mi");
     await userEvent.click(await screen.findByText("Milk"));
-    await userEvent.click(screen.getByText("Save"));
 
-    expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ itemId: "1", name: "Milk", status: "todo" }),
+    // Everything else came off the item untouched, so re-stamping those clocks would be a pure
+    // opportunity to stomp a collaborator's concurrent edit.
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual(["status"]);
+  });
+
+  it("picking an item already on the list changes nothing and just closes (T-140)", async () => {
+    const registry = [registryItem("1", "Milk", "dairy", [], "todo")];
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={registry}
+        defaultCurrency="EUR"
+        onClose={onClose}
+        onSave={onSave}
+      />,
     );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Mi");
+    await userEvent.click(await screen.findByText("Milk"));
+
+    // An empty change set: ListPage's save answers that by pushing nothing at all.
+    expect([...onSave.mock.calls[0][0].changedFields]).toEqual([]);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open with the item loaded when the adopt fails (T-140)", async () => {
+    const registry = [registryItem("1", "Milk", "Dairy")];
+    const onSave = vi.fn().mockRejectedValue(new ApiError(409, "duplicate_name", "Already there."));
+    const onClose = vi.fn();
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={registry}
+        defaultCurrency="EUR"
+        onClose={onClose}
+        onSave={onSave}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Mi");
+    await userEvent.click(await screen.findByText("Milk"));
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Already there.");
+    // Seeded from the picked item, so the user can fix and press Add rather than retyping.
+    expect(screen.getByLabelText("Name")).toHaveValue("Milk");
+    expect(screen.getByLabelText("Category")).toHaveValue("Dairy");
   });
 
   it("typing a brand new name saves with a freshly generated id", async () => {
@@ -219,20 +294,28 @@ describe("ItemDialog add-another mode (T-53)", () => {
 
   it("clears a matched-existing suggestion pick so the next item isn't bound to the same id", async () => {
     const registry = [registryItem("1", "Milk")];
-    const onSave = vi.fn().mockResolvedValue(undefined);
+    // Since T-140 a successful pick saves and closes, so the only way add mode still ends up
+    // holding an existing item's id is a pick that FAILED and left the form seeded with it. That
+    // is the case this invariant now has to survive.
+    const onSave = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(503, "server_busy", "Try again."))
+      .mockResolvedValue(undefined);
     render(
       <ItemDialog listId="list-1" registryItems={registry} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
     );
     await userEvent.type(screen.getByLabelText("Name"), "Mi");
     await userEvent.click(await screen.findByText("Milk"));
+    // Retry the adopt from the seeded form, then move on to a brand-new item.
     await userEvent.click(screen.getByText("Add another"));
 
     await userEvent.type(screen.getByLabelText("Name"), "Bread");
     await userEvent.click(screen.getByText("Add another"));
 
-    const secondCall = onSave.mock.calls[1][0];
-    expect(secondCall.name).toBe("Bread");
-    expect(secondCall.itemId).not.toBe("1");
+    expect(onSave.mock.calls[1][0].itemId).toBe("1");
+    const thirdCall = onSave.mock.calls[2][0];
+    expect(thirdCall.name).toBe("Bread");
+    expect(thirdCall.itemId).not.toBe("1");
   });
 
   it("is not shown in edit mode", () => {

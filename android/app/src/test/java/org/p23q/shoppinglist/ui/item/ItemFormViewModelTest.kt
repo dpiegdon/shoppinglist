@@ -169,35 +169,39 @@ class ItemFormViewModelTest {
     }
 
     @Test
-    fun `picking a suggestion prefills the form and binds the itemId WITHOUT mutating the item`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `picking a suggestion puts that existing item on the list right away (T-140)`() = runTest(mainDispatcherRule.dispatcher) {
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
         itemsRepo.setCategory(existingId, "dairy")
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
-        val existing = itemsRepo.getById(existingId)!!
 
-        viewModel.pickSuggestion(existing)
+        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)?.join()
 
-        // The item is untouched until Save — picking then cancelling (never saving) must not put
-        // it on the list (T-33). Its status stays backlog.
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(existingId)!!.status.value)
+        // No second press: the pick IS the add. Same item (no duplicate), now on the list, and the
+        // dialog is done — isSaved is what AddItemDialog closes on.
+        assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
+        assertEquals(1, itemsRepo.searchRegistry(listId, "Milk").first().size)
         assertEquals(existingId, viewModel.uiState.value.itemId)
-        assertEquals("Milk", viewModel.uiState.value.name)
-        assertEquals("dairy", viewModel.uiState.value.category)
+        assertTrue(viewModel.uiState.value.isSaved)
     }
 
     @Test
-    fun `saving a picked suggestion puts that existing item on the list as todo`() = runTest(mainDispatcherRule.dispatcher) {
-        val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
+    fun `picking an item already on the list writes nothing but still closes (T-140)`() = runTest(mainDispatcherRule.dispatcher) {
+        val seed = seedRepo("seed-device")
+        val existingId = seed.createItem(listId, "Milk", status = Status.TODO)
+        // Clear the creation dirty flag so a later dirty row can only come from a pick write.
+        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.id })
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
-        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)
 
-        viewModel.save()?.join()
+        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)?.join()
 
-        // Same item (no duplicate created), now on the list.
-        assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
-        assertEquals(1, itemsRepo.searchRegistry(listId, "Milk").first().size)
+        // Adopting is change-scoped, so re-adding something already todo is a no-op rather than a
+        // pointless new status clock — and it must not push a row for nothing.
+        val saved = itemsRepo.getById(existingId)!!
+        assertEquals("seed-device", saved.status.updatedBy)
+        assertFalse(saved.dirty)
+        assertTrue(viewModel.uiState.value.isSaved)
     }
 
     @Test
@@ -490,9 +494,7 @@ class ItemFormViewModelTest {
         seed.setCategory(existingId, "dairy")
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
-        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)
-
-        viewModel.save()?.join()
+        viewModel.pickSuggestion(itemsRepo.getById(existingId)!!)?.join()
 
         val saved = itemsRepo.getById(existingId)!!
         // The adopt flips backlog -> todo (that one field is stamped) and touches nothing else.

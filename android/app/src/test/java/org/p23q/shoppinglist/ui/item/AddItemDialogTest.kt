@@ -62,14 +62,11 @@ class AddItemDialogTest {
         composeTestRule.onNodeWithText("Milk").performClick()
         composeTestRule.waitForIdle()
 
-        // Picking a suggestion only prefills; the item isn't put on the list until Save (T-33).
-        assertEquals(Status.BACKLOG.wireValue, itemsRepo.getById(existingId)!!.status.value)
-
-        composeTestRule.onNodeWithText("Add").performClick()
-        composeTestRule.waitForIdle()
-
-        assertEquals(true, dismissed)
+        // The pick alone puts it on the list and closes the dialog (T-140) — there is no second
+        // press. This replaces T-33's prefill-then-Save, which cost an extra tap on the path this
+        // dialog is opened for most often.
         assertEquals(Status.TODO.wireValue, itemsRepo.getById(existingId)!!.status.value)
+        assertEquals(true, dismissed)
     }
 
     /**

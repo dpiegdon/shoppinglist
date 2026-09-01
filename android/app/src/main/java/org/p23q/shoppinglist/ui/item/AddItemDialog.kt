@@ -48,7 +48,8 @@ import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
 
-/** Notes (Add-item dialog): name suggestions from the registry; picking one reuses it, else creates new.
+/** Notes (Add-item dialog): name suggestions from the registry; picking one adds it to the list
+ *  immediately (T-140), while typing a name no suggestion matches creates a new item on Add.
  *
  *  Full-screen, and laid out like [EditItemDialog] for the same reason (T-80): the action bar is
  *  fixed below a scrolling field area, so the soft keyboard can't cover it. As a floating

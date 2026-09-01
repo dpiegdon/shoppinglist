@@ -211,12 +211,50 @@ export default function ItemDialog({
       .slice(0, 8);
   }, [storeSuggestions, storeInput, values.stores]);
 
-  function pickSuggestion(item: ItemObject) {
-    setMatchedExisting(item);
+  /**
+   * Picking a name suggestion puts that item on the list immediately and closes (T-140) — adding
+   * straight from the backlog is the usual reason this dialog is open, and it used to cost a
+   * second press. Whatever settings came along with the adopted item can be changed by editing it
+   * afterwards.
+   *
+   * The payload is built from the item rather than from form state on purpose: setValues is
+   * asynchronous, so a save that read `values` here would read the PREVIOUS render's. Running the
+   * same computeChangedFields diff against the item itself also keeps the adopt change-scoped
+   * (T-88) — the only field that differs is status, and picking something already `todo` produces
+   * an empty set, which ListPage answers by pushing nothing.
+   */
+  async function pickSuggestion(item: ItemObject) {
     const next = valuesFromItem(item);
-    setValues(next);
-    setStoreInput("");
-    setStatus("todo");
+    const changedFields = computeChangedFields(
+      {
+        name: next.name,
+        category: next.category || null,
+        stores: next.stores,
+        quantity: next.quantity || null,
+        price: next.priceAmount
+          ? { amount: next.priceAmount, currency: next.priceCurrency || null }
+          : null,
+        note: next.note || null,
+        status: "todo",
+      },
+      item,
+    );
+
+    setSaving(true);
+    try {
+      await onSave({ itemId: item.id, ...next, status: "todo", changedFields });
+      onClose();
+    } catch (err) {
+      // Fall back to the old behaviour on failure: seed the form from the item and leave the
+      // dialog open, so the user can see what went wrong and retry with Add.
+      setMatchedExisting(item);
+      setValues(next);
+      setStoreInput("");
+      setStatus("todo");
+      setSaveError(err instanceof ApiError ? err.message : t("item.saveFailed"));
+    } finally {
+      setSaving(false);
+    }
   }
 
   /** Commit the trimmed store-input text as a new chip; ignores empty/duplicate entries (T-99). */

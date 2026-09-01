@@ -192,8 +192,8 @@ describe("ListPage item-save pushes only changed fields (T-88)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "+ Add item" }));
     await userEvent.type(screen.getByLabelText("Name"), "Chee");
+    // The pick is the whole gesture since T-140 — there is no Save press any more.
     await userEvent.click(await screen.findByText("Cheese"));
-    await userEvent.click(screen.getByText("Save"));
 
     const pushes = pushedItemCalls();
     expect(pushes).toHaveLength(1);

@@ -56,8 +56,9 @@ data class ItemFormUiState(
  * Shared by [AddItemDialog] and [EditItemDialog] (Notes: both edit the same field set). Add mode
  * starts blank and, while Name is still empty, offers the most likely re-adds — recent backlog
  * items, most-recently-touched first (T-52) — then switches to live registry search once the user
- * types. Picking any suggestion reuses that item (setting it `todo`) instead of creating a
- * duplicate. Edit mode pre-fills from an existing item and additionally exposes status + delete.
+ * types. Picking any suggestion reuses that item rather than creating a duplicate, and adds it to
+ * the list there and then (T-140). Edit mode pre-fills from an existing item and additionally
+ * exposes status + delete.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -214,12 +215,18 @@ class ItemFormViewModel @Inject constructor(
     fun onStatusChange(status: Status) = _uiState.update { it.copy(status = status) }
 
     /**
-     * Notes (Add dialog): picking an existing suggestion prefills the form and binds its id, so
-     * Save reuses that item instead of creating a duplicate. It does NOT touch the item yet — the
-     * item only actually joins the list (status -> todo) on Save, so Cancel leaves it untouched
-     * (T-33; this reverses A8's persist-on-pick behavior).
+     * Notes (Add dialog): picking an existing suggestion puts that item on the list immediately —
+     * seeded into the form, saved, dialog closed (T-140). Adding straight from the backlog is the
+     * usual reason the dialog is open at all, and it used to cost a second press; the settings that
+     * come along with the adopted item can be changed afterwards by editing it.
+     *
+     * The save goes through [performSave] rather than writing here, so the adopt keeps the
+     * change-scoped diff (T-88): [loadedSnapshot] is the item's own values, so the only field whose
+     * clock gets re-stamped is `status`, and picking an item that is already `todo` writes nothing
+     * at all. This re-reverses T-33's "pick does not touch the item until Save" on the pick path —
+     * deliberately, since there is no longer a Save to wait for.
      */
-    fun pickSuggestion(item: ItemEntity) {
+    fun pickSuggestion(item: ItemEntity): Job? {
         val price = itemsRepo.decodePrice(item.price.value)
         _uiState.update {
             it.copy(
@@ -240,6 +247,7 @@ class ItemFormViewModel @Inject constructor(
         // was just set to TODO (the intended new value), so override it with the item's real status
         // — that way an unmodified adopt correctly diffs as "only status changed" (backlog -> todo).
         loadedSnapshot = snapshotFrom(_uiState.value).copy(status = Status.fromWireValue(item.status.value))
+        return performSave()
     }
 
     /** Returns null only for a trivial synchronous validation failure (blank name); Job otherwise. */
