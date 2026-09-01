@@ -1,0 +1,12 @@
+{
+  "body": "Found while surveying, not requested \u2014 filing rather than fixing.\n\nThe Add-another button was removed from the Android add-item dialog (the\nbuttons are now just Cancel and Add, deliberately close together). The web item\ndialog still has it: ItemDialog.performSave(closeAfter) keeps the save-and-reset\npath and handleSaveAndAddAnother still renders a button for it.\n\nSo the two clients now offer different buttons in the same dialog. Either the\nweb one goes too, or Android gets it back. [[T-140]] makes the burst-add\nworkflow cheaper on both clients, which weakens the case for keeping it.\n\nNeeds a decision, not implementation.",
+  "created_at": "2026-09-01T20:06:33+00:00",
+  "id": "T-144",
+  "labels": [
+    "ux",
+    "human"
+  ],
+  "priority": 4,
+  "title": "web still has Add another; Android no longer does",
+  "updated_at": "2026-09-01T20:06:33+00:00"
+}
