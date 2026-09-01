@@ -1,0 +1,11 @@
+{
+  "body": "The release procedure exists only as README prose plus two throwaway scripts\nthat live in an agent session scratchpad and die with it: the batched\nverify-then-assembleRelease Gradle run, and the wheel smoke test in a clean\nvenv. Every release so far has been hand-driven, which is how a release could\nsilently ship a stale web bundle or a mismatched APK.\n\nCommit it as release.sh, taking the target version and doing:\n\n1. refuse to run on a dirty tree, or off main, or if the tag already exists\n2. bump every version file \u2014 server/pyproject.toml, android versionName +\n   versionCode, and web/package.json (currently stuck at 0.0.0 while the README\n   claims every part shares one version)\n3. rebuild the web bundle\n4. verify-all, then assembleRelease, in ONE gradle daemon lifetime, daemon\n   stopped afterwards (the Pi is memory-tight)\n5. copy the signed APK in and verify versionName/versionCode with aapt2 and the\n   signature with apksigner\n6. build the wheel and smoke-test it in a clean venv\n7. commit and write the annotated tag\n\nTagging stays the last step, and stays a deliberate one.",
+  "created_at": "2026-09-01T20:06:18+00:00",
+  "id": "T-142",
+  "labels": [
+    "ops"
+  ],
+  "priority": 3,
+  "title": "release.sh \u2014 one command from version bump to tag",
+  "updated_at": "2026-09-01T20:06:18+00:00"
+}
