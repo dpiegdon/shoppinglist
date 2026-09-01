@@ -1,0 +1,12 @@
+{
+  "body": "web/src/i18n/__android__/de.json is a 72-key subset of the Android German\ncatalog, and consistency.test.ts asserts web German matches it. Nothing\nverifies the snapshot still matches the real\nandroid/app/src/main/res/values-de/strings.xml, so it drifts silently.\n\nIt had drifted: it still carried item.addAnother long after the Android string\nwas deleted, which is part of why [[T-144]]'s divergence went unnoticed. Fixed\nby hand in the T-144 commit, which is the same manual step that let it drift in\nthe first place.\n\nThe comment in consistency.test.ts says the cross-client half of the check\n\"lives in the Android suite, where the resource XML is readable without a build\nstep\". It does not. TranslationResourcesTest only compares Android locales\nagainst Android English. So the claim is wrong and there is no automated\ncross-client check at all.\n\nTwo ways out:\n1. Have the web test read values-de/strings.xml directly (it is a fixed relative\n   path from web/, and the test already normalises the two placeholder dialects)\n   and drop the snapshot.\n2. Generate the snapshot from the resources as a build step, so drift is a diff.\n\nOption 1 removes a file rather than adding a generator, and makes a deleted\nAndroid string fail the web suite immediately.",
+  "created_at": "2026-09-01T21:42:46+00:00",
+  "id": "T-148",
+  "labels": [
+    "bug",
+    "ops"
+  ],
+  "priority": 3,
+  "title": "cross-client i18n check is a hand-kept snapshot nothing validates",
+  "updated_at": "2026-09-01T21:42:46+00:00"
+}
