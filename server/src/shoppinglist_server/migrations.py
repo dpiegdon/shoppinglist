@@ -67,6 +67,22 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "ALTER TABLE lists ADD COLUMN kind_by TEXT NOT NULL DEFAULT ''",
         ],
     ),  # T-110: list kind (shopping | checklist)
+    (
+        6,
+        [
+            "ALTER TABLE lists ADD COLUMN currency TEXT",
+            "ALTER TABLE lists ADD COLUMN currency_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE lists ADD COLUMN currency_by TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE items ADD COLUMN expense TEXT",
+            "ALTER TABLE items ADD COLUMN expense_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE items ADD COLUMN expense_by TEXT NOT NULL DEFAULT ''",
+            # A partial index's WHERE clause cannot be altered in place. No existing row has an
+            # expense, so the rebuilt index covers exactly the rows the old one did.
+            "DROP INDEX IF EXISTS idx_items_list_name_live",
+            "CREATE UNIQUE INDEX idx_items_list_name_live ON items (list_id, lower(name)) "
+            "WHERE deleted = 0 AND expense IS NULL",
+        ],
+    ),  # T-151: expense lists — list currency, item expense, names not unique on expenses
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

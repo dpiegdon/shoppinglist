@@ -58,6 +58,13 @@ CREATE TABLE IF NOT EXISTS lists (
     kind_ts INTEGER NOT NULL DEFAULT 0,
     kind_by TEXT NOT NULL DEFAULT '',
 
+    -- Free-text currency label for an 'expenses' list (T-151): "EUR", "€", "pizza slices".
+    -- Required non-empty on that kind, permitted but unrendered on the others. Deliberately NOT
+    -- the ISO-4217 check the item price field uses.
+    currency TEXT,
+    currency_ts INTEGER NOT NULL DEFAULT 0,
+    currency_by TEXT NOT NULL DEFAULT '',
+
     deleted INTEGER NOT NULL DEFAULT 0,
     deleted_ts INTEGER NOT NULL DEFAULT 0,
     deleted_by TEXT NOT NULL DEFAULT ''
@@ -108,6 +115,15 @@ CREATE TABLE IF NOT EXISTS items (
     status_ts INTEGER NOT NULL,
     status_by TEXT NOT NULL,
 
+    -- The whole money tuple of an expense (T-151), canonical JSON:
+    -- {"paid_by": {account_id: amount}, "equal_by": bool,
+    --  "paid_for": {account_id: amount}, "equal_for": bool, "date": "YYYY-MM-DD"}.
+    -- ONE field, not five, so the "both maps sum to the same amount" invariant is written and
+    -- resolved by LWW as a unit. Non-NULL exactly on the live items of an 'expenses' list.
+    expense TEXT,
+    expense_ts INTEGER NOT NULL DEFAULT 0,
+    expense_by TEXT NOT NULL DEFAULT '',
+
     -- Item-level (not per-field, unlike the *_by columns above), updated whenever
     -- any field-level write wins for this item (T-64). NULL until the item's
     -- first post-migration edit for rows that predate this column.
@@ -120,9 +136,12 @@ CREATE TABLE IF NOT EXISTS items (
 );
 -- Live (non-deleted) item names are unique per list, case-insensitively;
 -- deleted rows are excluded so a name can be reused after deletion (Spec S3/S4).
+-- Expenses are excluded too (T-151): several "Dinner at Luigi's" on one list are
+-- legitimate. `expense IS NOT NULL` identifies them without a join, since a partial
+-- index cannot look at lists.kind.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_items_list_name_live
     ON items (list_id, lower(name))
-    WHERE deleted = 0;
+    WHERE deleted = 0 AND expense IS NULL;
 CREATE INDEX IF NOT EXISTS idx_items_change_seq ON items (change_seq);
 CREATE INDEX IF NOT EXISTS idx_items_list ON items (list_id);
 

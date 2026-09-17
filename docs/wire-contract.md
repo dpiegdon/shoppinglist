@@ -59,6 +59,7 @@ Appears in `POST /sync` payloads; the server always returns full row state.
     "price":    {"value": {"amount": "1.99", "currency": "EUR"}, "...": "..."},
     "note":     {"value": "the ripe ones", "...": "..."},
     "status":   {"value": "todo", "...": "..."},
+    "expense":  {"value": null, "...": "..."},
     "deleted":  {"value": false, "...": "..."}
   },
   "last_touched_by": "account-uuid"
@@ -70,6 +71,8 @@ Appears in `POST /sync` payloads; the server always returns full row state.
 - `price` is `null` or `{"amount": "<decimal-string>", "currency": "<ISO-4217>"|null}`,
   also one LWW field.
 - `status` is `"backlog"`, `"todo"`, or `"checked"`.
+- `expense` is `null` except on an `expenses` list, where it is required and
+  carries the whole money tuple as **one** LWW field — see "Expenses" below.
 - `deleted` is the tombstone, as an LWW boolean field.
 - `last_touched_by` is an **account** id, sits *outside* `fields`, and is
   server-maintained — clients never write it. It is set whenever any field-level
@@ -77,7 +80,44 @@ Appears in `POST /sync` payloads; the server always returns full row state.
   post-migration edit. Clients use it to attribute changes to a collaborator.
 
 Optional fields may be **absent from a request** (send clocks only for fields you
-changed); **responses always carry all 8 fields**.
+changed); **responses always carry all 9 fields**.
+
+### Expenses
+
+On a list whose `kind` is `expenses`, every item is an expense. Its title is
+`name`, which is **not unique** there — several "Dinner at Luigi's" are several
+dinners, and the server's same-name merge never runs on such a list. `note` stays
+usable; `category`, `stores`, `quantity`, `price` and `status` carry no meaning.
+
+```json
+"expense": {"value": {
+  "paid_by":   {"<account-id>": "40.00", "<account-id>": "24.00"},
+  "equal_by":  false,
+  "paid_for":  {"<account-id>": "21.34", "<account-id>": "21.33", "<account-id>": "21.33"},
+  "equal_for": true,
+  "date":      "2026-09-17"
+}, "...": "..."}
+```
+
+- Both maps are non-empty. Every amount is a **positive** decimal string in the
+  `price` amount format (`[0-9]+(\.[0-9]{1,2})?`) — never zero: a participant
+  with no share is absent from the map.
+- The two maps **sum to the same value**, compared in whole cents. There is no
+  stored total; it is the sum of either map.
+- Every key is an account id that is a current member of the list, or is already
+  present in the item's stored expense (so an expense involving someone who has
+  since left stays editable). That check applies only to a write that would win
+  last-write-wins; a stale write is discarded without error.
+- `equal_by` / `equal_for` record that the map was an equal split, so a client
+  reopening the expense redistributes on a changed total. The server stores them
+  and does not cross-check them against the amounts.
+- `date` is a calendar date, `YYYY-MM-DD`, with no time or zone.
+- Unknown keys inside the object are dropped, not stored.
+
+Any violation is `422 invalid_expense` with `row_id` and `field`. An `expense`
+value on any other kind of list is refused the same way; `null` there is fine.
+Creating an item on an `expenses` list without one, or nulling it later, is
+refused too.
 
 ## List object
 
@@ -89,6 +129,7 @@ changed); **responses always carry all 8 fields**.
     "category_order": {"value": ["groceries", "freezer"], "...": "..."},
     "notes":          {"value": "back door code 1234", "...": "..."},
     "kind":           {"value": "shopping", "...": "..."},
+    "currency":       {"value": null, "...": "..."},
     "deleted":        {"value": false, "...": "..."}
   }
 }
@@ -96,10 +137,19 @@ changed); **responses always carry all 8 fields**.
 
 - `category_order` is an array of strings (whole array = one LWW field).
 - `notes` is string-or-null, max 5000 characters.
-- `kind` is `"shopping"` or `"checklist"`, default `"shopping"`. It is purely a
-  **client-side display toggle**: a checklist hides the shopping-only item fields
-  (`stores`, `price`, `quantity`), but the item schema is identical and no server
-  logic depends on it, so a list can flip `kind` at any time with no migration.
+- `kind` is `"shopping"`, `"checklist"` or `"expenses"`, default `"shopping"`.
+  Between shopping and checklist it is purely a **client-side display toggle**: a
+  checklist hides the shopping-only item fields (`stores`, `price`, `quantity`),
+  but the item schema is identical and no server logic depends on it, so a list
+  can flip between those two at any time with no migration.
+  `expenses` is different: its items have another shape (see "Expenses" above),
+  so the kind is **fixed for the list's whole life** in both directions. Any
+  write that would change a kind to or from `expenses` is `422 invalid_field`
+  with `row_id` and `field`, whatever its clock.
+- `currency` is a free-text label of at most 32 characters — `"EUR"`, `"€"`,
+  `"pizza slices"` — deliberately not an ISO code. It is **required and
+  non-blank** when creating an `expenses` list and can never be blanked there
+  (`422 invalid_currency`); on other kinds it is permitted and unrendered.
 
 ## Endpoints
 

@@ -11,6 +11,7 @@ resolve to the latest. ``updated_by`` is a deterministic tiebreak on equal
 timestamps (larger string wins).
 """
 
+import datetime
 import json
 import re
 import sqlite3
@@ -46,6 +47,7 @@ ITEM_FIELD_META = [
     ("price", "price_ts", "price_by"),
     ("note", "note_ts", "note_by"),
     ("status", "status_ts", "status_by"),
+    ("expense", "expense_ts", "expense_by"),
     ("deleted", "deleted_ts", "deleted_by"),
 ]
 LIST_FIELD_META = [
@@ -53,12 +55,19 @@ LIST_FIELD_META = [
     ("category_order", "category_order_ts", "category_order_by"),
     ("notes", "notes_ts", "notes_by"),
     ("kind", "kind_ts", "kind_by"),
+    ("currency", "currency_ts", "currency_by"),
     ("deleted", "deleted_ts", "deleted_by"),
 ]
-# T-110: which item fields the clients render for a list. The server stores and syncs `kind` but
-# NO server logic depends on it — a checklist simply never sends stores/price/quantity, and those
-# fields keep their existing validation if a client does send them.
-LIST_KINDS = ("shopping", "checklist")
+# T-110: which item fields the clients render for a list. For shopping and checklist the server
+# stores and syncs `kind` but no server logic depends on it — a checklist simply never sends
+# stores/price/quantity, and those fields keep their existing validation if a client does send them.
+#
+# `expenses` (T-151) is different in kind, not just display: its items carry the `expense` money
+# tuple and nothing else of the shopping shape, its item names are not unique, and the kind is
+# fixed for the list's whole life in both directions. See
+# docs/archive/specs/2026-09-17-expense-lists-design.md for why.
+EXPENSES_KIND = "expenses"
+LIST_KINDS = ("shopping", "checklist", EXPENSES_KIND)
 DEFAULT_LIST_KIND = "shopping"
 NOTES_MAX_LENGTH = 5000
 
@@ -98,6 +107,11 @@ STRING_LIST_MAX_ITEMS = (
 STRING_LIST_ELEM_MAX_LENGTH = (
     200  # each store name / category label, same scale as a category label.
 )
+# Free-text currency label of an expenses list (T-151): an ISO code, a symbol, or "pizza slices".
+CURRENCY_LABEL_MAX_LENGTH = 32
+# Entries per share map of one expense. Real lists have a handful of members; this only blocks bloat.
+EXPENSE_SHARES_MAX = 200
+EXPENSE_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
 # ---- clock clamping (T-86) --------------------------------------------------
 # A client-supplied updated_at/created_at that is wildly in the future (broken
@@ -155,9 +169,23 @@ def _item_field_to_columns(key, value) -> dict:
         if value is None:
             return {"price_amount": None, "price_currency": None}
         return {"price_amount": value["amount"], "price_currency": value.get("currency")}
+    if key == "expense":
+        return {"expense": None if value is None else _encode_expense(value)}
     if key == "deleted":
         return {"deleted": 1 if value else 0}
     return {key: value}
+
+
+def _encode_expense(value) -> str:
+    """Canonical JSON of a validated expense: exactly the five known keys, stable key order.
+
+    Unknown keys a client sent are dropped rather than stored, so a newer client cannot bloat a row
+    with fields this server does not understand and then have them served to every member.
+    """
+    canonical = {
+        key: value[key] for key in ("paid_by", "equal_by", "paid_for", "equal_for", "date")
+    }
+    return json.dumps(canonical, sort_keys=True, separators=(",", ":"))
 
 
 def _item_load_field(key, row):
@@ -167,6 +195,8 @@ def _item_load_field(key, row):
         if row["price_amount"] is None:
             return None
         return {"amount": row["price_amount"], "currency": row["price_currency"]}
+    if key == "expense":
+        return None if row["expense"] is None else json.loads(row["expense"])
     if key == "deleted":
         return bool(row["deleted"])
     return row[key]
@@ -309,8 +339,77 @@ def _validate_item_field(key, value):
             raise ApiError(422, "invalid_status", f"status must be one of {sorted(STATUS_VALUES)}.")
     elif key == "price":
         _validate_price(value)
+    elif key == "expense":
+        _validate_expense(value)
     elif key == "deleted":
         _validate_deleted(value)
+
+
+def _amount_cents(amount: str) -> int:
+    """Cents of an amount already matched by PRICE_AMOUNT_RE: "12" -> 1200, "12.5" -> 1250."""
+    whole, _, fraction = amount.partition(".")
+    return int(whole) * 100 + int(fraction.ljust(2, "0") or "0")
+
+
+def _validate_share_map(key, shares) -> int:
+    """Validate one of an expense's share maps; returns its total in cents."""
+    if not isinstance(shares, dict) or not shares:
+        raise ApiError(
+            422, "invalid_expense", f"expense {key} must be a non-empty object of amounts."
+        )
+    if len(shares) > EXPENSE_SHARES_MAX:
+        raise ApiError(
+            422,
+            "invalid_expense",
+            f"expense {key} may name at most {EXPENSE_SHARES_MAX} participants.",
+        )
+    total = 0
+    for account_id, amount in shares.items():
+        if not account_id.strip() or len(account_id) > ID_MAX_LENGTH:
+            raise ApiError(422, "invalid_expense", f"expense {key} has an invalid participant id.")
+        if (
+            not isinstance(amount, str)
+            or len(amount) > PRICE_AMOUNT_MAX_LENGTH
+            or not PRICE_AMOUNT_RE.match(amount)
+        ):
+            raise ApiError(
+                422, "invalid_expense", f"expense {key} amounts must be decimal strings."
+            )
+        cents = _amount_cents(amount)
+        # Strictly positive: a participant with no share is absent from the map, never zero.
+        if cents <= 0:
+            raise ApiError(422, "invalid_expense", f"expense {key} amounts must be positive.")
+        total += cents
+    return total
+
+
+def _validate_expense(value):
+    """Shape of the expense money tuple (T-151). Context-free: which list it may sit on, and
+    whether its participants are members, is checked in _check_expense_against_list."""
+    if value is None:
+        return  # permitted by shape; _check_expense_against_list decides per list kind
+    if not isinstance(value, dict):
+        raise ApiError(422, "invalid_expense", "expense must be an object.")
+    paid_by = _validate_share_map("paid_by", value.get("paid_by"))
+    paid_for = _validate_share_map("paid_for", value.get("paid_for"))
+    for key in ("equal_by", "equal_for"):
+        if not isinstance(value.get(key), bool):
+            raise ApiError(422, "invalid_expense", f"expense {key} must be a boolean.")
+    date = value.get("date")
+    if not isinstance(date, str) or not EXPENSE_DATE_RE.match(date):
+        raise ApiError(422, "invalid_expense", "expense date must be a YYYY-MM-DD date.")
+    try:
+        datetime.date.fromisoformat(date)
+    except ValueError:
+        raise ApiError(
+            422, "invalid_expense", "expense date must be a real calendar date."
+        ) from None
+    # The one invariant that spans both maps, and the reason they are one LWW field rather than
+    # several: compared in whole cents, never as floats.
+    if paid_by != paid_for:
+        raise ApiError(
+            422, "invalid_expense", "expense paid_by and paid_for must sum to the same amount."
+        )
 
 
 def _validate_price(value):
@@ -357,10 +456,12 @@ def _validate_list_field(key, value):
             raise ApiError(
                 422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer."
             )
+    elif key == "currency":
+        _require_str(key, value, CURRENCY_LABEL_MAX_LENGTH, nullable=True, code="invalid_currency")
     elif key == "kind":
         # Unknown kinds are rejected rather than coerced: a client sending a kind this server
         # doesn't know would otherwise get silent, surprising display behaviour (T-110).
-        if value not in LIST_KINDS:
+        if not isinstance(value, str) or value not in LIST_KINDS:
             raise ApiError(
                 422, "invalid_field", f"List kind must be one of: {', '.join(LIST_KINDS)}."
             )
@@ -423,6 +524,63 @@ def _parse_row(obj, keys, tsby, validate, device_id):
     return row_id, created_at, fields
 
 
+def _is_nonblank(value) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fields):
+    """The rules on `expense` that depend on which list the item is on (T-151).
+
+    - Only an expenses list holds expenses; any other kind may send null but never a value.
+    - On an expenses list every item is an expense: required on create, never null afterwards.
+    - Every participant must be a current member, or already be in the row's stored expense —
+      so an expense involving someone who has since left stays editable.
+
+    The participant rule is only applied to a write that would WIN last-write-wins. A stale write
+    is discarded anyway, and rejecting it would quarantine an innocent offline edit on the client
+    for naming someone who left while it was offline.
+    """
+
+    def reject(message, **extra):
+        raise ApiError(
+            422,
+            "invalid_expense",
+            message,
+            details={"row_id": item_id, "field": "expense", **extra},
+        )
+
+    incoming = fields.get("expense")
+    if list_kind != EXPENSES_KIND:
+        if incoming is not None and incoming[0] is not None:
+            reject("Only an expenses list can hold expenses.")
+        return
+
+    if incoming is None:
+        if existing is None:
+            reject("Creating an item on an expenses list requires an expense.")
+        return
+    value, ts, by = incoming
+    if value is None:
+        reject("An item on an expenses list must have an expense.")
+    if existing is not None and (ts, by) <= (existing["expense_ts"], existing["expense_by"]):
+        return
+
+    already_present = set()
+    if existing is not None and existing["expense"] is not None:
+        stored = json.loads(existing["expense"])
+        already_present = set(stored["paid_by"]) | set(stored["paid_for"])
+    members = {
+        row["account_id"]
+        for row in conn.execute("SELECT account_id FROM memberships WHERE list_id = ?", (list_id,))
+    }
+    for participant in sorted(set(value["paid_by"]) | set(value["paid_for"])):
+        if participant not in members and participant not in already_present:
+            reject(
+                "Every participant in an expense must be a member of the list.",
+                account_id=participant,
+            )
+
+
 # ---- membership helpers ----------------------------------------------------
 
 
@@ -480,6 +638,9 @@ def _new_item_columns(item_id, list_id, created_at, fields, account_id):
         "status": "todo",
         "status_ts": 0,
         "status_by": "",
+        "expense": None,
+        "expense_ts": 0,
+        "expense_by": "",
         "last_touched_by_account_id": None,
         "last_touched_ts": 0,
         "deleted": 0,
@@ -516,6 +677,9 @@ def _new_list_columns(list_id, created_at, fields):
         "kind": DEFAULT_LIST_KIND,
         "kind_ts": 0,
         "kind_by": "",
+        "currency": None,
+        "currency_ts": 0,
+        "currency_by": "",
         "deleted": 0,
         "deleted_ts": 0,
         "deleted_by": "",
@@ -615,6 +779,14 @@ def _apply_list(conn, account_id, device_id, obj):
     if existing is None:
         if "name" not in fields:
             raise ApiError(422, "invalid_name", "Creating a list requires a name.")
+        kind = fields["kind"][0] if "kind" in fields else DEFAULT_LIST_KIND
+        if kind == EXPENSES_KIND and not _is_nonblank(fields.get("currency", (None,))[0]):
+            raise ApiError(
+                422,
+                "invalid_currency",
+                "An expenses list requires a currency.",
+                details={"row_id": list_id, "field": "currency"},
+            )
         cols = _new_list_columns(list_id, created_at, fields)
         cols["change_seq"] = _bump(conn)
         _insert(conn, "lists", cols)
@@ -632,6 +804,29 @@ def _apply_list(conn, account_id, device_id, obj):
     # leaks is only whether a *guessed* id is in use.
     if not _is_member(conn, account_id, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
+    if "kind" in fields:
+        new_kind = fields["kind"][0]
+        # Fixed for life in both directions (T-151), whatever the clock says: an expenses list's
+        # items have a different shape from every other kind's, so there is no conversion that
+        # keeps the data meaningful. Shopping <-> checklist stays a free display toggle.
+        if new_kind != existing["kind"] and EXPENSES_KIND in (new_kind, existing["kind"]):
+            raise ApiError(
+                422,
+                "invalid_field",
+                "A list cannot be converted to or from the expenses kind.",
+                details={"row_id": list_id, "field": "kind"},
+            )
+    if (
+        existing["kind"] == EXPENSES_KIND
+        and "currency" in fields
+        and not _is_nonblank(fields["currency"][0])
+    ):
+        raise ApiError(
+            422,
+            "invalid_currency",
+            "An expenses list requires a currency.",
+            details={"row_id": list_id, "field": "currency"},
+        )
     set_cols = _lww_update_columns(existing, fields, _list_field_to_columns, LIST_TSBY)
     if set_cols:
         set_cols["change_seq"] = _bump(conn)
@@ -683,6 +878,8 @@ def _apply_item(conn, account_id, device_id, obj):
             "Item refers to an unknown list_id.",
             details={"row_id": item_id},
         )
+    list_kind = conn.execute("SELECT kind FROM lists WHERE id = ?", (list_id,)).fetchone()["kind"]
+    _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fields)
 
     if existing is None:
         if "name" not in fields:
@@ -771,7 +968,12 @@ def name_merge(conn, list_id) -> None:
     an idempotent post-apply safety net (S5 calls it per touched list). It is
     also the correct standalone reconciliation should live duplicates ever
     arise by another path.
+
+    Never on an expenses list (T-151): two "Dinner at Luigi's" there are two dinners.
     """
+    kind_row = conn.execute("SELECT kind FROM lists WHERE id = ?", (list_id,)).fetchone()
+    if kind_row is not None and kind_row["kind"] == EXPENSES_KIND:
+        return
     rows = conn.execute(
         "SELECT id, lower(name) AS lname FROM items WHERE list_id = ? AND deleted = 0",
         (list_id,),
