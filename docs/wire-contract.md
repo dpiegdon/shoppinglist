@@ -131,7 +131,10 @@ refused too.
     "kind":           {"value": "shopping", "...": "..."},
     "currency":       {"value": null, "...": "..."},
     "deleted":        {"value": false, "...": "..."}
-  }
+  },
+  "members": [{"account_id": "account-uuid", "email": "a@example.com", "initials": "AL"}],
+  "close_votes": [],
+  "closed_at": null
 }
 ```
 
@@ -150,6 +153,18 @@ refused too.
   `"pizza slices"` — deliberately not an ISO code. It is **required and
   non-blank** when creating an `expenses` list and can never be blanked there
   (`422 invalid_currency`); on other kinds it is permitted and unrendered.
+- `members`, `close_votes` and `closed_at` sit **outside** `fields` and are
+  server-maintained, like an item's `last_touched_by`: clients never write them,
+  and a client that sends them has them ignored.
+- `members` is the list's current roster, oldest membership first and
+  alphabetical within one millisecond. `initials` is already resolved
+  (override-or-derived), so no second lookup is needed. Joining, leaving,
+  deleting an account, and changing an email or initials each bump the list's
+  `change_seq`, so a roster change reaches every device through the ordinary
+  incremental sync even though no field value moved. This is what gives both
+  clients an offline roster without a cache of their own.
+- `close_votes` and `closed_at` belong to closing an expenses list. Until that
+  ships they are always `[]` and `null`.
 
 ## Endpoints
 
@@ -182,6 +197,9 @@ the instance's static `admin_emails` config and is never stored.
 
 `GET /account/sessions` omits idle-expired sessions rather than listing devices
 the account can no longer use.
+
+Changing an email, or setting or clearing `initials`, also bumps every list the
+account belongs to, because both appear in that list's `members` roster.
 
 `PATCH /settings` is a patch, not a put: an **absent** key means "leave
 unchanged", while an explicit `"initials": null` clears the override back to the

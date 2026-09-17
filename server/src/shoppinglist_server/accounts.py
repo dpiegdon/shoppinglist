@@ -73,6 +73,7 @@ def change_email(
         conn.execute("UPDATE accounts SET email = ? WHERE id = ?", (new_email, account_id))
     except sqlite3.IntegrityError as exc:
         raise ApiError(409, "email_taken", "An account with this email already exists.") from exc
+    invites.touch_lists_of_account(conn, account_id)  # the roster shows the address (T-152)
     conn.commit()
 
 
@@ -170,6 +171,10 @@ def update_settings(
             f"UPDATE account_settings SET {', '.join(set_clauses)} WHERE account_id = ?",
             params,
         )
+        # Initials are part of the roster on every list this account belongs to (T-152).
+        # default_currency is private to the account, so it moves nothing.
+        if initials is not _UNSET:
+            invites.touch_lists_of_account(conn, account_id)
         conn.commit()
 
     return get_settings(conn, account_id)
@@ -200,7 +205,10 @@ def _delete_account_row(conn: sqlite3.Connection, account_id: str) -> None:
             "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",
             (account_id, list_id),
         )
-        invites.orphan_check(conn, list_id)
+        # A tombstoned list has already moved; a surviving one has to, so the remaining members
+        # stop seeing the departed account in the roster (T-152).
+        if not invites.orphan_check(conn, list_id):
+            invites.touch_list(conn, list_id)
 
     conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (account_id,))
     conn.execute("DELETE FROM account_settings WHERE account_id = ?", (account_id,))

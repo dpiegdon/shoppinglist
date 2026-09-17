@@ -152,6 +152,7 @@ def redeem(conn, key: bytes, account, token: str | None) -> str:
         (account.id, list_id, now_ms()),
     )
     conn.execute("UPDATE invites SET used_at = ? WHERE id = ?", (now_ms(), invite_id))
+    touch_list(conn, list_id)  # the joiner is now in every member's roster (T-152)
     return list_id
 
 
@@ -174,19 +175,46 @@ def _clear_and_tombstone(conn, list_id: str) -> None:
     )
 
 
-def orphan_check(conn, list_id: str) -> None:
+def touch_list(conn, list_id: str) -> None:
+    """Bump a list's change_seq without changing any of its fields (T-152).
+
+    The roster rides on the synced list object, so a membership change has to move the row even
+    though no field value did — otherwise a device would keep showing someone who has left, or
+    miss someone who joined, until the next unrelated edit. Same mechanism for an email or
+    initials change, which are equally visible in the roster.
+    """
+    conn.execute(
+        "UPDATE lists SET change_seq = ? WHERE id = ?",
+        (db_module.next_change_seq(conn), list_id),
+    )
+
+
+def touch_lists_of_account(conn, account_id: str) -> None:
+    """Bump every list this account is a member of — for a change to the account itself."""
+    for row in conn.execute(
+        "SELECT list_id FROM memberships WHERE account_id = ?", (account_id,)
+    ).fetchall():
+        touch_list(conn, row["list_id"])
+
+
+def orphan_check(conn, list_id: str) -> bool:
     """Tombstone `list_id`'s content iff it currently has zero memberships.
 
     Call this *after* removing a membership row. Intended for paths with no
     surviving session to preserve tombstone-propagation for (e.g. account
     deletion, S3) — contrast with `leave`, which keeps the departing member's
     row around in the orphaning case specifically so it still propagates.
+
+    Returns whether the list was orphaned, so a caller can skip the roster bump that the
+    tombstone write has already made redundant.
     """
     remaining = conn.execute(
         "SELECT COUNT(*) AS n FROM memberships WHERE list_id = ?", (list_id,)
     ).fetchone()["n"]
     if remaining == 0:
         _clear_and_tombstone(conn, list_id)
+        return True
+    return False
 
 
 def leave(conn, account_id: str, list_id: str) -> None:
@@ -218,3 +246,4 @@ def leave(conn, account_id: str, list_id: str) -> None:
             "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",
             (account_id, list_id),
         )
+        touch_list(conn, list_id)  # the leaver drops out of every remaining roster (T-152)

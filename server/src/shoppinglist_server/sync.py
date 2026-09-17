@@ -17,6 +17,7 @@ import re
 import sqlite3
 import time
 
+from . import accounts
 from . import db as db_module
 from .errors import ApiError
 
@@ -234,12 +235,54 @@ def _item_to_wire(row) -> dict:
     }
 
 
-def _list_to_wire(row) -> dict:
+def _list_to_wire(row, members) -> dict:
     fields = {
         key: {"value": _list_load_field(key, row), "updated_at": row[ts], "updated_by": row[by]}
         for key, ts, by in LIST_FIELD_META
     }
-    return {"id": row["id"], "created_at": row["created_at"], "fields": fields}
+    return {
+        "id": row["id"],
+        "created_at": row["created_at"],
+        "fields": fields,
+        # Server-maintained, outside `fields` like an item's last_touched_by, never client-written
+        # (T-152). The roster rides here so both clients have it offline with no cache of their
+        # own; every membership, email or initials change bumps the list's change_seq to carry it.
+        "members": members,
+        # Close votes arrive with T-157; until then no list can be voted on or closed.
+        "close_votes": [],
+        "closed_at": None,
+    }
+
+
+def _rosters(conn, list_ids) -> dict:
+    """Current members of each list, oldest membership first, as served in `members`.
+
+    joined_at is milliseconds, so two people who join in the same millisecond (a list created and
+    shared by a script, or a test) would otherwise come back in whatever order SQLite chose.
+    Email breaks the tie: stable across devices, and alphabetical is what a reader expects.
+    """
+    rosters = {list_id: [] for list_id in list_ids}
+    if not rosters:
+        return rosters
+    placeholders = ", ".join("?" * len(rosters))
+    for row in conn.execute(
+        "SELECT memberships.list_id AS list_id, accounts.id AS account_id, "
+        "accounts.email AS email, account_settings.initials AS initials "
+        "FROM memberships "
+        "JOIN accounts ON accounts.id = memberships.account_id "
+        "LEFT JOIN account_settings ON account_settings.account_id = accounts.id "
+        f"WHERE memberships.list_id IN ({placeholders}) "
+        "ORDER BY memberships.joined_at, lower(accounts.email), accounts.id",
+        list(rosters),
+    ):
+        rosters[row["list_id"]].append(
+            {
+                "account_id": row["account_id"],
+                "email": row["email"],
+                "initials": accounts.resolve_initials(row["email"], row["initials"]),
+            }
+        )
+    return rosters
 
 
 # ---- parsing / validation --------------------------------------------------
@@ -1011,14 +1054,14 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
         if list_id not in member_ids:
             raise ApiError(403, "not_a_member", "You are not a member of this list.")
 
-    lists_out, items_out = {}, {}
+    list_rows, items_out = {}, {}
     if member_ids:
         placeholders = ", ".join("?" * len(member_ids))
         params = (cursor, *member_ids)
         for row in conn.execute(
             f"SELECT * FROM lists WHERE change_seq > ? AND id IN ({placeholders})", params
         ):
-            lists_out[row["id"]] = _list_to_wire(row)
+            list_rows[row["id"]] = row
         for row in conn.execute(
             f"SELECT * FROM items WHERE change_seq > ? AND list_id IN ({placeholders})", params
         ):
@@ -1029,14 +1072,16 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
             "SELECT * FROM lists WHERE id = ? AND deleted = 0", (list_id,)
         ).fetchone()
         if lrow is not None:
-            lists_out[lrow["id"]] = _list_to_wire(lrow)
+            list_rows[lrow["id"]] = lrow
         for row in conn.execute(
             "SELECT * FROM items WHERE list_id = ? AND deleted = 0", (list_id,)
         ):
             items_out[row["id"]] = _item_to_wire(row)
 
+    rosters = _rosters(conn, list_rows)
+    lists_out = [_list_to_wire(row, rosters[list_id]) for list_id, row in list_rows.items()]
     new_cursor = conn.execute("SELECT change_seq FROM meta WHERE id = 1").fetchone()["change_seq"]
     return {
         "cursor": new_cursor,
-        "changes": {"lists": list(lists_out.values()), "items": list(items_out.values())},
+        "changes": {"lists": lists_out, "items": list(items_out.values())},
     }
