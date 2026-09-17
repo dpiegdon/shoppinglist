@@ -1,0 +1,13 @@
+{
+  "body": "Umbrella for the `expenses` list kind. The design and every reason behind it\nis docs/archive/specs/2026-09-17-expense-lists-design.md; the tickets under\nthe `expenses` label carry the work and deliberately do not repeat the why.\n\nThree phases, each a release:\n1. expense lists exist and balance\n2. the rules: close by unanimous vote, no leave while open, freeze, no delete\n3. settlement suggestions\n\nDecisions already made (do not reopen without the user): one item field\nholds both share maps + date; amounts not percentages; one currency per list,\nfree text; `kind` fixed for life; closed is final; any member edits; account\ndeletion always allowed, departed members become \"former member\"; solo lists\nfully supported.",
+  "created_at": "2026-09-17T17:50:52+00:00",
+  "id": "T-150",
+  "labels": [
+    "expenses",
+    "feature",
+    "human"
+  ],
+  "priority": 2,
+  "title": "Expense lists \u2014 a third list kind, Tricount-style (epic)",
+  "updated_at": "2026-09-17T17:50:52+00:00"
+}
