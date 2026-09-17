@@ -11,7 +11,8 @@
     "android",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "expenses: Android \u2014 data layer, migration, split and balance arithmetic",
-  "updated_at": "2026-09-17T17:50:53+00:00"
+  "updated_at": "2026-09-17T18:37:47+00:00"
 }
