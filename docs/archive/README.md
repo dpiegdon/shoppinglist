@@ -23,6 +23,7 @@ For anything you actually need:
 | [`plans/2026-07-08-shopping-list-tickets.md`](plans/2026-07-08-shopping-list-tickets.md) | The original ticket breakdown for the whole system (server, Android, web epics). Ongoing work moved to the gittoc tracker on the `gittoc` branch afterward. |
 | [`plans/2026-07-15-t65-collaborator-change-notifications.md`](plans/2026-07-15-t65-collaborator-change-notifications.md) | Implementation plan for one feature (collaborator-change notifications), kept as a worked example of the plan format. |
 | [`specs/2026-08-11-android-update-check-design.md`](specs/2026-08-11-android-update-check-design.md) | Design for the in-app update check (T-135), written before it was built. Later than the rest of this directory. The endpoint it describes is documented for real in [`../wire-contract.md`](../wire-contract.md). |
+| [`specs/2026-09-17-expense-lists-design.md`](specs/2026-09-17-expense-lists-design.md) | Design for the `expenses` list kind (T-150 and the `expenses` label): the decisions and the reasons behind them. The tickets carry the work; this carries the why. Once built, the wire shapes it describes are authoritative only in [`../wire-contract.md`](../wire-contract.md). |
 
 These documents were written to be executed by AI coding agents, so they carry
 agent-directed instructions ("use this skill", model tags per ticket, host-specific
