@@ -1,0 +1,234 @@
+package org.p23q.shoppinglist.ui.expense
+
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.lifecycle.SavedStateHandle
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.p23q.shoppinglist.data.DeviceIdProvider
+import org.p23q.shoppinglist.data.Expense
+import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.ListMember
+import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.repo.ItemsRepo
+import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.ui.Routes
+import org.robolectric.RobolectricTestRunner
+
+/**
+ * The expense list and balances screens (T-154).
+ *
+ * Rendered directly with a real ViewModel over an in-memory database — the screens are Hilt-free
+ * by design (T-127), which is what makes this possible at all.
+ */
+@RunWith(RobolectricTestRunner::class)
+class ExpenseScreensTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    private lateinit var db: AppDb
+    private lateinit var itemsRepo: ItemsRepo
+    private lateinit var listsRepo: ListsRepo
+    private lateinit var listId: String
+
+    private val me = "acct-me"
+    private val other = "acct-other"
+
+    @Before
+    fun setUp() = runBlocking<Unit> {
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            // Runs DAO calls inline so the screen has its data by waitForIdle (T-29).
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
+        setMembers(me, other)
+    }
+
+    private suspend fun setMembers(vararg ids: String) {
+        // Initials from the part after the dash: "acct-me" and "acct-other" both start "AC".
+        val members = ids.map {
+            ListMember(it, "$it@example.com", it.substringAfter('-').take(2).uppercase())
+        }
+        val list = listsRepo.getById(listId)!!
+        db.listDao().upsert(list.copy(membersJson = Json.encodeToString(members)))
+    }
+
+    private fun viewModel() = ExpenseListViewModel(
+        SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+        itemsRepo,
+        listsRepo,
+        FakeSessionState().apply { accountId = me },
+    )
+
+    private fun dinner(paidBy: String = me) = Expense(
+        paidBy = mapOf(paidBy to "64.00"),
+        equalBy = true,
+        paidFor = mapOf(me to "32.00", other to "32.00"),
+        equalFor = true,
+        date = "2026-09-17",
+    )
+
+    // ---- the list screen ------------------------------------------------------
+
+    @Test
+    fun `shows each expense with what it cost, who paid and who for`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenBalances = {},
+                onOpenListProps = {},
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
+        // Twice over: once as this row's amount, once as the list's total in the summary card.
+        composeTestRule.onAllNodesWithText("64.00 EUR").assertCountEquals(2)
+        // Everyone on the list is covered, so the row says so rather than listing them.
+        composeTestRule.onNodeWithText("paid by ME · for everyone").assertIsDisplayed()
+        composeTestRule.onNodeWithText("2026-09-17").assertIsDisplayed()
+    }
+
+    @Test
+    fun `shows the total and my balance, and opens balances when tapped`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        var openedBalances = false
+
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenBalances = { openedBalances = true },
+                onOpenListProps = {},
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Total spent").assertIsDisplayed()
+        // I paid 64 and owe 32, so the list owes me 32.
+        composeTestRule.onNodeWithText("32.00 EUR").assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("Your balance").performClick()
+        assertEquals(true, openedBalances)
+    }
+
+    @Test
+    fun `says so when there is nothing on the list yet`() = runBlocking<Unit> {
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenBalances = {},
+                onOpenListProps = {},
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("No expenses yet. Add one to get started.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `tapping an expense opens it for editing`() = runBlocking<Unit> {
+        val itemId = itemsRepo.createExpense(listId, "Taxi", dinner())
+        var edited: String? = null
+
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = { edited = it },
+                onOpenBalances = {},
+                onOpenListProps = {},
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Taxi").performClick()
+
+        assertEquals(itemId, edited)
+    }
+
+    @Test
+    fun `a list of one shows what was spent but no balance`() = runBlocking<Unit> {
+        setMembers(me)
+        itemsRepo.createExpense(
+            listId,
+            "Coffee",
+            Expense(mapOf(me to "4.20"), true, mapOf(me to "4.20"), true, "2026-09-17"),
+        )
+
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenBalances = {},
+                onOpenListProps = {},
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Total spent").assertIsDisplayed()
+        // Always zero on a list of one, so saying it would be noise.
+        composeTestRule.onNodeWithText("Your balance").assertDoesNotExist()
+    }
+
+    // ---- the balances screen --------------------------------------------------
+
+    @Test
+    fun `balances name everyone involved and what they paid`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+
+        composeTestRule.setContent { BalancesScreen(viewModel = viewModel()) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Total spent: 64.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("32.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("-32.00 EUR").assertIsDisplayed()
+    }
+
+    @Test
+    fun `someone who has left keeps their balance, numbered rather than named`() = runBlocking<Unit> {
+        itemsRepo.createExpense(
+            listId,
+            "Old dinner",
+            Expense(mapOf("acct-gone" to "20.00"), true, mapOf(me to "10.00", "acct-gone" to "10.00"), true, "2026-09-16"),
+        )
+
+        composeTestRule.setContent { BalancesScreen(viewModel = viewModel()) }
+        composeTestRule.waitForIdle()
+
+        // Only an account id remains, so there is no name or email to show.
+        composeTestRule.onNodeWithText("Former member 1").assertIsDisplayed()
+        composeTestRule.onNodeWithText("10.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("-10.00 EUR").assertIsDisplayed()
+    }
+}

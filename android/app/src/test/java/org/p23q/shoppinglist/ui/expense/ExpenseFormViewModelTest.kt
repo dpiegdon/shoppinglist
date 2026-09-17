@@ -62,7 +62,10 @@ class ExpenseFormViewModelTest {
 
     /** The roster normally arrives from the server on the list row; seed it directly here. */
     private suspend fun setMembers(vararg ids: String) {
-        val members = ids.map { ListMember(it, "$it@example.com", it.take(2).uppercase()) }
+        // Initials from the part after the dash: "acct-me" and "acct-other" both start "AC".
+        val members = ids.map {
+            ListMember(it, "$it@example.com", it.substringAfter('-').take(2).uppercase())
+        }
         val list = listsRepo.getById(listId)!!
         db.listDao().upsert(list.copy(membersJson = Json.encodeToString(members)))
     }
