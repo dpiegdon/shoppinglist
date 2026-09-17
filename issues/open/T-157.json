@@ -1,0 +1,13 @@
+{
+  "body": "Phase 2, server. Spec: docs/archive/specs/2026-09-17-expense-lists-design.md,\n\"Closing\" and \"The freeze rule\".\n\n- POST /lists/{id}/close-votes casts the caller's vote; if every CURRENT\n  member has now voted, closed_at is set in the same transaction. DELETE\n  withdraws. Both bump change_seq; both refuse a closed list (409\n  list_closed). Former members do not count; a join raises the bar.\n- Once closed: sync refuses item and list-field writes with 422 list_closed\n  (+row_id); invite mint and redeem refused; leave allowed.\n- Leave on an OPEN expense list: 409 list_open.\n- The `deleted` tombstone on an expense list: 422 cannot_delete_expense_list.\n- Freeze rule: frozen = voters + former members. Any write that would change\n  a frozen participant's paid-by or paid-for amount is refused with 422\n  participant_frozen {row_id, account_id}; new row = change from zero,\n  deletion = change to zero. Checked against the field version that would\n  WIN LWW \u2014 a stale loser must not be rejected.\n- Account deletion unchanged (always allowed); the departed id stays in\n  shares and is now frozen.\n- wire-contract.md, server README, audit events for votes and closing.\n- Tests: the vote state machine incl. join-raises-bar and former-member-\n  does-not-count; every refusal; the freeze matrix (create/edit/delete \u00d7\n  voter/former) incl. the LWW-loser case; a solo list closing on one vote\n  then leaving -> orphaned.",
+  "created_at": "2026-09-17T17:50:54+00:00",
+  "id": "T-157",
+  "labels": [
+    "expenses",
+    "server",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "expenses: server \u2014 close votes, closed state, leave rule, freeze rule, no delete",
+  "updated_at": "2026-09-17T17:50:54+00:00"
+}
