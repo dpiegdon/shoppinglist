@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-09-17T17:50:53+00:00", "kind": "dependency", "ref": "main@a9f7bb0", "text": "T-151 T-152"}
 {"actor": "claude", "at": "2026-09-17T17:53:31+00:00", "kind": "note", "ref": "main@36a622f", "text": "Cross-client agreement guard: the split and balance case tables live in ONE\nfile at the repo root, shared-test-cases/expense-arithmetic.json, and both the\nKotlin and the TypeScript tests read it (Android via a relative File path from\nthe module, the way TranslationResourcesTest reads res/; web via import).\nWhichever of T-153 / T-155 lands first creates it; the other consumes it. Do\nnot maintain two copies \u2014 that is exactly how the i18n fixture drifted (T-148)."}
 {"actor": "claude", "at": "2026-09-17T18:37:47+00:00", "kind": "claimed", "ref": "main@f958bca", "text": "claude"}
+{"actor": "claude", "at": "2026-09-17T19:20:46+00:00", "kind": "closed", "ref": "main@2ee9d9f", "text": ""}
