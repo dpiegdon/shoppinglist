@@ -1,0 +1,13 @@
+{
+  "body": "Phase 1, server half one. Spec: docs/archive/specs/2026-09-17-expense-lists-design.md.\n\n- LIST_KINDS gains \"expenses\". A list's kind may never change to or from it.\n- New LWW list field `currency`: free text, <= 32 chars, required non-empty\n  when kind is expenses, permitted but ignored otherwise. NOT the ISO check.\n- New LWW item field `expense`: {paid_by, equal_by, paid_for, equal_for, date}.\n  Validation on expense lists as a unit: both maps non-empty, every value a\n  positive amount in PRICE_AMOUNT_RE format (never zero), both maps sum to the\n  same value in cents, every key a current member (the frozen-participant\n  exception arrives with the phase-2 ticket), date YYYY-MM-DD. Null and\n  required-absent on other kinds. No stored total.\n- name_merge is skipped for expense lists; names are not unique there.\n- schema.sql + migration; wire-contract.md; server README.\n- Tests: the validation matrix, kind immutability both directions, merge\n  skipped, a solo list end to end.",
+  "created_at": "2026-09-17T17:50:52+00:00",
+  "id": "T-151",
+  "labels": [
+    "expenses",
+    "server",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "expenses: server \u2014 item field, list currency, kind rules, validation",
+  "updated_at": "2026-09-17T17:50:52+00:00"
+}
