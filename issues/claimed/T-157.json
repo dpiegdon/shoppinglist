@@ -10,7 +10,8 @@
     "server",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "expenses: server \u2014 close votes, closed state, leave rule, freeze rule, no delete",
-  "updated_at": "2026-09-17T17:50:54+00:00"
+  "updated_at": "2026-09-17T22:32:37+00:00"
 }
