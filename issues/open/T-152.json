@@ -1,0 +1,13 @@
+{
+  "body": "Phase 1, server half two. Spec: docs/archive/specs/2026-09-17-expense-lists-design.md.\n\nThe list object gains three server-maintained values OUTSIDE `fields`,\nfollowing the last_touched_by pattern (never client-written):\n  members     [{account_id, email, initials}]\n  close_votes [account_id]   \u2014 always [] until the phase-2 ticket\n  closed_at   null           \u2014 always null until the phase-2 ticket\n\nJoining (invite redeem), leaving and account deletion bump the list's\nchange_seq so the roster reaches every device through ordinary incremental\nsync. This is what gives both clients an offline roster with no cache, and\nwhat votes will ride on. Applies to every list kind \u2014 shopping lists' last-\ntouched-by badges benefit too. The members endpoint is unchanged.\n\nTests: roster in a fresh pull and in a delta after each membership change;\nclients cannot write the three values; ordering by joined_at.",
+  "created_at": "2026-09-17T17:50:52+00:00",
+  "id": "T-152",
+  "labels": [
+    "expenses",
+    "server",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "expenses: server \u2014 roster and vote state on the synced list object",
+  "updated_at": "2026-09-17T17:50:52+00:00"
+}
