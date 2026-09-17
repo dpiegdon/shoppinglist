@@ -1,0 +1,12 @@
+{
+  "body": "Minor version. From this release an open expense list cannot be left or\ndeleted; release notes must say so plainly.",
+  "created_at": "2026-09-17T17:50:55+00:00",
+  "id": "T-160",
+  "labels": [
+    "expenses",
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release: expense lists, phase 2 (closing and the rules)",
+  "updated_at": "2026-09-17T17:50:55+00:00"
+}
