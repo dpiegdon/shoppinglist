@@ -1,6 +1,10 @@
 {
   "body": "Phase 2, Android. Spec: docs/archive/specs/2026-09-17-expense-lists-design.md.\n\n- List properties: close-vote section (who has agreed, agree / withdraw,\n  online-only, disabled offline); leave disabled while open with the reason.\n- List screen banners: pending (\"2 of 4 agree to close\" + agree/withdraw) and\n  closed (\"Closed on <date>\", no add button, read-only).\n- Overview: closed marker.\n- Form: frozen participants locked (amount shown, not editable, not\n  deselectable, excluded from rebalancing); never in defaults.\n- SyncEngine: list_closed -> REVERT the local row to the server copy;\n  participant_frozen -> quarantine with a message naming who is frozen\n  (existing edit-to-clear path). Both distinct from the existing 422 path.\n- Strings \u00d79. Tests for each banner state, the locked form, and both\n  rejection reactions.",
   "created_at": "2026-09-17T17:50:54+00:00",
+  "deps": [
+    "T-154",
+    "T-157"
+  ],
   "id": "T-158",
   "labels": [
     "expenses",
