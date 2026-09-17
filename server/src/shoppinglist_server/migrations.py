@@ -83,6 +83,19 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "WHERE deleted = 0 AND expense IS NULL",
         ],
     ),  # T-151: expense lists — list currency, item expense, names not unique on expenses
+    (
+        7,
+        [
+            "ALTER TABLE lists ADD COLUMN closed_at INTEGER",
+            "CREATE TABLE close_votes ("
+            "  list_id TEXT NOT NULL REFERENCES lists (id),"
+            "  account_id TEXT NOT NULL REFERENCES accounts (id),"
+            "  voted_at INTEGER NOT NULL,"
+            "  PRIMARY KEY (list_id, account_id)"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_close_votes_list ON close_votes (list_id)",
+        ],
+    ),  # T-157: closing an expenses list by unanimous vote
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

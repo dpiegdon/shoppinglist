@@ -170,8 +170,12 @@ def test_update_settings_invalid_currency_raises_422(db_conn, bad_currency):
 
 
 def test_default_initials_derived_from_email_local_part():
-    assert accounts._default_initials("alice@example.com") == "AL"
-    assert accounts._default_initials("a@example.com") == "A"
+    # Lives in auth since T-157, so the sync engine can resolve a roster's initials without
+    # importing accounts; accounts re-exports resolve_initials for its own callers.
+    assert auth._default_initials("alice@example.com") == "AL"
+    assert auth._default_initials("a@example.com") == "A"
+    assert accounts.resolve_initials("alice@example.com", None) == "AL"
+    assert accounts.resolve_initials("alice@example.com", "ZZ") == "ZZ"
 
 
 def test_update_settings_with_initials_override(db_conn):

@@ -65,11 +65,26 @@ CREATE TABLE IF NOT EXISTS lists (
     currency_ts INTEGER NOT NULL DEFAULT 0,
     currency_by TEXT NOT NULL DEFAULT '',
 
+    -- When this expenses list was closed by unanimous vote (T-157), or NULL while open. A closed
+    -- list is a read-only archive: no writes, no new members, but it can finally be left.
+    -- Server-maintained, never a client-written LWW field.
+    closed_at INTEGER,
+
     deleted INTEGER NOT NULL DEFAULT 0,
     deleted_ts INTEGER NOT NULL DEFAULT 0,
     deleted_by TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_lists_change_seq ON lists (change_seq);
+
+-- Who has agreed to close an expenses list (T-157). A row per member who has voted; the list
+-- closes once every CURRENT member has one, and votes can be withdrawn while it is open.
+CREATE TABLE IF NOT EXISTS close_votes (
+    list_id TEXT NOT NULL REFERENCES lists (id),
+    account_id TEXT NOT NULL REFERENCES accounts (id),
+    voted_at INTEGER NOT NULL,
+    PRIMARY KEY (list_id, account_id)
+);
+CREATE INDEX IF NOT EXISTS idx_close_votes_list ON close_votes (list_id);
 
 CREATE TABLE IF NOT EXISTS memberships (
     account_id TEXT NOT NULL REFERENCES accounts (id),

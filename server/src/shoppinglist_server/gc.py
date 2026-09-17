@@ -57,6 +57,8 @@ def run(conn, now_ms: int) -> dict:
         items_purged += item_count
         conn.execute("DELETE FROM items WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM memberships WHERE list_id = ?", (list_id,))
+        # close_votes references lists(id), so it has to go with the list, not after it (T-157).
+        conn.execute("DELETE FROM close_votes WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM invites WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM lists WHERE id = ?", (list_id,))
         lists_purged += 1

@@ -8,7 +8,7 @@ import sqlite3
 
 import pytest
 
-from shoppinglist_server import auth, invites
+from shoppinglist_server import accounts, auth
 from shoppinglist_server import migrations as migrations_module
 from shoppinglist_server import sync
 from shoppinglist_server.errors import ApiError
@@ -275,19 +275,24 @@ def test_every_participant_must_be_a_member(db_conn, trip):
 
 
 def test_an_expense_involving_someone_who_left_stays_editable(db_conn, trip):
+    """Leaving an open expenses list is refused from T-157 on, but deleting an account never is —
+    so a departed participant is still reachable, and the expense still has to be editable."""
     a, b = trip["alice"], trip["bob"]
-    _apply(db_conn, a, items=[_expense_item("e1", _expense({b: "30"}, {a: "15", b: "15"}))])
-    invites.leave(db_conn, b, "trip")
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    original = _expense({b: "30"}, {a: "10", b: "10", carol: "10"})
+    _apply(db_conn, a, items=[_expense_item("e1", original)])
+    accounts.delete_account(db_conn, b, PW)
 
-    # Correcting the payer's share while bob is gone: allowed, bob was already on it.
-    edit = _expense({b: "32"}, {a: "16", b: "16"})
+    # Correcting how the living members split it, leaving the departed member's own share alone.
+    edit = _expense({b: "30"}, {a: "15", b: "10", carol: "5"})
     _apply(db_conn, a, items=[_expense_item("e1", edit, ts=200)])
     assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == edit
 
 
 def test_someone_who_left_cannot_be_added_to_a_different_expense(db_conn, trip):
     a, b = trip["alice"], trip["bob"]
-    invites.leave(db_conn, b, "trip")
+    accounts.delete_account(db_conn, b, PW)
 
     new = _expense({a: "10"}, {a: "5", b: "5"})
     _rejects(db_conn, a, "invalid_expense", items=[_expense_item("e2", new)])
@@ -302,7 +307,7 @@ def test_a_stale_write_naming_a_departed_member_is_not_rejected(db_conn, trip):
     _apply(db_conn, a, items=[_expense_item("e1", _expense({a: "10"}, {a: "10"}), ts=100)])
     newer = _expense({a: "20"}, {a: "20"})
     _apply(db_conn, a, items=[_expense_item("e1", newer, ts=300)])
-    invites.leave(db_conn, carol, "trip")
+    accounts.delete_account(db_conn, carol, PW)
 
     # Written offline at ts=200, naming carol, pushed after she left and after the ts=300 edit.
     stale = _expense({a: "10"}, {a: "5", carol: "5"})

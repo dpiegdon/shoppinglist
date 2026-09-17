@@ -74,6 +74,7 @@ def mint(
 ) -> dict:
     if not is_member(conn, created_by, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
+    _refuse_if_closed(conn, list_id)
     # The token payload is colon-delimited (see _encode_token/decode_token), so NO component may
     # contain a colon. invited_email was always checked; list_id was not — and list ids are
     # client-minted arbitrary strings (sync._parse_row accepts any non-empty string up to 128
@@ -146,6 +147,8 @@ def redeem(conn, key: bytes, account, token: str | None) -> str:
         raise ApiError(409, "invite_revoked", "This invite has been revoked.")
     if row["used_at"] is not None:
         raise ApiError(409, "invite_used", "This invite has already been used.")
+    # A link minted before the list closed must stop working, or closing would not be final.
+    _refuse_if_closed(conn, list_id)
 
     conn.execute(
         "INSERT OR IGNORE INTO memberships (account_id, list_id, joined_at) VALUES (?, ?, ?)",
@@ -173,6 +176,14 @@ def _clear_and_tombstone(conn, list_id: str) -> None:
         "UPDATE lists SET deleted = 1, deleted_ts = ?, deleted_by = ?, change_seq = ? WHERE id = ?",
         (now, SERVER_ORPHAN, db_module.next_change_seq(conn), list_id),
     )
+
+
+def _refuse_if_closed(conn, list_id: str) -> None:
+    """A closed list takes no new members (T-157) — it is an archive, not a place to be added to."""
+    from . import closing  # deferred: see the note in leave()
+
+    if closing.is_closed(conn, list_id):
+        raise ApiError(409, "list_closed", "This list is closed.")
 
 
 def touch_list(conn, list_id: str) -> None:
@@ -235,6 +246,19 @@ def leave(conn, account_id: str, list_id: str) -> None:
     if not is_member(conn, account_id, list_id):
         raise ApiError(403, "not_a_member", "You are not a member of this list.")
 
+    # Deferred import: closing reads the sync engine, which reaches this module through accounts.
+    from . import closing
+
+    row = conn.execute("SELECT kind, closed_at FROM lists WHERE id = ?", (list_id,)).fetchone()
+    if row is not None and row["kind"] == closing.EXPENSES_KIND and row["closed_at"] is None:
+        # Walking away from an unsettled shared ledger is exactly what closing exists to prevent
+        # (T-157). Once the list is closed, leaving is how it is finally let go.
+        raise ApiError(
+            409,
+            "list_open",
+            "This expenses list is still open. It has to be closed before you can leave it.",
+        )
+
     remaining = conn.execute(
         "SELECT COUNT(*) AS n FROM memberships WHERE list_id = ?", (list_id,)
     ).fetchone()["n"]
@@ -246,4 +270,11 @@ def leave(conn, account_id: str, list_id: str) -> None:
             "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",
             (account_id, list_id),
         )
+        # A close vote belongs to a member, so it leaves with them — on a closed list it is spent
+        # history, and on an open one it must not stand in for someone who is no longer here.
+        conn.execute(
+            "DELETE FROM close_votes WHERE list_id = ? AND account_id = ?", (list_id, account_id)
+        )
         touch_list(conn, list_id)  # the leaver drops out of every remaining roster (T-152)
+        # Their departure can be what completes a vote: everyone still here had already agreed.
+        closing.close_if_unanimous_after_membership_change(conn, list_id)

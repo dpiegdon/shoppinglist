@@ -452,6 +452,31 @@ call site passes them. That is deliberate: logs are usually retained longer and
 guarded less than the database, and everything this server stores is personal
 data. Resolve an id to a person via `GET /admin/users` when you actually need to.
 
+## Expenses lists
+
+A list whose `kind` is `expenses` holds shared costs rather than things to buy:
+each item carries who paid what and who owes what, and the clients render
+balances from it. Three rules are enforced here rather than in the clients,
+because they are what the feature means:
+
+- **It cannot be converted.** A list is created as an expenses list or never
+  becomes one, in either direction — the item shapes are incompatible.
+- **It is closed by unanimous vote** (`POST /lists/{id}/close-votes`). Once
+  every current member has agreed, the list becomes a read-only archive: no
+  writes, no new members, and pending invite links stop redeeming. Closing is
+  final in this version.
+- **It cannot be left while open, or deleted at all.** Leaving becomes possible
+  once the list is closed, and the last member out orphans it as usual. Deleting
+  an *account* is never refused, whatever it is a member of; the departed id
+  stays in the expenses it was part of.
+
+While the list is open, anyone who has voted to close — or who has left — has
+their amounts frozen: no write may change what they paid or owe. That is what
+makes agreeing to close mean something.
+
+The wire shapes, error codes and the exact freeze rule are in
+[`../docs/wire-contract.md`](../docs/wire-contract.md).
+
 ## Out of scope (v1)
 
 - No email verification and no outbound email of any kind. Invites are

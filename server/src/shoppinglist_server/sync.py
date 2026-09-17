@@ -17,7 +17,7 @@ import re
 import sqlite3
 import time
 
-from . import accounts
+from . import auth
 from . import db as db_module
 from .errors import ApiError
 
@@ -235,7 +235,7 @@ def _item_to_wire(row) -> dict:
     }
 
 
-def _list_to_wire(row, members) -> dict:
+def _list_to_wire(row, members, close_votes) -> dict:
     fields = {
         key: {"value": _list_load_field(key, row), "updated_at": row[ts], "updated_by": row[by]}
         for key, ts, by in LIST_FIELD_META
@@ -248,9 +248,8 @@ def _list_to_wire(row, members) -> dict:
         # (T-152). The roster rides here so both clients have it offline with no cache of their
         # own; every membership, email or initials change bumps the list's change_seq to carry it.
         "members": members,
-        # Close votes arrive with T-157; until then no list can be voted on or closed.
-        "close_votes": [],
-        "closed_at": None,
+        "close_votes": close_votes,
+        "closed_at": row["closed_at"],
     }
 
 
@@ -279,7 +278,7 @@ def _rosters(conn, list_ids) -> dict:
             {
                 "account_id": row["account_id"],
                 "email": row["email"],
-                "initials": accounts.resolve_initials(row["email"], row["initials"]),
+                "initials": auth.resolve_initials(row["email"], row["initials"]),
             }
         )
     return rosters
@@ -388,7 +387,7 @@ def _validate_item_field(key, value):
         _validate_deleted(value)
 
 
-def _amount_cents(amount: str) -> int:
+def amount_cents(amount: str) -> int:
     """Cents of an amount already matched by PRICE_AMOUNT_RE: "12" -> 1200, "12.5" -> 1250."""
     whole, _, fraction = amount.partition(".")
     return int(whole) * 100 + int(fraction.ljust(2, "0") or "0")
@@ -418,7 +417,7 @@ def _validate_share_map(key, shares) -> int:
             raise ApiError(
                 422, "invalid_expense", f"expense {key} amounts must be decimal strings."
             )
-        cents = _amount_cents(amount)
+        cents = amount_cents(amount)
         # Strictly positive: a participant with no share is absent from the map, never zero.
         if cents <= 0:
             raise ApiError(422, "invalid_expense", f"expense {key} amounts must be positive.")
@@ -569,6 +568,42 @@ def _parse_row(obj, keys, tsby, validate, device_id):
 
 def _is_nonblank(value) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _wins(incoming, existing, ts_col, by_col) -> bool:
+    """Whether a pushed field would beat what is stored — the same comparison _lww_update_columns
+    makes, asked ahead of time so a rule can be applied to the value that will actually survive."""
+    if incoming is None:
+        return False
+    if existing is None:
+        return True
+    _, ts, by = incoming
+    return (ts, by) > (existing[ts_col], existing[by_col])
+
+
+def _expense_before_and_after(existing, fields):
+    """The item's expense as it stands and as it will stand, with deletion folded in.
+
+    A tombstoned expense counts for nothing, so deleting one is a change to None and restoring it
+    a change from None. Both have to be visible to the freeze rule or they would be ways round it.
+    """
+    stored = None
+    was_deleted = False
+    if existing is not None:
+        stored = json.loads(existing["expense"]) if existing["expense"] else None
+        was_deleted = bool(existing["deleted"])
+
+    after = (
+        fields["expense"][0]
+        if _wins(fields.get("expense"), existing, "expense_ts", "expense_by")
+        else stored
+    )
+    deleted_after = (
+        bool(fields["deleted"][0])
+        if _wins(fields.get("deleted"), existing, "deleted_ts", "deleted_by")
+        else was_deleted
+    )
+    return (None if was_deleted else stored), (None if deleted_after else after)
 
 
 def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fields):
@@ -859,6 +894,28 @@ def _apply_list(conn, account_id, device_id, obj):
                 "A list cannot be converted to or from the expenses kind.",
                 details={"row_id": list_id, "field": "kind"},
             )
+    if existing["kind"] == EXPENSES_KIND:
+        # Deferred import: closing reads this module's constants, so importing it at module level
+        # would close a cycle. By the time any write happens, both modules are fully loaded.
+        from . import closing
+
+        if closing.is_closed(conn, list_id):
+            raise ApiError(
+                422,
+                "list_closed",
+                "This list is closed; nothing on it can be changed.",
+                details={"row_id": list_id},
+            )
+        # No delete for an expenses list, ever (T-157): any member tombstoning a shared ledger is
+        # a larger hole than leaving it. A closed list is left one member at a time instead, and
+        # the last one out orphans it.
+        if "deleted" in fields and fields["deleted"][0]:
+            raise ApiError(
+                422,
+                "cannot_delete_expense_list",
+                "An expenses list cannot be deleted. Close it and leave it instead.",
+                details={"row_id": list_id, "field": "deleted"},
+            )
     if (
         existing["kind"] == EXPENSES_KIND
         and "currency" in fields
@@ -923,6 +980,18 @@ def _apply_item(conn, account_id, device_id, obj):
         )
     list_kind = conn.execute("SELECT kind FROM lists WHERE id = ?", (list_id,)).fetchone()["kind"]
     _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fields)
+    if list_kind == EXPENSES_KIND:
+        from . import closing  # deferred: see the note in _apply_list
+
+        if closing.is_closed(conn, list_id):
+            raise ApiError(
+                422,
+                "list_closed",
+                "This list is closed; nothing on it can be changed.",
+                details={"row_id": item_id},
+            )
+        before, after = _expense_before_and_after(existing, fields)
+        closing.check_write_against_freeze(conn, list_id, item_id, before, after)
 
     if existing is None:
         if "name" not in fields:
@@ -1079,7 +1148,13 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
             items_out[row["id"]] = _item_to_wire(row)
 
     rosters = _rosters(conn, list_rows)
-    lists_out = [_list_to_wire(row, rosters[list_id]) for list_id, row in list_rows.items()]
+    from . import closing  # deferred: see the note in _apply_list
+
+    vote_state = closing.votes_for_lists(conn, list_rows)
+    lists_out = [
+        _list_to_wire(row, rosters[list_id], vote_state[list_id])
+        for list_id, row in list_rows.items()
+    ]
     new_cursor = conn.execute("SELECT change_seq FROM meta WHERE id = 1").fetchone()["change_seq"]
     return {
         "cursor": new_cursor,

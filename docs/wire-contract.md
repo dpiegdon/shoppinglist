@@ -163,8 +163,9 @@ refused too.
   `change_seq`, so a roster change reaches every device through the ordinary
   incremental sync even though no field value moved. This is what gives both
   clients an offline roster without a cache of their own.
-- `close_votes` and `closed_at` belong to closing an expenses list. Until that
-  ships they are always `[]` and `null`.
+- `close_votes` is the account ids that have agreed to close this expenses list,
+  and `closed_at` is when it closed, or `null` while it is open. See "Closing an
+  expenses list" below.
 
 ## Endpoints
 
@@ -307,6 +308,57 @@ points at the site-root `GET /shoppinglist.apk` below.
 source checkout with no installed package version to report. That is also what
 every server released before this endpoint existed answers, so a client can
 treat "no update information" as one case rather than two.
+
+### Closing an expenses list
+
+| Endpoint | Request body | Success response |
+|---|---|---|
+| `POST /lists/{id}/close-votes` | — | `200 {"close_votes", "closed_at"}` |
+| `DELETE /lists/{id}/close-votes` | — | `200 {"close_votes", "closed_at"}` |
+
+Any member may agree to close at any time, and withdraw while the list is still
+open. The list closes the moment the **last current member's** vote lands, in the
+same transaction, so a client never sees "everyone agreed but it is still open".
+Someone who joins while votes are pending raises the bar; someone who leaves
+takes their vote with them, and their departure can itself be what completes the
+vote. Both endpoints answer `403 not_a_member` for a list the caller is not on,
+whether or not it exists, and `409 not_an_expenses_list` for any other kind.
+
+A **closed** list is a read-only archive:
+
+| Attempt | Answer |
+|---|---|
+| Any item or list-field write via `/sync` | `422 list_closed` with `row_id` |
+| Another close vote, or withdrawing one | `409 list_closed` |
+| Minting an invite, or redeeming one minted earlier | `409 list_closed` |
+| Leaving | allowed — this is the only way a list is finally let go |
+
+Leaving an **open** expenses list is `409 list_open`: walking away from an
+unsettled shared ledger is what closing exists to prevent. Deleting an account is
+never refused, whatever lists it is on; the departed id stays in the expenses it
+was part of and is rendered as a former member.
+
+An expenses list can never be deleted. The `deleted` tombstone on one is
+`422 cannot_delete_expense_list`; when its last member leaves it is orphaned and
+tombstoned server-side, exactly as any other list is.
+
+### The freeze
+
+While an expenses list is open, a **frozen** participant's numbers may not move.
+Frozen means: has voted to close, or is no longer a member.
+
+> Any write that would change a frozen participant's total paid or total owed on
+> an expense is `422 participant_frozen`, carrying `row_id`, `field` and the
+> `account_id` in question.
+
+A new row counts as a change from zero and a deletion as a change to zero, so
+neither is a way around it. Everything else about such an expense stays editable
+— its title, its note, and the other participants' shares — because the rule is
+about money, not about the row.
+
+The check is applied only to the value that would actually win last-write-wins.
+A stale offline write that loses is discarded without error, so a device that was
+offline while someone voted does not end up quarantining an innocent edit.
 
 ### Site-root routes (outside the API prefix)
 

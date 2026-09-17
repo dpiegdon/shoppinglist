@@ -13,15 +13,9 @@ RESET_PASSWORD_LENGTH = 16
 INITIALS_MAX_LENGTH = 3
 
 
-def _default_initials(email: str) -> str:
-    """Leading 1-2 characters of the email's local-part, uppercased (T-64)."""
-    local_part = email.split("@", 1)[0]
-    return local_part[:2].upper()
-
-
-def resolve_initials(email: str, initials: str | None) -> str:
-    """The account's chosen initials, or a derived default when unset (T-64)."""
-    return initials or _default_initials(email)
+# Lives in auth (T-157): the sync engine needs it for the roster it serves, and importing accounts
+# from there would close a cycle once accounts reaches back into the closing rules.
+resolve_initials = auth.resolve_initials
 
 
 def _require_password(conn: sqlite3.Connection, account_id: str, password: str | None) -> None:
@@ -205,10 +199,18 @@ def _delete_account_row(conn: sqlite3.Connection, account_id: str) -> None:
             "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",
             (account_id, list_id),
         )
+        # close_votes references accounts(id), so the vote cannot outlive the account — and a
+        # vote left behind would stand in for a member who no longer exists (T-157).
+        conn.execute(
+            "DELETE FROM close_votes WHERE account_id = ? AND list_id = ?", (account_id, list_id)
+        )
         # A tombstoned list has already moved; a surviving one has to, so the remaining members
         # stop seeing the departed account in the roster (T-152).
         if not invites.orphan_check(conn, list_id):
             invites.touch_list(conn, list_id)
+            from . import closing  # deferred: closing -> sync -> auth, and accounts sits between
+
+            closing.close_if_unanimous_after_membership_change(conn, list_id)
 
     conn.execute("DELETE FROM auth_tokens WHERE account_id = ?", (account_id,))
     conn.execute("DELETE FROM account_settings WHERE account_id = ?", (account_id,))

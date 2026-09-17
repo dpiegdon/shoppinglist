@@ -2,7 +2,7 @@ import json
 
 from flask import g, jsonify
 
-from .. import accounts, get_db, invites
+from .. import accounts, audit, closing, get_db, invites
 from ..auth import authed
 from ..errors import ApiError
 
@@ -72,6 +72,47 @@ def register_routes(bp):
             )
         ]
         return jsonify({"members": members, "invites": pending_invites}), 200
+
+    def _vote_state(conn, list_id):
+        return {
+            "close_votes": closing.votes(conn, list_id),
+            "closed_at": closing.closed_at(conn, list_id),
+        }
+
+    def _require_member(conn, list_id):
+        # Uniform 403 whether or not the list exists, like GET /members above: a non-member must
+        # not be able to probe which list ids are in use.
+        if not invites.is_member(conn, g.account.id, list_id):
+            raise ApiError(403, "not_a_member", "You are not a member of this list.")
+
+    @bp.route("/lists/<list_id>/close-votes", methods=["POST"])
+    @authed
+    def cast_close_vote_view(list_id):
+        """Agree to close this expenses list (T-157).
+
+        The list closes in this same transaction if this was the last current member's vote, so a
+        client never sees a state where everyone has agreed but the list is still open.
+        """
+        conn = get_db()
+        _require_member(conn, list_id)
+        closing.cast_vote(conn, g.account.id, list_id)
+        state = _vote_state(conn, list_id)
+        conn.commit()
+        audit.record("list.close_vote_cast", account_id=g.account.id, list_id=list_id)
+        if state["closed_at"] is not None:
+            audit.record("list.closed", account_id=g.account.id, list_id=list_id)
+        return jsonify(state), 200
+
+    @bp.route("/lists/<list_id>/close-votes", methods=["DELETE"])
+    @authed
+    def withdraw_close_vote_view(list_id):
+        conn = get_db()
+        _require_member(conn, list_id)
+        closing.withdraw_vote(conn, g.account.id, list_id)
+        state = _vote_state(conn, list_id)
+        conn.commit()
+        audit.record("list.close_vote_withdrawn", account_id=g.account.id, list_id=list_id)
+        return jsonify(state), 200
 
     @bp.route("/lists/<list_id>/leave", methods=["POST"])
     @authed

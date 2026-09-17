@@ -93,6 +93,17 @@ def now_ms() -> int:
     return time.time_ns() // 1_000_000
 
 
+def _default_initials(email: str) -> str:
+    """Leading 1-2 characters of the email's local-part, uppercased (T-64)."""
+    local_part = email.split("@", 1)[0]
+    return local_part[:2].upper()
+
+
+def resolve_initials(email: str, initials: str | None) -> str:
+    """The account's chosen initials, or a derived default when unset (T-64)."""
+    return initials or _default_initials(email)
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
