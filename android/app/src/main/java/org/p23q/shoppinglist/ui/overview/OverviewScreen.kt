@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
@@ -100,6 +101,29 @@ fun OverviewScreen(
                                         modifier = Modifier.padding(end = 8.dp),
                                     )
                                     Text(text = list.name.value, modifier = Modifier.weight(1f))
+                                    val summary = state.expenseSummaries[list.id]
+                                    if (summary != null) {
+                                        // What has been spent, and where this account stands —
+                                        // an expenses list has no open items to count (T-154).
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "${ExpenseMath.fromCents(summary.totalCents)} ${summary.currency}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            summary.myBalanceCents?.let { balance ->
+                                                Text(
+                                                    text = "${ExpenseMath.fromCents(balance)} ${summary.currency}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (balance < 0) {
+                                                        MaterialTheme.colorScheme.error
+                                                    } else {
+                                                        MaterialTheme.colorScheme.primary
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
                                     val openCount = state.openCounts[list.id] ?: 0
                                     if (openCount > 0) {
                                         // At-a-glance "is a trip pending" count of open items (T-42).
@@ -134,7 +158,7 @@ fun OverviewScreen(
                     // Kind is chosen up front (T-110) but isn't permanent — list properties can
                     // convert it later, and converting never touches item data.
                     Text(stringResource(R.string.overview_type), style = MaterialTheme.typography.labelMedium)
-                    listOf(ListKind.SHOPPING, ListKind.CHECKLIST).forEach { kind ->
+                    listOf(ListKind.SHOPPING, ListKind.CHECKLIST, ListKind.EXPENSES).forEach { kind ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -153,14 +177,30 @@ fun OverviewScreen(
                         }
                     }
                     Text(
-                        if (state.newListKind == ListKind.CHECKLIST) {
-                            stringResource(R.string.overview_kind_checklist)
-                        } else {
-                            stringResource(R.string.overview_kind_shopping)
+                        when (state.newListKind) {
+                            ListKind.CHECKLIST -> stringResource(R.string.overview_kind_checklist)
+                            ListKind.EXPENSES -> stringResource(R.string.overview_kind_expenses)
+                            else -> stringResource(R.string.overview_kind_shopping)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    // Free text, not a picker: the server takes any label, so a group that settles
+                    // in pizza slices can say so. Fixed once the list exists.
+                    if (ListKind.isExpenses(state.newListKind)) {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = state.newListCurrency,
+                            onValueChange = viewModel::onNewListCurrencyChange,
+                            label = { Text(stringResource(R.string.expense_currency)) },
+                            singleLine = true,
+                        )
+                        Text(
+                            stringResource(R.string.overview_currency_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             },
             confirmButton = {

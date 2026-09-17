@@ -32,6 +32,8 @@ data class ListPropsUiState(
     val name: String = "",
     /** "shopping" | "checklist" (T-110). */
     val kind: String = ListKind.DEFAULT,
+    /** Free-text label, shown read-only: an expenses list keeps its currency for life (T-151). */
+    val currency: String = "",
     val categoryOrder: List<String> = emptyList(),
     val notes: String = "",
     val members: List<MemberDto> = emptyList(),
@@ -76,6 +78,7 @@ class ListPropsViewModel @Inject constructor(
                 it.copy(
                     name = list?.name?.value ?: "",
                     kind = ListKind.of(list?.kind?.value),
+                    currency = list?.currency?.value.orEmpty(),
                     categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )

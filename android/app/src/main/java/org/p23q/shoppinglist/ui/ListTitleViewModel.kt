@@ -27,4 +27,13 @@ class ListTitleViewModel @Inject constructor(
     val name: StateFlow<String> = listsRepo.observeById(listId)
         .map { it?.name?.value ?: "" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    /**
+     * The list's kind, for the nav host to pick the right screen (T-154). Null until the row is
+     * known: an expenses list rendered as a shopping list for one frame would flash the wrong
+     * screen on every visit, so the caller waits rather than guessing.
+     */
+    val kind: StateFlow<String?> = listsRepo.observeById(listId)
+        .map { it?.kind?.value }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }

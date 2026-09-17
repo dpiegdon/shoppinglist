@@ -1,0 +1,296 @@
+package org.p23q.shoppinglist.ui.expense
+
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.data.DeviceIdProvider
+import org.p23q.shoppinglist.data.Expense
+import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.ListMember
+import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.repo.ItemsRepo
+import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.robolectric.RobolectricTestRunner
+
+/**
+ * The expense form (T-154). The arithmetic itself is covered by ExpenseMathTest against the
+ * cross-client case table; this covers what the form does with it — defaults, what a typed amount
+ * protects, and what reaches the database on save.
+ */
+@RunWith(RobolectricTestRunner::class)
+class ExpenseFormViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private lateinit var db: AppDb
+    private lateinit var itemsRepo: ItemsRepo
+    private lateinit var listsRepo: ListsRepo
+    private lateinit var sessionState: FakeSessionState
+    private lateinit var listId: String
+
+    private val me = "acct-me"
+    private val other = "acct-other"
+
+    @Before
+    fun setUp() = runTest(mainDispatcherRule.dispatcher) {
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        sessionState = FakeSessionState().apply { accountId = me }
+        listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
+        setMembers(me, other)
+    }
+
+    /** The roster normally arrives from the server on the list row; seed it directly here. */
+    private suspend fun setMembers(vararg ids: String) {
+        val members = ids.map { ListMember(it, "$it@example.com", it.take(2).uppercase()) }
+        val list = listsRepo.getById(listId)!!
+        db.listDao().upsert(list.copy(membersJson = Json.encodeToString(members)))
+    }
+
+    private fun newViewModel() = ExpenseFormViewModel(itemsRepo, listsRepo, sessionState)
+
+    private suspend fun storedExpense(): Expense =
+        itemsRepo.decodeExpense(itemsRepo.activeItemsForListOnce(listId).first().expense.value)!!
+
+    // ---- adding ---------------------------------------------------------------
+
+    @Test
+    fun `a new expense defaults to paid by me, for everyone`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf(true, false), state.paidBy.map { it.selected })
+        assertEquals(listOf(true, true), state.paidFor.map { it.selected })
+        assertEquals("EUR", state.currency)
+        // Today, not empty: a date the user has to fill in every time is a date they will get wrong.
+        assertTrue(state.date.matches(Regex("\\d{4}-\\d{2}-\\d{2}")))
+    }
+
+    @Test
+    fun `an equal split is written with the flags that let it redistribute later`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Dinner")
+            viewModel.onTotalChange("64.01")
+
+            viewModel.save()?.join()
+
+            val expense = storedExpense()
+            assertEquals(mapOf(me to "64.01"), expense.paidBy)
+            // The odd cent goes to the first participant, and both maps still sum to the total.
+            assertEquals(mapOf(me to "32.01", other to "32.00"), expense.paidFor)
+            assertTrue(expense.equalBy)
+            assertTrue(expense.equalFor)
+        }
+
+    @Test
+    fun `a typed share stays put while the rest absorb a changed total`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Lobster")
+            viewModel.onTotalChange("60.00")
+            viewModel.onShareChange(Side.PAID_FOR, me, "30.00")
+
+            viewModel.onTotalChange("64.00")
+
+            val forRows = viewModel.uiState.value.paidFor.associateBy { it.accountId }
+            assertEquals("30.00", forRows.getValue(me).text)
+            assertEquals(3400L, forRows.getValue(other).derivedCents)
+
+            viewModel.save()?.join()
+            val expense = storedExpense()
+            assertEquals(mapOf(me to "30.00", other to "34.00"), expense.paidFor)
+            // No longer an equal split, so reopening it must not redistribute.
+            assertFalse(expense.equalFor)
+        }
+
+    @Test
+    fun `typed amounts that miss the total block the save and offer to become it`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Groceries")
+            viewModel.onTotalChange("60.00")
+            viewModel.onShareChange(Side.PAID_FOR, me, "20.00")
+            viewModel.onShareChange(Side.PAID_FOR, other, "20.00")
+
+            assertEquals(ExpenseMath.DistributeError.FIXED_SUM_MISMATCH, viewModel.uiState.value.paidForError)
+            assertFalse(viewModel.uiState.value.canSave)
+            assertNull(viewModel.save())
+
+            viewModel.useSumAsTotal(Side.PAID_FOR)
+            assertEquals("40.00", viewModel.uiState.value.totalText)
+            assertNull(viewModel.uiState.value.paidForError)
+            assertTrue(viewModel.uiState.value.canSave)
+        }
+
+    @Test
+    fun `typed amounts above the total block the save`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+        viewModel.onNameChange("Too much")
+        viewModel.onTotalChange("10.00")
+        viewModel.onShareChange(Side.PAID_FOR, me, "99.00")
+
+        assertEquals(ExpenseMath.DistributeError.FIXED_EXCEEDS_TOTAL, viewModel.uiState.value.paidForError)
+        assertFalse(viewModel.uiState.value.canSave)
+    }
+
+    @Test
+    fun `a blank name blocks the save and is reported`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+        viewModel.onTotalChange("10.00")
+
+        assertNull(viewModel.save())
+        assertTrue(viewModel.uiState.value.nameError)
+    }
+
+    @Test
+    fun `deselecting someone drops their typed amount rather than keeping it stale`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Taxi")
+            viewModel.onTotalChange("30.00")
+            viewModel.onShareChange(Side.PAID_FOR, other, "10.00")
+
+            viewModel.toggleParticipant(Side.PAID_FOR, other)
+            viewModel.toggleParticipant(Side.PAID_FOR, other)
+
+            val row = viewModel.uiState.value.paidFor.first { it.accountId == other }
+            assertEquals("", row.text)
+            assertEquals(1500L, row.derivedCents)
+        }
+
+    // ---- a list of one --------------------------------------------------------
+
+    @Test
+    fun `a solo list has nothing to distribute and books the whole amount`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            setMembers(me)
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Coffee")
+            viewModel.onTotalChange("4.20")
+
+            assertTrue(viewModel.uiState.value.soloList)
+            viewModel.save()?.join()
+
+            val expense = storedExpense()
+            assertEquals(mapOf(me to "4.20"), expense.paidBy)
+            assertEquals(mapOf(me to "4.20"), expense.paidFor)
+        }
+
+    // ---- editing --------------------------------------------------------------
+
+    @Test
+    fun `reopening an equal split redistributes on a corrected total`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val itemId = itemsRepo.createExpense(
+                listId,
+                "Dinner",
+                Expense(mapOf(me to "64.00"), true, mapOf(me to "32.00", other to "32.00"), true, "2026-09-17"),
+            )
+            val viewModel = newViewModel()
+            viewModel.startEdit(itemId).join()
+            assertEquals("64.00", viewModel.uiState.value.totalText)
+
+            viewModel.onTotalChange("70.00")
+            viewModel.save()?.join()
+
+            val expense = storedExpense()
+            assertEquals(mapOf(me to "70.00"), expense.paidBy)
+            assertEquals(mapOf(me to "35.00", other to "35.00"), expense.paidFor)
+        }
+
+    @Test
+    fun `reopening typed amounts keeps them, and refuses a total they no longer match`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val itemId = itemsRepo.createExpense(
+                listId,
+                "Split bill",
+                Expense(mapOf(me to "40.00", other to "24.00"), false, mapOf(me to "32.00", other to "32.00"), true, "2026-09-17"),
+            )
+            val viewModel = newViewModel()
+            viewModel.startEdit(itemId).join()
+
+            assertEquals(listOf("40.00", "24.00"), viewModel.uiState.value.paidBy.map { it.text })
+            viewModel.onTotalChange("70.00")
+            assertEquals(ExpenseMath.DistributeError.FIXED_SUM_MISMATCH, viewModel.uiState.value.paidByError)
+        }
+
+    @Test
+    fun `someone who has left stays on the expense and stays editable`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val gone = "acct-gone"
+            val itemId = itemsRepo.createExpense(
+                listId,
+                "Old dinner",
+                Expense(mapOf(gone to "20.00"), true, mapOf(me to "10.00", gone to "10.00"), true, "2026-09-16"),
+            )
+            val viewModel = newViewModel()
+            viewModel.startEdit(itemId).join()
+
+            val payer = viewModel.uiState.value.paidBy.first { it.accountId == gone }
+            assertTrue(payer.selected)
+            // No email to show, so the screen labels them by number instead.
+            assertNull(payer.email)
+            assertEquals(1, payer.formerNumber)
+        }
+
+    @Test
+    fun `an untouched edit writes nothing at all`() = runTest(mainDispatcherRule.dispatcher) {
+        val expense = Expense(mapOf(me to "64.00"), true, mapOf(me to "32.00", other to "32.00"), true, "2026-09-17")
+        val itemId = itemsRepo.createExpense(listId, "Dinner", expense)
+        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.id })
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        viewModel.save()?.join()
+
+        // Change-scoped (T-88): nothing changed, so no clock is re-stamped and nothing is pushed.
+        assertFalse(itemsRepo.getById(itemId)!!.dirty)
+    }
+
+    @Test
+    fun `deleting tombstones the expense`() = runTest(mainDispatcherRule.dispatcher) {
+        val itemId = itemsRepo.createExpense(
+            listId,
+            "Mistake",
+            Expense(mapOf(me to "5.00"), true, mapOf(me to "5.00"), true, "2026-09-17"),
+        )
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        viewModel.requestDelete()
+        assertTrue(viewModel.uiState.value.isDeleteConfirmOpen)
+        viewModel.confirmDelete()?.join()
+
+        assertTrue(itemsRepo.getById(itemId)!!.deleted.value)
+        assertTrue(viewModel.uiState.value.isDeleted)
+    }
+}

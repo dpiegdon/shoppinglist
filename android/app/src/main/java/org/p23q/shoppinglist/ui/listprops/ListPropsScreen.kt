@@ -94,6 +94,7 @@ fun ListPropsScreen(
 
         // Convert between shopping list and checklist (T-110) — non-destructive, so it's a plain
         // switch rather than a guarded action.
+        val isExpenses = ListKind.isExpenses(state.kind)
         Text(stringResource(R.string.listprops_type), style = MaterialTheme.typography.titleMedium)
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -103,24 +104,36 @@ fun ListPropsScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text("${ListKind.icon(state.kind)}  ${stringResource(ListKind.label(state.kind))}")
                 Text(
-                    if (state.kind == ListKind.CHECKLIST) {
-                        stringResource(R.string.listprops_kind_checklist)
-                    } else {
-                        stringResource(R.string.listprops_kind_shopping)
+                    when (state.kind) {
+                        ListKind.CHECKLIST -> stringResource(R.string.listprops_kind_checklist)
+                        ListKind.EXPENSES -> stringResource(R.string.listprops_kind_expenses)
+                        else -> stringResource(R.string.listprops_kind_shopping)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (isExpenses) {
+                    Text(
+                        stringResource(R.string.expense_currency_value, state.currency),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
-            Switch(
-                checked = state.kind == ListKind.CHECKLIST,
-                onCheckedChange = { checked ->
-                    viewModel.setKind(if (checked) ListKind.CHECKLIST else ListKind.SHOPPING)
-                },
-            )
+            // No switch for an expenses list: the server refuses to convert one in either
+            // direction, because its items have a different shape entirely (T-151).
+            if (!isExpenses) {
+                Switch(
+                    checked = state.kind == ListKind.CHECKLIST,
+                    onCheckedChange = { checked ->
+                        viewModel.setKind(if (checked) ListKind.CHECKLIST else ListKind.SHOPPING)
+                    },
+                )
+            }
         }
         Text(
-            stringResource(R.string.listprops_kind_switch_help),
+            stringResource(
+                if (isExpenses) R.string.listprops_kind_fixed else R.string.listprops_kind_switch_help,
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -142,20 +155,22 @@ fun ListPropsScreen(
             Spacer(Modifier.height(16.dp))
         }
 
-        Text(stringResource(R.string.listprops_categories), style = MaterialTheme.typography.titleMedium)
-        Text(
-            stringResource(R.string.listprops_categories_help),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        CategoryOrderList(
-            categories = state.categoryOrder,
-            onMoveUp = viewModel::moveCategoryUp,
-            onMoveDown = viewModel::moveCategoryDown,
-            onRename = { index, newName -> viewModel.renameCategory(index, newName) },
-        )
-        TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text(stringResource(R.string.listprops_save_order)) }
-        Spacer(Modifier.height(16.dp))
+        if (!isExpenses) {
+            Text(stringResource(R.string.listprops_categories), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.listprops_categories_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            CategoryOrderList(
+                categories = state.categoryOrder,
+                onMoveUp = viewModel::moveCategoryUp,
+                onMoveDown = viewModel::moveCategoryDown,
+                onRename = { index, newName -> viewModel.renameCategory(index, newName) },
+            )
+            TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text(stringResource(R.string.listprops_save_order)) }
+            Spacer(Modifier.height(16.dp))
+        }
 
         // Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens.
         Text(stringResource(R.string.listprops_notes), style = MaterialTheme.typography.titleMedium)
@@ -213,7 +228,9 @@ fun ListPropsScreen(
         Spacer(Modifier.height(16.dp))
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
-        TextButton(onClick = viewModel::duplicateList) { Text(stringResource(R.string.action_duplicate)) }
+        if (!isExpenses) {
+            TextButton(onClick = viewModel::duplicateList) { Text(stringResource(R.string.action_duplicate)) }
+        }
         Spacer(Modifier.height(8.dp))
 
         // stringResource(R.string.listprops_leave_list) (was stringResource(R.string.action_unsubscribe), T-112): red, matching the Clear-checked danger action.

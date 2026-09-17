@@ -58,6 +58,10 @@ import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.item.AddItemDialog
 import org.p23q.shoppinglist.ui.item.EditItemDialog
+import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.ui.expense.BalancesScreen
+import org.p23q.shoppinglist.ui.expense.ExpenseDialog
+import org.p23q.shoppinglist.ui.expense.ExpenseListScreen
 import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.listprops.ListPropsScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
@@ -82,6 +86,7 @@ object Routes {
     const val LIST_PATTERN = "list/{$LIST_ID_ARG}"
     const val REGISTRY_PATTERN = "registry/{$LIST_ID_ARG}"
     const val LIST_PROPS_PATTERN = "listProps/{$LIST_ID_ARG}"
+    const val BALANCES_PATTERN = "balances/{$LIST_ID_ARG}"
 
     const val TOKEN_ARG = "token"
     const val REDEEM_PATTERN = "redeem/{$TOKEN_ARG}"
@@ -89,6 +94,7 @@ object Routes {
     fun list(listId: String) = "list/$listId"
     fun registry(listId: String) = "registry/$listId"
     fun listProps(listId: String) = "listProps/$listId"
+    fun balances(listId: String) = "balances/$listId"
     fun redeem(token: String) = "redeem/$token"
 }
 
@@ -219,18 +225,47 @@ fun ShoppingListNavHost(
                 var isAddDialogOpen by rememberSaveable { mutableStateOf(false) }
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
-                ListScreen(
-                    onAddItem = { isAddDialogOpen = true },
-                    onEditItem = { itemId -> editingItemId = itemId },
-                    onOpenRegistry = { navController.navigate(Routes.registry(listId)) },
-                    onOpenListProps = { navController.navigate(Routes.listProps(listId)) },
-                )
+                // An expenses list shares almost nothing with a shopping list on screen, so it
+                // gets its own screen rather than a branch inside ListScreen (T-154). Nothing is
+                // rendered until the kind is known: guessing would flash the wrong screen.
+                val listKindViewModel: ListTitleViewModel = hiltViewModel()
+                val kind by listKindViewModel.kind.collectAsStateWithLifecycle()
 
-                if (isAddDialogOpen) {
-                    AddItemDialog(listId = listId, onDismiss = { isAddDialogOpen = false })
-                }
-                editingItemId?.let { itemId ->
-                    EditItemDialog(itemId = itemId, onDismiss = { editingItemId = null })
+                when {
+                    kind == null -> Unit
+                    ListKind.isExpenses(kind) -> {
+                        ExpenseListScreen(
+                            onAddExpense = { isAddDialogOpen = true },
+                            onEditExpense = { itemId -> editingItemId = itemId },
+                            onOpenBalances = { navController.navigate(Routes.balances(listId)) },
+                            onOpenListProps = { navController.navigate(Routes.listProps(listId)) },
+                        )
+                        if (isAddDialogOpen || editingItemId != null) {
+                            ExpenseDialog(
+                                listId = listId,
+                                itemId = editingItemId,
+                                onDismiss = {
+                                    isAddDialogOpen = false
+                                    editingItemId = null
+                                },
+                            )
+                        }
+                    }
+                    else -> {
+                        ListScreen(
+                            onAddItem = { isAddDialogOpen = true },
+                            onEditItem = { itemId -> editingItemId = itemId },
+                            onOpenRegistry = { navController.navigate(Routes.registry(listId)) },
+                            onOpenListProps = { navController.navigate(Routes.listProps(listId)) },
+                        )
+
+                        if (isAddDialogOpen) {
+                            AddItemDialog(listId = listId, onDismiss = { isAddDialogOpen = false })
+                        }
+                        editingItemId?.let { itemId ->
+                            EditItemDialog(itemId = itemId, onDismiss = { editingItemId = null })
+                        }
+                    }
                 }
             }
         }
@@ -248,6 +283,16 @@ fun ShoppingListNavHost(
                 editingItemId?.let { itemId ->
                     EditItemDialog(itemId = itemId, onDismiss = { editingItemId = null })
                 }
+            }
+        }
+        composable(Routes.BALANCES_PATTERN) { backStackEntry ->
+            val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
+            AppDrawerScaffold(
+                navController = navController,
+                title = stringResource(R.string.expense_balances),
+                onTitleClick = { navController.backToList(listId) },
+            ) {
+                BalancesScreen()
             }
         }
         composable(Routes.LIST_PROPS_PATTERN) { backStackEntry ->
