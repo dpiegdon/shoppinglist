@@ -11,7 +11,8 @@
     "ux",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "expenses: Android \u2014 create, list screen, expense form, balances",
-  "updated_at": "2026-09-17T17:50:53+00:00"
+  "updated_at": "2026-09-17T19:21:00+00:00"
 }
