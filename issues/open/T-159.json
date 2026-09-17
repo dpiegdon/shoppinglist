@@ -1,6 +1,10 @@
 {
   "body": "Phase 2, web. The Android phase-2 ticket, on the web: vote section and\nbanners, leave disabled while open, frozen participants locked in the form,\nand the two rejection reactions in the sync hook (list_closed reverts,\nparticipant_frozen keeps the row with a message). Catalogs \u00d79 + fixture.",
   "created_at": "2026-09-17T17:50:55+00:00",
+  "deps": [
+    "T-155",
+    "T-157"
+  ],
   "id": "T-159",
   "labels": [
     "expenses",
