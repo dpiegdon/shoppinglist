@@ -1,6 +1,10 @@
 {
   "body": "Phase 1, the whole web client. Spec: docs/archive/specs/2026-09-17-expense-lists-design.md.\n\nEverything in the two Android tickets, on the web: contract types for the\nnew item field and the three list values; split and balance arithmetic as\npure modules with the SAME case table as Android (agreement to the cent);\nduplicate-name check off for expense lists; new-list kind + currency; list\nproperties adjustments; overview card; expense list page; expense form;\nbalances page; nine catalogs + the cross-client fixture.",
   "created_at": "2026-09-17T17:50:53+00:00",
+  "deps": [
+    "T-151",
+    "T-152"
+  ],
   "id": "T-155",
   "labels": [
     "expenses",
