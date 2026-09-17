@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-09-17T17:50:54+00:00", "kind": "created", "ref": "main@a9f7bb0", "text": "expenses: Android \u2014 vote controls, banners, leave rule, rejection handling"}
 {"actor": "claude", "at": "2026-09-17T17:50:54+00:00", "kind": "dependency", "ref": "main@a9f7bb0", "text": "T-157 T-154"}
+{"actor": "claude", "at": "2026-09-17T23:16:02+00:00", "kind": "claimed", "ref": "main@a30b1db", "text": "claude"}
