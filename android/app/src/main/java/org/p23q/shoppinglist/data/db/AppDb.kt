@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 5, exportSchema = false)
+@Database(entities = [ListEntity::class, ItemEntity::class], version = 6, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao
@@ -54,6 +54,23 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/** Expense lists (T-151, T-152): items.expense_* and lists.currency_* are @Embedded LWW triples;
+ *  the roster and vote columns are plain mirrors of server-maintained values, so they carry no
+ *  clock and default to "nothing known yet" for every existing row. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE items ADD COLUMN expense_value TEXT")
+        db.execSQL("ALTER TABLE items ADD COLUMN expense_updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE items ADD COLUMN expense_updatedBy TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE lists ADD COLUMN currency_value TEXT")
+        db.execSQL("ALTER TABLE lists ADD COLUMN currency_updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE lists ADD COLUMN currency_updatedBy TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE lists ADD COLUMN membersJson TEXT NOT NULL DEFAULT '[]'")
+        db.execSQL("ALTER TABLE lists ADD COLUMN closeVotesJson TEXT NOT NULL DEFAULT '[]'")
+        db.execSQL("ALTER TABLE lists ADD COLUMN closedAt INTEGER")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -61,7 +78,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDb(@ApplicationContext context: Context): AppDb =
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
 
     @Provides

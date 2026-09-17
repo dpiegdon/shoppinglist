@@ -23,6 +23,11 @@ data class ItemFieldsDto(
     val price: FieldClock<PriceDto?>,
     val note: FieldClock<String?>,
     val status: FieldClock<String>,
+    /**
+     * The expense money tuple (T-151), null except on an expenses list. DEFAULTED like `kind`
+     * below, so this app still decodes items from a server too old to send it at all.
+     */
+    val expense: FieldClock<org.p23q.shoppinglist.data.Expense?> = FieldClock(null, 0, ""),
     val deleted: FieldClock<Boolean>,
 )
 
@@ -48,6 +53,8 @@ data class ListFieldsDto(
      * sync entirely. A missing kind means "shopping", with clock 0 so any real write wins.
      */
     val kind: FieldClock<String> = FieldClock(org.p23q.shoppinglist.data.ListKind.DEFAULT, 0, ""),
+    /** Free-text currency label of an expenses list (T-151); defaulted for older servers. */
+    val currency: FieldClock<String?> = FieldClock(null, 0, ""),
     val deleted: FieldClock<Boolean>,
 )
 
@@ -56,6 +63,12 @@ data class ListDto(
     val id: String,
     @SerialName("created_at") val createdAt: Long,
     val fields: ListFieldsDto,
+    // Server-maintained, outside `fields` like an item's last_touched_by (T-152): the client never
+    // writes these, it mirrors whatever the server last reported. All defaulted, so a server
+    // predating them still decodes.
+    val members: List<org.p23q.shoppinglist.data.ListMember> = emptyList(),
+    @SerialName("close_votes") val closeVotes: List<String> = emptyList(),
+    @SerialName("closed_at") val closedAt: Long? = null,
 )
 
 @Serializable

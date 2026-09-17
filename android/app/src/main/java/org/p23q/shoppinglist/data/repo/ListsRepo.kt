@@ -5,6 +5,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.db.ListDao
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.toLww
@@ -29,7 +30,15 @@ class ListsRepo @Inject constructor(
 
     suspend fun clearDirty(ids: List<String>) = listDao.clearDirty(ids)
 
-    suspend fun createList(name: String, kind: String = ListKind.DEFAULT): String {
+    /**
+     * @param currency free-text label, required for an expenses list and meaningless elsewhere
+     *   (T-151). The kind is fixed for the list's whole life, so both are decided here or never.
+     */
+    suspend fun createList(
+        name: String,
+        kind: String = ListKind.DEFAULT,
+        currency: String? = null,
+    ): String {
         val id = UUID.randomUUID().toString()
         val by = deviceId.get()
         val now = System.currentTimeMillis()
@@ -41,6 +50,7 @@ class ListsRepo @Inject constructor(
                 categoryOrder = encodeCategoryOrder(emptyList()).toLww(by, now),
                 notes = null.toLwwOptional(by, now),
                 kind = ListKind.of(kind).toLww(by, now),
+                currency = currency?.trim()?.takeIf { it.isNotEmpty() }.toLwwOptional(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
             ),
@@ -99,6 +109,14 @@ class ListsRepo @Inject constructor(
 
     /** Real delete, not the LWW tombstone — only for leaving a shared list (A9), never synced. */
     suspend fun removeLocally(listId: String) = listDao.hardDelete(listId)
+
+    /**
+     * The list's roster as the server last reported it (T-152). Decoded from the mirrored column
+     * rather than fetched, so the expense form's defaults and the balances screen work offline. A
+     * row written before this column existed, or by a server too old to send it, decodes to empty.
+     */
+    fun decodeMembers(json: String): List<ListMember> =
+        runCatching { Json.decodeFromString<List<ListMember>>(json) }.getOrDefault(emptyList())
 
     fun decodeCategoryOrder(json: String): List<String> = Json.decodeFromString(json)
 

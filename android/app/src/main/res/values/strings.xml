@@ -73,6 +73,7 @@
 
     <string name="list_kind_shopping">Shopping list</string>
     <string name="list_kind_checklist">Checklist</string>
+    <string name="list_kind_expenses">Expenses</string>
 
     <!-- overview -->
     <string name="overview_new_list">New list</string>

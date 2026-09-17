@@ -16,11 +16,25 @@ object ListKind {
     const val SHOPPING = "shopping"
     const val CHECKLIST = "checklist"
 
+    /**
+     * A list of shared expenses (T-151). Not a display toggle like the two above: its items carry
+     * the money tuple instead of the shopping fields, their names are not unique, and the server
+     * refuses to convert a list to or from this kind for its whole life.
+     */
+    const val EXPENSES = "expenses"
+
     /** Pre-T-110 lists and older servers carry no kind — they stay shopping lists. */
     const val DEFAULT = SHOPPING
 
     /** Normalizes anything unexpected (an unknown kind from a newer client) to the default. */
-    fun of(raw: String?): String = if (raw == CHECKLIST) CHECKLIST else SHOPPING
+    fun of(raw: String?): String = when (raw) {
+        CHECKLIST -> CHECKLIST
+        EXPENSES -> EXPENSES
+        else -> SHOPPING
+    }
+
+    /** Whether this list holds shared expenses rather than things to buy (T-151). */
+    fun isExpenses(kind: String?): Boolean = of(kind) == EXPENSES
 
     /** Whether the shopping-only item fields (stores, quantity, price) are shown for this kind. */
     fun showsShoppingFields(kind: String?): Boolean = of(kind) == SHOPPING
@@ -28,9 +42,16 @@ object ListKind {
     /** A string RESOURCE, not a String: this is user-facing and must follow the chosen language
      *  (T-111), and this object has no Context to resolve one with. */
     @StringRes
-    fun label(kind: String?): Int =
-        if (of(kind) == CHECKLIST) R.string.list_kind_checklist else R.string.list_kind_shopping
+    fun label(kind: String?): Int = when (of(kind)) {
+        CHECKLIST -> R.string.list_kind_checklist
+        EXPENSES -> R.string.list_kind_expenses
+        else -> R.string.list_kind_shopping
+    }
 
-    /** Overview glyph — a cart for shopping, a check for a plain checklist. */
-    fun icon(kind: String?): String = if (of(kind) == CHECKLIST) "✓" else "🛒"
+    /** Overview glyph — a cart for shopping, a check for a checklist, a banknote for expenses. */
+    fun icon(kind: String?): String = when (of(kind)) {
+        CHECKLIST -> "✓"
+        EXPENSES -> "💶"
+        else -> "🛒"
+    }
 }

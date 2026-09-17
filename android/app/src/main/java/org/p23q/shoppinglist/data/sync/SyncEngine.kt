@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
@@ -237,6 +238,7 @@ private fun ItemEntity.toDto(): ItemDto = ItemDto(
         price = FieldClock(price.value?.let { Json.decodeFromString<PriceDto>(it) }, price.updatedAt, price.updatedBy),
         note = FieldClock(note.value, note.updatedAt, note.updatedBy),
         status = FieldClock(status.value, status.updatedAt, status.updatedBy),
+        expense = FieldClock(expense.value?.let { Json.decodeFromString<Expense>(it) }, expense.updatedAt, expense.updatedBy),
         deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
     ),
 )
@@ -249,6 +251,7 @@ private fun ListEntity.toDto(): ListDto = ListDto(
         categoryOrder = FieldClock(Json.decodeFromString(categoryOrder.value), categoryOrder.updatedAt, categoryOrder.updatedBy),
         notes = FieldClock(notes.value, notes.updatedAt, notes.updatedBy),
         kind = FieldClock(kind.value, kind.updatedAt, kind.updatedBy),
+        currency = FieldClock(currency.value, currency.updatedAt, currency.updatedBy),
         deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
     ),
 )
@@ -277,6 +280,11 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
         remote.fields.price.updatedAt,
         remote.fields.price.updatedBy,
     )
+    val expenseRemote = FieldClock(
+        remote.fields.expense.value?.let { Json.encodeToString(it) },
+        remote.fields.expense.updatedAt,
+        remote.fields.expense.updatedBy,
+    )
 
     if (local == null) {
         return ItemEntity(
@@ -290,6 +298,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
             price = priceRemote.value.toLwwOptional(priceRemote.updatedBy, priceRemote.updatedAt),
             note = remote.fields.note.value.toLwwOptional(remote.fields.note.updatedBy, remote.fields.note.updatedAt),
             status = remote.fields.status.value.toLww(remote.fields.status.updatedBy, remote.fields.status.updatedAt),
+            expense = expenseRemote.value.toLwwOptional(expenseRemote.updatedBy, expenseRemote.updatedAt),
             deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
             dirty = false,
             lastTouchedByAccountId = remote.lastTouchedBy,
@@ -303,9 +312,10 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
     val price = mergeField(local.price.value, local.price.updatedAt, local.price.updatedBy, priceRemote)
     val note = mergeField(local.note.value, local.note.updatedAt, local.note.updatedBy, remote.fields.note)
     val status = mergeField(local.status.value, local.status.updatedAt, local.status.updatedBy, remote.fields.status)
+    val expense = mergeField(local.expense.value, local.expense.updatedAt, local.expense.updatedBy, expenseRemote)
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
     val mergedDirty = name.dirty || category.dirty || stores.dirty || quantity.dirty || price.dirty ||
-        note.dirty || status.dirty || deleted.dirty
+        note.dirty || status.dirty || expense.dirty || deleted.dirty
 
     return ItemEntity(
         id = local.id,
@@ -318,6 +328,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
         price = LwwOptionalString(price.value, price.updatedAt, price.updatedBy),
         note = LwwOptionalString(note.value, note.updatedAt, note.updatedBy),
         status = LwwString(status.value, status.updatedAt, status.updatedBy),
+        expense = LwwOptionalString(expense.value, expense.updatedAt, expense.updatedBy),
         deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
         dirty = mergedDirty,
         // A quarantined row stays quarantined only while it still has unpushed local state; once a
@@ -345,8 +356,12 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
             categoryOrder = categoryOrderRemote.value.toLww(categoryOrderRemote.updatedBy, categoryOrderRemote.updatedAt),
             notes = remote.fields.notes.value.toLwwOptional(remote.fields.notes.updatedBy, remote.fields.notes.updatedAt),
             kind = remote.fields.kind.value.toLww(remote.fields.kind.updatedBy, remote.fields.kind.updatedAt),
+            currency = remote.fields.currency.value.toLwwOptional(remote.fields.currency.updatedBy, remote.fields.currency.updatedAt),
             deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
             dirty = false,
+            membersJson = Json.encodeToString(remote.members),
+            closeVotesJson = Json.encodeToString(remote.closeVotes),
+            closedAt = remote.closedAt,
         )
     }
 
@@ -354,6 +369,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
     val categoryOrder = mergeField(local.categoryOrder.value, local.categoryOrder.updatedAt, local.categoryOrder.updatedBy, categoryOrderRemote)
     val notes = mergeField(local.notes.value, local.notes.updatedAt, local.notes.updatedBy, remote.fields.notes)
     val kind = mergeField(local.kind.value, local.kind.updatedAt, local.kind.updatedBy, remote.fields.kind)
+    val currency = mergeField(local.currency.value, local.currency.updatedAt, local.currency.updatedBy, remote.fields.currency)
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
 
     return ListEntity(
@@ -363,7 +379,12 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
         categoryOrder = LwwString(categoryOrder.value, categoryOrder.updatedAt, categoryOrder.updatedBy),
         notes = LwwOptionalString(notes.value, notes.updatedAt, notes.updatedBy),
         kind = LwwString(kind.value, kind.updatedAt, kind.updatedBy),
+        currency = LwwOptionalString(currency.value, currency.updatedAt, currency.updatedBy),
         deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
-        dirty = name.dirty || categoryOrder.dirty || notes.dirty || kind.dirty || deleted.dirty,
+        dirty = name.dirty || categoryOrder.dirty || notes.dirty || kind.dirty || currency.dirty || deleted.dirty,
+        // Not LWW (T-152): always whatever the server last said, like an item's lastTouchedBy.
+        membersJson = Json.encodeToString(remote.members),
+        closeVotesJson = Json.encodeToString(remote.closeVotes),
+        closedAt = remote.closedAt,
     )
 }

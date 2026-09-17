@@ -58,6 +58,7 @@
     <string name="status_backlog_hint">Ще не в списку</string>
     <string name="list_kind_shopping">Список покупок</string>
     <string name="list_kind_checklist">Контрольний список</string>
+    <string name="list_kind_expenses">Витрати</string>
     <string name="overview_new_list">Новий список</string>
     <string name="overview_no_lists">Списків ще немає</string>
     <string name="overview_list_name">Назва списку</string>

@@ -18,6 +18,16 @@ data class ListEntity(
      * time and the hidden fields (stores/price/quantity) survive untouched.
      */
     @Embedded(prefix = "kind_") val kind: LwwString,
+    /** Free-text currency label; set exactly on an expenses list (T-151). */
+    @Embedded(prefix = "currency_") val currency: LwwOptionalString = LwwOptionalString(null, 0, ""),
     @Embedded(prefix = "deleted_") val deleted: LwwBoolean,
     val dirty: Boolean,
+    /**
+     * Server-maintained, NOT LWW clocks (T-152): the roster and the close-vote state as the server
+     * last reported them. Stored as JSON so the mirror has them offline, which is what the expense
+     * form's defaults and the balances screen need. The client never writes them.
+     */
+    val membersJson: String = "[]",
+    val closeVotesJson: String = "[]",
+    val closedAt: Long? = null,
 )

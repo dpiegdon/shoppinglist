@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DeviceIdProvider
+import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.db.ItemDao
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
@@ -81,6 +82,45 @@ class ItemsRepo @Inject constructor(
         syncTrigger.scheduleAfterEdit()
         return id
     }
+
+    /**
+     * Create an expense (T-153). Distinct from [createItem] because an item on an expenses list is
+     * invalid without its money tuple — the server refuses one — so the two are written together
+     * under a single clock rather than as a create followed by an edit.
+     */
+    suspend fun createExpense(listId: String, name: String, expense: Expense, note: String? = null): String {
+        val id = UUID.randomUUID().toString()
+        val by = deviceId.get()
+        val now = System.currentTimeMillis()
+        itemDao.upsert(
+            ItemEntity(
+                id = id,
+                listId = listId,
+                createdAt = now,
+                name = name.toLww(by, now),
+                category = null.toLwwOptional(by, now),
+                stores = encodeStores(emptyList()).toLww(by, now),
+                quantity = null.toLwwOptional(by, now),
+                price = null.toLwwOptional(by, now),
+                note = note.toLwwOptional(by, now),
+                status = Status.TODO.wireValue.toLww(by, now),
+                expense = encodeExpense(expense).toLwwOptional(by, now),
+                deleted = false.toLww(by, now),
+                dirty = true,
+            ),
+        )
+        syncTrigger.scheduleAfterEdit()
+        return id
+    }
+
+    /** Replace an expense's money tuple; the whole object is one LWW field (T-151). */
+    suspend fun setExpense(itemId: String, expense: Expense) =
+        updateField(itemId) { it.copy(expense = encodeExpense(expense).toLwwOptional(deviceId.get())) }
+
+    fun decodeExpense(json: String?): Expense? =
+        json?.let { runCatching { Json.decodeFromString<Expense>(it) }.getOrNull() }
+
+    fun encodeExpense(expense: Expense): String = Json.encodeToString(expense)
 
     suspend fun rename(itemId: String, name: String) =
         updateField(itemId) { it.copy(name = name.toLww(deviceId.get())) }

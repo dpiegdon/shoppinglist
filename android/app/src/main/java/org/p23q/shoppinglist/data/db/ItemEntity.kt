@@ -22,6 +22,12 @@ data class ItemEntity(
     @Embedded(prefix = "price_") val price: LwwOptionalString,
     @Embedded(prefix = "note_") val note: LwwOptionalString,
     @Embedded(prefix = "status_") val status: LwwString,
+    /**
+     * JSON-encoded [org.p23q.shoppinglist.data.Expense], or null (T-151) — text rather than a
+     * decoded type for the same reason as [stores] and [price]: the whole object is one LWW field.
+     * Non-null exactly on the items of an expenses list.
+     */
+    @Embedded(prefix = "expense_") val expense: LwwOptionalString = LwwOptionalString(null, 0, ""),
     @Embedded(prefix = "deleted_") val deleted: LwwBoolean,
     val dirty: Boolean,
     /**

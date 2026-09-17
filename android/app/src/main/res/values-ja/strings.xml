@@ -58,6 +58,7 @@
     <string name="status_backlog_hint">まだリストに入っていません</string>
     <string name="list_kind_shopping">買い物リスト</string>
     <string name="list_kind_checklist">チェックリスト</string>
+    <string name="list_kind_expenses">支出</string>
     <string name="overview_new_list">新しいリスト</string>
     <string name="overview_no_lists">リストがまだありません</string>
     <string name="overview_list_name">リスト名</string>

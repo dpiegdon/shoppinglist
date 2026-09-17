@@ -58,6 +58,7 @@
     <string name="status_backlog_hint">尚未加入清单</string>
     <string name="list_kind_shopping">购物清单</string>
     <string name="list_kind_checklist">待办清单</string>
+    <string name="list_kind_expenses">支出</string>
     <string name="overview_new_list">新建清单</string>
     <string name="overview_no_lists">还没有清单</string>
     <string name="overview_list_name">清单名称</string>

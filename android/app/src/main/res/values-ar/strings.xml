@@ -58,6 +58,7 @@
     <string name="status_backlog_hint">ليس على القائمة بعد</string>
     <string name="list_kind_shopping">قائمة تسوق</string>
     <string name="list_kind_checklist">قائمة مهام</string>
+    <string name="list_kind_expenses">المصروفات</string>
     <string name="overview_new_list">قائمة جديدة</string>
     <string name="overview_no_lists">لا توجد قوائم بعد</string>
     <string name="overview_list_name">اسم القائمة</string>

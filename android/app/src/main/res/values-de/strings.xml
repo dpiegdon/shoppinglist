@@ -58,6 +58,7 @@
     <string name="status_backlog_hint">Noch nicht auf der Liste</string>
     <string name="list_kind_shopping">Einkaufsliste</string>
     <string name="list_kind_checklist">Checkliste</string>
+    <string name="list_kind_expenses">Ausgaben</string>
     <string name="overview_new_list">Neue Liste</string>
     <string name="overview_no_lists">Noch keine Listen</string>
     <string name="overview_list_name">Listenname</string>

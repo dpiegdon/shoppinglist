@@ -58,6 +58,7 @@
     <string name="status_backlog_hint">Pas encore sur la liste</string>
     <string name="list_kind_shopping">Liste de courses</string>
     <string name="list_kind_checklist">Check-list</string>
+    <string name="list_kind_expenses">Dépenses</string>
     <string name="overview_new_list">Nouvelle liste</string>
     <string name="overview_no_lists">Aucune liste pour l\'instant</string>
     <string name="overview_list_name">Nom de la liste</string>
