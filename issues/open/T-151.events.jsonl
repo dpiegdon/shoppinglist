@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-09-17T17:50:52+00:00", "kind": "created", "ref": "main@a9f7bb0", "text": "expenses: server \u2014 item field, list currency, kind rules, validation"}
+{"actor": "claude", "at": "2026-09-17T17:51:30+00:00", "kind": "note", "ref": "main@a9f7bb0", "text": "Correction to the body: in phase 1 a key is valid if it is a current member OR already present in the row's stored expense value, so an expense involving someone who has since left stays editable. The freeze on such amounts is T-157."}
