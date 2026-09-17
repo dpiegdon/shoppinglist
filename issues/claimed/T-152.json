@@ -7,7 +7,8 @@
     "server",
     "agent"
   ],
+  "owner": "claude",
   "priority": 2,
   "title": "expenses: server \u2014 roster and vote state on the synced list object",
-  "updated_at": "2026-09-17T17:50:52+00:00"
+  "updated_at": "2026-09-17T18:05:08+00:00"
 }
