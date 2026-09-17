@@ -1,0 +1,12 @@
+{
+  "body": "Minor version. Carries the phase-1 tickets. Wheel smoke test gains an expense\nround trip before this is cut. Release notes must say that leaving an expense\nlist still works as it does for any list until phase 2.",
+  "created_at": "2026-09-17T17:50:53+00:00",
+  "id": "T-156",
+  "labels": [
+    "expenses",
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release: expense lists, phase 1",
+  "updated_at": "2026-09-17T17:50:53+00:00"
+}
