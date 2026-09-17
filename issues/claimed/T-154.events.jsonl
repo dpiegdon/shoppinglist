@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-09-17T17:50:53+00:00", "kind": "created", "ref": "main@a9f7bb0", "text": "expenses: Android \u2014 create, list screen, expense form, balances"}
 {"actor": "claude", "at": "2026-09-17T17:50:53+00:00", "kind": "dependency", "ref": "main@a9f7bb0", "text": "T-153"}
 {"actor": "claude", "at": "2026-09-17T19:21:00+00:00", "kind": "claimed", "ref": "main@2ee9d9f", "text": "claude"}
+{"actor": "claude", "at": "2026-09-17T19:58:23+00:00", "kind": "note", "ref": "main@0d70160", "text": "Screens, form, balances, overview, list props and strings landed in the commit above; 13 view-model tests cover the form. Remaining: Robolectric screen tests for ExpenseListScreen and BalancesScreen."}
