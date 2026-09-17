@@ -22,6 +22,8 @@ export interface ExpenseSaveValues {
 
 interface ExpenseDialogProps {
   members: ListMember[];
+  /** Who has agreed to close the list (T-157): their amounts are frozen and cannot be edited. */
+  closeVotes: string[];
   /** The list's free-text currency label, shown beside the total. */
   currency: string;
   /** The signed-in account, which is who a new expense defaults to having been paid by. */
@@ -62,17 +64,33 @@ function shareStateFrom(shares: Record<string, string>, equal: boolean): ShareSt
   return { selected, text };
 }
 
-function entriesOf(state: ShareState, ids: string[]): ShareEntry[] {
+function entriesOf(state: ShareState, ids: string[], frozen?: Set<string>): ShareEntry[] {
   return ids
     .filter((id) => state.selected[id])
     .map((id) => {
       const typed = (state.text[id] ?? "").trim();
+      // A frozen participant's share is fixed by definition: it may not move, so it cannot be
+      // one of the auto shares that absorb a change elsewhere.
+      if (frozen?.has(id) && typed === "") return { id, fixed: 0 };
       return { id, fixed: typed === "" ? null : toCents(typed) };
     });
 }
 
+/** A new expense can never involve a frozen participant, so they start unselected. */
+function frozenFreeSelection(
+  ids: string[],
+  closeVotes: string[],
+  members: ListMember[],
+): Record<string, boolean> {
+  const current = new Set(members.map((member) => member.account_id));
+  return Object.fromEntries(
+    ids.filter((id) => !closeVotes.includes(id) && current.has(id)).map((id) => [id, true]),
+  );
+}
+
 export default function ExpenseDialog({
   members,
+  closeVotes,
   currency,
   myAccountId,
   editingItem,
@@ -107,24 +125,41 @@ export default function ExpenseDialog({
   const [paidBy, setPaidBy] = useState<ShareState>(() =>
     stored
       ? shareStateFrom(stored.paid_by, stored.equal_by)
-      : { selected: { [myAccountId]: true }, text: {} },
+      : { selected: frozenFreeSelection([myAccountId], closeVotes, members), text: {} },
   );
   const [paidFor, setPaidFor] = useState<ShareState>(() =>
     stored
       ? shareStateFrom(stored.paid_for, stored.equal_for)
-      : { selected: Object.fromEntries(members.map((m) => [m.account_id, true])), text: {} },
+      : {
+          selected: frozenFreeSelection(
+            members.map((m) => m.account_id),
+            closeVotes,
+            members,
+          ),
+          text: {},
+        },
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  /**
+   * Whose amounts may not move: whoever has agreed to close, and anyone no longer on the roster.
+   * Their rows render locked rather than hidden — the amount is part of the record, and a share
+   * that vanished from the form would be silently dropped on the next save.
+   */
+  const frozen = useMemo(() => {
+    const current = new Set(members.map((member) => member.account_id));
+    return new Set(participantIds.filter((id) => closeVotes.includes(id) || !current.has(id)));
+  }, [participantIds, members, closeVotes]);
+
   const totalCents = toCents(totalText.trim() || "0");
   const byResult = useMemo(
-    () => distribute(totalCents, entriesOf(paidBy, participantIds)),
-    [totalCents, paidBy, participantIds],
+    () => distribute(totalCents, entriesOf(paidBy, participantIds, frozen)),
+    [totalCents, paidBy, participantIds, frozen],
   );
   const forResult = useMemo(
-    () => distribute(totalCents, entriesOf(paidFor, participantIds)),
-    [totalCents, paidFor, participantIds],
+    () => distribute(totalCents, entriesOf(paidFor, participantIds, frozen)),
+    [totalCents, paidFor, participantIds, frozen],
   );
 
   // With one participant there is nothing to distribute: they paid, and it was for them.
@@ -146,7 +181,7 @@ export default function ExpenseDialog({
   }
 
   function sumOf(state: ShareState): number {
-    return entriesOf(state, participantIds).reduce((sum, entry) => sum + (entry.fixed ?? 0), 0);
+    return entriesOf(state, participantIds, frozen).reduce((sum, entry) => sum + (entry.fixed ?? 0), 0);
   }
 
   function renderShares(
@@ -165,6 +200,7 @@ export default function ExpenseDialog({
         {participantIds.map((id) => {
           const selected = Boolean(state.selected[id]);
           const typed = state.text[id] ?? "";
+          const isFrozen = frozen.has(id);
           // The derived share is the PLACEHOLDER, never the value. As the value it would come
           // straight back the moment the field was cleared, so typing over it appended to it.
           // Empty means auto, which is also what the greyed-out number says.
@@ -175,6 +211,7 @@ export default function ExpenseDialog({
                 type="checkbox"
                 id={`${which}-${id}`}
                 checked={selected}
+                disabled={isFrozen}
                 onChange={(e) =>
                   setState({
                     selected: { ...state.selected, [id]: e.target.checked },
@@ -186,11 +223,16 @@ export default function ExpenseDialog({
               />
               <label htmlFor={`${which}-${id}`} style={{ flex: 1, minWidth: 0 }} dir="auto">
                 {labelFor(id)}
+                {isFrozen && (
+                  <span className="muted" style={{ fontSize: "0.75rem", display: "block" }}>
+                    {t("expense.frozen")}
+                  </span>
+                )}
               </label>
               <input
                 aria-label={`${which === "by" ? t("expense.paidBy") : t("expense.paidFor")} ${labelFor(id)}`}
                 inputMode="decimal"
-                disabled={!selected}
+                disabled={!selected || isFrozen}
                 value={typed}
                 placeholder={derived}
                 style={{ width: "6rem", textAlign: "end" }}
@@ -231,18 +273,28 @@ export default function ExpenseDialog({
         expense: {
           paid_by: sharesToWire(byResult.shares),
           // "Everyone selected is auto" is exactly what makes a later total change redistribute.
-          equal_by: entriesOf(paidBy, participantIds).every((entry) => entry.fixed == null),
+          equal_by: entriesOf(paidBy, participantIds, frozen).every((entry) => entry.fixed == null),
           paid_for: sharesToWire(forResult.shares),
-          equal_for: entriesOf(paidFor, participantIds).every((entry) => entry.fixed == null),
+          equal_for: entriesOf(paidFor, participantIds, frozen).every((entry) => entry.fixed == null),
           date,
         },
       });
       onClose();
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : t("item.saveFailed"));
+      setSaveError(saveErrorText(err));
     } finally {
       setSaving(false);
     }
+  }
+
+  /** The server's refusals, said in terms of this list's people rather than account ids. */
+  function saveErrorText(err: unknown): string {
+    if (!(err instanceof ApiError)) return t("item.saveFailed");
+    if (err.code === "participant_frozen") {
+      return t("expense.error.frozen", { who: labelFor(String(err.details.account_id ?? "")) });
+    }
+    if (err.code === "list_closed") return t("expense.error.closed");
+    return err.message;
   }
 
   const canSave = name.trim() !== "" && byResult.ok && forResult.ok && !saving;

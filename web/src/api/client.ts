@@ -1,4 +1,5 @@
 import type {
+  CloseVoteState,
   AdminServerSettings,
   AdminUsersResponse,
   ApiErrorBody,
@@ -26,12 +27,18 @@ const TOKEN_STORAGE_KEY = "shoppinglist_token";
 export class ApiError extends Error {
   status: number;
   code: string;
+  /**
+   * The error envelope's extra keys, which some codes carry: `row_id` and `field` on a /sync
+   * rejection, and `account_id` on `participant_frozen` (T-157) so the client can say who.
+   */
+  details: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -115,7 +122,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
       forcedLogoutHandler?.();
     }
     const body = data as ApiErrorBody | undefined;
-    throw new ApiError(response.status, body?.error ?? "unknown_error", body?.message ?? response.statusText);
+    throw new ApiError(
+      response.status,
+      body?.error ?? "unknown_error",
+      body?.message ?? response.statusText,
+      (data ?? {}) as Record<string, unknown>,
+    );
   }
 
   return data as T;
@@ -174,6 +186,15 @@ export function getMembers(listId: string): Promise<MembersResponse> {
 
 export function leaveList(listId: string): Promise<void> {
   return apiFetch(`/lists/${listId}/leave`, { method: "POST" });
+}
+
+/** Agree to close an expenses list (T-157). It closes when the last current member agrees. */
+export function castCloseVote(listId: string): Promise<CloseVoteState> {
+  return apiFetch(`/lists/${listId}/close-votes`, { method: "POST" });
+}
+
+export function withdrawCloseVote(listId: string): Promise<CloseVoteState> {
+  return apiFetch(`/lists/${listId}/close-votes`, { method: "DELETE" });
 }
 
 export function mintInvite(listId: string, invitedEmail: string): Promise<MintInviteResponse> {

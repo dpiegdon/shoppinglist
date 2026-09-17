@@ -213,4 +213,18 @@ export const de: Catalog = {
   "expense.error.useSum": "Gesamtbetrag auf {sum} setzen",
   "expense.error.nobody": "Wähle mindestens eine Person.",
   "expense.error.total": "Gib einen Gesamtbetrag ein.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "Abschließen",
+  "expense.closingHelp": "Alle müssen zustimmen. Danach ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.",
+  "expense.agreeToClose": "Abschluss zustimmen",
+  "expense.withdrawVote": "Zurückziehen",
+  "expense.agreeCount": "{voted} von {total} stimmen dem Abschluss zu",
+  "expense.closedOn": "Abgeschlossen am {date}",
+  "expense.closed": "Abgeschlossen",
+  "expense.voteFailed": "Deine Stimme konnte nicht gespeichert werden.",
+  "expense.frozen": "hat zugestimmt – Beträge festgeschrieben",
+  "expense.error.frozen": "{who} hat dem Abschluss zugestimmt, daher sind diese Beträge unveränderlich.",
+  "expense.error.closed": "Diese Liste ist abgeschlossen und kann nicht mehr geändert werden.",
+  "listProps.leaveBlocked": "Eine Ausgabenliste kann erst verlassen werden, wenn sie abgeschlossen ist.",
 };

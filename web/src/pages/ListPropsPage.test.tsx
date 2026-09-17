@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ListPage from "./ListPage";
 import ListPropsPage from "./ListPropsPage";
 import { SyncProvider } from "../hooks/SyncContext";
+import { AuthProvider } from "../auth/AuthContext";
 import * as api from "../api/client";
 import type { ItemStatus } from "../api/contract";
 
@@ -37,12 +38,16 @@ function listObj(notes: string | null = null) {
 async function renderListPropsPageViaListPage() {
   const utils = render(
     <MemoryRouter initialEntries={["/list/list-1"]}>
-      <SyncProvider>
-        <Routes>
-          <Route path="/list/:listId" element={<ListPage />} />
-          <Route path="/list/:listId/properties" element={<ListPropsPage />} />
-        </Routes>
-      </SyncProvider>
+      {/* The page reads the signed-in account since T-159, to decide whether the close-vote
+          control offers to agree or to withdraw. */}
+      <AuthProvider>
+        <SyncProvider>
+          <Routes>
+            <Route path="/list/:listId" element={<ListPage />} />
+            <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+          </Routes>
+        </SyncProvider>
+      </AuthProvider>
     </MemoryRouter>,
   );
   await screen.findByText("Groceries");

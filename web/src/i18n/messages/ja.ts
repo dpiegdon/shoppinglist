@@ -213,4 +213,18 @@ export const ja: Catalog = {
   "expense.error.useSum": "合計を {sum} にする",
   "expense.error.nobody": "少なくとも 1 人を選んでください。",
   "expense.error.total": "合計を入力してください。",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "締め",
+  "expense.closingHelp": "全員の同意が必要です。締めたあとは読み取り専用の記録になり、退出できるようになります。",
+  "expense.agreeToClose": "締めに同意",
+  "expense.withdrawVote": "取り消す",
+  "expense.agreeCount": "{total} 人中 {voted} 人が締めに同意",
+  "expense.closedOn": "{date} に締め済み",
+  "expense.closed": "締め済み",
+  "expense.voteFailed": "投票を記録できませんでした。",
+  "expense.frozen": "締めに同意済み — 金額は確定",
+  "expense.error.frozen": "{who} が締めに同意しているため、この金額は変更できません。",
+  "expense.error.closed": "このリストは締め済みで、変更できません。",
+  "listProps.leaveBlocked": "支出リストは締めたあとにのみ退出できます。",
 };

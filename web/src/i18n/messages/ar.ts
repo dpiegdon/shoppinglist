@@ -214,4 +214,18 @@ export const ar: Catalog = {
   "expense.error.useSum": "اجعل الإجمالي {sum}",
   "expense.error.nobody": "اختر شخصًا واحدًا على الأقل.",
   "expense.error.total": "أدخل الإجمالي.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "الإغلاق",
+  "expense.closingHelp": "يجب أن يوافق الجميع. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.",
+  "expense.agreeToClose": "الموافقة على الإغلاق",
+  "expense.withdrawVote": "سحب الموافقة",
+  "expense.agreeCount": "{voted} من {total} وافقوا على الإغلاق",
+  "expense.closedOn": "أُغلقت في {date}",
+  "expense.closed": "مغلقة",
+  "expense.voteFailed": "تعذّر تسجيل تصويتك.",
+  "expense.frozen": "وافق على الإغلاق — المبالغ ثابتة",
+  "expense.error.frozen": "{who} وافق على إغلاق القائمة، لذا لا يمكن تغيير مبالغه.",
+  "expense.error.closed": "أُغلقت هذه القائمة ولم يعد بالإمكان تغييرها.",
+  "listProps.leaveBlocked": "لا يمكن مغادرة قائمة المصروفات إلا بعد إغلاقها.",
 };

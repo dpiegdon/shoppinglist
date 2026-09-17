@@ -208,4 +208,18 @@ export const es: Catalog = {
   "expense.error.useSum": "Poner el total en {sum}",
   "expense.error.nobody": "Elige al menos a una persona.",
   "expense.error.total": "Introduce un total.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "Cierre",
+  "expense.closingHelp": "Todos deben estar de acuerdo. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.",
+  "expense.agreeToClose": "Aceptar cerrar",
+  "expense.withdrawVote": "Retirar",
+  "expense.agreeCount": "{voted} de {total} aceptan cerrar",
+  "expense.closedOn": "Cerrada el {date}",
+  "expense.closed": "Cerrada",
+  "expense.voteFailed": "No se pudo registrar tu voto.",
+  "expense.frozen": "aceptó cerrar: importes fijados",
+  "expense.error.frozen": "{who} aceptó cerrar la lista, así que sus importes no pueden cambiar.",
+  "expense.error.closed": "Esta lista está cerrada y ya no se puede modificar.",
+  "listProps.leaveBlocked": "Una lista de gastos solo se puede abandonar una vez cerrada.",
 };

@@ -113,6 +113,7 @@ export default function OverviewPage() {
     return (
       <span style={{ textAlign: "end", fontWeight: 400, fontSize: "0.85rem" }}>
         <span className="muted" style={{ display: "block" }}>
+          {(list.closed_at ?? null) !== null && `${t("expense.closed")} · `}
           {fromCents(total)} {currency}
         </span>
         {showBalance && (

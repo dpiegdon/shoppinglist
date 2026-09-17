@@ -212,4 +212,18 @@ export const uk: Catalog = {
   "expense.error.useSum": "Зробити загальну суму {sum}",
   "expense.error.nobody": "Виберіть щонайменше одну людину.",
   "expense.error.total": "Введіть загальну суму.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "Закриття",
+  "expense.closingHelp": "Мають погодитися всі. Після закриття список стає записом лише для читання, і його можна залишити.",
+  "expense.agreeToClose": "Погодитися закрити",
+  "expense.withdrawVote": "Відкликати",
+  "expense.agreeCount": "{voted} з {total} погоджуються закрити",
+  "expense.closedOn": "Закрито {date}",
+  "expense.closed": "Закрито",
+  "expense.voteFailed": "Не вдалося зарахувати ваш голос.",
+  "expense.frozen": "погодився закрити — суми зафіксовано",
+  "expense.error.frozen": "{who} погодився закрити список, тому ці суми не можна змінити.",
+  "expense.error.closed": "Цей список закрито, змінити його вже не можна.",
+  "listProps.leaveBlocked": "Список витрат можна залишити лише після закриття.",
 };

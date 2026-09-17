@@ -212,4 +212,18 @@ export const zhHans: Catalog = {
   "expense.error.useSum": "把合计设为 {sum}",
   "expense.error.nobody": "请至少选择一个人。",
   "expense.error.total": "请输入合计金额。",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "结算",
+  "expense.closingHelp": "需要所有人同意。结算后清单变为只读记录，并且可以退出。",
+  "expense.agreeToClose": "同意结算",
+  "expense.withdrawVote": "撤回",
+  "expense.agreeCount": "{total} 人中已有 {voted} 人同意结算",
+  "expense.closedOn": "已于 {date} 结算",
+  "expense.closed": "已结算",
+  "expense.voteFailed": "无法记录你的投票。",
+  "expense.frozen": "已同意结算 — 金额已锁定",
+  "expense.error.frozen": "{who} 已同意结算，因此其金额不能更改。",
+  "expense.error.closed": "此清单已结算，无法再更改。",
+  "listProps.leaveBlocked": "支出清单结算后才能退出。",
 };

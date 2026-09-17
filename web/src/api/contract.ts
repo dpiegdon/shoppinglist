@@ -218,6 +218,12 @@ export interface RedeemResponse {
   list_id: string;
 }
 
+/** What the close-vote endpoints answer with (T-157). */
+export interface CloseVoteState {
+  close_votes: string[];
+  closed_at: number | null;
+}
+
 export interface ApiErrorBody {
   error: string;
   message: string;

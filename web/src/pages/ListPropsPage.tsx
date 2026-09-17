@@ -7,6 +7,8 @@ import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useS
 import { checkedItems } from "../lib/grouping";
 import { canonicalCategoryNames, categoryKey, planCategoryRename } from "../lib/categories";
 import { isExpenses, listKind, listKindLabelKey } from "../lib/listKind";
+import CloseVoteBanner from "../components/CloseVoteBanner";
+import { useAuth } from "../auth/AuthContext";
 import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
@@ -15,6 +17,7 @@ export default function ListPropsPage() {
   const t = useT();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId, refresh } = useSyncContext();
+  const { account } = useAuth();
   const navigate = useNavigate();
   const list = listId ? lists.get(listId) : undefined;
 
@@ -320,6 +323,23 @@ export default function ListPropsPage() {
         )}
       </section>
 
+      {isExpenses(listKind(list)) && (
+        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("expense.closing")}</h2>
+          <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
+            {t("expense.closingHelp")}
+          </p>
+          <CloseVoteBanner
+            listId={id}
+            members={list.members ?? []}
+            closeVotes={list.close_votes ?? []}
+            closedAt={list.closed_at ?? null}
+            myAccountId={account?.id ?? null}
+            alwaysShow
+          />
+        </section>
+      )}
+
       {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
           when there's something to clear. */}
       {!isExpenses(listKind(list)) && allChecked.length > 0 && (
@@ -520,9 +540,21 @@ export default function ListPropsPage() {
           {t("action.duplicate")}
         </button>
       )}
-      <button type="button" className="btn btn-danger" onClick={handleLeave}>
+      {/* An open expenses list cannot be left (T-157): the server refuses it, and saying why
+          here beats letting the button fail. */}
+      <button
+        type="button"
+        className="btn btn-danger"
+        disabled={isExpenses(listKind(list)) && (list.closed_at ?? null) === null}
+        onClick={handleLeave}
+      >
         {t("listProps.leaveList")}
       </button>
+      {isExpenses(listKind(list)) && (list.closed_at ?? null) === null && (
+        <p className="muted" style={{ fontSize: "0.8rem", marginTop: "0.4rem" }}>
+          {t("listProps.leaveBlocked")}
+        </p>
+      )}
     </main>
   );
 }

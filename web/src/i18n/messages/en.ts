@@ -242,6 +242,20 @@ export const en = {
   "expense.error.useSum": "Set the total to {sum}",
   "expense.error.nobody": "Choose at least one person.",
   "expense.error.total": "Enter a total.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "Closing",
+  "expense.closingHelp": "Everyone has to agree. Once closed, the list is a read-only record and can be left.",
+  "expense.agreeToClose": "Agree to close",
+  "expense.withdrawVote": "Withdraw",
+  "expense.agreeCount": "{voted} of {total} agree to close",
+  "expense.closedOn": "Closed on {date}",
+  "expense.closed": "Closed",
+  "expense.voteFailed": "Could not record your vote.",
+  "expense.frozen": "agreed to close — amounts fixed",
+  "expense.error.frozen": "{who} has agreed to close the list, so their amounts cannot change.",
+  "expense.error.closed": "This list has been closed and can no longer be changed.",
+  "listProps.leaveBlocked": "An expenses list can only be left once it is closed.",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -210,4 +210,18 @@ export const fr: Catalog = {
   "expense.error.useSum": "Mettre le total à {sum}",
   "expense.error.nobody": "Choisissez au moins une personne.",
   "expense.error.total": "Saisissez un total.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "Clôture",
+  "expense.closingHelp": "Tout le monde doit être d'accord. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.",
+  "expense.agreeToClose": "Accepter la clôture",
+  "expense.withdrawVote": "Retirer",
+  "expense.agreeCount": "{voted} sur {total} acceptent la clôture",
+  "expense.closedOn": "Close le {date}",
+  "expense.closed": "Close",
+  "expense.voteFailed": "Votre vote n'a pas pu être enregistré.",
+  "expense.frozen": "a accepté la clôture — montants figés",
+  "expense.error.frozen": "{who} a accepté de clore la liste : ses montants ne peuvent plus changer.",
+  "expense.error.closed": "Cette liste est close et ne peut plus être modifiée.",
+  "listProps.leaveBlocked": "Une liste de dépenses ne peut être quittée qu'une fois close.",
 };

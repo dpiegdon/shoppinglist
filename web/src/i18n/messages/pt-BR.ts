@@ -211,4 +211,18 @@ export const ptBR: Catalog = {
   "expense.error.useSum": "Definir o total como {sum}",
   "expense.error.nobody": "Escolha pelo menos uma pessoa.",
   "expense.error.total": "Informe um total.",
+
+  // --- Closing an expenses list (T-159) ---
+  "expense.closing": "Encerramento",
+  "expense.closingHelp": "Todos precisam concordar. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.",
+  "expense.agreeToClose": "Concordar em encerrar",
+  "expense.withdrawVote": "Retirar",
+  "expense.agreeCount": "{voted} de {total} concordam em encerrar",
+  "expense.closedOn": "Encerrada em {date}",
+  "expense.closed": "Encerrada",
+  "expense.voteFailed": "Não foi possível registrar seu voto.",
+  "expense.frozen": "concordou em encerrar — valores fixados",
+  "expense.error.frozen": "{who} concordou em encerrar a lista, então esses valores não podem mudar.",
+  "expense.error.closed": "Esta lista foi encerrada e não pode mais ser alterada.",
+  "listProps.leaveBlocked": "Uma lista de despesas só pode ser deixada depois de encerrada.",
 };

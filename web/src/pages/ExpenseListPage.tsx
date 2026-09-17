@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ExpenseDialog, { type ExpenseSaveValues } from "../components/ExpenseDialog";
+import CloseVoteBanner from "../components/CloseVoteBanner";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -32,6 +33,8 @@ export default function ExpenseListPage() {
   const list = listId ? lists.get(listId) : undefined;
   const members = useMemo(() => list?.members ?? [], [list]);
   const currency = (list ? listFieldValue(list, "currency") : null) ?? "";
+  const closeVotes = useMemo(() => list?.close_votes ?? [], [list]);
+  const closedAt = list?.closed_at ?? null;
 
   const expenses = useMemo(
     () =>
@@ -183,14 +186,25 @@ export default function ExpenseListPage() {
         </Link>
       </div>
 
-      <button
-        type="button"
-        className="btn"
-        style={{ width: "100%", marginBottom: "0.75rem" }}
-        onClick={() => setDialogItem("new")}
-      >
-        {t("expense.add")}
-      </button>
+      <CloseVoteBanner
+        listId={listId}
+        members={members}
+        closeVotes={closeVotes}
+        closedAt={closedAt}
+        myAccountId={account?.id ?? null}
+      />
+
+      {/* A closed list is an archive: nothing to add, and nothing to open for editing. */}
+      {closedAt === null && (
+        <button
+          type="button"
+          className="btn"
+          style={{ width: "100%", marginBottom: "0.75rem" }}
+          onClick={() => setDialogItem("new")}
+        >
+          {t("expense.add")}
+        </button>
+      )}
 
       {expenses.length === 0 && <p className="muted">{t("expense.empty")}</p>}
 
@@ -207,6 +221,7 @@ export default function ExpenseListPage() {
                   key={item.id}
                   type="button"
                   className="card"
+                  disabled={closedAt !== null}
                   onClick={() => setDialogItem(item)}
                   style={{
                     display: "flex",
@@ -242,6 +257,7 @@ export default function ExpenseListPage() {
       {dialogItem && account && (
         <ExpenseDialog
           members={members}
+          closeVotes={closeVotes}
           currency={currency}
           myAccountId={account.id}
           editingItem={dialogItem === "new" ? undefined : dialogItem}

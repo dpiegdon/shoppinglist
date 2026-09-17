@@ -8,10 +8,18 @@ import { AuthProvider } from "../auth/AuthContext";
 import { SyncProvider } from "../hooks/SyncContext";
 import * as api from "../api/client";
 import type { Expense } from "../api/contract";
+import { ApiError } from "../api/client";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
-  return { ...actual, sync: vi.fn(), getSettings: vi.fn(), getMembers: vi.fn() };
+  return {
+    ...actual,
+    sync: vi.fn(),
+    getSettings: vi.fn(),
+    getMembers: vi.fn(),
+    castCloseVote: vi.fn(),
+    withdrawCloseVote: vi.fn(),
+  };
 });
 
 const ME = "acct-me";
@@ -21,7 +29,7 @@ function clock<T>(value: T) {
   return { value, updated_at: 1, updated_by: "dev" };
 }
 
-function expenseList(members = [ME, OTHER]) {
+function expenseList(members = [ME, OTHER], closeVotes: string[] = [], closedAt: number | null = null) {
   return {
     id: "list-1",
     created_at: 0,
@@ -37,8 +45,8 @@ function expenseList(members = [ME, OTHER]) {
       email: `${id}@example.com`,
       initials: id === ME ? "ME" : "OT",
     })),
-    close_votes: [],
-    closed_at: null,
+    close_votes: closeVotes,
+    closed_at: closedAt,
   };
 }
 
@@ -370,5 +378,101 @@ describe("balances screen", () => {
 
     const mine = (await screen.findByText(`${ME}@example.com`)).closest("div");
     expect(within(mine as HTMLElement).getByText("paid 64.00 · share 42.00")).toBeInTheDocument();
+  });
+});
+
+
+// ---- closing (T-159) ---------------------------------------------------------
+
+describe("closing an expenses list", () => {
+  function setUp(closeVotes: string[] = [], closedAt: number | null = null) {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [expenseList([ME, OTHER], closeVotes, closedAt)],
+        items: [expenseItem("e1", "Dinner", dinner)],
+      },
+    });
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("says nothing while nobody has voted", async () => {
+    setUp();
+    renderAt("/list/list-1");
+
+    expect(await screen.findByText("Dinner")).toBeInTheDocument();
+    expect(screen.queryByText(/agree to close/)).not.toBeInTheDocument();
+  });
+
+  it("counts the votes once one is cast, and offers to agree", async () => {
+    setUp([OTHER]);
+    vi.mocked(api.castCloseVote).mockResolvedValue({ close_votes: [OTHER, ME], closed_at: 1 });
+    renderAt("/list/list-1");
+
+    expect(await screen.findByText("1 of 2 agree to close")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Agree to close" }));
+
+    expect(api.castCloseVote).toHaveBeenCalledWith("list-1");
+  });
+
+  it("offers to withdraw once I have voted", async () => {
+    setUp([ME]);
+    vi.mocked(api.withdrawCloseVote).mockResolvedValue({ close_votes: [], closed_at: null });
+    renderAt("/list/list-1");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Withdraw" }));
+
+    expect(api.withdrawCloseVote).toHaveBeenCalledWith("list-1");
+  });
+
+  it("a closed list is an archive: no adding, no opening an expense", async () => {
+    setUp([ME, OTHER], Date.UTC(2026, 8, 17));
+    renderAt("/list/list-1");
+
+    expect(await screen.findByText(/^Closed on /)).toBeInTheDocument();
+    expect(screen.queryByText("+ Add expense")).not.toBeInTheDocument();
+    // The row is still there to read, it just cannot be opened.
+    expect(screen.getByText("Dinner").closest("button")).toBeDisabled();
+  });
+
+  it("locks a voter's amounts in the form rather than hiding them", async () => {
+    setUp([OTHER]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    const theirShare = screen.getByLabelText(`For ${OTHER}@example.com`);
+    expect(theirShare).toBeDisabled();
+    // Their share is still visible — it is part of the record, not something to drop silently.
+    expect(screen.getAllByText("agreed to close — amounts fixed").length).toBeGreaterThan(0);
+    // Mine is still editable: the freeze is about their money, not about the expense.
+    expect(screen.getByLabelText(`For ${ME}@example.com`)).not.toBeDisabled();
+  });
+
+  it("says who is frozen when the server refuses the save", async () => {
+    setUp([OTHER]);
+    vi.mocked(api.sync).mockRejectedValue(
+      new ApiError(422, "participant_frozen", "frozen", { account_id: OTHER }),
+    );
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      `${OTHER}@example.com has agreed to close the list`,
+    );
   });
 });
