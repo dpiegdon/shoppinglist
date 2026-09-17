@@ -1,0 +1,14 @@
+{
+  "body": "Phase 1. Spec: docs/archive/specs/2026-09-17-expense-lists-design.md, \"The\nform\" and \"Screens\".\n\n- New-list dialog: Expenses in the kind picker; choosing it reveals the\n  currency field, prefilled from the account default, suggestions + free text.\n- List properties for expense lists: currency read-only; hide kind toggle,\n  duplicate, delete. (Leave stays as today in phase 1.)\n- Overview card: total spent, plus your balance when >1 participant.\n- List screen: summary bar -> balances; expenses newest first sectioned by\n  date; second line \"paid by AL \u00b7 for everyone\"; no shopping apparatus.\n- Expense form, full screen like Add item: title (focused), total with the\n  list currency as label, date defaulting to today, paid-by and paid-for as\n  member rows (selector, initials + email, amount grey while auto / normal\n  when fixed, clear returns to auto), note. Both distribution sections hidden\n  with one participant. Cancel / Add, or Save / Delete when editing.\n- Balances screen.\n- Strings in all nine locales, identical key counts.\n- Robolectric tests: form defaults, rebalancing through the UI, the two\n  invalid states, solo form, balances screen.",
+  "created_at": "2026-09-17T17:50:53+00:00",
+  "id": "T-154",
+  "labels": [
+    "expenses",
+    "android",
+    "ux",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "expenses: Android \u2014 create, list screen, expense form, balances",
+  "updated_at": "2026-09-17T17:50:53+00:00"
+}
