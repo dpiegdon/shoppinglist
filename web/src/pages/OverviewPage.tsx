@@ -3,7 +3,11 @@ import { Navigate, Link } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
-import { DEFAULT_LIST_KIND, listKind, listKindIcon, listKindLabel } from "../lib/listKind";
+import { DEFAULT_LIST_KIND, isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
+import { balancesFor, expenseTotalCents, fromCents } from "../lib/expenses";
+import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
+import { useAuth } from "../auth/AuthContext";
+import type { Expense } from "../api/contract";
 import type { ListKind } from "../api/contract";
 import { useT } from "../i18n";
 
@@ -28,6 +32,10 @@ export default function OverviewPage() {
   const [newName, setNewName] = useState("");
   // Shopping is preselected so creating a list behaves exactly as it always has (T-110).
   const [newKind, setNewKind] = useState<ListKind>(DEFAULT_LIST_KIND);
+  // An expenses list needs a currency up front, and it is fixed afterwards (T-151).
+  const defaultCurrency = useDefaultCurrency();
+  const [newCurrency, setNewCurrency] = useState("");
+  const { account } = useAuth();
   const [redirectTo, setRedirectTo] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -53,6 +61,8 @@ export default function OverviewPage() {
     e.preventDefault();
     const name = newName.trim();
     if (!name) return;
+    const currency = (newCurrency.trim() || defaultCurrency).trim();
+    if (isExpenses(newKind) && !currency) return;
     const id = crypto.randomUUID();
     await push({
       lists: [
@@ -61,12 +71,14 @@ export default function OverviewPage() {
           fields: {
             ...fieldPatch(deviceId, "name", name),
             ...fieldPatch(deviceId, "kind", newKind),
+            ...(isExpenses(newKind) ? fieldPatch(deviceId, "currency", currency) : {}),
           },
         },
       ],
     });
     setNewName("");
     setNewKind(DEFAULT_LIST_KIND);
+    setNewCurrency("");
     setCreating(false);
   }
 
@@ -76,10 +88,40 @@ export default function OverviewPage() {
 
   // Open (todo) item count per list, for an at-a-glance "is a trip pending" hint (T-42).
   const openCounts = new Map<string, number>();
+  // An expenses list has no open items; what it is worth saying there is what has been spent, and
+  // where the signed-in account stands (T-155).
+  const expensesByList = new Map<string, Expense[]>();
   for (const item of items.values()) {
-    if (itemFieldValue(item, "status") === "todo" && !itemFieldValue(item, "deleted")) {
+    if (itemFieldValue(item, "deleted")) continue;
+    const expense = itemFieldValue(item, "expense");
+    if (expense) {
+      expensesByList.set(item.list_id, [...(expensesByList.get(item.list_id) ?? []), expense]);
+    } else if (itemFieldValue(item, "status") === "todo") {
       openCounts.set(item.list_id, (openCounts.get(item.list_id) ?? 0) + 1);
     }
+  }
+
+  function expenseSummary(list: (typeof listArray)[number]) {
+    const expenses = expensesByList.get(list.id) ?? [];
+    const currency = listFieldValue(list, "currency") ?? "";
+    const total = expenses.reduce((sum, expense) => sum + expenseTotalCents(expense), 0);
+    const members = list.members ?? [];
+    const mine = balancesFor(expenses, members.map((m) => m.account_id)).find(
+      (balance) => balance.accountId === account?.id,
+    );
+    const showBalance = members.length > 1 && mine;
+    return (
+      <span style={{ textAlign: "end", fontWeight: 400, fontSize: "0.85rem" }}>
+        <span className="muted" style={{ display: "block" }}>
+          {fromCents(total)} {currency}
+        </span>
+        {showBalance && (
+          <span style={{ color: mine.balanceCents < 0 ? "var(--color-danger)" : "var(--color-accent)" }}>
+            {fromCents(mine.balanceCents)} {currency}
+          </span>
+        )}
+      </span>
+    );
   }
 
   return (
@@ -113,13 +155,15 @@ export default function OverviewPage() {
                 gap: "0.5rem",
               }}
             >
-              <span aria-label={listKindLabel(listKind(list))} title={listKindLabel(listKind(list))}>
+              <span aria-label={t(listKindLabelKey(listKind(list)))} title={t(listKindLabelKey(listKind(list)))}>
                 {listKindIcon(listKind(list))}
               </span>
               <span dir="auto" style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>
-              {openCount > 0 && (
-                <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>{openCount}</span>
-              )}
+              {isExpenses(listKind(list))
+                ? expenseSummary(list)
+                : openCount > 0 && (
+                    <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>{openCount}</span>
+                  )}
             </Link>
           );
         })}
@@ -145,26 +189,57 @@ export default function OverviewPage() {
               <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
                 {t("overview.type")}
               </legend>
-              {(["shopping", "checklist"] as const).map((kind) => (
+              {(["shopping", "checklist", "expenses"] as const).map((kind) => (
                 <label key={kind} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.15rem 0" }}>
                   <input
                     type="radio"
                     name="new-list-kind"
                     value={kind}
                     checked={newKind === kind}
-                    onChange={() => setNewKind(kind)}
+                    onChange={() => {
+                      setNewKind(kind);
+                      // Prefilled rather than placeheld: the field is required, and the account's
+                      // own currency is the answer nearly every time.
+                      if (kind === "expenses") setNewCurrency((current) => current || defaultCurrency);
+                    }}
                   />
                   <span>
-                    {listKindIcon(kind)} {listKindLabel(kind)}
+                    {listKindIcon(kind)} {t(listKindLabelKey(kind))}
                   </span>
                 </label>
               ))}
               <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
-                {newKind === "checklist"
-                  ? t("overview.kind.checklist")
-                  : t("overview.kind.shopping")}
+                {isExpenses(newKind)
+                  ? t("overview.kind.expenses")
+                  : newKind === "checklist"
+                    ? t("overview.kind.checklist")
+                    : t("overview.kind.shopping")}
               </p>
             </fieldset>
+            {isExpenses(newKind) && (
+              <div className="form-field">
+                <label htmlFor="new-list-currency">{t("expense.currency")}</label>
+                <input
+                  id="new-list-currency"
+                  required
+                  list="currency-suggestions"
+                  value={newCurrency}
+                  onChange={(e) => setNewCurrency(e.target.value)}
+                />
+                {/* Suggestions, not a constraint: the server takes free text, so a list can be
+                    kept in pizza slices if that is what the group settles in. */}
+                <datalist id="currency-suggestions">
+                  {[defaultCurrency, "EUR", "USD", "GBP", "CHF", "JPY"]
+                    .filter((code, index, all) => code && all.indexOf(code) === index)
+                    .map((code) => (
+                      <option key={code} value={code} />
+                    ))}
+                </datalist>
+                <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
+                  {t("overview.currencyHelp")}
+                </p>
+              </div>
+            )}
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
               <button type="button" className="btn btn-secondary" onClick={() => setCreating(false)}>
                 {t("action.cancel")}

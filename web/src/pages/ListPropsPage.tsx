@@ -6,7 +6,7 @@ import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
 import { canonicalCategoryNames, categoryKey, planCategoryRename } from "../lib/categories";
-import { listKind, listKindLabel } from "../lib/listKind";
+import { isExpenses, listKind, listKindLabelKey } from "../lib/listKind";
 import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
@@ -289,29 +289,40 @@ export default function ListPropsPage() {
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.type")}</h2>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
-            <div>{listKindLabel(listKind(list))}</div>
+            <div>{t(listKindLabelKey(listKind(list)))}</div>
             <p className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
-              {listKind(list) === "checklist"
-                ? t("listProps.kind.checklist")
-                : t("listProps.kind.shopping")}
+              {isExpenses(listKind(list))
+                ? t("listProps.kind.expenses")
+                : listKind(list) === "checklist"
+                  ? t("listProps.kind.checklist")
+                  : t("listProps.kind.shopping")}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setKind(listKind(list) === "checklist" ? "shopping" : "checklist")}
-          >
-            {listKind(list) === "checklist" ? t("listProps.makeShopping") : t("listProps.makeChecklist")}
-          </button>
+          {/* An expenses list cannot be converted in either direction — the server refuses it,
+              because its items have a different shape (T-151). So there is nothing to offer. */}
+          {!isExpenses(listKind(list)) && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setKind(listKind(list) === "checklist" ? "shopping" : "checklist")}
+            >
+              {listKind(list) === "checklist" ? t("listProps.makeShopping") : t("listProps.makeChecklist")}
+            </button>
+          )}
         </div>
         <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.8rem" }}>
-          {t("listProps.kindSwitchHelp")}
+          {isExpenses(listKind(list)) ? t("listProps.kindFixed") : t("listProps.kindSwitchHelp")}
         </p>
+        {isExpenses(listKind(list)) && (
+          <p style={{ margin: "0.5rem 0 0" }}>
+            {t("expense.currency")}: <strong>{listFieldValue(list, "currency")}</strong>
+          </p>
+        )}
       </section>
 
       {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
           when there's something to clear. */}
-      {allChecked.length > 0 && (
+      {!isExpenses(listKind(list)) && allChecked.length > 0 && (
         <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
           <p className="muted" style={{ margin: "0 0 0.6rem" }}>
@@ -323,7 +334,10 @@ export default function ListPropsPage() {
         </section>
       )}
 
-      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+      <section
+        className="card"
+        style={{ padding: "1rem", marginBottom: "1rem", display: isExpenses(listKind(list)) ? "none" : undefined }}
+      >
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
           {t("listProps.categoriesHelp")}
@@ -499,9 +513,13 @@ export default function ListPropsPage() {
         )}
       </section>
 
-      <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginInlineEnd: "0.5rem" }}>
-        {t("action.duplicate")}
-      </button>
+      {/* Not offered for expenses (T-155): a copy of a shared ledger, with the same debts owed to
+          nobody in particular, is never what someone means. */}
+      {!isExpenses(listKind(list)) && (
+        <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginInlineEnd: "0.5rem" }}>
+          {t("action.duplicate")}
+        </button>
+      )}
       <button type="button" className="btn btn-danger" onClick={handleLeave}>
         {t("listProps.leaveList")}
       </button>

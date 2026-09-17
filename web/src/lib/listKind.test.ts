@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listKind, listKindIcon, listKindLabel, showsShoppingFields } from "./listKind";
+import { isExpenses, listKind, listKindIcon, listKindLabelKey, showsShoppingFields } from "./listKind";
 import type { ListObject } from "../api/contract";
 
 function list(kind?: string): ListObject {
@@ -29,11 +29,19 @@ describe("listKind (T-110)", () => {
   it("only shopping lists show the shopping-only fields", () => {
     expect(showsShoppingFields("shopping")).toBe(true);
     expect(showsShoppingFields("checklist")).toBe(false);
+    expect(showsShoppingFields("expenses")).toBe(false);
   });
 
-  it("labels and icons the two kinds distinctly", () => {
-    expect(listKindLabel("shopping")).toBe("Shopping list");
-    expect(listKindLabel("checklist")).toBe("Checklist");
-    expect(listKindIcon("shopping")).not.toBe(listKindIcon("checklist"));
+  it("recognises an expenses list", () => {
+    expect(isExpenses("expenses")).toBe(true);
+    expect(isExpenses("shopping")).toBe(false);
+    expect(isExpenses("checklist")).toBe(false);
+  });
+
+  it("labels and icons the three kinds distinctly", () => {
+    const keys = (["shopping", "checklist", "expenses"] as const).map(listKindLabelKey);
+    const icons = (["shopping", "checklist", "expenses"] as const).map(listKindIcon);
+    expect(new Set(keys).size).toBe(3);
+    expect(new Set(icons).size).toBe(3);
   });
 });

@@ -1,0 +1,231 @@
+{
+  "_comment": [
+    "Cross-client case table for expense split and balance arithmetic (T-153, T-155).",
+    "",
+    "ONE file, read by BOTH test suites: web/src/lib/expenses.test.ts imports it, and the Android",
+    "ExpenseMathTest reads it from the repo root the way TranslationResourcesTest reads res/.",
+    "Two copies would drift, which is exactly how the i18n fixture went wrong (T-148).",
+    "",
+    "Amounts are decimal strings in the wire format, so each client's own parser is exercised too.",
+    "Rounding rule: auto participants get the floor of an equal share, and the leftover cents go",
+    "one each to the first auto participants in the given order. A participant whose share comes",
+    "out at zero is absent from the result, never present with a zero amount."
+  ],
+
+  "to_cents": [
+    { "amount": "0.01", "cents": 1 },
+    { "amount": "12", "cents": 1200 },
+    { "amount": "12.5", "cents": 1250 },
+    { "amount": "12.50", "cents": 1250 },
+    { "amount": "1234567.89", "cents": 123456789 }
+  ],
+
+  "from_cents": [
+    { "cents": 1, "amount": "0.01" },
+    { "cents": 1200, "amount": "12.00" },
+    { "cents": 1250, "amount": "12.50" },
+    { "cents": 123456789, "amount": "1234567.89" }
+  ],
+
+  "equal_split": [
+    {
+      "name": "divides evenly",
+      "total": "60.00",
+      "participants": ["a", "b", "c"],
+      "expect": { "a": "20.00", "b": "20.00", "c": "20.00" }
+    },
+    {
+      "name": "one leftover cent goes to the first participant",
+      "total": "64.00",
+      "participants": ["a", "b", "c"],
+      "expect": { "a": "21.34", "b": "21.33", "c": "21.33" }
+    },
+    {
+      "name": "two leftover cents go to the first two, one each",
+      "total": "10.00",
+      "participants": ["a", "b", "c"],
+      "expect": { "a": "3.34", "b": "3.33", "c": "3.33" }
+    },
+    {
+      "name": "order decides who absorbs the leftovers",
+      "total": "10.00",
+      "participants": ["c", "b", "a"],
+      "expect": { "c": "3.34", "b": "3.33", "a": "3.33" }
+    },
+    {
+      "name": "a solo list gets the whole total",
+      "total": "84.20",
+      "participants": ["a"],
+      "expect": { "a": "84.20" }
+    },
+    {
+      "name": "shares too small to exist are absent, never zero",
+      "total": "0.01",
+      "participants": ["a", "b", "c"],
+      "expect": { "a": "0.01" }
+    }
+  ],
+
+  "distribute": [
+    {
+      "name": "all auto is an equal split",
+      "total": "64.00",
+      "entries": [{ "id": "a" }, { "id": "b" }, { "id": "c" }],
+      "expect": { "a": "21.34", "b": "21.33", "c": "21.33" }
+    },
+    {
+      "name": "one fixed share, the rest absorb the difference",
+      "total": "60.00",
+      "entries": [{ "id": "a", "fixed": "30.00" }, { "id": "b" }, { "id": "c" }],
+      "expect": { "a": "30.00", "b": "15.00", "c": "15.00" }
+    },
+    {
+      "name": "raising the total leaves the fixed share alone",
+      "total": "64.00",
+      "entries": [{ "id": "a", "fixed": "30.00" }, { "id": "b" }, { "id": "c" }],
+      "expect": { "a": "30.00", "b": "17.00", "c": "17.00" }
+    },
+    {
+      "name": "every entry fixed and summing to the total",
+      "total": "64.00",
+      "entries": [
+        { "id": "a", "fixed": "21.34" },
+        { "id": "b", "fixed": "21.33" },
+        { "id": "c", "fixed": "21.33" }
+      ],
+      "expect": { "a": "21.34", "b": "21.33", "c": "21.33" }
+    },
+    {
+      "name": "the payer covering everything leaves the others out entirely",
+      "total": "40.00",
+      "entries": [{ "id": "a", "fixed": "40.00" }, { "id": "b" }],
+      "expect": { "a": "40.00" }
+    },
+    {
+      "name": "a single auto entry takes the remainder whole",
+      "total": "40.00",
+      "entries": [{ "id": "a", "fixed": "9.99" }, { "id": "b" }],
+      "expect": { "a": "9.99", "b": "30.01" }
+    },
+    {
+      "name": "two payers, both fixed",
+      "total": "64.00",
+      "entries": [{ "id": "a", "fixed": "40.00" }, { "id": "b", "fixed": "24.00" }],
+      "expect": { "a": "40.00", "b": "24.00" }
+    },
+    {
+      "name": "fixed shares above the total",
+      "total": "50.00",
+      "entries": [{ "id": "a", "fixed": "30.00" }, { "id": "b", "fixed": "30.00" }],
+      "error": "fixed_exceeds_total"
+    },
+    {
+      "name": "every entry fixed, and they do not add up",
+      "total": "64.00",
+      "entries": [{ "id": "a", "fixed": "20.00" }, { "id": "b", "fixed": "20.00" }],
+      "error": "fixed_sum_mismatch"
+    },
+    {
+      "name": "a total of nothing",
+      "total": "0",
+      "entries": [{ "id": "a" }],
+      "error": "total_not_positive"
+    },
+    {
+      "name": "nobody selected",
+      "total": "10.00",
+      "entries": [],
+      "error": "no_participants"
+    }
+  ],
+
+  "balances": [
+    {
+      "name": "one dinner, one payer, split three ways",
+      "participants": ["a", "b", "c"],
+      "expenses": [
+        {
+          "paid_by": { "a": "64.00" },
+          "paid_for": { "a": "21.34", "b": "21.33", "c": "21.33" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "64.00", "share": "21.34", "balance": "42.66" },
+        "b": { "paid": "0.00", "share": "21.33", "balance": "-21.33" },
+        "c": { "paid": "0.00", "share": "21.33", "balance": "-21.33" }
+      },
+      "total": "64.00"
+    },
+    {
+      "name": "two expenses and two payers settle out",
+      "participants": ["a", "b"],
+      "expenses": [
+        { "paid_by": { "a": "30.00" }, "paid_for": { "a": "15.00", "b": "15.00" } },
+        { "paid_by": { "b": "30.00" }, "paid_for": { "a": "15.00", "b": "15.00" } }
+      ],
+      "expect": {
+        "a": { "paid": "30.00", "share": "30.00", "balance": "0.00" },
+        "b": { "paid": "30.00", "share": "30.00", "balance": "0.00" }
+      },
+      "total": "60.00"
+    },
+    {
+      "name": "several payers on one expense",
+      "participants": ["a", "b", "c"],
+      "expenses": [
+        {
+          "paid_by": { "a": "40.00", "b": "24.00" },
+          "paid_for": { "a": "21.34", "b": "21.33", "c": "21.33" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "40.00", "share": "21.34", "balance": "18.66" },
+        "b": { "paid": "24.00", "share": "21.33", "balance": "2.67" },
+        "c": { "paid": "0.00", "share": "21.33", "balance": "-21.33" }
+      },
+      "total": "64.00"
+    },
+    {
+      "name": "someone who has left still owes what they owed",
+      "participants": ["a"],
+      "expenses": [
+        { "paid_by": { "a": "50.00" }, "paid_for": { "a": "25.00", "gone": "25.00" } }
+      ],
+      "expect": {
+        "a": { "paid": "50.00", "share": "25.00", "balance": "25.00" },
+        "gone": { "paid": "0.00", "share": "25.00", "balance": "-25.00" }
+      },
+      "total": "50.00"
+    },
+    {
+      "name": "a member with nothing on the list still appears, at zero",
+      "participants": ["a", "quiet"],
+      "expenses": [{ "paid_by": { "a": "10.00" }, "paid_for": { "a": "10.00" } }],
+      "expect": {
+        "a": { "paid": "10.00", "share": "10.00", "balance": "0.00" },
+        "quiet": { "paid": "0.00", "share": "0.00", "balance": "0.00" }
+      },
+      "total": "10.00"
+    },
+    {
+      "name": "a solo list is always square with itself",
+      "participants": ["a"],
+      "expenses": [
+        { "paid_by": { "a": "84.20" }, "paid_for": { "a": "84.20" } },
+        { "paid_by": { "a": "12.30" }, "paid_for": { "a": "12.30" } }
+      ],
+      "expect": { "a": { "paid": "96.50", "share": "96.50", "balance": "0.00" } },
+      "total": "96.50"
+    },
+    {
+      "name": "an empty list",
+      "participants": ["a", "b"],
+      "expenses": [],
+      "expect": {
+        "a": { "paid": "0.00", "share": "0.00", "balance": "0.00" },
+        "b": { "paid": "0.00", "share": "0.00", "balance": "0.00" }
+      },
+      "total": "0.00"
+    }
+  ]
+}

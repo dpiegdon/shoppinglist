@@ -14,6 +14,22 @@ export interface Price {
   currency: string | null;
 }
 
+/**
+ * The whole money tuple of an expense (T-151), and ONE LWW field: the "both maps sum to the same
+ * amount" invariant cannot survive being split across several fields that resolve independently.
+ * There is no stored total — it is the sum of either map. `equal_*` record that the map was an
+ * equal split, so reopening the form redistributes on a changed total instead of erroring.
+ * Amounts are positive decimal strings, and a participant with no share is absent, never zero.
+ */
+export interface Expense {
+  paid_by: Record<string, string>;
+  equal_by: boolean;
+  paid_for: Record<string, string>;
+  equal_for: boolean;
+  /** Calendar date, YYYY-MM-DD: no time, no zone. */
+  date: string;
+}
+
 export interface ItemFields {
   name: FieldClock<string>;
   category: FieldClock<string | null>;
@@ -22,6 +38,8 @@ export interface ItemFields {
   price: FieldClock<Price | null>;
   note: FieldClock<string | null>;
   status: FieldClock<ItemStatus>;
+  /** Null except on an `expenses` list, where every item has one. */
+  expense: FieldClock<Expense | null>;
   deleted: FieldClock<boolean>;
 }
 
@@ -40,21 +58,41 @@ export interface ItemObject {
  * What a list is (T-110). A checklist is a shopping list minus the shopping-only item fields
  * (stores/price/quantity) — the item schema is identical either way, so this is purely a
  * display toggle and a list can be converted at any time without touching item data.
+ *
+ * `expenses` (T-151) is not a display toggle: its items carry the `expense` money tuple instead of
+ * the shopping fields, their names are not unique, and the server refuses to convert a list to or
+ * from this kind for its whole life.
  */
-export type ListKind = "shopping" | "checklist";
+export type ListKind = "shopping" | "checklist" | "expenses";
 
 export interface ListFields {
   name: FieldClock<string>;
   category_order: FieldClock<string[]>;
   notes: FieldClock<string | null>;
   kind: FieldClock<ListKind>;
+  /** Free-text label — "EUR", "€", "pizza slices". Required and non-blank on an expenses list. */
+  currency: FieldClock<string | null>;
   deleted: FieldClock<boolean>;
+}
+
+/** One entry of a list's roster, as carried on the synced list object (T-152). */
+export interface ListMember {
+  account_id: string;
+  email: string;
+  /** Already resolved override-or-derived by the server. */
+  initials: string;
 }
 
 export interface ListObject {
   id: string;
   created_at?: number;
   fields: Partial<ListFields>;
+  // Server-maintained, outside `fields` like an item's last_touched_by (T-152): absent on a
+  // payload this client builds to push, present on anything read back from the server. The roster
+  // rides here so it is available offline, with no separate fetch.
+  members?: ListMember[];
+  close_votes?: string[];
+  closed_at?: number | null;
 }
 
 export interface SyncRequest {

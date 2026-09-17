@@ -21,11 +21,25 @@ export function showsShoppingFields(kind: ListKind): boolean {
   return kind === "shopping";
 }
 
-export function listKindLabel(kind: ListKind): string {
-  return kind === "checklist" ? "Checklist" : "Shopping list";
+/** Whether this list holds expenses rather than things to buy (T-155). */
+export function isExpenses(kind: ListKind): boolean {
+  return kind === "expenses";
 }
 
-/** Overview glyph — a cart for shopping, a check for a plain checklist. */
+/**
+ * The i18n key for a kind's name. A key rather than the text: these labels were English-only
+ * before the expenses kind arrived, and shipping one untranslated word beside translated UI is
+ * worse than translating all three.
+ */
+export function listKindLabelKey(kind: ListKind): "listKind.checklist" | "listKind.expenses" | "listKind.shopping" {
+  if (kind === "checklist") return "listKind.checklist";
+  if (kind === "expenses") return "listKind.expenses";
+  return "listKind.shopping";
+}
+
+/** Overview glyph — a cart for shopping, a check for a checklist, a banknote for expenses. */
 export function listKindIcon(kind: ListKind): string {
-  return kind === "checklist" ? "✓" : "🛒";
+  if (kind === "checklist") return "✓";
+  if (kind === "expenses") return "💶";
+  return "🛒";
 }

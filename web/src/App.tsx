@@ -3,7 +3,8 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
 import OverviewPage from "./pages/OverviewPage";
-import ListPage from "./pages/ListPage";
+import ListRoute from "./pages/ListRoute";
+import BalancesPage from "./pages/BalancesPage";
 import RegistryPage from "./pages/RegistryPage";
 import ListPropsPage from "./pages/ListPropsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -37,7 +38,15 @@ function AppRoutes() {
         path="/list/:listId"
         element={
           <ProtectedRoute>
-            <ListPage />
+            <ListRoute />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/list/:listId/balances"
+        element={
+          <ProtectedRoute>
+            <BalancesPage />
           </ProtectedRoute>
         }
       />
