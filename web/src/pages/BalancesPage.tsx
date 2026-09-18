@@ -209,11 +209,13 @@ export default function BalancesPage() {
           myAccountId={account.id}
           prefill={{
             name: t("expense.settlement"),
+            // Equal split of one on each side: the total drives the amounts, so editing it is how
+            // a partial settlement works.
             expense: {
               paid_by: { [recording.from]: fromCents(recording.cents) },
-              equal_by: false,
+              equal_by: true,
               paid_for: { [recording.to]: fromCents(recording.cents) },
-              equal_for: false,
+              equal_for: true,
               date: today(),
             },
           }}

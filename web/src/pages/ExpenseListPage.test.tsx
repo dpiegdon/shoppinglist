@@ -545,11 +545,25 @@ describe("settling up", () => {
     expect(pushedItem()?.fields.name?.value).toBe("Settlement");
     expect(expense.paid_by).toEqual({ [OTHER]: "22.00" });
     expect(expense.paid_for).toEqual({ [ME]: "22.00" });
-    // Amounts that were meant, not an equal split: correcting the total later must not
-    // redistribute a payment to people who were never part of it.
-    expect(expense.equal_by).toBe(false);
-    expect(expense.equal_for).toBe(false);
+    // The equal split of one person on each side — what the dialog writes for a lone payer, and
+    // what lets a changed total follow through.
+    expect(expense.equal_by).toBe(true);
+    expect(expense.equal_for).toBe(true);
     expect(expense.date).toBe(today());
+  });
+
+  it("a partial settlement is a changed total", async () => {
+    renderAt("/list/list-1/balances");
+    await userEvent.click(await screen.findByRole("button", { name: "Record" }));
+
+    const total = screen.getByLabelText("Total (EUR)");
+    await userEvent.clear(total);
+    await userEvent.type(total, "10.00");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const expense = pushedExpense();
+    expect(expense.paid_by).toEqual({ [OTHER]: "10.00" });
+    expect(expense.paid_for).toEqual({ [ME]: "10.00" });
   });
 
   it("offers nothing to record once a party has agreed to close", async () => {

@@ -261,8 +261,10 @@ archive, the plain statement of what was owed at the end.
 *Record* opens the ordinary expense form pre-filled: the title "Settlement"
 in the recorder's language as plain, editable text; the amount as the
 total; the payer as the sole payer; the payee as the sole beneficiary;
-today's date. Saving creates an ordinary expense, which zeroes the pair's
-mutual balance. Editing the total first is how a partial settlement works.
+today's date. The two shares are seeded as the equal split of one person on
+each side, so the total drives them: editing it is how a partial settlement
+works. Saving creates an ordinary expense, which zeroes the pair's mutual
+balance.
 Everything downstream — last-write-wins, sync, the freeze, the closed
 state, deletion — applies unchanged, because nothing new exists.
 
