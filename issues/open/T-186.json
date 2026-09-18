@@ -1,0 +1,13 @@
+{
+  "body": "Backlog screen: All items (web) vs Registry (Android) \u2014 All items, since it lists items of every status. Settings: Account settings (web) vs Settings (Android) \u2014 Settings. Overview heading: Your lists (web) vs Overview (Android) \u2014 Overview, as both menus call it.",
+  "created_at": "2026-09-18T17:50:11+00:00",
+  "id": "T-186",
+  "labels": [
+    "ux",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "the same names on both clients",
+  "updated_at": "2026-09-18T17:50:11+00:00"
+}
