@@ -41,6 +41,7 @@ import org.p23q.shoppinglist.data.sync.SyncResult
 import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 
 /**
@@ -50,6 +51,11 @@ import java.io.File
  * by design (T-127), which is what makes this possible at all.
  */
 @RunWith(RobolectricTestRunner::class)
+// A phone-sized screen rather than Robolectric's default 470dp: since the balances view sits under
+// the list's controls row (T-172), a three-person balance list pushes settle up below that default
+// fold, and a LazyColumn does not compose rows that are off screen — so assertions about them
+// failed on content that a real phone shows without scrolling.
+@Config(qualifiers = "w411dp-h891dp")
 class ExpenseScreensTest {
 
     @get:Rule
