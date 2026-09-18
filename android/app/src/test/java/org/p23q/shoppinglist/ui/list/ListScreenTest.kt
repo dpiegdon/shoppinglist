@@ -372,4 +372,43 @@ class ListScreenTest {
         composeTestRule.onNodeWithText("Add item").assertDoesNotExist()
         db.close()
     }
+
+    @Test
+    fun `Show checked carries a check while it is on, as on the web (T-174)`() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_check_mark", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            apiProvider,
+        )
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+        val wasOn = viewModel.uiState.value.showChecked
+
+        // The unmerged tree: the chip merges its children into one node, and a child's test tag does
+        // not survive that merge.
+
+        composeTestRule.onAllNodesWithTag("show-checked-mark", useUnmergedTree = true).assertCountEquals(if (wasOn) 1 else 0)
+        composeTestRule.onNodeWithText("Show checked").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag("show-checked-mark", useUnmergedTree = true).assertCountEquals(if (wasOn) 0 else 1)
+        db.close()
+    }
 }

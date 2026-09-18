@@ -1,5 +1,11 @@
 package org.p23q.shoppinglist.ui.list
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -20,10 +26,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,35 +49,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.data.api.MemberDto
-import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.ui.SyncStatusMarker
-import org.p23q.shoppinglist.ui.rememberTickingNowMs
-import org.p23q.shoppinglist.data.db.Status
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.AddFab
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.api.MemberDto
+import org.p23q.shoppinglist.data.db.ItemEntity
+import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.ui.AddFab
+import org.p23q.shoppinglist.ui.SyncStatusMarker
+import org.p23q.shoppinglist.ui.rememberTickingNowMs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,6 +140,19 @@ fun ListScreen(
                     selected = state.showChecked,
                     onClick = { viewModel.toggleShowChecked() },
                     label = { Text(stringResource(R.string.list_show_checked)) },
+                    // Material's FilterChip shows no check unless given one; the web's toggle has
+                    // always shown "✓" when on, and so does the expense list's selector (T-174).
+                    leadingIcon = if (state.showChecked) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.Done,
+                                contentDescription = null,
+                                modifier = Modifier.size(FilterChipDefaults.IconSize).testTag("show-checked-mark"),
+                            )
+                        }
+                    } else {
+                        null
+                    },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Folded into this row instead of its own line (T-63): a quiet dot rather than a
