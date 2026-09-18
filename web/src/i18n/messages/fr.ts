@@ -225,7 +225,7 @@ export const fr: Catalog = {
   "expense.error.closed": "Cette liste est close et ne peut plus être modifiée.",
   "expense.settleUp": "Régler les comptes",
   "expense.transfer": "{from} paie {to}",
-  "expense.record": "Enregistrer",
+  "expense.reimburse": "Rembourser",
   "expense.allSettled": "Tout est réglé",
   "expense.settlement": "Remboursement",
   "listProps.leaveBlocked": "Une liste de dépenses ne peut être quittée qu'une fois close.",

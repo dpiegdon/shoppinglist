@@ -257,7 +257,7 @@ export const en = {
   "expense.error.closed": "This list has been closed and can no longer be changed.",
   "expense.settleUp": "Settle up",
   "expense.transfer": "{from} pays {to}",
-  "expense.record": "Record",
+  "expense.reimburse": "Reimburse",
   "expense.allSettled": "All settled",
   "expense.settlement": "Settlement",
   "listProps.leaveBlocked": "An expenses list can only be left once it is closed.",

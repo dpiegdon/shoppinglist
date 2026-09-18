@@ -67,7 +67,7 @@ data class ExpenseFormUiState(
 }
 
 /**
- * What Record on the balances screen hands to the form (T-165). Everything in it stays editable —
+ * What Reimburse on the balances screen hands to the form (T-165). Everything in it stays editable —
  * changing the total is how a partial settlement is recorded.
  */
 data class ExpensePrefill(val name: String, val expense: Expense)

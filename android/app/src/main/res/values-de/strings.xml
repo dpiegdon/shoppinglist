@@ -262,7 +262,7 @@
     <string name="expense_frozen">hat zugestimmt – Beträge festgeschrieben</string>
     <string name="expense_settle_up">Ausgleichen</string>
     <string name="expense_transfer">%1$s zahlt an %2$s</string>
-    <string name="expense_record">Eintragen</string>
+    <string name="expense_reimburse">Erstatten</string>
     <string name="expense_all_settled">Alles ausgeglichen</string>
     <string name="expense_settlement">Ausgleich</string>
     <string name="listprops_leave_blocked">Eine Ausgabenliste kann erst verlassen werden, wenn sie abgeschlossen ist.</string>

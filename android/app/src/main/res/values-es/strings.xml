@@ -262,7 +262,7 @@
     <string name="expense_frozen">aceptó cerrar: importes fijados</string>
     <string name="expense_settle_up">Saldar cuentas</string>
     <string name="expense_transfer">%1$s paga a %2$s</string>
-    <string name="expense_record">Registrar</string>
+    <string name="expense_reimburse">Reembolsar</string>
     <string name="expense_all_settled">Todo saldado</string>
     <string name="expense_settlement">Pago</string>
     <string name="listprops_leave_blocked">Una lista de gastos solo se puede abandonar una vez cerrada.</string>

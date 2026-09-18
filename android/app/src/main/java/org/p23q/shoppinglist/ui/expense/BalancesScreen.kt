@@ -33,7 +33,7 @@ import java.time.LocalDate
  * it all zero (T-165).
  *
  * Everyone named anywhere appears, including people who have since left: their debts and credits
- * do not leave with them. The rows always sum to zero. Record on a transfer hands a pre-filled
+ * do not leave with them. The rows always sum to zero. Reimburse on a transfer hands a pre-filled
  * expense to [onRecord]; what gets saved is an ordinary expense, so nothing here is stored.
  */
 @Composable
@@ -150,7 +150,7 @@ fun BalancesScreen(
                                     )
                                 },
                             ) {
-                                Text(stringResource(R.string.expense_record))
+                                Text(stringResource(R.string.expense_reimburse))
                             }
                         }
                     }

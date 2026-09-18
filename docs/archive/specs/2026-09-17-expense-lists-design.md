@@ -252,13 +252,13 @@ implementations, including ties.
 labelled as the balances screen already labels them. A solo list hides the
 section: one person cannot owe themselves.
 
-**Recording a payment.** Each suggestion offers *Record* when, and only
+**Recording a payment.** Each suggestion offers *Reimburse* when, and only
 when, recording can succeed: the list is open, both parties are current
 members, and neither has voted to close. Otherwise the row is display only.
 On a closed list there are no buttons; the suggestions are part of the
 archive, the plain statement of what was owed at the end.
 
-*Record* opens the ordinary expense form pre-filled: the title "Settlement"
+*Reimburse* opens the ordinary expense form pre-filled: the title "Settlement"
 in the recorder's language as plain, editable text; the amount as the
 total; the payer as the sole payer; the payee as the sole beneficiary;
 today's date. The two shares are seeded as the equal split of one person on
@@ -285,7 +285,7 @@ trip is: settle, then vote. The suggestions on a closing list are what to
 settle.
 
 **Screen.** Balances, below the rows, under "Settle up": one line per
-transfer, "Bob → Alice 12.50", with *Record* where allowed. "All settled"
+transfer, "Bob → Alice 12.50", with *Reimburse* where allowed. "All settled"
 once there are expenses but nothing to transfer.
 
 ## Sync and offline
@@ -318,7 +318,7 @@ where a sync row is involved.
    rule, the freeze rule, no delete. Both clients' banners, vote controls and
    rejection handling.
 3. **Settling up.** Who pays whom, computed from the balances on the
-   client, with *Record* pre-filling the ordinary form. No server change.
+   client, with *Reimburse* pre-filling the ordinary form. No server change.
    See "Settling up".
 
 Each phase was planned as a release. In the event nothing had shipped by the

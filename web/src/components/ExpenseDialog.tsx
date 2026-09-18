@@ -31,7 +31,7 @@ interface ExpenseDialogProps {
   /** Present for edit mode, absent for add mode. */
   editingItem?: ItemObject;
   /**
-   * Values to open an add-mode form with (T-164): what Record on the balances screen hands over.
+   * Values to open an add-mode form with (T-164): what Reimburse on the balances screen hands over.
    * Everything stays editable — changing the total is how a partial settlement is recorded.
    */
   prefill?: { name: string; expense: Expense };

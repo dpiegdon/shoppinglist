@@ -229,7 +229,7 @@ export const ar: Catalog = {
   "expense.error.closed": "أُغلقت هذه القائمة ولم يعد بالإمكان تغييرها.",
   "expense.settleUp": "تسوية الحسابات",
   "expense.transfer": "{from} يدفع إلى {to}",
-  "expense.record": "تسجيل",
+  "expense.reimburse": "تسديد",
   "expense.allSettled": "تمت تسوية كل شيء",
   "expense.settlement": "تسوية",
   "listProps.leaveBlocked": "لا يمكن مغادرة قائمة المصروفات إلا بعد إغلاقها.",

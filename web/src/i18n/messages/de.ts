@@ -228,7 +228,7 @@ export const de: Catalog = {
   "expense.error.closed": "Diese Liste ist abgeschlossen und kann nicht mehr geändert werden.",
   "expense.settleUp": "Ausgleichen",
   "expense.transfer": "{from} zahlt an {to}",
-  "expense.record": "Eintragen",
+  "expense.reimburse": "Erstatten",
   "expense.allSettled": "Alles ausgeglichen",
   "expense.settlement": "Ausgleich",
   "listProps.leaveBlocked": "Eine Ausgabenliste kann erst verlassen werden, wenn sie abgeschlossen ist.",

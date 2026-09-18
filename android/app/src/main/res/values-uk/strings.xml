@@ -262,7 +262,7 @@
     <string name="expense_frozen">погодився закрити — суми зафіксовано</string>
     <string name="expense_settle_up">Розрахуватися</string>
     <string name="expense_transfer">%1$s платить %2$s</string>
-    <string name="expense_record">Записати</string>
+    <string name="expense_reimburse">Відшкодувати</string>
     <string name="expense_all_settled">Усе розраховано</string>
     <string name="expense_settlement">Розрахунок</string>
     <string name="listprops_leave_blocked">Список витрат можна залишити лише після закриття.</string>

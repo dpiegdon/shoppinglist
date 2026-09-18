@@ -226,7 +226,7 @@ export const ptBR: Catalog = {
   "expense.error.closed": "Esta lista foi encerrada e não pode mais ser alterada.",
   "expense.settleUp": "Acertar contas",
   "expense.transfer": "{from} paga {to}",
-  "expense.record": "Registrar",
+  "expense.reimburse": "Reembolsar",
   "expense.allSettled": "Tudo acertado",
   "expense.settlement": "Acerto",
   "listProps.leaveBlocked": "Uma lista de despesas só pode ser deixada depois de encerrada.",

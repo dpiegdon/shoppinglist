@@ -288,7 +288,7 @@ class ExpenseScreensTest {
         // Once as my balance, once as the transfer.
         composeTestRule.onAllNodesWithText("32.00 EUR").assertCountEquals(2)
 
-        composeTestRule.onNodeWithText("Record").performClick()
+        composeTestRule.onNodeWithText("Reimburse").performClick()
         val prefill = checkNotNull(recorded)
         assertEquals("Settlement", prefill.name)
         assertEquals(mapOf(other to "32.00"), prefill.expense.paidBy)
@@ -308,7 +308,7 @@ class ExpenseScreensTest {
         showBalances()
 
         composeTestRule.onNodeWithText("$me@example.com pays Former member 1").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Record").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
     }
 
     @Test
@@ -319,7 +319,7 @@ class ExpenseScreensTest {
         showBalances()
 
         composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Record").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
     }
 
     @Test
@@ -330,7 +330,7 @@ class ExpenseScreensTest {
         showBalances()
 
         composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Record").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
     }
 
     @Test

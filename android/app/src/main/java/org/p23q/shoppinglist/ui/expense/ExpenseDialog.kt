@@ -57,7 +57,7 @@ import org.p23q.shoppinglist.ui.LocalizedOverlay
  * AddItemDialog is (T-80): the soft keyboard must never cover the buttons.
  *
  * [itemId] null means a new expense on [listId]; otherwise that expense is edited. [prefill]
- * seeds a new expense with what Record on the balances screen chose (T-165).
+ * seeds a new expense with what Reimburse on the balances screen chose (T-165).
  */
 @Composable
 fun ExpenseDialog(

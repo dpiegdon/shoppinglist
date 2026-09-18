@@ -546,12 +546,12 @@ describe("settling up", () => {
     expect(within(section).getByText("10.00 EUR")).toBeInTheDocument();
     // Only the transfer between two current members can be recorded; nobody can settle with
     // someone who has left.
-    expect(within(section).getAllByRole("button", { name: "Record" })).toHaveLength(1);
+    expect(within(section).getAllByRole("button", { name: "Reimburse" })).toHaveLength(1);
   });
 
   it("records a transfer as an ordinary expense through the pre-filled form", async () => {
     renderAt("/list/list-1/balances");
-    await userEvent.click(await screen.findByRole("button", { name: "Record" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Reimburse" }));
 
     expect((screen.getByLabelText("What") as HTMLInputElement).value).toBe("Settlement");
     expect((screen.getByLabelText("Total (EUR)") as HTMLInputElement).value).toBe("22.00");
@@ -570,7 +570,7 @@ describe("settling up", () => {
 
   it("a partial settlement is a changed total", async () => {
     renderAt("/list/list-1/balances");
-    await userEvent.click(await screen.findByRole("button", { name: "Record" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Reimburse" }));
 
     const total = screen.getByLabelText("Total (EUR)");
     await userEvent.clear(total);
@@ -592,7 +592,7 @@ describe("settling up", () => {
     expect(await screen.findByText("Settle up")).toBeInTheDocument();
     // Both transfers involve the voter, whose amounts are frozen — the rows stay, the buttons go.
     expect(screen.getAllByText(/ pays /)).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: "Record" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reimburse" })).not.toBeInTheDocument();
   });
 
   it("a closed list keeps the transfers as its archive, with nothing to record", async () => {
@@ -604,7 +604,7 @@ describe("settling up", () => {
 
     expect(await screen.findByText("Settle up")).toBeInTheDocument();
     expect(screen.getAllByText(/ pays /)).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: "Record" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reimburse" })).not.toBeInTheDocument();
   });
 
   it("says all settled when nothing is owed", async () => {

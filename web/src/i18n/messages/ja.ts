@@ -228,7 +228,7 @@ export const ja: Catalog = {
   "expense.error.closed": "このリストは締め済みで、変更できません。",
   "expense.settleUp": "精算",
   "expense.transfer": "{from} が {to} に支払う",
-  "expense.record": "記録する",
+  "expense.reimburse": "返済する",
   "expense.allSettled": "すべて精算済み",
   "expense.settlement": "返済",
   "listProps.leaveBlocked": "支出リストは締めたあとにのみ退出できます。",

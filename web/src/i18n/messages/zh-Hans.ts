@@ -227,7 +227,7 @@ export const zhHans: Catalog = {
   "expense.error.closed": "此清单已结算，无法再更改。",
   "expense.settleUp": "结算",
   "expense.transfer": "{from} 支付给 {to}",
-  "expense.record": "记录",
+  "expense.reimburse": "还款",
   "expense.allSettled": "已全部结清",
   "expense.settlement": "还款",
   "listProps.leaveBlocked": "支出清单结算后才能退出。",

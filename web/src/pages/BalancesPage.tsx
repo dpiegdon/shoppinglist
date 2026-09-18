@@ -18,7 +18,7 @@ import { useT } from "../i18n";
 
 /**
  * Who is up and who is down on an expenses list (T-155), always summing to zero — and below it,
- * who should pay whom to make it so (T-164). Record on a transfer opens the ordinary expense form
+ * who should pay whom to make it so (T-164). Reimburse on a transfer opens the ordinary expense form
  * pre-filled; what it saves is an ordinary expense, so nothing on this screen is stored or synced.
  */
 export default function BalancesPage() {
@@ -191,7 +191,7 @@ export default function BalancesPage() {
                   </strong>
                   {canRecord(transfer) && (
                     <button type="button" className="btn btn-secondary" onClick={() => setRecording(transfer)}>
-                      {t("expense.record")}
+                      {t("expense.reimburse")}
                     </button>
                   )}
                 </div>

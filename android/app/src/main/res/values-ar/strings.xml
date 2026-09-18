@@ -262,7 +262,7 @@
     <string name="expense_frozen">وافق على الإغلاق — المبالغ ثابتة</string>
     <string name="expense_settle_up">تسوية الحسابات</string>
     <string name="expense_transfer">%1$s يدفع إلى %2$s</string>
-    <string name="expense_record">تسجيل</string>
+    <string name="expense_reimburse">تسديد</string>
     <string name="expense_all_settled">تمت تسوية كل شيء</string>
     <string name="expense_settlement">تسوية</string>
     <string name="listprops_leave_blocked">لا يمكن مغادرة قائمة المصروفات إلا بعد إغلاقها.</string>
