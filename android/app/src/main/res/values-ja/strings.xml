@@ -33,7 +33,6 @@
     <string name="nav_registry">すべてのアイテム</string>
     <string name="nav_list_properties">リストのプロパティ</string>
     <string name="nav_settings">設定</string>
-    <string name="nav_account">アカウント</string>
     <string name="nav_server_admin">サーバー管理</string>
     <string name="nav_log_out">ログアウト</string>
     <string name="nav_join_list">リストに参加</string>

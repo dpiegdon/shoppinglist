@@ -33,7 +33,6 @@
     <string name="nav_registry">Alle Artikel</string>
     <string name="nav_list_properties">Listeneigenschaften</string>
     <string name="nav_settings">Einstellungen</string>
-    <string name="nav_account">Konto</string>
     <string name="nav_server_admin">Serververwaltung</string>
     <string name="nav_log_out">Abmelden</string>
     <string name="nav_join_list">Liste beitreten</string>

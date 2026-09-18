@@ -60,13 +60,14 @@ class AppDrawerScaffoldTest {
     }
 
     @Test
-    fun `selecting Account in the drawer navigates to settings`() {
+    fun `selecting Settings in the drawer navigates to settings`() {
         val sessionState = FakeSessionState()
         val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
         val getNavController = setDrawerContent(loginViewModel)
 
         composeTestRule.onNodeWithContentDescription("Menu").performClick()
-        composeTestRule.onNodeWithText("Account").performClick()
+        // Labelled for the screen it opens (T-170); it said "Account".
+        composeTestRule.onNodeWithText("Settings").performClick()
 
         assertEquals(Routes.SETTINGS, getNavController().currentBackStackEntry?.destination?.route)
     }

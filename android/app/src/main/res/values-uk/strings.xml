@@ -33,7 +33,6 @@
     <string name="nav_registry">Усі товари</string>
     <string name="nav_list_properties">Властивості списку</string>
     <string name="nav_settings">Налаштування</string>
-    <string name="nav_account">Обліковий запис</string>
     <string name="nav_server_admin">Адміністрування сервера</string>
     <string name="nav_log_out">Вийти</string>
     <string name="nav_join_list">Приєднатися до списку</string>

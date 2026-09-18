@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -482,8 +482,9 @@ internal fun AppDrawerScaffold(
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_account)) },
+                    // "Settings", as the screen it opens is titled (T-170); it was "Account".
+                    icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_settings)) },
                     selected = currentRoute == Routes.SETTINGS,
                     onClick = { navigateTo(Routes.SETTINGS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
