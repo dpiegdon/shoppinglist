@@ -1,0 +1,13 @@
+{
+  "body": "The web uses the browser's date picker; Android had a plain text field expecting YYYY-MM-DD. It gets a date picker.",
+  "created_at": "2026-09-18T17:50:11+00:00",
+  "id": "T-185",
+  "labels": [
+    "ux",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "android: the expense date is picked, not typed",
+  "updated_at": "2026-09-18T17:50:11+00:00"
+}
