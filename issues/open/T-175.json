@@ -1,0 +1,13 @@
+{
+  "body": "Spotted during the 1.15.0 review: Material's FilterChip shows no check mark\nunless it is given a leading icon, and ours never was \u2014 so on Android the only\nsign that Show checked is on is the chip's tint. The web toggle has always shown\n\"\u2713\" when on.",
+  "created_at": "2026-09-18T17:38:44+00:00",
+  "id": "T-175",
+  "labels": [
+    "bug",
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "android: Show checked shows no check when on",
+  "updated_at": "2026-09-18T17:38:44+00:00"
+}
