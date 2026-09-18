@@ -1,0 +1,12 @@
+{
+  "body": "When the server refuses an expense write (participant_frozen, voted_to_close), the web client shows the reason at save time, naming the person (\"X has agreed to close the list, so their amounts cannot change\"). Android queues the write, the sync quarantines the row, and the only signal is the SyncStatusBar attention text with a count. No row is marked, no reason is shown, and nothing points at the expense to edit. Android has no equivalent of the web's expense.error.frozen string at all.\n\nBoth clients do pre-empt the common cases in the form (frozen rows locked, Reimburse hidden, Add hidden for voters), so this is the fallback path \u2014 but it is the path for races (someone votes while you edit offline), which is exactly when an explanation is needed.\n\nFix, to design: keep the server's code and account_id on the quarantined row (ItemEntity), mark the row in the expense list, and show the translated reason when it is opened; clear on edit as today. Same strings as the web where they exist. Check the same for shopping-list quarantines while there.",
+  "created_at": "2026-09-18T22:55:34+00:00",
+  "id": "T-200",
+  "labels": [
+    "ux",
+    "reliability"
+  ],
+  "priority": 3,
+  "title": "Android: a refused expense write is silent \u2014 a count in the status bar, no row, no reason",
+  "updated_at": "2026-09-18T22:55:34+00:00"
+}
