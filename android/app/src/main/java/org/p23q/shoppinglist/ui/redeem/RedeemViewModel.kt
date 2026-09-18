@@ -9,16 +9,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.RedeemInviteRequest
 import org.p23q.shoppinglist.data.sync.SyncEngine
+import org.p23q.shoppinglist.ui.ErrorText
+import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
 import javax.inject.Inject
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.UiText
 
 data class RedeemUiState(
     val token: String = "",
@@ -64,7 +65,7 @@ class RedeemViewModel @Inject constructor(
                 syncEngine.syncNow(fullLists = listOf(listId))
                 _uiState.update { it.copy(isLoading = false, redeemedListId = listId) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.redeem_msg_failed))) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
             }

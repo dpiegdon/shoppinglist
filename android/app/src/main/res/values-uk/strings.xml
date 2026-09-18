@@ -247,7 +247,7 @@
     <string name="expense_delete_title">Видалити цю витрату?</string>
     <string name="expense_delete_body">Її буде видалено для всіх у списку.</string>
     <string name="expense_error_above_total">Введені суми більші за загальну.</string>
-    <string name="expense_error_does_not_add_up">Введені суми дають %1$s.</string>
+    <string name="expense_error_does_not_add_up">Введені суми дають %1$s, а не %2$s.</string>
     <string name="expense_error_use_sum">Зробити загальну суму %1$s</string>
     <string name="expense_error_nobody">Виберіть щонайменше одну людину.</string>
     <string name="overview_kind_expenses">Спільні витрати: хто заплатив і хто винен.</string>
@@ -258,7 +258,7 @@
     <string name="expense_closing_help">Мають погодитися всі. Щойно ви погодитеся, ваші суми буде зафіксовано: нічого, що стосується вас, уже не можна додати чи змінити. Після закриття список стає записом лише для читання, і його можна залишити.</string>
     <string name="expense_agree_to_close">Погодитися закрити</string>
     <string name="expense_withdraw_vote">Відкликати</string>
-    <string name="expense_agree_count">%1$d з %2$d погоджуються закрити</string>
+    <string name="expense_agree_count">Голоси за закриття: %1$d з %2$d</string>
     <string name="expense_closed_on">Закрито %1$s</string>
     <string name="expense_vote_failed">Не вдалося зарахувати ваш голос.</string>
     <string name="expense_frozen">погодився закрити — суми зафіксовано</string>
@@ -269,4 +269,27 @@
     <string name="expense_all_settled">Усе розраховано</string>
     <string name="expense_settlement">Розрахунок</string>
     <string name="listprops_leave_blocked">Список витрат можна залишити лише після закриття.</string>
+    <string name="api_error_list_closed">Цей список закрито, змінити його вже не можна.</string>
+    <string name="api_error_email_taken">Обліковий запис із цією адресою вже існує</string>
+    <string name="api_error_registration_disabled">Цей сервер не приймає нових облікових записів</string>
+    <string name="api_error_invalid_email">Ця адреса електронної пошти недійсна</string>
+    <string name="api_error_invalid_password">Пароль має містити щонайменше 8 символів</string>
+    <string name="api_error_invalid_name">Введіть назву</string>
+    <string name="api_error_invalid_notes">Нотатки задовгі</string>
+    <string name="api_error_invalid_currency">Введіть трилітерний код валюти, наприклад EUR</string>
+    <string name="api_error_invalid_price">Ця ціна недійсна</string>
+    <string name="api_error_invite_expired">Термін дії цього запрошення минув</string>
+    <string name="api_error_invite_revoked">Це запрошення відкликано</string>
+    <string name="api_error_invite_used">Це запрошення вже використано</string>
+    <string name="api_error_invite_not_found">Такого запрошення не існує</string>
+    <string name="api_error_invite_email_mismatch">Це запрошення для іншої адреси електронної пошти</string>
+    <string name="api_error_cannot_delete_expense_list">Список витрат не можна видалити. Закрийте його, а потім залиште.</string>
+    <string name="api_error_not_a_member">Ви більше не учасник цього списку</string>
+    <string name="api_error_not_admin">Це може зробити лише адмін</string>
+    <string name="api_error_cannot_delete_admin">Адмінів не можна видалити тут</string>
+    <string name="api_error_cannot_delete_self">Власний обліковий запис видаляйте в налаштуваннях</string>
+    <string name="api_error_account_not_found">Цього облікового запису більше не існує</string>
+    <string name="api_error_session_not_found">Цей сеанс уже завершено</string>
+    <string name="api_error_server_busy">Сервер зайнятий. Спробуйте ще раз за мить.</string>
+    <string name="api_error_payload_too_large">Забагато даних для одного надсилання</string>
 </resources>

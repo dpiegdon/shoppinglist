@@ -456,7 +456,7 @@ describe("closing an expenses list", () => {
     renderAt("/list/list-1");
 
     expect(await screen.findByText("Dinner")).toBeInTheDocument();
-    expect(screen.queryByText(/agree to close/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Votes to close/)).not.toBeInTheDocument();
   });
 
   it("counts the votes once one is cast, and offers to agree", async () => {
@@ -464,7 +464,7 @@ describe("closing an expenses list", () => {
     vi.mocked(api.castCloseVote).mockResolvedValue({ close_votes: [OTHER, ME], closed_at: 1 });
     renderAt("/list/list-1");
 
-    expect(await screen.findByText("1 of 2 agree to close")).toBeInTheDocument();
+    expect(await screen.findByText("Votes to close: 1 of 2")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Agree to close" }));
 
     expect(api.castCloseVote).toHaveBeenCalledWith("list-1");

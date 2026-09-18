@@ -294,7 +294,7 @@
     <string name="expense_delete_title">Delete this expense?</string>
     <string name="expense_delete_body">It is removed for everyone on the list.</string>
     <string name="expense_error_above_total">The amounts entered are more than the total.</string>
-    <string name="expense_error_does_not_add_up">The amounts entered add up to %1$s.</string>
+    <string name="expense_error_does_not_add_up">The amounts entered add up to %1$s, not %2$s.</string>
     <string name="expense_error_use_sum">Set the total to %1$s</string>
     <string name="expense_error_nobody">Choose at least one person.</string>
     <string name="overview_kind_expenses">Shared costs: who paid, and who owes what.</string>
@@ -305,7 +305,7 @@
     <string name="expense_closing_help">Everyone has to agree. Once you agree, your amounts are fixed: nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.</string>
     <string name="expense_agree_to_close">Agree to close</string>
     <string name="expense_withdraw_vote">Withdraw</string>
-    <string name="expense_agree_count">%1$d of %2$d agree to close</string>
+    <string name="expense_agree_count">Votes to close: %1$d of %2$d</string>
     <string name="expense_closed_on">Closed on %1$s</string>
     <string name="expense_vote_failed">Could not record your vote.</string>
     <string name="expense_frozen">agreed to close — amounts fixed</string>
@@ -316,4 +316,27 @@
     <string name="expense_all_settled">All settled</string>
     <string name="expense_settlement">Settlement</string>
     <string name="listprops_leave_blocked">An expenses list can only be left once it is closed.</string>
+    <string name="api_error_list_closed">This list has been closed and can no longer be changed.</string>
+    <string name="api_error_email_taken">An account with this email already exists</string>
+    <string name="api_error_registration_disabled">This server isn\'t accepting new accounts</string>
+    <string name="api_error_invalid_email">That email address isn\'t valid</string>
+    <string name="api_error_invalid_password">Passwords need at least 8 characters</string>
+    <string name="api_error_invalid_name">Enter a name</string>
+    <string name="api_error_invalid_notes">The notes are too long</string>
+    <string name="api_error_invalid_currency">Enter a three-letter currency code, such as EUR</string>
+    <string name="api_error_invalid_price">That price isn\'t valid</string>
+    <string name="api_error_invite_expired">This invite has expired</string>
+    <string name="api_error_invite_revoked">This invite was withdrawn</string>
+    <string name="api_error_invite_used">This invite has already been used</string>
+    <string name="api_error_invite_not_found">This invite doesn\'t exist</string>
+    <string name="api_error_invite_email_mismatch">This invite is for a different email address</string>
+    <string name="api_error_cannot_delete_expense_list">An expenses list can\'t be deleted. Close it, then leave it.</string>
+    <string name="api_error_not_a_member">You\'re no longer a member of this list</string>
+    <string name="api_error_not_admin">Only an admin can do that</string>
+    <string name="api_error_cannot_delete_admin">Admins can\'t be deleted here</string>
+    <string name="api_error_cannot_delete_self">Delete your own account in Settings</string>
+    <string name="api_error_account_not_found">That account no longer exists</string>
+    <string name="api_error_session_not_found">That session has already ended</string>
+    <string name="api_error_server_busy">The server is busy. Try again in a moment.</string>
+    <string name="api_error_payload_too_large">That\'s too much to send at once</string>
 </resources>

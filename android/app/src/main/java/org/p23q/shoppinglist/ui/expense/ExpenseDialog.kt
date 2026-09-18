@@ -180,6 +180,7 @@ fun ExpenseDialog(
                                 rows = state.paidBy,
                                 error = state.paidByError,
                                 sumCents = state.paidBySumCents,
+                                totalCents = ExpenseMath.toCents(state.totalText.trim()) ?: 0L,
                                 onToggle = { viewModel.toggleParticipant(Side.PAID_BY, it) },
                                 onChange = { id, value -> viewModel.onShareChange(Side.PAID_BY, id, value) },
                                 onUseSum = { viewModel.useSumAsTotal(Side.PAID_BY) },
@@ -190,6 +191,7 @@ fun ExpenseDialog(
                                 rows = state.paidFor,
                                 error = state.paidForError,
                                 sumCents = state.paidForSumCents,
+                                totalCents = ExpenseMath.toCents(state.totalText.trim()) ?: 0L,
                                 onToggle = { viewModel.toggleParticipant(Side.PAID_FOR, it) },
                                 onChange = { id, value -> viewModel.onShareChange(Side.PAID_FOR, id, value) },
                                 onUseSum = { viewModel.useSumAsTotal(Side.PAID_FOR) },
@@ -292,6 +294,8 @@ private fun ShareSection(
     rows: List<ShareRow>,
     error: ExpenseMath.DistributeError?,
     sumCents: Long,
+    /** For "add up to X, not Y" — the same message as the web's (T-148). */
+    totalCents: Long,
     onToggle: (String) -> Unit,
     onChange: (String, String) -> Unit,
     onUseSum: () -> Unit,
@@ -338,7 +342,11 @@ private fun ShareSection(
             )
         ExpenseMath.DistributeError.FIXED_SUM_MISMATCH -> {
             Text(
-                stringResource(R.string.expense_error_does_not_add_up, ExpenseMath.fromCents(sumCents)),
+                stringResource(
+                    R.string.expense_error_does_not_add_up,
+                    ExpenseMath.fromCents(sumCents),
+                    ExpenseMath.fromCents(totalCents),
+                ),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )

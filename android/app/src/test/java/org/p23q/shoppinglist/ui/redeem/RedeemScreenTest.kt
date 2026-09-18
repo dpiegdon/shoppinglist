@@ -16,6 +16,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
@@ -119,10 +120,11 @@ class RedeemScreenTest {
         // each attempt so a response that lands late still gets picked up.
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.waitForIdle()
-            viewModel.uiState.value.errorMessage == UiText.Raw("Bad invite link")
+            viewModel.uiState.value.errorMessage == UiText.res(R.string.api_error_invite_not_found)
         }
 
-        composeTestRule.onNodeWithText("Bad invite link").assertExists()
+        // A garbled link reads as an invite that does not exist, in the app's language (see ErrorText).
+        composeTestRule.onNodeWithText("This invite doesn't exist").assertExists()
         composeTestRule.onNodeWithText("Back").assertExists()
         db.close()
     }

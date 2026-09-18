@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import * as api from "../api/client";
-import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
+import { errorMessage } from "../i18n/apiErrors";
 
 /** Accessible on/off switch (T-112): green track when on, red when off. */
 function ToggleSwitch({
@@ -95,7 +95,7 @@ export default function AdminPage() {
       setUsers(usersResp.users);
       setAllowRegistration(settings.allow_registration);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("admin.loadFailed"));
+      setError(errorMessage(t, err, "admin.loadFailed"));
     }
   }
 
@@ -114,7 +114,7 @@ export default function AdminPage() {
       const result = await api.setServerSettings(!allowRegistration);
       setAllowRegistration(result.allow_registration);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("admin.updateFailed"));
+      setError(errorMessage(t, err, "admin.updateFailed"));
     }
   }
 
@@ -126,7 +126,7 @@ export default function AdminPage() {
       const result = await api.adminResetPassword(user.id, password);
       setResetResult({ email: user.email, password: result.password });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("admin.resetFailed"));
+      setError(errorMessage(t, err, "admin.resetFailed"));
     }
   }
 
@@ -144,7 +144,7 @@ export default function AdminPage() {
       await api.adminDeleteUser(user.id, password);
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("admin.deleteFailed"));
+      setError(errorMessage(t, err, "admin.deleteFailed"));
     }
   }
 

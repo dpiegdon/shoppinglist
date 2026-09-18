@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import * as api from "../api/client";
-import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { extractInviteToken } from "../lib/inviteToken";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
+import { errorMessage } from "../i18n/apiErrors";
 
 export default function RedeemPage() {
   const t = useT();
@@ -28,7 +28,8 @@ export default function RedeemPage() {
       localStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
       navigate(`/list/${list_id}`, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("redeem.error"));
+      // A garbled or tampered link is, to its holder, an invite that does not exist.
+      setError(errorMessage(t, err, "redeem.error", { invalid_token: "apiError.inviteNotFound" }));
     } finally {
       setRedeeming(false);
     }

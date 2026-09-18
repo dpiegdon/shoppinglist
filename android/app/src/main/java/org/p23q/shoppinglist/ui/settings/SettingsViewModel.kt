@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
@@ -29,10 +30,10 @@ import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.update.UpdatePrefsStore
+import org.p23q.shoppinglist.ui.ErrorText
+import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
 import javax.inject.Inject
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.UiText
 
 data class SettingsUiState(
     val serverUrl: String = "",
@@ -202,7 +203,7 @@ class SettingsViewModel @Inject constructor(
                     )
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_currency_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_currency_failed)) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
@@ -229,7 +230,7 @@ class SettingsViewModel @Inject constructor(
                     it.copy(initials = response.initials, errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_initials_updated))
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_initials_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_initials_failed)) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
@@ -251,7 +252,7 @@ class SettingsViewModel @Inject constructor(
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_password_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_password_failed, mapOf("invalid_credentials" to R.string.settings_msg_password_incorrect))) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
@@ -280,7 +281,7 @@ class SettingsViewModel @Inject constructor(
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_email_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_email_failed, mapOf("invalid_credentials" to R.string.settings_msg_delete_password_incorrect))) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
@@ -315,7 +316,7 @@ class SettingsViewModel @Inject constructor(
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.settings_msg_delete_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_delete_failed, mapOf("invalid_credentials" to R.string.settings_msg_delete_password_incorrect))) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }

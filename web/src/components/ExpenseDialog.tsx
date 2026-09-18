@@ -12,6 +12,7 @@ import {
   type ShareEntry,
 } from "../lib/expenses";
 import { useT } from "../i18n";
+import { errorMessage } from "../i18n/apiErrors";
 
 export interface ExpenseSaveValues {
   itemId: string;
@@ -298,12 +299,10 @@ export default function ExpenseDialog({
 
   /** The server's refusals, said in terms of this list's people rather than account ids. */
   function saveErrorText(err: unknown): string {
-    if (!(err instanceof ApiError)) return t("item.saveFailed");
-    if (err.code === "participant_frozen") {
+    if (err instanceof ApiError && err.code === "participant_frozen") {
       return t("expense.error.frozen", { who: labelFor(String(err.details.account_id ?? "")) });
     }
-    if (err.code === "list_closed") return t("expense.error.closed");
-    return err.message;
+    return errorMessage(t, err, "item.saveFailed");
   }
 
   const canSave = name.trim() !== "" && byResult.ok && forResult.ok && !saving;

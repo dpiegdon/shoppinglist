@@ -335,7 +335,7 @@ describe("ListPropsPage invite link (T-83)", () => {
 
     await renderListPropsPageViaListPage();
 
-    const emailInput = await screen.findByPlaceholderText("Invite by email…");
+    const emailInput = await screen.findByPlaceholderText("Invite by email");
     await userEvent.type(emailInput, "friend@example.com");
     await userEvent.click(screen.getByRole("button", { name: "Invite" }));
 

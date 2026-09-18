@@ -144,8 +144,8 @@ class RedeemViewModelTest {
 
         viewModel.redeem()?.join()
 
-        // Server-supplied text stays Raw and untranslated — see UiText.
-        assertEquals(UiText.Raw("This invite was already used"), viewModel.uiState.value.errorMessage)
+        // Translated from the error's code, not the server's English text (see ErrorText).
+        assertEquals(UiText.res(R.string.api_error_invite_used), viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.redeemedListId)
     }
 

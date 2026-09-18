@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api/client";
-import { ApiError } from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
@@ -13,6 +12,7 @@ import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
 import { compareNames } from "../lib/nameOrder";
+import { errorMessage } from "../i18n/apiErrors";
 
 export default function ListPropsPage() {
   const t = useT();
@@ -59,7 +59,7 @@ export default function ListPropsPage() {
     api
       .getMembers(listId)
       .then(setMembers)
-      .catch((err) => setMembersError(err instanceof ApiError ? err.message : t("listProps.membersFailed")));
+      .catch((err) => setMembersError(errorMessage(t, err, "listProps.membersFailed")));
   }, [listId]);
 
   if (!listId) return <Navigate to="/" replace />;
@@ -207,7 +207,7 @@ export default function ListPropsPage() {
       const refreshed = await api.getMembers(id);
       setMembers(refreshed);
     } catch (err) {
-      setMembersError(err instanceof ApiError ? err.message : t("listProps.inviteFailed"));
+      setMembersError(errorMessage(t, err, "listProps.inviteFailed"));
     }
   }
 
@@ -385,7 +385,7 @@ export default function ListPropsPage() {
                     value={categoryDraft}
                     onChange={(e) => setCategoryDraft(e.target.value)}
                     style={{ flex: 1 }}
-                    aria-label={`Rename ${canonicalNames.get(key)}`}
+                    aria-label={t("listProps.renameCategory", { category: canonicalNames.get(key) ?? "" })}
                   />
                   <button type="submit" className="btn btn-secondary">
                     {t("action.save")}
@@ -399,7 +399,7 @@ export default function ListPropsPage() {
             return (
               <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                 <span style={{ flex: 1 }}>{canonicalNames.get(key)}</span>
-                <button type="button" className="btn-icon" onClick={() => startRename(key)} aria-label={`Rename ${canonicalNames.get(key)}`}>
+                <button type="button" className="btn-icon" onClick={() => startRename(key)} aria-label={t("listProps.renameCategory", { category: canonicalNames.get(key) ?? "" })}>
                   ✎
                 </button>
                 <button

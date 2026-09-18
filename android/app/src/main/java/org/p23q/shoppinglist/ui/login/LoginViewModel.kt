@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.AuthRepository
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.ServerConfig
@@ -17,14 +18,14 @@ import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.UnauthorizedException
 import org.p23q.shoppinglist.data.sync.SyncTrigger
+import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.authedStartDestination
 import java.io.IOException
 import java.net.URI
 import javax.inject.Inject
 import javax.net.ssl.SSLException
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.UiText
 
 data class LoginUiState(
     val serverUrl: String = "",
@@ -133,7 +134,7 @@ class LoginViewModel @Inject constructor(
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_incorrect_credentials)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.error_generic))) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, R.string.error_generic)) }
             } catch (e: SSLException) {
                 // Distinct from the generic reach-the-server case: an untrusted/self-signed cert is the
                 // first thing a self-hoster hits, and it's actionable (T-38). SSLException extends

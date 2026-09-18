@@ -247,7 +247,7 @@
     <string name="expense_delete_title">حذف هذا المصروف؟</string>
     <string name="expense_delete_body">سيُحذف لدى جميع أعضاء القائمة.</string>
     <string name="expense_error_above_total">المبالغ المُدخلة أكبر من الإجمالي.</string>
-    <string name="expense_error_does_not_add_up">المبالغ المُدخلة مجموعها %1$s.</string>
+    <string name="expense_error_does_not_add_up">المبالغ المُدخلة مجموعها %1$s وليس %2$s.</string>
     <string name="expense_error_use_sum">اجعل الإجمالي %1$s</string>
     <string name="expense_error_nobody">اختر شخصًا واحدًا على الأقل.</string>
     <string name="overview_kind_expenses">تكاليف مشتركة: من دفع ومن عليه دين.</string>
@@ -258,7 +258,7 @@
     <string name="expense_closing_help">يجب أن يوافق الجميع. بمجرد موافقتك تصبح مبالغك ثابتة: لا يمكن إضافة أو تغيير أي شيء يخصك. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.</string>
     <string name="expense_agree_to_close">الموافقة على الإغلاق</string>
     <string name="expense_withdraw_vote">سحب الموافقة</string>
-    <string name="expense_agree_count">%1$d من %2$d وافقوا على الإغلاق</string>
+    <string name="expense_agree_count">الأصوات المؤيدة للإغلاق: %1$d من %2$d</string>
     <string name="expense_closed_on">أُغلقت في %1$s</string>
     <string name="expense_vote_failed">تعذّر تسجيل تصويتك.</string>
     <string name="expense_frozen">وافق على الإغلاق — المبالغ ثابتة</string>
@@ -269,4 +269,27 @@
     <string name="expense_all_settled">تمت تسوية كل شيء</string>
     <string name="expense_settlement">تسوية</string>
     <string name="listprops_leave_blocked">لا يمكن مغادرة قائمة المصروفات إلا بعد إغلاقها.</string>
+    <string name="api_error_list_closed">أُغلقت هذه القائمة ولم يعد بالإمكان تغييرها.</string>
+    <string name="api_error_email_taken">يوجد حساب بهذا البريد الإلكتروني بالفعل</string>
+    <string name="api_error_registration_disabled">لا يقبل هذا الخادم حسابات جديدة</string>
+    <string name="api_error_invalid_email">عنوان البريد الإلكتروني هذا غير صالح</string>
+    <string name="api_error_invalid_password">يجب أن تتكون كلمة المرور من 8 أحرف على الأقل</string>
+    <string name="api_error_invalid_name">أدخل اسمًا</string>
+    <string name="api_error_invalid_notes">الملاحظات طويلة جدًا</string>
+    <string name="api_error_invalid_currency">أدخل رمز عملة من ثلاثة أحرف، مثل EUR</string>
+    <string name="api_error_invalid_price">هذا السعر غير صالح</string>
+    <string name="api_error_invite_expired">انتهت صلاحية هذه الدعوة</string>
+    <string name="api_error_invite_revoked">تم سحب هذه الدعوة</string>
+    <string name="api_error_invite_used">تم استخدام هذه الدعوة بالفعل</string>
+    <string name="api_error_invite_not_found">هذه الدعوة غير موجودة</string>
+    <string name="api_error_invite_email_mismatch">هذه الدعوة مخصصة لعنوان بريد إلكتروني آخر</string>
+    <string name="api_error_cannot_delete_expense_list">لا يمكن حذف قائمة المصروفات. أغلقها ثم غادرها.</string>
+    <string name="api_error_not_a_member">لم تعد عضوًا في هذه القائمة</string>
+    <string name="api_error_not_admin">لا يمكن القيام بذلك إلا للمسؤول</string>
+    <string name="api_error_cannot_delete_admin">لا يمكن حذف المسؤولين من هنا</string>
+    <string name="api_error_cannot_delete_self">احذف حسابك من الإعدادات</string>
+    <string name="api_error_account_not_found">هذا الحساب لم يعد موجودًا</string>
+    <string name="api_error_session_not_found">انتهت هذه الجلسة بالفعل</string>
+    <string name="api_error_server_busy">الخادم مشغول. حاول مرة أخرى بعد لحظة.</string>
+    <string name="api_error_payload_too_large">هذا أكثر مما يمكن إرساله دفعة واحدة</string>
 </resources>

@@ -148,7 +148,7 @@ class ExpenseClosingTest {
         setListState(closeVotes = listOf(other))
         showList()
 
-        composeTestRule.onNodeWithText("1 of 2 agree to close").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Votes to close: 1 of 2").assertIsDisplayed()
         composeTestRule.onNodeWithText("Agree to close").assertIsDisplayed()
     }
 
@@ -170,6 +170,6 @@ class ExpenseClosingTest {
         // By description: the Add button is an icon, so looking for it as text passed whether or not
         // it was there (T-168 found this).
         composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
-        composeTestRule.onNodeWithText("1 of 2 agree to close").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Votes to close: 1 of 2").assertDoesNotExist()
     }
 }

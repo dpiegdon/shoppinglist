@@ -273,6 +273,20 @@ describe("catalog registration (T-124)", () => {
   });
 });
 
+describe("the browser tab follows the language (T-148's review)", () => {
+  it("names the tab in the chosen language, not only the page", async () => {
+    const { renderHook, act } = await import("@testing-library/react");
+    const { I18nProvider, useI18n } = await import("./index");
+
+    const { result } = renderHook(() => useI18n(), { wrapper: I18nProvider });
+
+    act(() => result.current.setLocale("de"));
+    expect(document.title).toBe("Einkaufsliste");
+    act(() => result.current.setLocale("en"));
+    expect(document.title).toBe("Shopping List");
+  });
+});
+
 describe("Arabic engages the RTL machinery end-to-end (T-126/T-124)", () => {
   it("flips the document direction when Arabic is selected", async () => {
     // The point of shipping Arabic early: everything RTL in T-126 was built without a single real

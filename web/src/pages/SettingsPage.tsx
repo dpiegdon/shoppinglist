@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as api from "../api/client";
-import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useT } from "../i18n";
 import LanguagePicker from "../components/LanguagePicker";
 import { getCachedDefaultCurrency, setCachedDefaultCurrency, useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { Session } from "../api/contract";
 import { formatLastSeen } from "../lib/relativeTime";
+import { errorMessage } from "../i18n/apiErrors";
+import type { MessageKey } from "../i18n/messages/en";
 
 function useFormStatus() {
   // A custom hook, so it takes the translate function itself rather than being handed one — the
@@ -15,14 +16,15 @@ function useFormStatus() {
   const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
-  async function run(fn: () => Promise<void>) {
+  // [overrides] lets one form say something narrower for a code (see errorMessage).
+  async function run(fn: () => Promise<void>, overrides: Partial<Record<string, MessageKey>> = {}) {
     setError(null);
     setOk(false);
     try {
       await fn();
       setOk(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("error.generic"));
+      setError(errorMessage(t, err, "error.generic", overrides));
     }
   }
   return { error, ok, run };
@@ -118,7 +120,7 @@ export default function SettingsPage() {
       await api.changePassword({ current_password: currentPassword, new_password: newPassword });
       setCurrentPassword("");
       setNewPassword("");
-    });
+    }, { invalid_credentials: "settings.passwordIncorrect" });
   }
 
   async function handleEmailSave(e: FormEvent) {
@@ -127,7 +129,7 @@ export default function SettingsPage() {
       await api.changeEmail({ password: emailPassword, new_email: newEmail });
       setEmailPassword("");
       setNewEmail("");
-    });
+    }, { invalid_credentials: "settings.passwordWrong" });
   }
 
   async function handleRevokeSession(id: string) {
@@ -144,7 +146,7 @@ export default function SettingsPage() {
       await api.deleteAccount({ password: deletePassword });
       await logout();
       navigate("/login", { replace: true });
-    });
+    }, { invalid_credentials: "settings.passwordWrong" });
   }
 
   return (

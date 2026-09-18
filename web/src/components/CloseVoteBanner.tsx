@@ -1,10 +1,10 @@
 import { useState } from "react";
 import * as api from "../api/client";
-import { ApiError } from "../api/client";
 import type { ListMember } from "../api/contract";
 import { useSyncContext } from "../hooks/SyncContext";
 import { useT } from "../i18n";
 import { useFormat } from "../lib/format";
+import { errorMessage } from "../i18n/apiErrors";
 
 interface CloseVoteBannerProps {
   listId: string;
@@ -55,7 +55,7 @@ export default function CloseVoteBanner({
       // The list row carries the vote state, so a pull is what makes the change visible.
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("expense.voteFailed"));
+      setError(errorMessage(t, err, "expense.voteFailed"));
     } finally {
       setBusy(false);
     }

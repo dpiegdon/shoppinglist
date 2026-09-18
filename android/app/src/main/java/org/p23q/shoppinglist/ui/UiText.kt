@@ -15,16 +15,12 @@ import androidx.compose.ui.platform.LocalContext
  * changed. So a ViewModel names the message and the UI resolves it, at which point
  * [LocalizedContent] has already put the chosen locale on `LocalContext`.
  *
- * [Raw] exists for text the app did not author: server error messages arrive already-formed over
- * the wire. Those stay English regardless of the UI language — the server has no localization, and
- * the wire contract's error CODES would be the way to fix that properly, one day. Keeping them a
- * distinct case rather than smuggling them through [Res] makes that limitation visible instead of
- * silently pretending they are translated.
+ * There is no case for raw text any more. It existed for server error messages, which arrive in
+ * English: they are now translated from the error's code by [ErrorText], and a failure without a
+ * known code shows the screen's own message. Having no raw case is what keeps untranslated server
+ * text from creeping back in.
  */
 sealed interface UiText {
-    /** Text the app did not author — currently only server-supplied messages. Not translated. */
-    data class Raw(val value: String) : UiText
-
     /** A string resource, with any format arguments. */
     data class Res(@param:StringRes val id: Int, val args: List<Any> = emptyList()) : UiText
 
@@ -48,7 +44,6 @@ fun UiText.asString(): String = asString(LocalContext.current)
  * have to be assembled by concatenation, which is precisely what a translator cannot reorder.
  */
 fun UiText.asString(context: Context): String = when (this) {
-    is UiText.Raw -> value
     is UiText.Res -> context.getString(
         id,
         *args.map {

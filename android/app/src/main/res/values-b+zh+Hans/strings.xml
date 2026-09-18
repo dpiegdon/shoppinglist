@@ -247,7 +247,7 @@
     <string name="expense_delete_title">要删除这笔支出吗？</string>
     <string name="expense_delete_body">清单中的所有人都会看到它被删除。</string>
     <string name="expense_error_above_total">填写的金额之和超过了合计。</string>
-    <string name="expense_error_does_not_add_up">填写的金额之和是 %1$s。</string>
+    <string name="expense_error_does_not_add_up">填写的金额之和是 %1$s，不是 %2$s。</string>
     <string name="expense_error_use_sum">把合计设为 %1$s</string>
     <string name="expense_error_nobody">请至少选择一个人。</string>
     <string name="overview_kind_expenses">共同支出：谁付的钱，谁还欠钱。</string>
@@ -258,7 +258,7 @@
     <string name="expense_closing_help">需要所有人同意。一旦你同意，你的金额即被锁定：不能再添加或更改任何涉及你的支出。结算后清单变为只读记录，并且可以退出。</string>
     <string name="expense_agree_to_close">同意结算</string>
     <string name="expense_withdraw_vote">撤回</string>
-    <string name="expense_agree_count">%2$d 人中已有 %1$d 人同意结算</string>
+    <string name="expense_agree_count">同意结算：%1$d / %2$d</string>
     <string name="expense_closed_on">已于 %1$s 结算</string>
     <string name="expense_vote_failed">无法记录你的投票。</string>
     <string name="expense_frozen">已同意结算 — 金额已锁定</string>
@@ -269,4 +269,27 @@
     <string name="expense_all_settled">已全部结清</string>
     <string name="expense_settlement">还款</string>
     <string name="listprops_leave_blocked">支出清单结算后才能退出。</string>
+    <string name="api_error_list_closed">此清单已结算，无法再更改。</string>
+    <string name="api_error_email_taken">该邮箱已注册账户</string>
+    <string name="api_error_registration_disabled">此服务器不接受新账户注册</string>
+    <string name="api_error_invalid_email">该邮箱地址无效</string>
+    <string name="api_error_invalid_password">密码至少需要 8 个字符</string>
+    <string name="api_error_invalid_name">请输入名称</string>
+    <string name="api_error_invalid_notes">备注太长了</string>
+    <string name="api_error_invalid_currency">请输入三位字母的货币代码，例如 EUR</string>
+    <string name="api_error_invalid_price">价格无效</string>
+    <string name="api_error_invite_expired">此邀请已过期</string>
+    <string name="api_error_invite_revoked">此邀请已被撤回</string>
+    <string name="api_error_invite_used">此邀请已被使用</string>
+    <string name="api_error_invite_not_found">此邀请不存在</string>
+    <string name="api_error_invite_email_mismatch">此邀请属于另一个邮箱地址</string>
+    <string name="api_error_cannot_delete_expense_list">支出清单无法删除。请先结算，再退出。</string>
+    <string name="api_error_not_a_member">你已不是此清单的成员</string>
+    <string name="api_error_not_admin">只有管理员才能执行此操作</string>
+    <string name="api_error_cannot_delete_admin">无法在此删除管理员</string>
+    <string name="api_error_cannot_delete_self">请在设置中删除你自己的账户</string>
+    <string name="api_error_account_not_found">该账户已不存在</string>
+    <string name="api_error_session_not_found">该会话已结束</string>
+    <string name="api_error_server_busy">服务器繁忙，请稍后再试。</string>
+    <string name="api_error_payload_too_large">一次发送的内容太多</string>
 </resources>

@@ -149,6 +149,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (typeof document !== "undefined") {
       document.documentElement.lang = locale;
       document.documentElement.dir = localeDir(locale);
+      // The tab's title too (T-148's review): index.html ships the English name, and nothing
+      // replaced it, so the tab read "Shopping List" in every language.
+      document.title = translate(locale, "app.title");
     }
   }, [locale]);
 

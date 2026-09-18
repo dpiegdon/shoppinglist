@@ -9,16 +9,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.AdminPasswordRequest
 import org.p23q.shoppinglist.data.api.AdminUserDto
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.ServerSettingsDto
+import org.p23q.shoppinglist.ui.ErrorText
+import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
 import javax.inject.Inject
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.UiText
 
 data class AdminUiState(
     val users: List<AdminUserDto> = emptyList(),
@@ -60,7 +61,7 @@ class AdminViewModel @Inject constructor(
                 it.copy(users = users, allowRegistration = settings.allowRegistration, error = null)
             }
         } catch (e: ApiException) {
-            _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_load_failed))) }
+            _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
         } catch (e: IOException) {
             _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline_admin)) }
         }
@@ -90,7 +91,7 @@ class AdminViewModel @Inject constructor(
                 val result = apiProvider.get().adminSetServerSettings(ServerSettingsDto(!current))
                 _uiState.update { it.copy(allowRegistration = result.allowRegistration, error = null) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_update_failed))) }
+                _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_update_failed)) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
@@ -107,7 +108,7 @@ class AdminViewModel @Inject constructor(
                     it.copy(resetEmail = user.email, resetPassword = result.password, error = null)
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_reset_failed))) }
+                _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_reset_failed)) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
@@ -124,7 +125,7 @@ class AdminViewModel @Inject constructor(
                     it.copy(users = it.users.filterNot { u -> u.id == user.id }, error = null)
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.admin_msg_delete_failed))) }
+                _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_delete_failed)) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }

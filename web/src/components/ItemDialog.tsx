@@ -1,9 +1,9 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
-import { ApiError } from "../api/client";
 import { parseCurrency, parsePriceAmount } from "../lib/priceParse";
 import { useT } from "../i18n";
+import { errorMessage } from "../i18n/apiErrors";
 
 /** The item fields the dialog can push, as LWW keys (matches the `fieldPatch` keys the pages spread). */
 export type ItemChangedField = "name" | "category" | "stores" | "quantity" | "price" | "note" | "status";
@@ -250,7 +250,7 @@ export default function ItemDialog({
       setValues(next);
       setStoreInput("");
       setStatus("todo");
-      setSaveError(err instanceof ApiError ? err.message : t("item.saveFailed"));
+      setSaveError(errorMessage(t, err, "item.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -378,7 +378,7 @@ export default function ItemDialog({
       // Surface the server's rejection inline and keep the dialog open (T-91) — previously this
       // escaped as an unhandled rejection, leaving the user with no idea what went wrong or that
       // nothing was saved.
-      setSaveError(err instanceof ApiError ? err.message : t("item.saveFailed"));
+      setSaveError(errorMessage(t, err, "item.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -513,7 +513,7 @@ export default function ItemDialog({
                   <button
                     type="button"
                     className="chip-remove"
-                    aria-label={`Remove ${store}`}
+                    aria-label={t("item.removeStore", { store })}
                     onClick={() => removeStore(store)}
                   >
                     ×

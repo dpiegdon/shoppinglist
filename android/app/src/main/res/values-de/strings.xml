@@ -247,7 +247,7 @@
     <string name="expense_delete_title">Diese Ausgabe löschen?</string>
     <string name="expense_delete_body">Sie wird für alle auf der Liste entfernt.</string>
     <string name="expense_error_above_total">Die eingetragenen Beträge sind zusammen größer als der Gesamtbetrag.</string>
-    <string name="expense_error_does_not_add_up">Die eingetragenen Beträge ergeben %1$s.</string>
+    <string name="expense_error_does_not_add_up">Die eingetragenen Beträge ergeben %1$s, nicht %2$s.</string>
     <string name="expense_error_use_sum">Gesamtbetrag auf %1$s setzen</string>
     <string name="expense_error_nobody">Wähle mindestens eine Person.</string>
     <string name="overview_kind_expenses">Geteilte Kosten: wer gezahlt hat und wer noch zahlt.</string>
@@ -258,7 +258,7 @@
     <string name="expense_closing_help">Alle müssen zustimmen. Sobald du zustimmst, sind deine Beträge festgeschrieben: Nichts, was dich betrifft, kann noch hinzugefügt oder geändert werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.</string>
     <string name="expense_agree_to_close">Abschluss zustimmen</string>
     <string name="expense_withdraw_vote">Zurückziehen</string>
-    <string name="expense_agree_count">%1$d von %2$d stimmen dem Abschluss zu</string>
+    <string name="expense_agree_count">Zustimmungen zum Abschluss: %1$d von %2$d</string>
     <string name="expense_closed_on">Abgeschlossen am %1$s</string>
     <string name="expense_vote_failed">Deine Stimme konnte nicht gespeichert werden.</string>
     <string name="expense_frozen">hat zugestimmt – Beträge festgeschrieben</string>
@@ -269,4 +269,27 @@
     <string name="expense_all_settled">Alles ausgeglichen</string>
     <string name="expense_settlement">Ausgleich</string>
     <string name="listprops_leave_blocked">Eine Ausgabenliste kann erst verlassen werden, wenn sie abgeschlossen ist.</string>
+    <string name="api_error_list_closed">Diese Liste ist abgeschlossen und kann nicht mehr geändert werden.</string>
+    <string name="api_error_email_taken">Mit dieser E-Mail-Adresse gibt es bereits ein Konto</string>
+    <string name="api_error_registration_disabled">Dieser Server nimmt keine neuen Konten an</string>
+    <string name="api_error_invalid_email">Diese E-Mail-Adresse ist ungültig</string>
+    <string name="api_error_invalid_password">Passwörter brauchen mindestens 8 Zeichen</string>
+    <string name="api_error_invalid_name">Gib einen Namen ein</string>
+    <string name="api_error_invalid_notes">Die Notizen sind zu lang</string>
+    <string name="api_error_invalid_currency">Gib einen dreistelligen Währungscode ein, z. B. EUR</string>
+    <string name="api_error_invalid_price">Dieser Preis ist ungültig</string>
+    <string name="api_error_invite_expired">Diese Einladung ist abgelaufen</string>
+    <string name="api_error_invite_revoked">Diese Einladung wurde zurückgezogen</string>
+    <string name="api_error_invite_used">Diese Einladung wurde bereits verwendet</string>
+    <string name="api_error_invite_not_found">Diese Einladung gibt es nicht</string>
+    <string name="api_error_invite_email_mismatch">Diese Einladung gilt für eine andere E-Mail-Adresse</string>
+    <string name="api_error_cannot_delete_expense_list">Eine Ausgabenliste kann nicht gelöscht werden. Schließe sie ab und verlasse sie dann.</string>
+    <string name="api_error_not_a_member">Du bist kein Mitglied dieser Liste mehr</string>
+    <string name="api_error_not_admin">Das darf nur ein Admin</string>
+    <string name="api_error_cannot_delete_admin">Admins können hier nicht gelöscht werden</string>
+    <string name="api_error_cannot_delete_self">Dein eigenes Konto löschst du in den Einstellungen</string>
+    <string name="api_error_account_not_found">Dieses Konto gibt es nicht mehr</string>
+    <string name="api_error_session_not_found">Diese Sitzung ist bereits beendet</string>
+    <string name="api_error_server_busy">Der Server ist ausgelastet. Versuch es gleich noch einmal.</string>
+    <string name="api_error_payload_too_large">Das ist zu viel auf einmal</string>
 </resources>

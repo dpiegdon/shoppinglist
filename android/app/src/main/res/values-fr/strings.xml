@@ -247,7 +247,7 @@
     <string name="expense_delete_title">Supprimer cette dépense ?</string>
     <string name="expense_delete_body">Elle est supprimée pour tous les membres de la liste.</string>
     <string name="expense_error_above_total">Les montants saisis dépassent le total.</string>
-    <string name="expense_error_does_not_add_up">Les montants saisis font %1$s.</string>
+    <string name="expense_error_does_not_add_up">Les montants saisis font %1$s, pas %2$s.</string>
     <string name="expense_error_use_sum">Mettre le total à %1$s</string>
     <string name="expense_error_nobody">Choisissez au moins une personne.</string>
     <string name="overview_kind_expenses">Frais partagés : qui a payé et qui doit quoi.</string>
@@ -258,7 +258,7 @@
     <string name="expense_closing_help">Tout le monde doit être d\'accord. Dès que vous acceptez, vos montants sont figés : plus rien qui vous concerne ne peut être ajouté ou modifié. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.</string>
     <string name="expense_agree_to_close">Accepter la clôture</string>
     <string name="expense_withdraw_vote">Retirer</string>
-    <string name="expense_agree_count">%1$d sur %2$d acceptent la clôture</string>
+    <string name="expense_agree_count">Votes pour la clôture : %1$d sur %2$d</string>
     <string name="expense_closed_on">Close le %1$s</string>
     <string name="expense_vote_failed">Votre vote n\'a pas pu être enregistré.</string>
     <string name="expense_frozen">a accepté la clôture — montants figés</string>
@@ -269,4 +269,27 @@
     <string name="expense_all_settled">Tout est réglé</string>
     <string name="expense_settlement">Remboursement</string>
     <string name="listprops_leave_blocked">Une liste de dépenses ne peut être quittée qu\'une fois close.</string>
+    <string name="api_error_list_closed">Cette liste est close et ne peut plus être modifiée.</string>
+    <string name="api_error_email_taken">Un compte existe déjà avec cette adresse e-mail</string>
+    <string name="api_error_registration_disabled">Ce serveur n\'accepte pas de nouveaux comptes</string>
+    <string name="api_error_invalid_email">Cette adresse e-mail n\'est pas valide</string>
+    <string name="api_error_invalid_password">Les mots de passe doivent comporter au moins 8 caractères</string>
+    <string name="api_error_invalid_name">Saisissez un nom</string>
+    <string name="api_error_invalid_notes">Les notes sont trop longues</string>
+    <string name="api_error_invalid_currency">Saisissez un code de devise à trois lettres, par exemple EUR</string>
+    <string name="api_error_invalid_price">Ce prix n\'est pas valide</string>
+    <string name="api_error_invite_expired">Cette invitation a expiré</string>
+    <string name="api_error_invite_revoked">Cette invitation a été retirée</string>
+    <string name="api_error_invite_used">Cette invitation a déjà été utilisée</string>
+    <string name="api_error_invite_not_found">Cette invitation n\'existe pas</string>
+    <string name="api_error_invite_email_mismatch">Cette invitation est destinée à une autre adresse e-mail</string>
+    <string name="api_error_cannot_delete_expense_list">Une liste de dépenses ne peut pas être supprimée. Clôturez-la, puis quittez-la.</string>
+    <string name="api_error_not_a_member">Vous n\'êtes plus membre de cette liste</string>
+    <string name="api_error_not_admin">Seul un administrateur peut faire cela</string>
+    <string name="api_error_cannot_delete_admin">Les administrateurs ne peuvent pas être supprimés ici</string>
+    <string name="api_error_cannot_delete_self">Supprimez votre propre compte dans les Paramètres</string>
+    <string name="api_error_account_not_found">Ce compte n\'existe plus</string>
+    <string name="api_error_session_not_found">Cette session est déjà terminée</string>
+    <string name="api_error_server_busy">Le serveur est occupé. Réessayez dans un instant.</string>
+    <string name="api_error_payload_too_large">C\'est trop à envoyer en une fois</string>
 </resources>

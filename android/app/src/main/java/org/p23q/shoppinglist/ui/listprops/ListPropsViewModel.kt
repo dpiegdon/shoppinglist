@@ -26,6 +26,7 @@ import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.Syncer
+import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
@@ -211,7 +212,7 @@ class ListPropsViewModel @Inject constructor(
                 _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, errorMessage = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.listprops_msg_invite_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.listprops_msg_invite_failed)) }
             } catch (e: IOException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
             }
@@ -226,7 +227,7 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the invite is already gone — fall through and refresh so it drops off the list.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.listprops_msg_revoke_failed))) }
+                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.listprops_msg_revoke_failed)) }
                 return@launch
             }
         } catch (e: IOException) {
@@ -281,7 +282,7 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = (e.message?.let { UiText.Raw(it) } ?: UiText.res(R.string.listprops_msg_leave_failed))) }
+                _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = ErrorText.of(e, R.string.listprops_msg_leave_failed)) }
                 return@launch
             }
         } catch (e: IOException) {

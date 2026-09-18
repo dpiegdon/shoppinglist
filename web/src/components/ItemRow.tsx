@@ -2,6 +2,7 @@ import type { ItemObject, Member } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { useFormat } from "../lib/format";
 import { toCents } from "../lib/expenses";
+import { useT } from "../i18n";
 
 interface ItemRowProps {
   item: ItemObject;
@@ -28,6 +29,7 @@ export default function ItemRow({
   onToggle,
   onEdit,
 }: ItemRowProps) {
+  const t = useT();
   const fmt = useFormat();
   const checked = itemFieldValue(item, "status") === "checked";
   const category = itemFieldValue(item, "category");
@@ -93,8 +95,8 @@ export default function ItemRow({
       </div>
       {authorMember && (
         <span
-          title={`Last touched by ${authorMember.email}`}
-          aria-label={`Last touched by ${authorMember.email}`}
+          title={t("list.lastTouchedBy", { email: authorMember.email })}
+          aria-label={t("list.lastTouchedBy", { email: authorMember.email })}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -115,7 +117,7 @@ export default function ItemRow({
       <button
         type="button"
         className="btn-icon"
-        aria-label={`Edit ${itemFieldValue(item, "name")}`}
+        aria-label={t("list.editItem", { name: itemFieldValue(item, "name") ?? "" })}
         onClick={(e) => {
           e.stopPropagation();
           onEdit();

@@ -247,7 +247,7 @@
     <string name="expense_delete_title">Excluir esta despesa?</string>
     <string name="expense_delete_body">Ela é removida para todos na lista.</string>
     <string name="expense_error_above_total">Os valores informados somam mais que o total.</string>
-    <string name="expense_error_does_not_add_up">Os valores informados somam %1$s.</string>
+    <string name="expense_error_does_not_add_up">Os valores informados somam %1$s, não %2$s.</string>
     <string name="expense_error_use_sum">Definir o total como %1$s</string>
     <string name="expense_error_nobody">Escolha pelo menos uma pessoa.</string>
     <string name="overview_kind_expenses">Custos compartilhados: quem pagou e quem deve.</string>
@@ -258,7 +258,7 @@
     <string name="expense_closing_help">Todos precisam concordar. Ao concordar, seus valores ficam fixados: nada que envolva você pode ser adicionado ou alterado. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.</string>
     <string name="expense_agree_to_close">Concordar em encerrar</string>
     <string name="expense_withdraw_vote">Retirar</string>
-    <string name="expense_agree_count">%1$d de %2$d concordam em encerrar</string>
+    <string name="expense_agree_count">Votos para encerrar: %1$d de %2$d</string>
     <string name="expense_closed_on">Encerrada em %1$s</string>
     <string name="expense_vote_failed">Não foi possível registrar seu voto.</string>
     <string name="expense_frozen">concordou em encerrar — valores fixados</string>
@@ -269,4 +269,27 @@
     <string name="expense_all_settled">Tudo acertado</string>
     <string name="expense_settlement">Acerto</string>
     <string name="listprops_leave_blocked">Uma lista de despesas só pode ser deixada depois de encerrada.</string>
+    <string name="api_error_list_closed">Esta lista foi encerrada e não pode mais ser alterada.</string>
+    <string name="api_error_email_taken">Já existe uma conta com este e-mail</string>
+    <string name="api_error_registration_disabled">Este servidor não aceita novas contas</string>
+    <string name="api_error_invalid_email">Esse endereço de e-mail não é válido</string>
+    <string name="api_error_invalid_password">As senhas precisam ter pelo menos 8 caracteres</string>
+    <string name="api_error_invalid_name">Digite um nome</string>
+    <string name="api_error_invalid_notes">As notas são longas demais</string>
+    <string name="api_error_invalid_currency">Digite um código de moeda de três letras, como EUR</string>
+    <string name="api_error_invalid_price">Esse preço não é válido</string>
+    <string name="api_error_invite_expired">Este convite expirou</string>
+    <string name="api_error_invite_revoked">Este convite foi cancelado</string>
+    <string name="api_error_invite_used">Este convite já foi usado</string>
+    <string name="api_error_invite_not_found">Este convite não existe</string>
+    <string name="api_error_invite_email_mismatch">Este convite é para outro endereço de e-mail</string>
+    <string name="api_error_cannot_delete_expense_list">Uma lista de despesas não pode ser excluída. Encerre-a e depois saia dela.</string>
+    <string name="api_error_not_a_member">Você não é mais membro desta lista</string>
+    <string name="api_error_not_admin">Só um administrador pode fazer isso</string>
+    <string name="api_error_cannot_delete_admin">Administradores não podem ser excluídos aqui</string>
+    <string name="api_error_cannot_delete_self">Exclua sua própria conta em Configurações</string>
+    <string name="api_error_account_not_found">Essa conta não existe mais</string>
+    <string name="api_error_session_not_found">Essa sessão já foi encerrada</string>
+    <string name="api_error_server_busy">O servidor está ocupado. Tente de novo em instantes.</string>
+    <string name="api_error_payload_too_large">É coisa demais para enviar de uma vez</string>
 </resources>

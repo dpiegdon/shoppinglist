@@ -2,10 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import * as api from "../api/client";
-import { ApiError } from "../api/client";
 import { allowRegistration, appBasename } from "../lib/appConfig";
 import { useT } from "../i18n";
 import LanguagePicker from "../components/LanguagePicker";
+import { errorMessage } from "../i18n/apiErrors";
 
 const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
@@ -56,11 +56,7 @@ export default function LoginPage() {
       const from = (location.state as { from?: { pathname: string; search: string } } | null)?.from;
       navigate(from ? `${from.pathname}${from.search}` : "/", { replace: true });
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError(t("login.error.generic"));
-      }
+      setError(errorMessage(t, err, "login.error.generic"));
     }
   }
 

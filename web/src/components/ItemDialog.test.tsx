@@ -109,7 +109,7 @@ describe("ItemDialog (add mode)", () => {
 
     // Typed by hand in a different casing than the suggestion carries.
     await userEvent.type(screen.getByLabelText("Stores"), "rewe");
-    await userEvent.click(screen.getByRole("button", { name: "Add a store" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add store" }));
 
     expect(screen.getByRole("button", { name: "Remove rewe" })).toBeInTheDocument();
     // The suggestion is gone rather than offering a second spelling of one shop.
@@ -258,7 +258,9 @@ describe("ItemDialog (add mode)", () => {
     await userEvent.click(await screen.findByText("Milk"));
 
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent("Already there.");
+    // A code with no message of its own shows the dialog's translated fallback, never the server's
+    // English text.
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
     // Seeded from the picked item, so the user can fix and press Add rather than retyping.
     expect(screen.getByLabelText("Name")).toHaveValue("Milk");
     expect(screen.getByLabelText("Category")).toHaveValue("Dairy");
@@ -503,7 +505,7 @@ describe("ItemDialog stores chip editor (T-99)", () => {
     );
 
     await userEvent.type(screen.getByLabelText("Stores"), "Aldi");
-    await userEvent.click(screen.getByText("Add a store"));
+    await userEvent.click(screen.getByText("Add store"));
 
     expect(screen.getByText("Aldi")).toBeInTheDocument();
     expect(screen.getByLabelText("Stores")).toHaveValue("");
@@ -615,7 +617,7 @@ describe("ItemDialog price/currency validation (T-91)", () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ priceCurrency: "USD" }));
   });
 
-  it("surfaces the ApiError message inline when onSave rejects, and keeps the dialog open", async () => {
+  it("surfaces a translated message for the error code when onSave rejects, and keeps the dialog open", async () => {
     const onSave = vi.fn().mockRejectedValue(new ApiError(422, "invalid_price", "Price amount is invalid"));
     const onClose = vi.fn();
     render(
@@ -625,7 +627,9 @@ describe("ItemDialog price/currency validation (T-91)", () => {
     await userEvent.type(screen.getByLabelText("Name"), "Milk");
     await userEvent.click(screen.getByText("Add"));
 
-    expect(await screen.findByText("Price amount is invalid")).toBeInTheDocument();
+    // The code's message in the app's language, not the server's English text.
+    expect(await screen.findByText("That price isn't valid")).toBeInTheDocument();
+    expect(screen.queryByText("Price amount is invalid")).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 });
