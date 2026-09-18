@@ -164,4 +164,17 @@ class OverviewViewModelTest {
 
         assertEquals(true, summary.closed)
     }
+
+    @Test
+    fun `an expense list's count is its number of expenses (T-191)`() = runTest(mainDispatcherRule.dispatcher) {
+        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+        val expense = org.p23q.shoppinglist.data.Expense(mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18")
+        itemsRepo.createExpense(id, "Dinner", expense)
+        itemsRepo.createExpense(id, "Taxi", expense)
+
+        val counts = viewModel.uiState.first { it.openCounts[id] == 2 }.openCounts
+
+        // What the web counts too: every expense, since none is ever ticked off.
+        assertEquals(2, counts[id])
+    }
 }

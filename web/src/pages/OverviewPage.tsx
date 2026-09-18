@@ -99,6 +99,8 @@ export default function OverviewPage() {
     const expense = itemFieldValue(item, "expense");
     if (expense) {
       expensesByList.set(item.list_id, [...(expensesByList.get(item.list_id) ?? []), expense]);
+      // An expense list's count is its number of expenses (T-191), as the app shows it.
+      openCounts.set(item.list_id, (openCounts.get(item.list_id) ?? 0) + 1);
     } else if (itemFieldValue(item, "status") === "todo") {
       openCounts.set(item.list_id, (openCounts.get(item.list_id) ?? 0) + 1);
     }
@@ -157,11 +159,20 @@ export default function OverviewPage() {
                 {listKindIcon(listKind(list))}
               </span>
               <span dir="auto" style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>
-              {isExpenses(listKind(list))
-                ? expenseSummary(list)
-                : openCount > 0 && (
-                    <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>{openCount}</span>
-                  )}
+              {isExpenses(listKind(list)) && expenseSummary(list)}
+              {/* Every list kind shows its count, as the app does (T-191); beside an expense
+                  summary it gets some room. */}
+              {openCount > 0 && (
+                <span
+                  style={{
+                    color: "var(--color-accent)",
+                    fontWeight: 700,
+                    marginInlineStart: isExpenses(listKind(list)) ? "0.5rem" : undefined,
+                  }}
+                >
+                  {openCount}
+                </span>
+              )}
             </Link>
           );
         })}

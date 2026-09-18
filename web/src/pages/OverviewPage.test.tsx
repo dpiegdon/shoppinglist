@@ -166,13 +166,15 @@ describe("OverviewPage with expenses lists", () => {
     cleanup();
   });
 
-  it("shows what was spent and where I stand, instead of an open-item count", async () => {
+  it("shows what was spent, where I stand, and how many expenses there are", async () => {
     renderOverview();
 
     expect(await screen.findByText("Trip")).toBeInTheDocument();
     expect(screen.getByText(/^CHF\s60\.00$/)).toBeInTheDocument();
     // I paid 60 and owe 30, so the list owes me 30.
     expect(screen.getByText(/^CHF\s30\.00$/)).toBeInTheDocument();
+    // One expense on the list, counted as the app counts it (T-191).
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 
   it("asks for a currency when creating an expenses list, and pushes it", async () => {

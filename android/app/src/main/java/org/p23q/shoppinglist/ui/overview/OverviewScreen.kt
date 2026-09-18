@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -134,7 +135,11 @@ fun OverviewScreen(
                                     }
                                     val openCount = state.openCounts[list.id] ?: 0
                                     if (openCount > 0) {
-                                        // At-a-glance "is a trip pending" count of open items (T-42).
+                                        // Room between an expense list's total/balance and its count
+                                        // (T-191), which otherwise sat right against them.
+                                        if (summary != null) Spacer(Modifier.width(12.dp))
+                                        // At-a-glance "is a trip pending" count of open items (T-42);
+                                        // on an expense list, its number of expenses.
                                         Text(
                                             text = openCount.toString(),
                                             style = MaterialTheme.typography.titleMedium,
