@@ -1,5 +1,5 @@
 {
-  "body": "Phase 3. Not designed. Tricount's other half: from the balances, a minimal\nset of transfers that settles everyone. Needs its own design pass \u2014 display\nonly, or recorded as expenses? \u2014 before any ticket is actionable.",
+  "body": "Phase 3. Designed 2026-09-18: docs/archive/specs/2026-09-17-expense-lists-design.md,\n\"Settling up\". Display computed on the client, Record pre-fills the ordinary\nform, no server change, settlements are ordinary expenses and count toward the\ntotal. Carries the three implementation tickets below; closes when they do.",
   "created_at": "2026-09-17T17:50:55+00:00",
   "deps": [
     "T-163",
@@ -13,6 +13,6 @@
     "human"
   ],
   "priority": 4,
-  "title": "expenses: settlement suggestions \u2014 who pays whom",
+  "title": "expenses: phase 3 \u2014 settling up (who pays whom)",
   "updated_at": "2026-09-18T09:54:34+00:00"
 }
