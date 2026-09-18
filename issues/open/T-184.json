@@ -1,0 +1,12 @@
+{
+  "body": "The web drew every row as a separate card; Android draws a list's entries as flat rows with dividers and only the overview as cards. The web follows: list entries, expenses, balances and transfers become flat rows with dividers, list settings plain sections; the overview keeps its cards on both.",
+  "created_at": "2026-09-18T17:50:10+00:00",
+  "id": "T-184",
+  "labels": [
+    "ux",
+    "web"
+  ],
+  "priority": 2,
+  "title": "one row style: overview in cards, a list's entries as flat rows",
+  "updated_at": "2026-09-18T17:50:10+00:00"
+}
