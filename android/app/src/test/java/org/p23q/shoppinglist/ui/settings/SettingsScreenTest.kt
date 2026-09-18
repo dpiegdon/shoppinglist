@@ -10,10 +10,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.Dispatcher
@@ -357,6 +359,11 @@ class SettingsScreenTest {
             composeTestRule.onNodeWithText(line).assertExists()
             (lines - line).forEach { composeTestRule.onNodeWithText(it).assertDoesNotExist() }
         }
+        // The screen's own loads must not outlive the test: a sessions reply landing after it would
+        // resume on Dispatchers.Main while the next class's MainDispatcherRule is replacing it,
+        // which failed SettingsViewModelTest with "Dispatchers.Main is used concurrently".
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.initials == "MI" }
+        viewModel.viewModelScope.cancel()
         db.close()
     }
 }
