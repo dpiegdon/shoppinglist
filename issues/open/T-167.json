@@ -1,0 +1,13 @@
+{
+  "body": "Reported on 1.14.0: pulling down on an expenses list does nothing. On shopping and\nchecklist lists the same gesture resyncs. The expense list screen is a screen of its\nown (T-154) and did not get the pull-to-refresh wrapper the list screen has.\n\nWanted: the same gesture, the same indicator, the same sync call as the other lists.",
+  "created_at": "2026-09-18T12:31:47+00:00",
+  "id": "T-167",
+  "labels": [
+    "bug",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "android: pull-to-refresh is missing on the expense list screen",
+  "updated_at": "2026-09-18T12:31:47+00:00"
+}
