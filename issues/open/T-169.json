@@ -1,0 +1,14 @@
+{
+  "body": "Reported on 1.14.0, two requests on list settings:\n- Closing sits near the top, after the list type; Leave is at the bottom. They are\n  two stages of one thing (close, then leave), so they belong together.\n- The closing help should say that agreeing to close locks your amounts: nothing\n  that involves you can be added or changed after you vote.\nBoth clients; the help text in all nine languages on each.",
+  "created_at": "2026-09-18T12:39:52+00:00",
+  "id": "T-169",
+  "labels": [
+    "ux",
+    "android",
+    "web",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "expense lists: put closing next to leave, and say what voting locks",
+  "updated_at": "2026-09-18T12:39:52+00:00"
+}
