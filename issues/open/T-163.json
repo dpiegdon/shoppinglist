@@ -1,0 +1,14 @@
+{
+  "body": "Phase 3 (T-161), the arithmetic. Design: docs/archive/specs/2026-09-17-expense-lists-design.md,\n\"Settling up\".\n\nsettle(balances) -> transfers, implemented twice \u2014 web/src/lib/expenses.ts and\nandroid .../data/ExpenseMath.kt \u2014 and pinned by a new `settle` case group in\nshared-test-cases/expense-arithmetic.json that both test suites read.\n\nGreedy: largest debtor to largest creditor, transfer the smaller amount, drop\nwhoever hits zero, repeat. Cents exact. Deterministic: candidates by amount\ndescending then account id; transfers in the order found. Cases must cover:\ntwo people; a chain; ties in amount (the ordering rule); a former member in\ndebt and in credit; all zero; a single participant; a leftover-cent balance.",
+  "created_at": "2026-09-18T09:54:32+00:00",
+  "id": "T-163",
+  "labels": [
+    "expenses",
+    "feature",
+    "android",
+    "web"
+  ],
+  "priority": 2,
+  "title": "expenses: settle-up algorithm on both clients, with shared cases",
+  "updated_at": "2026-09-18T09:54:32+00:00"
+}
