@@ -249,4 +249,13 @@
     <string name="overview_currency_help">用于此清单的每一笔支出，创建后不可更改。</string>
     <string name="listprops_kind_expenses">共同支出，并显示每位成员的余额。</string>
     <string name="listprops_kind_fixed">支出清单的类型和货币始终不可更改。</string>
+    <string name="expense_closing">结算</string>
+    <string name="expense_closing_help">需要所有人同意。结算后清单变为只读记录，并且可以退出。</string>
+    <string name="expense_agree_to_close">同意结算</string>
+    <string name="expense_withdraw_vote">撤回</string>
+    <string name="expense_agree_count">%2$d 人中已有 %1$d 人同意结算</string>
+    <string name="expense_closed_on">已于 %1$s 结算</string>
+    <string name="expense_vote_failed">无法记录你的投票。</string>
+    <string name="expense_frozen">已同意结算 — 金额已锁定</string>
+    <string name="listprops_leave_blocked">支出清单结算后才能退出。</string>
 </resources>

@@ -21,7 +21,9 @@ import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
+import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import java.io.IOException
 import javax.inject.Inject
@@ -34,6 +36,12 @@ data class ListPropsUiState(
     val kind: String = ListKind.DEFAULT,
     /** Free-text label, shown read-only: an expenses list keeps its currency for life (T-151). */
     val currency: String = "",
+    /** Closing state (T-157), server-maintained: who has agreed, and when it closed. */
+    val closeVotes: List<String> = emptyList(),
+    val closedAt: Long? = null,
+    val memberCount: Int = 0,
+    val myAccountId: String? = null,
+    val isVoting: Boolean = false,
     val categoryOrder: List<String> = emptyList(),
     val notes: String = "",
     val members: List<MemberDto> = emptyList(),
@@ -60,6 +68,8 @@ class ListPropsViewModel @Inject constructor(
     private val itemsRepo: ItemsRepo,
     private val apiProvider: ApiProvider,
     private val notificationPrefs: NotificationPrefsStore,
+    private val sessionState: SessionState,
+    private val syncer: Syncer,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
@@ -79,6 +89,11 @@ class ListPropsViewModel @Inject constructor(
                     name = list?.name?.value ?: "",
                     kind = ListKind.of(list?.kind?.value),
                     currency = list?.currency?.value.orEmpty(),
+                    closeVotes = list?.let { row -> listsRepo.decodeCloseVotes(row.closeVotesJson) }
+                        ?: emptyList(),
+                    closedAt = list?.closedAt,
+                    memberCount = list?.let { row -> listsRepo.decodeMembers(row.membersJson).size } ?: 0,
+                    myAccountId = sessionState.accountId,
                     categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )
@@ -239,6 +254,26 @@ class ListPropsViewModel @Inject constructor(
      * member). NOTE: do NOT copy this to logout(), whose always-local-wipe is correct — you're ending
      * your own session there, not asking the server's permission.
      */
+    /**
+     * Agree to close this expenses list, or withdraw (T-158). Online-only, like leaving: whether
+     * this was the last vote needed is the server's call, not a device's.
+     */
+    fun toggleCloseVote(): Job = viewModelScope.launch {
+        val voted = _uiState.value.myAccountId in _uiState.value.closeVotes
+        _uiState.update { it.copy(isVoting = true) }
+        try {
+            val api = apiProvider.get()
+            if (voted) api.withdrawCloseVote(listId) else api.castCloseVote(listId)
+            syncer.syncNow(emptyList())
+        } catch (e: IOException) {
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline_retry)) }
+        } catch (e: IllegalStateException) {
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.expense_vote_failed)) }
+        } finally {
+            _uiState.update { it.copy(isVoting = false) }
+        }
+    }
+
     fun confirmLeave(): Job = viewModelScope.launch {
         try {
             apiProvider.get().leaveList(listId)

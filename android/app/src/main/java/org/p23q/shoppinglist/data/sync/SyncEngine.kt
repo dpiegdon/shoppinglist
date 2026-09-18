@@ -109,6 +109,18 @@ class SyncEngine @Inject constructor(
             // excludes the blocked row, so the same id can't 422 twice. The getById guard avoids
             // looping if the id isn't a known item (e.g. a list row we don't quarantine).
             val badRowId = e.rowId
+            // A write to a CLOSED expenses list (T-157) is not a bad value to be corrected: it can
+            // never be accepted, and the local row now disagrees with a server copy that has older
+            // clocks, so no pull would ever overwrite it. Quarantining it would leave that
+            // disagreement on screen forever. Drop the local row instead and ask for a fresh
+            // snapshot of its list in the same retry, which restores the server's truth.
+            if (e.httpStatus == 422 && e.code == "list_closed" && badRowId != null) {
+                val listId = itemDao.getById(badRowId)?.listId ?: badRowId.takeIf { listDao.getById(it) != null }
+                if (listId != null) {
+                    if (itemDao.getById(badRowId) != null) itemDao.hardDelete(badRowId) else listDao.hardDelete(badRowId)
+                    return syncNow(fullLists + listId)
+                }
+            }
             if (e.httpStatus == 422 && badRowId != null && itemDao.getById(badRowId) != null) {
                 itemDao.blockRow(badRowId)
                 return syncNow(fullLists)

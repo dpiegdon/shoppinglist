@@ -32,6 +32,12 @@ data class ShareRow(
     val text: String,
     /** The share this participant would get as things stand, for the placeholder. */
     val derivedCents: Long,
+    /**
+     * Their amounts may not move (T-157): they have agreed to close the list, or have left it.
+     * The row still shows what they paid or owe — it is part of the record — but nothing about it
+     * can be edited, and it never absorbs a change elsewhere.
+     */
+    val frozen: Boolean = false,
 )
 
 data class ExpenseFormUiState(
@@ -81,6 +87,7 @@ class ExpenseFormViewModel @Inject constructor(
     private var selected = mapOf(Side.PAID_BY to emptySet<String>(), Side.PAID_FOR to emptySet())
     private var typed = mapOf(Side.PAID_BY to emptyMap<String, String>(), Side.PAID_FOR to emptyMap())
     /** The expense as loaded, so an edit only writes what actually changed (T-88). */
+    private var frozenIds: Set<String> = emptySet()
     private var loaded: Expense? = null
     private var loadedName: String = ""
     private var loadedNote: String? = null
@@ -91,8 +98,10 @@ class ExpenseFormViewModel @Inject constructor(
         val me = sessionState.accountId
         selected = mapOf(
             // Whoever is adding it paid, unless they are not on the list at all (they always are).
-            Side.PAID_BY to setOfNotNull(me?.takeIf { it in participantIds }),
-            Side.PAID_FOR to participantIds.toSet(),
+            Side.PAID_BY to setOfNotNull(me?.takeIf { it in participantIds && !isFrozen(it) }),
+            // A new expense can never involve a frozen participant: that would be a change from
+            // zero for them, which the server refuses.
+            Side.PAID_FOR to participantIds.filterNot(::isFrozen).toSet(),
         )
         typed = mapOf(Side.PAID_BY to emptyMap(), Side.PAID_FOR to emptyMap())
         loaded = null
@@ -122,10 +131,12 @@ class ExpenseFormViewModel @Inject constructor(
             Side.PAID_FOR to expense.paidFor.keys.toSet(),
         )
         // An equal split comes back as auto so a corrected total redistributes; anything else was
-        // meant literally and comes back fixed.
+        // meant literally and comes back fixed. A frozen participant's share is always seeded from
+        // what is stored, whichever it was: it may not move, so it can never be one of the auto
+        // shares — and seeding it is what keeps it at its own amount rather than at nothing.
         typed = mapOf(
-            Side.PAID_BY to if (expense.equalBy) emptyMap() else expense.paidBy,
-            Side.PAID_FOR to if (expense.equalFor) emptyMap() else expense.paidFor,
+            Side.PAID_BY to (if (expense.equalBy) emptyMap() else expense.paidBy) + frozenShares(expense.paidBy),
+            Side.PAID_FOR to (if (expense.equalFor) emptyMap() else expense.paidFor) + frozenShares(expense.paidFor),
         )
         _uiState.update {
             it.copy(
@@ -146,8 +157,16 @@ class ExpenseFormViewModel @Inject constructor(
         val list = listsRepo.observeById(listId).first()
         members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList()
         participantIds = members.map { it.accountId }
+        frozenIds = list?.let { listsRepo.decodeCloseVotes(it.closeVotesJson) }?.toSet() ?: emptySet()
         _uiState.update { it.copy(currency = list?.currency?.value.orEmpty()) }
     }
+
+    /** Voters, plus anyone on this expense who is no longer a member (T-157). */
+    private fun isFrozen(accountId: String): Boolean =
+        accountId in frozenIds || members.none { it.accountId == accountId }
+
+    private fun frozenShares(stored: Map<String, String>): Map<String, String> =
+        stored.filterKeys(::isFrozen)
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value, nameError = false) }
 
@@ -161,6 +180,7 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun toggleParticipant(side: Side, accountId: String) {
+        if (isFrozen(accountId)) return
         val current = selected[side].orEmpty()
         val next = if (accountId in current) current - accountId else current + accountId
         selected = selected + (side to next)
@@ -171,6 +191,7 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun onShareChange(side: Side, accountId: String, value: String) {
+        if (isFrozen(accountId)) return
         typed = typed + (side to (typed[side].orEmpty() + (accountId to value)))
         recompute()
     }
@@ -184,6 +205,8 @@ class ExpenseFormViewModel @Inject constructor(
     private fun entries(side: Side): List<ExpenseMath.ShareEntry> =
         participantIds.filter { it in selected[side].orEmpty() }.map { id ->
             val text = typed[side].orEmpty()[id].orEmpty().trim()
+            // A frozen share is seeded from the stored value in startEdit, so it arrives here as
+            // typed text and is fixed by that alone — never auto, never absorbing a change.
             ExpenseMath.ShareEntry(id, if (text.isEmpty()) null else ExpenseMath.toCents(text))
         }
 
@@ -219,6 +242,7 @@ class ExpenseFormViewModel @Inject constructor(
                 selected = id in selected[side].orEmpty(),
                 text = typed[side].orEmpty()[id].orEmpty(),
                 derivedCents = shares[id] ?: 0,
+                frozen = isFrozen(id),
             )
         }
     }

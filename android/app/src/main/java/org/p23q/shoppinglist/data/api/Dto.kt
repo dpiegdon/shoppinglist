@@ -71,6 +71,13 @@ data class ListDto(
     @SerialName("closed_at") val closedAt: Long? = null,
 )
 
+/** What the close-vote endpoints answer with (T-157). */
+@Serializable
+data class CloseVoteStateDto(
+    @SerialName("close_votes") val closeVotes: List<String>,
+    @SerialName("closed_at") val closedAt: Long? = null,
+)
+
 @Serializable
 data class ErrorEnvelope(
     val error: String,

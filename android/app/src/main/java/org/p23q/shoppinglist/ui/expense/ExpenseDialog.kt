@@ -236,15 +236,28 @@ private fun ShareSection(
         val label = row.email
             ?: stringResource(R.string.expense_former_member, row.formerNumber)
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = row.selected, onCheckedChange = { onToggle(row.accountId) })
-            Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Checkbox(
+                checked = row.selected,
+                enabled = !row.frozen,
+                onCheckedChange = { onToggle(row.accountId) },
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+                if (row.frozen) {
+                    Text(
+                        stringResource(R.string.expense_frozen),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             OutlinedTextField(
                 value = row.text,
                 onValueChange = { onChange(row.accountId, it) },
                 // The derived share is the PLACEHOLDER, never the value: as the value it would come
                 // straight back when the field was cleared, so typing over it appended to it.
                 placeholder = { Text(ExpenseMath.fromCents(row.derivedCents)) },
-                enabled = row.selected,
+                enabled = row.selected && !row.frozen,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.width(120.dp),

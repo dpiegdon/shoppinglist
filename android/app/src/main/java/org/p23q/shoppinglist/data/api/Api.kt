@@ -39,6 +39,13 @@ interface Api {
     @POST("api/v1/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
+    /** Agree to close an expenses list (T-157); it closes when the last current member agrees. */
+    @POST("api/v1/lists/{listId}/close-votes")
+    suspend fun castCloseVote(@Path("listId") listId: String): CloseVoteStateDto
+
+    @DELETE("api/v1/lists/{listId}/close-votes")
+    suspend fun withdrawCloseVote(@Path("listId") listId: String): CloseVoteStateDto
+
     @POST("api/v1/logout")
     suspend fun logout()
 

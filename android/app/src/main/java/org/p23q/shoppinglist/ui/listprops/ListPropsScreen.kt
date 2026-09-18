@@ -47,6 +47,8 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.data.ListKind
+import java.text.DateFormat
+import java.util.Date
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.asString
 import androidx.compose.ui.res.stringResource
@@ -138,6 +140,47 @@ fun ListPropsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
+
+        // Closing an expenses list (T-158): unanimous, and the only way it can later be left.
+        if (isExpenses) {
+            Text(stringResource(R.string.expense_closing), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.expense_closing_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Bound to a local: `state` is a delegated property, so its fields cannot smart-cast.
+            val closedAt = state.closedAt
+            if (closedAt != null) {
+                Text(
+                    stringResource(
+                        R.string.expense_closed_on,
+                        DateFormat.getDateInstance().format(Date(closedAt)),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.expense_agree_count, state.closeVotes.size, state.memberCount),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    TextButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
+                        Text(
+                            stringResource(
+                                if (state.myAccountId in state.closeVotes) {
+                                    R.string.expense_withdraw_vote
+                                } else {
+                                    R.string.expense_agree_to_close
+                                },
+                            ),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
 
         // Relocated here from the list screen (T-75), where it was too easy to tap by accident: move
         // every checked item to backlog. A proper filled red button (T-82), matching the web
@@ -234,10 +277,20 @@ fun ListPropsScreen(
         Spacer(Modifier.height(8.dp))
 
         // stringResource(R.string.listprops_leave_list) (was stringResource(R.string.action_unsubscribe), T-112): red, matching the Clear-checked danger action.
+        // An open expenses list cannot be left (T-157) — saying why beats a button that fails.
+        val leaveBlocked = isExpenses && state.closedAt == null
         Button(
             onClick = viewModel::requestLeave,
+            enabled = !leaveBlocked,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
         ) { Text(stringResource(R.string.listprops_leave_list)) }
+        if (leaveBlocked) {
+            Text(
+                stringResource(R.string.listprops_leave_blocked),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 
     if (state.isLeaveConfirmOpen) {

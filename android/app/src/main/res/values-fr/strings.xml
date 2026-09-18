@@ -249,4 +249,13 @@
     <string name="overview_currency_help">Utilisée pour chaque dépense de cette liste, et fixée ensuite.</string>
     <string name="listprops_kind_expenses">Frais partagés, avec un solde par membre.</string>
     <string name="listprops_kind_fixed">Une liste de dépenses conserve son type et sa devise à vie.</string>
+    <string name="expense_closing">Clôture</string>
+    <string name="expense_closing_help">Tout le monde doit être d\'accord. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.</string>
+    <string name="expense_agree_to_close">Accepter la clôture</string>
+    <string name="expense_withdraw_vote">Retirer</string>
+    <string name="expense_agree_count">%1$d sur %2$d acceptent la clôture</string>
+    <string name="expense_closed_on">Close le %1$s</string>
+    <string name="expense_vote_failed">Votre vote n\'a pas pu être enregistré.</string>
+    <string name="expense_frozen">a accepté la clôture — montants figés</string>
+    <string name="listprops_leave_blocked">Une liste de dépenses ne peut être quittée qu\'une fois close.</string>
 </resources>

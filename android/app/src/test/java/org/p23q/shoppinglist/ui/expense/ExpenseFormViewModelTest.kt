@@ -296,4 +296,89 @@ class ExpenseFormViewModelTest {
         assertTrue(itemsRepo.getById(itemId)!!.deleted.value)
         assertTrue(viewModel.uiState.value.isDeleted)
     }
+
+    /** The vote state normally arrives from the server on the list row. */
+    private suspend fun setCloseVotes(vararg ids: String) {
+        val list = listsRepo.getById(listId)!!
+        db.listDao().upsert(list.copy(closeVotesJson = Json.encodeToString(ids.toList())))
+    }
+
+    /** One 60.00 dinner, split evenly, as the fixture for the freeze cases below. */
+    private suspend fun expenseId(): String = itemsRepo.createExpense(
+        listId,
+        "Dinner",
+        Expense(mapOf(me to "60.00"), true, mapOf(me to "30.00", other to "30.00"), true, "2026-09-17"),
+    )
+
+    // ---- the freeze (T-158) ----------------------------------------------------
+
+    @Test
+    fun `a voter's row is locked, shown rather than hidden`() = runTest(mainDispatcherRule.dispatcher) {
+        setCloseVotes(other)
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        val theirs = viewModel.uiState.value.paidFor.first { it.accountId == other }
+        val mine = viewModel.uiState.value.paidFor.first { it.accountId == me }
+        assertTrue(theirs.frozen)
+        assertTrue(theirs.selected)
+        // The freeze is about their money; everyone else is still editable.
+        assertFalse(mine.frozen)
+    }
+
+    @Test
+    fun `a frozen participant cannot be deselected or retyped`() = runTest(mainDispatcherRule.dispatcher) {
+        setCloseVotes(other)
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        viewModel.toggleParticipant(Side.PAID_FOR, other)
+        viewModel.onShareChange(Side.PAID_FOR, other, "999")
+
+        val theirs = viewModel.uiState.value.paidFor.first { it.accountId == other }
+        assertTrue(theirs.selected)
+        // Still showing what they actually owe, not what was typed at them: the amount is part of
+        // the record, so the row displays it and refuses the edit rather than blanking.
+        assertEquals("30.00", theirs.text)
+    }
+
+    @Test
+    fun `a frozen share never absorbs a change made elsewhere`() = runTest(mainDispatcherRule.dispatcher) {
+        setCloseVotes(other)
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        viewModel.onTotalChange("80.00")
+
+        // Their 30 stays exactly as it was; the rest of the change lands on the unfrozen share.
+        val theirs = viewModel.uiState.value.paidFor.first { it.accountId == other }
+        val mine = viewModel.uiState.value.paidFor.first { it.accountId == me }
+        assertEquals(3000L, theirs.derivedCents)
+        assertEquals(5000L, mine.derivedCents)
+    }
+
+    @Test
+    fun `a new expense never starts out involving a voter`() = runTest(mainDispatcherRule.dispatcher) {
+        setCloseVotes(other)
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+
+        val theirs = viewModel.uiState.value.paidFor.first { it.accountId == other }
+        assertFalse(theirs.selected)
+        assertTrue(viewModel.uiState.value.paidFor.first { it.accountId == me }.selected)
+    }
+
+    @Test
+    fun `someone who has left is frozen without having voted`() = runTest(mainDispatcherRule.dispatcher) {
+        // The roster no longer names them, but the expense still does.
+        setMembers(me)
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        assertTrue(viewModel.uiState.value.paidFor.first { it.accountId == other }.frozen)
+    }
 }

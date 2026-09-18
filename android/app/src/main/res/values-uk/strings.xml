@@ -249,4 +249,13 @@
     <string name="overview_currency_help">Використовується для кожної витрати в цьому списку й далі не змінюється.</string>
     <string name="listprops_kind_expenses">Спільні витрати з балансом для кожного учасника.</string>
     <string name="listprops_kind_fixed">Список витрат назавжди зберігає свій тип і валюту.</string>
+    <string name="expense_closing">Закриття</string>
+    <string name="expense_closing_help">Мають погодитися всі. Після закриття список стає записом лише для читання, і його можна залишити.</string>
+    <string name="expense_agree_to_close">Погодитися закрити</string>
+    <string name="expense_withdraw_vote">Відкликати</string>
+    <string name="expense_agree_count">%1$d з %2$d погоджуються закрити</string>
+    <string name="expense_closed_on">Закрито %1$s</string>
+    <string name="expense_vote_failed">Не вдалося зарахувати ваш голос.</string>
+    <string name="expense_frozen">погодився закрити — суми зафіксовано</string>
+    <string name="listprops_leave_blocked">Список витрат можна залишити лише після закриття.</string>
 </resources>

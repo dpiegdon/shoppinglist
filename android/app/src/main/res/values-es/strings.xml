@@ -249,4 +249,13 @@
     <string name="overview_currency_help">Se usa en todos los gastos de esta lista y no cambia después.</string>
     <string name="listprops_kind_expenses">Gastos compartidos, con un saldo por miembro.</string>
     <string name="listprops_kind_fixed">Una lista de gastos conserva su tipo y su moneda para siempre.</string>
+    <string name="expense_closing">Cierre</string>
+    <string name="expense_closing_help">Todos deben estar de acuerdo. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.</string>
+    <string name="expense_agree_to_close">Aceptar cerrar</string>
+    <string name="expense_withdraw_vote">Retirar</string>
+    <string name="expense_agree_count">%1$d de %2$d aceptan cerrar</string>
+    <string name="expense_closed_on">Cerrada el %1$s</string>
+    <string name="expense_vote_failed">No se pudo registrar tu voto.</string>
+    <string name="expense_frozen">aceptó cerrar: importes fijados</string>
+    <string name="listprops_leave_blocked">Una lista de gastos solo se puede abandonar una vez cerrada.</string>
 </resources>

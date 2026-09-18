@@ -249,4 +249,13 @@
     <string name="overview_currency_help">Gilt für jede Ausgabe dieser Liste und steht danach fest.</string>
     <string name="listprops_kind_expenses">Geteilte Kosten, mit einem Saldo pro Mitglied.</string>
     <string name="listprops_kind_fixed">Eine Ausgabenliste behält ihren Typ und ihre Währung dauerhaft.</string>
+    <string name="expense_closing">Abschließen</string>
+    <string name="expense_closing_help">Alle müssen zustimmen. Danach ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.</string>
+    <string name="expense_agree_to_close">Abschluss zustimmen</string>
+    <string name="expense_withdraw_vote">Zurückziehen</string>
+    <string name="expense_agree_count">%1$d von %2$d stimmen dem Abschluss zu</string>
+    <string name="expense_closed_on">Abgeschlossen am %1$s</string>
+    <string name="expense_vote_failed">Deine Stimme konnte nicht gespeichert werden.</string>
+    <string name="expense_frozen">hat zugestimmt – Beträge festgeschrieben</string>
+    <string name="listprops_leave_blocked">Eine Ausgabenliste kann erst verlassen werden, wenn sie abgeschlossen ist.</string>
 </resources>

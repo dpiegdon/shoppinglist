@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,10 +15,13 @@ import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.ui.Routes
+import java.io.IOException
 import javax.inject.Inject
 
 /** One expense, with its money tuple already decoded for rendering. */
@@ -33,7 +37,15 @@ data class ExpenseListUiState(
     /** Numbering for participants who are no longer members (T-152). */
     val formerMemberNumbers: Map<String, Int> = emptyMap(),
     val myAccountId: String? = null,
-)
+    /** Who has agreed to close (T-157), and when it closed — both server-maintained. */
+    val closeVotes: List<String> = emptyList(),
+    val closedAt: Long? = null,
+    val isVoting: Boolean = false,
+    val voteError: Boolean = false,
+) {
+    val isClosed: Boolean get() = closedAt != null
+    val iHaveVoted: Boolean get() = myAccountId != null && myAccountId in closeVotes
+}
 
 /**
  * The expenses of one list, plus what they add up to (T-154).
@@ -46,6 +58,8 @@ class ExpenseListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
+    private val apiProvider: ApiProvider,
+    private val syncer: Syncer,
     sessionState: SessionState,
 ) : ViewModel() {
 
@@ -53,6 +67,27 @@ class ExpenseListViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ExpenseListUiState(myAccountId = sessionState.accountId))
     val uiState: StateFlow<ExpenseListUiState> = _uiState.asStateFlow()
+
+    /**
+     * Agree to close, or withdraw. Online-only, like leaving: the server decides whether this was
+     * the last vote needed, which is not a call a device can make for itself while offline. The
+     * new state arrives through the ordinary sync that follows.
+     */
+    fun toggleCloseVote(): Job = viewModelScope.launch {
+        _uiState.update { it.copy(isVoting = true, voteError = false) }
+        val voted = _uiState.value.iHaveVoted
+        try {
+            val api = apiProvider.get()
+            if (voted) api.withdrawCloseVote(listId) else api.castCloseVote(listId)
+            syncer.syncNow(emptyList())
+        } catch (e: IOException) {
+            _uiState.update { it.copy(voteError = true) }
+        } catch (e: IllegalStateException) {
+            _uiState.update { it.copy(voteError = true) }
+        } finally {
+            _uiState.update { it.copy(isVoting = false) }
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -73,6 +108,9 @@ class ExpenseListViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             currency = list?.currency?.value.orEmpty(),
+                            closeVotes = list?.let { row -> listsRepo.decodeCloseVotes(row.closeVotesJson) }
+                                ?: emptyList(),
+                            closedAt = list?.closedAt,
                             members = members,
                             rows = rows,
                             totalCents = expenses.sumOf(ExpenseMath::expenseTotalCents),

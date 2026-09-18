@@ -32,6 +32,8 @@ import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncResult
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -87,6 +89,8 @@ class ListPropsScreenTest {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
+            FakeSessionState(),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
         var left = false
 
@@ -140,6 +144,8 @@ class ListPropsScreenTest {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
+            FakeSessionState(),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
 
         composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
@@ -195,6 +201,8 @@ class ListPropsScreenTest {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
+            FakeSessionState(),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
         var duplicatedListId: String? = null
 

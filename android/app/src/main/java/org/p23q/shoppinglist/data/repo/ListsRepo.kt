@@ -118,6 +118,10 @@ class ListsRepo @Inject constructor(
     fun decodeMembers(json: String): List<ListMember> =
         runCatching { Json.decodeFromString<List<ListMember>>(json) }.getOrDefault(emptyList())
 
+    /** Who has agreed to close this list (T-157), as the server last reported. */
+    fun decodeCloseVotes(json: String): List<String> =
+        runCatching { Json.decodeFromString<List<String>>(json) }.getOrDefault(emptyList())
+
     fun decodeCategoryOrder(json: String): List<String> = Json.decodeFromString(json)
 
     private fun encodeCategoryOrder(order: List<String>): String = Json.encodeToString(order)

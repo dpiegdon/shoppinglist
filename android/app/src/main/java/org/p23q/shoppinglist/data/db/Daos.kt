@@ -105,6 +105,14 @@ interface ItemDao {
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
     @Query("DELETE FROM items WHERE listId = :listId")
     suspend fun hardDeleteByListId(listId: String)
+
+    /**
+     * Drop one row outright. Used when the server refuses a write for good (a closed expenses
+     * list, T-157): the local row can never be pushed and can never be overwritten by a pull,
+     * since its clocks are newer, so the only way back to the truth is to fetch it again.
+     */
+    @Query("DELETE FROM items WHERE id = :id")
+    suspend fun hardDelete(id: String)
 }
 
 @Dao

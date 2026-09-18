@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.SavedStateHandle
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -24,11 +25,20 @@ import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.AuthInterceptor
+import org.p23q.shoppinglist.data.api.ErrorInterceptor
+import org.p23q.shoppinglist.data.api.SessionEvents
+import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncResult
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 
 /**
  * The expense list and balances screens (T-154).
@@ -77,6 +87,19 @@ class ExpenseScreensTest {
         SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
         itemsRepo,
         listsRepo,
+        // Voting is not what these tests are about; the provider is never asked for an Api.
+        ApiProvider(
+            serverConfig = ServerConfig(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("expense_screens_server_config", ".preferences_pb")
+                        .apply { deleteOnExit() }
+                },
+            ),
+            authInterceptor = AuthInterceptor(TokenProvider { null }),
+            errorInterceptor = ErrorInterceptor(Json { ignoreUnknownKeys = true }, SessionEvents()),
+            json = Json { ignoreUnknownKeys = true },
+        ),
+        Syncer { SyncResult.Success(0, 0, 0, 0) },
         FakeSessionState().apply { accountId = me },
     )
 

@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,6 +35,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * An expenses list (T-154): what was spent, by whom, for whom.
@@ -54,8 +57,11 @@ fun ExpenseListScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddExpense) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.expense_add))
+            // A closed list is an archive: nothing to add to it (T-157).
+            if (!state.isClosed) {
+                FloatingActionButton(onClick = onAddExpense) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.expense_add))
+                }
             }
         },
     ) { padding ->
@@ -105,6 +111,11 @@ fun ExpenseListScreen(
                 }
             }
 
+            CloseVoteBanner(
+                state = state,
+                onToggleVote = { viewModel.toggleCloseVote() },
+            )
+
             if (state.rows.isEmpty()) {
                 Text(
                     text = stringResource(R.string.expense_empty),
@@ -127,7 +138,7 @@ fun ExpenseListScreen(
                             .map { participantLabel(it, state) }
                             .joinToString(", "),
                         forLabel = forWhomLabel(row.expense, state),
-                        onClick = { onEditExpense(row.item.id) },
+                        onClick = if (state.isClosed) null else ({ onEditExpense(row.item.id) }),
                     )
                     HorizontalDivider()
                 }
@@ -143,10 +154,14 @@ private fun ExpenseRowView(
     currency: String,
     paidByLabel: String,
     forLabel: String,
-    onClick: () -> Unit,
+    /** Null on a closed list: the row is still there to read, it just cannot be opened. */
+    onClick: (() -> Unit)?,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -191,4 +206,50 @@ internal fun balanceColor(cents: Long) = when {
     cents < 0 -> MaterialTheme.colorScheme.error
     cents > 0 -> MaterialTheme.colorScheme.primary
     else -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+/**
+ * Where this list stands on closing (T-158). Silent until someone votes, a running count while
+ * votes are pending, and a note once it is closed.
+ */
+@Composable
+private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit) {
+    if (state.isClosed) {
+        Text(
+            text = stringResource(
+                R.string.expense_closed_on,
+                DateFormat.getDateInstance().format(Date(state.closedAt ?: 0L)),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        return
+    }
+    if (state.closeVotes.isEmpty()) return
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.expense_agree_count, state.closeVotes.size, state.members.size),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (state.voteError) {
+                Text(
+                    stringResource(R.string.expense_vote_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        TextButton(onClick = onToggleVote, enabled = !state.isVoting) {
+            Text(
+                stringResource(
+                    if (state.iHaveVoted) R.string.expense_withdraw_vote else R.string.expense_agree_to_close,
+                ),
+            )
+        }
+    }
 }

@@ -34,6 +34,8 @@ import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.sync.SyncResult
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -97,7 +99,15 @@ class ListPropsViewModelTest {
     }
 
     private fun newViewModel(): ListPropsViewModel =
-        ListPropsViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, itemsRepo, apiProvider, notificationPrefs)
+        ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            apiProvider,
+            notificationPrefs,
+            FakeSessionState(),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
 
     @Test
     fun `initial state loads the name and merges category_order with distinct categories, without a network call`() = runTest(mainDispatcherRule.dispatcher) {

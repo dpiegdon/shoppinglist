@@ -249,4 +249,13 @@
     <string name="overview_currency_help">تُستخدم لكل مصروف في هذه القائمة، ولا تتغير بعد ذلك.</string>
     <string name="listprops_kind_expenses">تكاليف مشتركة مع رصيد لكل عضو.</string>
     <string name="listprops_kind_fixed">قائمة المصروفات تحتفظ بنوعها وعملتها دائمًا.</string>
+    <string name="expense_closing">الإغلاق</string>
+    <string name="expense_closing_help">يجب أن يوافق الجميع. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.</string>
+    <string name="expense_agree_to_close">الموافقة على الإغلاق</string>
+    <string name="expense_withdraw_vote">سحب الموافقة</string>
+    <string name="expense_agree_count">%1$d من %2$d وافقوا على الإغلاق</string>
+    <string name="expense_closed_on">أُغلقت في %1$s</string>
+    <string name="expense_vote_failed">تعذّر تسجيل تصويتك.</string>
+    <string name="expense_frozen">وافق على الإغلاق — المبالغ ثابتة</string>
+    <string name="listprops_leave_blocked">لا يمكن مغادرة قائمة المصروفات إلا بعد إغلاقها.</string>
 </resources>
