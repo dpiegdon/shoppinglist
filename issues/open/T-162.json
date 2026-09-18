@@ -1,0 +1,13 @@
+{
+  "body": "MIGRATION_5_6 (T-153: items.expense_*, lists.currency_*, membersJson,\ncloseVotesJson, closedAt) has never run. Not once, anywhere:\n\n- all 34 Android test databases use inMemoryDatabaseBuilder, which creates the\n  schema at the CURRENT version, so no migration executes;\n- there is no MigrationTestHelper test, and androidTest holds no Kotlin at all.\n\nWhy it matters more than a missing unit test. AppDb registers the migration and\ndoes NOT call fallbackToDestructiveMigration, so if Room finds the migrated\nschema does not match the entities it throws on first database access \u2014 which on\nthis app is launch. An upgrading user gets a crash loop until they clear data.\n\nMitigating, but not a substitute: MIGRATION_5_6 has the same shape as\nMIGRATION_4_5, which shipped in 1.10.0 and has run on a real device through four\nreleases. Column names and types were checked against the entities by hand.\n\nWanted:\n1. exportSchema = true plus a schema location in build.gradle.kts, and the\n   generated schema JSONs committed (they are the input MigrationTestHelper\n   needs and are worth having in review anyway).\n2. A MigrationTestHelper test that creates a version-5 database, writes a row,\n   runs MIGRATION_5_6, and asserts the new columns exist with the old row\n   intact. That also covers 1->5, which have never been executed either.\n\nRelated: server migration 7 (T-157, close_votes + lists.closed_at) also has no\ntest that executes it, unlike migration 6. Cheaper: extend test_closing.py the\nway test_expenses.py covers migration 6.\n\nDo this before the phase-1 release (T-156), since that is the build existing\nusers upgrade into.",
+  "created_at": "2026-09-18T08:42:36+00:00",
+  "id": "T-162",
+  "labels": [
+    "android",
+    "reliability",
+    "test-coverage"
+  ],
+  "priority": 2,
+  "title": "Room migration 5->6 has never been executed by any test",
+  "updated_at": "2026-09-18T08:42:36+00:00"
+}
