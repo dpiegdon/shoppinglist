@@ -66,6 +66,33 @@ describe("ListPropsPage notes (T-62)", () => {
     cleanup();
   });
 
+  it("opened directly — a reload or a deep link — it stays and fills its fields once the list arrives (T-188)", async () => {
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj("Gate code: 4471")], items: [] },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/list/list-1/properties"]}>
+        <AuthProvider>
+          <SyncProvider>
+            <Routes>
+              <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+              <Route path="/" element={<div>Overview page</div>} />
+            </Routes>
+          </SyncProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    // It used to redirect on the first render, before the first sync had delivered the list.
+    const textarea = await screen.findByPlaceholderText("Gate code, store hours, anything worth remembering…");
+    await waitFor(() => expect(textarea).toHaveValue("Gate code: 4471"));
+    expect(screen.getByDisplayValue("Groceries")).toBeInTheDocument();
+    expect(screen.queryByText("Overview page")).not.toBeInTheDocument();
+  });
+
   it("loads an existing note into the textarea", async () => {
     vi.mocked(api.sync).mockResolvedValueOnce({
       cursor: 1,

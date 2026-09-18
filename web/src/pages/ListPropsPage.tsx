@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
@@ -17,7 +17,7 @@ import { compareNames } from "../lib/nameOrder";
 export default function ListPropsPage() {
   const t = useT();
   const { listId } = useParams<{ listId: string }>();
-  const { lists, items, push, deviceId, refresh } = useSyncContext();
+  const { lists, items, push, deviceId, refresh, loading } = useSyncContext();
   const { account } = useAuth();
   const navigate = useNavigate();
   const list = listId ? lists.get(listId) : undefined;
@@ -41,6 +41,19 @@ export default function ListPropsPage() {
   const [inviteLink, setInviteLink] = useState<{ url: string; email: string } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // The fields above are seeded from `list` on the first render, but a reload or a deep link renders
+  // first with no list at all — the web client has no local mirror, so lists only exist once the
+  // first sync lands (T-188). Seed them once, when the list first arrives, and never again: after
+  // that they hold what the user is typing.
+  const seededFor = useRef<string | null>(list ? listId ?? null : null);
+  useEffect(() => {
+    if (!list || !listId || seededFor.current === listId) return;
+    seededFor.current = listId;
+    setName(listFieldValue(list, "name") ?? "");
+    setCategoryOrder(listFieldValue(list, "category_order") ?? []);
+    setNotes(listFieldValue(list, "notes") ?? "");
+  }, [list, listId]);
+
   useEffect(() => {
     if (!listId) return;
     api
@@ -50,7 +63,16 @@ export default function ListPropsPage() {
   }, [listId]);
 
   if (!listId) return <Navigate to="/" replace />;
-  if (!list) return <Navigate to="/" replace />;
+  // Not a redirect (T-188), as on the All items screen (T-146): on a reload or a deep link the list
+  // does not exist yet on the first render, and redirecting bounced everyone to the overview.
+  if (!list) {
+    return (
+      <main style={{ padding: "1rem" }}>
+        <p className="muted">{loading ? t("common.loading") : t("list.notFound")}</p>
+        {!loading && <Link to="/">{t("list.backToOverview")}</Link>}
+      </main>
+    );
+  }
   const id: string = listId;
 
   const liveItems = Array.from(items.values()).filter(
