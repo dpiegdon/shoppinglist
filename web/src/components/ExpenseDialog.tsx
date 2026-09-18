@@ -59,13 +59,21 @@ export function today(): string {
  * Seed one distribution from a stored map. `equal` is the flag the expense carries: when it was an
  * equal split, everyone comes back as auto so that correcting the total redistributes rather than
  * erroring. Otherwise the amounts were meant, so they come back fixed.
+ *
+ * A frozen participant is seeded from what is stored whichever it was (T-196): their share may not
+ * move, so it can never be one of the auto shares — and seeding it is what keeps it at its own
+ * amount rather than at nothing, which every save would then be refused for.
  */
-function shareStateFrom(shares: Record<string, string>, equal: boolean): ShareState {
+function shareStateFrom(
+  shares: Record<string, string>,
+  equal: boolean,
+  frozen: ReadonlySet<string>,
+): ShareState {
   const selected: Record<string, boolean> = {};
   const text: Record<string, string> = {};
   for (const [id, amount] of Object.entries(shares)) {
     selected[id] = true;
-    if (!equal) text[id] = amount;
+    if (!equal || frozen.has(id)) text[id] = amount;
   }
   return { selected, text };
 }
@@ -121,6 +129,16 @@ export default function ExpenseDialog({
     return ids;
   }, [members, seed]);
 
+  /**
+   * Whose amounts may not move: whoever has agreed to close, and anyone no longer on the roster.
+   * Their rows render locked rather than hidden — the amount is part of the record, and a share
+   * that vanished from the form would be silently dropped on the next save.
+   */
+  const frozen = useMemo(() => {
+    const current = new Set(members.map((member) => member.account_id));
+    return new Set(participantIds.filter((id) => closeVotes.includes(id) || !current.has(id)));
+  }, [participantIds, members, closeVotes]);
+
   const [name, setName] = useState(() =>
     editingItem ? itemFieldValue(editingItem, "name") ?? "" : prefill?.name ?? "",
   );
@@ -131,14 +149,17 @@ export default function ExpenseDialog({
   const [totalText, setTotalText] = useState(() =>
     seed ? fromCents(expenseTotalCents(seed)) : "",
   );
+  // Only an expense already stored seeds frozen shares: a prefilled new one is a change from zero
+  // for anyone frozen whatever it says, so there is nothing of theirs to preserve.
+  const seedFrozen: ReadonlySet<string> = stored ? frozen : new Set<string>();
   const [paidBy, setPaidBy] = useState<ShareState>(() =>
     seed
-      ? shareStateFrom(seed.paid_by, seed.equal_by)
+      ? shareStateFrom(seed.paid_by, seed.equal_by, seedFrozen)
       : { selected: frozenFreeSelection([myAccountId], closeVotes, members), text: {} },
   );
   const [paidFor, setPaidFor] = useState<ShareState>(() =>
     seed
-      ? shareStateFrom(seed.paid_for, seed.equal_for)
+      ? shareStateFrom(seed.paid_for, seed.equal_for, seedFrozen)
       : {
           selected: frozenFreeSelection(
             members.map((m) => m.account_id),
@@ -150,16 +171,6 @@ export default function ExpenseDialog({
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  /**
-   * Whose amounts may not move: whoever has agreed to close, and anyone no longer on the roster.
-   * Their rows render locked rather than hidden — the amount is part of the record, and a share
-   * that vanished from the form would be silently dropped on the next save.
-   */
-  const frozen = useMemo(() => {
-    const current = new Set(members.map((member) => member.account_id));
-    return new Set(participantIds.filter((id) => closeVotes.includes(id) || !current.has(id)));
-  }, [participantIds, members, closeVotes]);
 
   // Whether deleting is off the table: it would take a frozen participant's amounts to zero (T-193).
   const deleteBlocked =

@@ -575,6 +575,77 @@ describe("closing an expenses list", () => {
 });
 
 
+// ---- editing around a frozen participant (T-196) -----------------------------
+
+describe("editing an expense that involves a frozen participant", () => {
+  const THIRD = "acct-third";
+  const GONE = "acct-gone";
+
+  /** 64.00 three ways: the leftover cent to the first, which is what the dialog would write. */
+  const dinnerFor = (third: string): Expense => ({
+    paid_by: { [ME]: "64.00" },
+    equal_by: true,
+    paid_for: { [ME]: "21.34", [OTHER]: "21.33", [third]: "21.33" },
+    equal_for: true,
+    date: "2026-09-17",
+  });
+
+  function setUp(list: ReturnType<typeof expenseList>, items: ReturnType<typeof expenseItem>[]) {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [list], items } });
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("shows a voter their stored share, and saves it unchanged", async () => {
+    setUp(expenseList([ME, OTHER, THIRD], [THIRD]), [expenseItem("e1", "Dinner", dinnerFor(THIRD))]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    // Their own 21.33, not the 0.00 that redistributing the whole total between the other two
+    // would leave them at — every save of which the server refuses.
+    expect(screen.getByLabelText(`For ${THIRD}@example.com`)).toHaveValue("21.33");
+    expect(screen.getByLabelText(`For ${ME}@example.com`)).toHaveAttribute("placeholder", "21.34");
+    expect(screen.getByLabelText(`For ${OTHER}@example.com`)).toHaveAttribute("placeholder", "21.33");
+
+    // The title is all that changes, so every share must go back exactly as it came.
+    await userEvent.clear(screen.getByLabelText("What"));
+    await userEvent.type(screen.getByLabelText("What"), "Dinner out");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(pushedItem()?.fields.name?.value).toBe("Dinner out");
+    expect(pushedExpense().paid_for).toEqual({ [ME]: "21.34", [OTHER]: "21.33", [THIRD]: "21.33" });
+  });
+
+  it("shows someone who has left their stored share, and saves it unchanged", async () => {
+    setUp(expenseList([ME, OTHER]), [expenseItem("e1", "Dinner", dinnerFor(GONE))]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    // By label rather than by number: which number they carry is the numbering's business.
+    expect(screen.getByLabelText(/^For Former member/)).toHaveValue("21.33");
+
+    await userEvent.clear(screen.getByLabelText("What"));
+    await userEvent.type(screen.getByLabelText("What"), "Dinner out");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(pushedExpense().paid_for).toEqual({ [ME]: "21.34", [OTHER]: "21.33", [GONE]: "21.33" });
+  });
+});
+
+
 // ---- settling up (T-164) -----------------------------------------------------
 
 describe("settling up", () => {
