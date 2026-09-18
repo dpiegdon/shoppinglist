@@ -4,11 +4,10 @@
   "id": "T-181",
   "labels": [
     "ux",
-    "web",
     "android",
     "expenses"
   ],
   "priority": 2,
-  "title": "overview marks a closed expense list",
-  "updated_at": "2026-09-18T17:50:09+00:00"
+  "title": "android: overview marks a closed expense list, as the web does",
+  "updated_at": "2026-09-18T17:57:05+00:00"
 }
