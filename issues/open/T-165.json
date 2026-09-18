@@ -1,0 +1,13 @@
+{
+  "body": "Phase 3 (T-161). Design: \"Settling up\" in the spec. The Android twin of the web\nticket: BalancesScreen gains \"Settle up\" with the same rows, the same empty and\nsolo behaviour, and Record under the same four conditions, opening ExpenseDialog\npre-filled through ExpenseFormViewModel.\n\nFive strings in all nine locales (French apostrophes escaped). Tests as for web,\nin the view-model test class that has MainDispatcherRule, not the Compose one.",
+  "created_at": "2026-09-18T09:54:33+00:00",
+  "id": "T-165",
+  "labels": [
+    "expenses",
+    "feature",
+    "android"
+  ],
+  "priority": 2,
+  "title": "expenses: Android \u2014 settle-up section and record",
+  "updated_at": "2026-09-18T09:54:33+00:00"
+}
