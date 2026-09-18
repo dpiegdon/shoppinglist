@@ -1,0 +1,12 @@
+{
+  "body": "Small drift between docs, server and UI wording around expenses:\n\n- docs/wire-contract.md says only that both share maps are non-empty; the server also caps each map at EXPENSE_SHARES_MAX = 200 participants (sync.py:114) with 422 invalid_expense. Document it.\n- UI strings on both clients say an expenses list's currency is \"fixed once the list exists\" / \"keeps its type and its currency for life\" (overview.currencyHelp, listProps.kindFixed). The server only forbids blanking it (wire contract: \"can never be blanked there\"); a non-blank change is accepted, and the list-properties screens simply do not offer one. Decide: either the server refuses changing it (then say so in the contract, like the kind) or the wording says the clients do not offer it. Maintainer call.\n- The error table lists invalid_currency once for two rules; that is its own ticket.",
+  "created_at": "2026-09-18T22:55:36+00:00",
+  "id": "T-207",
+  "labels": [
+    "docs",
+    "human"
+  ],
+  "priority": 4,
+  "title": "Docs/wording drift: undocumented 200-participant cap; currency 'fixed for life' vs server that only forbids blanking",
+  "updated_at": "2026-09-18T22:55:36+00:00"
+}
