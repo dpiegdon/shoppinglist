@@ -1,0 +1,12 @@
+{
+  "body": "The web shows sync status in its header on every page. Android showed a recency line on the overview and a dot on shopping lists only \u2014 none on expense lists. The dot moves into the top bar of every screen; the overview keeps its attention banner for blocked rows.",
+  "created_at": "2026-09-18T17:50:09+00:00",
+  "id": "T-178",
+  "labels": [
+    "ux",
+    "android"
+  ],
+  "priority": 2,
+  "title": "android: sync status in the top bar on every screen, as on the web",
+  "updated_at": "2026-09-18T17:50:09+00:00"
+}
