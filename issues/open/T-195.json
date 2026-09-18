@@ -1,0 +1,11 @@
+{
+  "body": "From the maintainer: the session moves to a host with more RAM, so the working\nagreements kept in the agent's host-local memory go into the repo as AGENTS.md\n(ticket and commit discipline, no push/pull, no history rewrites, release\nroutine, client parity and nine-locale strings, test pitfalls, host notes, open\nthreads). A one-line CLAUDE.md imports it so Claude Code loads it on its own.",
+  "created_at": "2026-09-18T22:11:56+00:00",
+  "id": "T-195",
+  "labels": [
+    "docs"
+  ],
+  "priority": 2,
+  "title": "AGENTS.md: standing instructions for agents, so they survive a move to another host",
+  "updated_at": "2026-09-18T22:11:56+00:00"
+}
