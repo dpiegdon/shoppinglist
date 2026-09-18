@@ -68,7 +68,18 @@ server_lint() (
 
 web_check() (
   cd web
-  npx vitest run &&
+  # package-lock.json's version fields drift silently: nothing rewrites them
+  # except a later `npm install`, which does it as a side effect and dirties
+  # the tree (T-201). Catch the drift here instead of at that install.
+  node -e '
+    const pkg = require("./package.json").version;
+    const lock = require("./package-lock.json").version;
+    if (pkg !== lock) {
+      console.error(`web: package.json is ${pkg} but package-lock.json is ${lock}`);
+      process.exit(1);
+    }
+  ' &&
+    npx vitest run &&
     npx tsc --noEmit -p tsconfig.app.json &&
     npm run lint
 )

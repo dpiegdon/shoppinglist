@@ -120,6 +120,22 @@ edit("android/app/build.gradle.kts", r'versionName = "[^"]*"', f'versionName = "
 # web/ is not published to npm, but the README promises one version for every
 # part, and a package.json frozen at 0.0.0 quietly made that untrue.
 edit("web/package.json", r'(?m)^  "version": "[^"]*"', f'  "version": "{version}"')
+# npm rewrites package-lock.json's version fields to match package.json on the
+# next `npm install` regardless of who edited package.json, so a lockfile left
+# behind at 0.0.0 dirties the tree the moment anyone installs (T-201). Bump it
+# here too, anchored on indentation so only the top-of-file "name": "web" pair
+# and the packages[""] "name": "web" pair are touched, never a dependency that
+# happens to also be named "web".
+edit(
+    "web/package-lock.json",
+    r'(?m)^(  "name": "web",\n  "version": ")[^"]*(")',
+    rf'\g<1>{version}\g<2>',
+)
+edit(
+    "web/package-lock.json",
+    r'(?m)^(      "name": "web",\n      "version": ")[^"]*(")',
+    rf'\g<1>{version}\g<2>',
+)
 PY
 
 # ---------------------------------------------------------------------------
