@@ -1,0 +1,13 @@
+{
+  "body": "Frozen means \"has voted to close, or is no longer a member\" (wire contract, The freeze). Both clients label every frozen participant's row with expense.frozen / expense_frozen: \"agreed to close \u2014 amounts fixed\", which is false for someone who simply left. The web's save-time message expense.error.frozen (\"{who} has agreed to close the list, so their amounts cannot change\") has the same problem. expense.deleteBlocked already gets it right (\"involves someone whose amounts are fixed\").\n\nFix: neutral wording, or two strings chosen by why the person is frozen, on both clients and in all nine locales.\n\nAlso: expense.error.frozen exists on the web only and crossClient.test.ts still passes, so a web-only string is not caught by the parity check. Either add the Android counterpart (see the Android refusal-surfacing ticket) or make the test fail on one-sided strings.",
+  "created_at": "2026-09-18T22:55:35+00:00",
+  "id": "T-203",
+  "labels": [
+    "ux",
+    "ready",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "'agreed to close \u2014 amounts fixed' is shown for former members who never voted; web-only string escaped the parity test",
+  "updated_at": "2026-09-18T22:55:35+00:00"
+}
