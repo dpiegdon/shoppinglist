@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.ui.expense
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -90,17 +91,23 @@ fun ExpenseListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Compact (T-174): less padding than Material's default, so the pill stays small. The
+                // check on the active segment stays, as on the web and on Show checked.
                 SingleChoiceSegmentedButtonRow {
                     SegmentedButton(
                         selected = !showBalances,
                         onClick = { showBalances = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    ) { Text(stringResource(R.string.list_kind_expenses)) }
+                        contentPadding = PaddingValues(horizontal = 10.dp),
+                        modifier = Modifier.height(32.dp),
+                    ) { Text(stringResource(R.string.list_kind_expenses), style = MaterialTheme.typography.labelMedium) }
                     SegmentedButton(
                         selected = showBalances,
                         onClick = { showBalances = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    ) { Text(stringResource(R.string.expense_balances)) }
+                        contentPadding = PaddingValues(horizontal = 10.dp),
+                        modifier = Modifier.height(32.dp),
+                    ) { Text(stringResource(R.string.expense_balances), style = MaterialTheme.typography.labelMedium) }
                 }
                 IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
                     Icon(
