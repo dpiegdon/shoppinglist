@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,10 +20,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -57,6 +56,7 @@ import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.data.db.Status
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.AddFab
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -118,6 +118,8 @@ fun ListScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Bottom right on every list kind (T-168), where the expense list already had it.
+        floatingActionButton = { AddFab(onClick = onAddItem, contentDescription = stringResource(R.string.list_add_item)) },
         // This screen already sits inside AppDrawerScaffold's Scaffold (which insets for the top
         // bar); without this, this inner Scaffold re-applies the status-bar inset and the controls
         // sit a status-bar-height too low, leaving empty space up top.
@@ -151,15 +153,6 @@ fun ListScreen(
                     }
                 }
             }
-            Button(
-                onClick = onAddItem,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.list_add_item))
-            }
-
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = { viewModel.refresh() },
@@ -213,6 +206,8 @@ fun ListScreen(
                         }
                     }
                 }
+                    // Room below the last row, so the floating Add button never covers it.
+                    item(key = "fab-clearance") { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }

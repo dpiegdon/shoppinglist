@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.expense
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -167,7 +168,9 @@ class ExpenseClosingTest {
         showList()
 
         composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Add expense").assertDoesNotExist()
+        // By description: the Add button is an icon, so looking for it as text passed whether or not
+        // it was there (T-168 found this).
+        composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
         composeTestRule.onNodeWithText("1 of 2 agree to close").assertDoesNotExist()
     }
 }

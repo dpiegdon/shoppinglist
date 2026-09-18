@@ -335,4 +335,41 @@ class ListScreenTest {
 
         composeTestRule.onNodeWithContentDescription("Last touched by a@example.com").assertDoesNotExist()
     }
+
+    @Test
+    fun `Add is the floating button every list has, and opens the add dialog (T-168)`() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_fab", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            apiProvider,
+        )
+        var added = false
+
+        composeTestRule.setContent { ListScreen(onAddItem = { added = true }, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        // An icon button now, found by what it is called rather than by a visible label.
+        composeTestRule.onNodeWithContentDescription("Add item").performClick()
+        assertEquals(true, added)
+        // And the full-width button it replaced is gone.
+        composeTestRule.onNodeWithText("Add item").assertDoesNotExist()
+        db.close()
+    }
 }

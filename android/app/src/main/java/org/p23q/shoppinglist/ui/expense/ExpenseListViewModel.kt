@@ -42,6 +42,8 @@ data class ExpenseListUiState(
     val closedAt: Long? = null,
     val isVoting: Boolean = false,
     val voteError: Boolean = false,
+    /** Pull-to-refresh in progress (T-167), as on the other lists. */
+    val isRefreshing: Boolean = false,
     /** Who pays whom to zero the balances (T-165), in the order the shared algorithm fixes. */
     val transfers: List<ExpenseMath.Transfer> = emptyList(),
 ) {
@@ -103,6 +105,16 @@ class ExpenseListViewModel @Inject constructor(
             _uiState.update { it.copy(voteError = true) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
+        }
+    }
+
+    /** Pull-to-refresh (T-167): an immediate foreground sync with a visible spinner, as ListScreen's. */
+    fun refresh(): Job = viewModelScope.launch {
+        _uiState.update { it.copy(isRefreshing = true) }
+        try {
+            syncer.syncNow(emptyList())
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 

@@ -4,10 +4,13 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.lifecycle.SavedStateHandle
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -24,13 +27,13 @@ import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ListMember
-import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.SessionEvents
 import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -83,7 +86,7 @@ class ExpenseScreensTest {
         db.listDao().upsert(list.copy(membersJson = Json.encodeToString(members)))
     }
 
-    private fun viewModel() = ExpenseListViewModel(
+    private fun viewModel(syncer: Syncer = Syncer { SyncResult.Success(0, 0, 0, 0) }) = ExpenseListViewModel(
         SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
         itemsRepo,
         listsRepo,
@@ -99,7 +102,7 @@ class ExpenseScreensTest {
             errorInterceptor = ErrorInterceptor(Json { ignoreUnknownKeys = true }, SessionEvents()),
             json = Json { ignoreUnknownKeys = true },
         ),
-        Syncer { SyncResult.Success(0, 0, 0, 0) },
+        syncer,
         FakeSessionState().apply { accountId = me },
     )
 
@@ -133,7 +136,10 @@ class ExpenseScreensTest {
         composeTestRule.onAllNodesWithText("64.00 EUR").assertCountEquals(2)
         // Everyone on the list is covered, so the row says so rather than listing them.
         composeTestRule.onNodeWithText("paid by ME · for everyone").assertIsDisplayed()
-        composeTestRule.onNodeWithText("2026-09-17").assertIsDisplayed()
+        // Once, as the heading of that day's group rather than on every row (T-168).
+        composeTestRule.onAllNodesWithText("2026-09-17").assertCountEquals(1)
+        // Add is the floating button every list has now (T-168).
+        composeTestRule.onNodeWithContentDescription("Add expense").assertIsDisplayed()
     }
 
     @Test
@@ -351,5 +357,57 @@ class ExpenseScreensTest {
 
         composeTestRule.onNodeWithText("Total spent: 12.00 EUR").assertIsDisplayed()
         composeTestRule.onNodeWithText("Settle up").assertDoesNotExist()
+    }
+
+    // ---- pull to refresh (T-167) -----------------------------------------------
+
+    @Test
+    fun `pulling the expense list down syncs, as on the other lists`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        var syncs = 0
+        val model = viewModel(syncer = Syncer { syncs++; SyncResult.Success(0, 0, 0, 0) })
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenBalances = {},
+                onOpenListProps = {},
+                viewModel = model,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Well past the refresh threshold, starting on a row inside the list.
+        composeTestRule.onNodeWithText("Dinner").performTouchInput {
+            swipeDown(startY = top, endY = top + 800f, durationMillis = 400)
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(1, syncs)
+        assertEquals(false, model.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun `an empty expense list can still be pulled down`() = runBlocking<Unit> {
+        var syncs = 0
+        val model = viewModel(syncer = Syncer { syncs++; SyncResult.Success(0, 0, 0, 0) })
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenBalances = {},
+                onOpenListProps = {},
+                viewModel = model,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // An empty list is exactly when someone pulls to see whether anything has arrived.
+        composeTestRule.onNodeWithText("No expenses yet. Add one to get started.").performTouchInput {
+            swipeDown(startY = top, endY = top + 800f, durationMillis = 400)
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(1, syncs)
     }
 }
