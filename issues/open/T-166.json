@@ -1,0 +1,13 @@
+{
+  "body": "Reported on 1.14.0: in the add-expense dialog the paid-by / for rows are broken \u2014\nthe checkbox takes ~70% of the row and the name and amount are crushed to the right.\n\nCause: the global `input, select, textarea` rule in web/src/index.css gives every\ninput `width: 100%` plus text-field padding (added so text fields shrink inside\nflex rows). Checkboxes and radios are inputs too, so inside a flex row they claim\nthe free space. The expense dialog's share rows are the visible case; the list-type\nradios on the overview's new-list form have the same shape and the same problem.\n\nFix at the root: exempt checkbox and radio from the text-field sizing.",
+  "created_at": "2026-09-18T12:30:20+00:00",
+  "id": "T-166",
+  "labels": [
+    "bug",
+    "web",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "web: checkboxes and radios inherit the text-field width, crushing their rows",
+  "updated_at": "2026-09-18T12:30:20+00:00"
+}
