@@ -18,6 +18,8 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
 - **Error envelope.** Every non-2xx JSON response is
   `{"error": "<code>", "message": "<text>"}`, sometimes with extra keys (never
   shadowing those two) — e.g. `row_id`/`field` on a `/sync` validation failure.
+  `message` is English; clients translate by `error`. Every code is listed
+  under "Error codes" at the end.
 - **Timestamps** are integer milliseconds since the Unix epoch.
 - **Caching.** Every response carries `Cache-Control: no-store` unless the route
   chose otherwise (the hashed `/assets/*` bundle and the APK are cacheable, the
@@ -182,7 +184,8 @@ refused too.
 older clients, which fall back to the long default. `is_admin` is derived from
 the instance's static `admin_emails` config and is never stored.
 
-`POST /register` returns `403` when registration is disabled for the instance.
+`POST /register` returns `403 registration_disabled` when registration is
+disabled for the instance.
 
 ### Account
 
@@ -292,8 +295,8 @@ returns `403 cannot_delete_admin` (remove them from the config instead).
 
 Unauthenticated, like `/registration-status`: checking for an update is not an
 account operation, and the download it points at is public anyway. The Android
-client polls it on foreground (rate-limited) and offers an update when `version`
-is newer than its own build.
+client polls it on foreground (rate-limited) and whenever its settings screen
+opens, and offers an update when `version` is newer than its own build.
 
 `version` is the **server package's** version, not a value parsed out of the
 APK. One built wheel is a single deployable artifact whose parts share one
@@ -411,3 +414,36 @@ reachable because list ids are client-minted strings). Registration rejects
 colon-bearing addresses for the same reason. Redemption grants membership in the
 list recorded on the **invite row**, not the one carried by the token — the two
 agree, but only the row is authoritative by construction.
+
+## Error codes
+
+Every `error` value the server sends. On `/sync`, a code for one row carries
+`row_id` (and `field`, when one field is at fault) whenever the row has a usable
+id — the signal to quarantine that row and keep syncing the rest.
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `invalid_token` | An invite token is malformed or names no invite (`POST /invites/redeem`). |
+| 401 | `missing_token` | No bearer token. |
+| 401 | `invalid_token` | The bearer token is unknown or revoked. |
+| 401 | `session_expired` | The session went unused past its inactivity window. |
+| 401 | `invalid_credentials` | Login with a wrong email or password — one answer for both. |
+| 403 | `invalid_credentials` | A re-entered password is wrong (account and admin operations that ask for one). |
+| 403 | `registration_disabled` | `POST /register` on an instance with registration off. |
+| 403 | `not_a_member` | A list the caller is not on, whether or not it exists. |
+| 403 | `not_admin` | An admin endpoint, called by someone who is not. |
+| 403 | `cannot_delete_self`, `cannot_delete_admin` | See "Admin". |
+| 404 | `account_not_found`, `session_not_found`, `invite_not_found` | The id names nothing. |
+| 404 | `no_app_package` | See "App package". |
+| 409 | `email_taken` | Registering or changing to an address already in use. |
+| 409 | `invite_email_mismatch`, `invite_expired`, `invite_revoked`, `invite_used` | Redeeming an invite that is for someone else, too old, withdrawn, or already used. |
+| 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list". |
+| 410 | `full_resync_required` | See "Sync". |
+| 413 | `payload_too_large` | The request body is over the size cap (4 MB by default). |
+| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_currency`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). |
+| 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. |
+| 422 | `too_many_changes` | See "Sync". No `row_id`. |
+| 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`, or names a list the caller cannot write to. |
+| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_currency` | A pushed field value breaks its rule (see "Item object", "List object"). |
+| 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
+| 503 | `server_busy` | See "Conventions". Always safe to retry. |

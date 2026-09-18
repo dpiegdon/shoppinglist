@@ -1,9 +1,9 @@
 # shoppinglist-server
 
-A Flask **blueprint** with a **SQLite** backend implementing the shopping-list
-server: accounts, shared lists, offline-first field-level last-write-wins
-sync, and email-bound invites. It is a library — mount it into any host Flask
-app — plus a minimal standalone `app.py` for local development.
+A Flask **blueprint** with a **SQLite** backend: accounts, shared lists
+(shopping lists, checklists, expense lists), offline-first field-level
+last-write-wins sync, and email-bound invites. It is a library — mount it into
+any host Flask app — plus a minimal standalone `app.py` for local development.
 
 **The web client is embedded and served by the blueprint itself.** Opening
 the server's base URL in a browser boots the React SPA directly — there is no
@@ -45,6 +45,7 @@ bp = create_blueprint(
                                          #   instead of the bundle embedded in this package
     allow_registration=True,             # optional; False = invite/operator-only instance — POST
                                          #   /register returns 403 and the web login page says so
+    admin_emails=["you@example.com"],    # optional — who gets the Server admin screen; see Configuration
 )
 app.register_blueprint(bp)
 app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
@@ -103,8 +104,8 @@ app.register_blueprint(create_blueprint(
 
 **One real constraint, not a bug:** the invite landing page (`/invite/<token>`),
 the embedded web client (`/`, `/assets/*`), and the Android APK download
-(`/shoppinglist.apk`) are unprefixed, site-root routes by design (Spec §5's
-share URL has no `/api/v1` segment) — there is only one `/` per app. At most
+(`/shoppinglist.apk`) are site-root routes by design (the share URL has no
+`/api/v1` segment) — there is only one `/` per app. At most
 **one** mounted instance per app may set `serve_web_client=True` /
 `serve_invite_landing_page=True` / `serve_android_apk=True`; a second attempt
 raises a clear `ValueError` rather than Flask's raw endpoint-collision error.
@@ -130,6 +131,7 @@ instances, and the CLI's instance-selection behavior).
 | `DATABASE_PATH` / `database_path` | SQLite file path. Created (with schema) by `init-db`; the parent directory must exist and be writable. |
 | `INVITE_HMAC_KEY` / `invite_hmac_key` | The signing key for invite tokens — see below. |
 | `BASE_URL` / `base_url` | The absolute public URL clients reach this server at (scheme + host, plus any mount path; a trailing `/` is tolerated). Used to build the invite **share URLs** (`<base_url>/invite/<token>`) and the landing page's open-in-app link — get it wrong and invite links point somewhere unreachable. |
+| `admin_emails` | Argument only. The instance's admins, matched case-insensitively against the logged-in account's email on every request — the only way to grant admin, so no API call can escalate privilege. Admins get the Server admin screen on both clients: registration on/off (until restart), reset a user's password, delete a user. |
 | `MAX_CONTENT_LENGTH` | Flask config key (not read from the env by the blueprint). The blueprint sets a **4 MB** default request-body cap so a host app is protected without proxy tuning; set this in the host app's Flask config to raise/lower it. Oversized requests get a `413 payload_too_large` JSON error. |
 | `SECRET_KEY` | Read by the dev `app.py` only, as ordinary Flask hygiene. The blueprint itself never uses Flask sessions or cookies (auth is bearer tokens), so it does not depend on this value. |
 
@@ -145,7 +147,7 @@ server-side for the *link* to be checkable. Consequences:
 
 - **Any byte string works; use a real random one** (32+ bytes), e.g.
   `python -c 'import secrets; print(secrets.token_hex(32))'`. The dev `app.py`
-  now **refuses to start** when `INVITE_HMAC_KEY` is unset or still the published
+  **refuses to start** when `INVITE_HMAC_KEY` is unset or still the published
   dev default, rather than running perfectly and wholly insecurely: a forgotten
   variable is an operator mistake that has to be loud. A host app that builds the
   blueprint itself is responsible for the same check.
@@ -168,6 +170,17 @@ flask --app app.py shoppinglist gc                     # force tombstone garbage
 
 `gc` also runs opportunistically (piggybacked on `POST /sync`, at most about
 once a day), so a cron job is optional.
+
+## Deploying and upgrading
+
+1. Build the wheel (see the root README) and `pip install` it on the host.
+2. Mount the blueprint from your host app, as above, behind a TLS proxy (see
+   Deployment requirements).
+3. For a new database, run `flask shoppinglist init-db` once.
+
+To upgrade, install the new wheel and restart. An existing database migrates
+itself the first time the new version opens it; take a backup first (see
+Backups), since migrations only run forward.
 
 ## Running the dev server
 
@@ -211,17 +224,13 @@ npm install
 npm run build   # writes into ../server/src/shoppinglist_server/web_dist/
 ```
 
-`routes/webapp.py`, registered directly on the host app (same reasoning as
-the invite landing page: it must live at the site root, not under
-`url_prefix`), serves the built `index.html` for `/` and any unmatched `GET`
-(SPA client-side routing fallback), and the hashed `/assets/*` bundle with a
-long cache lifetime. `/api/v1/*`, `/invite/<token>`, and `/shoppinglist.apk`
-all rank above this catch-all — Werkzeug sorts routes by rule specificity,
-not registration order — verified with real requests in
-`tests/test_webapp.py` and `tests/test_apk.py`, not just a route dump. Pass `serve_web_client=False` to `create_blueprint(...)` to
-disable it (e.g. a host app that wants to serve its own root content
-instead); a package installed without ever running `npm run build` degrades
-gracefully to the same effect rather than crashing.
+`routes/webapp.py`, registered on the host app at the site root, serves the
+built `index.html` for `/` and any unmatched `GET` (the SPA's client-side
+routing), and the hashed `/assets/*` bundle with a long cache lifetime. The API,
+`/invite/<token>` and `/shoppinglist.apk` all rank above this catch-all, because
+Werkzeug sorts routes by specificity, not registration order. Pass
+`serve_web_client=False` to disable it; a package built without the web bundle
+behaves the same way rather than crashing.
 
 The web client is same-origin with its own API by construction, so — unlike
 the Android app — it has no server-URL setting.
@@ -243,37 +252,16 @@ web client, invite landing page, and the app download in one wheel:
 pip install server/dist/shoppinglist_server-*.whl   # on the deployment host
 ```
 
-Use the script rather than calling `python -m build --wheel` / `pip wheel`
-directly: it removes `build/` first and then checks what actually landed in the
-wheel. **setuptools reuses `build/` across builds and only ever *adds* to it**,
-so a file deleted from `src/` since the last build gets packaged again. That is
-not hypothetical — the first 1.6.0 wheel shipped the previous release's
-`web_dist/assets/index-*.js` alongside the current one, because `npm run build`
-had replaced the content-hashed bundle and the old name lingered in `build/`
-(T-105). `index.html` references bundles by hash, so the stale file was never
-served and it cost size rather than correctness — but the same mechanism would
-ship a wrong file the moment something is loaded by a stable path instead of a
-hash. The script fails the build if `web_dist/assets/` and `index.html` disagree
-in either direction, or if `schema.sql`, the migrations, the invite template, or
-the APK are missing.
-
-The script does *not* rebuild `web_dist` or the APK — those are committed
-inputs with their own, much slower toolchains. Rebuild them first if the
-release changes them (see above and `android/README.md`).
-
-…then mount it from your host app as shown in "Mounting the blueprint" above.
-(Copying the `src/shoppinglist_server/` directory into your Flask project works
-too — everything the blueprint serves lives inside the package.)
-
-**When a new Android release is built**, refresh the embedded copy:
-
-```bash
-cp android/app/build/outputs/apk/release/app-release.apk \
-   server/src/shoppinglist_server/apk/shoppinglist.apk
-```
+Use the script rather than `pip wheel` directly. setuptools reuses `build/`
+across builds and only ever *adds* to it, so a file deleted from `src/` gets
+packaged again; the script cleans first, then fails if `web_dist/assets/` and
+`index.html` disagree or if `schema.sql`, the migrations, the invite template or
+the APK are missing. It does *not* rebuild the web bundle or the APK —
+`../release.sh` does both, and embeds the APK at
+`src/shoppinglist_server/apk/shoppinglist.apk`.
 
 The download URL is stable (no content hash) and served with a short cache
-lifetime, so updated APKs propagate promptly.
+lifetime, so a new APK reaches users promptly.
 
 ### Telling the app an update exists
 
@@ -289,7 +277,8 @@ It is unauthenticated (like `/registration-status`), and the version reported is
 this **package's** version rather than one parsed out of the APK — the single
 artifact shares one version number, so those are the same thing. The Android
 client checks on foreground, at most twice a day, and offers each new version
-once; users can turn the check off entirely in the app's settings.
+once; opening its Settings checks right away and offers a skipped version again.
+Users can turn the check off there.
 
 Nothing needs configuring: the endpoint exists whenever the APK does. It answers
 `404 no_app_package` when the instance serves no APK — the same answer servers
@@ -322,10 +311,9 @@ below.
 pytest -v
 ```
 
-`tests/test_full_system.py` runs the complete lifecycle end-to-end: two
-accounts, list creation, invite + redeem, concurrent offline edits, sync
-convergence, both members leaving (the second leave orphans the list), and
-tombstone purge via `gc.run`.
+`tests/test_full_system.py` runs the whole lifecycle end to end: two accounts,
+invite and redeem, concurrent offline edits, convergence, both members leaving,
+and the tombstone purge.
 
 ### Linting and formatting
 
@@ -337,10 +325,8 @@ isort . && black .          # fix layout and import order
 ruff check . && ty check .  # lint and type-check
 ```
 
-**black is the authority on layout.** isort runs in black's profile so the two
-can never disagree about imports, and ruff is a linter only here — its formatter
-is unused and its import rules are off, so nothing competes for the same job.
-Run isort before black.
+black is the authority on layout: isort runs in black's profile, and ruff only
+lints (its formatter and import rules are off). Run isort before black.
 
 `../verify-all.sh` runs all four in `--check` mode as its first stage, so a
 badly formatted tree fails the build without anything being rewritten under you.
@@ -402,8 +388,9 @@ should avoid double-setting):
   blueprints does not impose its CSP or `Referrer-Policy` on their routes.
 - **Session revocation on password change** — changing a password revokes all of
   the account's other sessions, keeping only the one that made the change. The
-  operator `reset-password` CLI goes further: it resets the password and signs
-  out all devices (there is no trusted "current" session to spare in that flow).
+  operator `reset-password` CLI signs out all devices.
+- **Idle sessions expire** — after 7 days unused on the web, 62 days on Android
+  and for clients that don't say what they are. Any request slides the window.
 
 - **Request-body row cap** — a `/sync` push carries at most 250 rows; larger
   batches get `422 too_many_changes` and clients split them. `MAX_CONTENT_LENGTH`
@@ -423,8 +410,7 @@ Known, accepted trade-off:
   alternative for these flows. `/login` itself does *not* enumerate: it returns
   the same `invalid_credentials` for an unknown email and a wrong password, and
   performs the same scrypt verify either way, so the two are not distinguishable
-  by timing. (Before v1.9.0 the hash ran only when the account existed, which
-  made the response ~50x faster for an unknown address — a working oracle.)
+  by timing.
 
 ## Audit log
 
@@ -471,8 +457,10 @@ because they are what the feature means:
   stays in the expenses it was part of.
 
 While the list is open, anyone who has voted to close — or who has left — has
-their amounts frozen: no write may change what they paid or owe. That is what
-makes agreeing to close mean something.
+their amounts frozen: no write may change what they paid or owe, so an expense
+naming them cannot be deleted either. Someone who has voted also changes
+nothing on the list themselves until they withdraw. That is what makes agreeing
+to close mean something.
 
 The wire shapes, error codes and the exact freeze rule are in
 [`../docs/wire-contract.md`](../docs/wire-contract.md).

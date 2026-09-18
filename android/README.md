@@ -46,25 +46,16 @@ keyPassword=...
 EOF
 ```
 
-**Back the keystore + properties file up somewhere safe** — installing an
-update over an existing install requires the same signing key; losing it means
-uninstall/reinstall (local data re-syncs from the server, so nothing is lost,
-but sessions/settings reset). Note the release build cannot be installed *over*
-a debug build (different signatures) — uninstall the debug app first. Release
-builds have no "trust self-signed certificates" toggle by design; see the TLS
-section below.
+Keep that keystore: Android installs an update only if it is signed with the
+same key, and `../release.sh` refuses to embed an APK signed with a different
+one. A release build also cannot be installed over a debug build (different
+signatures); uninstall the debug app first.
 
 The release unit-test variant (`./gradlew testReleaseUnitTest`) includes the
 proof that the debug-only TLS bypass is absent from release.
 
-After building a release, **refresh the copy embedded in the server package**
-so `/shoppinglist.apk` serves the new version (see "Android app download" in
-[`../server/README.md`](../server/README.md)):
-
-```bash
-cp app/build/outputs/apk/release/app-release.apk \
-   ../server/src/shoppinglist_server/apk/shoppinglist.apk
-```
+`../release.sh` builds the release APK and embeds it in the server package,
+which serves it at `/shoppinglist.apk`.
 
 ## Installing on a phone
 
@@ -81,14 +72,14 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
   it in a file manager. You'll be prompted to allow installs from that source
   the first time.
 
-Once installed, the app keeps itself current on its own: on foreground (at most
-twice a day) it asks the server via `GET /api/v1/app-version` whether a newer
-version is available, and offers each new version once. Accepting hands the APK
-URL to the system, which installs it the same way a sideload does — the app
-never downloads or installs anything itself, and asks for no extra permissions.
-Declining is remembered for that version and not asked again. The whole check
-can be turned off under Settings → Account. Servers that carry no APK, or that
-predate the feature, simply answer 404 and the app stays quiet.
+Once installed, the app keeps itself current: on foreground (at most twice a
+day) it asks the server via `GET /api/v1/app-version` whether a newer version
+exists, and offers each new version once. Opening Settings checks right away,
+says what it found, and offers a version you declined again. Accepting hands the
+APK URL to the system, which installs it the same way a sideload does — the app
+downloads and installs nothing itself and asks for no extra permissions. The
+check can be turned off under Settings → App updates. A server that carries no
+APK answers 404 and the app stays quiet.
 
 On first launch the login screen shows the **server URL** — prefilled with
 `https://p23q.org/shopping` (the original instance; edit it if you self-host)
@@ -115,6 +106,11 @@ or the test suite fails. It is only a prefill — the field stays editable, and 
 URL a user logs into replaces it — so users of a stock build can always reach your
 server by typing its URL.
 
+Nothing else is host-specific. The package name (`org.p23q.shoppinglist`) and the
+signing certificate carry the original domain but do not affect where the app
+connects; rename them only to publish a build that could be installed alongside
+the original.
+
 ### Testing against a self-signed server (debug builds only)
 
 A **debug** build's Settings screen has a *"Trust self-signed certificates"*
@@ -130,10 +126,10 @@ server instead.
 
 ### Self-hosted TLS: making your own certificate trusted (release-safe)
 
-When the app can't validate the server's certificate it now says so distinctly —
-*"The server's certificate isn't trusted…"* — rather than the generic *"Couldn't
-reach the server"*, so you can tell a cert problem apart from a wrong URL or being
-offline. You have three options, in order of preference:
+When the app can't validate the server's certificate it says *"The server's
+certificate isn't trusted…"* rather than *"Couldn't reach the server"*, so a
+certificate problem is told apart from a wrong URL or being offline. Three
+options, in order of preference:
 
 1. **Use a certificate from a public CA** — e.g. Let's Encrypt, typically
    terminated at a reverse proxy (nginx/Caddy/Traefik) in front of the Flask
@@ -156,12 +152,10 @@ declares an intent-filter for `https://*/invite/*` (see `AndroidManifest.xml`)
 so tapping such a link opens straight into the redeem flow when this is the
 only app installed that claims it.
 
-This is **not** a fully verified [Android App
+This is **not** a verified [Android App
 Link](https://developer.android.com/training/app-links/verify-android-applinks)
-out of the box, because the server has no fixed public host (Notes: "no fixed
-public URL, self-hosted") — Android's App Link verification (`autoVerify`)
-checks a Digital Asset Links file at exactly one declared host, and this app
-doesn't know your host ahead of time.
+out of the box: verification (`autoVerify`) checks a Digital Asset Links file at
+one declared host, and a self-hosted app doesn't know its host ahead of time.
 
 If you self-host the server and want the stronger, verified App Link behavior
 (the link opens this app directly, with no disambiguation dialog, even when
@@ -178,6 +172,6 @@ Links documentation linked above for the exact JSON shape. The server package
 in this repo does not currently serve this file for you — it would need to be
 added to whatever process hosts your server deployment.
 
-Without it, invite links still work via the paste-a-code fallback ("Join
+Without it, invite links still work via the paste-a-code fallback ("Join a
 list" in the app's drawer menu), or by the OS's normal disambiguation prompt
 when more than one app can open the link.
