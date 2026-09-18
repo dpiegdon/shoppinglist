@@ -167,14 +167,16 @@ describe("settling up", () => {
   // Balances in the table are signed; the wire amount format is not, so the sign is peeled off.
   const signedCents = (amount: string) =>
     amount.startsWith("-") ? -toCents(amount.slice(1)) : toCents(amount);
-  const balancesOf = (testCase: { balances: Record<string, string> }) =>
-    Object.entries(testCase.balances).map(([accountId, amount]) => ({
+  // Typed loosely on purpose: the JSON import infers a union of object shapes with optional keys,
+  // which is not a Record — at runtime every case is a plain id-to-amount map.
+  const balancesOf = (balances: object) =>
+    Object.entries(balances as Record<string, string>).map(([accountId, amount]) => ({
       accountId,
       balanceCents: signedCents(amount),
     }));
 
   it.each(cases.settle)("$name", (testCase) => {
-    const transfers = settle(balancesOf(testCase)).map((t) => ({
+    const transfers = settle(balancesOf(testCase.balances)).map((t) => ({
       from: t.from,
       to: t.to,
       amount: fromCents(t.cents),
@@ -183,7 +185,7 @@ describe("settling up", () => {
   });
 
   it.each(cases.settle)("$name — zeroes every balance in at most n-1 positive transfers", (testCase) => {
-    const balances = balancesOf(testCase);
+    const balances = balancesOf(testCase.balances);
     const remaining = new Map(balances.map((b) => [b.accountId, b.balanceCents]));
     const transfers = settle(balances);
     for (const t of transfers) {
