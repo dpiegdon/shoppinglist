@@ -1,0 +1,14 @@
+{
+  "body": "Expense date headings showed 2026-09-17 while the closed banner on the same screen used the language's format. Both follow the app's chosen language on both clients.",
+  "created_at": "2026-09-18T17:50:09+00:00",
+  "id": "T-180",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "dates in the user's language",
+  "updated_at": "2026-09-18T17:50:09+00:00"
+}
