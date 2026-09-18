@@ -1,0 +1,13 @@
+{
+  "body": "Editing an expense that was an equal split (equal_by / equal_for true) and involves a frozen participant (someone who voted to close, or who has left the list) renders that participant's share as 0.00 and redistributes the whole total among the others. Every save is then refused by the server with 422 participant_frozen, so the expense's title and note cannot be edited from the web at all. The former-member case makes this common.\n\nCause: `shareStateFrom` (web/src/components/ExpenseDialog.tsx:63) only seeds the text box when `equal` is false, and `entriesOf` (:73) maps a frozen participant with empty text to `fixed: 0`.\n\nReproduced: 3 members, 64.00 split 21.34/21.33/21.33, third member has voted; opening the expense shows the third at 0.00 and the other two at 32.00 each.\n\nFix: seed a frozen participant's share from the stored map regardless of `equal` \u2014 exactly what Android's ExpenseFormViewModel.startEdit does with `frozenShares(...)` (ExpenseFormViewModel.kt:160). Add a test in ExpenseListPage.test.tsx or a new ExpenseDialog test: frozen row shows the stored amount and the save pushes it unchanged. Check it fails when reverted.",
+  "created_at": "2026-09-18T22:55:33+00:00",
+  "id": "T-196",
+  "labels": [
+    "bug",
+    "ready",
+    "agent"
+  ],
+  "priority": 1,
+  "title": "Web: editing an equal-split expense zeroes a frozen participant's share, so every save is refused",
+  "updated_at": "2026-09-18T22:55:33+00:00"
+}
