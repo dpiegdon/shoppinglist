@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 6, exportSchema = false)
+@Database(entities = [ListEntity::class, ItemEntity::class], version = 6, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao

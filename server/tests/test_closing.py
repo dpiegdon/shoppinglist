@@ -3,9 +3,13 @@
 Design: docs/archive/specs/2026-09-17-expense-lists-design.md.
 """
 
+import sqlite3
+
 import pytest
 
-from shoppinglist_server import accounts, auth, closing, invites, sync
+from shoppinglist_server import accounts, auth, closing, invites
+from shoppinglist_server import migrations as migrations_module
+from shoppinglist_server import sync
 from shoppinglist_server.errors import ApiError
 
 PW = "password123"
@@ -492,3 +496,68 @@ def test_a_non_member_cannot_vote_or_probe(client):
         # The same answer either way, so the endpoint cannot be used to probe which ids exist.
         assert resp.status_code == 403
         assert resp.get_json()["error"] == "not_a_member"
+
+
+# ---- the migration -----------------------------------------------------------
+
+
+def test_migration_7_adds_closed_at_and_the_close_votes_table(tmp_path):
+    conn = sqlite3.connect(str(tmp_path / "v6.db"))
+    conn.row_factory = sqlite3.Row
+    # Just the parts of the v6 schema migration 7 touches or references.
+    conn.execute("CREATE TABLE accounts (id TEXT PRIMARY KEY)")
+    conn.execute("CREATE TABLE lists (id TEXT PRIMARY KEY, kind TEXT NOT NULL DEFAULT 'shopping')")
+    conn.execute("INSERT INTO accounts (id) VALUES ('a1')")
+    conn.execute("INSERT INTO lists (id, kind) VALUES ('l1', 'expenses')")
+    conn.commit()
+
+    for statement in dict(migrations_module.MIGRATIONS)[7]:
+        conn.execute(statement)
+    conn.commit()
+
+    # An existing list arrives open, which is the only safe default: closing is a decision the
+    # members make, never one a schema change makes for them.
+    assert (
+        conn.execute("SELECT closed_at FROM lists WHERE id = 'l1'").fetchone()["closed_at"] is None
+    )
+
+    conn.execute("INSERT INTO close_votes VALUES ('l1', 'a1', 1000)")
+    # One vote per member per list, enforced by the table rather than by the code that writes it.
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("INSERT INTO close_votes VALUES ('l1', 'a1', 2000)")
+    conn.close()
+
+
+def test_fresh_schema_and_migration_7_build_the_same_close_votes_table(db_conn, tmp_path):
+    # Compared as structure rather than as SQL text: the two are written by hand in two places
+    # and differ in whitespace, which is not a difference this test should ever fail on.
+    def shape_of(conn, table):
+        columns = [
+            (r["name"], r["type"].upper(), r["notnull"], r["pk"])
+            for r in conn.execute(f"PRAGMA table_info({table})")
+        ]
+        keys = sorted(
+            (r["table"], r["from"], r["to"])
+            for r in conn.execute(f"PRAGMA foreign_key_list({table})")
+        )
+        indexes = sorted(
+            (
+                r["name"],
+                r["unique"],
+                tuple(c["name"] for c in conn.execute(f"PRAGMA index_info({r['name']})")),
+            )
+            for r in conn.execute(f"PRAGMA index_list({table})")
+        )
+        return columns, keys, indexes
+
+    migrated = sqlite3.connect(str(tmp_path / "migrated.db"))
+    migrated.row_factory = sqlite3.Row
+    migrated.execute("CREATE TABLE accounts (id TEXT PRIMARY KEY)")
+    migrated.execute("CREATE TABLE lists (id TEXT PRIMARY KEY)")
+    for statement in dict(migrations_module.MIGRATIONS)[7]:
+        migrated.execute(statement)
+
+    # schema.sql and the migration must land on the same shape — an upgraded database and a fresh
+    # one are the same database as far as every query in the server is concerned.
+    assert shape_of(migrated, "close_votes") == shape_of(db_conn, "close_votes")
+    migrated.close()

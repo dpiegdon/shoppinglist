@@ -180,3 +180,10 @@ tasks.withType<Test>().configureEach {
         },
     )
 }
+
+// Room exports each schema version as JSON so migrations can be tested against a real old database
+// rather than trusted (T-162). The directory is committed: a diff there is the reviewable record of
+// what a schema change actually did, and it is the input androidx.room:room-testing needs.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
