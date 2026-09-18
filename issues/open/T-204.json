@@ -1,0 +1,13 @@
+{
+  "body": "balancesFor sorts equal balances by account id: the web uses `a.accountId.localeCompare(b.accountId)` (web/src/lib/expenses.ts), Android uses plain String order (`thenBy { it.accountId }`). Three functions further down, settle() in the same web file explicitly avoids localeCompare (\"ids are opaque and the order must not depend on the viewer's locale\"), and the shared case table pins settle's order but has no balances case with ids that order differently under the two rules.\n\nChecked: for \"A1\", \"a1\", \"a-1\" localeCompare and code-unit order disagree. Account ids are lowercase UUIDs today, so nothing visible yet, but the rule is inconsistent and untested.\n\nFix: plain comparison on the web; add a balances case to shared-test-cases/expense-arithmetic.json with tied balances and mixed-case ids so both clients are pinned.",
+  "created_at": "2026-09-18T22:55:35+00:00",
+  "id": "T-204",
+  "labels": [
+    "bug",
+    "ready",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "balancesFor tie-break: web localeCompare vs Android code-unit order; pin with a shared case",
+  "updated_at": "2026-09-18T22:55:35+00:00"
+}
