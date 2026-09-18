@@ -1,0 +1,14 @@
+{
+  "body": "Amounts showed as 64.00 EUR in every language. They follow the app's chosen language on both clients: 64,00 \u20ac in German. A currency label that is not an ISO code (the free-text case) keeps the plain number with the label after it. Inputs keep their plain format. Shopping prices too, with the account's default currency when the item has none, as Android already did and the web did not.",
+  "created_at": "2026-09-18T17:50:11+00:00",
+  "id": "T-187",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "amounts in the user's language",
+  "updated_at": "2026-09-18T17:50:11+00:00"
+}
