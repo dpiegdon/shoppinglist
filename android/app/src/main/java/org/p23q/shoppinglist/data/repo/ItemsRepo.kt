@@ -7,6 +7,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.Expense
+import org.p23q.shoppinglist.data.api.AppJson
 import org.p23q.shoppinglist.data.db.ItemDao
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
@@ -117,10 +118,17 @@ class ItemsRepo @Inject constructor(
     suspend fun setExpense(itemId: String, expense: Expense) =
         updateField(itemId) { it.copy(expense = encodeExpense(expense).toLwwOptional(deviceId.get())) }
 
+    /**
+     * The stored value is raw wire JSON, decoded here rather than at the sync boundary, so it goes
+     * through the app's lenient [AppJson] and not Json.Default (T-205). A strict decode returns
+     * null on the first unknown key, and the screens drop a null expense — so one new key in a
+     * server release would empty every expense list on every device until the app was updated,
+     * silently and with no error anywhere.
+     */
     fun decodeExpense(json: String?): Expense? =
-        json?.let { runCatching { Json.decodeFromString<Expense>(it) }.getOrNull() }
+        json?.let { runCatching { AppJson.decodeFromString<Expense>(it) }.getOrNull() }
 
-    fun encodeExpense(expense: Expense): String = Json.encodeToString(expense)
+    fun encodeExpense(expense: Expense): String = AppJson.encodeToString(expense)
 
     suspend fun rename(itemId: String, name: String) =
         updateField(itemId) { it.copy(name = name.toLww(deviceId.get())) }

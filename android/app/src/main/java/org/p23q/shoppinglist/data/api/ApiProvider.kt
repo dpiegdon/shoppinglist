@@ -16,12 +16,19 @@ import retrofit2.Retrofit
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * The one Json this app decodes with. Lenient about unknown keys, so a server that grows a field
+ * this build has never heard of keeps working instead of failing to decode (T-205) — which is
+ * also why stored wire JSON (an item's expense) must go through this and never Json.Default.
+ */
+val AppJson = Json { ignoreUnknownKeys = true }
+
 @Module
 @InstallIn(SingletonComponent::class)
 object JsonModule {
     @Provides
     @Singleton
-    fun provideJson(): Json = Json { ignoreUnknownKeys = true }
+    fun provideJson(): Json = AppJson
 }
 
 /** Builds the Retrofit [Api] lazily and rebuilds it whenever [ServerConfig.serverUrl] changes. */

@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DeviceIdProvider
+import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -260,6 +261,23 @@ class ItemsRepoTest {
 
         assertEquals(0, count)
         assertEquals(before, syncTrigger.scheduleCount)
+    }
+
+    @Test
+    fun `an expense carrying a key this build has never heard of still decodes (T-205)`() {
+        val expense = Expense(
+            paidBy = mapOf("acc-1" to "10.00"),
+            equalBy = true,
+            paidFor = mapOf("acc-1" to "10.00"),
+            equalFor = true,
+            date = "2026-09-18",
+        )
+        // What a later server release storing one more key would leave in the expense column.
+        val stored = repo.encodeExpense(expense).dropLast(1) + ""","settled":false}"""
+
+        // Strictly decoded this is null, and the screens drop a null expense — so every expense on
+        // every list would silently vanish until the app was updated (T-205).
+        assertEquals(expense, repo.decodeExpense(stored))
     }
 
     @Test

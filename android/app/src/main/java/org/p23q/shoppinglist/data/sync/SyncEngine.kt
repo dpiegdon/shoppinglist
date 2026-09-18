@@ -9,6 +9,7 @@ import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.AppJson
 import org.p23q.shoppinglist.data.api.FieldClock
 import org.p23q.shoppinglist.data.api.ItemDto
 import org.p23q.shoppinglist.data.api.ItemFieldsDto
@@ -269,7 +270,9 @@ private fun ItemEntity.toDto(): ItemDto = ItemDto(
         price = FieldClock(price.value?.let { Json.decodeFromString<PriceDto>(it) }, price.updatedAt, price.updatedBy),
         note = FieldClock(note.value, note.updatedAt, note.updatedBy),
         status = FieldClock(status.value, status.updatedAt, status.updatedBy),
-        expense = FieldClock(expense.value?.let { Json.decodeFromString<Expense>(it) }, expense.updatedAt, expense.updatedBy),
+        // The stored expense is decoded with the lenient AppJson, as everywhere else (T-205): with
+        // Json.Default an unknown key would throw here and take the whole push down with it.
+        expense = FieldClock(expense.value?.let { AppJson.decodeFromString<Expense>(it) }, expense.updatedAt, expense.updatedBy),
         deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
     ),
 )
