@@ -1,0 +1,14 @@
+{
+  "body": "One error code covers two contradictory rules:\n\n- PATCH /settings default_currency (accounts.py:141): must be a 3-letter uppercase ISO-4217 code.\n- An expenses list's `currency` field (sync.py:876, :942, :502): free text, non-blank, at most 32 characters; the wire contract says it is deliberately not an ISO code (\"EUR\", \"\u20ac\", \"pizza slices\").\n\nBoth clients map invalid_currency to one string: \"Enter a three-letter currency code, such as EUR\" (web/src/i18n/apiErrors.ts, android ErrorText.kt, api_error_invalid_currency). A user whose expense-list currency is blank or over 32 characters is told the opposite of the rule.\n\nFix: a distinct code for the list currency (e.g. invalid_list_currency, or split blank vs too long), listed in docs/wire-contract.md's error table, mapped in both clients' error tables with a message that matches the rule, in all nine locales; crossClient.test.ts keeps them paired. Server test: the two rules produce two codes.",
+  "created_at": "2026-09-18T22:55:34+00:00",
+  "id": "T-199",
+  "labels": [
+    "bug",
+    "ux",
+    "ready",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "invalid_currency is one code for two contradictory rules; expense-list users are told to enter a 3-letter code",
+  "updated_at": "2026-09-18T22:55:34+00:00"
+}
