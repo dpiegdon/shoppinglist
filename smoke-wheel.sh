@@ -111,6 +111,7 @@ r = c.post(
 )
 check("login returns a token", r.status_code == 200 and "token" in (r.get_json() or {}))
 token = (r.get_json() or {}).get("token", "")
+account_id = (r.get_json() or {}).get("account_id", "")
 auth = {"Authorization": f"Bearer {token}"}
 
 # --- a full sync round-trip ---------------------------------------------
@@ -154,6 +155,101 @@ check("sync returns the pushed item", any(x["id"] == "item-1" for x in items))
 check(
     "the item round-tripped its name",
     any(x["fields"]["name"]["value"] == "Milk" for x in items if x["id"] == "item-1"),
+)
+
+# --- an expenses list, end to end (T-151, T-157) -------------------------
+# Solo on purpose: one member means one vote closes the list, so this covers the
+# alone-on-a-list case and the whole close path in the same round trip.
+expense = {
+    "paid_by": {account_id: "42.00"},
+    "equal_by": False,
+    "paid_for": {account_id: "42.00"},
+    "equal_for": True,
+    "date": "2026-09-17",
+}
+r = c.post(
+    f"{API}/sync",
+    headers=auth,
+    json={
+        "cursor": 0,
+        "device_id": "smoke-device",
+        "changes": {
+            "lists": [
+                {
+                    "id": "trip-1",
+                    "created_at": 2,
+                    "fields": {
+                        "name": {"value": "Trip", **clock},
+                        "kind": {"value": "expenses", **clock},
+                        "currency": {"value": "EUR", **clock},
+                    },
+                }
+            ],
+            "items": [
+                {
+                    "id": "exp-1",
+                    "list_id": "trip-1",
+                    "created_at": 2,
+                    "fields": {
+                        "name": {"value": "Dinner", **clock},
+                        "expense": {"value": expense, **clock},
+                    },
+                }
+            ],
+        },
+    },
+)
+check("sync accepts an expenses list and an expense", r.status_code == 200, r.get_data(as_text=True)[:160])
+
+
+def pull_trip():
+    resp = c.post(f"{API}/sync", headers=auth, json={"cursor": 0, "device_id": "other-device"})
+    changes = (resp.get_json() or {}).get("changes", {}) if resp.status_code == 200 else {}
+    rows = [x for x in changes.get("lists", []) if x["id"] == "trip-1"]
+    expenses = [x for x in changes.get("items", []) if x["id"] == "exp-1"]
+    return (rows[0] if rows else {}), (expenses[0] if expenses else {})
+
+
+trip, exp = pull_trip()
+check("the expenses list round-trips its currency", trip.get("fields", {}).get("currency", {}).get("value") == "EUR")
+# The roster rides on the list row, which is what lets both clients name a payer offline.
+check("the expenses list carries its roster", len(trip.get("members", [])) == 1, repr(trip.get("members"))[:120])
+got = exp.get("fields", {}).get("expense", {}).get("value") or {}
+check("the expense round-trips its amounts", got.get("paid_for") == {account_id: "42.00"}, repr(got)[:160])
+check("the expense round-trips its equal-split flag", got.get("equal_for") is True, repr(got)[:160])
+
+r = c.post(f"{API}/lists/trip-1/close-votes", headers=auth)
+check("a close vote is accepted", r.status_code == 200, r.get_data(as_text=True)[:160])
+trip, _ = pull_trip()
+check("the sole member's vote closes the list", trip.get("closed_at") is not None, repr(trip.get("closed_at")))
+
+# A closed list is a read-only archive — the wheel has to enforce that, not just describe it.
+r = c.post(
+    f"{API}/sync",
+    headers=auth,
+    json={
+        "cursor": 0,
+        "device_id": "smoke-device",
+        "changes": {
+            "items": [
+                {
+                    "id": "exp-2",
+                    "list_id": "trip-1",
+                    "created_at": 3,
+                    "fields": {
+                        "name": {"value": "Breakfast", "updated_at": 9, "updated_by": "smoke-device"},
+                        "expense": {"value": expense, "updated_at": 9, "updated_by": "smoke-device"},
+                    },
+                }
+            ]
+        },
+    },
+)
+body = r.get_json() or {}
+check(
+    "a write to a closed list is refused",
+    r.status_code == 422 and body.get("error") == "list_closed",
+    f"{r.status_code} {r.get_data(as_text=True)[:120]}",
 )
 
 # --- embedded artifacts --------------------------------------------------
