@@ -1,0 +1,14 @@
+{
+  "body": "release.sh bumps web/package.json (line 122) but not web/package-lock.json, whose top-level \"version\" is still 0.0.0 (last touched in July). Any `npm install` rewrites the lockfile's version to match package.json and dirties the tree \u2014 seen on this checkout. With AGENTS.md's warning about `git add -A` sweeping release leftovers, this is a live hazard: the next agent to run npm install and commit would carry the lockfile change into an unrelated commit.\n\nFix: have release.sh update the lockfile's two version fields as well (or run `npm version --no-git-tag-version` / `npm install --package-lock-only` in web/ after the edit), and reconcile the current lockfile to 1.16.0 in the same commit. Consider a check in verify-all.sh or release.sh that package.json and package-lock.json agree.",
+  "created_at": "2026-09-18T22:55:34+00:00",
+  "id": "T-201",
+  "labels": [
+    "ops",
+    "chore",
+    "ready",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "release.sh bumps package.json but not package-lock.json; npm install dirties the tree",
+  "updated_at": "2026-09-18T22:55:34+00:00"
+}

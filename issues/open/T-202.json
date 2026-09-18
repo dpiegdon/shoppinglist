@@ -1,0 +1,11 @@
+{
+  "body": "A fresh `npm run build` on this machine (Node 20.19.2, deps exactly as the lockfile pins them \u2014 package-lock.json unchanged since July) produced a JS bundle about 3.4 KB different from the committed server/src/shoppinglist_server/web_dist bundle (index-DpsDDNAK.js vs the committed index-C_OcqfYB.js; the CSS was identical). Either the committed bundle was built from different sources than HEAD, or the build is not reproducible across Node versions.\n\nWhy it matters: README promises that running the server from a source checkout serves the committed web client, and build-wheel.sh deliberately packages whatever bundle is committed. A stale committed bundle is invisible until someone installs it.\n\nTo do: find the cause (build with the Node version used for 1.16.0 and compare; if identical, pin Node via web/package.json \"engines\" and a .nvmrc and say so in web/README.md). Consider a verify-all.sh or release.sh check that a fresh build matches the committed bundle, or at least that the committed bundle is newer than the last web/src change.",
+  "created_at": "2026-09-18T22:55:35+00:00",
+  "id": "T-202",
+  "labels": [
+    "ops"
+  ],
+  "priority": 3,
+  "title": "Committed web bundle is not reproducible from HEAD and the lockfile; pin Node or verify it",
+  "updated_at": "2026-09-18T22:55:35+00:00"
+}
