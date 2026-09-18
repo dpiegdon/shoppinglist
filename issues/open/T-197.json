@@ -1,0 +1,14 @@
+{
+  "body": "The same departed participant gets different \"Former member N\" numbers depending on the screen.\n\n- Web form: `labelFor` in ExpenseDialog.tsx uses `participantIds.indexOf(id) + 1`, which counts current members first. Reproduced: list rows and balances say \"Former member 1\", the form says \"Former member 3\" on a 2-member list.\n- Android form: `rowsFor` in ExpenseFormViewModel.kt calls `formerMemberNumbers(listOfNotNull(loaded), ...)`, numbering within the single loaded expense; ExpenseListViewModel numbers across all expenses. With two former members the form can call the second one \"1\".\n- Both list/balances screens agree with each other (formerMemberNumbers across sorted expenses).\n\nFix: pass the list-wide numbering into the form on both clients (web: prop from the page; Android: from the list's expenses or a shared helper), and remove the local numbering. Pin with a screen test on each client.\n\nDesign note to weigh while here: numbering is by first appearance in newest-first order, so adding a newer expense that involves a different former member renumbers everyone. Stable would be by first appearance in oldest-first or by account id. Both clients would need the same rule (shared-test-cases).",
+  "created_at": "2026-09-18T22:55:34+00:00",
+  "id": "T-197",
+  "labels": [
+    "bug",
+    "ux",
+    "ready",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Former members are numbered differently in the expense form than on the list and balances, both clients",
+  "updated_at": "2026-09-18T22:55:34+00:00"
+}
