@@ -626,9 +626,9 @@ def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fie
     - Every participant must be a current member, or already be in the row's stored expense —
       so an expense involving someone who has since left stays editable.
 
-    The participant rule is only applied to a write that would WIN last-write-wins. A stale write
-    is discarded anyway, and rejecting it would quarantine an innocent offline edit on the client
-    for naming someone who left while it was offline.
+    Both the null-expense rule and the participant rule are only applied to a write that would WIN
+    last-write-wins (T-206): a stale write is discarded anyway, and rejecting it would quarantine
+    an innocent offline edit on the client for a value that never took effect.
     """
 
     def reject(message, **extra):
@@ -649,11 +649,13 @@ def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fie
         if existing is None:
             reject("Creating an item on an expenses list requires an expense.")
         return
-    value, ts, by = incoming
+    # A create has no existing clock to lose against, so _wins is True there too (T-206): the
+    # "requires an expense" rule above and the null check below both still bind on create.
+    if not _wins(incoming, existing, "expense_ts", "expense_by"):
+        return
+    value = incoming[0]
     if value is None:
         reject("An item on an expenses list must have an expense.")
-    if existing is not None and (ts, by) <= (existing["expense_ts"], existing["expense_by"]):
-        return
 
     already_present = set()
     if existing is not None and existing["expense"] is not None:
@@ -995,10 +997,12 @@ def _apply_item(conn, account_id, device_id, obj):
             details={"row_id": item_id},
         )
     list_kind = conn.execute("SELECT kind FROM lists WHERE id = ?", (list_id,)).fetchone()["kind"]
-    _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fields)
     if list_kind == EXPENSES_KIND:
         from . import closing  # deferred: see the note in _apply_list
 
+        # Closed first (T-206): nothing on a closed list is worth validating further, and the
+        # Android client keys its "drop the row and re-pull" handling on list_closed, so a row
+        # that also breaks an expense rule must still be answered with list_closed, not that rule.
         if closing.is_closed(conn, list_id):
             raise ApiError(
                 422,
@@ -1006,6 +1010,8 @@ def _apply_item(conn, account_id, device_id, obj):
                 "This list is closed; nothing on it can be changed.",
                 details={"row_id": item_id},
             )
+    _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fields)
+    if list_kind == EXPENSES_KIND:
         # Before the freeze check, so a voter is told the rule that actually applies to them.
         closing.check_voter_may_change(
             conn, list_id, account_id, item_id, _changes_anything(existing, fields, ITEM_FIELD_META)

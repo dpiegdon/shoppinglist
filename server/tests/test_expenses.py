@@ -253,6 +253,18 @@ def test_an_expense_cannot_be_nulled_later(db_conn, trip):
     _rejects(db_conn, a, "invalid_expense", items=[_expense_item("e1", None, ts=200)])
 
 
+def test_a_stale_null_expense_is_discarded_not_refused(db_conn, trip):
+    """The null-expense rule, like the participant rule, binds only a write that would win
+    last-write-wins: a stale write is discarded silently, never refused (T-206)."""
+    a = trip["alice"]
+    original = _expense({a: "5"}, {a: "5"})
+    _apply(db_conn, a, items=[_expense_item("e1", original, ts=200)])
+
+    _apply(db_conn, a, items=[_expense_item("e1", None, ts=100)])  # stale: ts=100 < 200
+
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == original
+
+
 def test_other_fields_of_an_expense_can_be_edited_without_resending_it(db_conn, trip):
     a = trip["alice"]
     _apply(db_conn, a, items=[_expense_item("e1", _expense({a: "5"}, {a: "5"}))])

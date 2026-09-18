@@ -196,6 +196,26 @@ def test_a_closed_list_takes_no_item_writes(db_conn, trip):
     _rejects(db_conn, a, "list_closed", items=[_item("e1", ..., ts=300, deleted=True)])
 
 
+def test_a_closed_lists_broken_participant_rule_still_answers_list_closed(db_conn, trip):
+    """list_closed comes before every expense-shaped rule (T-206): the Android client keys its
+    "drop the row and re-pull" handling on list_closed, and would otherwise quarantine this row
+    on invalid_expense instead."""
+    _close(db_conn, trip)
+    a = trip["alice"]
+    stranger = _register(db_conn, "stranger@example.com")
+    expense = _expense({a: "10"}, {a: "5", stranger: "5"})
+
+    error = _rejects(db_conn, a, "list_closed", items=[_item("e1", expense, ts=300)])
+    assert error.details["row_id"] == "e1"
+
+
+def test_a_closed_lists_new_item_without_an_expense_still_answers_list_closed(db_conn, trip):
+    _close(db_conn, trip)
+
+    error = _rejects(db_conn, trip["alice"], "list_closed", items=[_item("e2", ...)])
+    assert error.details["row_id"] == "e2"
+
+
 def test_a_closed_list_takes_no_list_writes(db_conn, trip):
     _close(db_conn, trip)
     rename = {"id": "trip", "fields": {"name": _clock("Renamed", 300)}}
