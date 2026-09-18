@@ -1,0 +1,13 @@
+{
+  "body": "Full i18n review before the next release. Findings fixed here:\n- Both clients showed the server's English error text (~15 sites each): a wrong\n  password read English in German. Now translated by error code, with each\n  screen's own message as the fallback, and network failures no longer show the\n  platform's English either. Same table and English on both clients.\n- Web screen-reader labels built in English in code (last touched by, edit,\n  remove store, rename category).\n- The same message worded differently in English on each client, so the\n  cross-client check could not pair them (password/email changed, sign-in toggle,\n  invite code, add store, search, admin texts, failure messages). Harmonised on\n  the app's wording and translations.\n- \"{voted} of {total} agree to close\" put the count inside the sentence, against\n  T-123's rule (Ukrainian and Arabic verbs must agree with it): now \"Votes to\n  close: 1 of 2\".\n- The web tab title stayed \"Shopping List\" in every language; the join page was\n  titled differently on each client.\n- Web catalogs are Partial by design, so a missing key silently showed English\n  with nothing to notice; now tested, with placeholders.\nFound and left, for the user: the server's invite landing page is English-only.",
+  "created_at": "2026-09-18T19:41:08+00:00",
+  "id": "T-189",
+  "labels": [
+    "i18n",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "i18n review: server errors, screen-reader labels and wording, in every language on both clients",
+  "updated_at": "2026-09-18T19:41:08+00:00"
+}
