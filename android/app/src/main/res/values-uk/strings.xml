@@ -146,6 +146,10 @@
     <string name="settings_auto_update_check_help">Запитувати цей сервер, чи доступна новіша версія застосунку. Стосується лише цього пристрою.</string>
     <string name="update_available_title">Доступне оновлення</string>
     <string name="update_available_body">Доступна версія %1$s застосунку. У вас %2$s.</string>
+    <string name="update_checking">Перевірка оновлень…</string>
+    <string name="update_up_to_date">У вас остання версія (%1$s).</string>
+    <string name="update_available_status">Доступна версія %1$s.</string>
+    <string name="update_check_failed">Не вдалося перевірити оновлення.</string>
     <string name="action_update">Оновити</string>
     <string name="action_skip">Пропустити</string>
     <string name="settings_diagnostics">Діагностика</string>

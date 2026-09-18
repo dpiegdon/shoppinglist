@@ -11,6 +11,16 @@ import javax.inject.Singleton
 /** A newer app package the server is offering. */
 data class AvailableUpdate(val version: String, val downloadUrl: String)
 
+/** What a check made because the user opened settings found (T-149). */
+sealed interface CheckOutcome {
+    data class Available(val update: AvailableUpdate) : CheckOutcome
+    data class UpToDate(val version: String) : CheckOutcome
+    /** Asked and got no usable answer: offline, a server too old to say, an unparseable version. */
+    data object Failed : CheckOutcome
+    /** Did not ask: checking is switched off, or no server is configured. */
+    data object NotChecked : CheckOutcome
+}
+
 /**
  * Asks the configured server whether it carries a newer app than this build (T-135).
  *
@@ -38,22 +48,46 @@ class UpdateChecker @Inject constructor(
         // otherwise never record an attempt and get retried on every single foreground.
         prefs.recordCheck(now)
 
-        val response = try {
-            apiProvider.get().appVersion()
-        } catch (e: IOException) {
-            // Covers both halves of "couldn't ask": genuine network failure, and every non-2xx,
-            // which ErrorInterceptor turns into an ApiException (itself an IOException). A 404
-            // is the expected answer from any server predating this endpoint.
-            return null
-        } catch (e: IllegalStateException) {
-            // ApiProvider.get() throws this when the server URL vanished between the check above
-            // and here (logout racing a foreground check).
-            return null
-        }
-
+        val response = fetchLatest() ?: return null
         if ((compareVersions(response.version, currentVersion) ?: return null) <= 0) return null
         if (prefs.lastPromptedVersion.first() == response.version) return null
         return AvailableUpdate(response.version, response.downloadUrl)
+    }
+
+    /**
+     * The check the settings screen makes when it opens (T-149). The user went there, so two of
+     * [check]'s rules do not apply: the twelve-hour interval (a release made an hour after the last
+     * automatic check would otherwise stay invisible until tomorrow), and the once-per-version rule
+     * (a prompt skipped by accident gets its second chance here). The switch still decides — off
+     * means no request at all — and every outcome is reported, because there is someone looking.
+     */
+    suspend fun checkNow(currentVersion: String = BuildConfig.VERSION_NAME): CheckOutcome {
+        if (!prefs.autoCheckEnabled.first()) return CheckOutcome.NotChecked
+        if (serverConfig.serverUrl.first().isNullOrBlank()) return CheckOutcome.NotChecked
+        // Counts as the automatic check too, so leaving settings does not trigger a second one.
+        prefs.recordCheck(System.currentTimeMillis())
+
+        val response = fetchLatest() ?: return CheckOutcome.Failed
+        val order = compareVersions(response.version, currentVersion) ?: return CheckOutcome.Failed
+        return if (order > 0) {
+            CheckOutcome.Available(AvailableUpdate(response.version, response.downloadUrl))
+        } else {
+            CheckOutcome.UpToDate(currentVersion)
+        }
+    }
+
+    /** The server's current app version, or null for every way of not getting one. */
+    private suspend fun fetchLatest() = try {
+        apiProvider.get().appVersion()
+    } catch (e: IOException) {
+        // Covers both halves of "couldn't ask": genuine network failure, and every non-2xx,
+        // which ErrorInterceptor turns into an ApiException (itself an IOException). A 404
+        // is the expected answer from any server predating this endpoint.
+        null
+    } catch (e: IllegalStateException) {
+        // ApiProvider.get() throws this when the server URL vanished between the check above
+        // and here (logout racing a foreground check).
+        null
     }
 
     /** Records that the user has now been asked about [version], whichever way they answered. */

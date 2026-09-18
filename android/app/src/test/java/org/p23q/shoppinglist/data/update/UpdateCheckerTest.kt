@@ -10,6 +10,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -196,5 +197,66 @@ class UpdateCheckerTest {
         // Recording only on success would leave lastCheckedAt at 0 and re-hit an unreachable
         // server on every single foreground.
         assertEquals(true, prefs.lastCheckedAt.first() > 0L)
+    }
+
+    // ---- the check made on opening settings (T-149) ------------------------------
+
+    @Test
+    fun `opening settings asks even inside the twelve-hour window`() = runTest {
+        // The case the ticket came from: an automatic check an hour ago, a release since.
+        prefs.recordCheck(System.currentTimeMillis())
+        server.enqueue(offering("1.12.0"))
+
+        val outcome = checker.checkNow(currentVersion = "1.11.0")
+
+        assertEquals(CheckOutcome.Available(AvailableUpdate("1.12.0", "https://example.com/shoppinglist.apk")), outcome)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `opening settings offers a version that was skipped`() = runTest {
+        // The escape hatch for a prompt tapped away by accident.
+        checker.markPrompted("1.12.0")
+        server.enqueue(offering("1.12.0"))
+
+        assertTrue(checker.checkNow(currentVersion = "1.11.0") is CheckOutcome.Available)
+    }
+
+    @Test
+    fun `opening settings says so when this build is current`() = runTest {
+        server.enqueue(offering("1.12.0"))
+
+        assertEquals(CheckOutcome.UpToDate("1.12.0"), checker.checkNow(currentVersion = "1.12.0"))
+    }
+
+    @Test
+    fun `opening settings reports a failed check instead of staying silent`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+
+        server.enqueue(offering("2.0.0-rc1"))
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+
+        server.shutdown()
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `switched off, opening settings sends nothing`() = runTest {
+        prefs.setAutoCheckEnabled(false)
+        server.enqueue(offering("1.12.0"))
+
+        assertEquals(CheckOutcome.NotChecked, checker.checkNow(currentVersion = "1.11.0"))
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `the settings check counts as the automatic one`() = runTest {
+        server.enqueue(offering("1.12.0"))
+        checker.checkNow(currentVersion = "1.12.0")
+
+        // Leaving settings must not set off a second request straight away.
+        assertNull(checker.check(currentVersion = "1.12.0"))
+        assertEquals(1, server.requestCount)
     }
 }

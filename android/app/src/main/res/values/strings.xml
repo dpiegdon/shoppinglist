@@ -177,6 +177,10 @@
     <string name="settings_auto_update_check_help">Ask this server whether a newer version of the app is available. Only this device is affected.</string>
     <string name="update_available_title">Update available</string>
     <string name="update_available_body">Version %1$s of the app is available. You have %2$s.</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_up_to_date">You have the latest version (%1$s).</string>
+    <string name="update_available_status">Version %1$s is available.</string>
+    <string name="update_check_failed">Couldn\'t check for updates.</string>
     <string name="action_update">Update</string>
     <string name="action_skip">Skip</string>
     <string name="settings_diagnostics">Diagnostics</string>

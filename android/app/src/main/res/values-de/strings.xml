@@ -146,6 +146,10 @@
     <string name="settings_auto_update_check_help">Diesen Server fragen, ob eine neuere Version der App verfügbar ist. Betrifft nur dieses Gerät.</string>
     <string name="update_available_title">Update verfügbar</string>
     <string name="update_available_body">Version %1$s der App ist verfügbar. Du hast %2$s.</string>
+    <string name="update_checking">Suche nach Updates …</string>
+    <string name="update_up_to_date">Du hast die neueste Version (%1$s).</string>
+    <string name="update_available_status">Version %1$s ist verfügbar.</string>
+    <string name="update_check_failed">Konnte nicht nach Updates suchen.</string>
     <string name="action_update">Aktualisieren</string>
     <string name="action_skip">Überspringen</string>
     <string name="settings_diagnostics">Diagnose</string>

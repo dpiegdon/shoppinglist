@@ -146,6 +146,10 @@
     <string name="settings_auto_update_check_help">Perguntar a este servidor se há uma versão mais recente do aplicativo. Afeta apenas este dispositivo.</string>
     <string name="update_available_title">Atualização disponível</string>
     <string name="update_available_body">A versão %1$s do aplicativo está disponível. Você tem a %2$s.</string>
+    <string name="update_checking">Procurando atualizações…</string>
+    <string name="update_up_to_date">Você tem a versão mais recente (%1$s).</string>
+    <string name="update_available_status">A versão %1$s está disponível.</string>
+    <string name="update_check_failed">Não foi possível procurar atualizações.</string>
     <string name="action_update">Atualizar</string>
     <string name="action_skip">Ignorar</string>
     <string name="settings_diagnostics">Diagnóstico</string>

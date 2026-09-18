@@ -361,8 +361,13 @@ fun ShoppingListNavHost(
             )
         }
         composable(Routes.SETTINGS) {
+            // Opening settings asks the server right away (T-149): past the twelve-hour interval,
+            // with the ordinary prompt if there is something newer and a status line either way.
+            LaunchedEffect(Unit) { updateViewModel.checkNow() }
+            val updateStatus by updateViewModel.status.collectAsStateWithLifecycle()
             AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_settings)) {
                 SettingsScreen(
+                    updateStatus = updateStatus,
                     selectedLocale = selectedLocale,
                     onSelectLocale = localeViewModel::setLocale,
                     onAccountDeleted = {

@@ -146,6 +146,10 @@
     <string name="settings_auto_update_check_help">向此服务器查询是否有更新版本的应用。仅影响本设备。</string>
     <string name="update_available_title">有可用更新</string>
     <string name="update_available_body">应用版本 %1$s 已可用。当前版本为 %2$s。</string>
+    <string name="update_checking">正在检查更新…</string>
+    <string name="update_up_to_date">你使用的是最新版本（%1$s）。</string>
+    <string name="update_available_status">版本 %1$s 可用。</string>
+    <string name="update_check_failed">无法检查更新。</string>
     <string name="action_update">更新</string>
     <string name="action_skip">跳过</string>
     <string name="settings_diagnostics">诊断</string>

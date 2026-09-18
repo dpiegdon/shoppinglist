@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -34,6 +37,7 @@ import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.update.UpdatePrefsStore
+import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -284,6 +288,75 @@ class SettingsScreenTest {
 
         composeTestRule.onNodeWithText("No crash logs yet").assertExists()
         assertEquals(null, viewModel.uiState.value.crashLogPath)
+        db.close()
+    }
+
+    @Test
+    fun `the update check made on opening shows its answer under the switch (T-149)`() = runBlocking {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path?.endsWith("/account/sessions") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"sessions": []}""")
+                request.path?.endsWith("/settings") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}""")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_update_server_config") })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val sessionState = FakeSessionState().apply {
+            token = "tok-123"
+            accountEmail = "milk@example.com"
+            defaultCurrency = "EUR"
+        }
+        val json = Json { ignoreUnknownKeys = true }
+        val viewModel = SettingsViewModel(
+            ApiProvider(
+                serverConfig = serverConfig,
+                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                json = json,
+            ),
+            sessionState,
+            serverConfig,
+            ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_update_theme") }),
+            db,
+            CrashLogWriter(File.createTempFile("settings_update_crashlog", ".txt").apply { deleteOnExit() }),
+            DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_update_notif") }),
+            UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_update_prefs") }),
+        )
+        var status by mutableStateOf<UpdateStatus>(UpdateStatus.Idle)
+        composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel, updateStatus = status) }
+        composeTestRule.waitForIdle()
+
+        val lines = listOf(
+            "Checking for updates…",
+            "You have the latest version (1.14.0).",
+            "Version 1.15.0 is available.",
+            "Couldn't check for updates.",
+        )
+        // Nothing to say before a check, or with checking switched off.
+        lines.forEach { composeTestRule.onNodeWithText(it).assertDoesNotExist() }
+
+        for ((next, line) in listOf(
+            UpdateStatus.Checking to lines[0],
+            UpdateStatus.UpToDate("1.14.0") to lines[1],
+            UpdateStatus.Available("1.15.0") to lines[2],
+            UpdateStatus.Failed to lines[3],
+        )) {
+            status = next
+            composeTestRule.waitForIdle()
+            composeTestRule.onNodeWithText(line).assertExists()
+            (lines - line).forEach { composeTestRule.onNodeWithText(it).assertDoesNotExist() }
+        }
         db.close()
     }
 }
