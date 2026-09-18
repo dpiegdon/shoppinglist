@@ -49,10 +49,14 @@ export default function ExpenseListHeader({ listId, listName, view }: ExpenseLis
         }}
       >
         <nav className="segmented">
+          {/* The active view carries a check (T-174), as Show checked does when it is on. Hidden from
+              screen readers, which announce aria-current instead. */}
           <Link to={`/list/${listId}`} replace aria-current={view === "expenses" ? "page" : undefined}>
+            {view === "expenses" && <span aria-hidden="true">✓ </span>}
             {t("listKind.expenses")}
           </Link>
           <Link to={`/list/${listId}/balances`} replace aria-current={view === "balances" ? "page" : undefined}>
+            {view === "balances" && <span aria-hidden="true">✓ </span>}
             {t("expense.balances")}
           </Link>
         </nav>

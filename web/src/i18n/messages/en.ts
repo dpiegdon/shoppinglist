@@ -146,7 +146,6 @@ export const en = {
   // ---- overview ----
   "overview.title": "Your lists",
   "overview.newList": "New list",
-  "overview.newListButton": "+ New list",
   "overview.name": "Name",
   "overview.type": "Type",
   "overview.kind.checklist": "Just names, categories and notes.",

@@ -155,6 +155,9 @@ describe("expense list screen", () => {
     expect(await screen.findByRole("heading", { name: "Trip" })).toBeInTheDocument();
     const expenses = screen.getByRole("link", { name: "Expenses" });
     expect(expenses).toHaveAttribute("aria-current", "page");
+    // The active view is checked, like Show checked when it is on (T-174).
+    expect(expenses).toHaveTextContent("✓ Expenses");
+    expect(screen.getByRole("link", { name: "Balances" })).not.toHaveTextContent("✓");
     expect(screen.getByRole("link", { name: "Balances" })).not.toHaveAttribute("aria-current");
 
     await userEvent.click(screen.getByRole("link", { name: "Balances" }));

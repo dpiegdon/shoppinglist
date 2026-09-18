@@ -179,7 +179,7 @@ describe("OverviewPage with expenses lists", () => {
     renderOverview();
     await screen.findByText("Trip");
 
-    await userEvent.click(screen.getByRole("button", { name: "+ New list" }));
+    await userEvent.click(screen.getByRole("button", { name: "New list" }));
     await userEvent.type(screen.getByLabelText("Name"), "Ski trip");
 
     // No currency field until the kind actually needs one.
@@ -202,7 +202,7 @@ describe("OverviewPage with expenses lists", () => {
     renderOverview();
     await screen.findByText("Trip");
 
-    await userEvent.click(screen.getByRole("button", { name: "+ New list" }));
+    await userEvent.click(screen.getByRole("button", { name: "New list" }));
     await userEvent.type(screen.getByLabelText("Name"), "Ski trip");
     await userEvent.click(screen.getByRole("radio", { name: /Expenses/ }));
     expect(screen.getByLabelText("Currency")).toHaveValue("EUR");

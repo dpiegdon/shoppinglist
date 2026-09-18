@@ -122,7 +122,6 @@ export const ptBR: Catalog = {
 
   "overview.title": "Suas listas",
   "overview.newList": "Nova lista",
-  "overview.newListButton": "+ Nova lista",
   "overview.name": "Nome",
   "overview.type": "Tipo",
   "overview.kind.checklist": "Apenas nomes, categorias e observações.",

@@ -124,7 +124,6 @@ export const ja: Catalog = {
 
   "overview.title": "あなたのリスト",
   "overview.newList": "新しいリスト",
-  "overview.newListButton": "+ 新しいリスト",
   "overview.name": "名前",
   "overview.type": "種類",
   "overview.kind.checklist": "名前、カテゴリ、メモのみ。",

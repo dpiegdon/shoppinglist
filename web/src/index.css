@@ -220,13 +220,35 @@ textarea:focus {
   border-color: var(--color-text-muted);
 }
 
-/* The add button on every list screen (T-168): bottom right, round, the way the app does it and
-   the way most apps do now. .btn supplies the colours, so it matches every other primary button.
-   inset-inline-end keeps it on the trailing side in Arabic too. */
-.fab {
+/* The round Add button (T-168), docked bottom right inside the page's content column (T-174):
+   against the right border of the list entries, not out at the window's edge. The dock spans the
+   viewport and centres a column as wide as every page's <main> (40rem, 1rem padding); flex-end
+   keeps the button on the trailing side in Arabic too. .btn supplies the colours. */
+.fab-dock {
   position: fixed;
-  inset-inline-end: 1.25rem;
+  left: 0;
+  right: 0;
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  pointer-events: none;
+  transition: bottom 0.15s ease;
+}
+
+/* Lifted clear of a toast at the bottom of the screen, as Android lifts a FAB over a snackbar. */
+.fab-dock-raised {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.fab-dock-column {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fab {
+  pointer-events: auto;
   width: 3.5rem;
   height: 3.5rem;
   padding: 0;
@@ -235,13 +257,6 @@ textarea:focus {
   font-weight: 400;
   line-height: 1;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
-  z-index: 50;
-  transition: bottom 0.15s ease;
-}
-
-/* Lifted clear of a toast at the bottom of the screen, as Android lifts a FAB over a snackbar. */
-.fab-raised {
-  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Room at the end of a list, so the floating button never sits on top of the last row. */
@@ -258,10 +273,11 @@ textarea:focus {
   border-radius: 999px;
 }
 
+/* Compact (T-174): small enough to read as a control, not as a second heading. */
 .segmented a {
-  padding: 0.35rem 0.9rem;
+  padding: 0.15rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-decoration: none;

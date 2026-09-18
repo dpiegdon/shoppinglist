@@ -124,7 +124,6 @@ export const de: Catalog = {
 
   "overview.title": "Deine Listen",
   "overview.newList": "Neue Liste",
-  "overview.newListButton": "+ Neue Liste",
   "overview.name": "Name",
   "overview.type": "Typ",
   "overview.kind.checklist": "Nur Namen, Kategorien und Notizen.",

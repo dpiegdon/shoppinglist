@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import AddFab from "../components/AddFab";
 import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -327,15 +328,7 @@ export default function ListPage() {
       <div className="fab-spacer" aria-hidden="true" />
 
       {/* Bottom right on every list kind (T-168), matching the app. */}
-      <button
-        type="button"
-        className={`btn fab${undo || categoryToast ? " fab-raised" : ""}`}
-        aria-label={t("list.addItem")}
-        title={t("list.addItem")}
-        onClick={() => setDialogItem("new")}
-      >
-        +
-      </button>
+      <AddFab label={t("list.addItem")} onClick={() => setDialogItem("new")} raised={Boolean(undo || categoryToast)} />
 
       {undo && (
         <div

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Navigate, Link } from "react-router-dom";
+import AddFab from "../components/AddFab";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
@@ -127,12 +128,7 @@ export default function OverviewPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ fontSize: "1.3rem" }}>{t("overview.title")}</h1>
-        <button type="button" className="btn" onClick={() => setCreating(true)}>
-          {t("overview.newListButton")}
-        </button>
-      </div>
+      <h1 style={{ fontSize: "1.3rem" }}>{t("overview.title")}</h1>
 
       {loading && listArray.length === 0 && <p className="muted">{t("common.loading")}</p>}
       {!loading && listArray.length === 0 && <p className="muted">{t("overview.empty")}</p>}
@@ -169,6 +165,10 @@ export default function OverviewPage() {
           );
         })}
       </div>
+
+      <div className="fab-spacer" aria-hidden="true" />
+      {/* Bottom right, like Add on every list and like the app's overview (T-174). */}
+      <AddFab label={t("overview.newList")} onClick={() => setCreating(true)} />
 
       {creating && (
         <div className="dialog-overlay" onClick={() => setCreating(false)}>

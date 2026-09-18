@@ -123,7 +123,6 @@ export const zhHans: Catalog = {
 
   "overview.title": "你的清单",
   "overview.newList": "新建清单",
-  "overview.newListButton": "+ 新建清单",
   "overview.name": "名称",
   "overview.type": "类型",
   "overview.kind.checklist": "仅包含名称、分类和备注。",

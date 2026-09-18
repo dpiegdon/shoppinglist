@@ -123,7 +123,6 @@ export const uk: Catalog = {
 
   "overview.title": "Твої списки",
   "overview.newList": "Новий список",
-  "overview.newListButton": "+ Новий список",
   "overview.name": "Назва",
   "overview.type": "Тип",
   "overview.kind.checklist": "Лише назви, категорії та нотатки.",

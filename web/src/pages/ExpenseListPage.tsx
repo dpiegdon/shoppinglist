@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ExpenseDialog, { type ExpenseSaveValues } from "../components/ExpenseDialog";
+import AddFab from "../components/AddFab";
 import CloseVoteBanner from "../components/CloseVoteBanner";
 import ExpenseListHeader from "../components/ExpenseListHeader";
 import { useAuth } from "../auth/AuthContext";
@@ -219,17 +220,7 @@ export default function ExpenseListPage() {
       <div className="fab-spacer" aria-hidden="true" />
 
       {/* Bottom right on every list kind (T-168). A closed list is an archive: nothing to add. */}
-      {closedAt === null && (
-        <button
-          type="button"
-          className="btn fab"
-          aria-label={t("expense.add")}
-          title={t("expense.add")}
-          onClick={() => setDialogItem("new")}
-        >
-          +
-        </button>
-      )}
+      {closedAt === null && <AddFab label={t("expense.add")} onClick={() => setDialogItem("new")} />}
 
       {dialogItem && account && (
         <ExpenseDialog

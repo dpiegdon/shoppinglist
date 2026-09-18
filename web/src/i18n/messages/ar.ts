@@ -125,7 +125,6 @@ export const ar: Catalog = {
 
   "overview.title": "قوائمك",
   "overview.newList": "قائمة جديدة",
-  "overview.newListButton": "+ قائمة جديدة",
   "overview.name": "الاسم",
   "overview.type": "النوع",
   "overview.kind.checklist": "أسماء وفئات وملاحظات فقط.",
