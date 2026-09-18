@@ -1,0 +1,11 @@
+{
+  "body": "Feedback on 1.15.0 and the consistency and i18n reviews: T-174, T-175 (layout\nfollow-ups), T-176 (one name order), T-177..T-187 (consistency pass), T-188 (list\nsettings on reload), T-148 (cross-client translation check), T-189 (i18n review).\nMinor version: new behaviour (date picker, sync in the top bar, translated errors).",
+  "created_at": "2026-09-18T19:44:38+00:00",
+  "id": "T-190",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 1.16.0",
+  "updated_at": "2026-09-18T19:44:38+00:00"
+}
