@@ -1,6 +1,9 @@
 {
   "body": "Phase 3 (T-161). Design: \"Settling up\" in the spec.\n\nBalancesPage gains \"Settle up\" below the balances: one row per transfer,\n\"Bob \u2192 Alice 12.50\", using the existing participant labels (former members\nincluded). \"All settled\" when there are expenses but no transfers. Hidden on a\nsolo list.\n\nRecord on a row only when it can succeed: list open, both parties current\nmembers, neither has voted to close. It opens the ordinary expense form\npre-filled \u2014 title \"Settlement\" (localized, plain editable text), total,\nsole payer, sole beneficiary, today's date. Nothing else changes: the saved\nrow is an ordinary expense.\n\nFive strings in all nine catalogs. Tests: rows and their order, the button's\nfour conditions, the pre-filled form, the empty state, the solo case.",
   "created_at": "2026-09-18T09:54:33+00:00",
+  "deps": [
+    "T-163"
+  ],
   "id": "T-164",
   "labels": [
     "expenses",
