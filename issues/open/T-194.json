@@ -1,0 +1,11 @@
+{
+  "body": "From the user: a full documentation review, and less fluff in the README.\n\nFound in review (all checked against the code):\n- Root README describes shopping lists only; checklists and expense lists are\n  two thirds of the app now. It is also long: release.sh internals, wheel\n  history and the server-URL prefill are told at length in three places.\n- server/README: `admin_emails` (the only way to grant admin) appears nowhere;\n  no word on deploying (init-db once for a new database) versus upgrading\n  (migrations run on their own); idle session windows (web 7 days, Android\n  62) undocumented; expenses section predates T-192/T-193; the update check\n  omits the Settings-open check; history anecdotes (T-105, pre-1.9.0 timing).\n- android/README: \"Settings \u2192 Account\" (now Settings \u2192 App updates), \"Join list\"\n  (now \"Join a list\"), declined versions re-offered in Settings, a stale \"Notes:\"\n  reference, changelog wording (\"now says so\").\n- web/README: token lives in localStorage, not sessionStorage (T-104); the\n  structure list misses expenses, balances, admin, i18n, format, name order.\n- wire-contract: 30 of the 49 server error codes are not listed, although both\n  clients translate by code; the app-version section omits the Settings check.",
+  "created_at": "2026-09-18T22:03:41+00:00",
+  "id": "T-194",
+  "labels": [
+    "docs"
+  ],
+  "priority": 2,
+  "title": "docs: full documentation review; shorter root README",
+  "updated_at": "2026-09-18T22:03:41+00:00"
+}
