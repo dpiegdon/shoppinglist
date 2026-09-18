@@ -62,7 +62,8 @@ data class ExpenseListUiState(
      */
     fun canRecord(transfer: ExpenseMath.Transfer): Boolean {
         val current = members.map { it.accountId }.toSet()
-        return !isClosed &&
+        // Reimburse adds an expense, which someone who has agreed to close may not do (T-192).
+        return !isClosed && !iHaveVoted &&
             transfer.from in current && transfer.to in current &&
             transfer.from !in closeVotes && transfer.to !in closeVotes
     }

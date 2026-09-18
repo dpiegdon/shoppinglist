@@ -34,6 +34,7 @@ object ErrorText {
         "invite_email_mismatch" to UiText.res(R.string.api_error_invite_email_mismatch),
         "list_closed" to UiText.res(R.string.api_error_list_closed),
         "list_open" to UiText.res(R.string.listprops_leave_blocked),
+        "voted_to_close" to UiText.res(R.string.api_error_voted_to_close),
         "cannot_delete_expense_list" to UiText.res(R.string.api_error_cannot_delete_expense_list),
         "not_a_member" to UiText.res(R.string.api_error_not_a_member),
         "not_admin" to UiText.res(R.string.api_error_not_admin),

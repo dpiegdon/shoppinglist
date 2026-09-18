@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">Gastos compartidos, con un saldo por miembro.</string>
     <string name="listprops_kind_fixed">Una lista de gastos conserva su tipo y su moneda para siempre.</string>
     <string name="expense_closing">Cierre</string>
-    <string name="expense_closing_help">Todos deben estar de acuerdo. Al aceptar, tus importes quedan fijados: no se puede añadir ni cambiar nada que te incluya. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.</string>
+    <string name="expense_closing_help">Todos deben estar de acuerdo. Al aceptar, ya no puedes añadir gastos, y no se puede añadir ni cambiar nada que te incluya. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.</string>
     <string name="expense_agree_to_close">Aceptar cerrar</string>
     <string name="expense_withdraw_vote">Retirar</string>
     <string name="expense_agree_count">Votos para cerrar: %1$d de %2$d</string>
@@ -292,4 +292,5 @@
     <string name="api_error_session_not_found">Esa sesión ya ha terminado</string>
     <string name="api_error_server_busy">El servidor está ocupado. Inténtalo de nuevo en un momento.</string>
     <string name="api_error_payload_too_large">Es demasiado para enviar de una vez</string>
+    <string name="api_error_voted_to_close">Aceptaste cerrar esta lista, así que no puedes añadir gastos. Retira tu voto para añadir uno.</string>
 </resources>

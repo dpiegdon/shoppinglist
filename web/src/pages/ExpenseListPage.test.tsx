@@ -470,6 +470,15 @@ describe("closing an expenses list", () => {
     expect(api.castCloseVote).toHaveBeenCalledWith("list-1");
   });
 
+  it("offers no Add once I have agreed to close (T-192)", async () => {
+    setUp([ME]);
+    renderAt("/list/list-1");
+
+    expect(await screen.findByRole("button", { name: "Withdraw" })).toBeInTheDocument();
+    // Agreeing to close means being done: the server refuses a voter's new expenses.
+    expect(screen.queryByRole("button", { name: "Add expense" })).not.toBeInTheDocument();
+  });
+
   it("offers to withdraw once I have voted", async () => {
     setUp([ME]);
     vi.mocked(api.withdrawCloseVote).mockResolvedValue({ close_votes: [], closed_at: null });
@@ -628,6 +637,29 @@ describe("settling up", () => {
 
     expect(await screen.findByText("Settle up")).toBeInTheDocument();
     expect(screen.getAllByText(/ pays /)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Reimburse" })).not.toBeInTheDocument();
+  });
+
+  it("offers no Reimburse to someone who has agreed to close, even between two others (T-192)", async () => {
+    const THIRD = "acct-third";
+    // The other owes the third member; nothing here involves me.
+    const between: Expense = {
+      paid_by: { [THIRD]: "20.00" },
+      equal_by: true,
+      paid_for: { [OTHER]: "20.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    };
+    syncWith(expenseList([ME, OTHER, THIRD]), [expenseItem("e1", "Tickets", between)]);
+    renderAt("/list/list-1/balances");
+    // Before I vote it is offered: a transfer between two current members who have not voted.
+    expect(await screen.findByRole("button", { name: "Reimburse" })).toBeInTheDocument();
+    cleanup();
+
+    syncWith(expenseList([ME, OTHER, THIRD], [ME]), [expenseItem("e1", "Tickets", between)]);
+    renderAt("/list/list-1/balances");
+    expect(await screen.findByText("Settle up")).toBeInTheDocument();
+    // Reimburse adds an expense, which I may no longer do.
     expect(screen.queryByRole("button", { name: "Reimburse" })).not.toBeInTheDocument();
   });
 

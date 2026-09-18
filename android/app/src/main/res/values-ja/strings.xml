@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">共同の支出と、メンバーごとの残高。</string>
     <string name="listprops_kind_fixed">支出リストの種類と通貨はあとから変更できません。</string>
     <string name="expense_closing">締め</string>
-    <string name="expense_closing_help">全員の同意が必要です。同意すると、あなたの金額は確定し、あなたが関わる支出を追加・変更できなくなります。締めたあとは読み取り専用の記録になり、退出できるようになります。</string>
+    <string name="expense_closing_help">全員の同意が必要です。同意すると、支出を追加できなくなり、あなたが関わる支出も追加・変更できなくなります。締めたあとは読み取り専用の記録になり、退出できるようになります。</string>
     <string name="expense_agree_to_close">締めに同意</string>
     <string name="expense_withdraw_vote">取り消す</string>
     <string name="expense_agree_count">締めへの同意：%1$d / %2$d</string>
@@ -292,4 +292,5 @@
     <string name="api_error_session_not_found">そのセッションはすでに終了しています</string>
     <string name="api_error_server_busy">サーバーが混み合っています。しばらくしてからもう一度お試しください。</string>
     <string name="api_error_payload_too_large">一度に送信できる量を超えています</string>
+    <string name="api_error_voted_to_close">このリストの締めに同意しているため、支出を追加できません。追加するには同意を取り消してください。</string>
 </resources>

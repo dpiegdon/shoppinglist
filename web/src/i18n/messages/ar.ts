@@ -215,7 +215,7 @@ export const ar: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "الإغلاق",
-  "expense.closingHelp": "يجب أن يوافق الجميع. بمجرد موافقتك تصبح مبالغك ثابتة: لا يمكن إضافة أو تغيير أي شيء يخصك. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.",
+  "expense.closingHelp": "يجب أن يوافق الجميع. بمجرد موافقتك لن تتمكن من إضافة مصروفات، ولا يمكن إضافة أو تغيير أي شيء يخصك. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.",
   "expense.agreeToClose": "الموافقة على الإغلاق",
   "expense.withdrawVote": "سحب الموافقة",
   "expense.agreeCount": "الأصوات المؤيدة للإغلاق: {voted} من {total}",
@@ -261,4 +261,5 @@ export const ar: Catalog = {
   "apiError.sessionNotFound": "انتهت هذه الجلسة بالفعل",
   "apiError.serverBusy": "الخادم مشغول. حاول مرة أخرى بعد لحظة.",
   "apiError.payloadTooLarge": "هذا أكثر مما يمكن إرساله دفعة واحدة",
+  "apiError.votedToClose": "لقد وافقت على إغلاق هذه القائمة، لذا لا يمكنك إضافة مصروفات. اسحب موافقتك لإضافة مصروف.",
 };

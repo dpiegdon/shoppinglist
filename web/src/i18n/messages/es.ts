@@ -209,7 +209,7 @@ export const es: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Cierre",
-  "expense.closingHelp": "Todos deben estar de acuerdo. Al aceptar, tus importes quedan fijados: no se puede añadir ni cambiar nada que te incluya. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.",
+  "expense.closingHelp": "Todos deben estar de acuerdo. Al aceptar, ya no puedes añadir gastos, y no se puede añadir ni cambiar nada que te incluya. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.",
   "expense.agreeToClose": "Aceptar cerrar",
   "expense.withdrawVote": "Retirar",
   "expense.agreeCount": "Votos para cerrar: {voted} de {total}",
@@ -255,4 +255,5 @@ export const es: Catalog = {
   "apiError.sessionNotFound": "Esa sesión ya ha terminado",
   "apiError.serverBusy": "El servidor está ocupado. Inténtalo de nuevo en un momento.",
   "apiError.payloadTooLarge": "Es demasiado para enviar de una vez",
+  "apiError.votedToClose": "Aceptaste cerrar esta lista, así que no puedes añadir gastos. Retira tu voto para añadir uno.",
 };

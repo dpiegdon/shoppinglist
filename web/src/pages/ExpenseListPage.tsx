@@ -213,7 +213,11 @@ export default function ExpenseListPage() {
       <div className="fab-spacer" aria-hidden="true" />
 
       {/* Bottom right on every list kind (T-168). A closed list is an archive: nothing to add. */}
-      {closedAt === null && <AddFab label={t("expense.add")} onClick={() => setDialogItem("new")} />}
+      {/* Not on a closed list, and not for someone who has agreed to close it (T-192): agreeing
+          means being done, and the server refuses their new expenses. */}
+      {closedAt === null && !(account && closeVotes.includes(account.id)) && (
+        <AddFab label={t("expense.add")} onClick={() => setDialogItem("new")} />
+      )}
 
       {dialogItem && account && (
         <ExpenseDialog

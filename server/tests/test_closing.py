@@ -346,6 +346,47 @@ def test_a_new_expense_among_the_unfrozen_is_still_fine(db_conn, trip):
     _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {a: "5", carol: "5"}))])
 
 
+def test_a_voter_cannot_add_an_expense_even_between_other_people(db_conn, trip):
+    """The reported case (T-192): the freeze guarded the voter's amounts, not the list."""
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    closing.cast_vote(db_conn, a, "trip")
+
+    error = _rejects(
+        db_conn, a, "voted_to_close", items=[_item("e2", _expense({b: "10"}, {b: "5", carol: "5"}))]
+    )
+    # A row id, so a device that added it offline parks the row instead of wedging its queue.
+    assert error.details == {"row_id": "e2"}
+
+
+def test_a_voter_is_told_they_voted_rather_than_that_they_are_frozen(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    closing.cast_vote(db_conn, a, "trip")
+
+    _rejects(
+        db_conn, a, "voted_to_close", items=[_item("e2", _expense({a: "10"}, {a: "5", b: "5"}))]
+    )
+
+
+def test_withdrawing_the_vote_lets_the_member_add_again(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    closing.cast_vote(db_conn, a, "trip")
+    closing.withdraw_vote(db_conn, a, "trip")
+
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {a: "5", b: "5"}))])
+
+
+def test_someone_elses_vote_does_not_stop_a_member_adding(db_conn, trip):
+    """The rule is about the one who voted; the others add as before, around the freeze."""
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    closing.cast_vote(db_conn, b, "trip")
+
+    _apply(db_conn, carol, items=[_item("e2", _expense({carol: "10"}, {a: "5", carol: "5"}))])
+
+
 def test_an_expense_involving_a_voter_cannot_be_deleted(db_conn, trip):
     """A deletion takes their share to zero, which is a change like any other."""
     b = trip["bob"]

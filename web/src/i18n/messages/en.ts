@@ -243,7 +243,7 @@ export const en = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Closing",
-  "expense.closingHelp": "Everyone has to agree. Once you agree, your amounts are fixed: nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.",
+  "expense.closingHelp": "Everyone has to agree. Once you agree, you can't add expenses any more, and nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.",
   "expense.agreeToClose": "Agree to close",
   "expense.withdrawVote": "Withdraw",
   "expense.agreeCount": "Votes to close: {voted} of {total}",
@@ -289,6 +289,7 @@ export const en = {
   "apiError.sessionNotFound": "That session has already ended",
   "apiError.serverBusy": "The server is busy. Try again in a moment.",
   "apiError.payloadTooLarge": "That's too much to send at once",
+  "apiError.votedToClose": "You've agreed to close this list, so you can't add expenses. Withdraw your vote to add one.",
 } as const;
 
 export type MessageKey = keyof typeof en;

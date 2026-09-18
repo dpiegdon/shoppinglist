@@ -360,6 +360,19 @@ The check is applied only to the value that would actually win last-write-wins.
 A stale offline write that loses is discarded without error, so a device that was
 offline while someone voted does not end up quarantining an innocent edit.
 
+**A voter adds nothing.** The freeze protects a voter's numbers from everyone
+else; the other half is that a member who has voted to close may not add an
+expense at all while the list is open — not even one between two other people.
+
+> A new expense row from a member with a close vote on the list is
+> `422 voted_to_close`, carrying `row_id`.
+
+422 with the row, as for the freeze, so a device that added the expense offline
+before its owner voted parks the row instead of wedging its push queue.
+Withdrawing the vote lifts the rule. The check comes before the freeze check, so
+a voter hears the rule that applies to them. Edits and deletions are governed by
+the freeze alone.
+
 ### Site-root routes (outside the API prefix)
 
 These live at the mount root rather than under `/api/v1`, because the invite

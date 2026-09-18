@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">Frais partagés, avec un solde par membre.</string>
     <string name="listprops_kind_fixed">Une liste de dépenses conserve son type et sa devise à vie.</string>
     <string name="expense_closing">Clôture</string>
-    <string name="expense_closing_help">Tout le monde doit être d\'accord. Dès que vous acceptez, vos montants sont figés : plus rien qui vous concerne ne peut être ajouté ou modifié. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.</string>
+    <string name="expense_closing_help">Tout le monde doit être d\'accord. Dès que vous acceptez, vous ne pouvez plus ajouter de dépenses, et plus rien qui vous concerne ne peut être ajouté ou modifié. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.</string>
     <string name="expense_agree_to_close">Accepter la clôture</string>
     <string name="expense_withdraw_vote">Retirer</string>
     <string name="expense_agree_count">Votes pour la clôture : %1$d sur %2$d</string>
@@ -292,4 +292,5 @@
     <string name="api_error_session_not_found">Cette session est déjà terminée</string>
     <string name="api_error_server_busy">Le serveur est occupé. Réessayez dans un instant.</string>
     <string name="api_error_payload_too_large">C\'est trop à envoyer en une fois</string>
+    <string name="api_error_voted_to_close">Vous avez accepté de clôturer cette liste : vous ne pouvez pas ajouter de dépenses. Retirez votre accord pour en ajouter une.</string>
 </resources>

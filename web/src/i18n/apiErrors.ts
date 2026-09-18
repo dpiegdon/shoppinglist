@@ -30,6 +30,7 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   invite_email_mismatch: "apiError.inviteEmailMismatch",
   list_closed: "expense.error.closed",
   list_open: "listProps.leaveBlocked",
+  voted_to_close: "apiError.votedToClose",
   cannot_delete_expense_list: "apiError.cannotDeleteExpenseList",
   not_a_member: "apiError.notAMember",
   not_admin: "apiError.notAdmin",

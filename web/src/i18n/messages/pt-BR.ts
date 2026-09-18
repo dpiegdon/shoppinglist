@@ -212,7 +212,7 @@ export const ptBR: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Encerramento",
-  "expense.closingHelp": "Todos precisam concordar. Ao concordar, seus valores ficam fixados: nada que envolva você pode ser adicionado ou alterado. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.",
+  "expense.closingHelp": "Todos precisam concordar. Ao concordar, você não pode mais adicionar despesas, e nada que envolva você pode ser adicionado ou alterado. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.",
   "expense.agreeToClose": "Concordar em encerrar",
   "expense.withdrawVote": "Retirar",
   "expense.agreeCount": "Votos para encerrar: {voted} de {total}",
@@ -258,4 +258,5 @@ export const ptBR: Catalog = {
   "apiError.sessionNotFound": "Essa sessão já foi encerrada",
   "apiError.serverBusy": "O servidor está ocupado. Tente de novo em instantes.",
   "apiError.payloadTooLarge": "É coisa demais para enviar de uma vez",
+  "apiError.votedToClose": "Você concordou em encerrar esta lista, então não pode adicionar despesas. Retire seu voto para adicionar uma.",
 };

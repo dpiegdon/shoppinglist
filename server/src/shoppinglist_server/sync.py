@@ -990,6 +990,9 @@ def _apply_item(conn, account_id, device_id, obj):
                 "This list is closed; nothing on it can be changed.",
                 details={"row_id": item_id},
             )
+        # Before the freeze check, so a voter is told the rule that actually applies to them.
+        if existing is None:
+            closing.check_voter_may_add(conn, list_id, account_id, item_id)
         before, after = _expense_before_and_after(existing, fields)
         closing.check_write_against_freeze(conn, list_id, item_id, before, after)
 

@@ -158,6 +158,8 @@ class ExpenseClosingTest {
         showList()
 
         composeTestRule.onNodeWithText("Withdraw").assertIsDisplayed()
+        // Agreeing to close means being done: no Add for a voter (T-192).
+        composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
         composeTestRule.onNodeWithText("Agree to close").assertDoesNotExist()
     }
 

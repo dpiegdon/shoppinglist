@@ -87,7 +87,8 @@ fun ExpenseListScreen(
     Scaffold(
         floatingActionButton = {
             // A closed list is an archive: nothing to add to it (T-157). Balances has its own actions.
-            if (!state.isClosed && !showBalances) {
+            // Not for someone who has agreed to close (T-192): the server refuses their new expenses.
+            if (!state.isClosed && !showBalances && !state.iHaveVoted) {
                 AddFab(onClick = onAddExpense, contentDescription = stringResource(R.string.expense_add))
             }
         },

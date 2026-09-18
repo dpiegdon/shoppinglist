@@ -90,6 +90,8 @@ export default function BalancesPage() {
     return (
       closedAt === null &&
       !!account &&
+      // Reimburse adds an expense, which someone who has agreed to close may not do (T-192).
+      !closeVotes.includes(account.id) &&
       currentIds.has(transfer.from) &&
       currentIds.has(transfer.to) &&
       !closeVotes.includes(transfer.from) &&

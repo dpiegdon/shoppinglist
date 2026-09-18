@@ -302,7 +302,7 @@
     <string name="listprops_kind_expenses">Shared costs, with a balance per member.</string>
     <string name="listprops_kind_fixed">An expenses list keeps its type and its currency for life.</string>
     <string name="expense_closing">Closing</string>
-    <string name="expense_closing_help">Everyone has to agree. Once you agree, your amounts are fixed: nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.</string>
+    <string name="expense_closing_help">Everyone has to agree. Once you agree, you can\'t add expenses any more, and nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.</string>
     <string name="expense_agree_to_close">Agree to close</string>
     <string name="expense_withdraw_vote">Withdraw</string>
     <string name="expense_agree_count">Votes to close: %1$d of %2$d</string>
@@ -339,4 +339,5 @@
     <string name="api_error_session_not_found">That session has already ended</string>
     <string name="api_error_server_busy">The server is busy. Try again in a moment.</string>
     <string name="api_error_payload_too_large">That\'s too much to send at once</string>
+    <string name="api_error_voted_to_close">You\'ve agreed to close this list, so you can\'t add expenses. Withdraw your vote to add one.</string>
 </resources>

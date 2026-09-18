@@ -167,6 +167,25 @@ def expense_amounts(expense) -> dict:
     return {account_id: tuple(pair) for account_id, pair in amounts.items()}
 
 
+def check_voter_may_add(conn, list_id: str, account_id: str, item_id: str) -> None:
+    """Refuse a new expense from a member who has agreed to close the list (T-192).
+
+    The freeze protects a voter's own amounts from everyone else; this is the other half.
+    Agreeing to close means being done with the list, so a voter adds nothing more, not even an
+    expense between two other people, until they withdraw the vote. 422 with the row id, not
+    409: a device that added the expense offline, before its owner voted, must park that row
+    rather than wedge its whole push queue (T-32).
+    """
+    if account_id in votes(conn, list_id):
+        raise ApiError(
+            422,
+            "voted_to_close",
+            "You have agreed to close this list, so you cannot add expenses to it. "
+            "Withdraw your vote to add one.",
+            details={"row_id": item_id},
+        )
+
+
 def check_write_against_freeze(conn, list_id: str, item_id: str, before_value, after_value) -> None:
     """Refuse a write that would move a frozen participant's paid or owed amount.
 

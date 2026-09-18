@@ -148,6 +148,14 @@ This is what guarantees that once you have voted, your totals cannot move.
 also has to cover edits and deletions or anyone could still move your
 numbers.
 
+The other half, added after 1.16.0 (T-192): a voter adds nothing. The freeze
+guarded the voter's own amounts but not the list, so someone who had agreed to
+close could still add an expense between two other people. Agreeing to close
+means being done, so a new expense from a voter is refused with
+`voted_to_close` until they withdraw the vote, and neither client offers Add or
+Reimburse to them. Edits and deletions by a voter are governed by the freeze
+alone.
+
 The check runs against the version of the field that would actually win the
 per-field conflict resolution. A stale offline write that would have been
 discarded anyway must not produce a spurious rejection.
@@ -310,7 +318,7 @@ offline.
 ## Error codes
 
 `list_closed`, `list_open`, `participant_frozen` (with `account_id`),
-`cannot_delete_expense_list`. All in the existing envelope, with `row_id`
+`voted_to_close`, `cannot_delete_expense_list`. All in the existing envelope, with `row_id`
 where a sync row is involved.
 
 ## Phases
