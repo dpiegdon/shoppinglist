@@ -939,17 +939,27 @@ def _apply_list(conn, account_id, device_id, obj):
         closing.check_voter_may_change(
             conn, list_id, account_id, list_id, _changes_anything(existing, fields, LIST_FIELD_META)
         )
-    if (
-        existing["kind"] == EXPENSES_KIND
-        and "currency" in fields
-        and not _is_nonblank(fields["currency"][0])
-    ):
-        raise ApiError(
-            422,
-            "invalid_list_currency",
-            "An expenses list requires a currency.",
-            details={"row_id": list_id, "field": "currency"},
-        )
+    if existing["kind"] == EXPENSES_KIND and "currency" in fields:
+        new_currency = fields["currency"][0]
+        if not _is_nonblank(new_currency):
+            raise ApiError(
+                422,
+                "invalid_list_currency",
+                "An expenses list requires a currency.",
+                details={"row_id": list_id, "field": "currency"},
+            )
+        # Fixed for life like the kind (T-207), whatever the clock says. Both clients have always
+        # promised this — neither offers a way to change it, and both say so on screen — while the
+        # server only forbade blanking it. Every amount already recorded is in this label's units,
+        # so a change would silently relabel the whole ledger. Re-sending the same value is not a
+        # change: clients push the whole list row on every edit.
+        if new_currency != existing["currency"]:
+            raise ApiError(
+                422,
+                "invalid_field",
+                "An expenses list's currency cannot be changed.",
+                details={"row_id": list_id, "field": "currency"},
+            )
     set_cols = _lww_update_columns(existing, fields, _list_field_to_columns, LIST_TSBY)
     if set_cols:
         set_cols["change_seq"] = _bump(conn)

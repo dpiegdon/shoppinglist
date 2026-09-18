@@ -131,6 +131,29 @@ def test_an_expenses_list_currency_cannot_be_blanked_later(db_conn, trip):
     assert error.details == {"row_id": "trip", "field": "currency"}
 
 
+def test_an_expenses_list_currency_is_fixed_for_life(db_conn, trip):
+    # Both clients have always said so on screen and neither offers a way to change it; the server
+    # only forbade blanking it, so a hand-built push could relabel a whole ledger (T-207).
+    update = {"id": "trip", "fields": {"currency": _clock("CHF", 999)}}
+    error = _rejects(db_conn, trip["alice"], "invalid_field", lists=[update])
+    assert error.details == {"row_id": "trip", "field": "currency"}
+    assert db_conn.execute("SELECT currency FROM lists").fetchone()["currency"] == "EUR"
+
+
+def test_rewriting_an_expenses_list_with_its_own_currency_is_fine(db_conn, trip):
+    # Clients push the whole list row on every edit, so the unchanged label arrives constantly.
+    _apply(db_conn, trip["alice"], lists=[_expense_list(ts=200)])
+
+    assert db_conn.execute("SELECT currency FROM lists").fetchone()["currency"] == "EUR"
+
+
+def test_other_kinds_still_change_their_currency_freely(db_conn, alice):
+    _apply(db_conn, alice, lists=[_expense_list(kind="shopping", currency="EUR")])
+    _apply(db_conn, alice, lists=[{"id": "trip", "fields": {"currency": _clock("CHF", 200)}}])
+
+    assert db_conn.execute("SELECT currency FROM lists").fetchone()["currency"] == "CHF"
+
+
 @pytest.mark.parametrize(
     ("created_as", "changed_to"),
     [("shopping", "expenses"), ("checklist", "expenses"), ("expenses", "shopping")],

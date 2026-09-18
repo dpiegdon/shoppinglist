@@ -101,9 +101,11 @@ usable; `category`, `stores`, `quantity`, `price` and `status` carry no meaning.
 }, "...": "..."}
 ```
 
-- Both maps are non-empty. Every amount is a **positive** decimal string in the
-  `price` amount format (`[0-9]+(\.[0-9]{1,2})?`) — never zero: a participant
-  with no share is absent from the map.
+- Both maps are non-empty, and each holds at most **200** participants — far
+  beyond any real list, so the cap only blocks bloat. Every amount is a
+  **positive** decimal string in the `price` amount format
+  (`[0-9]+(\.[0-9]{1,2})?`) — never zero: a participant with no share is absent
+  from the map.
 - The two maps **sum to the same value**, compared in whole cents. There is no
   stored total; it is the sum of either map.
 - Every key is an account id that is a current member of the list, or is already
@@ -157,8 +159,13 @@ refused too.
   either way, and over the length cap on any kind, that is
   `422 invalid_list_currency` with `row_id` and `field`. The code is its own, not
   the `invalid_currency` of `PATCH /settings`: that one asks for a 3-letter
-  ISO-4217 code, this one does not. On other kinds the field is permitted and
-  unrendered.
+  ISO-4217 code, this one does not.
+  On an `expenses` list the label is also **fixed for the list's whole life**,
+  like the `kind`: every amount already recorded is in its units, so a change
+  would silently relabel the ledger. Any write carrying a value different from
+  the stored one is `422 invalid_field` with `row_id` and `field`, whatever its
+  clock; a write carrying the same value is not a change and is accepted. On
+  other kinds the field is permitted, unrendered and freely changed.
 - `members`, `close_votes` and `closed_at` sit **outside** `fields` and are
   server-maintained, like an item's `last_touched_by`: clients never write them,
   and a client that sends them has them ignored.
