@@ -1,0 +1,14 @@
+{
+  "body": "Feedback on 1.15.0:\n- Expense lists: move the Expenses | Balances pill and the settings gear onto the\n  list title's line, right-aligned, dropping to the next line when the title is too\n  long. Drop the pill's checkmark and some padding so it stays small. Both clients.\n- Web: the round Add button sits at the window's right edge; it belongs inside the\n  list layout, right-aligned with the right border of the list entries.\n- Web: the overview still has the old \"+ New list\" button at the top; it becomes\n  the same bottom-right button (the app already does this).",
+  "created_at": "2026-09-18T17:17:00+00:00",
+  "id": "T-174",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "layout follow-ups: view controls beside the list name, a smaller pill, Add inside the list's width, no top New list button",
+  "updated_at": "2026-09-18T17:17:00+00:00"
+}
