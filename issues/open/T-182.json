@@ -1,0 +1,14 @@
+{
+  "body": "Balances rows showed zero in grey, but the web summary card and both overviews coloured zero like a credit.",
+  "created_at": "2026-09-18T17:50:10+00:00",
+  "id": "T-182",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "a zero balance is grey everywhere",
+  "updated_at": "2026-09-18T17:50:10+00:00"
+}
