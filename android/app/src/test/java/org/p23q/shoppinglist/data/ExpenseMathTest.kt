@@ -146,9 +146,45 @@ class ExpenseMathTest {
     }
 
     @Test
+    fun `settling up matches the shared case table, and zeroes every balance`() {
+        // Balances in the table are signed; the wire amount format is not, so the sign is peeled off.
+        fun signedCents(amount: String): Long =
+            if (amount.startsWith("-")) -cents(amount.substring(1)) else cents(amount)
+
+        for (case in group("settle")) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val balances = case["balances"]!!.jsonObject.map { (id, amount) ->
+                val balance = signedCents(amount.jsonPrimitive.content)
+                ExpenseMath.Balance(id, paidCents = balance, shareCents = 0, balanceCents = balance)
+            }
+            val transfers = ExpenseMath.settle(balances)
+
+            val rendered = transfers.map {
+                mapOf("from" to it.from, "to" to it.to, "amount" to ExpenseMath.fromCents(it.cents))
+            }
+            val expected = case["expect"]!!.jsonArray.map { transfer ->
+                transfer.jsonObject.mapValues { (_, value) -> value.jsonPrimitive.content }
+            }
+            assertEquals(name, expected, rendered)
+
+            // The properties that make the section trustworthy: every transfer is a real payment,
+            // together they leave nobody owing anything, and there are never more than n-1 of them.
+            val remaining = balances.associate { it.accountId to it.balanceCents }.toMutableMap()
+            for (transfer in transfers) {
+                assertTrue(name, transfer.cents > 0)
+                remaining[transfer.from] = remaining.getValue(transfer.from) + transfer.cents
+                remaining[transfer.to] = remaining.getValue(transfer.to) - transfer.cents
+            }
+            assertTrue(name, remaining.values.all { it == 0L })
+            val withBalance = balances.count { it.balanceCents != 0L }
+            assertTrue(name, transfers.size <= maxOf(withBalance - 1, 0))
+        }
+    }
+
+    @Test
     fun `the case table covers every group this test drives`() {
         // A renamed or dropped group would otherwise make a whole block silently iterate nothing.
-        for (name in listOf("to_cents", "from_cents", "equal_split", "distribute", "balances")) {
+        for (name in listOf("to_cents", "from_cents", "equal_split", "distribute", "balances", "settle")) {
             assertTrue(name, group(name).isNotEmpty())
         }
     }

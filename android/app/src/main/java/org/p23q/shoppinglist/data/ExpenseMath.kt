@@ -158,4 +158,37 @@ object ExpenseMath {
         }
         return numbers
     }
+
+    /** One payment that settling up asks for: [from] pays [to]. */
+    data class Transfer(val from: String, val to: String, val cents: Long)
+
+    /**
+     * Who pays whom to bring every balance to zero (T-163). Greedy: the largest debtor pays the
+     * largest creditor the smaller of the two amounts, whoever reaches zero drops out, repeat.
+     * Exact in cents, and at most one transfer fewer than the number of people with a balance.
+     * Not always the fewest transfers possible — that problem is NP-hard, and this is what every
+     * app in this space shows. Ties in amount go by account id, so both clients list the same
+     * transfers in the same order; the shared case table pins that.
+     */
+    fun settle(balances: List<Balance>): List<Transfer> {
+        val debts = LinkedHashMap<String, Long>()
+        val credits = LinkedHashMap<String, Long>()
+        for (balance in balances) {
+            if (balance.balanceCents < 0) debts[balance.accountId] = -balance.balanceCents
+            if (balance.balanceCents > 0) credits[balance.accountId] = balance.balanceCents
+        }
+        // Plain String order, not a Collator: ids are opaque and the order must not depend on the
+        // viewer's locale.
+        val byAmountThenId = compareByDescending<Map.Entry<String, Long>> { it.value }.thenBy { it.key }
+        val transfers = mutableListOf<Transfer>()
+        while (true) {
+            val (debtorId, debt) = debts.entries.minWithOrNull(byAmountThenId) ?: break
+            val (creditorId, credit) = credits.entries.minWithOrNull(byAmountThenId) ?: break
+            val cents = minOf(debt, credit)
+            transfers += Transfer(debtorId, creditorId, cents)
+            if (debt == cents) debts.remove(debtorId) else debts[debtorId] = debt - cents
+            if (credit == cents) credits.remove(creditorId) else credits[creditorId] = credit - cents
+        }
+        return transfers
+    }
 }

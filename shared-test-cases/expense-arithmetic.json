@@ -9,7 +9,12 @@
     "Amounts are decimal strings in the wire format, so each client's own parser is exercised too.",
     "Rounding rule: auto participants get the floor of an equal share, and the leftover cents go",
     "one each to the first auto participants in the given order. A participant whose share comes",
-    "out at zero is absent from the result, never present with a zero amount."
+    "out at zero is absent from the result, never present with a zero amount.",
+    "",
+    "settle (T-163): input is each participant's signed balance, output the ordered transfers",
+    "that zero them. Greedy: the largest debtor pays the largest creditor the smaller amount,",
+    "whoever reaches zero drops out, repeat; ties in amount go by account id. Not always the",
+    "fewest transfers, and both clients must produce exactly this order."
   ],
 
   "to_cents": [
@@ -226,6 +231,74 @@
         "b": { "paid": "0.00", "share": "0.00", "balance": "0.00" }
       },
       "total": "0.00"
+    }
+  ],
+  "settle": [
+    {
+      "name": "one debt, one credit",
+      "balances": { "a": "20.00", "b": "-20.00" },
+      "expect": [{ "from": "b", "to": "a", "amount": "20.00" }]
+    },
+    {
+      "name": "two equal debtors pay one creditor, in id order",
+      "balances": { "a": "42.66", "b": "-21.33", "c": "-21.33" },
+      "expect": [
+        { "from": "b", "to": "a", "amount": "21.33" },
+        { "from": "c", "to": "a", "amount": "21.33" }
+      ]
+    },
+    {
+      "name": "one debtor pays two equal creditors, in id order",
+      "balances": { "a": "10.00", "b": "10.00", "c": "-20.00" },
+      "expect": [
+        { "from": "c", "to": "a", "amount": "10.00" },
+        { "from": "c", "to": "b", "amount": "10.00" }
+      ]
+    },
+    {
+      "name": "the largest debtor and the largest creditor go first",
+      "balances": { "a": "50.00", "b": "-30.00", "c": "-20.00" },
+      "expect": [
+        { "from": "b", "to": "a", "amount": "30.00" },
+        { "from": "c", "to": "a", "amount": "20.00" }
+      ]
+    },
+    {
+      "name": "a partial payment leaves a remainder that is matched again",
+      "balances": { "c1": "12.00", "c2": "6.00", "d1": "-10.00", "d2": "-8.00" },
+      "expect": [
+        { "from": "d1", "to": "c1", "amount": "10.00" },
+        { "from": "d2", "to": "c2", "amount": "6.00" },
+        { "from": "d2", "to": "c1", "amount": "2.00" }
+      ]
+    },
+    {
+      "name": "a former member still owes",
+      "balances": { "a": "15.00", "former-1": "-15.00" },
+      "expect": [{ "from": "former-1", "to": "a", "amount": "15.00" }]
+    },
+    {
+      "name": "a former member is still owed",
+      "balances": { "former-1": "9.00", "a": "-4.00", "b": "-5.00" },
+      "expect": [
+        { "from": "b", "to": "former-1", "amount": "5.00" },
+        { "from": "a", "to": "former-1", "amount": "4.00" }
+      ]
+    },
+    {
+      "name": "a single leftover cent is a transfer",
+      "balances": { "a": "0.01", "b": "-0.01" },
+      "expect": [{ "from": "b", "to": "a", "amount": "0.01" }]
+    },
+    {
+      "name": "all settled already",
+      "balances": { "a": "0.00", "b": "0.00" },
+      "expect": []
+    },
+    {
+      "name": "a solo list has nothing to settle",
+      "balances": { "a": "0.00" },
+      "expect": []
     }
   ]
 }

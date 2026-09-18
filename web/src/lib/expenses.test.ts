@@ -6,6 +6,7 @@ import {
   expenseTotalCents,
   formerMemberNumbers,
   fromCents,
+  settle,
   sharesToWire,
   splitEqually,
   toCents,
@@ -159,5 +160,39 @@ describe("former members", () => {
 
   it("is empty when everyone involved is still on the list", () => {
     expect(formerMemberNumbers([expenseItem("e1", "2026-09-01", ["a"])], members).size).toBe(0);
+  });
+});
+
+describe("settling up", () => {
+  // Balances in the table are signed; the wire amount format is not, so the sign is peeled off.
+  const signedCents = (amount: string) =>
+    amount.startsWith("-") ? -toCents(amount.slice(1)) : toCents(amount);
+  const balancesOf = (testCase: { balances: Record<string, string> }) =>
+    Object.entries(testCase.balances).map(([accountId, amount]) => ({
+      accountId,
+      balanceCents: signedCents(amount),
+    }));
+
+  it.each(cases.settle)("$name", (testCase) => {
+    const transfers = settle(balancesOf(testCase)).map((t) => ({
+      from: t.from,
+      to: t.to,
+      amount: fromCents(t.cents),
+    }));
+    expect(transfers).toEqual(testCase.expect);
+  });
+
+  it.each(cases.settle)("$name — zeroes every balance in at most n-1 positive transfers", (testCase) => {
+    const balances = balancesOf(testCase);
+    const remaining = new Map(balances.map((b) => [b.accountId, b.balanceCents]));
+    const transfers = settle(balances);
+    for (const t of transfers) {
+      expect(t.cents).toBeGreaterThan(0);
+      remaining.set(t.from, (remaining.get(t.from) ?? 0) + t.cents);
+      remaining.set(t.to, (remaining.get(t.to) ?? 0) - t.cents);
+    }
+    expect([...remaining.values()].every((cents) => cents === 0)).toBe(true);
+    const withBalance = balances.filter((b) => b.balanceCents !== 0).length;
+    expect(transfers.length).toBeLessThanOrEqual(Math.max(withBalance - 1, 0));
   });
 });

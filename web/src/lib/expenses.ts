@@ -173,3 +173,51 @@ export function formerMemberNumbers(expenses: ItemObject[], members: ListMember[
   }
   return numbers;
 }
+
+/** One payment that settling up asks for: `from` pays `to`. */
+export interface Transfer {
+  from: string;
+  to: string;
+  cents: number;
+}
+
+/**
+ * Who pays whom to bring every balance to zero (T-163). Greedy: the largest debtor pays the
+ * largest creditor the smaller of the two amounts, whoever reaches zero drops out, repeat. Exact
+ * in cents, and at most one transfer fewer than the number of people with a balance. Not always
+ * the fewest transfers possible — that problem is NP-hard, and this is what every app in this
+ * space shows. Ties in amount go by account id, so both clients list the same transfers in the
+ * same order; the shared case table pins that.
+ */
+export function settle(balances: Pick<Balance, "accountId" | "balanceCents">[]): Transfer[] {
+  const debts = new Map<string, number>();
+  const credits = new Map<string, number>();
+  for (const { accountId, balanceCents } of balances) {
+    if (balanceCents < 0) debts.set(accountId, -balanceCents);
+    else if (balanceCents > 0) credits.set(accountId, balanceCents);
+  }
+  // Plain string comparison, not localeCompare: ids are opaque and the order must not depend on
+  // the viewer's locale.
+  const largest = (side: Map<string, number>): [string, number] | undefined => {
+    let best: [string, number] | undefined;
+    for (const entry of side) {
+      if (!best || entry[1] > best[1] || (entry[1] === best[1] && entry[0] < best[0])) best = entry;
+    }
+    return best;
+  };
+  const transfers: Transfer[] = [];
+  for (;;) {
+    const debtor = largest(debts);
+    const creditor = largest(credits);
+    if (!debtor || !creditor) break;
+    const [debtorId, debt] = debtor;
+    const [creditorId, credit] = creditor;
+    const cents = Math.min(debt, credit);
+    transfers.push({ from: debtorId, to: creditorId, cents });
+    if (debt === cents) debts.delete(debtorId);
+    else debts.set(debtorId, debt - cents);
+    if (credit === cents) credits.delete(creditorId);
+    else credits.set(creditorId, credit - cents);
+  }
+  return transfers;
+}
