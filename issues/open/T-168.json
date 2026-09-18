@@ -5,9 +5,10 @@
   "labels": [
     "ux",
     "android",
-    "expenses"
+    "expenses",
+    "web"
   ],
   "priority": 2,
-  "title": "android: one layout for all list kinds \u2014 Add as a bottom-right button, the expense list in the common style",
-  "updated_at": "2026-09-18T12:39:52+00:00"
+  "title": "one layout for all list kinds on both clients \u2014 Add as a bottom-right button, the expense list in the common style",
+  "updated_at": "2026-09-18T12:41:18+00:00"
 }
