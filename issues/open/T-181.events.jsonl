@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-09-18T17:50:09+00:00", "kind": "created", "ref": "main@118e903", "text": "overview marks a closed expense list"}
+{"actor": "claude", "at": "2026-09-18T17:57:04+00:00", "kind": "note", "ref": "main@118e903", "text": "Correction: the web overview already marks it \u2014 'Closed \u00b7 <total>' in the summary (the review's search missed it). Only Android lacks it; Android follows the web's wording and placement."}
