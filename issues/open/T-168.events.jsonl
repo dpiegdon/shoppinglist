@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-09-18T12:39:52+00:00", "kind": "created", "ref": "main@b55fb76", "text": "android: one layout for all list kinds \u2014 Add as a bottom-right button, the expense list in the common style"}
 {"actor": "claude", "at": "2026-09-18T12:41:18+00:00", "kind": "updated", "ref": "main@b55fb76", "text": "fields updated"}
+{"actor": "claude", "at": "2026-09-18T12:41:19+00:00", "kind": "note", "ref": "main@b55fb76", "text": "Scope widened by the user: 'should be the same layout basically' on web and Android. So the web lists move Add to a bottom-right floating button too, both kinds, and the web expense list matches the other lists' look."}
