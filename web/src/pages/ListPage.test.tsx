@@ -190,7 +190,7 @@ describe("ListPage item-save pushes only changed fields (T-88)", () => {
     renderListPage();
     await screen.findByText("Milk");
 
-    await userEvent.click(screen.getByRole("button", { name: "+ Add item" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add item" }));
     await userEvent.type(screen.getByLabelText("Name"), "Chee");
     // The pick is the whole gesture since T-140 — there is no Save press any more.
     await userEvent.click(await screen.findByText("Cheese"));

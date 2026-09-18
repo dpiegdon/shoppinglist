@@ -137,7 +137,7 @@ export const ptBR: Catalog = {
   "list.empty": "Nada nesta lista ainda. Adicione um item para começar.",
   "list.checkedOff": "Item marcado.",
   "list.showChecked": "Mostrar concluídos",
-  "list.addItem": "+ Adicionar item",
+  "list.addItem": "Adicionar item",
 
   "settings.language": "Idioma",
   "settings.title": "Configurações da conta",
@@ -196,7 +196,7 @@ export const ptBR: Catalog = {
   "expense.paidFor": "Para",
   "expense.new": "Nova despesa",
   "expense.edit": "Editar despesa",
-  "expense.add": "+ Adicionar despesa",
+  "expense.add": "Adicionar despesa",
   "expense.empty": "Ainda não há despesas. Adicione uma para começar.",
   "expense.balances": "Saldos",
   "expense.totalSpent": "Total gasto",

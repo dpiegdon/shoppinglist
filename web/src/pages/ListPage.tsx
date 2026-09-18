@@ -288,15 +288,6 @@ export default function ListPage() {
         </div>
       </div>
 
-      <button
-        type="button"
-        className="btn"
-        style={{ width: "100%", marginBottom: "0.75rem" }}
-        onClick={() => setDialogItem("new")}
-      >
-        {t("list.addItem")}
-      </button>
-
       {groups.length === 0 && (
         <p className="muted">{t("list.empty")}</p>
       )}
@@ -332,6 +323,19 @@ export default function ListPage() {
           </div>
         </section>
       ))}
+
+      <div className="fab-spacer" aria-hidden="true" />
+
+      {/* Bottom right on every list kind (T-168), matching the app. */}
+      <button
+        type="button"
+        className={`btn fab${undo || categoryToast ? " fab-raised" : ""}`}
+        aria-label={t("list.addItem")}
+        title={t("list.addItem")}
+        onClick={() => setDialogItem("new")}
+      >
+        +
+      </button>
 
       {undo && (
         <div

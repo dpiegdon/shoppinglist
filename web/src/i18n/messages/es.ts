@@ -134,7 +134,7 @@ export const es: Catalog = {
   "list.empty": "Aún no hay nada en esta lista. Añade un artículo para empezar.",
   "list.checkedOff": "Artículo marcado.",
   "list.showChecked": "Mostrar completados",
-  "list.addItem": "+ Añadir artículo",
+  "list.addItem": "Añadir artículo",
 
   "settings.language": "Idioma",
   "settings.title": "Ajustes de la cuenta",
@@ -193,7 +193,7 @@ export const es: Catalog = {
   "expense.paidFor": "Para",
   "expense.new": "Nuevo gasto",
   "expense.edit": "Editar gasto",
-  "expense.add": "+ Añadir gasto",
+  "expense.add": "Añadir gasto",
   "expense.empty": "Aún no hay gastos. Añade uno para empezar.",
   "expense.balances": "Saldos",
   "expense.totalSpent": "Total gastado",

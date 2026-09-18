@@ -142,6 +142,18 @@ export default function ExpenseListPage() {
         </Link>
       </h1>
 
+      {/* Where the shopping list keeps its controls row (T-168), so settings is in the same place. */}
+      <div style={{ display: "flex", justifyContent: "flex-end", margin: "0.75rem 0 0" }}>
+        <Link
+          to={`/list/${listId}/properties`}
+          className="btn-icon"
+          aria-label={t("listProps.title")}
+          title={t("listProps.title")}
+        >
+          ⚙
+        </Link>
+      </div>
+
       <Link
         to={`/list/${listId}/balances`}
         className="card"
@@ -175,17 +187,6 @@ export default function ExpenseListPage() {
         )}
       </Link>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
-        <Link
-          to={`/list/${listId}/properties`}
-          className="btn-icon"
-          aria-label={t("listProps.title")}
-          title={t("listProps.title")}
-        >
-          ⚙
-        </Link>
-      </div>
-
       <CloseVoteBanner
         listId={listId}
         members={members}
@@ -194,23 +195,12 @@ export default function ExpenseListPage() {
         myAccountId={account?.id ?? null}
       />
 
-      {/* A closed list is an archive: nothing to add, and nothing to open for editing. */}
-      {closedAt === null && (
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "100%", marginBottom: "0.75rem" }}
-          onClick={() => setDialogItem("new")}
-        >
-          {t("expense.add")}
-        </button>
-      )}
-
       {expenses.length === 0 && <p className="muted">{t("expense.empty")}</p>}
 
       {[...byDate.entries()].map(([date, rows]) => (
         <section key={date} style={{ marginBottom: "1rem" }}>
-          <h2 className="muted" style={{ fontSize: "0.8rem", margin: "0 0 0.3rem" }}>
+          {/* Styled like the shopping list's category headings (T-168). */}
+          <h2 className="muted" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
             {date}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -253,6 +243,21 @@ export default function ExpenseListPage() {
           </div>
         </section>
       ))}
+
+      <div className="fab-spacer" aria-hidden="true" />
+
+      {/* Bottom right on every list kind (T-168). A closed list is an archive: nothing to add. */}
+      {closedAt === null && (
+        <button
+          type="button"
+          className="btn fab"
+          aria-label={t("expense.add")}
+          title={t("expense.add")}
+          onClick={() => setDialogItem("new")}
+        >
+          +
+        </button>
+      )}
 
       {dialogItem && account && (
         <ExpenseDialog

@@ -140,7 +140,7 @@ export const ar: Catalog = {
   "list.empty": "لا يوجد شيء في هذه القائمة بعد. أضف عنصرًا للبدء.",
   "list.checkedOff": "تم شطب العنصر.",
   "list.showChecked": "إظهار المكتملة",
-  "list.addItem": "+ إضافة عنصر",
+  "list.addItem": "إضافة عنصر",
 
   "settings.language": "اللغة",
   "settings.title": "إعدادات الحساب",
@@ -199,7 +199,7 @@ export const ar: Catalog = {
   "expense.paidFor": "لصالح",
   "expense.new": "مصروف جديد",
   "expense.edit": "تعديل المصروف",
-  "expense.add": "+ إضافة مصروف",
+  "expense.add": "إضافة مصروف",
   "expense.empty": "لا توجد مصروفات بعد. أضف واحدًا للبدء.",
   "expense.balances": "الأرصدة",
   "expense.totalSpent": "إجمالي المصروف",

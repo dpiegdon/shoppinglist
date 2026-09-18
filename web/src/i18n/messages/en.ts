@@ -166,7 +166,7 @@ export const en = {
   "list.empty": "Nothing on this list yet. Add an item to get started.",
   "list.checkedOff": "Item checked off.",
   "list.showChecked": "Show checked",
-  "list.addItem": "+ Add item",
+  "list.addItem": "Add item",
 
   // ---- settings ----
   "settings.language": "Language",
@@ -227,7 +227,7 @@ export const en = {
   "expense.paidFor": "For",
   "expense.new": "New expense",
   "expense.edit": "Edit expense",
-  "expense.add": "+ Add expense",
+  "expense.add": "Add expense",
   "expense.empty": "No expenses yet. Add one to get started.",
   "expense.balances": "Balances",
   "expense.totalSpent": "Total spent",

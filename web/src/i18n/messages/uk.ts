@@ -138,7 +138,7 @@ export const uk: Catalog = {
   "list.empty": "У цьому списку ще нічого немає. Додай товар, щоб почати.",
   "list.checkedOff": "Товар позначено.",
   "list.showChecked": "Показати виконані",
-  "list.addItem": "+ Додати товар",
+  "list.addItem": "Додати товар",
 
   "settings.language": "Мова",
   "settings.title": "Налаштування облікового запису",
@@ -197,7 +197,7 @@ export const uk: Catalog = {
   "expense.paidFor": "Для",
   "expense.new": "Нова витрата",
   "expense.edit": "Редагувати витрату",
-  "expense.add": "+ Додати витрату",
+  "expense.add": "Додати витрату",
   "expense.empty": "Витрат ще немає. Додайте першу.",
   "expense.balances": "Баланси",
   "expense.totalSpent": "Разом витрачено",

@@ -139,7 +139,7 @@ export const ja: Catalog = {
   "list.empty": "このリストにはまだ何もありません。アイテムを追加してください。",
   "list.checkedOff": "アイテムをチェックしました。",
   "list.showChecked": "完了済みを表示",
-  "list.addItem": "+ アイテムを追加",
+  "list.addItem": "アイテムを追加",
 
   "settings.language": "言語",
   "settings.title": "アカウント設定",
@@ -198,7 +198,7 @@ export const ja: Catalog = {
   "expense.paidFor": "対象",
   "expense.new": "新しい支出",
   "expense.edit": "支出を編集",
-  "expense.add": "+ 支出を追加",
+  "expense.add": "支出を追加",
   "expense.empty": "まだ支出がありません。追加して始めましょう。",
   "expense.balances": "残高",
   "expense.totalSpent": "支出の合計",

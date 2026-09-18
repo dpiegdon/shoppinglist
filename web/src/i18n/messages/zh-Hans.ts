@@ -138,7 +138,7 @@ export const zhHans: Catalog = {
   "list.empty": "此清单还是空的。添加一件物品开始吧。",
   "list.checkedOff": "物品已勾选。",
   "list.showChecked": "显示已完成",
-  "list.addItem": "+ 添加物品",
+  "list.addItem": "添加物品",
 
   "settings.language": "语言",
   "settings.title": "账户设置",
@@ -197,7 +197,7 @@ export const zhHans: Catalog = {
   "expense.paidFor": "分摊给",
   "expense.new": "新建支出",
   "expense.edit": "编辑支出",
-  "expense.add": "+ 添加支出",
+  "expense.add": "添加支出",
   "expense.empty": "还没有支出。添加一笔开始吧。",
   "expense.balances": "余额",
   "expense.totalSpent": "支出合计",

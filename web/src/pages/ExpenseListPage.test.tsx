@@ -144,12 +144,12 @@ describe("expense list screen", () => {
     expect(screen.getByText("paid by ME · for everyone")).toBeInTheDocument();
     // None of the shopping apparatus belongs here.
     expect(screen.queryByText("Show checked")).not.toBeInTheDocument();
-    expect(screen.queryByText("+ Add item")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add item" })).not.toBeInTheDocument();
   });
 
   it("adds an expense paid by me and split equally, with the leftover cent to the first", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
 
     await userEvent.type(screen.getByLabelText("What"), "Taxi");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "0.01");
@@ -165,7 +165,7 @@ describe("expense list screen", () => {
 
   it("redistributes the auto shares when the total changes", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
     await userEvent.type(screen.getByLabelText("What"), "Hotel");
 
     const total = screen.getByLabelText("Total (EUR)");
@@ -182,7 +182,7 @@ describe("expense list screen", () => {
 
   it("leaves a share the user typed alone, and lets the others absorb a change", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
     await userEvent.type(screen.getByLabelText("What"), "Lobster");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "60.00");
 
@@ -205,7 +205,7 @@ describe("expense list screen", () => {
 
   it("refuses a fully typed split that misses the total, and offers to use the sum", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
     await userEvent.type(screen.getByLabelText("What"), "Groceries");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "60.00");
 
@@ -224,7 +224,7 @@ describe("expense list screen", () => {
 
   it("refuses typed shares that exceed the total", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
     await userEvent.type(screen.getByLabelText("What"), "Too much");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "10.00");
 
@@ -251,7 +251,7 @@ describe("expense list screen", () => {
 
   it("asks rather than guessing when typed payer amounts no longer match the total", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
     await userEvent.type(screen.getByLabelText("What"), "Split bill");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "64.00");
 
@@ -301,7 +301,7 @@ describe("expense list screen, on a list of one", () => {
 
   it("hides the distributions entirely and books the whole amount to me", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByText("+ Add expense"));
+    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
 
     expect(screen.queryByText("Paid by")).not.toBeInTheDocument();
     expect(screen.queryByText("For")).not.toBeInTheDocument();
@@ -461,7 +461,7 @@ describe("closing an expenses list", () => {
     renderAt("/list/list-1");
 
     expect(await screen.findByText(/^Closed on /)).toBeInTheDocument();
-    expect(screen.queryByText("+ Add expense")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add expense" })).not.toBeInTheDocument();
     // The row is still there to read, it just cannot be opened.
     expect(screen.getByText("Dinner").closest("button")).toBeDisabled();
   });
