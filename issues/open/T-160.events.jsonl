@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-09-17T17:50:55+00:00", "kind": "created", "ref": "main@a9f7bb0", "text": "Release: expense lists, phase 2 (closing and the rules)"}
 {"actor": "claude", "at": "2026-09-17T17:50:55+00:00", "kind": "dependency", "ref": "main@a9f7bb0", "text": "T-158 T-159"}
 {"actor": "claude", "at": "2026-09-18T09:54:35+00:00", "kind": "note", "ref": "main@b86f96a", "text": "Folds into T-156: all three phases ship as one release. Closes with it."}
+{"actor": "claude", "at": "2026-09-18T11:41:35+00:00", "kind": "note", "ref": "main@99405e3", "text": "Shipped inside 1.14.0 (T-156, tag v1.14.0)."}
