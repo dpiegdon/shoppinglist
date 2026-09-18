@@ -1,0 +1,14 @@
+{
+  "body": "The design spec calls for a closed marker on an expense list's overview row; neither client had one.",
+  "created_at": "2026-09-18T17:50:09+00:00",
+  "id": "T-181",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "overview marks a closed expense list",
+  "updated_at": "2026-09-18T17:50:09+00:00"
+}
