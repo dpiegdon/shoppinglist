@@ -79,6 +79,22 @@ textarea {
   min-width: 0;
 }
 
+/* Checkboxes and radios are inputs too, but none of the text-field sizing above suits them. At
+   width 100% inside a flex row they claimed the free space: the expense form's paid-by and for
+   rows gave the checkbox most of the row and pushed the name and amount out of view (T-166). */
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  padding: 0;
+  flex: none;
+}
+
+/* A fieldset is at least as wide as its widest unbreakable content by default, so one long email
+   in the expense form stretched every row past the dialog's edge (T-166). */
+fieldset {
+  min-width: 0;
+}
+
 input:focus,
 select:focus,
 textarea:focus {

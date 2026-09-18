@@ -229,7 +229,8 @@ export default function ExpenseDialog({
                   })
                 }
               />
-              <label htmlFor={`${which}-${id}`} style={{ flex: 1, minWidth: 0 }} dir="auto">
+              {/* Wraps rather than truncates: in a form, who a share belongs to must stay readable. */}
+              <label htmlFor={`${which}-${id}`} style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }} dir="auto">
                 {labelFor(id)}
                 {isFrozen && (
                   <span className="muted" style={{ fontSize: "0.75rem", display: "block" }}>
