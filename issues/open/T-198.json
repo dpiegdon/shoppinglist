@@ -1,0 +1,14 @@
+{
+  "body": "The server answers 422 with row_id for expense-list rule violations so a client can park that one row. The Android client can only park item rows: `syncBlocked` exists on ItemEntity only, and SyncEngine.kt:124 requires `itemDao.getById(badRowId) != null`. The special drop at :117 covers only list_closed.\n\nSo a 422 naming a list row falls through to syncStatus.failed() and every later sync fails until the server state changes. Reachable case: a member edits the list name or notes with the change still queued (offline, or before the next push), then votes to close; toggleCloseVote() casts the vote and immediately syncs, the queued list edit is refused with voted_to_close (row_id = list id), and the push queue is wedged until they withdraw the vote. The wire contract states this 422 exists precisely so the device parks the row instead.\n\nAlso reachable: cannot_delete_expense_list, invalid_currency, invalid_name/invalid_notes on a list row.\n\nFix: either quarantine list rows too (syncBlocked on ListEntity, cleared on the next local edit, mirrored in dirtyRows()), or for voted_to_close on a list row drop the local field values and request a full pull of that list, as the list_closed branch does. Add a SyncEngineTest: 422 voted_to_close with a list row_id leaves later syncs working.",
+  "created_at": "2026-09-18T22:55:34+00:00",
+  "id": "T-198",
+  "labels": [
+    "bug",
+    "reliability",
+    "ready",
+    "agent"
+  ],
+  "priority": 2,
+  "title": "Android: a 422 naming a list row cannot be quarantined, so voted_to_close on a queued list edit wedges sync",
+  "updated_at": "2026-09-18T22:55:34+00:00"
+}
