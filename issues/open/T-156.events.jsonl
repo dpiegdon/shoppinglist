@@ -3,3 +3,4 @@
 {"actor": "claude", "at": "2026-09-18T08:42:36+00:00", "kind": "dependency", "ref": "main@39034b5", "text": "T-162"}
 {"actor": "claude", "at": "2026-09-18T09:33:45+00:00", "kind": "note", "ref": "main@b86f96a", "text": "Precondition met: the wheel smoke test now does an expense round trip (b86f96a).\nEight new checks on a solo list \u2014 create, currency, roster, amounts, equal-split\nflag, one vote closes it, and a write afterwards is refused. 31 checks total.\n\nBlocker T-162 (migration coverage) is closed."}
 {"actor": "claude", "at": "2026-09-18T09:54:35+00:00", "kind": "updated", "ref": "main@b86f96a", "text": "fields updated"}
+{"actor": "claude", "at": "2026-09-18T09:54:35+00:00", "kind": "dependency", "ref": "main@b86f96a", "text": "T-161"}
