@@ -1,0 +1,13 @@
+{
+  "body": "Reported on 1.14.0. Shopping and checklist lists put a full-width Add button at the\ntop; the expense list uses a floating action button at the bottom right. The user\nwants the lists to look roughly alike, with the floating button everywhere, \"since\nthat's the default these days\", and the expense list to use the common colour style.\n\nScope as read:\n- ListScreen: the top Add button becomes a bottom-right floating button, in the\n  same colours as the button it replaces; the last row must stay reachable above it.\n- ExpenseListScreen: the same floating button, and the look of the other lists \u2014\n  date headings styled like category headings (the spec already says \"sectioned by\n  date\", which the web does and Android did not), and item dividers like theirs.\nWeb is not in scope: both web list screens already put Add at the top.",
+  "created_at": "2026-09-18T12:39:52+00:00",
+  "id": "T-168",
+  "labels": [
+    "ux",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "android: one layout for all list kinds \u2014 Add as a bottom-right button, the expense list in the common style",
+  "updated_at": "2026-09-18T12:39:52+00:00"
+}
