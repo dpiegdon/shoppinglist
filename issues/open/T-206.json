@@ -1,0 +1,13 @@
+{
+  "body": "Two ordering nits in _apply_item's expense-list checks (server/src/shoppinglist_server/sync.py):\n\n1. _check_expense_against_list rejects `\"expense\": null` on an expenses list before it compares clocks, so a stale write that sets the expense to null is refused with 422 invalid_expense rather than discarded. AGENTS.md's rule is that sync rules apply only to a write that would win; a stale write is discarded silently. No client sends null there, so this is consistency rather than a live bug.\n\n2. _check_expense_against_list runs before the list_closed check, so on a closed list a row whose expense breaks the participant rule reports invalid_expense, not list_closed. Android's SyncEngine keys its \"drop the local row and re-pull\" handling on list_closed and would quarantine such a row instead. Same for a new item without an expense on a closed list.\n\nFix: check list_closed first (nothing on a closed list is worth validating further), and apply the null-expense rule only to a winning write. Add server tests for both orderings.",
+  "created_at": "2026-09-18T22:55:36+00:00",
+  "id": "T-206",
+  "labels": [
+    "bug",
+    "ready",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "Server: expense-list check ordering \u2014 stale null expense refused, invalid_expense reported before list_closed",
+  "updated_at": "2026-09-18T22:55:36+00:00"
+}
