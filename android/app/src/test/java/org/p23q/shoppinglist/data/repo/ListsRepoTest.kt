@@ -189,4 +189,23 @@ class ListsRepoTest {
 
         assertEquals(before + 1, syncTrigger.scheduleCount)
     }
+
+    @Test
+    fun `a quarantined list is skipped by dirtyRows but re-editing it clears the block (T-198)`() = runTest {
+        val listId = repo.createList("Trip")
+        db.listDao().blockRow(listId)
+
+        // Quarantined: still in the mirror and on screen, but not offered for push.
+        assertEquals(1, repo.blockedRowCount())
+        assertEquals(listId, repo.firstBlockedListId())
+        assertFalse(repo.dirtyRows().any { it.id == listId })
+        assertTrue(repo.getById(listId)!!.syncBlocked)
+
+        // Editing the list (correcting whatever the server refused) clears the block and re-queues it.
+        repo.rename(listId, "Trip to Rome")
+
+        assertFalse(repo.getById(listId)!!.syncBlocked)
+        assertTrue(repo.dirtyRows().any { it.id == listId })
+        assertEquals(0, repo.blockedRowCount())
+    }
 }

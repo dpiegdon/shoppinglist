@@ -155,6 +155,17 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `a quarantined list surfaces itself for the attention banner (T-198)`() = runTest(mainDispatcherRule.dispatcher) {
+        val listId = listsRepo.createList("Trip")
+        db.listDao().blockRow(listId)
+
+        syncStatus.failed("refused list row", pending = 0, blocked = 1)
+
+        val state = viewModel.uiState.first { it.sync.blockedCount == 1 }
+        assertEquals(listId, state.attentionListId)
+    }
+
+    @Test
     fun `a closed expense list is marked as closed (T-181)`() = runTest(mainDispatcherRule.dispatcher) {
         val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
         val list = listsRepo.getById(id)!!

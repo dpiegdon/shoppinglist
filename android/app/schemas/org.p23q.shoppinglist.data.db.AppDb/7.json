@@ -1,0 +1,376 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 7,
+    "identityHash": "853faeb40b133c7f32bc42a6074dc594",
+    "entities": [
+      {
+        "tableName": "lists",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `dirty` INTEGER NOT NULL, `syncBlocked` INTEGER NOT NULL, `membersJson` TEXT NOT NULL, `closeVotesJson` TEXT NOT NULL, `closedAt` INTEGER, `name_value` TEXT NOT NULL, `name_updatedAt` INTEGER NOT NULL, `name_updatedBy` TEXT NOT NULL, `categoryOrder_value` TEXT NOT NULL, `categoryOrder_updatedAt` INTEGER NOT NULL, `categoryOrder_updatedBy` TEXT NOT NULL, `notes_value` TEXT, `notes_updatedAt` INTEGER NOT NULL, `notes_updatedBy` TEXT NOT NULL, `kind_value` TEXT NOT NULL, `kind_updatedAt` INTEGER NOT NULL, `kind_updatedBy` TEXT NOT NULL, `currency_value` TEXT, `currency_updatedAt` INTEGER NOT NULL, `currency_updatedBy` TEXT NOT NULL, `deleted_value` INTEGER NOT NULL, `deleted_updatedAt` INTEGER NOT NULL, `deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dirty",
+            "columnName": "dirty",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncBlocked",
+            "columnName": "syncBlocked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "membersJson",
+            "columnName": "membersJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "closeVotesJson",
+            "columnName": "closeVotesJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "closedAt",
+            "columnName": "closedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "name.value",
+            "columnName": "name_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name.updatedAt",
+            "columnName": "name_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name.updatedBy",
+            "columnName": "name_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryOrder.value",
+            "columnName": "categoryOrder_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryOrder.updatedAt",
+            "columnName": "categoryOrder_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryOrder.updatedBy",
+            "columnName": "categoryOrder_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes.value",
+            "columnName": "notes_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes.updatedAt",
+            "columnName": "notes_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notes.updatedBy",
+            "columnName": "notes_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind.value",
+            "columnName": "kind_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind.updatedAt",
+            "columnName": "kind_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind.updatedBy",
+            "columnName": "kind_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currency.value",
+            "columnName": "currency_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "currency.updatedAt",
+            "columnName": "currency_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currency.updatedBy",
+            "columnName": "currency_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted.value",
+            "columnName": "deleted_value",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted.updatedAt",
+            "columnName": "deleted_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted.updatedBy",
+            "columnName": "deleted_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `listId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `dirty` INTEGER NOT NULL, `syncBlocked` INTEGER NOT NULL, `lastTouchedByAccountId` TEXT, `name_value` TEXT NOT NULL, `name_updatedAt` INTEGER NOT NULL, `name_updatedBy` TEXT NOT NULL, `category_value` TEXT, `category_updatedAt` INTEGER NOT NULL, `category_updatedBy` TEXT NOT NULL, `stores_value` TEXT NOT NULL, `stores_updatedAt` INTEGER NOT NULL, `stores_updatedBy` TEXT NOT NULL, `quantity_value` TEXT, `quantity_updatedAt` INTEGER NOT NULL, `quantity_updatedBy` TEXT NOT NULL, `price_value` TEXT, `price_updatedAt` INTEGER NOT NULL, `price_updatedBy` TEXT NOT NULL, `note_value` TEXT, `note_updatedAt` INTEGER NOT NULL, `note_updatedBy` TEXT NOT NULL, `status_value` TEXT NOT NULL, `status_updatedAt` INTEGER NOT NULL, `status_updatedBy` TEXT NOT NULL, `expense_value` TEXT, `expense_updatedAt` INTEGER NOT NULL, `expense_updatedBy` TEXT NOT NULL, `deleted_value` INTEGER NOT NULL, `deleted_updatedAt` INTEGER NOT NULL, `deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "listId",
+            "columnName": "listId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dirty",
+            "columnName": "dirty",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "syncBlocked",
+            "columnName": "syncBlocked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastTouchedByAccountId",
+            "columnName": "lastTouchedByAccountId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "name.value",
+            "columnName": "name_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name.updatedAt",
+            "columnName": "name_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name.updatedBy",
+            "columnName": "name_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category.value",
+            "columnName": "category_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "category.updatedAt",
+            "columnName": "category_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category.updatedBy",
+            "columnName": "category_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stores.value",
+            "columnName": "stores_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stores.updatedAt",
+            "columnName": "stores_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stores.updatedBy",
+            "columnName": "stores_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity.value",
+            "columnName": "quantity_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "quantity.updatedAt",
+            "columnName": "quantity_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantity.updatedBy",
+            "columnName": "quantity_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "price.value",
+            "columnName": "price_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "price.updatedAt",
+            "columnName": "price_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "price.updatedBy",
+            "columnName": "price_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note.value",
+            "columnName": "note_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "note.updatedAt",
+            "columnName": "note_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note.updatedBy",
+            "columnName": "note_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status.value",
+            "columnName": "status_value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status.updatedAt",
+            "columnName": "status_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status.updatedBy",
+            "columnName": "status_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expense.value",
+            "columnName": "expense_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "expense.updatedAt",
+            "columnName": "expense_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expense.updatedBy",
+            "columnName": "expense_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted.value",
+            "columnName": "deleted_value",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted.updatedAt",
+            "columnName": "deleted_updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted.updatedBy",
+            "columnName": "deleted_updatedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '853faeb40b133c7f32bc42a6074dc594')"
+    ]
+  }
+}

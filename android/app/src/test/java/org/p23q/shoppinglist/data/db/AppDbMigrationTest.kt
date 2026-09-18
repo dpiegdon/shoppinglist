@@ -36,7 +36,7 @@ import java.lang.reflect.Proxy
  * - The driver path cannot run migrations at all: Room 2.8's Migration.migrate(SQLiteConnection)
  *   is `TODO("Migration functionality with a SQLiteDriver is not yet available")` for anything but
  *   a support-backed connection. **The production builder must therefore not adopt setDriver()
- *   until Room implements this** — doing so would break all five migrations at once.
+ *   until Room implements this** — doing so would break every migration at once.
  *
  * So the migration objects are driven directly, against a database built at the old version, and
  * the result is compared against the schema Room itself exported. That comparison is the same one
@@ -46,8 +46,8 @@ import java.lang.reflect.Proxy
 class AppDbMigrationTest {
 
     /**
-     * Version 1: the schema before any migration, taken from app/schemas/…/6.json minus every
-     * column the five migrations add — so it is Room's own SQL, not a hand-written guess at it.
+     * Version 1: the schema before any migration, taken from app/schemas/…/7.json minus every
+     * column the later migrations add — so it is Room's own SQL, not a hand-written guess at it.
      */
     private val v1Lists =
         "CREATE TABLE IF NOT EXISTS `lists` (`id` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
@@ -72,7 +72,7 @@ class AppDbMigrationTest {
             "`deleted_updatedAt` INTEGER NOT NULL, `deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`id`))"
 
     private val migrations = listOf(
-        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
+        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
     )
 
     /**
@@ -145,7 +145,7 @@ class AppDbMigrationTest {
 
     /** What Room says version 6 must look like — its own exported schema, committed alongside. */
     private fun expectedColumns(table: String): Set<Column> {
-        val file = File("schemas/org.p23q.shoppinglist.data.db.AppDb/6.json")
+        val file = File("schemas/org.p23q.shoppinglist.data.db.AppDb/7.json")
         assertTrue("exported schema missing — run the ksp task: ${file.absolutePath}", file.exists())
         val entity = Json.parseToJsonElement(file.readText())
             .jsonObject["database"]!!.jsonObject["entities"]!!.jsonArray
@@ -169,16 +169,33 @@ class AppDbMigrationTest {
         connection.prepare(sql).use { if (it.step()) (if (it.isNull(0)) null else it.getLong(0)) else null }
 
     @Test
-    fun `migrating 5 to 6 lands on exactly the schema Room expects`() {
-        val connection = openFresh("v5")
+    fun `migrating 6 to 7 lands on exactly the schema Room expects`() {
+        val connection = openFresh("v6")
         try {
             seedV1(connection)
-            runMigrations(connection, from = 1, to = 5)
-            // Only the step under test from here, against the schema 1.13.0 left on real phones.
-            MIGRATION_5_6.migrate(supportFacade(connection))
+            runMigrations(connection, from = 1, to = 6)
+            // Only the step under test from here, against the schema 1.16.0 left on real phones.
+            MIGRATION_6_7.migrate(supportFacade(connection))
 
             assertEquals(expectedColumns("lists"), actualColumns(connection, "lists"))
             assertEquals(expectedColumns("items"), actualColumns(connection, "items"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 6 to 7 keeps the rows and leaves every list unblocked`() {
+        val connection = openFresh("v6-rows")
+        try {
+            seedV1(connection)
+            runMigrations(connection, from = 1, to = 6)
+            MIGRATION_6_7.migrate(supportFacade(connection))
+
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists"))
+            // A list that existed before the quarantine column must arrive pushable (T-198), not
+            // parked — lists.dirtyRows() skips a blocked row, so a 1 here would silently stop sync.
+            assertEquals(0L, readLong(connection, "SELECT syncBlocked FROM lists"))
         } finally {
             connection.close()
         }
@@ -212,11 +229,11 @@ class AppDbMigrationTest {
     }
 
     @Test
-    fun `migrating 1 to 6 lands on the same schema and keeps the rows`() {
+    fun `migrating 1 to 7 lands on the same schema and keeps the rows`() {
         val connection = openFresh("v1")
         try {
             seedV1(connection)
-            runMigrations(connection, from = 1, to = 6)
+            runMigrations(connection, from = 1, to = 7)
 
             assertEquals(expectedColumns("lists"), actualColumns(connection, "lists"))
             assertEquals(expectedColumns("items"), actualColumns(connection, "items"))
@@ -226,6 +243,7 @@ class AppDbMigrationTest {
             assertNull(readText(connection, "SELECT notes_value FROM lists"))
             assertEquals("shopping", readText(connection, "SELECT kind_value FROM lists"))
             assertEquals(0L, readLong(connection, "SELECT syncBlocked FROM items"))
+            assertEquals(0L, readLong(connection, "SELECT syncBlocked FROM lists"))
             assertNull(readText(connection, "SELECT lastTouchedByAccountId FROM items"))
         } finally {
             connection.close()
@@ -238,7 +256,7 @@ class AppDbMigrationTest {
         // exported schema left stale by a build that was never re-run. @Database is compile-time
         // retained, so the declared version is read from the schema Room exported from it — the
         // same file the other tests here compare against.
-        val exported = File("schemas/org.p23q.shoppinglist.data.db.AppDb/6.json")
+        val exported = File("schemas/org.p23q.shoppinglist.data.db.AppDb/7.json")
         assertTrue("exported schema missing: ${exported.absolutePath}", exported.exists())
         val declared = Json.parseToJsonElement(exported.readText())
             .jsonObject["database"]!!.jsonObject["version"]!!.jsonPrimitive.content.toInt()

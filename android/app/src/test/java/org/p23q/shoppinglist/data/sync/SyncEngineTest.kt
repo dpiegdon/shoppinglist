@@ -27,6 +27,7 @@ import org.p23q.shoppinglist.data.api.SyncRequest
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.ItemEntity
+import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
 import org.robolectric.RobolectricTestRunner
@@ -103,6 +104,30 @@ class SyncEngineTest {
         deleted = false.toLww("this-device", at),
         dirty = dirty,
     )
+
+    private fun dummyList(id: String, name: String, dirty: Boolean, at: Long = 1_000L): ListEntity = ListEntity(
+        id = id,
+        createdAt = at,
+        name = name.toLww("this-device", at),
+        categoryOrder = "[]".toLww("this-device", at),
+        notes = null.toLwwOptional("this-device", at),
+        kind = "expenses".toLww("this-device", at),
+        currency = "EUR".toLwwOptional("this-device", at),
+        deleted = false.toLww("this-device", at),
+        dirty = dirty,
+    )
+
+    /** An expenses list as the SERVER holds it, vote state included (T-198). */
+    private fun expensesListJson(id: String, name: String, at: Long, closeVotes: String): String = """
+        {"id": "$id", "created_at": 1000, "fields": {
+          "name": {"value": "$name", "updated_at": $at, "updated_by": "server-device"},
+          "category_order": {"value": [], "updated_at": $at, "updated_by": "server-device"},
+          "notes": {"value": null, "updated_at": $at, "updated_by": "server-device"},
+          "kind": {"value": "expenses", "updated_at": $at, "updated_by": "server-device"},
+          "currency": {"value": "EUR", "updated_at": $at, "updated_by": "server-device"},
+          "deleted": {"value": false, "updated_at": $at, "updated_by": "server-device"}
+        }, "members": [], "close_votes": $closeVotes, "closed_at": null}
+    """.trimIndent()
 
     @Test
     fun `push-only sync clears dirty when the server echoes the same clock back`() = runTest {
@@ -263,6 +288,75 @@ class SyncEngineTest {
         assertEquals(setOf("good-item"), retry.changes.items.map { it.id }.toSet())
 
         // The health surface counts the quarantined row so the UI can flag "needs attention" (T-47).
+        assertEquals(1, syncStatus.state.value.blockedCount)
+    }
+
+    @Test
+    fun `a 422 voted_to_close naming a list row parks it instead of wedging the queue (T-198)`() = runTest {
+        pointAtServer()
+        // A list edit queued before its author voted to close the list, plus an unrelated item edit.
+        db.listDao().upsert(dummyList("list-1", "Trip (renamed)", dirty = true, at = 2_000L))
+        db.itemDao().upsert(dummyItem("good-item", "Bread", dirty = true))
+
+        // The vote landed first, so the queued rename is refused with the list's own id.
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody(
+                """{"error": "voted_to_close", "message": "you agreed to close", "row_id": "list-1"}""",
+            ),
+        )
+        // Retry (the list now parked): accepted, and the server's copy of the list comes back with it.
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"cursor": 1, "changes": {"lists": [${expensesListJson("list-1", "Trip", at = 1_000L, closeVotes = "[\"me\"]")}], "items": []}}""",
+            ),
+        )
+        // And a later sync still goes through rather than failing on the same row forever.
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 2, "changes": {"lists": [], "items": []}}"""))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        val parked = db.listDao().getById("list-1")!!
+        assertTrue("the refused list row is quarantined", parked.syncBlocked)
+        // Everything the server owns is still mirrored onto the parked row — the vote that caused
+        // the refusal included, which is what tells the UI why nothing is moving.
+        assertEquals("""["me"]""", parked.closeVotesJson)
+
+        val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(listOf("list-1"), first.changes.lists.map { it.id })
+        assertTrue("the parked list is not pushed again", retry.changes.lists.isEmpty())
+        assertEquals(listOf("good-item"), retry.changes.items.map { it.id })
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        assertEquals(1, syncStatus.state.value.blockedCount)
+    }
+
+    @Test
+    fun `a bad field value on a list row is quarantined like an item's (T-198)`() = runTest {
+        pointAtServer()
+        db.listDao().upsert(dummyList("bad-list", "Trip", dirty = true))
+        db.listDao().upsert(dummyList("good-list", "Groceries", dirty = true))
+
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody(
+                """{"error": "invalid_currency", "message": "bad currency", "row_id": "bad-list", "field": "currency"}""",
+            ),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        assertTrue("the rejected list is quarantined", db.listDao().getById("bad-list")!!.syncBlocked)
+        assertFalse("the healthy one is not", db.listDao().getById("good-list")!!.syncBlocked)
+
+        val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(setOf("bad-list", "good-list"), first.changes.lists.map { it.id }.toSet())
+        assertEquals(setOf("good-list"), retry.changes.lists.map { it.id }.toSet())
+
+        // A blocked list counts towards "needs attention" alongside blocked items (T-47).
         assertEquals(1, syncStatus.state.value.blockedCount)
     }
 

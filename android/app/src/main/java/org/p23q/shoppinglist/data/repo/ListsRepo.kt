@@ -131,9 +131,17 @@ class ListsRepo @Inject constructor(
 
     private fun encodeCategoryOrder(order: List<String>): String = Json.encodeToString(order)
 
+    /** True after the server quarantined at least one list row (T-198) — counted with the items'. */
+    suspend fun blockedRowCount(): Int = listDao.blockedRowCount()
+
+    /** A quarantined list, so a "needs attention" surface can open it even with no item blocked (T-198). */
+    suspend fun firstBlockedListId(): String? = listDao.firstBlockedListId()
+
     private suspend fun updateField(listId: String, mutate: suspend (ListEntity) -> ListEntity) {
         val current = listDao.getById(listId) ?: return
-        listDao.upsert(mutate(current).copy(dirty = true))
+        // Any user edit clears a prior quarantine so the corrected row is retried on the next sync,
+        // exactly as for an item (T-198).
+        listDao.upsert(mutate(current).copy(dirty = true, syncBlocked = false))
         syncTrigger.scheduleAfterEdit()
     }
 }

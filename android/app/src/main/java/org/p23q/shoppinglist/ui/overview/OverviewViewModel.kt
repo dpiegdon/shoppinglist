@@ -91,7 +91,12 @@ class OverviewViewModel @Inject constructor(
         viewModelScope.launch {
             syncStatus.state.collect { sync ->
                 // Resolve which list the attention banner should open only when something is blocked.
-                val attentionListId = if (sync.blockedCount > 0) itemsRepo.firstBlockedItem()?.listId else null
+                // A blocked list row counts too (T-198), so fall back to it when no item is blocked.
+                val attentionListId = if (sync.blockedCount > 0) {
+                    itemsRepo.firstBlockedItem()?.listId ?: listsRepo.firstBlockedListId()
+                } else {
+                    null
+                }
                 _uiState.update { it.copy(sync = sync, attentionListId = attentionListId) }
             }
         }

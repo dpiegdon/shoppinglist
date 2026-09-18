@@ -79,7 +79,7 @@ class SyncEngine @Inject constructor(
 
         // Surface "syncing…" plus the counts as they stand now (T-47). Recursive retries below
         // re-enter this and re-report, so the innermost outcome is what the UI settles on.
-        syncStatus.started(pending = pendingBefore, blocked = itemDao.blockedRowCount())
+        syncStatus.started(pending = pendingBefore, blocked = blockedCount())
 
         val request = SyncRequest(
             cursor = sessionState.syncCursor,
@@ -91,7 +91,7 @@ class SyncEngine @Inject constructor(
         val response = try {
             apiProvider.get().sync(request)
         } catch (e: UnauthorizedException) {
-            syncStatus.stoppedUnauthorized(pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            syncStatus.stoppedUnauthorized(pending = pendingBefore, blocked = blockedCount())
             return SyncResult.Unauthorized
         } catch (e: ApiException) {
             if (e.code == "full_resync_required") {
@@ -105,28 +105,44 @@ class SyncEngine @Inject constructor(
             // One row the server rejected (bad field value) aborts the whole transactional push.
             // Quarantine just that row so it stops wedging the queue, then retry immediately: the
             // remaining dirty rows now go through. The row stays visible/editable; editing it clears
-            // the block (ItemsRepo) so the corrected value is re-tried. Terminates because each retry
-            // excludes the blocked row, so the same id can't 422 twice. The getById guard avoids
-            // looping if the id isn't a known item (e.g. a list row we don't quarantine).
+            // the block (ItemsRepo / ListsRepo) so the corrected value is re-tried. Terminates because
+            // each retry excludes the blocked row, so the same id can't 422 twice. The getById guards
+            // avoid looping if the id names neither a known item nor a known list.
             val badRowId = e.rowId
-            // A write to a CLOSED expenses list (T-157) is not a bad value to be corrected: it can
-            // never be accepted, and the local row now disagrees with a server copy that has older
-            // clocks, so no pull would ever overwrite it. Quarantining it would leave that
-            // disagreement on screen forever. Drop the local row instead and ask for a fresh
-            // snapshot of its list in the same retry, which restores the server's truth.
-            if (e.httpStatus == 422 && e.code == "list_closed" && badRowId != null) {
+            // A write the server can NEVER accept as sent is not a bad value to be corrected: the
+            // local row now disagrees with a server copy that has older clocks, so no pull would
+            // ever overwrite it, and quarantining it would leave that disagreement on screen
+            // forever. Worse for these two, the row is invisible — a closed list's item and a
+            // tombstoned list are both hidden — so the user can't even edit it to clear the block.
+            // Drop the local row instead and ask for a fresh snapshot of its list in the same
+            // retry, which restores the server's truth: a write to a closed expenses list (T-157),
+            // and a tombstone on an expenses list, which can never be deleted (T-198).
+            if (e.httpStatus == 422 && badRowId != null &&
+                (e.code == "list_closed" || e.code == "cannot_delete_expense_list")
+            ) {
                 val listId = itemDao.getById(badRowId)?.listId ?: badRowId.takeIf { listDao.getById(it) != null }
                 if (listId != null) {
                     if (itemDao.getById(badRowId) != null) itemDao.hardDelete(badRowId) else listDao.hardDelete(badRowId)
                     return syncNow(fullLists + listId)
                 }
             }
-            if (e.httpStatus == 422 && badRowId != null && itemDao.getById(badRowId) != null) {
-                itemDao.blockRow(badRowId)
-                return syncNow(fullLists)
+            if (e.httpStatus == 422 && badRowId != null) {
+                // A list row is parked exactly like an item row (T-198). Before that it fell
+                // through to failed() below, so one refused list edit — a rename queued before its
+                // author voted to close the list, say — wedged every later sync until the server
+                // state changed. The Wire Contract answers 422-with-row_id precisely so the device
+                // parks the row instead.
+                if (itemDao.getById(badRowId) != null) {
+                    itemDao.blockRow(badRowId)
+                    return syncNow(fullLists)
+                }
+                if (listDao.getById(badRowId) != null) {
+                    listDao.blockRow(badRowId)
+                    return syncNow(fullLists)
+                }
             }
             val message = e.message ?: "sync failed"
-            syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            syncStatus.failed(message, pending = pendingBefore, blocked = blockedCount())
             return SyncResult.Failed(message)
         } catch (e: SSLException) {
             // Distinct, actionable message for an untrusted cert (T-38); SSLException extends
@@ -137,11 +153,11 @@ class SyncEngine @Inject constructor(
             // SyncResult.Failed's message entirely. It is a diagnostic, so translating it would be
             // work with no user-visible effect (T-111).
             val message = "Server certificate not trusted"
-            syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            syncStatus.failed(message, pending = pendingBefore, blocked = blockedCount())
             return SyncResult.Failed(message)
         } catch (e: IOException) {
             val message = e.message ?: "network error"
-            syncStatus.failed(message, pending = pendingBefore, blocked = itemDao.blockedRowCount())
+            syncStatus.failed(message, pending = pendingBefore, blocked = blockedCount())
             return SyncResult.Failed(message)
         }
 
@@ -181,7 +197,7 @@ class SyncEngine @Inject constructor(
         syncStatus.succeeded(
             at = System.currentTimeMillis(),
             pending = pendingAfter,
-            blocked = itemDao.blockedRowCount(),
+            blocked = blockedCount(),
         )
         return SyncResult.Success(
             pushedItems = dirtyItems.size,
@@ -190,6 +206,9 @@ class SyncEngine @Inject constructor(
             pulledLists = response.changes.lists.size,
         )
     }
+
+    /** Rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
+    private suspend fun blockedCount(): Int = itemDao.blockedRowCount() + listDao.blockedRowCount()
 
     /**
      * Self-heals a missing account id (T-74). accountId is only stored at login, so a session that
@@ -383,6 +402,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
     val kind = mergeField(local.kind.value, local.kind.updatedAt, local.kind.updatedBy, remote.fields.kind)
     val currency = mergeField(local.currency.value, local.currency.updatedAt, local.currency.updatedBy, remote.fields.currency)
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
+    val mergedDirty = name.dirty || categoryOrder.dirty || notes.dirty || kind.dirty || currency.dirty || deleted.dirty
 
     return ListEntity(
         id = local.id,
@@ -393,7 +413,9 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
         kind = LwwString(kind.value, kind.updatedAt, kind.updatedBy),
         currency = LwwOptionalString(currency.value, currency.updatedAt, currency.updatedBy),
         deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
-        dirty = name.dirty || categoryOrder.dirty || notes.dirty || kind.dirty || currency.dirty || deleted.dirty,
+        dirty = mergedDirty,
+        // Quarantined only while there is still unpushed local state, as for an item (T-198).
+        syncBlocked = local.syncBlocked && mergedDirty,
         // Not LWW (T-152): always whatever the server last said, like an item's lastTouchedBy.
         membersJson = Json.encodeToString(remote.members),
         closeVotesJson = Json.encodeToString(remote.closeVotes),

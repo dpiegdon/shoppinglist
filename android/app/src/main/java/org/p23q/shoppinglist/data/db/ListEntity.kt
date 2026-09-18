@@ -23,6 +23,13 @@ data class ListEntity(
     @Embedded(prefix = "deleted_") val deleted: LwwBoolean,
     val dirty: Boolean,
     /**
+     * Set when the server rejected this row's pushed values with a 422 (T-198), the same
+     * quarantine [org.p23q.shoppinglist.data.db.ItemEntity.syncBlocked] gives an item: the list
+     * stays visible and editable, but [ListDao.dirtyRows] skips it, so one refused list row can't
+     * wedge the whole push queue. Cleared the moment the user edits the list again (see ListsRepo).
+     */
+    val syncBlocked: Boolean = false,
+    /**
      * Server-maintained, NOT LWW clocks (T-152): the roster and the close-vote state as the server
      * last reported them. Stored as JSON so the mirror has them offline, which is what the expense
      * form's defaults and the balances screen need. The client never writes them.

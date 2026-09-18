@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 6, exportSchema = true)
+@Database(entities = [ListEntity::class, ItemEntity::class], version = 7, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao
@@ -71,6 +71,14 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+/** Adds lists.syncBlocked (T-198), the list-row twin of items.syncBlocked: a list the server
+ *  refused with a 422 is parked rather than pushed forever. Existing rows default to not blocked. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE lists ADD COLUMN syncBlocked INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -78,7 +86,9 @@ object DatabaseModule {
     @Singleton
     fun provideAppDb(@ApplicationContext context: Context): AppDb =
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(
+                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+            )
             .build()
 
     @Provides

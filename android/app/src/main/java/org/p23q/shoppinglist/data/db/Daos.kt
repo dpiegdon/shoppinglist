@@ -136,8 +136,20 @@ interface ListDao {
     @Query("SELECT id FROM lists WHERE deleted_value = 0 LIMIT 1")
     suspend fun anyActiveListId(): String?
 
-    @Query("SELECT * FROM lists WHERE dirty = 1")
+    /** Rows to push: dirty AND not quarantined by a prior server 422 (T-198), as for items. */
+    @Query("SELECT * FROM lists WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ListEntity>
+
+    /** Quarantine a list the server rejected (T-198); dirtyRows() then skips it until it's re-edited. */
+    @Query("UPDATE lists SET syncBlocked = 1 WHERE id = :id")
+    suspend fun blockRow(id: String)
+
+    @Query("SELECT COUNT(*) FROM lists WHERE syncBlocked = 1")
+    suspend fun blockedRowCount(): Int
+
+    /** A quarantined list, so the sync-health surface can open it even when no item is blocked (T-198). */
+    @Query("SELECT id FROM lists WHERE syncBlocked = 1 LIMIT 1")
+    suspend fun firstBlockedListId(): String?
 
     @Query("UPDATE lists SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
