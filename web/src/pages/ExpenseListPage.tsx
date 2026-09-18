@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ExpenseDialog, { type ExpenseSaveValues } from "../components/ExpenseDialog";
 import CloseVoteBanner from "../components/CloseVoteBanner";
+import ExpenseListHeader from "../components/ExpenseListHeader";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -125,46 +126,17 @@ export default function ExpenseListPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
-      <Link to="/" className="muted" style={{ fontSize: "0.85rem" }}>
-        {t("list.allListsLink")}
-      </Link>
-      <h1
-        style={{
-          fontSize: "1.3rem",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          margin: "0.25rem 0",
-        }}
-      >
-        <Link to="/" style={{ color: "inherit", textDecoration: "none" }}>
-          {listFieldValue(list, "name")}
-        </Link>
-      </h1>
+      <ExpenseListHeader listId={listId} listName={listFieldValue(list, "name") ?? ""} view="expenses" />
 
-      {/* Where the shopping list keeps its controls row (T-168), so settings is in the same place. */}
-      <div style={{ display: "flex", justifyContent: "flex-end", margin: "0.75rem 0 0" }}>
-        <Link
-          to={`/list/${listId}/properties`}
-          className="btn-icon"
-          aria-label={t("listProps.title")}
-          title={t("listProps.title")}
-        >
-          ⚙
-        </Link>
-      </div>
-
-      <Link
-        to={`/list/${listId}/balances`}
+      {/* A summary, no longer the hidden way into balances: the selector above is (T-172). */}
+      <div
         className="card"
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           padding: "0.75rem 1rem",
-          margin: "0.75rem 0",
-          textDecoration: "none",
-          color: "var(--color-text)",
+          margin: "0 0 0.75rem",
         }}
       >
         <span>
@@ -185,7 +157,7 @@ export default function ExpenseListPage() {
             </strong>
           </span>
         )}
-      </Link>
+      </div>
 
       <CloseVoteBanner
         listId={listId}

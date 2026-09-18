@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import androidx.core.net.toUri
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
@@ -43,7 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -57,13 +58,13 @@ import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.item.AddItemDialog
-import org.p23q.shoppinglist.ui.item.EditItemDialog
 import org.p23q.shoppinglist.data.ListKind
-import org.p23q.shoppinglist.ui.expense.BalancesScreen
+import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.expense.ExpenseDialog
 import org.p23q.shoppinglist.ui.expense.ExpenseListScreen
 import org.p23q.shoppinglist.ui.expense.ExpensePrefill
+import org.p23q.shoppinglist.ui.item.AddItemDialog
+import org.p23q.shoppinglist.ui.item.EditItemDialog
 import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.listprops.ListPropsScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
@@ -71,11 +72,9 @@ import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
 import org.p23q.shoppinglist.ui.redeem.RedeemDialog
 import org.p23q.shoppinglist.ui.redeem.RedeemScreen
-import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
 import org.p23q.shoppinglist.ui.update.UpdateViewModel
-import androidx.compose.ui.res.stringResource
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -88,7 +87,6 @@ object Routes {
     const val LIST_PATTERN = "list/{$LIST_ID_ARG}"
     const val REGISTRY_PATTERN = "registry/{$LIST_ID_ARG}"
     const val LIST_PROPS_PATTERN = "listProps/{$LIST_ID_ARG}"
-    const val BALANCES_PATTERN = "balances/{$LIST_ID_ARG}"
 
     const val TOKEN_ARG = "token"
     const val REDEEM_PATTERN = "redeem/{$TOKEN_ARG}"
@@ -96,7 +94,6 @@ object Routes {
     fun list(listId: String) = "list/$listId"
     fun registry(listId: String) = "registry/$listId"
     fun listProps(listId: String) = "listProps/$listId"
-    fun balances(listId: String) = "balances/$listId"
     fun redeem(token: String) = "redeem/$token"
 }
 
@@ -236,19 +233,24 @@ fun ShoppingListNavHost(
                 when {
                     kind == null -> Unit
                     ListKind.isExpenses(kind) -> {
+                        // Plain remember, not rememberSaveable: the prefill is not Parcelable, and losing an
+                        // unsaved settlement form to process death costs one tap to reopen.
+                        var reimbursing by remember { mutableStateOf<ExpensePrefill?>(null) }
                         ExpenseListScreen(
                             onAddExpense = { isAddDialogOpen = true },
                             onEditExpense = { itemId -> editingItemId = itemId },
-                            onOpenBalances = { navController.navigate(Routes.balances(listId)) },
                             onOpenListProps = { navController.navigate(Routes.listProps(listId)) },
+                            onReimburse = { reimbursing = it },
                         )
-                        if (isAddDialogOpen || editingItemId != null) {
+                        if (isAddDialogOpen || editingItemId != null || reimbursing != null) {
                             ExpenseDialog(
                                 listId = listId,
                                 itemId = editingItemId,
+                                prefill = reimbursing,
                                 onDismiss = {
                                     isAddDialogOpen = false
                                     editingItemId = null
+                                    reimbursing = null
                                 },
                             )
                         }
@@ -284,27 +286,6 @@ fun ShoppingListNavHost(
 
                 editingItemId?.let { itemId ->
                     EditItemDialog(itemId = itemId, onDismiss = { editingItemId = null })
-                }
-            }
-        }
-        composable(Routes.BALANCES_PATTERN) { backStackEntry ->
-            val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
-            // Plain remember, not rememberSaveable: the prefill is not Parcelable, and losing an
-            // unsaved settlement form to process death costs one tap to reopen.
-            var recording by remember { mutableStateOf<ExpensePrefill?>(null) }
-            AppDrawerScaffold(
-                navController = navController,
-                title = stringResource(R.string.expense_balances),
-                onTitleClick = { navController.backToList(listId) },
-            ) {
-                BalancesScreen(onRecord = { recording = it })
-                recording?.let { prefill ->
-                    ExpenseDialog(
-                        listId = listId,
-                        itemId = null,
-                        prefill = prefill,
-                        onDismiss = { recording = null },
-                    )
                 }
             }
         }

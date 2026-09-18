@@ -126,7 +126,6 @@ class ExpenseClosingTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = listViewModel(),
             )

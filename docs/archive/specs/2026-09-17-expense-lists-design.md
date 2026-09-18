@@ -215,8 +215,12 @@ carry the close-vote section (who has agreed, agree / withdraw).
 **Overview card.** Total spent, and your balance when there is more than
 one participant. A closed marker.
 
-**List screen.** A summary bar (total, your balance) tapping through to
-balances. Expenses newest first, sectioned by date: title, amount, and a
+**List screen.** The header every list has (all-lists link, list name), then
+where a shopping list keeps its controls row, an *Expenses | Balances*
+selector with settings beside it (T-172). Balances was first a screen of its
+own, titled "Balances" and reached by tapping a summary card; neither said
+that it could be tapped, and the title led nowhere. The expenses view keeps a
+plain summary (total, your balance). Expenses newest first, sectioned by date: title, amount, and a
 second line such as "paid by AL · for everyone". Banners above the list for
 pending votes ("2 of 4 agree to close", agree / withdraw) and for closed
 ("Closed on 17 Sep 2026", no add button). None of the shopping apparatus.
@@ -284,7 +288,7 @@ doing exactly what it was for. The order of operations at the end of a
 trip is: settle, then vote. The suggestions on a closing list are what to
 settle.
 
-**Screen.** Balances, below the rows, under "Settle up": one line per
+**Screen.** The Balances view, below the rows, under "Settle up": one line per
 transfer, "Bob → Alice 12.50", with *Reimburse* where allowed. "All settled"
 once there are expenses but nothing to transfer.
 

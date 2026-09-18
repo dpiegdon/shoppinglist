@@ -249,6 +249,29 @@ textarea:focus {
   height: 5rem;
 }
 
+/* A choice between views of one thing (T-172), the expense list's Expenses | Balances: the same
+   pill as the shopping list's Show checked toggle, so the two controls rows read alike. */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.segmented a {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.segmented a[aria-current="page"] {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

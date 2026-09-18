@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ExpenseDialog, { today, type ExpenseSaveValues } from "../components/ExpenseDialog";
+import ExpenseListHeader from "../components/ExpenseListHeader";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -116,10 +117,7 @@ export default function BalancesPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
-      <Link to={`/list/${listId}`} className="muted" style={{ fontSize: "0.85rem" }}>
-        ← {listFieldValue(list, "name")}
-      </Link>
-      <h1 style={{ fontSize: "1.3rem", margin: "0.25rem 0 1rem" }}>{t("expense.balances")}</h1>
+      <ExpenseListHeader listId={listId} listName={listFieldValue(list, "name") ?? ""} view="balances" />
 
       <p className="muted" style={{ marginTop: 0 }}>
         {t("expense.totalSpent")}: <strong>{fromCents(totalCents)} {currency}</strong>

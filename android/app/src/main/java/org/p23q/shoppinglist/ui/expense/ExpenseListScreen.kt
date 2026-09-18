@@ -22,11 +22,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -54,17 +60,20 @@ import java.util.Date
 fun ExpenseListScreen(
     onAddExpense: () -> Unit,
     onEditExpense: (String) -> Unit,
-    onOpenBalances: () -> Unit,
     onOpenListProps: () -> Unit,
+    /** Reimburse on a settle-up row (T-165, T-171): the pre-filled expense to open the form with. */
+    onReimburse: (ExpensePrefill) -> Unit = {},
     viewModel: ExpenseListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val myBalance = state.balances.firstOrNull { it.accountId == state.myAccountId }
+    // Expenses or balances (T-172). Saveable, so rotating the phone keeps the view you were on.
+    var showBalances by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
-            // A closed list is an archive: nothing to add to it (T-157).
-            if (!state.isClosed) {
+            // A closed list is an archive: nothing to add to it (T-157). Balances has its own actions.
+            if (!state.isClosed && !showBalances) {
                 AddFab(onClick = onAddExpense, contentDescription = stringResource(R.string.expense_add))
             }
         },
@@ -73,12 +82,26 @@ fun ExpenseListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // The controls row every list has, with settings where ListScreen keeps it.
+            // The controls row every list has (T-168), with settings where ListScreen keeps it, and the
+            // Expenses | Balances selector where ListScreen has Show checked (T-172). Balances used
+            // to be a screen of its own, reached through a summary card nothing marked as a button.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(
+                        selected = !showBalances,
+                        onClick = { showBalances = false },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    ) { Text(stringResource(R.string.list_kind_expenses)) }
+                    SegmentedButton(
+                        selected = showBalances,
+                        onClick = { showBalances = true },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    ) { Text(stringResource(R.string.expense_balances)) }
+                }
                 IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
                     Icon(
                         Icons.Default.Settings,
@@ -87,9 +110,19 @@ fun ExpenseListScreen(
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable(onClick = onOpenBalances),
-            ) {
+            if (showBalances) {
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    BalancesContent(state = state, onReimburse = onReimburse)
+                }
+                return@Column
+            }
+
+            // A summary now, not the way into balances: the selector above is (T-172).
+            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,

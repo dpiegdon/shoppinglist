@@ -137,7 +137,8 @@ describe("expense list screen", () => {
     renderAt("/list/list-1");
 
     expect(await screen.findByText("Dinner")).toBeInTheDocument();
-    const summary = screen.getByRole("link", { name: /Total spent/ });
+    // A plain summary now; the selector is the way to balances (T-172).
+    const summary = screen.getByText("Total spent").closest(".card") as HTMLElement;
     expect(within(summary).getByText("64.00 EUR")).toBeInTheDocument();
     // I paid 64 and my share is 32, so the list owes me 32.
     expect(within(summary).getByText("32.00 EUR")).toBeInTheDocument();
@@ -145,6 +146,24 @@ describe("expense list screen", () => {
     // None of the shopping apparatus belongs here.
     expect(screen.queryByText("Show checked")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add item" })).not.toBeInTheDocument();
+  });
+
+  it("switches between expenses and balances with the selector under the list's own header", async () => {
+    renderAt("/list/list-1");
+
+    // The header every list has (T-172): the list's name, not a title of the view.
+    expect(await screen.findByRole("heading", { name: "Trip" })).toBeInTheDocument();
+    const expenses = screen.getByRole("link", { name: "Expenses" });
+    expect(expenses).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Balances" })).not.toHaveAttribute("aria-current");
+
+    await userEvent.click(screen.getByRole("link", { name: "Balances" }));
+    expect(await screen.findByText("paid 64.00 · share 32.00")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Trip" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Balances" })).toHaveAttribute("aria-current", "page");
+
+    await userEvent.click(screen.getByRole("link", { name: "Expenses" }));
+    expect(await screen.findByText("Dinner")).toBeInTheDocument();
   });
 
   it("adds an expense paid by me and split equally, with the leftover cent to the first", async () => {

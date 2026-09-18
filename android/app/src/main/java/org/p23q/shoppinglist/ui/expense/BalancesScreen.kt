@@ -16,13 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
@@ -30,18 +27,18 @@ import java.time.LocalDate
 
 /**
  * Who is up and who is down on an expenses list (T-154), and below it who should pay whom to make
- * it all zero (T-165).
+ * it all zero (T-165). The Balances half of the expense list screen's selector (T-172), so it takes
+ * that screen's state rather than a view model of its own.
  *
  * Everyone named anywhere appears, including people who have since left: their debts and credits
  * do not leave with them. The rows always sum to zero. Reimburse on a transfer hands a pre-filled
- * expense to [onRecord]; what gets saved is an ordinary expense, so nothing here is stored.
+ * expense to [onReimburse]; what gets saved is an ordinary expense, so nothing here is stored.
  */
 @Composable
-fun BalancesScreen(
-    onRecord: (ExpensePrefill) -> Unit = {},
-    viewModel: ExpenseListViewModel = hiltViewModel(),
+fun BalancesContent(
+    state: ExpenseListUiState,
+    onReimburse: (ExpensePrefill) -> Unit,
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settlementTitle = stringResource(R.string.expense_settlement)
 
     @Composable
@@ -134,7 +131,7 @@ fun BalancesScreen(
                             val amount = ExpenseMath.fromCents(transfer.cents)
                             TextButton(
                                 onClick = {
-                                    onRecord(
+                                    onReimburse(
                                         ExpensePrefill(
                                             name = settlementTitle,
                                             // Equal split of one on each side: the total drives the

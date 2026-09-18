@@ -124,7 +124,6 @@ class ExpenseScreensTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = viewModel(),
             )
@@ -143,15 +142,13 @@ class ExpenseScreensTest {
     }
 
     @Test
-    fun `shows the total and my balance, and opens balances when tapped`() = runBlocking<Unit> {
+    fun `shows the total and my balance, and the selector switches to balances and back`() = runBlocking<Unit> {
         itemsRepo.createExpense(listId, "Dinner", dinner())
-        var openedBalances = false
 
         composeTestRule.setContent {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = { openedBalances = true },
                 onOpenListProps = {},
                 viewModel = viewModel(),
             )
@@ -162,8 +159,17 @@ class ExpenseScreensTest {
         // I paid 64 and owe 32, so the list owes me 32.
         composeTestRule.onNodeWithText("32.00 EUR").assertIsDisplayed()
 
-        composeTestRule.onNodeWithText("Your balance").performClick()
-        assertEquals(true, openedBalances)
+        // Balances is the other half of this screen now, behind the selector (T-172).
+        composeTestRule.onNodeWithText("Balances").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dinner").assertDoesNotExist()
+        // Adding belongs to the expenses view.
+        composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
+
+        composeTestRule.onNodeWithText("Expenses").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
     }
 
     @Test
@@ -172,7 +178,6 @@ class ExpenseScreensTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = viewModel(),
             )
@@ -191,7 +196,6 @@ class ExpenseScreensTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = { edited = it },
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = viewModel(),
             )
@@ -215,7 +219,6 @@ class ExpenseScreensTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = viewModel(),
             )
@@ -227,14 +230,29 @@ class ExpenseScreensTest {
         composeTestRule.onNodeWithText("Your balance").assertDoesNotExist()
     }
 
-    // ---- the balances screen --------------------------------------------------
+    // ---- the balances view (T-172: a half of the expense list screen) ----------
+
+    /** Opens the expense list and switches it to balances, the way a user gets there. */
+    private fun showBalances(onReimburse: (ExpensePrefill) -> Unit = {}) {
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenListProps = {},
+                onReimburse = onReimburse,
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Balances").performClick()
+        composeTestRule.waitForIdle()
+    }
 
     @Test
     fun `balances name everyone involved and what they paid`() = runBlocking<Unit> {
         itemsRepo.createExpense(listId, "Dinner", dinner())
 
-        composeTestRule.setContent { BalancesScreen(viewModel = viewModel()) }
-        composeTestRule.waitForIdle()
+        showBalances()
 
         composeTestRule.onNodeWithText("Total spent: 64.00 EUR").assertIsDisplayed()
         composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
@@ -253,8 +271,7 @@ class ExpenseScreensTest {
             Expense(mapOf("acct-gone" to "20.00"), true, mapOf(me to "10.00", "acct-gone" to "10.00"), true, "2026-09-16"),
         )
 
-        composeTestRule.setContent { BalancesScreen(viewModel = viewModel()) }
-        composeTestRule.waitForIdle()
+        showBalances()
 
         // Only an account id remains, so there is no name or email to show.
         composeTestRule.onNodeWithText("Former member 1").assertIsDisplayed()
@@ -271,17 +288,12 @@ class ExpenseScreensTest {
         db.listDao().upsert(list.copy(closeVotesJson = Json.encodeToString(closeVotes), closedAt = closedAt))
     }
 
-    private fun showBalances(onRecord: (ExpensePrefill) -> Unit = {}) {
-        composeTestRule.setContent { BalancesScreen(onRecord = onRecord, viewModel = viewModel()) }
-        composeTestRule.waitForIdle()
-    }
-
     @Test
     fun `settle up says who pays whom, and Record hands over a pre-filled settlement`() = runBlocking<Unit> {
         itemsRepo.createExpense(listId, "Dinner", dinner())
         var recorded: ExpensePrefill? = null
 
-        showBalances(onRecord = { recorded = it })
+        showBalances(onReimburse = { recorded = it })
 
         composeTestRule.onNodeWithText("Settle up").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
@@ -370,7 +382,6 @@ class ExpenseScreensTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = model,
             )
@@ -395,7 +406,6 @@ class ExpenseScreensTest {
             ExpenseListScreen(
                 onAddExpense = {},
                 onEditExpense = {},
-                onOpenBalances = {},
                 onOpenListProps = {},
                 viewModel = model,
             )
