@@ -90,6 +90,14 @@ describe("RegistryPage item dialog autocomplete", () => {
     expect(screen.getByText("Bread")).toBeInTheDocument();
   });
 
+  it("shows each item's status in the app's language, not its wire value (T-186)", async () => {
+    renderRegistryPage();
+
+    expect(await screen.findByText("Milk")).toBeInTheDocument();
+    expect(screen.getAllByText("Backlog").length).toBeGreaterThan(0);
+    expect(screen.queryByText("backlog")).not.toBeInTheDocument();
+  });
+
   it("offers the list's categories when editing an item from here (T-145)", async () => {
     renderRegistryPage();
     await userEvent.click(await screen.findByText("Bread"));

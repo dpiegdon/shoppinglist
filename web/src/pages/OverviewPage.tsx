@@ -5,13 +5,14 @@ import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { DEFAULT_LIST_KIND, isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
-import { balancesFor, expenseTotalCents, fromCents } from "../lib/expenses";
+import { balancesFor, expenseTotalCents } from "../lib/expenses";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useAuth } from "../auth/AuthContext";
 import type { Expense } from "../api/contract";
 import type { ListKind } from "../api/contract";
 import { useT } from "../i18n";
 import { byName } from "../lib/nameOrder";
+import { balanceColor, useFormat } from "../lib/format";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
 
@@ -29,6 +30,7 @@ export function _resetInitialResumeForTests() {
 
 export default function OverviewPage() {
   const t = useT();
+  const fmt = useFormat();
   const { lists, items, loading, push, deviceId } = useSyncContext();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -115,12 +117,10 @@ export default function OverviewPage() {
       <span style={{ textAlign: "end", fontWeight: 400, fontSize: "0.85rem" }}>
         <span className="muted" style={{ display: "block" }}>
           {(list.closed_at ?? null) !== null && `${t("expense.closed")} · `}
-          {fromCents(total)} {currency}
+          {fmt.money(total, currency)}
         </span>
         {showBalance && (
-          <span style={{ color: mine.balanceCents < 0 ? "var(--color-danger)" : "var(--color-accent)" }}>
-            {fromCents(mine.balanceCents)} {currency}
-          </span>
+          <span style={{ color: balanceColor(mine.balanceCents) }}>{fmt.money(mine.balanceCents, currency)}</span>
         )}
       </span>
     );
@@ -128,7 +128,8 @@ export default function OverviewPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
-      <h1 style={{ fontSize: "1.3rem" }}>{t("overview.title")}</h1>
+      {/* "Overview", as the menus on both clients call it (T-186); it said "Your lists". */}
+      <h1 style={{ fontSize: "1.3rem" }}>{t("nav.overview")}</h1>
 
       {loading && listArray.length === 0 && <p className="muted">{t("common.loading")}</p>}
       {!loading && listArray.length === 0 && <p className="muted">{t("overview.empty")}</p>}

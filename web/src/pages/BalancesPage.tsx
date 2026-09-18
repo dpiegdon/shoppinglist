@@ -16,6 +16,7 @@ import {
 } from "../lib/expenses";
 import type { Expense } from "../api/contract";
 import { useT } from "../i18n";
+import { balanceColor, useFormat } from "../lib/format";
 
 /**
  * Who is up and who is down on an expenses list (T-155), always summing to zero — and below it,
@@ -24,6 +25,7 @@ import { useT } from "../i18n";
  */
 export default function BalancesPage() {
   const t = useT();
+  const fmt = useFormat();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId } = useSyncContext();
   const { account } = useAuth();
@@ -120,16 +122,16 @@ export default function BalancesPage() {
       <ExpenseListHeader listId={listId} listName={listFieldValue(list, "name") ?? ""} view="balances" />
 
       <p className="muted" style={{ marginTop: 0 }}>
-        {t("expense.totalSpent")}: <strong>{fromCents(totalCents)} {currency}</strong>
+        {t("expense.totalSpent")}: <strong>{fmt.money(totalCents, currency)}</strong>
       </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+      <div className="rows">
         {balances.map((balance) => {
           const member = members.find((m) => m.account_id === balance.accountId);
           return (
             <div
               key={balance.accountId}
-              className="card"
+              className="row"
               style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.6rem 0.75rem" }}
             >
               <span aria-hidden="true" style={{ fontWeight: 700, minWidth: "2.2rem" }}>
@@ -141,23 +143,18 @@ export default function BalancesPage() {
                 </span>
                 <span className="muted" style={{ fontSize: "0.8rem" }}>
                   {t("expense.paidAndShare", {
-                    paid: fromCents(balance.paidCents),
-                    share: fromCents(balance.shareCents),
+                    paid: fmt.number(balance.paidCents),
+                    share: fmt.number(balance.shareCents),
                   })}
                 </span>
               </span>
               <strong
                 style={{
                   whiteSpace: "nowrap",
-                  color:
-                    balance.balanceCents === 0
-                      ? "var(--color-text-muted)"
-                      : balance.balanceCents < 0
-                        ? "var(--color-danger)"
-                        : "var(--color-accent)",
+                  color: balanceColor(balance.balanceCents),
                 }}
               >
-                {fromCents(balance.balanceCents)} {currency}
+                {fmt.money(balance.balanceCents, currency)}
               </strong>
             </div>
           );
@@ -174,18 +171,18 @@ export default function BalancesPage() {
               {t("expense.allSettled")}
             </p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+            <div className="rows">
               {transfers.map((transfer, index) => (
                 <div
                   key={`${index}-${transfer.from}-${transfer.to}`}
-                  className="card"
+                  className="row"
                   style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.6rem 0.75rem" }}
                 >
                   <span dir="auto" style={{ flex: 1, minWidth: 0 }}>
                     {t("expense.transfer", { from: labelFor(transfer.from), to: labelFor(transfer.to) })}
                   </span>
                   <strong style={{ whiteSpace: "nowrap" }}>
-                    {fromCents(transfer.cents)} {currency}
+                    {fmt.money(transfer.cents, currency)}
                   </strong>
                   {canRecord(transfer) && (
                     <button type="button" className="btn btn-secondary" onClick={() => setRecording(transfer)}>

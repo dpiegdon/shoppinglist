@@ -279,7 +279,7 @@ export default function ListPropsPage() {
       </Link>
       <h1 style={{ fontSize: "1.3rem" }}>{t("listProps.title")}</h1>
 
-      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+      <section style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.name")}</h2>
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
           <input value={name} onChange={(e) => setName(e.target.value)} style={{ flex: 1 }} />
@@ -289,7 +289,7 @@ export default function ListPropsPage() {
         </form>
       </section>
 
-      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+      <section style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.type")}</h2>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
@@ -327,7 +327,7 @@ export default function ListPropsPage() {
       {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
           when there's something to clear. */}
       {!isExpenses(listKind(list)) && allChecked.length > 0 && (
-        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+        <section style={{ marginBottom: "1.5rem" }}>
           <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
           <p className="muted" style={{ margin: "0 0 0.6rem" }}>
             {t("listProps.clearCheckedHelp")}
@@ -338,10 +338,7 @@ export default function ListPropsPage() {
         </section>
       )}
 
-      <section
-        className="card"
-        style={{ padding: "1rem", marginBottom: "1rem", display: isExpenses(listKind(list)) ? "none" : undefined }}
-      >
+      <section style={{ marginBottom: "1.5rem", display: isExpenses(listKind(list)) ? "none" : undefined }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
           {t("listProps.categoriesHelp")}
@@ -433,7 +430,7 @@ export default function ListPropsPage() {
       </section>
 
       {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
-      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+      <section style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.notes")}</h2>
         <form onSubmit={saveNotes} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <textarea
@@ -449,7 +446,7 @@ export default function ListPropsPage() {
         </form>
       </section>
 
-      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+      <section style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.members")}</h2>
         {membersError && <p className="error-text">{membersError}</p>}
         {members && (
@@ -520,7 +517,7 @@ export default function ListPropsPage() {
       {/* Closing sits directly above Leave (T-169): they are two stages of one thing — agree to
           close, then, once closed, leave. */}
       {isExpenses(listKind(list)) && (
-        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+        <section style={{ marginBottom: "1.5rem" }}>
           <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("expense.closing")}</h2>
           <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
             {t("expense.closingHelp")}

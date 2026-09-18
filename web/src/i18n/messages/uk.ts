@@ -121,7 +121,6 @@ export const uk: Catalog = {
   "nav.logOut": "Вийти",
   "nav.menu": "Меню",
 
-  "overview.title": "Твої списки",
   "overview.newList": "Новий список",
   "overview.name": "Назва",
   "overview.type": "Тип",
@@ -140,7 +139,7 @@ export const uk: Catalog = {
   "list.addItem": "Додати товар",
 
   "settings.language": "Мова",
-  "settings.title": "Налаштування облікового запису",
+  "settings.title": "Налаштування",
   "settings.serverAdmin": "Адміністрування сервера",
   "settings.defaultCurrency": "Валюта за замовчуванням",
   "settings.currentlyCached": "Зараз у кеші: {currency}",

@@ -116,12 +116,12 @@ export default function RegistryPage() {
 
       {filtered.length === 0 && <p className="muted">{t("list.registry.empty")}</p>}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+      <div className="rows">
         {filtered.map((item) => (
           <button
             key={item.id}
             type="button"
-            className="card"
+            className="row"
             onClick={() => setEditingItem(item)}
             style={{
               display: "flex",
@@ -129,13 +129,13 @@ export default function RegistryPage() {
               alignItems: "center",
               padding: "0.6rem 0.75rem",
               textAlign: "start",
-              border: "1px solid var(--color-border)",
-              color: "var(--color-text)",
             }}
           >
             <span dir="auto">{itemFieldValue(item, "name")}</span>
-            <span className="muted" style={{ fontSize: "0.8rem", textTransform: "capitalize" }}>
-              {itemFieldValue(item, "status")}
+            {/* The translated status (T-186); it showed the raw wire value, in English, whatever
+                the language. */}
+            <span className="muted" style={{ fontSize: "0.8rem" }}>
+              {t(`item.status.${itemFieldValue(item, "status") ?? "backlog"}` as "item.status.backlog")}
             </span>
           </button>
         ))}

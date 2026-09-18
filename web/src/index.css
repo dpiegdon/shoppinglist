@@ -288,6 +288,34 @@ textarea:focus {
   color: var(--color-accent-text);
 }
 
+/* Group headings inside a list — categories, dates (T-183): coloured and centred, as the app
+   draws them. */
+.group-heading {
+  color: var(--color-accent);
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+/* A list's entries as flat rows divided by a thin line (T-184), as the app draws them; only the
+   overview's lists and the expense summary keep cards. */
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--color-text);
+}
+
+.rows > .row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

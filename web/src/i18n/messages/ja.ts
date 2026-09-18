@@ -122,7 +122,6 @@ export const ja: Catalog = {
   "nav.logOut": "ログアウト",
   "nav.menu": "メニュー",
 
-  "overview.title": "あなたのリスト",
   "overview.newList": "新しいリスト",
   "overview.name": "名前",
   "overview.type": "種類",
@@ -141,7 +140,7 @@ export const ja: Catalog = {
   "list.addItem": "アイテムを追加",
 
   "settings.language": "言語",
-  "settings.title": "アカウント設定",
+  "settings.title": "設定",
   "settings.serverAdmin": "サーバー管理",
   "settings.defaultCurrency": "デフォルトの通貨",
   "settings.currentlyCached": "現在のキャッシュ：{currency}",

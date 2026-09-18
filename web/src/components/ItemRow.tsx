@@ -1,5 +1,7 @@
 import type { ItemObject, Member } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
+import { useFormat } from "../lib/format";
+import { toCents } from "../lib/expenses";
 
 interface ItemRowProps {
   item: ItemObject;
@@ -8,6 +10,8 @@ interface ItemRowProps {
   authorMember?: Member;
   /** False on a checklist (T-110): hides the quantity/price detail line. */
   showShoppingFields?: boolean;
+  /** The account's currency, shown for a price that has none of its own — as the app does (T-187). */
+  defaultCurrency?: string | null;
   /** True while this row is animating away after being checked off (T-128). The row is already
    *  logically gone — it is still mounted only so the exit can be seen — so it is inert. */
   exiting?: boolean;
@@ -19,10 +23,12 @@ export default function ItemRow({
   item,
   authorMember,
   showShoppingFields = true,
+  defaultCurrency = null,
   exiting = false,
   onToggle,
   onEdit,
 }: ItemRowProps) {
+  const fmt = useFormat();
   const checked = itemFieldValue(item, "status") === "checked";
   const category = itemFieldValue(item, "category");
   const quantity = itemFieldValue(item, "quantity");
@@ -32,13 +38,14 @@ export default function ItemRow({
   // values the dialog won't let you edit would be confusing. The data itself is untouched.
   const details = !showShoppingFields
     ? ""
-    : [quantity, price ? `${price.amount}${price.currency ? " " + price.currency : ""}` : null]
+    : [quantity, price ? fmt.money(toCents(price.amount), price.currency ?? defaultCurrency) : null]
         .filter(Boolean)
         .join(" · ");
 
   return (
     <div
-      className={exiting ? "card item-exiting" : "card"}
+      // A flat row, as the app draws a list's entries (T-184).
+      className={exiting ? "row item-exiting" : "row"}
       role="button"
       // Inert while exiting: without this a fast double-tap re-toggles a row that is on its way
       // out, and the second tap lands on something the user can no longer really see.

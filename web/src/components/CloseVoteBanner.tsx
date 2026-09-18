@@ -4,6 +4,7 @@ import { ApiError } from "../api/client";
 import type { ListMember } from "../api/contract";
 import { useSyncContext } from "../hooks/SyncContext";
 import { useT } from "../i18n";
+import { useFormat } from "../lib/format";
 
 interface CloseVoteBannerProps {
   listId: string;
@@ -35,6 +36,7 @@ export default function CloseVoteBanner({
   alwaysShow = false,
 }: CloseVoteBannerProps) {
   const t = useT();
+  const fmt = useFormat();
   const { refresh } = useSyncContext();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export default function CloseVoteBanner({
   if (closedAt !== null) {
     return (
       <p className="card" style={{ padding: "0.6rem 0.75rem", margin: "0 0 0.75rem" }}>
-        {t("expense.closedOn", { date: new Date(closedAt).toLocaleDateString() })}
+        {t("expense.closedOn", { date: fmt.day(closedAt) })}
       </p>
     );
   }

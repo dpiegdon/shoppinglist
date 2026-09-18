@@ -119,7 +119,6 @@ export const fr: Catalog = {
   "nav.logOut": "Se déconnecter",
   "nav.menu": "Menu",
 
-  "overview.title": "Tes listes",
   "overview.newList": "Nouvelle liste",
   "overview.name": "Nom",
   "overview.type": "Type",
@@ -138,7 +137,7 @@ export const fr: Catalog = {
   "list.addItem": "Ajouter un article",
 
   "settings.language": "Langue",
-  "settings.title": "Paramètres du compte",
+  "settings.title": "Paramètres",
   "settings.serverAdmin": "Administration du serveur",
   "settings.defaultCurrency": "Devise par défaut",
   "settings.currentlyCached": "En cache actuellement : {currency}",

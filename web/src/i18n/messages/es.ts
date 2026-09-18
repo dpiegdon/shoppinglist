@@ -117,7 +117,6 @@ export const es: Catalog = {
   "nav.logOut": "Cerrar sesión",
   "nav.menu": "Menú",
 
-  "overview.title": "Tus listas",
   "overview.newList": "Nueva lista",
   "overview.name": "Nombre",
   "overview.type": "Tipo",
@@ -136,7 +135,7 @@ export const es: Catalog = {
   "list.addItem": "Añadir artículo",
 
   "settings.language": "Idioma",
-  "settings.title": "Ajustes de la cuenta",
+  "settings.title": "Ajustes",
   "settings.serverAdmin": "Administración del servidor",
   "settings.defaultCurrency": "Moneda predeterminada",
   "settings.currentlyCached": "En caché ahora: {currency}",

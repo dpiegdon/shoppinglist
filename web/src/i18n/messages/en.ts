@@ -144,7 +144,6 @@ export const en = {
   "nav.menu": "Menu",
 
   // ---- overview ----
-  "overview.title": "Your lists",
   "overview.newList": "New list",
   "overview.name": "Name",
   "overview.type": "Type",
@@ -169,7 +168,7 @@ export const en = {
 
   // ---- settings ----
   "settings.language": "Language",
-  "settings.title": "Account settings",
+  "settings.title": "Settings",
   "settings.serverAdmin": "Server admin",
   "settings.defaultCurrency": "Default currency",
   "settings.currentlyCached": "Currently cached: {currency}",

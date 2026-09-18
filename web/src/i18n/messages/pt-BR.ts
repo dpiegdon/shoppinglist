@@ -120,7 +120,6 @@ export const ptBR: Catalog = {
   "nav.logOut": "Sair",
   "nav.menu": "Menu",
 
-  "overview.title": "Suas listas",
   "overview.newList": "Nova lista",
   "overview.name": "Nome",
   "overview.type": "Tipo",
@@ -139,7 +138,7 @@ export const ptBR: Catalog = {
   "list.addItem": "Adicionar item",
 
   "settings.language": "Idioma",
-  "settings.title": "Configurações da conta",
+  "settings.title": "Configurações",
   "settings.serverAdmin": "Administração do servidor",
   "settings.defaultCurrency": "Moeda padrão",
   "settings.currentlyCached": "Em cache agora: {currency}",

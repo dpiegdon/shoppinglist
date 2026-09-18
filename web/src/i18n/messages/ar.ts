@@ -123,7 +123,6 @@ export const ar: Catalog = {
   "nav.logOut": "تسجيل الخروج",
   "nav.menu": "القائمة",
 
-  "overview.title": "قوائمك",
   "overview.newList": "قائمة جديدة",
   "overview.name": "الاسم",
   "overview.type": "النوع",
@@ -142,7 +141,7 @@ export const ar: Catalog = {
   "list.addItem": "إضافة عنصر",
 
   "settings.language": "اللغة",
-  "settings.title": "إعدادات الحساب",
+  "settings.title": "الإعدادات",
   "settings.serverAdmin": "إدارة الخادم",
   "settings.defaultCurrency": "العملة الافتراضية",
   "settings.currentlyCached": "المخزَّن حاليًا: {currency}",

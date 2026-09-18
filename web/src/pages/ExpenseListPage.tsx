@@ -12,11 +12,11 @@ import {
   balancesFor,
   expenseTotalCents,
   formerMemberNumbers,
-  fromCents,
   sortedExpenses,
 } from "../lib/expenses";
 import type { Expense, ItemObject } from "../api/contract";
 import { useT } from "../i18n";
+import { balanceColor, useFormat } from "../lib/format";
 
 /**
  * An expenses list (T-155): who paid what, for whom. None of the shopping apparatus applies —
@@ -25,6 +25,7 @@ import { useT } from "../i18n";
  */
 export default function ExpenseListPage() {
   const t = useT();
+  const fmt = useFormat();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId } = useSyncContext();
   const { account } = useAuth();
@@ -144,17 +145,15 @@ export default function ExpenseListPage() {
           <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>
             {t("expense.totalSpent")}
           </span>
-          <strong>
-            {fromCents(totalCents)} {currency}
-          </strong>
+          <strong>{fmt.money(totalCents, currency)}</strong>
         </span>
         {members.length > 1 && myBalance && (
           <span style={{ textAlign: "end" }}>
             <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>
               {t("expense.yourBalance")}
             </span>
-            <strong style={{ color: myBalance.balanceCents < 0 ? "var(--color-danger)" : "var(--color-accent)" }}>
-              {fromCents(myBalance.balanceCents)} {currency}
+            <strong style={{ color: balanceColor(myBalance.balanceCents) }}>
+              {fmt.money(myBalance.balanceCents, currency)}
             </strong>
           </span>
         )}
@@ -172,18 +171,16 @@ export default function ExpenseListPage() {
 
       {[...byDate.entries()].map(([date, rows]) => (
         <section key={date} style={{ marginBottom: "1rem" }}>
-          {/* Styled like the shopping list's category headings (T-168). */}
-          <h2 className="muted" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
-            {date}
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+          {/* Styled like category headings (T-168, T-183), the date in the app's language (T-180). */}
+          <h2 className="group-heading">{fmt.date(date)}</h2>
+          <div className="rows">
             {rows.map((item) => {
               const expense = itemFieldValue(item, "expense") as Expense;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  className="card"
+                  className="row"
                   disabled={closedAt !== null}
                   onClick={() => setDialogItem(item)}
                   style={{
@@ -192,8 +189,6 @@ export default function ExpenseListPage() {
                     gap: "0.75rem",
                     padding: "0.6rem 0.75rem",
                     textAlign: "start",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--color-text)",
                   }}
                 >
                   <span style={{ minWidth: 0 }}>
@@ -207,9 +202,7 @@ export default function ExpenseListPage() {
                       })}
                     </span>
                   </span>
-                  <strong style={{ whiteSpace: "nowrap" }}>
-                    {fromCents(expenseTotalCents(expense))} {currency}
-                  </strong>
+                  <strong style={{ whiteSpace: "nowrap" }}>{fmt.money(expenseTotalCents(expense), currency)}</strong>
                 </button>
               );
             })}

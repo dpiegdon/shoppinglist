@@ -83,7 +83,7 @@ describe("OverviewPage last-opened-list resume", () => {
     // the list again.
     renderOverview();
 
-    await waitFor(() => expect(screen.getByText("Your lists")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument());
     expect(screen.queryByText("list screen")).not.toBeInTheDocument();
   });
 
@@ -92,7 +92,7 @@ describe("OverviewPage last-opened-list resume", () => {
 
     renderOverview();
 
-    await waitFor(() => expect(screen.getByText("Your lists")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument());
   });
 });
 
@@ -170,9 +170,9 @@ describe("OverviewPage with expenses lists", () => {
     renderOverview();
 
     expect(await screen.findByText("Trip")).toBeInTheDocument();
-    expect(screen.getByText("60.00 CHF")).toBeInTheDocument();
+    expect(screen.getByText(/^CHF\s60\.00$/)).toBeInTheDocument();
     // I paid 60 and owe 30, so the list owes me 30.
-    expect(screen.getByText("30.00 CHF")).toBeInTheDocument();
+    expect(screen.getByText(/^CHF\s30\.00$/)).toBeInTheDocument();
   });
 
   it("asks for a currency when creating an expenses list, and pushes it", async () => {

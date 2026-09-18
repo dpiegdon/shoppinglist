@@ -297,14 +297,16 @@ export default function ListPage() {
         <section key={group.category} style={{ marginBottom: "1rem" }}>
           {/* Not uppercased (T-108): the category's casing is user-controlled now (fixable in the
               item dialog / list settings), so render it verbatim like the Android app does. */}
-          <h2 className="muted" dir="auto" style={{ fontSize: "0.85rem", margin: "0 0 0.4rem" }}>
+          {/* Coloured and centred, as the app draws them (T-183). */}
+          <h2 className="group-heading" dir="auto">
             {group.category}
           </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+          <div className="rows">
             {group.items.map((item) => (
               <ItemRow
                 key={item.id}
                 item={item}
+                defaultCurrency={defaultCurrency}
                 showShoppingFields={showShopping}
                 authorMember={
                   members.length >= 2 ? members.find((m) => m.account_id === item.last_touched_by) : undefined
