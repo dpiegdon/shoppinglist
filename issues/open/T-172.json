@@ -1,0 +1,14 @@
+{
+  "body": "Reported on 1.14.0 (web, and the same layout wanted on Android). On the balances\nview the title is \"Balances\" and does not lead back; the user is not happy with that\nlayout, and on the expense view nothing says that the summary card opens balances.\n\nWanted: the normal list header on both views, as on the other lists (all-lists link,\nlist name), and under it a selector switching between the two views. The user\nsuggested \"overview | balances\"; labelled Expenses | Balances instead, because\n\"Overview\" already names the all-lists screen in both clients.",
+  "created_at": "2026-09-18T13:28:28+00:00",
+  "id": "T-172",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "expense lists: one header for both views, with an Expenses | Balances selector",
+  "updated_at": "2026-09-18T13:28:28+00:00"
+}
