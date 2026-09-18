@@ -1,0 +1,14 @@
+{
+  "body": "Feedback on 1.16.0: on the overview, an expense list shows its total and your\nbalance on both clients, but Android also shows a count (every expense counts as\nan open item, since expenses are stored as todo and never ticked off) and the web\ndoes not. Keep the count, on both \u2014 on the web counted explicitly as the number\nof expenses \u2014 and give it some space from the total/balance on Android, where it\nsat right against them.",
+  "created_at": "2026-09-18T20:38:42+00:00",
+  "id": "T-191",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 3,
+  "title": "overview: an expense list shows its expense count on both clients, with room before it on Android",
+  "updated_at": "2026-09-18T20:38:42+00:00"
+}
