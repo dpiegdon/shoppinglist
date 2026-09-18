@@ -234,7 +234,8 @@ class ExpenseScreensTest {
         composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
-        composeTestRule.onNodeWithText("32.00 EUR").assertIsDisplayed()
+        // Once as my balance and once as the transfer that settles it (T-165).
+        composeTestRule.onAllNodesWithText("32.00 EUR").assertCountEquals(2)
         composeTestRule.onNodeWithText("-32.00 EUR").assertIsDisplayed()
     }
 
@@ -251,7 +252,104 @@ class ExpenseScreensTest {
 
         // Only an account id remains, so there is no name or email to show.
         composeTestRule.onNodeWithText("Former member 1").assertIsDisplayed()
-        composeTestRule.onNodeWithText("10.00 EUR").assertIsDisplayed()
+        // Once as their balance and once as the transfer that would settle it (T-165).
+        composeTestRule.onAllNodesWithText("10.00 EUR").assertCountEquals(2)
         composeTestRule.onNodeWithText("-10.00 EUR").assertIsDisplayed()
+    }
+
+    // ---- settling up (T-165) ---------------------------------------------------
+
+    /** The vote state normally arrives from the server on the list row; seed it directly here. */
+    private suspend fun setClosing(closeVotes: List<String> = emptyList(), closedAt: Long? = null) {
+        val list = listsRepo.getById(listId)!!
+        db.listDao().upsert(list.copy(closeVotesJson = Json.encodeToString(closeVotes), closedAt = closedAt))
+    }
+
+    private fun showBalances(onRecord: (ExpensePrefill) -> Unit = {}) {
+        composeTestRule.setContent { BalancesScreen(onRecord = onRecord, viewModel = viewModel()) }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `settle up says who pays whom, and Record hands over a pre-filled settlement`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        var recorded: ExpensePrefill? = null
+
+        showBalances(onRecord = { recorded = it })
+
+        composeTestRule.onNodeWithText("Settle up").assertIsDisplayed()
+        composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
+        // Once as my balance, once as the transfer.
+        composeTestRule.onAllNodesWithText("32.00 EUR").assertCountEquals(2)
+
+        composeTestRule.onNodeWithText("Record").performClick()
+        val prefill = checkNotNull(recorded)
+        assertEquals("Settlement", prefill.name)
+        assertEquals(mapOf(other to "32.00"), prefill.expense.paidBy)
+        assertEquals(mapOf(me to "32.00"), prefill.expense.paidFor)
+        assertEquals(true, prefill.expense.equalBy)
+        assertEquals(true, prefill.expense.equalFor)
+    }
+
+    @Test
+    fun `nobody can record a settlement with someone who has left`() = runBlocking<Unit> {
+        itemsRepo.createExpense(
+            listId,
+            "Old dinner",
+            Expense(mapOf("acct-gone" to "20.00"), true, mapOf(me to "10.00", "acct-gone" to "10.00"), true, "2026-09-16"),
+        )
+
+        showBalances()
+
+        composeTestRule.onNodeWithText("$me@example.com pays Former member 1").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Record").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a voter's amounts are frozen, so nothing involving them can be recorded`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        setClosing(closeVotes = listOf(other))
+
+        showBalances()
+
+        composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Record").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a closed list keeps the transfers as its archive, with nothing to record`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        setClosing(closeVotes = listOf(me, other), closedAt = 1_758_000_000_000)
+
+        showBalances()
+
+        composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Record").assertDoesNotExist()
+    }
+
+    @Test
+    fun `says all settled when nothing is owed`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        itemsRepo.createExpense(listId, "Lunch", dinner(paidBy = other))
+
+        showBalances()
+
+        composeTestRule.onNodeWithText("All settled").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText(" pays ", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun `a list of one has no settling up`() = runBlocking<Unit> {
+        setMembers(me)
+        itemsRepo.createExpense(
+            listId,
+            "Coffee",
+            Expense(mapOf(me to "12.00"), true, mapOf(me to "12.00"), true, "2026-09-17"),
+        )
+
+        showBalances()
+
+        composeTestRule.onNodeWithText("Total spent: 12.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Settle up").assertDoesNotExist()
     }
 }

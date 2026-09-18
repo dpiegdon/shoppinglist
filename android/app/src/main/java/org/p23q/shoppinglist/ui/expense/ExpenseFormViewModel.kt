@@ -67,6 +67,12 @@ data class ExpenseFormUiState(
 }
 
 /**
+ * What Record on the balances screen hands to the form (T-165). Everything in it stays editable —
+ * changing the total is how a partial settlement is recorded.
+ */
+data class ExpensePrefill(val name: String, val expense: Expense)
+
+/**
  * The expense form (T-154). The total drives: typed shares stay as typed, and everything still on
  * auto absorbs the difference. The arithmetic itself is [ExpenseMath], shared with the web client
  * through one case table; this only holds what the user has typed so far.
@@ -92,25 +98,50 @@ class ExpenseFormViewModel @Inject constructor(
     private var loadedName: String = ""
     private var loadedNote: String? = null
 
-    fun startAdd(listId: String): Job = viewModelScope.launch {
+    fun startAdd(listId: String, prefill: ExpensePrefill? = null): Job = viewModelScope.launch {
         this@ExpenseFormViewModel.listId = listId
         loadList()
-        val me = sessionState.accountId
-        selected = mapOf(
-            // Whoever is adding it paid, unless they are not on the list at all (they always are).
-            Side.PAID_BY to setOfNotNull(me?.takeIf { it in participantIds && !isFrozen(it) }),
-            // A new expense can never involve a frozen participant: that would be a change from
-            // zero for them, which the server refuses.
-            Side.PAID_FOR to participantIds.filterNot(::isFrozen).toSet(),
-        )
-        typed = mapOf(Side.PAID_BY to emptyMap(), Side.PAID_FOR to emptyMap())
         loaded = null
-        _uiState.update {
-            ExpenseFormUiState(
-                isEditMode = false,
-                currency = it.currency,
-                date = LocalDate.now().toString(),
+        if (prefill != null) {
+            val expense = prefill.expense
+            participantIds = (participantIds + expense.paidBy.keys + expense.paidFor.keys).distinct()
+            selected = mapOf(
+                Side.PAID_BY to expense.paidBy.keys.toSet(),
+                Side.PAID_FOR to expense.paidFor.keys.toSet(),
             )
+            // The same reading startEdit gives a stored expense: an equal split comes back as auto,
+            // anything else as typed. A settlement is the equal split of one person on each side,
+            // which is what lets a changed total follow through — that is a partial settlement.
+            typed = mapOf(
+                Side.PAID_BY to (if (expense.equalBy) emptyMap() else expense.paidBy),
+                Side.PAID_FOR to (if (expense.equalFor) emptyMap() else expense.paidFor),
+            )
+            _uiState.update {
+                ExpenseFormUiState(
+                    isEditMode = false,
+                    currency = it.currency,
+                    name = prefill.name,
+                    date = expense.date,
+                    totalText = ExpenseMath.fromCents(ExpenseMath.expenseTotalCents(expense)),
+                )
+            }
+        } else {
+            val me = sessionState.accountId
+            selected = mapOf(
+                // Whoever is adding it paid, unless they are not on the list at all (they always are).
+                Side.PAID_BY to setOfNotNull(me?.takeIf { it in participantIds && !isFrozen(it) }),
+                // A new expense can never involve a frozen participant: that would be a change from
+                // zero for them, which the server refuses.
+                Side.PAID_FOR to participantIds.filterNot(::isFrozen).toSet(),
+            )
+            typed = mapOf(Side.PAID_BY to emptyMap(), Side.PAID_FOR to emptyMap())
+            _uiState.update {
+                ExpenseFormUiState(
+                    isEditMode = false,
+                    currency = it.currency,
+                    date = LocalDate.now().toString(),
+                )
+            }
         }
         recompute()
     }

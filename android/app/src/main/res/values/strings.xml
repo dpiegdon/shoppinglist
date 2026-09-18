@@ -304,5 +304,10 @@
     <string name="expense_closed_on">Closed on %1$s</string>
     <string name="expense_vote_failed">Could not record your vote.</string>
     <string name="expense_frozen">agreed to close — amounts fixed</string>
+    <string name="expense_settle_up">Settle up</string>
+    <string name="expense_transfer">%1$s pays %2$s</string>
+    <string name="expense_record">Record</string>
+    <string name="expense_all_settled">All settled</string>
+    <string name="expense_settlement">Settlement</string>
     <string name="listprops_leave_blocked">An expenses list can only be left once it is closed.</string>
 </resources>

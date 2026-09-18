@@ -257,5 +257,10 @@
     <string name="expense_closed_on">已于 %1$s 结算</string>
     <string name="expense_vote_failed">无法记录你的投票。</string>
     <string name="expense_frozen">已同意结算 — 金额已锁定</string>
+    <string name="expense_settle_up">结算</string>
+    <string name="expense_transfer">%1$s 支付给 %2$s</string>
+    <string name="expense_record">记录</string>
+    <string name="expense_all_settled">已全部结清</string>
+    <string name="expense_settlement">还款</string>
     <string name="listprops_leave_blocked">支出清单结算后才能退出。</string>
 </resources>

@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -62,6 +63,7 @@ import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.ui.expense.BalancesScreen
 import org.p23q.shoppinglist.ui.expense.ExpenseDialog
 import org.p23q.shoppinglist.ui.expense.ExpenseListScreen
+import org.p23q.shoppinglist.ui.expense.ExpensePrefill
 import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.listprops.ListPropsScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
@@ -287,12 +289,23 @@ fun ShoppingListNavHost(
         }
         composable(Routes.BALANCES_PATTERN) { backStackEntry ->
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
+            // Plain remember, not rememberSaveable: the prefill is not Parcelable, and losing an
+            // unsaved settlement form to process death costs one tap to reopen.
+            var recording by remember { mutableStateOf<ExpensePrefill?>(null) }
             AppDrawerScaffold(
                 navController = navController,
                 title = stringResource(R.string.expense_balances),
                 onTitleClick = { navController.backToList(listId) },
             ) {
-                BalancesScreen()
+                BalancesScreen(onRecord = { recording = it })
+                recording?.let { prefill ->
+                    ExpenseDialog(
+                        listId = listId,
+                        itemId = null,
+                        prefill = prefill,
+                        onDismiss = { recording = null },
+                    )
+                }
             }
         }
         composable(Routes.LIST_PROPS_PATTERN) { backStackEntry ->

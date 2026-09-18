@@ -257,5 +257,10 @@
     <string name="expense_closed_on">%1$s に締め済み</string>
     <string name="expense_vote_failed">投票を記録できませんでした。</string>
     <string name="expense_frozen">締めに同意済み — 金額は確定</string>
+    <string name="expense_settle_up">精算</string>
+    <string name="expense_transfer">%1$s が %2$s に支払う</string>
+    <string name="expense_record">記録する</string>
+    <string name="expense_all_settled">すべて精算済み</string>
+    <string name="expense_settlement">返済</string>
     <string name="listprops_leave_blocked">支出リストは締めたあとにのみ退出できます。</string>
 </resources>

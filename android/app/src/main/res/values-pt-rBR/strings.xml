@@ -257,5 +257,10 @@
     <string name="expense_closed_on">Encerrada em %1$s</string>
     <string name="expense_vote_failed">Não foi possível registrar seu voto.</string>
     <string name="expense_frozen">concordou em encerrar — valores fixados</string>
+    <string name="expense_settle_up">Acertar contas</string>
+    <string name="expense_transfer">%1$s paga %2$s</string>
+    <string name="expense_record">Registrar</string>
+    <string name="expense_all_settled">Tudo acertado</string>
+    <string name="expense_settlement">Acerto</string>
     <string name="listprops_leave_blocked">Uma lista de despesas só pode ser deixada depois de encerrada.</string>
 </resources>

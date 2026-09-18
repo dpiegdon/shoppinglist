@@ -56,13 +56,15 @@ import org.p23q.shoppinglist.ui.LocalizedOverlay
  * Add or edit one expense (T-154). Full-screen with a fixed action bar for the same reason
  * AddItemDialog is (T-80): the soft keyboard must never cover the buttons.
  *
- * [itemId] null means a new expense on [listId]; otherwise that expense is edited.
+ * [itemId] null means a new expense on [listId]; otherwise that expense is edited. [prefill]
+ * seeds a new expense with what Record on the balances screen chose (T-165).
  */
 @Composable
 fun ExpenseDialog(
     listId: String,
     itemId: String?,
     onDismiss: () -> Unit,
+    prefill: ExpensePrefill? = null,
     viewModel: ExpenseFormViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,7 +72,7 @@ fun ExpenseDialog(
     val keyboard = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(listId, itemId) {
-        if (itemId == null) viewModel.startAdd(listId) else viewModel.startEdit(itemId)
+        if (itemId == null) viewModel.startAdd(listId, prefill) else viewModel.startEdit(itemId)
     }
     LaunchedEffect(state.isSaved, state.isDeleted) {
         if (state.isSaved || state.isDeleted) onDismiss()

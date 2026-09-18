@@ -381,4 +381,53 @@ class ExpenseFormViewModelTest {
 
         assertTrue(viewModel.uiState.value.paidFor.first { it.accountId == other }.frozen)
     }
+
+    // ---- a pre-filled settlement (T-165) ---------------------------------------
+
+    private fun settlement(amount: String = "22.00") = ExpensePrefill(
+        name = "Settlement",
+        expense = Expense(mapOf(other to amount), true, mapOf(me to amount), true, "2026-09-18"),
+    )
+
+    @Test
+    fun `a prefilled settlement opens with its name, total, payer and payee`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId, settlement()).join()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.isEditMode)
+            assertEquals("Settlement", state.name)
+            assertEquals("22.00", state.totalText)
+            assertEquals("2026-09-18", state.date)
+            // Rows follow the roster order (me, other): the other paid, and it was for me.
+            assertEquals(listOf(false, true), state.paidBy.map { it.selected })
+            assertEquals(listOf(true, false), state.paidFor.map { it.selected })
+            assertTrue(state.canSave)
+        }
+
+    @Test
+    fun `saving a prefilled settlement writes an ordinary expense`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId, settlement()).join()
+            viewModel.save()!!.join()
+
+            assertEquals("Settlement", itemsRepo.activeItemsForListOnce(listId).first().name.value)
+            val stored = storedExpense()
+            assertEquals(mapOf(other to "22.00"), stored.paidBy)
+            assertEquals(mapOf(me to "22.00"), stored.paidFor)
+        }
+
+    @Test
+    fun `a partial settlement is a changed total`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId, settlement()).join()
+        viewModel.onTotalChange("10.00")
+        viewModel.save()!!.join()
+
+        val stored = storedExpense()
+        assertEquals(mapOf(other to "10.00"), stored.paidBy)
+        assertEquals(mapOf(me to "10.00"), stored.paidFor)
+    }
 }

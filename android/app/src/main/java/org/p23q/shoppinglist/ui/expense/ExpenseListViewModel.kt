@@ -42,9 +42,26 @@ data class ExpenseListUiState(
     val closedAt: Long? = null,
     val isVoting: Boolean = false,
     val voteError: Boolean = false,
+    /** Who pays whom to zero the balances (T-165), in the order the shared algorithm fixes. */
+    val transfers: List<ExpenseMath.Transfer> = emptyList(),
 ) {
     val isClosed: Boolean get() = closedAt != null
     val iHaveVoted: Boolean get() = myAccountId != null && myAccountId in closeVotes
+
+    /** One person cannot owe themselves, and with no expenses there is nothing to say either way. */
+    val showSettleUp: Boolean get() = balances.size > 1 && rows.isNotEmpty()
+
+    /**
+     * Record is offered only where it can succeed (T-165): the list is open, both parties are
+     * current members, and neither has agreed to close — the freeze rule would refuse the expense
+     * otherwise. Everywhere else the row is display only; on a closed list that is the archive.
+     */
+    fun canRecord(transfer: ExpenseMath.Transfer): Boolean {
+        val current = members.map { it.accountId }.toSet()
+        return !isClosed &&
+            transfer.from in current && transfer.to in current &&
+            transfer.from !in closeVotes && transfer.to !in closeVotes
+    }
 }
 
 /**
@@ -105,6 +122,7 @@ class ExpenseListViewModel @Inject constructor(
                                 .thenByDescending { it.item.createdAt },
                         )
                     val expenses = rows.map { it.expense }
+                    val balances = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
                     _uiState.update {
                         it.copy(
                             currency = list?.currency?.value.orEmpty(),
@@ -114,7 +132,8 @@ class ExpenseListViewModel @Inject constructor(
                             members = members,
                             rows = rows,
                             totalCents = expenses.sumOf(ExpenseMath::expenseTotalCents),
-                            balances = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId }),
+                            balances = balances,
+                            transfers = ExpenseMath.settle(balances),
                             formerMemberNumbers = ExpenseMath.formerMemberNumbers(
                                 expenses,
                                 members.map { m -> m.accountId }.toSet(),
