@@ -11,6 +11,7 @@ import { useAuth } from "../auth/AuthContext";
 import type { Expense } from "../api/contract";
 import type { ListKind } from "../api/contract";
 import { useT } from "../i18n";
+import { byName } from "../lib/nameOrder";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
 
@@ -83,9 +84,8 @@ export default function OverviewPage() {
     setCreating(false);
   }
 
-  const listArray = Array.from(lists.values()).sort((a, b) =>
-    (listFieldValue(a, "name") ?? "").localeCompare(listFieldValue(b, "name") ?? ""),
-  );
+  // The shared name order (T-176): the same on Android, emoji-led and accented names included.
+  const listArray = Array.from(lists.values()).sort(byName((list) => listFieldValue(list, "name") ?? "", (list) => list.id));
 
   // Open (todo) item count per list, for an at-a-glance "is a trip pending" hint (T-42).
   const openCounts = new Map<string, number>();

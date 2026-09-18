@@ -1,11 +1,13 @@
 package org.p23q.shoppinglist.data.repo
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ListMember
+import org.p23q.shoppinglist.data.NameOrder
 import org.p23q.shoppinglist.data.db.ListDao
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.toLww
@@ -19,7 +21,10 @@ class ListsRepo @Inject constructor(
     private val deviceId: DeviceIdProvider,
     private val syncTrigger: SyncTrigger,
 ) {
-    fun activeLists(): Flow<List<ListEntity>> = listDao.activeLists()
+    /** Every live list in the shared name order (T-176) — sorted here, not in SQL, because SQLite's
+     *  NOCASE folds only A-Z and the web orders by the same rules as this. */
+    fun activeLists(): Flow<List<ListEntity>> =
+        listDao.activeLists().map { lists -> lists.sortedWith(NameOrder.by({ it.name.value }, { it.id })) }
 
     suspend fun getById(listId: String): ListEntity? = listDao.getById(listId)
 

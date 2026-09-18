@@ -8,6 +8,7 @@ import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog"
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { ItemObject } from "../api/contract";
 import { useT } from "../i18n";
+import { byName } from "../lib/nameOrder";
 
 export default function RegistryPage() {
   const t = useT();
@@ -44,9 +45,7 @@ export default function RegistryPage() {
     const matching = q
       ? listItems.filter((i) => (itemFieldValue(i, "name") ?? "").toLowerCase().includes(q))
       : listItems;
-    return [...matching].sort((a, b) =>
-      (itemFieldValue(a, "name") ?? "").localeCompare(itemFieldValue(b, "name") ?? ""),
-    );
+    return [...matching].sort(byName((item) => itemFieldValue(item, "name") ?? "", (item) => item.id));
   }, [listItems, query]);
 
   if (!listId) return <Navigate to="/" replace />;

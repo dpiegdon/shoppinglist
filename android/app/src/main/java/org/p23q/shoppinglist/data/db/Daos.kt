@@ -128,7 +128,8 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE id = :id")
     fun observeById(id: String): Flow<ListEntity?>
 
-    @Query("SELECT * FROM lists WHERE deleted_value = 0 ORDER BY name_value COLLATE NOCASE")
+    // Unordered on purpose: ListsRepo sorts in the shared name order (T-176).
+    @Query("SELECT * FROM lists WHERE deleted_value = 0")
     fun activeLists(): Flow<List<ListEntity>>
 
     /** Any non-deleted list id, for the accountId self-heal's members lookup (T-74). */

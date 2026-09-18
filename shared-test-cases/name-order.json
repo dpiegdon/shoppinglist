@@ -1,0 +1,84 @@
+{
+  "_comment": [
+    "Cross-client name order (T-176): lists on the overview, categories, items, the All items",
+    "screen. ONE file, read by BOTH test suites, like expense-arithmetic.json: web/src/lib/",
+    "nameOrder.test.ts imports it and Android's NameOrderTest reads it from the repo root.",
+    "",
+    "The sort key of a name: NFKD-decompose it, drop every combining mark (so accents go), lowercase",
+    "it without a locale, fold the few letters that do not decompose (ß ss, æ ae, œ oe, ø o, đ d,",
+    "ł l, þ th), then drop anything before the first letter or digit — emoji, symbols, spaces.",
+    "Keys compare by UTF-16 code unit, as both JavaScript and Kotlin compare strings. Equal keys",
+    "fall back to the full name, the same way, and then to the id, so the order is total.",
+    "",
+    "Deliberately not a platform collator: Intl.Collator and java.text.Collator disagree in",
+    "details, and the point of this is that both clients agree exactly. Digits are not read as",
+    "numbers: '10 things' sorts before '2 things'. Kana voicing marks decompose into combining",
+    "marks too, so ご sorts with こ, which is also how a Japanese dictionary orders them."
+  ],
+  "keys": [
+    { "name": "Groceries", "key": "groceries" },
+    { "name": "Äpfel", "key": "apfel" },
+    { "name": "Élan", "key": "elan" },
+    { "name": "🍕 Pizza night", "key": "pizza night" },
+    { "name": "🎉🎉", "key": "" },
+    { "name": "  Trip", "key": "trip" },
+    { "name": "#1 Party", "key": "1 party" },
+    { "name": "1️⃣ First", "key": "1 first" },
+    { "name": "Straße", "key": "strasse" },
+    { "name": "Œuvres", "key": "oeuvres" },
+    { "name": "Ørsted", "key": "orsted" },
+    { "name": "Łódź", "key": "lodz" },
+    { "name": "Ёлка", "key": "елка" },
+    { "name": "ＦＵＬＬ", "key": "full" },
+    { "name": "りんご", "key": "りんこ" }
+  ],
+  "orders": [
+    {
+      "name": "accents, case and a leading emoji do not move a name out of its letter",
+      "lists": [
+        { "id": "z", "name": "Zucker" },
+        { "id": "a1", "name": "Äpfel" },
+        { "id": "a2", "name": "apples" },
+        { "id": "b", "name": "Bananen" },
+        { "id": "p", "name": "🍕 Pizza" },
+        { "id": "e", "name": "élan" }
+      ],
+      "expect": ["a1", "a2", "b", "e", "p", "z"]
+    },
+    {
+      "name": "equal keys fall back to the full name, then the id",
+      "lists": [
+        { "id": "b", "name": "Trip" },
+        { "id": "c", "name": "trip" },
+        { "id": "a", "name": "Trip" }
+      ],
+      "expect": ["a", "b", "c"]
+    },
+    {
+      "name": "a name with no letters or digits sorts first",
+      "lists": [
+        { "id": "alpha", "name": "Alpha" },
+        { "id": "party", "name": "🎉" }
+      ],
+      "expect": ["party", "alpha"]
+    },
+    {
+      "name": "digits are characters, not numbers",
+      "lists": [
+        { "id": "alpha", "name": "Alpha" },
+        { "id": "two", "name": "2 things" },
+        { "id": "ten", "name": "10 things" }
+      ],
+      "expect": ["ten", "two", "alpha"]
+    },
+    {
+      "name": "Cyrillic sorts within itself, ё with е",
+      "lists": [
+        { "id": "ya", "name": "Яблоки" },
+        { "id": "yo", "name": "Ёлка" },
+        { "id": "a", "name": "Арбуз" }
+      ],
+      "expect": ["a", "yo", "ya"]
+    }
+  ]
+}

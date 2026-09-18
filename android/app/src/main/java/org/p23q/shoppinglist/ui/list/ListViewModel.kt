@@ -10,13 +10,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.NameOrder
 import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.MemberDto
@@ -278,12 +279,13 @@ private fun groupByCategory(items: List<ItemEntity>, categoryOrder: List<String>
         .distinct()
     val leftover = byKey.keys
         .filter { it.isNotEmpty() && it !in orderedKeys }
-        .sortedBy { (names[it] ?: it).lowercase() }
+        // The shared name order (T-176), the same as the web's.
+        .sortedWith(compareBy(NameOrder.names) { key: String -> names[key] ?: key }.thenBy { it })
     val keys = orderedKeys + leftover + (if (byKey.containsKey("")) listOf("") else emptyList())
     return keys.map { key ->
         ItemGroup(
             category = if (key.isEmpty()) null else names[key] ?: key,
-            items = byKey.getValue(key).sortedBy { it.name.value.lowercase() },
+            items = byKey.getValue(key).sortedWith(NameOrder.by({ it.name.value }, { it.id })),
         )
     }
 }

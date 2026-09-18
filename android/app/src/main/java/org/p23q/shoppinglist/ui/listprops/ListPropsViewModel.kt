@@ -11,24 +11,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.CategoryCanon
+import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.NameOrder
+import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.CreateInviteRequest
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.api.PendingInviteDto
-import org.p23q.shoppinglist.data.CategoryCanon
-import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
-import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
 import javax.inject.Inject
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.UiText
 
 data class ListPropsUiState(
     val name: String = "",
@@ -304,6 +305,7 @@ private fun List<String>.swap(i: Int, j: Int): List<String> =
 private fun buildCategoryDisplay(currentOrder: List<String>, rawCategories: List<String>): List<String> {
     val names = CategoryCanon.canonicalNames(rawCategories, currentOrder)
     val orderedKeys = currentOrder.map { CategoryCanon.key(it) }.filter { it.isNotEmpty() }.distinct()
-    val leftover = names.keys.filter { it !in orderedKeys }.sortedBy { names.getValue(it).lowercase() }
+    val leftover = names.keys.filter { it !in orderedKeys }
+        .sortedWith(compareBy(NameOrder.names) { key: String -> names.getValue(key) }.thenBy { it })
     return (orderedKeys + leftover).mapNotNull { names[it] }
 }

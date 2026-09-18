@@ -1,6 +1,7 @@
 import type { ItemObject } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { canonicalCategoryNames, categoryKey, UNCATEGORIZED_LABEL } from "./categories";
+import { byName, compareNames } from "./nameOrder";
 
 export interface CategoryGroup {
   /** Case-insensitive grouping key ("" = uncategorized), as produced by `categoryKey`. Exposed
@@ -54,7 +55,8 @@ export function groupVisibleItems(
   }
 
   for (const bucket of byKey.values()) {
-    bucket.sort((a, b) => (itemFieldValue(a, "name") ?? "").localeCompare(itemFieldValue(b, "name") ?? ""));
+    // The shared name order (T-176), so both clients list a category's items alike.
+    bucket.sort(byName((item) => itemFieldValue(item, "name") ?? "", (item) => item.id));
   }
 
   const displayName = (key: string) =>
@@ -71,7 +73,7 @@ export function groupVisibleItems(
   }
   const remaining = Array.from(byKey.keys())
     .filter((key) => key !== UNCATEGORIZED_KEY && !seen.has(key))
-    .sort((a, b) => displayName(a).localeCompare(displayName(b)));
+    .sort((a, b) => compareNames(displayName(a), displayName(b)) || (a < b ? -1 : a > b ? 1 : 0));
   orderedKeys.push(...remaining);
   if (byKey.has(UNCATEGORIZED_KEY)) orderedKeys.push(UNCATEGORIZED_KEY);
 

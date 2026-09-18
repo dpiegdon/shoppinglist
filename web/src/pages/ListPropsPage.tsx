@@ -12,6 +12,7 @@ import { useAuth } from "../auth/AuthContext";
 import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
+import { compareNames } from "../lib/nameOrder";
 
 export default function ListPropsPage() {
   const t = useT();
@@ -71,7 +72,7 @@ export default function ListPropsPage() {
     ...orderedKeys.filter((k) => canonicalNames.has(k)),
     ...Array.from(canonicalNames.keys())
       .filter((k) => !orderedKeys.includes(k))
-      .sort((a, b) => canonicalNames.get(a)!.localeCompare(canonicalNames.get(b)!)),
+      .sort((a, b) => compareNames(canonicalNames.get(a)!, canonicalNames.get(b)!) || (a < b ? -1 : a > b ? 1 : 0)),
   ];
   const orderIndexOf = (key: string) => categoryOrder.findIndex((e) => categoryKey(e) === key);
 
