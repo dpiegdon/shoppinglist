@@ -1,0 +1,12 @@
+{
+  "body": "Found while checking the consistency pass in a browser: /list/<id>/properties opened\ndirectly (a reload, a bookmark, a deep link) redirects to the overview, because\nListPropsPage navigates away when the list is not in sync state yet \u2014 which it\nnever is on the first render of a cold load. The same bug the All items screen had\nuntil T-146, fixed there by waiting for the first sync instead of redirecting.",
+  "created_at": "2026-09-18T18:41:42+00:00",
+  "id": "T-188",
+  "labels": [
+    "bug",
+    "web"
+  ],
+  "priority": 3,
+  "title": "web: opening list settings by link or reload bounces to the overview",
+  "updated_at": "2026-09-18T18:41:42+00:00"
+}
