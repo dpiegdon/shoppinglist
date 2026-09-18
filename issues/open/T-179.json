@@ -1,0 +1,12 @@
+{
+  "body": "Android shopping lists show nothing when empty; expense lists and both web list kinds show an empty-state line.",
+  "created_at": "2026-09-18T17:50:09+00:00",
+  "id": "T-179",
+  "labels": [
+    "ux",
+    "android"
+  ],
+  "priority": 2,
+  "title": "android: an empty shopping list says so",
+  "updated_at": "2026-09-18T17:50:09+00:00"
+}
