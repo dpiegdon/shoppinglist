@@ -4,3 +4,4 @@
 {"actor": "claude", "at": "2026-09-18T09:54:34+00:00", "kind": "dependency", "ref": "main@b86f96a", "text": "T-163 T-164 T-165"}
 {"actor": "claude", "at": "2026-09-18T09:54:34+00:00", "kind": "updated", "ref": "main@b86f96a", "text": "fields updated"}
 {"actor": "claude", "at": "2026-09-18T10:46:08+00:00", "kind": "note", "ref": "main@096b117", "text": "Phase 3 done: T-163 (algorithm + shared cases), T-164 (web), T-165 (Android). verify-all green on all four stages."}
+{"actor": "claude", "at": "2026-09-18T10:46:08+00:00", "kind": "closed", "ref": "main@096b117", "text": ""}
