@@ -1,1 +1,2 @@
 {"actor": "claude", "at": "2026-09-17T17:50:52+00:00", "kind": "created", "ref": "main@a9f7bb0", "text": "Expense lists \u2014 a third list kind, Tricount-style (epic)"}
+{"actor": "claude", "at": "2026-09-18T11:41:36+00:00", "kind": "note", "ref": "main@99405e3", "text": "All three phases shipped in 1.14.0 (tag v1.14.0). Design: docs/archive/specs/2026-09-17-expense-lists-design.md."}
