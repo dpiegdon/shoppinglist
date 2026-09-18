@@ -1,0 +1,13 @@
+{
+  "body": "ItemsRepo.decodeExpense (android/.../data/repo/ItemsRepo.kt:120) decodes the stored expense JSON with Json.Default, which is strict, and returns null on any failure; ExpenseListViewModel then drops the row with mapNotNull. The API client's Json is configured with ignoreUnknownKeys = true (ApiProvider.kt:24), but the expense value is stored as a raw string and decoded later with the default instance.\n\nToday the server strips unknown keys from an expense before storing it, so this cannot happen. The moment a server release adds a key to the expense object, every expense would silently vanish from every Android list until the app is updated, with no error anywhere.\n\nFix: decode with the lenient instance (inject the API Json, or a shared one with ignoreUnknownKeys), and add a DtoTest/ItemsRepoTest that an expense with an extra key still decodes.",
+  "created_at": "2026-09-18T22:55:36+00:00",
+  "id": "T-205",
+  "labels": [
+    "reliability",
+    "ready",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "Android decodes stored expenses with strict Json.Default; one new server key would hide every expense",
+  "updated_at": "2026-09-18T22:55:36+00:00"
+}
