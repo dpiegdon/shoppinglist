@@ -1,0 +1,14 @@
+{
+  "body": "Follow-up to T-192, from the user: once a member has voted to close, no action may\nchange history relevant to their total \u2014 adding, editing or deleting an expense\nthat involves them, by anyone \u2014 and they themselves may not change anything on the\nlist.\n\nThe second half extends T-192 from adding to every change a voter makes: expense\nedits and deletions, and the list's own fields (name, notes). The first half is the\nfreeze (T-157), which already refuses any write that would move a voter's amounts,\ndeletion included; kept, and now visible on the clients: Delete is disabled on an\nexpense involving someone whose amounts are fixed, with the reason.\n\nApplied only to a write that would win last-write-wins, as the freeze is, so a\nvoter's stale offline edit is discarded rather than quarantined. Membership actions\n(invites) are not list content and are not covered.",
+  "created_at": "2026-09-18T21:25:03+00:00",
+  "id": "T-193",
+  "labels": [
+    "expenses",
+    "server",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "expense lists: a voter changes nothing, and nothing that touches a voter's total can change",
+  "updated_at": "2026-09-18T21:25:03+00:00"
+}
