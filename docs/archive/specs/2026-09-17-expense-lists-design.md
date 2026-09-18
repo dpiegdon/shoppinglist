@@ -25,6 +25,8 @@ the reasons, which the tickets deliberately do not repeat.
 | Account deletion | Always allowed (GDPR). A departed member's shares and balance remain as a "former member". |
 | Kind changes | `expenses` is fixed for life; a list of another kind cannot become one. |
 | Solo use | Fully supported. One participant, trivial splits, closing is one vote. |
+| What a settlement is | An ordinary expense, recorded through the ordinary form. No flag, no second item shape. See "Settling up". |
+| Settlements and the total | They count. "Total spent" is money that moved. A flag to exclude them would have to be offered on every create and edit, and was not worth that. |
 
 ## The data model
 
@@ -226,6 +228,64 @@ credit first. The balances always sum to zero.
 **Non-copyable** is a client rule only — the server cannot tell a copy from
 a fresh list — so the app simply does not offer duplicate for this kind.
 
+## Settling up
+
+Phase 3. The balances say who is owed what; this says who should pay whom
+to make them all zero. It is computed on the client from the balances and
+nothing about it is stored, synced or known to the server.
+
+**The algorithm.** Greedy. Take the largest debtor and the largest creditor,
+transfer the smaller of the two amounts, drop whoever reaches zero, repeat
+until nobody is left. Exact in cents, since the balances are, and it needs
+at most one transfer fewer than the number of people with a balance. It does
+not always find the fewest possible transfers — that problem is NP-hard and
+the greedy answer is what every app in this space shows — so a shorter
+hand-found settlement is not a bug.
+
+Both clients must show the same list, so the order is fixed: candidates are
+taken by amount descending, then by account id, and the transfers are
+listed in the order they are found. The case group `settle` in
+`shared-test-cases/expense-arithmetic.json` pins this for both
+implementations, including ties.
+
+**Who appears.** Everyone with a non-zero balance, former members included,
+labelled as the balances screen already labels them. A solo list hides the
+section: one person cannot owe themselves.
+
+**Recording a payment.** Each suggestion offers *Record* when, and only
+when, recording can succeed: the list is open, both parties are current
+members, and neither has voted to close. Otherwise the row is display only.
+On a closed list there are no buttons; the suggestions are part of the
+archive, the plain statement of what was owed at the end.
+
+*Record* opens the ordinary expense form pre-filled: the title "Settlement"
+in the recorder's language as plain, editable text; the amount as the
+total; the payer as the sole payer; the payee as the sole beneficiary;
+today's date. Saving creates an ordinary expense, which zeroes the pair's
+mutual balance. Editing the total first is how a partial settlement works.
+Everything downstream — last-write-wins, sync, the freeze, the closed
+state, deletion — applies unchanged, because nothing new exists.
+
+A recorded settlement therefore counts toward "Total spent". Accepted (see
+the decisions table): the alternative was a settlement flag that the form
+would have had to offer on every create and edit so that any expense could
+be marked or unmarked, and the total would still have needed a caption.
+
+**Why not one tap.** Creating the expense directly, without the form, saves
+a tap and costs two things: a mis-tap is an expense on everyone's list, and
+a frozen participant becomes an error to explain instead of a locked row
+in a form the user already knows. The form is the safer step.
+
+**The freeze and settling.** A recorded settlement changes both balances,
+so it cannot involve anyone who has voted to close; that is the freeze rule
+doing exactly what it was for. The order of operations at the end of a
+trip is: settle, then vote. The suggestions on a closing list are what to
+settle.
+
+**Screen.** Balances, below the rows, under "Settle up": one line per
+transfer, "Bob → Alice 12.50", with *Record* where allowed. "All settled"
+once there are expenses but nothing to transfer.
+
 ## Sync and offline
 
 The server is the authority for every rule; the clients pre-check only so
@@ -255,6 +315,10 @@ where a sync row is involved.
 2. **The rules.** Close votes, the closed state and its refusals, the leave
    rule, the freeze rule, no delete. Both clients' banners, vote controls and
    rejection handling.
-3. **Settlement suggestions** — "who pays whom". Not designed yet.
+3. **Settling up.** Who pays whom, computed from the balances on the
+   client, with *Record* pre-filling the ordinary form. No server change.
+   See "Settling up".
 
-Each phase is a release.
+Each phase was planned as a release. In the event nothing had shipped by the
+time all three were built, so they go out together as one — one device round
+and one real migration for the user instead of three.
