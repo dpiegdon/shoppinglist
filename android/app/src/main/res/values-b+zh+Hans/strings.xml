@@ -250,7 +250,7 @@
     <string name="listprops_kind_expenses">共同支出，并显示每位成员的余额。</string>
     <string name="listprops_kind_fixed">支出清单的类型和货币始终不可更改。</string>
     <string name="expense_closing">结算</string>
-    <string name="expense_closing_help">需要所有人同意。结算后清单变为只读记录，并且可以退出。</string>
+    <string name="expense_closing_help">需要所有人同意。一旦你同意，你的金额即被锁定：不能再添加或更改任何涉及你的支出。结算后清单变为只读记录，并且可以退出。</string>
     <string name="expense_agree_to_close">同意结算</string>
     <string name="expense_withdraw_vote">撤回</string>
     <string name="expense_agree_count">%2$d 人中已有 %1$d 人同意结算</string>

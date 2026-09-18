@@ -297,7 +297,7 @@
     <string name="listprops_kind_expenses">Shared costs, with a balance per member.</string>
     <string name="listprops_kind_fixed">An expenses list keeps its type and its currency for life.</string>
     <string name="expense_closing">Closing</string>
-    <string name="expense_closing_help">Everyone has to agree. Once closed, the list is a read-only record and can be left.</string>
+    <string name="expense_closing_help">Everyone has to agree. Once you agree, your amounts are fixed: nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.</string>
     <string name="expense_agree_to_close">Agree to close</string>
     <string name="expense_withdraw_vote">Withdraw</string>
     <string name="expense_agree_count">%1$d of %2$d agree to close</string>

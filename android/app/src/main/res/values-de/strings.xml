@@ -250,7 +250,7 @@
     <string name="listprops_kind_expenses">Geteilte Kosten, mit einem Saldo pro Mitglied.</string>
     <string name="listprops_kind_fixed">Eine Ausgabenliste behält ihren Typ und ihre Währung dauerhaft.</string>
     <string name="expense_closing">Abschließen</string>
-    <string name="expense_closing_help">Alle müssen zustimmen. Danach ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.</string>
+    <string name="expense_closing_help">Alle müssen zustimmen. Sobald du zustimmst, sind deine Beträge festgeschrieben: Nichts, was dich betrifft, kann noch hinzugefügt oder geändert werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.</string>
     <string name="expense_agree_to_close">Abschluss zustimmen</string>
     <string name="expense_withdraw_vote">Zurückziehen</string>
     <string name="expense_agree_count">%1$d von %2$d stimmen dem Abschluss zu</string>

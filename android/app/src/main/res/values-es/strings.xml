@@ -250,7 +250,7 @@
     <string name="listprops_kind_expenses">Gastos compartidos, con un saldo por miembro.</string>
     <string name="listprops_kind_fixed">Una lista de gastos conserva su tipo y su moneda para siempre.</string>
     <string name="expense_closing">Cierre</string>
-    <string name="expense_closing_help">Todos deben estar de acuerdo. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.</string>
+    <string name="expense_closing_help">Todos deben estar de acuerdo. Al aceptar, tus importes quedan fijados: no se puede añadir ni cambiar nada que te incluya. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.</string>
     <string name="expense_agree_to_close">Aceptar cerrar</string>
     <string name="expense_withdraw_vote">Retirar</string>
     <string name="expense_agree_count">%1$d de %2$d aceptan cerrar</string>

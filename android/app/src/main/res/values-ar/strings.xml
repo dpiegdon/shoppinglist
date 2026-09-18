@@ -250,7 +250,7 @@
     <string name="listprops_kind_expenses">تكاليف مشتركة مع رصيد لكل عضو.</string>
     <string name="listprops_kind_fixed">قائمة المصروفات تحتفظ بنوعها وعملتها دائمًا.</string>
     <string name="expense_closing">الإغلاق</string>
-    <string name="expense_closing_help">يجب أن يوافق الجميع. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.</string>
+    <string name="expense_closing_help">يجب أن يوافق الجميع. بمجرد موافقتك تصبح مبالغك ثابتة: لا يمكن إضافة أو تغيير أي شيء يخصك. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.</string>
     <string name="expense_agree_to_close">الموافقة على الإغلاق</string>
     <string name="expense_withdraw_vote">سحب الموافقة</string>
     <string name="expense_agree_count">%1$d من %2$d وافقوا على الإغلاق</string>

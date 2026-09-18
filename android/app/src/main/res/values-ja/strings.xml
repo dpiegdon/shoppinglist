@@ -250,7 +250,7 @@
     <string name="listprops_kind_expenses">共同の支出と、メンバーごとの残高。</string>
     <string name="listprops_kind_fixed">支出リストの種類と通貨はあとから変更できません。</string>
     <string name="expense_closing">締め</string>
-    <string name="expense_closing_help">全員の同意が必要です。締めたあとは読み取り専用の記録になり、退出できるようになります。</string>
+    <string name="expense_closing_help">全員の同意が必要です。同意すると、あなたの金額は確定し、あなたが関わる支出を追加・変更できなくなります。締めたあとは読み取り専用の記録になり、退出できるようになります。</string>
     <string name="expense_agree_to_close">締めに同意</string>
     <string name="expense_withdraw_vote">取り消す</string>
     <string name="expense_agree_count">%2$d 人中 %1$d 人が締めに同意</string>

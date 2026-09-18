@@ -141,47 +141,6 @@ fun ListPropsScreen(
         )
         Spacer(Modifier.height(16.dp))
 
-        // Closing an expenses list (T-158): unanimous, and the only way it can later be left.
-        if (isExpenses) {
-            Text(stringResource(R.string.expense_closing), style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(R.string.expense_closing_help),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // Bound to a local: `state` is a delegated property, so its fields cannot smart-cast.
-            val closedAt = state.closedAt
-            if (closedAt != null) {
-                Text(
-                    stringResource(
-                        R.string.expense_closed_on,
-                        DateFormat.getDateInstance().format(Date(closedAt)),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.expense_agree_count, state.closeVotes.size, state.memberCount),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    TextButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
-                        Text(
-                            stringResource(
-                                if (state.myAccountId in state.closeVotes) {
-                                    R.string.expense_withdraw_vote
-                                } else {
-                                    R.string.expense_agree_to_close
-                                },
-                            ),
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
         // Relocated here from the list screen (T-75), where it was too easy to tap by accident: move
         // every checked item to backlog. A proper filled red button (T-82), matching the web
         // version's btn-danger; only shown when there's something to clear.
@@ -275,6 +234,48 @@ fun ListPropsScreen(
             TextButton(onClick = viewModel::duplicateList) { Text(stringResource(R.string.action_duplicate)) }
         }
         Spacer(Modifier.height(8.dp))
+
+        // Closing an expenses list (T-158): unanimous, and the only way it can later be left. Directly
+        // above Leave (T-169): the two are stages of one thing — agree to close, then leave.
+        if (isExpenses) {
+            Text(stringResource(R.string.expense_closing), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.expense_closing_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Bound to a local: `state` is a delegated property, so its fields cannot smart-cast.
+            val closedAt = state.closedAt
+            if (closedAt != null) {
+                Text(
+                    stringResource(
+                        R.string.expense_closed_on,
+                        DateFormat.getDateInstance().format(Date(closedAt)),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.expense_agree_count, state.closeVotes.size, state.memberCount),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    TextButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
+                        Text(
+                            stringResource(
+                                if (state.myAccountId in state.closeVotes) {
+                                    R.string.expense_withdraw_vote
+                                } else {
+                                    R.string.expense_agree_to_close
+                                },
+                            ),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
 
         // stringResource(R.string.listprops_leave_list) (was stringResource(R.string.action_unsubscribe), T-112): red, matching the Clear-checked danger action.
         // An open expenses list cannot be left (T-157) — saying why beats a button that fails.

@@ -250,7 +250,7 @@
     <string name="listprops_kind_expenses">Спільні витрати з балансом для кожного учасника.</string>
     <string name="listprops_kind_fixed">Список витрат назавжди зберігає свій тип і валюту.</string>
     <string name="expense_closing">Закриття</string>
-    <string name="expense_closing_help">Мають погодитися всі. Після закриття список стає записом лише для читання, і його можна залишити.</string>
+    <string name="expense_closing_help">Мають погодитися всі. Щойно ви погодитеся, ваші суми буде зафіксовано: нічого, що стосується вас, уже не можна додати чи змінити. Після закриття список стає записом лише для читання, і його можна залишити.</string>
     <string name="expense_agree_to_close">Погодитися закрити</string>
     <string name="expense_withdraw_vote">Відкликати</string>
     <string name="expense_agree_count">%1$d з %2$d погоджуються закрити</string>
