@@ -1,0 +1,13 @@
+{
+  "body": "Review of 1.15.0: the web sorted the overview with the browser's language-aware comparison, Android with SQLite NOCASE, which folds only A-Z \u2014 so \u00c4, \u00c9, Cyrillic, Japanese and emoji-led names landed in different places on each client. One algorithm, implemented twice and pinned by a shared case table: leading emoji and symbols are skipped, accents are ignored, case is ignored, ties broken by the full name and then the id.",
+  "created_at": "2026-09-18T17:50:08+00:00",
+  "id": "T-176",
+  "labels": [
+    "ux",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "one list order on both clients, the same for names starting with an emoji",
+  "updated_at": "2026-09-18T17:50:08+00:00"
+}
