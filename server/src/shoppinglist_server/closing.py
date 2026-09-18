@@ -167,22 +167,26 @@ def expense_amounts(expense) -> dict:
     return {account_id: tuple(pair) for account_id, pair in amounts.items()}
 
 
-def check_voter_may_add(conn, list_id: str, account_id: str, item_id: str) -> None:
-    """Refuse a new expense from a member who has agreed to close the list (T-192).
+def check_voter_may_change(conn, list_id: str, account_id: str, row_id: str, changes: bool) -> None:
+    """Refuse any change a member who has agreed to close makes to the list (T-192, T-193).
 
-    The freeze protects a voter's own amounts from everyone else; this is the other half.
-    Agreeing to close means being done with the list, so a voter adds nothing more, not even an
-    expense between two other people, until they withdraw the vote. 422 with the row id, not
-    409: a device that added the expense offline, before its owner voted, must park that row
-    rather than wedge its whole push queue (T-32).
+    The freeze protects a voter's amounts from everyone else; this is the other half. Agreeing
+    to close means being done with the list, so a voter adds, edits and deletes nothing — not
+    even an expense between two other people — and leaves the list's own fields alone, until
+    they withdraw the vote. [changes] is whether the write would win last-write-wins at all: a
+    stale write changes nothing, so it is discarded as usual rather than refused, which keeps a
+    device that edited offline before voting from quarantining a row for nothing.
+
+    422 with the row id, not 409: a device that made the change offline, before its owner voted,
+    must park that row rather than wedge its whole push queue (T-32).
     """
-    if account_id in votes(conn, list_id):
+    if changes and account_id in votes(conn, list_id):
         raise ApiError(
             422,
             "voted_to_close",
-            "You have agreed to close this list, so you cannot add expenses to it. "
-            "Withdraw your vote to add one.",
-            details={"row_id": item_id},
+            "You have agreed to close this list, so you cannot change it. "
+            "Withdraw your vote to make changes.",
+            details={"row_id": row_id},
         )
 
 

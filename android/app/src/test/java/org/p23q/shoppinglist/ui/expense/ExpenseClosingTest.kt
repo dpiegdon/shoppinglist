@@ -1,9 +1,13 @@
 package org.p23q.shoppinglist.ui.expense
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
@@ -12,6 +16,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -55,6 +60,7 @@ class ExpenseClosingTest {
     private lateinit var itemsRepo: ItemsRepo
     private lateinit var listsRepo: ListsRepo
     private lateinit var listId: String
+    private lateinit var dinnerId: String
 
     private val me = "acct-me"
     private val other = "acct-other"
@@ -70,7 +76,7 @@ class ExpenseClosingTest {
         listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
         listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
         setListState()
-        itemsRepo.createExpense(
+        dinnerId = itemsRepo.createExpense(
             listId,
             "Dinner",
             Expense(mapOf(me to "60.00"), true, mapOf(me to "30.00", other to "30.00"), true, "2026-09-17"),
@@ -121,11 +127,11 @@ class ExpenseClosingTest {
     private fun formViewModel() =
         ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
 
-    private fun showList() {
+    private fun showList(onEditExpense: (String) -> Unit = {}) {
         composeTestRule.setContent {
             ExpenseListScreen(
                 onAddExpense = {},
-                onEditExpense = {},
+                onEditExpense = onEditExpense,
                 onOpenListProps = {},
                 viewModel = listViewModel(),
             )
@@ -161,6 +167,56 @@ class ExpenseClosingTest {
         // Agreeing to close means being done: no Add for a voter (T-192).
         composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
         composeTestRule.onNodeWithText("Agree to close").assertDoesNotExist()
+    }
+
+    @Test
+    fun `once I have voted the expenses stay to read but open nothing (T-193)`() = runBlocking<Unit> {
+        setListState(closeVotes = listOf(me))
+        var opened: String? = null
+        showList(onEditExpense = { opened = it })
+
+        composeTestRule.onNodeWithText("Dinner").assertIsDisplayed().performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(null, opened)
+    }
+
+    @Test
+    fun `before I vote an expense opens as usual`() = runBlocking<Unit> {
+        setListState(closeVotes = listOf(other))
+        var opened: String? = null
+        showList(onEditExpense = { opened = it })
+
+        composeTestRule.onNodeWithText("Dinner").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(dinnerId, opened)
+    }
+
+    // ---- deleting (T-193) -----------------------------------------------------
+
+    private fun showDinner() {
+        composeTestRule.setContent {
+            ExpenseDialog(listId = listId, itemId = dinnerId, onDismiss = {}, viewModel = formViewModel())
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `an expense involving a voter cannot be deleted, and the form says why`() = runBlocking<Unit> {
+        setListState(closeVotes = listOf(other))
+        showDinner()
+
+        composeTestRule.onNodeWithText("Delete").performScrollTo().assertIsNotEnabled()
+        composeTestRule.onNodeWithText("This expense can't be deleted", substring = true).assertExists()
+    }
+
+    @Test
+    fun `an expense nobody on it has voted about deletes as usual`() = runBlocking<Unit> {
+        showDinner()
+
+        composeTestRule.onNodeWithText("Delete").performScrollTo().assertIsEnabled()
+        composeTestRule.onNodeWithText("This expense can't be deleted", substring = true).assertDoesNotExist()
     }
 
     @Test

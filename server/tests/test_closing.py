@@ -369,12 +369,73 @@ def test_a_voter_is_told_they_voted_rather_than_that_they_are_frozen(db_conn, tr
     )
 
 
-def test_withdrawing_the_vote_lets_the_member_add_again(db_conn, trip):
+def test_a_voter_cannot_edit_an_expense_even_one_not_involving_them(db_conn, trip):
+    """T-193: a voter changes nothing, not just their own amounts."""
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    _apply(db_conn, b, items=[_item("e2", _expense({b: "10"}, {b: "5", carol: "5"}))])
+    closing.cast_vote(db_conn, a, "trip")
+
+    _rejects(db_conn, a, "voted_to_close", items=[_item("e2", ..., name="Renamed", ts=300)])
+
+
+def test_a_voter_cannot_delete_an_expense(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    _apply(db_conn, b, items=[_item("e2", _expense({b: "10"}, {b: "5", carol: "5"}))])
+    closing.cast_vote(db_conn, a, "trip")
+
+    _rejects(db_conn, a, "voted_to_close", items=[_item("e2", ..., ts=300, deleted=True)])
+
+
+def test_a_voter_cannot_change_the_list_itself(db_conn, trip):
+    a = trip["alice"]
+    closing.cast_vote(db_conn, a, "trip")
+
+    for field, value in (("name", "Renamed"), ("notes", "Gate code 4471")):
+        error = _rejects(
+            db_conn,
+            a,
+            "voted_to_close",
+            lists=[{"id": "trip", "fields": {field: _clock(value, 300)}}],
+        )
+        assert error.details == {"row_id": "trip"}
+
+
+def test_a_voters_stale_offline_edit_is_discarded_rather_than_refused(db_conn, trip):
+    """A write that loses last-write-wins changes nothing, so there is nothing to refuse: a device
+    that edited offline before its owner voted does not end up with a quarantined row."""
+    a = trip["alice"]
+    closing.cast_vote(db_conn, a, "trip")
+
+    # e1 was written at ts=100; this edit is older and loses.
+    _apply(db_conn, a, items=[_item("e1", ..., name="Stale", ts=50)])
+    row = db_conn.execute("SELECT name FROM items WHERE id = 'e1'").fetchone()
+    assert row["name"] == "Dinner"
+
+
+def test_other_members_still_edit_what_does_not_touch_a_voter(db_conn, trip):
+    """The voter's own lock is theirs alone; the freeze still guards what involves them."""
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    _apply(db_conn, b, items=[_item("e2", _expense({b: "10"}, {b: "5", carol: "5"}))])
+    closing.cast_vote(db_conn, a, "trip")
+
+    _apply(db_conn, carol, items=[_item("e2", ..., name="Renamed", ts=300)])
+    _apply(db_conn, carol, items=[_item("e2", ..., ts=400, deleted=True)])
+
+
+def test_withdrawing_the_vote_lets_the_member_change_things_again(db_conn, trip):
     a, b = trip["alice"], trip["bob"]
     closing.cast_vote(db_conn, a, "trip")
     closing.withdraw_vote(db_conn, a, "trip")
 
     _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {a: "5", b: "5"}))])
+    _apply(db_conn, a, items=[_item("e2", ..., name="Renamed", ts=300)])
+    _apply(db_conn, a, lists=[{"id": "trip", "fields": {"name": _clock("Renamed", 300)}}])
 
 
 def test_someone_elses_vote_does_not_stop_a_member_adding(db_conn, trip):

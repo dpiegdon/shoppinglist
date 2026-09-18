@@ -448,7 +448,7 @@ describe("closing an expenses list", () => {
     // Two stages of one thing (T-169): every other section comes first, then closing, then leave.
     expect(members.compareDocumentPosition(closing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(closing.compareDocumentPosition(leave) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText(/nothing involving you can be added or changed/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing involving you can be added, changed or deleted/)).toBeInTheDocument();
   });
 
   it("says nothing while nobody has voted", async () => {
@@ -477,6 +477,53 @@ describe("closing an expenses list", () => {
     expect(await screen.findByRole("button", { name: "Withdraw" })).toBeInTheDocument();
     // Agreeing to close means being done: the server refuses a voter's new expenses.
     expect(screen.queryByRole("button", { name: "Add expense" })).not.toBeInTheDocument();
+  });
+
+  it("opens no expense once I have agreed to close, though the rows stay to read (T-193)", async () => {
+    setUp([ME]);
+    renderAt("/list/list-1");
+
+    expect(await screen.findByRole("button", { name: "Withdraw" })).toBeInTheDocument();
+    expect(screen.getByText("Dinner").closest("button")).toBeDisabled();
+  });
+
+  it("locks the list's name and notes once I have agreed to close (T-193)", async () => {
+    setUp([ME]);
+    renderAt("/list/list-1/properties");
+
+    expect(await screen.findByText(/You've agreed to close this list/)).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Trip")).toBeDisabled();
+    expect(screen.getByPlaceholderText(/Gate code/)).toBeDisabled();
+    for (const button of screen.getAllByRole("button", { name: /^Save/ })) expect(button).toBeDisabled();
+  });
+
+  it("leaves the name and notes open to someone who has not agreed yet", async () => {
+    setUp([OTHER]);
+    renderAt("/list/list-1/properties");
+
+    expect(await screen.findByDisplayValue("Trip")).toBeEnabled();
+    expect(screen.queryByText(/You've agreed to close this list/)).not.toBeInTheDocument();
+  });
+
+  it("will not delete an expense that involves someone who has agreed to close (T-193)", async () => {
+    // OTHER has voted and is on the dinner: deleting it would take their share to zero.
+    setUp([OTHER]);
+    renderAt("/list/list-1");
+
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(screen.getByText(/can't be deleted: it involves someone whose amounts are fixed/)).toBeInTheDocument();
+  });
+
+  it("deletes freely while nobody on the expense has voted", async () => {
+    setUp();
+    renderAt("/list/list-1");
+
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+    expect(screen.queryByText(/can't be deleted/)).not.toBeInTheDocument();
   });
 
   it("offers to withdraw once I have voted", async () => {

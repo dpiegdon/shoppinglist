@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">Custos compartilhados, com um saldo por membro.</string>
     <string name="listprops_kind_fixed">Uma lista de despesas mantém o tipo e a moeda para sempre.</string>
     <string name="expense_closing">Encerramento</string>
-    <string name="expense_closing_help">Todos precisam concordar. Ao concordar, você não pode mais adicionar despesas, e nada que envolva você pode ser adicionado ou alterado. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.</string>
+    <string name="expense_closing_help">Todos precisam concordar. Ao concordar, você não pode mais alterar nada na lista, e nada que envolva você pode ser adicionado, alterado ou excluído. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.</string>
     <string name="expense_agree_to_close">Concordar em encerrar</string>
     <string name="expense_withdraw_vote">Retirar</string>
     <string name="expense_agree_count">Votos para encerrar: %1$d de %2$d</string>
@@ -292,5 +292,6 @@
     <string name="api_error_session_not_found">Essa sessão já foi encerrada</string>
     <string name="api_error_server_busy">O servidor está ocupado. Tente de novo em instantes.</string>
     <string name="api_error_payload_too_large">É coisa demais para enviar de uma vez</string>
-    <string name="api_error_voted_to_close">Você concordou em encerrar esta lista, então não pode adicionar despesas. Retire seu voto para adicionar uma.</string>
+    <string name="api_error_voted_to_close">Você concordou em encerrar esta lista, então não pode mais alterá-la. Retire seu voto para fazer alterações.</string>
+    <string name="expense_delete_blocked">Esta despesa não pode ser excluída: ela envolve alguém cujos valores estão fixados.</string>
 </resources>

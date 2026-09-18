@@ -352,26 +352,31 @@ Frozen means: has voted to close, or is no longer a member.
 > `account_id` in question.
 
 A new row counts as a change from zero and a deletion as a change to zero, so
-neither is a way around it. Everything else about such an expense stays editable
-— its title, its note, and the other participants' shares — because the rule is
-about money, not about the row.
+neither is a way around it — so an expense naming a voter or a former member
+cannot be deleted by anyone until the vote is withdrawn. Everything else about
+such an expense stays editable by non-voters — its title, its note, and the other
+participants' shares — because the rule is about money, not about the row.
 
 The check is applied only to the value that would actually win last-write-wins.
 A stale offline write that loses is discarded without error, so a device that was
 offline while someone voted does not end up quarantining an innocent edit.
 
-**A voter adds nothing.** The freeze protects a voter's numbers from everyone
-else; the other half is that a member who has voted to close may not add an
-expense at all while the list is open — not even one between two other people.
+**A voter changes nothing.** The freeze protects a voter's numbers from
+everyone else; the other half is that a member who has voted to close may not
+change the list at all while it is open — no new expense, not even one between
+two other people, no edit or deletion of any expense, and no change to the
+list's own fields (name, notes).
 
-> A new expense row from a member with a close vote on the list is
-> `422 voted_to_close`, carrying `row_id`.
+> Any expense-list write from a member with a close vote on the list that would
+> change something — a new row, or a field that would win last-write-wins — is
+> `422 voted_to_close`, carrying `row_id` (the item's, or the list's own id).
 
-422 with the row, as for the freeze, so a device that added the expense offline
-before its owner voted parks the row instead of wedging its push queue.
-Withdrawing the vote lifts the rule. The check comes before the freeze check, so
-a voter hears the rule that applies to them. Edits and deletions are governed by
-the freeze alone.
+422 with the row, as for the freeze, so a device that queued the change offline
+before its owner voted parks the row instead of wedging its push queue. As with
+the freeze, a stale write that loses is discarded without error rather than
+refused. Withdrawing the vote lifts the rule. The check comes before the freeze
+check, so a voter hears the rule that applies to them. Voting itself, withdrawing
+and leaving go through their own endpoints and are not affected.
 
 ### Site-root routes (outside the API prefix)
 

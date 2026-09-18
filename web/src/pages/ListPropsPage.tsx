@@ -74,6 +74,11 @@ export default function ListPropsPage() {
     );
   }
   const id: string = listId;
+  const lockedByVote =
+    isExpenses(listKind(list)) &&
+    (list.closed_at ?? null) === null &&
+    !!account &&
+    (list.close_votes ?? []).includes(account.id);
 
   const liveItems = Array.from(items.values()).filter(
     (i) => i.list_id === id && !itemFieldValue(i, "deleted"),
@@ -301,11 +306,18 @@ export default function ListPropsPage() {
       </Link>
       <h1 style={{ fontSize: "1.3rem" }}>{t("listProps.title")}</h1>
 
+      {/* Someone who has agreed to close an expense list changes nothing on it (T-193). */}
+      {lockedByVote && (
+        <p className="muted" style={{ margin: "0 0 1rem" }}>
+          {t("apiError.votedToClose")}
+        </p>
+      )}
+
       <section style={{ marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.name")}</h2>
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={{ flex: 1 }} />
-          <button type="submit" className="btn" disabled={savingName}>
+          <input value={name} onChange={(e) => setName(e.target.value)} disabled={lockedByVote} style={{ flex: 1 }} />
+          <button type="submit" className="btn" disabled={savingName || lockedByVote}>
             {t("action.save")}
           </button>
         </form>
@@ -459,10 +471,11 @@ export default function ListPropsPage() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("listProps.notesPlaceholder")}
+            disabled={lockedByVote}
             rows={4}
             style={{ resize: "vertical", font: "inherit" }}
           />
-          <button type="submit" className="btn" disabled={savingNotes} style={{ alignSelf: "flex-start" }}>
+          <button type="submit" className="btn" disabled={savingNotes || lockedByVote} style={{ alignSelf: "flex-start" }}>
             {t("listProps.saveNotes")}
           </button>
         </form>

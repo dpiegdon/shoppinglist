@@ -213,8 +213,15 @@ fun ExpenseDialog(
                         )
                         if (state.isEditMode) {
                             Spacer(Modifier.height(16.dp))
-                            TextButton(onClick = viewModel::requestDelete) {
+                            TextButton(onClick = viewModel::requestDelete, enabled = state.canDelete) {
                                 Text(stringResource(R.string.action_delete))
+                            }
+                            if (!state.canDelete) {
+                                Text(
+                                    stringResource(R.string.expense_delete_blocked),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }

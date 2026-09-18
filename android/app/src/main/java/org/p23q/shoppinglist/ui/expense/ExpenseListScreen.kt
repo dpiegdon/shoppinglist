@@ -224,7 +224,8 @@ fun ExpenseListScreen(
                                     .map { participantLabel(it, state) }
                                     .joinToString(", "),
                                 forLabel = forWhomLabel(row.expense, state),
-                                onClick = if (state.isClosed) null else ({ onEditExpense(row.item.id) }),
+                                // Nothing to open on a closed list, nor for someone who has agreed to close (T-193).
+                                onClick = if (state.isClosed || state.iHaveVoted) null else ({ onEditExpense(row.item.id) }),
                             )
                             if (rowIndex < rows.lastIndex) {
                                 HorizontalDivider(

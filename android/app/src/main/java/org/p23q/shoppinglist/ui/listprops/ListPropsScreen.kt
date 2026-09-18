@@ -82,15 +82,30 @@ fun ListPropsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        // Someone who has agreed to close an expense list changes nothing on it (T-193).
+        val lockedByVote = ListKind.isExpenses(state.kind) &&
+            state.closedAt == null &&
+            state.myAccountId in state.closeVotes
+        if (lockedByVote) {
+            Text(
+                stringResource(R.string.api_error_voted_to_close),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+        }
         Text(stringResource(R.string.listprops_list_name), style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = state.name,
                 onValueChange = viewModel::onNameChange,
                 singleLine = true,
+                enabled = !lockedByVote,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { viewModel.saveName() }) { Text(stringResource(R.string.action_save)) }
+            TextButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote) {
+                Text(stringResource(R.string.action_save))
+            }
         }
         Spacer(Modifier.height(16.dp))
 
@@ -182,9 +197,12 @@ fun ListPropsScreen(
             placeholder = { Text(stringResource(R.string.listprops_notes_placeholder)) },
             minLines = 3,
             maxLines = 6,
+            enabled = !lockedByVote,
             modifier = Modifier.fillMaxWidth(),
         )
-        TextButton(onClick = { viewModel.saveNotes() }) { Text(stringResource(R.string.listprops_save_notes)) }
+        TextButton(onClick = { viewModel.saveNotes() }, enabled = !lockedByVote) {
+            Text(stringResource(R.string.listprops_save_notes))
+        }
         Spacer(Modifier.height(16.dp))
 
         // Per-list collaborator-change notification mute (T-65); the global switch is in Settings.

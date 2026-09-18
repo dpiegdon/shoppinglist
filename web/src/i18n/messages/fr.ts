@@ -211,7 +211,7 @@ export const fr: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Clôture",
-  "expense.closingHelp": "Tout le monde doit être d'accord. Dès que vous acceptez, vous ne pouvez plus ajouter de dépenses, et plus rien qui vous concerne ne peut être ajouté ou modifié. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.",
+  "expense.closingHelp": "Tout le monde doit être d'accord. Dès que vous acceptez, vous ne pouvez plus rien modifier dans la liste, et plus rien qui vous concerne ne peut être ajouté, modifié ou supprimé. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.",
   "expense.agreeToClose": "Accepter la clôture",
   "expense.withdrawVote": "Retirer",
   "expense.agreeCount": "Votes pour la clôture : {voted} sur {total}",
@@ -257,5 +257,6 @@ export const fr: Catalog = {
   "apiError.sessionNotFound": "Cette session est déjà terminée",
   "apiError.serverBusy": "Le serveur est occupé. Réessayez dans un instant.",
   "apiError.payloadTooLarge": "C'est trop à envoyer en une fois",
-  "apiError.votedToClose": "Vous avez accepté de clôturer cette liste : vous ne pouvez pas ajouter de dépenses. Retirez votre accord pour en ajouter une.",
+  "apiError.votedToClose": "Vous avez accepté de clôturer cette liste : vous ne pouvez plus la modifier. Retirez votre accord pour faire des changements.",
+  "expense.deleteBlocked": "Cette dépense ne peut pas être supprimée : elle concerne quelqu'un dont les montants sont figés.",
 };

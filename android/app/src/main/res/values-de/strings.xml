@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">Geteilte Kosten, mit einem Saldo pro Mitglied.</string>
     <string name="listprops_kind_fixed">Eine Ausgabenliste behält ihren Typ und ihre Währung dauerhaft.</string>
     <string name="expense_closing">Abschließen</string>
-    <string name="expense_closing_help">Alle müssen zustimmen. Sobald du zustimmst, kannst du keine Ausgaben mehr hinzufügen, und nichts, was dich betrifft, kann noch hinzugefügt oder geändert werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.</string>
+    <string name="expense_closing_help">Alle müssen zustimmen. Sobald du zustimmst, kannst du an der Liste nichts mehr ändern, und nichts, was dich betrifft, kann noch hinzugefügt, geändert oder gelöscht werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.</string>
     <string name="expense_agree_to_close">Abschluss zustimmen</string>
     <string name="expense_withdraw_vote">Zurückziehen</string>
     <string name="expense_agree_count">Zustimmungen zum Abschluss: %1$d von %2$d</string>
@@ -292,5 +292,6 @@
     <string name="api_error_session_not_found">Diese Sitzung ist bereits beendet</string>
     <string name="api_error_server_busy">Der Server ist ausgelastet. Versuch es gleich noch einmal.</string>
     <string name="api_error_payload_too_large">Das ist zu viel auf einmal</string>
-    <string name="api_error_voted_to_close">Du hast dem Abschluss zugestimmt und kannst deshalb keine Ausgaben hinzufügen. Zieh deine Zustimmung zurück, um eine hinzuzufügen.</string>
+    <string name="api_error_voted_to_close">Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.</string>
+    <string name="expense_delete_blocked">Diese Ausgabe kann nicht gelöscht werden: Sie betrifft jemanden, dessen Beträge festgeschrieben sind.</string>
 </resources>

@@ -59,6 +59,11 @@ data class ExpenseFormUiState(
     /** One participant: nothing to distribute, so the form hides both sections (T-155). */
     val soloList: Boolean = false,
     val isDeleteConfirmOpen: Boolean = false,
+    /**
+     * False when deleting would take a frozen participant's amounts to zero, which the freeze
+     * forbids (T-157) — the form says so instead of letting the server refuse it (T-193).
+     */
+    val canDelete: Boolean = true,
     val isSaved: Boolean = false,
     val isDeleted: Boolean = false,
 ) {
@@ -173,6 +178,7 @@ class ExpenseFormViewModel @Inject constructor(
             it.copy(
                 isEditMode = true,
                 itemId = itemId,
+                canDelete = (expense.paidBy.keys + expense.paidFor.keys).none(::isFrozen),
                 name = item.name.value,
                 note = item.note.value.orEmpty(),
                 date = expense.date,

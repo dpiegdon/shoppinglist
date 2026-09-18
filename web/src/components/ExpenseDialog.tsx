@@ -161,6 +161,10 @@ export default function ExpenseDialog({
     return new Set(participantIds.filter((id) => closeVotes.includes(id) || !current.has(id)));
   }, [participantIds, members, closeVotes]);
 
+  // Whether deleting is off the table: it would take a frozen participant's amounts to zero (T-193).
+  const deleteBlocked =
+    !!stored && [...Object.keys(stored.paid_by), ...Object.keys(stored.paid_for)].some((id) => frozen.has(id));
+
   const totalCents = toCents(totalText.trim() || "0");
   const byResult = useMemo(
     () => distribute(totalCents, entriesOf(paidBy, participantIds, frozen)),
@@ -377,10 +381,18 @@ export default function ExpenseDialog({
               <button
                 type="button"
                 className="btn btn-danger"
+                // Deleting takes everyone on it to zero, which the freeze forbids for anyone whose
+                // amounts are fixed (T-157) — so say so here rather than let the server refuse it.
+                disabled={deleteBlocked}
                 onClick={() => onDelete(editingItem.id).then(onClose)}
               >
                 {t("action.delete")}
               </button>
+            )}
+            {isEdit && deleteBlocked && (
+              <p className="muted" style={{ fontSize: "0.8rem", margin: "0.3rem 0 0" }}>
+                {t("expense.deleteBlocked")}
+              </p>
             )}
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>

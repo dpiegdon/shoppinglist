@@ -213,7 +213,7 @@ export const zhHans: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "结算",
-  "expense.closingHelp": "需要所有人同意。一旦你同意，就不能再添加支出，任何涉及你的支出也不能再添加或更改。结算后清单变为只读记录，并且可以退出。",
+  "expense.closingHelp": "需要所有人同意。一旦你同意，就不能再更改清单中的任何内容，任何涉及你的支出也不能再添加、更改或删除。结算后清单变为只读记录，并且可以退出。",
   "expense.agreeToClose": "同意结算",
   "expense.withdrawVote": "撤回",
   "expense.agreeCount": "同意结算：{voted} / {total}",
@@ -259,5 +259,6 @@ export const zhHans: Catalog = {
   "apiError.sessionNotFound": "该会话已结束",
   "apiError.serverBusy": "服务器繁忙，请稍后再试。",
   "apiError.payloadTooLarge": "一次发送的内容太多",
-  "apiError.votedToClose": "你已同意结算此清单，因此无法添加支出。撤回同意后即可添加。",
+  "apiError.votedToClose": "你已同意结算此清单，因此不能再更改它。撤回同意后即可更改。",
+  "expense.deleteBlocked": "此支出无法删除：它涉及金额已锁定的成员。",
 };

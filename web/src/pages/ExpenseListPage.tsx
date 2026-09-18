@@ -38,6 +38,8 @@ export default function ExpenseListPage() {
   const currency = (list ? listFieldValue(list, "currency") : null) ?? "";
   const closeVotes = useMemo(() => list?.close_votes ?? [], [list]);
   const closedAt = list?.closed_at ?? null;
+  // Someone who has agreed to close changes nothing on the list (T-192, T-193).
+  const iHaveVoted = !!account && closeVotes.includes(account.id);
 
   const expenses = useMemo(
     () =>
@@ -181,7 +183,7 @@ export default function ExpenseListPage() {
                   key={item.id}
                   type="button"
                   className="row"
-                  disabled={closedAt !== null}
+                  disabled={closedAt !== null || iHaveVoted}
                   onClick={() => setDialogItem(item)}
                   style={{
                     display: "flex",
@@ -215,7 +217,7 @@ export default function ExpenseListPage() {
       {/* Bottom right on every list kind (T-168). A closed list is an archive: nothing to add. */}
       {/* Not on a closed list, and not for someone who has agreed to close it (T-192): agreeing
           means being done, and the server refuses their new expenses. */}
-      {closedAt === null && !(account && closeVotes.includes(account.id)) && (
+      {closedAt === null && !iHaveVoted && (
         <AddFab label={t("expense.add")} onClick={() => setDialogItem("new")} />
       )}
 

@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">تكاليف مشتركة مع رصيد لكل عضو.</string>
     <string name="listprops_kind_fixed">قائمة المصروفات تحتفظ بنوعها وعملتها دائمًا.</string>
     <string name="expense_closing">الإغلاق</string>
-    <string name="expense_closing_help">يجب أن يوافق الجميع. بمجرد موافقتك لن تتمكن من إضافة مصروفات، ولا يمكن إضافة أو تغيير أي شيء يخصك. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.</string>
+    <string name="expense_closing_help">يجب أن يوافق الجميع. بمجرد موافقتك لن تتمكن من تغيير أي شيء في القائمة، ولا يمكن إضافة أو تغيير أو حذف أي شيء يخصك. بعد الإغلاق تصبح القائمة سجلًا للقراءة فقط ويمكن مغادرتها.</string>
     <string name="expense_agree_to_close">الموافقة على الإغلاق</string>
     <string name="expense_withdraw_vote">سحب الموافقة</string>
     <string name="expense_agree_count">الأصوات المؤيدة للإغلاق: %1$d من %2$d</string>
@@ -292,5 +292,6 @@
     <string name="api_error_session_not_found">انتهت هذه الجلسة بالفعل</string>
     <string name="api_error_server_busy">الخادم مشغول. حاول مرة أخرى بعد لحظة.</string>
     <string name="api_error_payload_too_large">هذا أكثر مما يمكن إرساله دفعة واحدة</string>
-    <string name="api_error_voted_to_close">لقد وافقت على إغلاق هذه القائمة، لذا لا يمكنك إضافة مصروفات. اسحب موافقتك لإضافة مصروف.</string>
+    <string name="api_error_voted_to_close">لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.</string>
+    <string name="expense_delete_blocked">لا يمكن حذف هذا المصروف: فهو يخص شخصًا مبالغه ثابتة.</string>
 </resources>

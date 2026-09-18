@@ -255,7 +255,7 @@
     <string name="listprops_kind_expenses">Спільні витрати з балансом для кожного учасника.</string>
     <string name="listprops_kind_fixed">Список витрат назавжди зберігає свій тип і валюту.</string>
     <string name="expense_closing">Закриття</string>
-    <string name="expense_closing_help">Мають погодитися всі. Щойно ви погодитеся, ви більше не зможете додавати витрати, і нічого, що стосується вас, уже не можна додати чи змінити. Після закриття список стає записом лише для читання, і його можна залишити.</string>
+    <string name="expense_closing_help">Мають погодитися всі. Щойно ви погодитеся, ви більше не зможете нічого змінювати в списку, і нічого, що стосується вас, уже не можна додати, змінити чи видалити. Після закриття список стає записом лише для читання, і його можна залишити.</string>
     <string name="expense_agree_to_close">Погодитися закрити</string>
     <string name="expense_withdraw_vote">Відкликати</string>
     <string name="expense_agree_count">Голоси за закриття: %1$d з %2$d</string>
@@ -292,5 +292,6 @@
     <string name="api_error_session_not_found">Цей сеанс уже завершено</string>
     <string name="api_error_server_busy">Сервер зайнятий. Спробуйте ще раз за мить.</string>
     <string name="api_error_payload_too_large">Забагато даних для одного надсилання</string>
-    <string name="api_error_voted_to_close">Ви погодилися закрити цей список, тому не можете додавати витрати. Відкличте свою згоду, щоб додати.</string>
+    <string name="api_error_voted_to_close">Ви погодилися закрити цей список, тому більше не можете його змінювати. Відкличте свою згоду, щоб вносити зміни.</string>
+    <string name="expense_delete_blocked">Цю витрату не можна видалити: вона стосується когось, чиї суми зафіксовано.</string>
 </resources>

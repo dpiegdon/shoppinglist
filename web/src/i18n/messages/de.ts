@@ -214,7 +214,7 @@ export const de: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Abschließen",
-  "expense.closingHelp": "Alle müssen zustimmen. Sobald du zustimmst, kannst du keine Ausgaben mehr hinzufügen, und nichts, was dich betrifft, kann noch hinzugefügt oder geändert werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.",
+  "expense.closingHelp": "Alle müssen zustimmen. Sobald du zustimmst, kannst du an der Liste nichts mehr ändern, und nichts, was dich betrifft, kann noch hinzugefügt, geändert oder gelöscht werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.",
   "expense.agreeToClose": "Abschluss zustimmen",
   "expense.withdrawVote": "Zurückziehen",
   "expense.agreeCount": "Zustimmungen zum Abschluss: {voted} von {total}",
@@ -260,5 +260,6 @@ export const de: Catalog = {
   "apiError.sessionNotFound": "Diese Sitzung ist bereits beendet",
   "apiError.serverBusy": "Der Server ist ausgelastet. Versuch es gleich noch einmal.",
   "apiError.payloadTooLarge": "Das ist zu viel auf einmal",
-  "apiError.votedToClose": "Du hast dem Abschluss zugestimmt und kannst deshalb keine Ausgaben hinzufügen. Zieh deine Zustimmung zurück, um eine hinzuzufügen.",
+  "apiError.votedToClose": "Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.",
+  "expense.deleteBlocked": "Diese Ausgabe kann nicht gelöscht werden: Sie betrifft jemanden, dessen Beträge festgeschrieben sind.",
 };

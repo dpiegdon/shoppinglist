@@ -153,8 +153,16 @@ guarded the voter's own amounts but not the list, so someone who had agreed to
 close could still add an expense between two other people. Agreeing to close
 means being done, so a new expense from a voter is refused with
 `voted_to_close` until they withdraw the vote, and neither client offers Add or
-Reimburse to them. Edits and deletions by a voter are governed by the freeze
-alone.
+Reimburse to them.
+
+T-193 widened it to everything: a voter changes nothing on the list while it is
+open. Editing or deleting any expense, and changing the list's name or notes, is
+refused with `voted_to_close` too, applied like the freeze to the value that
+would win, so a stale offline write is discarded rather than refused. Because a
+deletion is a change to zero, nobody can delete an expense that names a voter or
+a former member; both clients disable Delete on such an expense and say why, a
+voter's expense rows no longer open, and the list's name and notes are locked
+for them in list settings.
 
 The check runs against the version of the field that would actually win the
 per-field conflict resolution. A stale offline write that would have been

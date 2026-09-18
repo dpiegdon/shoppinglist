@@ -372,6 +372,36 @@ class ExpenseFormViewModelTest {
     }
 
     @Test
+    fun `an expense involving someone frozen cannot be deleted (T-193)`() = runTest(mainDispatcherRule.dispatcher) {
+        setCloseVotes(other)
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        // Deleting would take their 30 to zero, which the freeze forbids.
+        assertFalse(viewModel.uiState.value.canDelete)
+    }
+
+    @Test
+    fun `an expense involving only unfrozen people can be deleted`() = runTest(mainDispatcherRule.dispatcher) {
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        assertTrue(viewModel.uiState.value.canDelete)
+    }
+
+    @Test
+    fun `an expense naming someone who has left cannot be deleted either`() = runTest(mainDispatcherRule.dispatcher) {
+        setMembers(me)
+        val itemId = expenseId()
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        assertFalse(viewModel.uiState.value.canDelete)
+    }
+
+    @Test
     fun `someone who has left is frozen without having voted`() = runTest(mainDispatcherRule.dispatcher) {
         // The roster no longer names them, but the expense still does.
         setMembers(me)

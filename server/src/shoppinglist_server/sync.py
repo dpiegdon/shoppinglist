@@ -581,6 +581,18 @@ def _wins(incoming, existing, ts_col, by_col) -> bool:
     return (ts, by) > (existing[ts_col], existing[by_col])
 
 
+def _changes_anything(existing, fields, meta) -> bool:
+    """Whether a pushed row would change anything: a new row always does, an existing one only
+    if some field would win last-write-wins (see _wins)."""
+    if existing is None:
+        return True
+    return any(
+        _wins(fields[name], existing, ts_col, by_col)
+        for name, ts_col, by_col in meta
+        if name in fields
+    )
+
+
 def _expense_before_and_after(existing, fields):
     """The item's expense as it stands and as it will stand, with deletion folded in.
 
@@ -916,6 +928,10 @@ def _apply_list(conn, account_id, device_id, obj):
                 "An expenses list cannot be deleted. Close it and leave it instead.",
                 details={"row_id": list_id, "field": "deleted"},
             )
+        # Nor its own fields — name, notes — by someone who has agreed to close it (T-193).
+        closing.check_voter_may_change(
+            conn, list_id, account_id, list_id, _changes_anything(existing, fields, LIST_FIELD_META)
+        )
     if (
         existing["kind"] == EXPENSES_KIND
         and "currency" in fields
@@ -991,8 +1007,9 @@ def _apply_item(conn, account_id, device_id, obj):
                 details={"row_id": item_id},
             )
         # Before the freeze check, so a voter is told the rule that actually applies to them.
-        if existing is None:
-            closing.check_voter_may_add(conn, list_id, account_id, item_id)
+        closing.check_voter_may_change(
+            conn, list_id, account_id, item_id, _changes_anything(existing, fields, ITEM_FIELD_META)
+        )
         before, after = _expense_before_and_after(existing, fields)
         closing.check_write_against_freeze(conn, list_id, item_id, before, after)
 

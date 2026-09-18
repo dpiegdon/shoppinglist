@@ -214,7 +214,7 @@ export const ja: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "締め",
-  "expense.closingHelp": "全員の同意が必要です。同意すると、支出を追加できなくなり、あなたが関わる支出も追加・変更できなくなります。締めたあとは読み取り専用の記録になり、退出できるようになります。",
+  "expense.closingHelp": "全員の同意が必要です。同意すると、リストを一切変更できなくなり、あなたが関わる支出も追加・変更・削除できなくなります。締めたあとは読み取り専用の記録になり、退出できるようになります。",
   "expense.agreeToClose": "締めに同意",
   "expense.withdrawVote": "取り消す",
   "expense.agreeCount": "締めへの同意：{voted} / {total}",
@@ -260,5 +260,6 @@ export const ja: Catalog = {
   "apiError.sessionNotFound": "そのセッションはすでに終了しています",
   "apiError.serverBusy": "サーバーが混み合っています。しばらくしてからもう一度お試しください。",
   "apiError.payloadTooLarge": "一度に送信できる量を超えています",
-  "apiError.votedToClose": "このリストの締めに同意しているため、支出を追加できません。追加するには同意を取り消してください。",
+  "apiError.votedToClose": "このリストの締めに同意しているため、変更できません。変更するには同意を取り消してください。",
+  "expense.deleteBlocked": "この支出は削除できません：金額が確定している人が関わっています。",
 };

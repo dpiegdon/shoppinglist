@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.listprops
 
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -22,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
@@ -45,6 +48,8 @@ class ListPropsScreenTest {
     val composeTestRule = createComposeRule()
 
     private lateinit var server: MockWebServer
+
+    private val me = "acct-me"
 
     @After
     fun tearDown() {
@@ -215,6 +220,78 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals(true, duplicatedListId != null && duplicatedListId != listId)
+        db.close()
+    }
+
+    /**
+     * An expenses list's settings, shown to [me] with [closeVotes] already cast. The roster and
+     * votes normally arrive from the server on the list row.
+     */
+    private suspend fun showExpenseSettings(closeVotes: List<String>): AppDb {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
+        db.listDao().upsert(listsRepo.getById(listId)!!.copy(closeVotesJson = Json.encodeToString(closeVotes)))
+
+        val serverConfigFile = File.createTempFile("listprops_screen_vote_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val json = Json { ignoreUnknownKeys = true }
+        val apiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            json = json,
+        )
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            apiProvider,
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            FakeSessionState().apply { accountId = me },
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+
+        composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+        return db
+    }
+    @Test
+    fun `once I have agreed to close, the name and notes are locked and it says why (T-193)`() = runBlocking {
+        val db = showExpenseSettings(closeVotes = listOf(me))
+
+        composeTestRule.onNodeWithText("You've agreed to close this list", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Trip").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Save").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Gate code, store hours, anything worth remembering…")
+            .performScrollTo()
+            .assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Save notes").performScrollTo().assertIsNotEnabled()
+        db.close()
+    }
+
+    @Test
+    fun `someone else's vote leaves my name and notes editable`() = runBlocking {
+        val db = showExpenseSettings(closeVotes = listOf("acct-other"))
+
+        composeTestRule.onNodeWithText("You've agreed to close this list", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Trip").assertIsEnabled()
+        composeTestRule.onNodeWithText("Save notes").performScrollTo().assertIsEnabled()
         db.close()
     }
 }
