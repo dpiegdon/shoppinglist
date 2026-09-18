@@ -1,9 +1,6 @@
 {
   "body": "Phase 3. Not designed. Tricount's other half: from the balances, a minimal\nset of transfers that settles everyone. Needs its own design pass \u2014 display\nonly, or recorded as expenses? \u2014 before any ticket is actionable.",
   "created_at": "2026-09-17T17:50:55+00:00",
-  "deps": [
-    "T-160"
-  ],
   "id": "T-161",
   "labels": [
     "expenses",
@@ -12,5 +9,5 @@
   ],
   "priority": 4,
   "title": "expenses: settlement suggestions \u2014 who pays whom",
-  "updated_at": "2026-09-17T17:50:55+00:00"
+  "updated_at": "2026-09-18T09:54:34+00:00"
 }
