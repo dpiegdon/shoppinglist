@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import androidDe from "./__android__/de.json";
 import { ar } from "./messages/ar";
 import { de } from "./messages/de";
 import { en } from "./messages/en";
@@ -11,11 +10,12 @@ import { uk } from "./messages/uk";
 import { zhHans } from "./messages/zh-Hans";
 
 /**
- * Consistency of the WEB catalogs against each other and against English (T-124).
+ * Consistency of the WEB catalogs against each other and against English (T-124): no language
+ * translates the same English source two different ways.
  *
- * The cross-CLIENT half of this check (web vs the Android resources) lives in the Android suite,
- * where the resource XML is readable without a build step. This half covers what can be seen from
- * here: that no language translates the same English source two different ways.
+ * The cross-CLIENT check — web against the Android resources, in all nine languages — is
+ * crossClient.test.ts (T-148). It replaced a hand-kept snapshot of Android's German here, which had
+ * drifted, and a comment claiming the Android suite did this, which it never did.
  */
 const CATALOGS: Array<[string, Record<string, string>]> = [
   ["de", de as Record<string, string>],
@@ -55,15 +55,4 @@ describe("catalog self-consistency (T-124)", () => {
       expect(split, `${tag} renders one English string several ways`).toEqual([]);
     });
   }
-
-  it("android German mirrors web German for every shared string", () => {
-    // Guards the claim that the two clients read identically. A user switching between phone and
-    // browser mid-shop should not meet two vocabularies. German stands in for all nine: the
-    // generator that produced the resources is shared, so a divergence here means a process
-    // problem, not a one-language typo.
-    for (const [webKey, androidValue] of Object.entries(androidDe as Record<string, string>)) {
-      expect(normalise((de as Record<string, string>)[webKey]), `${webKey} differs between clients`)
-        .toBe(normalise(androidValue));
-    }
-  });
 });

@@ -181,7 +181,7 @@ export const zhHans: Catalog = {
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "购物清单",
-  "listKind.checklist": "清单",
+  "listKind.checklist": "待办清单",
   "listKind.expenses": "支出",
   "overview.kind.expenses": "共同支出：谁付的钱，谁还欠钱。",
   "overview.currencyHelp": "用于此清单的每一笔支出，创建后不可更改。",

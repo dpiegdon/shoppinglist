@@ -182,7 +182,7 @@ export const ar: Catalog = {
   "admin.isAdmin": "(مسؤول)",
 
   // --- Expense lists (T-155) ---
-  "listKind.shopping": "قائمة التسوق",
+  "listKind.shopping": "قائمة تسوق",
   "listKind.checklist": "قائمة مهام",
   "listKind.expenses": "المصروفات",
   "overview.kind.expenses": "تكاليف مشتركة: من دفع ومن عليه دين.",
