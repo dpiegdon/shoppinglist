@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import BalancesPage from "./BalancesPage";
+import ListPropsPage from "./ListPropsPage";
 import { today } from "../components/ExpenseDialog";
 import ListRoute from "./ListRoute";
 import { AuthProvider } from "../auth/AuthContext";
@@ -84,6 +85,7 @@ function renderAt(path: string) {
           <Routes>
             <Route path="/list/:listId" element={<ListRoute />} />
             <Route path="/list/:listId/balances" element={<BalancesPage />} />
+            <Route path="/list/:listId/properties" element={<ListPropsPage />} />
             <Route path="/" element={<div>Overview page</div>} />
           </Routes>
         </SyncProvider>
@@ -409,6 +411,20 @@ describe("closing an expenses list", () => {
     api.setToken(null);
     localStorage.clear();
     cleanup();
+  });
+
+  it("puts closing directly above leave in list settings, and says what agreeing locks", async () => {
+    setUp();
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByRole("link", { name: "List properties" }));
+
+    const closing = await screen.findByRole("heading", { name: "Closing" });
+    const members = screen.getByRole("heading", { name: "Members" });
+    const leave = screen.getByRole("button", { name: "Leave list" });
+    // Two stages of one thing (T-169): every other section comes first, then closing, then leave.
+    expect(members.compareDocumentPosition(closing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(closing.compareDocumentPosition(leave) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText(/nothing involving you can be added or changed/)).toBeInTheDocument();
   });
 
   it("says nothing while nobody has voted", async () => {

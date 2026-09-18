@@ -216,7 +216,7 @@ export const ja: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "締め",
-  "expense.closingHelp": "全員の同意が必要です。締めたあとは読み取り専用の記録になり、退出できるようになります。",
+  "expense.closingHelp": "全員の同意が必要です。同意すると、あなたの金額は確定し、あなたが関わる支出を追加・変更できなくなります。締めたあとは読み取り専用の記録になり、退出できるようになります。",
   "expense.agreeToClose": "締めに同意",
   "expense.withdrawVote": "取り消す",
   "expense.agreeCount": "{total} 人中 {voted} 人が締めに同意",

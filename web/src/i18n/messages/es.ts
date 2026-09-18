@@ -211,7 +211,7 @@ export const es: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Cierre",
-  "expense.closingHelp": "Todos deben estar de acuerdo. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.",
+  "expense.closingHelp": "Todos deben estar de acuerdo. Al aceptar, tus importes quedan fijados: no se puede añadir ni cambiar nada que te incluya. Una vez cerrada, la lista queda como registro de solo lectura y se puede abandonar.",
   "expense.agreeToClose": "Aceptar cerrar",
   "expense.withdrawVote": "Retirar",
   "expense.agreeCount": "{voted} de {total} aceptan cerrar",

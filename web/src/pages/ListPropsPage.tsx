@@ -323,23 +323,6 @@ export default function ListPropsPage() {
         )}
       </section>
 
-      {isExpenses(listKind(list)) && (
-        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("expense.closing")}</h2>
-          <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
-            {t("expense.closingHelp")}
-          </p>
-          <CloseVoteBanner
-            listId={id}
-            members={list.members ?? []}
-            closeVotes={list.close_votes ?? []}
-            closedAt={list.closed_at ?? null}
-            myAccountId={account?.id ?? null}
-            alwaysShow
-          />
-        </section>
-      )}
-
       {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
           when there's something to clear. */}
       {!isExpenses(listKind(list)) && allChecked.length > 0 && (
@@ -532,6 +515,25 @@ export default function ListPropsPage() {
           </div>
         )}
       </section>
+
+      {/* Closing sits directly above Leave (T-169): they are two stages of one thing — agree to
+          close, then, once closed, leave. */}
+      {isExpenses(listKind(list)) && (
+        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("expense.closing")}</h2>
+          <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
+            {t("expense.closingHelp")}
+          </p>
+          <CloseVoteBanner
+            listId={id}
+            members={list.members ?? []}
+            closeVotes={list.close_votes ?? []}
+            closedAt={list.closed_at ?? null}
+            myAccountId={account?.id ?? null}
+            alwaysShow
+          />
+        </section>
+      )}
 
       {/* Not offered for expenses (T-155): a copy of a shared ledger, with the same debts owed to
           nobody in particular, is never what someone means. */}

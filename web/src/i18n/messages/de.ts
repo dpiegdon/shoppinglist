@@ -216,7 +216,7 @@ export const de: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Abschließen",
-  "expense.closingHelp": "Alle müssen zustimmen. Danach ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.",
+  "expense.closingHelp": "Alle müssen zustimmen. Sobald du zustimmst, sind deine Beträge festgeschrieben: Nichts, was dich betrifft, kann noch hinzugefügt oder geändert werden. Nach dem Abschluss ist die Liste ein Nachweis, den man nur noch lesen und verlassen kann.",
   "expense.agreeToClose": "Abschluss zustimmen",
   "expense.withdrawVote": "Zurückziehen",
   "expense.agreeCount": "{voted} von {total} stimmen dem Abschluss zu",

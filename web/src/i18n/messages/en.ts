@@ -245,7 +245,7 @@ export const en = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Closing",
-  "expense.closingHelp": "Everyone has to agree. Once closed, the list is a read-only record and can be left.",
+  "expense.closingHelp": "Everyone has to agree. Once you agree, your amounts are fixed: nothing involving you can be added or changed. Once closed, the list is a read-only record and can be left.",
   "expense.agreeToClose": "Agree to close",
   "expense.withdrawVote": "Withdraw",
   "expense.agreeCount": "{voted} of {total} agree to close",

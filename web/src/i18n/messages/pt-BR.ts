@@ -214,7 +214,7 @@ export const ptBR: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Encerramento",
-  "expense.closingHelp": "Todos precisam concordar. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.",
+  "expense.closingHelp": "Todos precisam concordar. Ao concordar, seus valores ficam fixados: nada que envolva você pode ser adicionado ou alterado. Depois de encerrada, a lista vira um registro somente leitura e pode ser deixada.",
   "expense.agreeToClose": "Concordar em encerrar",
   "expense.withdrawVote": "Retirar",
   "expense.agreeCount": "{voted} de {total} concordam em encerrar",

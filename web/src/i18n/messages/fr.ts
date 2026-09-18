@@ -213,7 +213,7 @@ export const fr: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "Clôture",
-  "expense.closingHelp": "Tout le monde doit être d'accord. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.",
+  "expense.closingHelp": "Tout le monde doit être d'accord. Dès que vous acceptez, vos montants sont figés : plus rien qui vous concerne ne peut être ajouté ou modifié. Une fois close, la liste devient un relevé en lecture seule et peut être quittée.",
   "expense.agreeToClose": "Accepter la clôture",
   "expense.withdrawVote": "Retirer",
   "expense.agreeCount": "{voted} sur {total} acceptent la clôture",

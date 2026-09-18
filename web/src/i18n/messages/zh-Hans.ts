@@ -215,7 +215,7 @@ export const zhHans: Catalog = {
 
   // --- Closing an expenses list (T-159) ---
   "expense.closing": "结算",
-  "expense.closingHelp": "需要所有人同意。结算后清单变为只读记录，并且可以退出。",
+  "expense.closingHelp": "需要所有人同意。一旦你同意，你的金额即被锁定：不能再添加或更改任何涉及你的支出。结算后清单变为只读记录，并且可以退出。",
   "expense.agreeToClose": "同意结算",
   "expense.withdrawVote": "撤回",
   "expense.agreeCount": "{total} 人中已有 {voted} 人同意结算",
