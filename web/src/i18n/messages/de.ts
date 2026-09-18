@@ -226,5 +226,10 @@ export const de: Catalog = {
   "expense.frozen": "hat zugestimmt – Beträge festgeschrieben",
   "expense.error.frozen": "{who} hat dem Abschluss zugestimmt, daher sind diese Beträge unveränderlich.",
   "expense.error.closed": "Diese Liste ist abgeschlossen und kann nicht mehr geändert werden.",
+  "expense.settleUp": "Ausgleichen",
+  "expense.transfer": "{from} zahlt an {to}",
+  "expense.record": "Eintragen",
+  "expense.allSettled": "Alles ausgeglichen",
+  "expense.settlement": "Ausgleich",
   "listProps.leaveBlocked": "Eine Ausgabenliste kann erst verlassen werden, wenn sie abgeschlossen ist.",
 };

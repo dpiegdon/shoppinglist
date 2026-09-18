@@ -255,6 +255,11 @@ export const en = {
   "expense.frozen": "agreed to close — amounts fixed",
   "expense.error.frozen": "{who} has agreed to close the list, so their amounts cannot change.",
   "expense.error.closed": "This list has been closed and can no longer be changed.",
+  "expense.settleUp": "Settle up",
+  "expense.transfer": "{from} pays {to}",
+  "expense.record": "Record",
+  "expense.allSettled": "All settled",
+  "expense.settlement": "Settlement",
   "listProps.leaveBlocked": "An expenses list can only be left once it is closed.",
 } as const;
 

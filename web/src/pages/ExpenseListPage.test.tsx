@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import BalancesPage from "./BalancesPage";
+import { today } from "../components/ExpenseDialog";
 import ListRoute from "./ListRoute";
 import { AuthProvider } from "../auth/AuthContext";
 import { SyncProvider } from "../hooks/SyncContext";
@@ -474,5 +475,129 @@ describe("closing an expenses list", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       `${OTHER}@example.com has agreed to close the list`,
     );
+  });
+});
+
+
+// ---- settling up (T-164) -----------------------------------------------------
+
+describe("settling up", () => {
+  const taxi: Expense = {
+    paid_by: { "acct-gone": "20.00" },
+    equal_by: false,
+    paid_for: { [ME]: "10.00", "acct-gone": "10.00" },
+    equal_for: true,
+    date: "2026-09-16",
+  };
+
+  /** Replaces whatever sync would answer: the first pull returns these, later pulls nothing. */
+  function syncWith(list: ReturnType<typeof expenseList>, items: ReturnType<typeof expenseItem>[]) {
+    vi.mocked(api.sync).mockReset();
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [list], items } });
+  }
+
+  beforeEach(() => {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    // Balances: me +22.00, the other -32.00, the departed member +10.00. So the other pays me
+    // 22.00 first (largest debtor, largest creditor) and the departed member the remaining 10.00.
+    syncWith(expenseList(), [expenseItem("e1", "Dinner", dinner), expenseItem("e2", "Taxi", taxi)]);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("lists who pays whom, largest first, and names a former member", async () => {
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Settle up")).toBeInTheDocument();
+    const section = screen.getByRole("region", { name: "Settle up" });
+    expect(within(section).getAllByText(/ pays /).map((node) => node.textContent)).toEqual([
+      `${OTHER}@example.com pays ${ME}@example.com`,
+      `${OTHER}@example.com pays Former member 1`,
+    ]);
+    expect(within(section).getByText("22.00 EUR")).toBeInTheDocument();
+    expect(within(section).getByText("10.00 EUR")).toBeInTheDocument();
+    // Only the transfer between two current members can be recorded; nobody can settle with
+    // someone who has left.
+    expect(within(section).getAllByRole("button", { name: "Record" })).toHaveLength(1);
+  });
+
+  it("records a transfer as an ordinary expense through the pre-filled form", async () => {
+    renderAt("/list/list-1/balances");
+    await userEvent.click(await screen.findByRole("button", { name: "Record" }));
+
+    expect((screen.getByLabelText("What") as HTMLInputElement).value).toBe("Settlement");
+    expect((screen.getByLabelText("Total (EUR)") as HTMLInputElement).value).toBe("22.00");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const expense = pushedExpense();
+    expect(pushedItem()?.fields.name?.value).toBe("Settlement");
+    expect(expense.paid_by).toEqual({ [OTHER]: "22.00" });
+    expect(expense.paid_for).toEqual({ [ME]: "22.00" });
+    // Amounts that were meant, not an equal split: correcting the total later must not
+    // redistribute a payment to people who were never part of it.
+    expect(expense.equal_by).toBe(false);
+    expect(expense.equal_for).toBe(false);
+    expect(expense.date).toBe(today());
+  });
+
+  it("offers nothing to record once a party has agreed to close", async () => {
+    syncWith(expenseList([ME, OTHER], [OTHER]), [
+      expenseItem("e1", "Dinner", dinner),
+      expenseItem("e2", "Taxi", taxi),
+    ]);
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Settle up")).toBeInTheDocument();
+    // Both transfers involve the voter, whose amounts are frozen — the rows stay, the buttons go.
+    expect(screen.getAllByText(/ pays /)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Record" })).not.toBeInTheDocument();
+  });
+
+  it("a closed list keeps the transfers as its archive, with nothing to record", async () => {
+    syncWith(expenseList([ME, OTHER], [ME, OTHER], 1_758_000_000_000), [
+      expenseItem("e1", "Dinner", dinner),
+      expenseItem("e2", "Taxi", taxi),
+    ]);
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Settle up")).toBeInTheDocument();
+    expect(screen.getAllByText(/ pays /)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Record" })).not.toBeInTheDocument();
+  });
+
+  it("says all settled when nothing is owed", async () => {
+    const mirror: Expense = { ...dinner, paid_by: { [OTHER]: "64.00" } };
+    syncWith(expenseList(), [expenseItem("e1", "Dinner", dinner), expenseItem("e2", "Lunch", mirror)]);
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("All settled")).toBeInTheDocument();
+    expect(screen.queryByText(/ pays /)).not.toBeInTheDocument();
+  });
+
+  it("hides settling up on a list of one", async () => {
+    const solo: Expense = {
+      paid_by: { [ME]: "12.00" },
+      equal_by: true,
+      paid_for: { [ME]: "12.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    };
+    syncWith(expenseList([ME]), [expenseItem("e1", "Coffee", solo)]);
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Balances")).toBeInTheDocument();
+    expect(screen.queryByText("Settle up")).not.toBeInTheDocument();
   });
 });

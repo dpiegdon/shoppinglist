@@ -225,5 +225,10 @@ export const zhHans: Catalog = {
   "expense.frozen": "已同意结算 — 金额已锁定",
   "expense.error.frozen": "{who} 已同意结算，因此其金额不能更改。",
   "expense.error.closed": "此清单已结算，无法再更改。",
+  "expense.settleUp": "结算",
+  "expense.transfer": "{from} 支付给 {to}",
+  "expense.record": "记录",
+  "expense.allSettled": "已全部结清",
+  "expense.settlement": "还款",
   "listProps.leaveBlocked": "支出清单结算后才能退出。",
 };

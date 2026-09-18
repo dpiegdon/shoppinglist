@@ -225,5 +225,10 @@ export const uk: Catalog = {
   "expense.frozen": "погодився закрити — суми зафіксовано",
   "expense.error.frozen": "{who} погодився закрити список, тому ці суми не можна змінити.",
   "expense.error.closed": "Цей список закрито, змінити його вже не можна.",
+  "expense.settleUp": "Розрахуватися",
+  "expense.transfer": "{from} платить {to}",
+  "expense.record": "Записати",
+  "expense.allSettled": "Усе розраховано",
+  "expense.settlement": "Розрахунок",
   "listProps.leaveBlocked": "Список витрат можна залишити лише після закриття.",
 };

@@ -226,5 +226,10 @@ export const ja: Catalog = {
   "expense.frozen": "締めに同意済み — 金額は確定",
   "expense.error.frozen": "{who} が締めに同意しているため、この金額は変更できません。",
   "expense.error.closed": "このリストは締め済みで、変更できません。",
+  "expense.settleUp": "精算",
+  "expense.transfer": "{from} が {to} に支払う",
+  "expense.record": "記録する",
+  "expense.allSettled": "すべて精算済み",
+  "expense.settlement": "返済",
   "listProps.leaveBlocked": "支出リストは締めたあとにのみ退出できます。",
 };

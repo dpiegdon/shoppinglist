@@ -30,6 +30,11 @@ interface ExpenseDialogProps {
   myAccountId: string;
   /** Present for edit mode, absent for add mode. */
   editingItem?: ItemObject;
+  /**
+   * Values to open an add-mode form with (T-164): what Record on the balances screen hands over.
+   * Everything stays editable — changing the total is how a partial settlement is recorded.
+   */
+  prefill?: { name: string; expense: Expense };
   onClose: () => void;
   onSave: (values: ExpenseSaveValues) => Promise<void>;
   onDelete?: (itemId: string) => Promise<void>;
@@ -42,7 +47,7 @@ interface ShareState {
   text: Record<string, string>;
 }
 
-function today(): string {
+export function today(): string {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
@@ -94,6 +99,7 @@ export default function ExpenseDialog({
   currency,
   myAccountId,
   editingItem,
+  prefill,
   onClose,
   onSave,
   onDelete,
@@ -101,35 +107,37 @@ export default function ExpenseDialog({
   const t = useT();
   const isEdit = Boolean(editingItem);
   const stored = editingItem ? itemFieldValue(editingItem, "expense") ?? null : null;
+  // What the distributions start from: the expense being edited, else a prefill, else nothing.
+  const seed = stored ?? prefill?.expense ?? null;
 
   // Everyone who can be given a share: the current roster, plus anyone already on this expense
   // who has since left — their amount must stay visible and editable rather than vanish.
   const participantIds = useMemo(() => {
     const ids = members.map((member) => member.account_id);
-    for (const id of [...Object.keys(stored?.paid_by ?? {}), ...Object.keys(stored?.paid_for ?? {})]) {
+    for (const id of [...Object.keys(seed?.paid_by ?? {}), ...Object.keys(seed?.paid_for ?? {})]) {
       if (!ids.includes(id)) ids.push(id);
     }
     return ids;
-  }, [members, stored]);
+  }, [members, seed]);
 
   const [name, setName] = useState(() =>
-    editingItem ? itemFieldValue(editingItem, "name") ?? "" : "",
+    editingItem ? itemFieldValue(editingItem, "name") ?? "" : prefill?.name ?? "",
   );
   const [note, setNote] = useState(() =>
     editingItem ? itemFieldValue(editingItem, "note") ?? "" : "",
   );
-  const [date, setDate] = useState(() => stored?.date ?? today());
+  const [date, setDate] = useState(() => seed?.date ?? today());
   const [totalText, setTotalText] = useState(() =>
-    stored ? fromCents(expenseTotalCents(stored)) : "",
+    seed ? fromCents(expenseTotalCents(seed)) : "",
   );
   const [paidBy, setPaidBy] = useState<ShareState>(() =>
-    stored
-      ? shareStateFrom(stored.paid_by, stored.equal_by)
+    seed
+      ? shareStateFrom(seed.paid_by, seed.equal_by)
       : { selected: frozenFreeSelection([myAccountId], closeVotes, members), text: {} },
   );
   const [paidFor, setPaidFor] = useState<ShareState>(() =>
-    stored
-      ? shareStateFrom(stored.paid_for, stored.equal_for)
+    seed
+      ? shareStateFrom(seed.paid_for, seed.equal_for)
       : {
           selected: frozenFreeSelection(
             members.map((m) => m.account_id),

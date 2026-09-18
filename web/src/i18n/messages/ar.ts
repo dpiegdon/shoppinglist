@@ -227,5 +227,10 @@ export const ar: Catalog = {
   "expense.frozen": "وافق على الإغلاق — المبالغ ثابتة",
   "expense.error.frozen": "{who} وافق على إغلاق القائمة، لذا لا يمكن تغيير مبالغه.",
   "expense.error.closed": "أُغلقت هذه القائمة ولم يعد بالإمكان تغييرها.",
+  "expense.settleUp": "تسوية الحسابات",
+  "expense.transfer": "{from} يدفع إلى {to}",
+  "expense.record": "تسجيل",
+  "expense.allSettled": "تمت تسوية كل شيء",
+  "expense.settlement": "تسوية",
   "listProps.leaveBlocked": "لا يمكن مغادرة قائمة المصروفات إلا بعد إغلاقها.",
 };

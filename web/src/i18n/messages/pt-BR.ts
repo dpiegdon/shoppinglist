@@ -224,5 +224,10 @@ export const ptBR: Catalog = {
   "expense.frozen": "concordou em encerrar — valores fixados",
   "expense.error.frozen": "{who} concordou em encerrar a lista, então esses valores não podem mudar.",
   "expense.error.closed": "Esta lista foi encerrada e não pode mais ser alterada.",
+  "expense.settleUp": "Acertar contas",
+  "expense.transfer": "{from} paga {to}",
+  "expense.record": "Registrar",
+  "expense.allSettled": "Tudo acertado",
+  "expense.settlement": "Acerto",
   "listProps.leaveBlocked": "Uma lista de despesas só pode ser deixada depois de encerrada.",
 };

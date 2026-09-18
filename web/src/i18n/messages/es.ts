@@ -221,5 +221,10 @@ export const es: Catalog = {
   "expense.frozen": "aceptó cerrar: importes fijados",
   "expense.error.frozen": "{who} aceptó cerrar la lista, así que sus importes no pueden cambiar.",
   "expense.error.closed": "Esta lista está cerrada y ya no se puede modificar.",
+  "expense.settleUp": "Saldar cuentas",
+  "expense.transfer": "{from} paga a {to}",
+  "expense.record": "Registrar",
+  "expense.allSettled": "Todo saldado",
+  "expense.settlement": "Pago",
   "listProps.leaveBlocked": "Una lista de gastos solo se puede abandonar una vez cerrada.",
 };
