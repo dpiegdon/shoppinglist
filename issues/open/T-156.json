@@ -1,5 +1,5 @@
 {
-  "body": "Minor version. Carries the phase-1 tickets. Wheel smoke test gains an expense\nround trip before this is cut. Release notes must say that leaving an expense\nlist still works as it does for any list until phase 2.",
+  "body": "Minor version, 1.14.0. Nothing had shipped by the time phases 1\u20133 were all\nbuilt, so they go out together; T-160 folds into this and closes with it.\n\nNotes must say: an open expense list cannot be left or deleted; a closed one is\na read-only archive; settlements are ordinary expenses and count toward the\ntotal. Release testing should include the upgrade over 1.13.0, not only a clean\ninstall: this is the first release where an existing install runs a migration\nfrom the expense work (server 6 and 7, Android 5->6).",
   "created_at": "2026-09-17T17:50:53+00:00",
   "deps": [
     "T-154",
@@ -12,6 +12,6 @@
     "ops"
   ],
   "priority": 2,
-  "title": "Release: expense lists, phase 1",
-  "updated_at": "2026-09-18T08:42:36+00:00"
+  "title": "Release: expense lists, all three phases",
+  "updated_at": "2026-09-18T09:54:35+00:00"
 }
