@@ -274,6 +274,7 @@ export const en = {
   "apiError.invalidName": "Enter a name",
   "apiError.invalidNotes": "The notes are too long",
   "apiError.invalidCurrency": "Enter a three-letter currency code, such as EUR",
+  "apiError.invalidListCurrency": "Enter a currency for this list, up to 32 characters",
   "apiError.invalidPrice": "That price isn't valid",
   "apiError.inviteExpired": "This invite has expired",
   "apiError.inviteRevoked": "This invite was withdrawn",

@@ -244,6 +244,7 @@ export const zhHans: Catalog = {
   "apiError.invalidName": "请输入名称",
   "apiError.invalidNotes": "备注太长了",
   "apiError.invalidCurrency": "请输入三位字母的货币代码，例如 EUR",
+  "apiError.invalidListCurrency": "请输入此清单的货币，最多 32 个字符",
   "apiError.invalidPrice": "价格无效",
   "apiError.inviteExpired": "此邀请已过期",
   "apiError.inviteRevoked": "此邀请已被撤回",

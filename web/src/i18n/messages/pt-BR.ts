@@ -243,6 +243,7 @@ export const ptBR: Catalog = {
   "apiError.invalidName": "Digite um nome",
   "apiError.invalidNotes": "As notas são longas demais",
   "apiError.invalidCurrency": "Digite um código de moeda de três letras, como EUR",
+  "apiError.invalidListCurrency": "Digite uma moeda para esta lista, com até 32 caracteres",
   "apiError.invalidPrice": "Esse preço não é válido",
   "apiError.inviteExpired": "Este convite expirou",
   "apiError.inviteRevoked": "Este convite foi cancelado",

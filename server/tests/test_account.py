@@ -164,6 +164,9 @@ def test_update_settings_invalid_currency_raises_422(db_conn, bad_currency):
     with pytest.raises(ApiError) as excinfo:
         accounts.update_settings(db_conn, account_id, bad_currency)
     assert excinfo.value.status == 422
+    # invalid_currency stays this rule's code; an expenses list's free-text label has its own,
+    # invalid_list_currency, because the two rules contradict each other (T-199).
+    assert excinfo.value.code == "invalid_currency"
 
 
 # ---- service layer: initials (T-64) -----------------------------------------
@@ -550,6 +553,7 @@ def test_settings_http_patch_invalid_currency_422(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_currency"
 
 
 # ---- HTTP layer: PATCH-not-PUT semantics (T-87) ------------------------------

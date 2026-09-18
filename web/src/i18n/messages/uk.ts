@@ -244,6 +244,7 @@ export const uk: Catalog = {
   "apiError.invalidName": "Введіть назву",
   "apiError.invalidNotes": "Нотатки задовгі",
   "apiError.invalidCurrency": "Введіть трилітерний код валюти, наприклад EUR",
+  "apiError.invalidListCurrency": "Введіть валюту для цього списку, не більше ніж 32 символи",
   "apiError.invalidPrice": "Ця ціна недійсна",
   "apiError.inviteExpired": "Термін дії цього запрошення минув",
   "apiError.inviteRevoked": "Це запрошення відкликано",

@@ -499,7 +499,12 @@ def _validate_list_field(key, value):
                 422, "invalid_notes", f"List notes must be {NOTES_MAX_LENGTH} characters or fewer."
             )
     elif key == "currency":
-        _require_str(key, value, CURRENCY_LABEL_MAX_LENGTH, nullable=True, code="invalid_currency")
+        # Its own code, not the settings one (T-199): default_currency wants a 3-letter ISO code
+        # while a list's currency is free text under a length cap, and one code cannot carry both
+        # rules — clients told users to type "EUR" when the list label was merely too long.
+        _require_str(
+            key, value, CURRENCY_LABEL_MAX_LENGTH, nullable=True, code="invalid_list_currency"
+        )
     elif key == "kind":
         # Unknown kinds are rejected rather than coerced: a client sending a kind this server
         # doesn't know would otherwise get silent, surprising display behaviour (T-110).
@@ -875,7 +880,7 @@ def _apply_list(conn, account_id, device_id, obj):
         if kind == EXPENSES_KIND and not _is_nonblank(fields.get("currency", (None,))[0]):
             raise ApiError(
                 422,
-                "invalid_currency",
+                "invalid_list_currency",
                 "An expenses list requires a currency.",
                 details={"row_id": list_id, "field": "currency"},
             )
@@ -941,7 +946,7 @@ def _apply_list(conn, account_id, device_id, obj):
     ):
         raise ApiError(
             422,
-            "invalid_currency",
+            "invalid_list_currency",
             "An expenses list requires a currency.",
             details={"row_id": list_id, "field": "currency"},
         )

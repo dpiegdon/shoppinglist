@@ -277,6 +277,7 @@
     <string name="api_error_invalid_name">أدخل اسمًا</string>
     <string name="api_error_invalid_notes">الملاحظات طويلة جدًا</string>
     <string name="api_error_invalid_currency">أدخل رمز عملة من ثلاثة أحرف، مثل EUR</string>
+    <string name="api_error_invalid_list_currency">أدخل عملة لهذه القائمة، بحد أقصى 32 حرفًا</string>
     <string name="api_error_invalid_price">هذا السعر غير صالح</string>
     <string name="api_error_invite_expired">انتهت صلاحية هذه الدعوة</string>
     <string name="api_error_invite_revoked">تم سحب هذه الدعوة</string>

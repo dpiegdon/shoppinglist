@@ -25,6 +25,19 @@ class ErrorTextTest {
     }
 
     @Test
+    fun `the two currency rules say different things`() {
+        // One code for both used to tell someone whose list label was too long to type "EUR" (T-199).
+        assertEquals(
+            UiText.res(R.string.api_error_invalid_currency),
+            ErrorText.of(apiError("invalid_currency"), R.string.redeem_msg_failed),
+        )
+        assertEquals(
+            UiText.res(R.string.api_error_invalid_list_currency),
+            ErrorText.of(apiError("invalid_list_currency"), R.string.redeem_msg_failed),
+        )
+    }
+
+    @Test
     fun `a screen can say something narrower for a code`() {
         val text = ErrorText.of(
             apiError("invalid_credentials"),

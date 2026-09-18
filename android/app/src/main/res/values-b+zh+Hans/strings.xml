@@ -277,6 +277,7 @@
     <string name="api_error_invalid_name">请输入名称</string>
     <string name="api_error_invalid_notes">备注太长了</string>
     <string name="api_error_invalid_currency">请输入三位字母的货币代码，例如 EUR</string>
+    <string name="api_error_invalid_list_currency">请输入此清单的货币，最多 32 个字符</string>
     <string name="api_error_invalid_price">价格无效</string>
     <string name="api_error_invite_expired">此邀请已过期</string>
     <string name="api_error_invite_revoked">此邀请已被撤回</string>

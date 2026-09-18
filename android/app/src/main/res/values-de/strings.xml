@@ -277,6 +277,7 @@
     <string name="api_error_invalid_name">Gib einen Namen ein</string>
     <string name="api_error_invalid_notes">Die Notizen sind zu lang</string>
     <string name="api_error_invalid_currency">Gib einen dreistelligen Währungscode ein, z. B. EUR</string>
+    <string name="api_error_invalid_list_currency">Gib eine Währung für diese Liste ein, höchstens 32 Zeichen</string>
     <string name="api_error_invalid_price">Dieser Preis ist ungültig</string>
     <string name="api_error_invite_expired">Diese Einladung ist abgelaufen</string>
     <string name="api_error_invite_revoked">Diese Einladung wurde zurückgezogen</string>

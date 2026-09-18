@@ -245,6 +245,7 @@ export const de: Catalog = {
   "apiError.invalidName": "Gib einen Namen ein",
   "apiError.invalidNotes": "Die Notizen sind zu lang",
   "apiError.invalidCurrency": "Gib einen dreistelligen Währungscode ein, z. B. EUR",
+  "apiError.invalidListCurrency": "Gib eine Währung für diese Liste ein, höchstens 32 Zeichen",
   "apiError.invalidPrice": "Dieser Preis ist ungültig",
   "apiError.inviteExpired": "Diese Einladung ist abgelaufen",
   "apiError.inviteRevoked": "Diese Einladung wurde zurückgezogen",

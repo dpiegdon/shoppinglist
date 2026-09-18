@@ -277,6 +277,7 @@
     <string name="api_error_invalid_name">Введіть назву</string>
     <string name="api_error_invalid_notes">Нотатки задовгі</string>
     <string name="api_error_invalid_currency">Введіть трилітерний код валюти, наприклад EUR</string>
+    <string name="api_error_invalid_list_currency">Введіть валюту для цього списку, не більше ніж 32 символи</string>
     <string name="api_error_invalid_price">Ця ціна недійсна</string>
     <string name="api_error_invite_expired">Термін дії цього запрошення минув</string>
     <string name="api_error_invite_revoked">Це запрошення відкликано</string>

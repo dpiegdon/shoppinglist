@@ -22,6 +22,9 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   invalid_notes: "apiError.invalidNotes",
   invalid_initials: ["settings.initialsTooLong", { count: 3 }],
   invalid_currency: "apiError.invalidCurrency",
+  // A different rule, so a different code and a different sentence (T-199): the account's
+  // default_currency is an ISO code, an expenses list's currency is a free-text label.
+  invalid_list_currency: "apiError.invalidListCurrency",
   invalid_price: "apiError.invalidPrice",
   invite_expired: "apiError.inviteExpired",
   invite_revoked: "apiError.inviteRevoked",

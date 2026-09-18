@@ -245,6 +245,7 @@ export const ja: Catalog = {
   "apiError.invalidName": "名前を入力してください",
   "apiError.invalidNotes": "メモが長すぎます",
   "apiError.invalidCurrency": "EUR のような 3 文字の通貨コードを入力してください",
+  "apiError.invalidListCurrency": "このリストの通貨を 32 文字以内で入力してください",
   "apiError.invalidPrice": "価格が正しくありません",
   "apiError.inviteExpired": "この招待は期限切れです",
   "apiError.inviteRevoked": "この招待は取り消されました",

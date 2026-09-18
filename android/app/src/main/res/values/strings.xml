@@ -324,6 +324,7 @@
     <string name="api_error_invalid_name">Enter a name</string>
     <string name="api_error_invalid_notes">The notes are too long</string>
     <string name="api_error_invalid_currency">Enter a three-letter currency code, such as EUR</string>
+    <string name="api_error_invalid_list_currency">Enter a currency for this list, up to 32 characters</string>
     <string name="api_error_invalid_price">That price isn\'t valid</string>
     <string name="api_error_invite_expired">This invite has expired</string>
     <string name="api_error_invite_revoked">This invite was withdrawn</string>

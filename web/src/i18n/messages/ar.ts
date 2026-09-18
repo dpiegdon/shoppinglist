@@ -246,6 +246,7 @@ export const ar: Catalog = {
   "apiError.invalidName": "أدخل اسمًا",
   "apiError.invalidNotes": "الملاحظات طويلة جدًا",
   "apiError.invalidCurrency": "أدخل رمز عملة من ثلاثة أحرف، مثل EUR",
+  "apiError.invalidListCurrency": "أدخل عملة لهذه القائمة، بحد أقصى 32 حرفًا",
   "apiError.invalidPrice": "هذا السعر غير صالح",
   "apiError.inviteExpired": "انتهت صلاحية هذه الدعوة",
   "apiError.inviteRevoked": "تم سحب هذه الدعوة",

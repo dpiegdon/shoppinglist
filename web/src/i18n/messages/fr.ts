@@ -242,6 +242,7 @@ export const fr: Catalog = {
   "apiError.invalidName": "Saisissez un nom",
   "apiError.invalidNotes": "Les notes sont trop longues",
   "apiError.invalidCurrency": "Saisissez un code de devise à trois lettres, par exemple EUR",
+  "apiError.invalidListCurrency": "Saisissez une devise pour cette liste, 32 caractères maximum",
   "apiError.invalidPrice": "Ce prix n'est pas valide",
   "apiError.inviteExpired": "Cette invitation a expiré",
   "apiError.inviteRevoked": "Cette invitation a été retirée",

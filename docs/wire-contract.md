@@ -153,8 +153,12 @@ refused too.
   with `row_id` and `field`, whatever its clock.
 - `currency` is a free-text label of at most 32 characters — `"EUR"`, `"€"`,
   `"pizza slices"` — deliberately not an ISO code. It is **required and
-  non-blank** when creating an `expenses` list and can never be blanked there
-  (`422 invalid_currency`); on other kinds it is permitted and unrendered.
+  non-blank** when creating an `expenses` list and can never be blanked there;
+  either way, and over the length cap on any kind, that is
+  `422 invalid_list_currency` with `row_id` and `field`. The code is its own, not
+  the `invalid_currency` of `PATCH /settings`: that one asks for a 3-letter
+  ISO-4217 code, this one does not. On other kinds the field is permitted and
+  unrendered.
 - `members`, `close_votes` and `closed_at` sit **outside** `fields` and are
   server-maintained, like an item's `last_touched_by`: clients never write them,
   and a client that sends them has them ignored.
@@ -440,10 +444,11 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list". |
 | 410 | `full_resync_required` | See "Sync". |
 | 413 | `payload_too_large` | The request body is over the size cap (4 MB by default). |
-| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_currency`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). |
+| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). |
+| 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
 | 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
 | 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`, or names a list the caller cannot write to. |
-| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_currency` | A pushed field value breaks its rule (see "Item object", "List object"). |
+| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. |
 | 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
 | 503 | `server_busy` | See "Conventions". Always safe to retry. |

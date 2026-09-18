@@ -26,6 +26,9 @@ object ErrorText {
         "invalid_notes" to UiText.res(R.string.api_error_invalid_notes),
         "invalid_initials" to UiText.res(R.string.settings_msg_initials_too_long, 3),
         "invalid_currency" to UiText.res(R.string.api_error_invalid_currency),
+        // A different rule, so a different code and a different sentence (T-199): the account's
+        // default_currency is an ISO code, an expenses list's currency is a free-text label.
+        "invalid_list_currency" to UiText.res(R.string.api_error_invalid_list_currency),
         "invalid_price" to UiText.res(R.string.api_error_invalid_price),
         "invite_expired" to UiText.res(R.string.api_error_invite_expired),
         "invite_revoked" to UiText.res(R.string.api_error_invite_revoked),

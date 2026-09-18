@@ -277,6 +277,7 @@
     <string name="api_error_invalid_name">Saisissez un nom</string>
     <string name="api_error_invalid_notes">Les notes sont trop longues</string>
     <string name="api_error_invalid_currency">Saisissez un code de devise à trois lettres, par exemple EUR</string>
+    <string name="api_error_invalid_list_currency">Saisissez une devise pour cette liste, 32 caractères maximum</string>
     <string name="api_error_invalid_price">Ce prix n\'est pas valide</string>
     <string name="api_error_invite_expired">Cette invitation a expiré</string>
     <string name="api_error_invite_revoked">Cette invitation a été retirée</string>

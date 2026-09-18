@@ -277,6 +277,7 @@
     <string name="api_error_invalid_name">名前を入力してください</string>
     <string name="api_error_invalid_notes">メモが長すぎます</string>
     <string name="api_error_invalid_currency">EUR のような 3 文字の通貨コードを入力してください</string>
+    <string name="api_error_invalid_list_currency">このリストの通貨を 32 文字以内で入力してください</string>
     <string name="api_error_invalid_price">価格が正しくありません</string>
     <string name="api_error_invite_expired">この招待は期限切れです</string>
     <string name="api_error_invite_revoked">この招待は取り消されました</string>

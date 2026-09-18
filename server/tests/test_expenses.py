@@ -110,17 +110,25 @@ def test_other_kinds_carry_a_null_currency_on_the_wire(db_conn, alice):
 
 @pytest.mark.parametrize("currency", [None, "", "   "])
 def test_an_expenses_list_cannot_be_created_without_a_currency(db_conn, alice, currency):
-    error = _rejects(db_conn, alice, "invalid_currency", lists=[_expense_list(currency=currency)])
+    # invalid_list_currency, never the settings code (T-199): this rule is "non-blank, 32 chars",
+    # not "a 3-letter ISO code", and the clients say so.
+    error = _rejects(
+        db_conn, alice, "invalid_list_currency", lists=[_expense_list(currency=currency)]
+    )
     assert error.details == {"row_id": "trip", "field": "currency"}
 
 
 def test_currency_is_capped_at_32_characters(db_conn, alice):
-    _rejects(db_conn, alice, "invalid_currency", lists=[_expense_list(currency="x" * 33)])
+    error = _rejects(
+        db_conn, alice, "invalid_list_currency", lists=[_expense_list(currency="x" * 33)]
+    )
+    assert error.details == {"row_id": "trip", "field": "currency"}
 
 
 def test_an_expenses_list_currency_cannot_be_blanked_later(db_conn, trip):
     update = {"id": "trip", "fields": {"currency": _clock("", 200)}}
-    _rejects(db_conn, trip["alice"], "invalid_currency", lists=[update])
+    error = _rejects(db_conn, trip["alice"], "invalid_list_currency", lists=[update])
+    assert error.details == {"row_id": "trip", "field": "currency"}
 
 
 @pytest.mark.parametrize(
