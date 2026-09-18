@@ -70,8 +70,7 @@ import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.ui.AddFab
-import org.p23q.shoppinglist.ui.SyncStatusMarker
-import org.p23q.shoppinglist.ui.rememberTickingNowMs
+import org.p23q.shoppinglist.ui.appLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,12 +153,8 @@ fun ListScreen(
                         null
                     },
                 )
+                // The sync dot lives in the top bar now, on every screen as on the web (T-178).
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Folded into this row instead of its own line (T-63): a quiet dot rather than a
-                    // full "Synced 5 min ago" sentence; the sentence itself is still there as the
-                    // content description for TalkBack. The loud attention banner is Overview's job.
-                    SyncStatusMarker(state = state.sync, nowMs = rememberTickingNowMs())
-                    Spacer(Modifier.width(8.dp))
                     IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.nav_registry))
                     }
@@ -174,6 +169,17 @@ fun ListScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    // Said, not left blank (T-179), as the expense list and the web do.
+                    if (state.groups.isEmpty()) {
+                        item(key = "empty") {
+                            Text(
+                                text = stringResource(R.string.list_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            )
+                        }
+                    }
                     state.groups.forEachIndexed { index, group ->
                     item(key = "header-${group.category ?: "—"}") {
                         // A thin divider between categories (not above the first) makes groups easy to
@@ -289,7 +295,7 @@ private fun ItemRow(
                 // showing what the form won't let you edit would be confusing. The data is untouched.
                 val quantity = item.quantity.value?.takeIf { it.isNotBlank() }
                 val detail = if (!showShoppingFields) "" else
-                    listOfNotNull(quantity, formatPrice(item, defaultCurrency)).joinToString(" · ")
+                    listOfNotNull(quantity, formatPrice(item, defaultCurrency, appLocale())).joinToString(" · ")
                 if (detail.isNotEmpty()) {
                     Text(text = detail, style = MaterialTheme.typography.bodySmall)
                 }

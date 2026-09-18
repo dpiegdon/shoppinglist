@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.Dispatcher
@@ -23,10 +25,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DefaultCurrencyState
-import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
@@ -43,8 +45,7 @@ import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
 import java.io.File
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.launch
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 class ListViewModelTest {
@@ -279,8 +280,9 @@ class ListViewModelTest {
         val groups = newViewModel().uiState.first { it.groups.isNotEmpty() }.groups
         val items = groups.flatMap { it.items }.associateBy { it.name.value }
 
-        assertEquals("1.99 EUR", formatPrice(items.getValue("Milk"), "USD"))
-        assertEquals("2.50 USD", formatPrice(items.getValue("Bread"), "USD"))
+        // In the app's language (T-187): English here, so the symbol leads.
+        assertEquals("€1.99", formatPrice(items.getValue("Milk"), "USD", Locale.US))
+        assertEquals("$2.50", formatPrice(items.getValue("Bread"), "USD", Locale.US))
     }
 
     @Test
@@ -299,7 +301,7 @@ class ListViewModelTest {
         val afterSettingsChange = newViewModel().uiState.first { it.groups.isNotEmpty() }
         assertEquals("EUR", afterSettingsChange.defaultCurrency)
         val item = afterSettingsChange.groups.flatMap { it.items }.single { it.id == itemId }
-        assertEquals("2.50 EUR", formatPrice(item, afterSettingsChange.defaultCurrency))
+        assertEquals("€2.50", formatPrice(item, afterSettingsChange.defaultCurrency, Locale.US))
     }
 
     @Test
@@ -318,7 +320,7 @@ class ListViewModelTest {
 
         val updated = viewModel.uiState.first { it.defaultCurrency == "EUR" }
         val item = updated.groups.flatMap { it.items }.single { it.id == itemId }
-        assertEquals("2.50 EUR", formatPrice(item, updated.defaultCurrency))
+        assertEquals("€2.50", formatPrice(item, updated.defaultCurrency, Locale.US))
     }
 
     @Test

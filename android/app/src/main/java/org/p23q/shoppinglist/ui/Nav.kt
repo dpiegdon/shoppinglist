@@ -421,8 +421,10 @@ internal fun AppDrawerScaffold(
     // When set, the top-bar title becomes tappable (the list screen uses it to jump to Overview).
     onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    syncStatusViewModel: SyncStatusViewModel = hiltViewModel(),
     content: @Composable () -> Unit,
 ) {
+    val syncState by syncStatusViewModel.state.collectAsStateWithLifecycle()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -507,7 +509,16 @@ internal fun AppDrawerScaffold(
                             Icon(imageVector = Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
                         }
                     },
-                    actions = actions,
+                    actions = {
+                        actions()
+                        // One sync status on every screen, where the web keeps it too (T-178): a
+                        // quiet dot, with the full "Synced 5 min ago" sentence as its description.
+                        SyncStatusMarker(
+                            state = syncState,
+                            nowMs = rememberTickingNowMs(),
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                        )
+                    },
                 )
             },
         ) { innerPadding ->

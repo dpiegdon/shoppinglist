@@ -22,7 +22,13 @@ import org.p23q.shoppinglist.data.sync.Syncer
 import javax.inject.Inject
 
 /** What an expenses list's card shows instead of an open-item count. */
-data class ExpenseSummary(val totalCents: Long, val myBalanceCents: Long?, val currency: String)
+data class ExpenseSummary(
+    val totalCents: Long,
+    val myBalanceCents: Long?,
+    val currency: String,
+    /** Closed by vote (T-157), which the overview says (T-181). */
+    val closed: Boolean = false,
+)
 
 data class OverviewUiState(
     val lists: List<ListEntity> = emptyList(),
@@ -76,6 +82,7 @@ class OverviewViewModel @Inject constructor(
                         // A list of one is always square with itself, so its balance says nothing.
                         myBalanceCents = balance?.balanceCents?.takeIf { members.size > 1 },
                         currency = list.currency.value.orEmpty(),
+                        closed = list.closedAt != null,
                     )
                 }
                 _uiState.update { it.copy(expenseSummaries = summaries) }

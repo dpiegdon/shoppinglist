@@ -44,6 +44,8 @@ fun SyncStatusBar(
     // The list screen already surfaces the recency line and doesn't need the loud attention banner
     // (Overview owns that), so it opts out (T-36).
     showAttention: Boolean = true,
+    // Off where the top bar's status dot already says it (T-178).
+    showRecency: Boolean = true,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (showAttention && state.blockedCount > 0) {
@@ -63,7 +65,7 @@ fun SyncStatusBar(
                 }
             }
         }
-        Text(
+        if (showRecency) Text(
             text = syncRecencyText(state, nowMs).asString(),
             style = MaterialTheme.typography.labelSmall,
             color = if (state.lastError != null && state.blockedCount == 0) {

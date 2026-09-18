@@ -35,11 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SyncStatusBar
+import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,10 +60,13 @@ fun OverviewScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // The recency line moved into the top bar with the status dot (T-178); what stays here is
+            // the banner for rows that failed to sync, which needs the room and the tap target.
             SyncStatusBar(
                 state = state.sync,
                 nowMs = rememberTickingNowMs(),
                 onAttentionClick = { state.attentionListId?.let(onOpenList) },
+                showRecency = false,
             )
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
@@ -105,20 +110,24 @@ fun OverviewScreen(
                                         // What has been spent, and where this account stands —
                                         // an expenses list has no open items to count (T-154).
                                         Column(horizontalAlignment = Alignment.End) {
+                                            val locale = appLocale()
+                                            val total = AppFormat.money(summary.totalCents, summary.currency, locale)
                                             Text(
-                                                text = "${ExpenseMath.fromCents(summary.totalCents)} ${summary.currency}",
+                                                // "Closed · total", as the web writes it (T-181).
+                                                text = if (summary.closed) {
+                                                    "${stringResource(R.string.expense_closed)} · $total"
+                                                } else {
+                                                    total
+                                                },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             summary.myBalanceCents?.let { balance ->
                                                 Text(
-                                                    text = "${ExpenseMath.fromCents(balance)} ${summary.currency}",
+                                                    text = AppFormat.money(balance, summary.currency, locale),
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = if (balance < 0) {
-                                                        MaterialTheme.colorScheme.error
-                                                    } else {
-                                                        MaterialTheme.colorScheme.primary
-                                                    },
+                                                    // Square is grey, as everywhere else (T-182).
+                                                    color = balanceColor(balance),
                                                 )
                                             }
                                         }

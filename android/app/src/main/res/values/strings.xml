@@ -13,6 +13,7 @@
 
     <!-- generic actions, reused across screens -->
     <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Save</string>
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
@@ -33,7 +34,7 @@
     <string name="nav_menu">Menu</string>
     <string name="nav_overview">Overview</string>
     <string name="nav_list">List</string>
-    <string name="nav_registry">Registry</string>
+    <string name="nav_registry">All items</string>
     <string name="nav_list_properties">List properties</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_server_admin">Server admin</string>
@@ -84,6 +85,7 @@
 
     <!-- list -->
     <string name="list_add_item">Add item</string>
+    <string name="list_empty">Nothing on this list yet. Add an item to get started.</string>
     <string name="list_clear_checked">Clear checked</string>
     <string name="list_show_checked">Show checked</string>
     <string name="list_edit_item">Edit %1$s</string>
@@ -104,7 +106,7 @@
     <string name="item_add">Add item</string>
     <string name="item_edit">Edit item</string>
     <string name="item_delete_title">Delete item?</string>
-    <string name="item_delete_registry_body">“%1$s” will be removed from the registry.</string>
+    <string name="item_delete_body">“%1$s” will be removed from this list.</string>
 
     <!-- registry -->
     <string name="registry_search">Search</string>
@@ -279,7 +281,7 @@
     <string name="expense_paid_for">For</string>
     <string name="expense_empty">No expenses yet. Add one to get started.</string>
     <string name="expense_total_spent">Total spent</string>
-    <string name="expense_total_spent_value">Total spent: %1$s %2$s</string>
+    <string name="expense_total_spent_value">Total spent: %1$s</string>
     <string name="expense_your_balance">Your balance</string>
     <string name="expense_paid_and_share">paid %1$s · share %2$s</string>
     <string name="expense_former_member">Former member %1$d</string>
@@ -307,6 +309,7 @@
     <string name="expense_closed_on">Closed on %1$s</string>
     <string name="expense_vote_failed">Could not record your vote.</string>
     <string name="expense_frozen">agreed to close — amounts fixed</string>
+    <string name="expense_closed">Closed</string>
     <string name="expense_settle_up">Settle up</string>
     <string name="expense_transfer">%1$s pays %2$s</string>
     <string name="expense_reimburse">Reimburse</string>

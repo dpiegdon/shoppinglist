@@ -12,6 +12,7 @@
 
     <string name="app_name">Lista de compras</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Salvar</string>
     <string name="action_add">Adicionar</string>
     <string name="action_delete">Excluir</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">Apenas nomes, categorias e observações.</string>
     <string name="overview_kind_shopping">Adiciona lojas, quantidade e preço a cada item.</string>
     <string name="list_add_item">Adicionar item</string>
+    <string name="list_empty">Nada nesta lista ainda. Adicione um item para começar.</string>
     <string name="list_clear_checked">Redefinir concluídos</string>
     <string name="list_show_checked">Mostrar concluídos</string>
     <string name="list_edit_item">Editar %1$s</string>
@@ -83,7 +85,7 @@
     <string name="item_add">Adicionar item</string>
     <string name="item_edit">Editar item</string>
     <string name="item_delete_title">Excluir item?</string>
-    <string name="item_delete_registry_body">“%1$s” será removido do registro.</string>
+    <string name="item_delete_body">“%1$s” será removido desta lista.</string>
     <string name="registry_search">Buscar</string>
     <string name="registry_item_deleted">%1$s excluído</string>
     <string name="registry_delete_item">Excluir %1$s</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">Para</string>
     <string name="expense_empty">Ainda não há despesas. Adicione uma para começar.</string>
     <string name="expense_total_spent">Total gasto</string>
-    <string name="expense_total_spent_value">Total gasto: %1$s %2$s</string>
+    <string name="expense_total_spent_value">Total gasto: %1$s</string>
     <string name="expense_your_balance">Seu saldo</string>
     <string name="expense_paid_and_share">pagou %1$s · parte %2$s</string>
     <string name="expense_former_member">Ex-integrante %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">Encerrada em %1$s</string>
     <string name="expense_vote_failed">Não foi possível registrar seu voto.</string>
     <string name="expense_frozen">concordou em encerrar — valores fixados</string>
+    <string name="expense_closed">Encerrada</string>
     <string name="expense_settle_up">Acertar contas</string>
     <string name="expense_transfer">%1$s paga %2$s</string>
     <string name="expense_reimburse">Reembolsar</string>

@@ -66,7 +66,7 @@ fun EditItemDialog(
         LocalizedAlertDialog(
             onDismissRequest = viewModel::cancelDelete,
             title = { Text(stringResource(R.string.item_delete_title)) },
-            text = { Text(stringResource(R.string.item_delete_registry_body, state.name)) },
+            text = { Text(stringResource(R.string.item_delete_body, state.name)) },
             confirmButton = { TextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
             dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text(stringResource(R.string.action_cancel)) } },
         )

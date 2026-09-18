@@ -12,6 +12,7 @@
 
     <string name="app_name">Liste de courses</string>
     <string name="action_cancel">Annuler</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Enregistrer</string>
     <string name="action_add">Ajouter</string>
     <string name="action_delete">Supprimer</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">Uniquement noms, catégories et notes.</string>
     <string name="overview_kind_shopping">Ajoute magasins, quantité et prix à chaque article.</string>
     <string name="list_add_item">Ajouter un article</string>
+    <string name="list_empty">Rien sur cette liste pour l\'instant. Ajoute un article pour commencer.</string>
     <string name="list_clear_checked">Réinitialiser les articles faits</string>
     <string name="list_show_checked">Afficher les articles faits</string>
     <string name="list_edit_item">Modifier %1$s</string>
@@ -83,7 +85,7 @@
     <string name="item_add">Ajouter un article</string>
     <string name="item_edit">Modifier l\'article</string>
     <string name="item_delete_title">Supprimer l\'article ?</string>
-    <string name="item_delete_registry_body">« %1$s » sera retiré du registre.</string>
+    <string name="item_delete_body">« %1$s » sera retiré de cette liste.</string>
     <string name="registry_search">Rechercher</string>
     <string name="registry_item_deleted">%1$s supprimé</string>
     <string name="registry_delete_item">Supprimer %1$s</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">Pour</string>
     <string name="expense_empty">Aucune dépense pour l\'instant. Ajoutez-en une.</string>
     <string name="expense_total_spent">Total dépensé</string>
-    <string name="expense_total_spent_value">Total dépensé : %1$s %2$s</string>
+    <string name="expense_total_spent_value">Total dépensé : %1$s</string>
     <string name="expense_your_balance">Votre solde</string>
     <string name="expense_paid_and_share">payé %1$s · part %2$s</string>
     <string name="expense_former_member">Ancien membre %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">Close le %1$s</string>
     <string name="expense_vote_failed">Votre vote n\'a pas pu être enregistré.</string>
     <string name="expense_frozen">a accepté la clôture — montants figés</string>
+    <string name="expense_closed">Close</string>
     <string name="expense_settle_up">Régler les comptes</string>
     <string name="expense_transfer">%1$s paie %2$s</string>
     <string name="expense_reimburse">Rembourser</string>

@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.expense
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,9 +17,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,11 +32,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,9 +57,14 @@ import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
+import org.p23q.shoppinglist.ui.appLocale
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
  * Add or edit one expense (T-154). Full-screen with a fixed action bar for the same reason
@@ -59,6 +73,7 @@ import org.p23q.shoppinglist.ui.LocalizedOverlay
  * [itemId] null means a new expense on [listId]; otherwise that expense is edited. [prefill]
  * seeds a new expense with what Reimburse on the balances screen chose (T-165).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseDialog(
     listId: String,
@@ -69,6 +84,12 @@ fun ExpenseDialog(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val nameFocusRequester = remember { FocusRequester() }
+    var isPickingDate by remember { mutableStateOf(false) }
+    // A read-only field consumes its own taps, so a tap is read from its interactions instead.
+    val dateInteraction = remember { MutableInteractionSource() }
+    LaunchedEffect(dateInteraction) {
+        dateInteraction.interactions.collect { if (it is PressInteraction.Release) isPickingDate = true }
+    }
     val keyboard = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(listId, itemId) {
@@ -134,11 +155,20 @@ fun ExpenseDialog(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1f),
                             )
+                            // Picked, not typed (T-185), as the web's date input is: shown in the app's
+                            // language, opened by a tap anywhere on the field or on its icon.
                             OutlinedTextField(
-                                value = state.date,
-                                onValueChange = viewModel::onDateChange,
+                                value = AppFormat.calendarDate(state.date, appLocale()),
+                                onValueChange = {},
+                                readOnly = true,
                                 label = { Text(stringResource(R.string.expense_date)) },
+                                trailingIcon = {
+                                    IconButton(onClick = { isPickingDate = true }) {
+                                        Icon(Icons.Default.DateRange, contentDescription = stringResource(R.string.expense_date))
+                                    }
+                                },
                                 singleLine = true,
+                                interactionSource = dateInteraction,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -199,6 +229,39 @@ fun ExpenseDialog(
                             Text(stringResource(if (state.isEditMode) R.string.action_save else R.string.action_add))
                         }
                     }
+                }
+            }
+
+            if (isPickingDate) {
+                // Stored dates are calendar dates, so the picker works at UTC midnight both ways:
+                // no time zone can move the chosen day.
+                val pickerState = rememberDatePickerState(
+                    initialSelectedDateMillis = runCatching {
+                        LocalDate.parse(state.date).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+                    }.getOrNull(),
+                )
+                // Its own window, so the chosen language is applied again, as LocalizedAlertDialog does.
+                DatePickerDialog(
+                    onDismissRequest = { isPickingDate = false },
+                    confirmButton = {
+                        LocalizedOverlay {
+                            TextButton(onClick = {
+                                pickerState.selectedDateMillis?.let { millis ->
+                                    viewModel.onDateChange(
+                                        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString(),
+                                    )
+                                }
+                                isPickingDate = false
+                            }) { Text(stringResource(R.string.action_ok)) }
+                        }
+                    },
+                    dismissButton = {
+                        LocalizedOverlay {
+                            TextButton(onClick = { isPickingDate = false }) { Text(stringResource(R.string.action_cancel)) }
+                        }
+                    },
+                ) {
+                    LocalizedOverlay { DatePicker(state = pickerState) }
                 }
             }
 

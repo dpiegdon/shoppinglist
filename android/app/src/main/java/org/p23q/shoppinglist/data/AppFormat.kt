@@ -1,0 +1,58 @@
+package org.p23q.shoppinglist.data
+
+import java.math.BigDecimal
+import java.text.NumberFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Currency
+import java.util.Locale
+
+/**
+ * Amounts and dates in the app's chosen language (T-180, T-187), as the web's lib/format.ts does:
+ * 64,00 € in German, €64.00 in English, and dates as each language writes them.
+ *
+ * Display only. Input fields keep the plain 64.00 / 2026-09-17 forms they parse, so what a user
+ * types is never reinterpreted by their language setting.
+ */
+object AppFormat {
+
+    /** Only an ISO code gets currency formatting; a free-text label (a list's own unit) does not. */
+    private val isoCurrency = Regex("^[A-Z]{3}$")
+
+    /** 64,00 € / €64.00 — or "12,00 pizza slices" when the label is not a currency code. */
+    fun money(cents: Long, currency: String?, locale: Locale): String {
+        val label = currency?.trim().orEmpty()
+        val code = if (isoCurrency.matches(label)) runCatching { Currency.getInstance(label) }.getOrNull() else null
+        if (code != null) {
+            // The currency's own precision (none for yen), set explicitly: java.text's setCurrency
+            // does not change the fraction digits. An amount that really has cents keeps them
+            // rather than being rounded away.
+            val format = NumberFormat.getCurrencyInstance(locale).apply { this.currency = code }
+            val digits = if (cents % 100 != 0L) 2 else code.defaultFractionDigits.coerceAtLeast(0)
+            format.minimumFractionDigits = digits
+            format.maximumFractionDigits = digits
+            return format.format(BigDecimal.valueOf(cents, 2))
+        }
+        val number = number(cents, locale)
+        return if (label.isNotEmpty()) "$number $label" else number
+    }
+
+    /** 64,00 / 64.00: the number alone, always with two decimals. */
+    fun number(cents: Long, locale: Locale): String = NumberFormat.getNumberInstance(locale).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }.format(BigDecimal.valueOf(cents, 2))
+
+    private fun dateStyle(locale: Locale) = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
+
+    /** A calendar date (YYYY-MM-DD, no time, no zone) as the language writes it. */
+    fun calendarDate(isoDate: String, locale: Locale): String =
+        runCatching { LocalDate.parse(isoDate).format(dateStyle(locale)) }.getOrDefault(isoDate)
+
+    /** The day a moment falls on, locally, in the same style as [calendarDate]. */
+    fun day(epochMillis: Long, locale: Locale, zone: ZoneId = ZoneId.systemDefault()): String =
+        Instant.ofEpochMilli(epochMillis).atZone(zone).toLocalDate().format(dateStyle(locale))
+}

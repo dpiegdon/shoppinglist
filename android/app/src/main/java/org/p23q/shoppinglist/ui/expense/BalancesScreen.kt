@@ -21,8 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.ui.appLocale
 import java.time.LocalDate
 
 /**
@@ -49,8 +51,7 @@ fun BalancesContent(
         Text(
             stringResource(
                 R.string.expense_total_spent_value,
-                ExpenseMath.fromCents(state.totalCents),
-                state.currency,
+                AppFormat.money(state.totalCents, state.currency, appLocale()),
             ),
             style = MaterialTheme.typography.titleMedium,
         )
@@ -76,14 +77,14 @@ fun BalancesContent(
                         Text(
                             text = stringResource(
                                 R.string.expense_paid_and_share,
-                                ExpenseMath.fromCents(balance.paidCents),
-                                ExpenseMath.fromCents(balance.shareCents),
+                                AppFormat.number(balance.paidCents, appLocale()),
+                                AppFormat.number(balance.shareCents, appLocale()),
                             ),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     Text(
-                        text = "${ExpenseMath.fromCents(balance.balanceCents)} ${state.currency}",
+                        text = AppFormat.money(balance.balanceCents, state.currency, appLocale()),
                         style = MaterialTheme.typography.titleSmall,
                         color = balanceColor(balance.balanceCents),
                     )
@@ -124,7 +125,7 @@ fun BalancesContent(
                             modifier = Modifier.weight(1f),
                         )
                         Text(
-                            text = "${ExpenseMath.fromCents(transfer.cents)} ${state.currency}",
+                            text = AppFormat.money(transfer.cents, state.currency, appLocale()),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         if (state.canRecord(transfer)) {

@@ -12,6 +12,7 @@
 
     <string name="app_name">قائمة التسوق</string>
     <string name="action_cancel">إلغاء</string>
+    <string name="action_ok">حسنًا</string>
     <string name="action_save">حفظ</string>
     <string name="action_add">إضافة</string>
     <string name="action_delete">حذف</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">أسماء وفئات وملاحظات فقط.</string>
     <string name="overview_kind_shopping">يضيف المتاجر والكمية والسعر لكل عنصر.</string>
     <string name="list_add_item">إضافة عنصر</string>
+    <string name="list_empty">لا يوجد شيء في هذه القائمة بعد. أضف عنصرًا للبدء.</string>
     <string name="list_clear_checked">إعادة المكتملة</string>
     <string name="list_show_checked">إظهار المكتملة</string>
     <string name="list_edit_item">تعديل %1$s</string>
@@ -83,7 +85,7 @@
     <string name="item_add">إضافة عنصر</string>
     <string name="item_edit">تعديل العنصر</string>
     <string name="item_delete_title">حذف العنصر؟</string>
-    <string name="item_delete_registry_body">«%1$s» ستتم إزالته من السجل.</string>
+    <string name="item_delete_body">«%1$s» ستتم إزالته من هذه القائمة.</string>
     <string name="registry_search">بحث</string>
     <string name="registry_item_deleted">تم حذف %1$s</string>
     <string name="registry_delete_item">حذف %1$s</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">لصالح</string>
     <string name="expense_empty">لا توجد مصروفات بعد. أضف واحدًا للبدء.</string>
     <string name="expense_total_spent">إجمالي المصروف</string>
-    <string name="expense_total_spent_value">إجمالي المصروف: %1$s %2$s</string>
+    <string name="expense_total_spent_value">إجمالي المصروف: %1$s</string>
     <string name="expense_your_balance">رصيدك</string>
     <string name="expense_paid_and_share">دفع %1$s · حصة %2$s</string>
     <string name="expense_former_member">عضو سابق %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">أُغلقت في %1$s</string>
     <string name="expense_vote_failed">تعذّر تسجيل تصويتك.</string>
     <string name="expense_frozen">وافق على الإغلاق — المبالغ ثابتة</string>
+    <string name="expense_closed">مغلقة</string>
     <string name="expense_settle_up">تسوية الحسابات</string>
     <string name="expense_transfer">%1$s يدفع إلى %2$s</string>
     <string name="expense_reimburse">تسديد</string>

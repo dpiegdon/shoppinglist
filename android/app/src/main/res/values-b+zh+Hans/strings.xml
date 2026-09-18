@@ -12,6 +12,7 @@
 
     <string name="app_name">购物清单</string>
     <string name="action_cancel">取消</string>
+    <string name="action_ok">确定</string>
     <string name="action_save">保存</string>
     <string name="action_add">添加</string>
     <string name="action_delete">删除</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">仅包含名称、分类和备注。</string>
     <string name="overview_kind_shopping">为每件物品添加商店、数量和价格。</string>
     <string name="list_add_item">添加物品</string>
+    <string name="list_empty">此清单还是空的。添加一件物品开始吧。</string>
     <string name="list_clear_checked">重置已完成</string>
     <string name="list_show_checked">显示已完成</string>
     <string name="list_edit_item">编辑 %1$s</string>
@@ -83,7 +85,7 @@
     <string name="item_add">添加物品</string>
     <string name="item_edit">编辑物品</string>
     <string name="item_delete_title">删除物品？</string>
-    <string name="item_delete_registry_body">“%1$s”将从记录中移除。</string>
+    <string name="item_delete_body">“%1$s”将从此清单中移除。</string>
     <string name="registry_search">搜索</string>
     <string name="registry_item_deleted">已删除 %1$s</string>
     <string name="registry_delete_item">删除 %1$s</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">分摊给</string>
     <string name="expense_empty">还没有支出。添加一笔开始吧。</string>
     <string name="expense_total_spent">支出合计</string>
-    <string name="expense_total_spent_value">支出合计: %1$s %2$s</string>
+    <string name="expense_total_spent_value">支出合计: %1$s</string>
     <string name="expense_your_balance">你的余额</string>
     <string name="expense_paid_and_share">已付 %1$s · 分摊 %2$s</string>
     <string name="expense_former_member">已退出的成员 %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">已于 %1$s 结算</string>
     <string name="expense_vote_failed">无法记录你的投票。</string>
     <string name="expense_frozen">已同意结算 — 金额已锁定</string>
+    <string name="expense_closed">已结算</string>
     <string name="expense_settle_up">结算</string>
     <string name="expense_transfer">%1$s 支付给 %2$s</string>
     <string name="expense_reimburse">还款</string>

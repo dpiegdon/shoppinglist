@@ -20,8 +20,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -42,18 +42,18 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
-import org.p23q.shoppinglist.ui.LocalizedAlertDialog
-import org.p23q.shoppinglist.data.ListKind
-import java.text.DateFormat
-import java.util.Date
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.ui.asString
-import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.AppFormat
+import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 
 @Composable
 fun ListPropsScreen(
@@ -250,7 +250,7 @@ fun ListPropsScreen(
                 Text(
                     stringResource(
                         R.string.expense_closed_on,
-                        DateFormat.getDateInstance().format(Date(closedAt)),
+                        AppFormat.day(closedAt, appLocale()),
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )

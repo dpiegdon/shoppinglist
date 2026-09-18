@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.list
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -31,10 +32,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DefaultCurrencyState
-import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
@@ -138,7 +139,7 @@ class ListScreenTest {
     }
 
     @Test
-    fun `sync status is a marker on the top controls line, not its own line`() = runBlocking {
+    fun `an empty list says so, and its controls line no longer carries the sync dot`() = runBlocking<Unit> {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
@@ -165,11 +166,11 @@ class ListScreenTest {
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
 
-        // A fresh SyncStatus() has never synced (T-63): the marker carries that sentence as its
-        // content description, and "Show checked" (the top row it shares a line with) still exists.
-        composeTestRule.onNodeWithContentDescription("Not synced yet").assertExists()
+        // Said rather than left blank (T-179), as on expense lists and on the web.
+        composeTestRule.onNodeWithText("Nothing on this list yet. Add an item to get started.").assertIsDisplayed()
+        // The sync dot moved to the top bar of every screen (T-178); the controls line keeps the rest.
+        composeTestRule.onNodeWithContentDescription("Not synced yet").assertDoesNotExist()
         composeTestRule.onNodeWithText("Show checked").assertExists()
-        composeTestRule.onNodeWithText("Not synced yet").assertDoesNotExist()
     }
 
     @Test

@@ -12,6 +12,7 @@
 
     <string name="app_name">Список покупок</string>
     <string name="action_cancel">Скасувати</string>
+    <string name="action_ok">Гаразд</string>
     <string name="action_save">Зберегти</string>
     <string name="action_add">Додати</string>
     <string name="action_delete">Видалити</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">Лише назви, категорії та нотатки.</string>
     <string name="overview_kind_shopping">Додає магазини, кількість і ціну до кожного товару.</string>
     <string name="list_add_item">Додати товар</string>
+    <string name="list_empty">У цьому списку ще нічого немає. Додай товар, щоб почати.</string>
     <string name="list_clear_checked">Скинути виконані</string>
     <string name="list_show_checked">Показати виконані</string>
     <string name="list_edit_item">Редагувати %1$s</string>
@@ -83,7 +85,7 @@
     <string name="item_add">Додати товар</string>
     <string name="item_edit">Редагувати товар</string>
     <string name="item_delete_title">Видалити товар?</string>
-    <string name="item_delete_registry_body">«%1$s» буде вилучено з реєстру.</string>
+    <string name="item_delete_body">«%1$s» буде вилучено з цього списку.</string>
     <string name="registry_search">Пошук</string>
     <string name="registry_item_deleted">%1$s видалено</string>
     <string name="registry_delete_item">Видалити %1$s</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">Для</string>
     <string name="expense_empty">Витрат ще немає. Додайте першу.</string>
     <string name="expense_total_spent">Разом витрачено</string>
-    <string name="expense_total_spent_value">Разом витрачено: %1$s %2$s</string>
+    <string name="expense_total_spent_value">Разом витрачено: %1$s</string>
     <string name="expense_your_balance">Ваш баланс</string>
     <string name="expense_paid_and_share">заплачено %1$s · частка %2$s</string>
     <string name="expense_former_member">Колишній учасник %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">Закрито %1$s</string>
     <string name="expense_vote_failed">Не вдалося зарахувати ваш голос.</string>
     <string name="expense_frozen">погодився закрити — суми зафіксовано</string>
+    <string name="expense_closed">Закрито</string>
     <string name="expense_settle_up">Розрахуватися</string>
     <string name="expense_transfer">%1$s платить %2$s</string>
     <string name="expense_reimburse">Відшкодувати</string>

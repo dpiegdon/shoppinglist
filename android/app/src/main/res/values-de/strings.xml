@@ -12,6 +12,7 @@
 
     <string name="app_name">Einkaufsliste</string>
     <string name="action_cancel">Abbrechen</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">Speichern</string>
     <string name="action_add">Hinzufügen</string>
     <string name="action_delete">Löschen</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">Nur Namen, Kategorien und Notizen.</string>
     <string name="overview_kind_shopping">Ergänzt jeden Artikel um Geschäfte, Menge und Preis.</string>
     <string name="list_add_item">Artikel hinzufügen</string>
+    <string name="list_empty">Noch nichts auf dieser Liste. Füge einen Artikel hinzu.</string>
     <string name="list_clear_checked">Erledigte zurücksetzen</string>
     <string name="list_show_checked">Erledigte anzeigen</string>
     <string name="list_edit_item">%1$s bearbeiten</string>
@@ -83,7 +85,7 @@
     <string name="item_add">Artikel hinzufügen</string>
     <string name="item_edit">Artikel bearbeiten</string>
     <string name="item_delete_title">Artikel löschen?</string>
-    <string name="item_delete_registry_body">„%1$s“ wird aus der Übersicht entfernt.</string>
+    <string name="item_delete_body">„%1$s“ wird von dieser Liste entfernt.</string>
     <string name="registry_search">Suchen</string>
     <string name="registry_item_deleted">%1$s gelöscht</string>
     <string name="registry_delete_item">%1$s löschen</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">Für</string>
     <string name="expense_empty">Noch keine Ausgaben. Füge eine hinzu.</string>
     <string name="expense_total_spent">Gesamt ausgegeben</string>
-    <string name="expense_total_spent_value">Gesamt ausgegeben: %1$s %2$s</string>
+    <string name="expense_total_spent_value">Gesamt ausgegeben: %1$s</string>
     <string name="expense_your_balance">Dein Saldo</string>
     <string name="expense_paid_and_share">bezahlt %1$s · Anteil %2$s</string>
     <string name="expense_former_member">Ehemaliges Mitglied %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">Abgeschlossen am %1$s</string>
     <string name="expense_vote_failed">Deine Stimme konnte nicht gespeichert werden.</string>
     <string name="expense_frozen">hat zugestimmt – Beträge festgeschrieben</string>
+    <string name="expense_closed">Abgeschlossen</string>
     <string name="expense_settle_up">Ausgleichen</string>
     <string name="expense_transfer">%1$s zahlt an %2$s</string>
     <string name="expense_reimburse">Erstatten</string>

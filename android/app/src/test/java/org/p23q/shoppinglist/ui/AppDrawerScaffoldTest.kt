@@ -17,6 +17,7 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.AuthRepository
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.p23q.shoppinglist.ui.login.LoginViewModel
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -48,7 +49,12 @@ class AppDrawerScaffoldTest {
             navController = rememberNavController()
             NavHost(navController = navController, startDestination = Routes.OVERVIEW) {
                 composable(Routes.OVERVIEW) {
-                    AppDrawerScaffold(navController = navController, title = "Overview", loginViewModel = loginViewModel) {
+                    AppDrawerScaffold(
+                        navController = navController,
+                        title = "Overview",
+                        loginViewModel = loginViewModel,
+                        syncStatusViewModel = SyncStatusViewModel(SyncStatus()),
+                    ) {
                         Text("Overview content")
                     }
                 }
@@ -96,5 +102,14 @@ class AppDrawerScaffoldTest {
 
         assertEquals(Routes.LOGIN, getNavController().currentBackStackEntry?.destination?.route)
         assertEquals(true, authRepository.loggedOut)
+    }
+
+    @Test
+    fun `the top bar carries the sync status on every screen (T-178)`() {
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        setDrawerContent(loginViewModel)
+
+        // A fresh SyncStatus has never synced: the dot says so in its description.
+        composeTestRule.onNodeWithContentDescription("Not synced yet").assertExists()
     }
 }

@@ -15,7 +15,10 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -138,11 +141,11 @@ class ExpenseScreensTest {
 
         composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
         // Twice over: once as this row's amount, once as the list's total in the summary card.
-        composeTestRule.onAllNodesWithText("64.00 EUR").assertCountEquals(2)
+        composeTestRule.onAllNodesWithText("€64.00").assertCountEquals(2)
         // Everyone on the list is covered, so the row says so rather than listing them.
         composeTestRule.onNodeWithText("paid by ME · for everyone").assertIsDisplayed()
         // Once, as the heading of that day's group rather than on every row (T-168).
-        composeTestRule.onAllNodesWithText("2026-09-17").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Sep 17, 2026").assertCountEquals(1)
         // Add is the floating button every list has now (T-168).
         composeTestRule.onNodeWithContentDescription("Add expense").assertIsDisplayed()
     }
@@ -163,7 +166,7 @@ class ExpenseScreensTest {
 
         composeTestRule.onNodeWithText("Total spent").assertIsDisplayed()
         // I paid 64 and owe 32, so the list owes me 32.
-        composeTestRule.onNodeWithText("32.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("€32.00").assertIsDisplayed()
 
         // Balances is the other half of this screen now, behind the selector (T-172).
         composeTestRule.onNodeWithText("Balances").performClick()
@@ -260,13 +263,13 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("Total spent: 64.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Total spent: €64.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
         // Once as my balance and once as the transfer that settles it (T-165).
-        composeTestRule.onAllNodesWithText("32.00 EUR").assertCountEquals(2)
-        composeTestRule.onNodeWithText("-32.00 EUR").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(2)
+        composeTestRule.onNodeWithText("-€32.00").assertIsDisplayed()
     }
 
     @Test
@@ -282,8 +285,8 @@ class ExpenseScreensTest {
         // Only an account id remains, so there is no name or email to show.
         composeTestRule.onNodeWithText("Former member 1").assertIsDisplayed()
         // Once as their balance and once as the transfer that would settle it (T-165).
-        composeTestRule.onAllNodesWithText("10.00 EUR").assertCountEquals(2)
-        composeTestRule.onNodeWithText("-10.00 EUR").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("€10.00").assertCountEquals(2)
+        composeTestRule.onNodeWithText("-€10.00").assertIsDisplayed()
     }
 
     // ---- settling up (T-165) ---------------------------------------------------
@@ -304,7 +307,7 @@ class ExpenseScreensTest {
         composeTestRule.onNodeWithText("Settle up").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
         // Once as my balance, once as the transfer.
-        composeTestRule.onAllNodesWithText("32.00 EUR").assertCountEquals(2)
+        composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(2)
 
         composeTestRule.onNodeWithText("Reimburse").performClick()
         val prefill = checkNotNull(recorded)
@@ -373,7 +376,7 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("Total spent: 12.00 EUR").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Total spent: €12.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Settle up").assertDoesNotExist()
     }
 
@@ -425,5 +428,40 @@ class ExpenseScreensTest {
         composeTestRule.waitForIdle()
 
         assertEquals(1, syncs)
+    }
+
+    // ---- live refresh (T-177) and the date picker (T-185) ------------------------
+
+    @Test
+    fun `an open expense list re-syncs every five seconds, as a shopping list does`() = runTest {
+        var syncs = 0
+        val model = viewModel(syncer = Syncer { syncs++; SyncResult.Success(0, 0, 0, 0) })
+
+        val loop = launch { model.liveSyncLoop() }
+        advanceTimeBy(4_999)
+        assertEquals(0, syncs)
+        advanceTimeBy(2)
+        assertEquals(1, syncs)
+        advanceTimeBy(5_000)
+        assertEquals(2, syncs)
+        loop.cancel()
+    }
+
+    @Test
+    fun `the expense date is picked from a calendar, not typed`() = runBlocking<Unit> {
+        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
+        composeTestRule.setContent { ExpenseDialog(listId = listId, itemId = null, onDismiss = {}, viewModel = form) }
+        composeTestRule.waitForIdle()
+        val today = form.uiState.value.date
+
+        composeTestRule.onNodeWithContentDescription("Date").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("OK").assertIsDisplayed()
+
+        // Confirming without choosing another day keeps the one the form started with.
+        composeTestRule.onNodeWithText("OK").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("OK").assertDoesNotExist()
+        assertEquals(today, form.uiState.value.date)
     }
 }

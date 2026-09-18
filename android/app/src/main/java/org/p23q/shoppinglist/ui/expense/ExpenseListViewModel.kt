@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,11 +17,12 @@ import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.list.LIVE_SYNC_INTERVAL_MS
 import java.io.IOException
 import javax.inject.Inject
 
@@ -105,6 +107,17 @@ class ExpenseListViewModel @Inject constructor(
             _uiState.update { it.copy(voteError = true) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
+        }
+    }
+
+    /**
+     * Re-syncs every [LIVE_SYNC_INTERVAL_MS] while collected — the screen collects it only while
+     * resumed, as ListScreen does (T-177). A failed round is dropped; the next one tries again.
+     */
+    suspend fun liveSyncLoop() {
+        while (true) {
+            delay(LIVE_SYNC_INTERVAL_MS)
+            runCatching { syncer.syncNow(emptyList()) }
         }
     }
 

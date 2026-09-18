@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,12 +41,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.ui.AddFab
-import java.text.DateFormat
+import org.p23q.shoppinglist.ui.appLocale
 import java.util.Date
 
 /**
@@ -68,6 +73,14 @@ fun ExpenseListScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val myBalance = state.balances.firstOrNull { it.accountId == state.myAccountId }
+    // Five-second refresh while this list is on screen, as ListScreen does (T-128, T-177): two
+    // people splitting a bill at the table see each other's entries without pulling.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.liveSyncLoop()
+        }
+    }
     // Expenses or balances (T-172). Saveable, so rotating the phone keeps the view you were on.
     var showBalances by rememberSaveable { mutableStateOf(false) }
 
@@ -140,7 +153,7 @@ fun ExpenseListScreen(
                             style = MaterialTheme.typography.labelSmall,
                         )
                         Text(
-                            "${ExpenseMath.fromCents(state.totalCents)} ${state.currency}",
+                            AppFormat.money(state.totalCents, state.currency, appLocale()),
                             style = MaterialTheme.typography.titleMedium,
                         )
                     }
@@ -152,7 +165,7 @@ fun ExpenseListScreen(
                                 style = MaterialTheme.typography.labelSmall,
                             )
                             Text(
-                                "${ExpenseMath.fromCents(myBalance.balanceCents)} ${state.currency}",
+                                AppFormat.money(myBalance.balanceCents, state.currency, appLocale()),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = balanceColor(myBalance.balanceCents),
                             )
@@ -191,7 +204,8 @@ fun ExpenseListScreen(
                             }
                             // Styled exactly like ListScreen's category headings.
                             Text(
-                                text = date,
+                                // In the app's language, as the closed banner is (T-180).
+                                text = AppFormat.calendarDate(date, appLocale()),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 textAlign = TextAlign.Center,
@@ -252,7 +266,7 @@ private fun ExpenseRowView(
             )
         }
         Text(
-            "${ExpenseMath.fromCents(ExpenseMath.expenseTotalCents(row.expense))} $currency",
+            AppFormat.money(ExpenseMath.expenseTotalCents(row.expense), currency, appLocale()),
             style = MaterialTheme.typography.bodyLarge,
         )
     }
@@ -297,7 +311,7 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
         Text(
             text = stringResource(
                 R.string.expense_closed_on,
-                DateFormat.getDateInstance().format(Date(state.closedAt ?: 0L)),
+                AppFormat.day(state.closedAt ?: 0L, appLocale()),
             ),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),

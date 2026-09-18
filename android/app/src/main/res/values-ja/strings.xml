@@ -12,6 +12,7 @@
 
     <string name="app_name">買い物リスト</string>
     <string name="action_cancel">キャンセル</string>
+    <string name="action_ok">OK</string>
     <string name="action_save">保存</string>
     <string name="action_add">追加</string>
     <string name="action_delete">削除</string>
@@ -65,6 +66,7 @@
     <string name="overview_kind_checklist">名前、カテゴリ、メモのみ。</string>
     <string name="overview_kind_shopping">各アイテムに店舗、数量、価格を追加します。</string>
     <string name="list_add_item">アイテムを追加</string>
+    <string name="list_empty">このリストにはまだ何もありません。アイテムを追加してください。</string>
     <string name="list_clear_checked">完了済みをリセット</string>
     <string name="list_show_checked">完了済みを表示</string>
     <string name="list_edit_item">%1$s を編集</string>
@@ -83,7 +85,7 @@
     <string name="item_add">アイテムを追加</string>
     <string name="item_edit">アイテムを編集</string>
     <string name="item_delete_title">アイテムを削除しますか？</string>
-    <string name="item_delete_registry_body">「%1$s」を一覧から削除します。</string>
+    <string name="item_delete_body">「%1$s」をこのリストから削除します。</string>
     <string name="registry_search">検索</string>
     <string name="registry_item_deleted">%1$s を削除しました</string>
     <string name="registry_delete_item">%1$s を削除</string>
@@ -232,7 +234,7 @@
     <string name="expense_paid_for">対象</string>
     <string name="expense_empty">まだ支出がありません。追加して始めましょう。</string>
     <string name="expense_total_spent">支出の合計</string>
-    <string name="expense_total_spent_value">支出の合計: %1$s %2$s</string>
+    <string name="expense_total_spent_value">支出の合計: %1$s</string>
     <string name="expense_your_balance">あなたの残高</string>
     <string name="expense_paid_and_share">支払い %1$s · 負担 %2$s</string>
     <string name="expense_former_member">元メンバー %1$d</string>
@@ -260,6 +262,7 @@
     <string name="expense_closed_on">%1$s に締め済み</string>
     <string name="expense_vote_failed">投票を記録できませんでした。</string>
     <string name="expense_frozen">締めに同意済み — 金額は確定</string>
+    <string name="expense_closed">締め済み</string>
     <string name="expense_settle_up">精算</string>
     <string name="expense_transfer">%1$s が %2$s に支払う</string>
     <string name="expense_reimburse">返済する</string>

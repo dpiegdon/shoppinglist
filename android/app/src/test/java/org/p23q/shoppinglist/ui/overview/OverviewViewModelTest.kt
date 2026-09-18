@@ -153,4 +153,15 @@ class OverviewViewModelTest {
         val state = viewModel.uiState.first { it.sync.blockedCount == 1 }
         assertEquals(listId, state.attentionListId)
     }
+
+    @Test
+    fun `a closed expense list is marked as closed (T-181)`() = runTest(mainDispatcherRule.dispatcher) {
+        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+        val list = listsRepo.getById(id)!!
+        db.listDao().upsert(list.copy(closedAt = 1_758_000_000_000))
+
+        val summary = viewModel.uiState.first { it.expenseSummaries[id]?.closed == true }.expenseSummaries.getValue(id)
+
+        assertEquals(true, summary.closed)
+    }
 }

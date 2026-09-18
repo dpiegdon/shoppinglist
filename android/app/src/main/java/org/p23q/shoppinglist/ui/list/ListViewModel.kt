@@ -14,8 +14,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.DefaultCurrencyState
+import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.NameOrder
 import org.p23q.shoppinglist.data.ShowCheckedStore
@@ -31,6 +33,7 @@ import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
 import java.io.IOException
+import java.util.Locale
 import javax.inject.Inject
 
 /** A category header ([category] `null` = uncategorized, rendered last) plus its sorted items. */
@@ -291,9 +294,10 @@ private fun groupByCategory(items: List<ItemEntity>, categoryOrder: List<String>
 }
 
 /** Notes (Price rendering): falls back to the account's default currency when the item has none. */
-internal fun formatPrice(item: ItemEntity, defaultCurrency: String?): String? {
+/** The item's price in the app's language (T-187), in its own currency or else the account's. */
+internal fun formatPrice(item: ItemEntity, defaultCurrency: String?, locale: Locale): String? {
     val json = item.price.value ?: return null
     val price = Json.decodeFromString<Price>(json)
-    val currency = price.currency ?: defaultCurrency
-    return if (currency != null) "${price.amount} $currency" else price.amount
+    val cents = ExpenseMath.toCents(price.amount) ?: return price.amount
+    return AppFormat.money(cents, price.currency ?: defaultCurrency, locale)
 }
