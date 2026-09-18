@@ -1,0 +1,11 @@
+{
+  "body": "The first round of feedback on 1.14.0, from device and browser testing: T-166\n(web form layout), T-167 (pull to refresh), T-168 (Add bottom right, one look),\nT-169 (closing beside leave, the lock notice), T-170 (Settings, not Account),\nT-149 (update check on opening settings), T-171 (Reimburse), T-172 (the Expenses |\nBalances selector). Minor version: several of these add behaviour, not only fixes.",
+  "created_at": "2026-09-18T13:36:52+00:00",
+  "id": "T-173",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 1.15.0",
+  "updated_at": "2026-09-18T13:36:52+00:00"
+}
