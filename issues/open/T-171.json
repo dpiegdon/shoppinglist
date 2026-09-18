@@ -1,0 +1,14 @@
+{
+  "body": "Reported on 1.14.0: in Balances, under Settle up, the per-transfer button reads\n\"Record\". It should read \"Reimburse\". Both clients, all nine languages. Behaviour\nunchanged: it still opens the expense form pre-filled with the transfer.",
+  "created_at": "2026-09-18T13:23:02+00:00",
+  "id": "T-171",
+  "labels": [
+    "ux",
+    "web",
+    "android",
+    "expenses"
+  ],
+  "priority": 2,
+  "title": "settle up: the button says Reimburse, not Record",
+  "updated_at": "2026-09-18T13:23:02+00:00"
+}
