@@ -50,11 +50,12 @@ _REDACTED_KEYS = frozenset(
 
 
 # A field value is one whitespace-separated token on one line, so anything that could end the line
-# or the token has to be neutered before it is written. Control characters become escapes (a
-# literal backslash is escaped too, so the escapes are unambiguous) and the result is capped: a
-# client can choose some of these values, and an audit log nobody can trust — or that one request
-# can fill — is worse than none.
-_ESCAPES = {"\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
+# or the token has to be neutered before it is written: control characters, and the space that
+# separates one field from the next — otherwise a value can add a field of its own. A literal
+# backslash is escaped too, so the escapes are unambiguous, and the result is capped: a client can
+# choose some of these values, and an audit log nobody can trust — or that one request can fill —
+# is worse than none.
+_ESCAPES = {"\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t", " ": "\\x20"}
 _MAX_VALUE_CHARS = 200
 _TRUNCATION_MARKER = "...[truncated]"
 

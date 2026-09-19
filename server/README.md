@@ -457,8 +457,9 @@ so failed logins and cross-account attempts are both visible).
 
 Each record is one line of `key=value` pairs. Some values are client-chosen
 (the `platform` a login declares, the `path` a denied request asked for), so
-every value is escaped before it is written: control characters — newlines above
-all — become `\n`-style escapes, and a value longer than 200 characters is cut
+every value is escaped before it is written: spaces and control characters —
+newlines above all — become `\n`-style escapes, so a value can neither add a
+field nor start a line, and a value longer than 200 characters is cut
 with a `...[truncated]` marker. One request can neither forge a second record
 nor bloat the log.
 

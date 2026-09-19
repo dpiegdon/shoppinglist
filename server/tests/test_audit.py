@@ -258,3 +258,25 @@ def test_an_overlong_value_is_capped_with_a_visible_marker(records):
     assert len(value) == 200
     assert value.startswith("x" * 100)
     assert value.endswith("...[truncated]")
+
+
+def test_a_space_in_the_login_platform_cannot_add_a_field(client, records):
+    client.post("/api/v1/register", json={"email": "spacer@example.com", "password": PW})
+    records.clear()
+
+    client.post(
+        "/api/v1/login",
+        json={
+            "email": "spacer@example.com",
+            "password": PW,
+            "device_label": "d",
+            "platform": "web outcome=forged",
+        },
+    )
+
+    messages = _messages(records)
+    assert len(messages) == 1
+    assert "platform=web\\x20outcome=forged" in messages[0]
+    # The space is the field separator, so an unescaped one would parse as a second field and
+    # overwrite the real outcome.
+    assert _events(records)[0]["outcome"] == "ok"
