@@ -4,7 +4,7 @@ from flask.cli import with_appcontext
 
 from . import accounts
 from . import db as db_module
-from . import gc, get_config_by_name
+from . import gc, get_config_by_name, housekeeping
 from .auth import now_ms
 from .errors import ApiError
 
@@ -74,3 +74,29 @@ def gc_command(instance_name):
         f"GC purged {result['items_purged']} items, {result['lists_purged']} lists, "
         f"{result['invites_purged']} invites, {result['sessions_purged']} expired sessions."
     )
+
+
+@shoppinglist_cli.command("audit")
+@_instance_option
+@with_appcontext
+def audit_command(instance_name):
+    """Check the database invariants the schema cannot state, and report violations (T-218).
+
+    Read-only: it never deletes or repairs anything, so it is safe to run at any time against a
+    live server. Exits 1 if any violation is found and 0 otherwise, so it can be run straight
+    from cron or a monitoring check. The same checks run automatically as part of the
+    housekeeping sweep (first request of a server run, then about weekly).
+    """
+    config = _resolve_config(instance_name)
+    conn = db_module.connect(config["database_path"])
+    try:
+        findings = housekeeping.audit(conn, now_ms())
+    finally:
+        conn.close()
+    if not findings:
+        click.echo("Audit found no violations.")
+        return
+    for finding in findings:
+        samples = ", ".join(finding.samples)
+        click.echo(f"{finding.check}: {finding.count} row(s); e.g. {samples}")
+    raise SystemExit(1)

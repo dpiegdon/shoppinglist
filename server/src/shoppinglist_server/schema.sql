@@ -178,7 +178,12 @@ CREATE TABLE IF NOT EXISTS meta (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     change_seq INTEGER NOT NULL DEFAULT 0,
     gc_horizon INTEGER NOT NULL DEFAULT 0,
-    last_gc_at INTEGER NOT NULL DEFAULT 0
+    last_gc_at INTEGER NOT NULL DEFAULT 0,
+    -- When the housekeeping sweep (retention GC + invariant audit) last
+    -- completed (T-218). 0 = never, which makes the first sweep due
+    -- immediately. Separate from last_gc_at because the two run on very
+    -- different cadences: GC daily, the sweep about weekly.
+    last_audit_at INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO meta (id, change_seq, gc_horizon, last_gc_at) VALUES (1, 0, 0, 0);
 
@@ -188,6 +193,12 @@ INSERT OR IGNORE INTO meta (id, change_seq, gc_horizon, last_gc_at) VALUES (1, 0
 CREATE TABLE IF NOT EXISTS server_runtime (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     registration_override INTEGER,
-    boot_id TEXT
+    boot_id TEXT,
+    -- The boot id of the server run whose housekeeping sweep last ran (T-218).
+    -- A mismatch with boot.current_boot_id() means this is the first request of
+    -- a new server run, which is one of the two things that make a sweep due.
+    -- Non-durable in the same sense as boot_id above: it is only ever compared
+    -- against the current run's id, never read for its own sake.
+    audit_boot_id TEXT
 );
 INSERT OR IGNORE INTO server_runtime (id, registration_override, boot_id) VALUES (1, NULL, NULL);

@@ -537,7 +537,12 @@ def test_maybe_run_runs_after_24h(db_conn, monkeypatch):
     assert _meta(db_conn)["last_gc_at"] == NOW
 
 
-# ---- opportunistic hook wired into POST /sync --------------------------------
+# ---- opportunistic hook, driven by ordinary authenticated traffic ------------
+#
+# The trigger itself moved out of routes/sync.py into the blueprint's
+# after_request hook in T-218 (see test_housekeeping.py); /sync is now just one
+# authenticated request among many. This test stays because /sync is the one
+# that used to carry the call, so it is the one a regression would show up in.
 
 
 def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
@@ -589,9 +594,7 @@ def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
     conn.commit()
     conn.close()
 
-    from shoppinglist_server.routes import sync as sync_route
-
-    monkeypatch.setattr(sync_route.gc, "_current_now_ms", lambda: NOW)
+    monkeypatch.setattr(gc, "_current_now_ms", lambda: NOW)
 
     resp = client.post(
         "/api/v1/sync",

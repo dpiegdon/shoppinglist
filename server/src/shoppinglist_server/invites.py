@@ -162,8 +162,13 @@ def redeem(conn, key: bytes, account, token: str | None) -> str:
 # ---- leave / orphans -----------------------------------------------------------
 
 
-def _clear_and_tombstone(conn, list_id: str) -> None:
-    """Tombstone every live item plus the list itself (Spec §3)."""
+def clear_and_tombstone(conn, list_id: str) -> None:
+    """Tombstone every live item plus the list itself (Spec §3).
+
+    Public rather than module-private because housekeeping.py reuses it for the one repair it
+    performs — a live list that somehow has no memberships left is put into exactly the state
+    `orphan_check` would have left it in, rather than hard-deleted (T-218).
+    """
     now = now_ms()
     for row in conn.execute(
         "SELECT id FROM items WHERE list_id = ? AND deleted = 0", (list_id,)
@@ -223,7 +228,7 @@ def orphan_check(conn, list_id: str) -> bool:
         "SELECT COUNT(*) AS n FROM memberships WHERE list_id = ?", (list_id,)
     ).fetchone()["n"]
     if remaining == 0:
-        _clear_and_tombstone(conn, list_id)
+        clear_and_tombstone(conn, list_id)
         return True
     return False
 
@@ -264,7 +269,7 @@ def leave(conn, account_id: str, list_id: str) -> None:
     ).fetchone()["n"]
 
     if remaining <= 1:
-        _clear_and_tombstone(conn, list_id)
+        clear_and_tombstone(conn, list_id)
     else:
         conn.execute(
             "DELETE FROM memberships WHERE account_id = ? AND list_id = ?",

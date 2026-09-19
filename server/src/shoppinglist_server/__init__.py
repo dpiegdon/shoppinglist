@@ -198,6 +198,49 @@ def create_blueprint(
             if registered:
                 owned_endpoints |= _WEBAPP_ENDPOINTS
 
+    @bp.after_request
+    def _housekeeping(response):
+        """Drive the housekeeping sweep and the retention GC off ordinary traffic (T-218).
+
+        This hook, not a call in each route, is where the trigger lives. Until T-218 the only
+        trigger was one `gc.maybe_run` inside `POST /sync`, which meant a server whose clients
+        were not syncing never swept at all. A blueprint-scoped `after_request` reaches every
+        request routed to THIS instance and nothing else — a co-mounted blueprint's routes and
+        the site-root HTML/APK routes are untouched — and each mounted instance registers its
+        own, so each sweeps its own database.
+
+        `after_request`, not `before_request`: by here `g.account` exists iff the request
+        authenticated (`auth.authed` / `auth.admin_required` set it), and the view has already
+        committed its own work, so the sweep's commit cannot smuggle a half-finished request
+        into the database.
+
+        Anonymous requests (register, login, the invite landing page) deliberately do not
+        trigger it: they are the ones an unauthenticated stranger can aim at the server, and a
+        sweep is the most expensive thing this module does.
+
+        Nothing here may break the request it is only observing — same rule as `audit.record`,
+        and for the same reason. Every failure is logged and swallowed.
+        """
+        conn = g.get("shoppinglist_db")
+        if conn is None or g.get("account") is None:
+            return response
+        try:
+            if conn.in_transaction:
+                # The request left an open transaction behind (an error path that wrote and
+                # then raised, say). Housekeeping commits, so running it now would commit that
+                # half-finished work as a side effect. Skip instead; _close_db below rolls it
+                # back, and the next request sweeps.
+                return response
+            # Deferred: housekeeping -> auth/invites -> this module, so importing it at module
+            # scope would be a cycle.
+            from . import housekeeping
+
+            housekeeping.maybe_run(conn)
+        except Exception as exc:  # pragma: no cover - defensive; see the docstring
+            current_app.logger.exception("shoppinglist_server housekeeping sweep failed")
+            audit.record("housekeeping.failed", outcome="error", error=type(exc).__name__)
+        return response
+
     @bp.teardown_app_request
     def _close_db(exception=None):
         conn = g.pop("shoppinglist_db", None)

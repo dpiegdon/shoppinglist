@@ -96,6 +96,18 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "CREATE INDEX IF NOT EXISTS idx_close_votes_list ON close_votes (list_id)",
         ],
     ),  # T-157: closing an expenses list by unanimous vote
+    (
+        8,
+        [
+            # 0 = never swept, so an upgraded deployment's first authenticated
+            # request sweeps immediately — which is the whole point of T-218 for
+            # a server that has been accumulating.
+            "ALTER TABLE meta ADD COLUMN last_audit_at INTEGER NOT NULL DEFAULT 0",
+            # NULL never equals boot.current_boot_id(), so the same first request
+            # is also treated as the first request of a server run.
+            "ALTER TABLE server_runtime ADD COLUMN audit_boot_id TEXT",
+        ],
+    ),  # T-218: housekeeping sweep bookkeeping (last sweep, and the run it ran for)
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

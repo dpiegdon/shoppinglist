@@ -238,3 +238,71 @@ def test_fresh_schema_and_migrations_agree_on_the_idle_ttl_default(tmp_path):
     )
     assert int(default) == auth.DEFAULT_IDLE_TTL_MS
     conn.close()
+
+
+def test_migration_8_adds_the_housekeeping_bookkeeping_columns(tmp_path):
+    """An existing deployment has to catch up on `meta.last_audit_at` and
+    `server_runtime.audit_boot_id`, and has to land in the "sweep immediately"
+    state: 0 is older than any interval, and NULL never equals a boot id
+    (T-218)."""
+    path = tmp_path / "pre_t218.db"
+    conn = sqlite3.connect(str(path))
+    conn.row_factory = sqlite3.Row
+    # meta and server_runtime as they existed before migration 8.
+    conn.execute(
+        "CREATE TABLE meta (id INTEGER PRIMARY KEY CHECK (id = 1), "
+        "change_seq INTEGER NOT NULL DEFAULT 0, gc_horizon INTEGER NOT NULL DEFAULT 0, "
+        "last_gc_at INTEGER NOT NULL DEFAULT 0)"
+    )
+    conn.execute("INSERT INTO meta (id, change_seq, gc_horizon, last_gc_at) VALUES (1, 7, 3, 99)")
+    conn.execute(
+        "CREATE TABLE server_runtime (id INTEGER PRIMARY KEY CHECK (id = 1), "
+        "registration_override INTEGER, boot_id TEXT)"
+    )
+    conn.execute("INSERT INTO server_runtime (id) VALUES (1)")
+    conn.commit()
+
+    for statement in dict(migrations_module.MIGRATIONS)[8]:
+        conn.execute(statement)
+    conn.commit()
+
+    meta = conn.execute("SELECT * FROM meta WHERE id = 1").fetchone()
+    assert meta["last_audit_at"] == 0
+    assert meta["change_seq"] == 7  # the pre-existing row is otherwise untouched
+    assert (
+        conn.execute("SELECT audit_boot_id FROM server_runtime WHERE id = 1").fetchone()[0] is None
+    )
+    conn.close()
+
+
+def test_fresh_schema_and_migration_8_agree_on_the_housekeeping_columns(tmp_path):
+    """schema.sql and the migration must produce the same end state (see the
+    migrations.py docstring) — column names, types, NOT NULL and DEFAULT."""
+    fresh = db_module.connect(str(tmp_path / "fresh_t218.db"))
+    db_module.init_db(fresh)
+
+    migrated = sqlite3.connect(str(tmp_path / "migrated_t218.db"))
+    migrated.row_factory = sqlite3.Row
+    migrated.execute(
+        "CREATE TABLE meta (id INTEGER PRIMARY KEY CHECK (id = 1), "
+        "change_seq INTEGER NOT NULL DEFAULT 0, gc_horizon INTEGER NOT NULL DEFAULT 0, "
+        "last_gc_at INTEGER NOT NULL DEFAULT 0)"
+    )
+    migrated.execute(
+        "CREATE TABLE server_runtime (id INTEGER PRIMARY KEY CHECK (id = 1), "
+        "registration_override INTEGER, boot_id TEXT)"
+    )
+    for statement in dict(migrations_module.MIGRATIONS)[8]:
+        migrated.execute(statement)
+    migrated.commit()
+
+    def _columns(conn, table):
+        return [
+            (row["name"], row["type"], row["notnull"], row["dflt_value"])
+            for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        ]
+
+    for table in ("meta", "server_runtime"):
+        assert _columns(fresh, table) == _columns(migrated, table), table
+    fresh.close()
+    migrated.close()

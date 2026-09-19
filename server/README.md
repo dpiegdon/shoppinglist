@@ -166,10 +166,32 @@ Registered on the host app via `app.cli.add_command(shoppinglist_cli)`:
 flask --app app.py shoppinglist init-db               # create the schema (idempotent)
 flask --app app.py shoppinglist reset-password <email> # reset the password and sign out all devices (no email flow exists)
 flask --app app.py shoppinglist gc                     # force tombstone garbage collection
+flask --app app.py shoppinglist audit                  # check database invariants (read-only)
 ```
 
-`gc` also runs opportunistically (piggybacked on `POST /sync`, at most about
-once a day), so a cron job is optional.
+### Housekeeping: what runs by itself, and when
+
+Both of the above also run by themselves, driven by ordinary traffic — there is
+no background thread and no cron job to install:
+
+- **The retention GC** (`gc`: tombstones past the 90-day window, dead invites,
+  sessions past their idle window) runs at most about once a day, on the first
+  authenticated request after that day has passed.
+- **The full housekeeping sweep** — the retention GC plus the invariant audit —
+  runs on the first authenticated request of a server run, and about weekly
+  after that. Its findings go to the audit log (see Audit log below) as
+  `housekeeping.violation` records; the one violation it repairs, a live list
+  that has no members left, is tombstoned rather than deleted and logged as
+  `housekeeping.repair`.
+
+Both triggers hang off *authenticated* requests, so a server nobody is using
+sweeps nothing. That is deliberate: if nobody is signed in, nothing is being
+created either, and the sweep happens as soon as somebody comes back.
+
+`audit` is read-only and exits non-zero when it finds a violation, so it is the
+one worth wiring into cron or a monitoring check if you want to be told about a
+problem rather than finding it in the log. Running `gc` from cron is still
+optional, and only buys a tidier database on a server that is going unused.
 
 ## Deploying and upgrading
 

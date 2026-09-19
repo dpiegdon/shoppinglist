@@ -1,6 +1,6 @@
 from flask import g, jsonify, request
 
-from .. import gc, get_db
+from .. import get_db
 from .. import sync as sync_engine
 from ..auth import authed
 from ..errors import ApiError
@@ -58,7 +58,10 @@ def register_routes(bp):
         changes = data.get("changes") or {}
 
         conn = get_db()
-        gc.maybe_run(conn)  # opportunistic, at most ~once/day (Spec §6)
+        # No gc.maybe_run here any more (T-218): the blueprint's after_request hook in
+        # __init__.py runs it — and the wider housekeeping sweep — for every authenticated
+        # request, of which this is one. Keeping a second call would have been redundant, and
+        # would have kept alive the impression that /sync is the only thing that sweeps.
 
         cursor_error = None
         try:
