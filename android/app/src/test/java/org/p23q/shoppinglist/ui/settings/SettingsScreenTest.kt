@@ -366,4 +366,64 @@ class SettingsScreenTest {
         viewModel.viewModelScope.cancel()
         db.close()
     }
+
+    @Test
+    fun `an admin is offered no server console here — it is a main-menu entry now (T-220)`() = runBlocking {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path?.endsWith("/account/sessions") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"sessions": []}""")
+                request.path?.endsWith("/settings") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}""")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_admin_server_config") })
+        serverConfig.setServerUrl(server.url("/").toString())
+        // An admin account: before T-220 this is exactly who got the button on this screen.
+        val sessionState = FakeSessionState().apply {
+            token = "tok-123"
+            accountEmail = "boss@example.com"
+            defaultCurrency = "EUR"
+            isAdmin = true
+        }
+        val json = Json { ignoreUnknownKeys = true }
+        val viewModel = SettingsViewModel(
+            ApiProvider(
+                serverConfig = serverConfig,
+                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                json = json,
+            ),
+            sessionState,
+            serverConfig,
+            ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_theme") }),
+            db,
+            CrashLogWriter(File.createTempFile("settings_admin_crashlog", ".txt").apply { deleteOnExit() }),
+            DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_notif") }),
+            UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_prefs") }),
+        )
+
+        composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
+        // Let the screen's own loads finish inside the test, re-idling each attempt so a reply that
+        // lands late is still picked up (T-96); cancelling below then keeps nothing running on Main.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.initials == "MI"
+        }
+
+        composeTestRule.onNodeWithText("boss@example.com").assertExists()
+        composeTestRule.onNodeWithText("Server admin").assertDoesNotExist()
+
+        viewModel.viewModelScope.cancel()
+        db.close()
+    }
 }

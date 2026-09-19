@@ -118,6 +118,7 @@ export const uk: Catalog = {
 
   "nav.overview": "Огляд",
   "nav.joinList": "Приєднатися до списку",
+  "nav.serverAdmin": "Адміністрування сервера",
   "nav.logOut": "Вийти",
   "nav.menu": "Меню",
 
@@ -140,7 +141,6 @@ export const uk: Catalog = {
 
   "settings.language": "Мова",
   "settings.title": "Налаштування",
-  "settings.serverAdmin": "Адміністрування сервера",
   "settings.defaultCurrency": "Валюта за замовчуванням",
   "settings.currentlyCached": "Зараз у кеші: {currency}",
   "settings.thisDevice": "(цей пристрій)",
@@ -154,13 +154,11 @@ export const uk: Catalog = {
   "settings.emailChanged": "Електронну пошту змінено",
   "settings.sessions": "Сеанси",
   "settings.deleteAccount": "Видалити обліковий запис",
-  "settings.openServerAdmin": "Відкрити адміністрування сервера",
   "settings.deleteMyAccount": "Видалити мій обліковий запис",
   "settings.password": "Пароль",
   "settings.deleteConfirm": "Це назавжди видалить твій обліковий запис. Ти впевнений?",
 
   "admin.title": "Адміністрування сервера",
-  "admin.backToSettings": "← Налаштування",
   "admin.registration": "Реєстрація",
   "admin.registrationHelp": "Тимчасове перевизначення — після перезапуску повертається до налаштованого значення.",
   "admin.newPasswordFor": "Новий пароль для {email} — показується один раз, надішли його безпечно:",

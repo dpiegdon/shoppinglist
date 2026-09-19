@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import * as api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useT } from "../i18n";
@@ -155,16 +155,6 @@ export default function SettingsPage() {
 
       <LanguagePicker />
       <p className="muted">{account?.email}</p>
-
-      {/* Admin-only entry point to the server console (T-107); shown from the login response flag. */}
-      {account?.isAdmin && (
-        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.serverAdmin")}</h2>
-          <Link to="/admin" className="btn btn-secondary" style={{ display: "inline-block" }}>
-            {t("settings.openServerAdmin")}
-          </Link>
-        </section>
-      )}
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.defaultCurrency")}</h2>

@@ -119,6 +119,7 @@ export const ja: Catalog = {
 
   "nav.overview": "概要",
   "nav.joinList": "リストに参加",
+  "nav.serverAdmin": "サーバー管理",
   "nav.logOut": "ログアウト",
   "nav.menu": "メニュー",
 
@@ -141,7 +142,6 @@ export const ja: Catalog = {
 
   "settings.language": "言語",
   "settings.title": "設定",
-  "settings.serverAdmin": "サーバー管理",
   "settings.defaultCurrency": "デフォルトの通貨",
   "settings.currentlyCached": "現在のキャッシュ：{currency}",
   "settings.thisDevice": "（この端末）",
@@ -155,13 +155,11 @@ export const ja: Catalog = {
   "settings.emailChanged": "メールアドレスを変更しました",
   "settings.sessions": "セッション",
   "settings.deleteAccount": "アカウントを削除",
-  "settings.openServerAdmin": "サーバー管理を開く",
   "settings.deleteMyAccount": "自分のアカウントを削除",
   "settings.password": "パスワード",
   "settings.deleteConfirm": "アカウントが完全に削除されます。よろしいですか？",
 
   "admin.title": "サーバー管理",
-  "admin.backToSettings": "← 設定",
   "admin.registration": "新規登録",
   "admin.registrationHelp": "一時的な上書きです — 再起動するとサーバーの設定値に戻ります。",
   "admin.newPasswordFor": "{email} の新しいパスワード — 一度だけ表示されます。安全な方法で伝えてください：",

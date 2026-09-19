@@ -148,3 +148,31 @@ describe("SettingsPage currency save must never write initials (T-101, T-103)", 
     expect(body.default_currency).toBe("EUR");
   });
 });
+
+describe("SettingsPage no longer holds the server console (T-220)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(api.getToken).mockReturnValue("tok");
+    vi.mocked(api.listSessions).mockResolvedValue({ sessions: [] });
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "BO" });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("offers an admin no route to /admin — that entry lives in the main menu now", async () => {
+    // An admin account: before T-220 this is exactly who saw the section here.
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: "admin-1", email: "boss@example.com", isAdmin: true }),
+    );
+
+    renderSettingsPage();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("BO"));
+
+    expect(screen.queryByRole("link", { name: en["nav.serverAdmin"] })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();
+  });
+});

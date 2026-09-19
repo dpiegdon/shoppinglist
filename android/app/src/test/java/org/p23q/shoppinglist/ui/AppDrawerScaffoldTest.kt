@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -59,6 +60,7 @@ class AppDrawerScaffoldTest {
                     }
                 }
                 composable(Routes.SETTINGS) { Text("Settings content") }
+                composable(Routes.ADMIN) { Text("Admin content") }
                 composable(Routes.LOGIN) { Text("Login content") }
             }
         }
@@ -102,6 +104,35 @@ class AppDrawerScaffoldTest {
 
         assertEquals(Routes.LOGIN, getNavController().currentBackStackEntry?.destination?.route)
         assertEquals(true, authRepository.loggedOut)
+    }
+
+    @Test
+    fun `an admin gets a Server admin entry right after Settings (T-220)`() {
+        val sessionState = FakeSessionState().apply { isAdmin = true }
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val getNavController = setDrawerContent(loginViewModel)
+
+        composeTestRule.onNodeWithContentDescription("Menu").performClick()
+
+        // Directly after Settings, before Log out — by where the rows actually sit in the sheet.
+        val y = { text: String -> composeTestRule.onNodeWithText(text).fetchSemanticsNode().positionInRoot.y }
+        assertTrue(y("Settings") < y("Server admin"))
+        assertTrue(y("Server admin") < y("Log out"))
+
+        composeTestRule.onNodeWithText("Server admin").performClick()
+        assertEquals(Routes.ADMIN, getNavController().currentBackStackEntry?.destination?.route)
+    }
+
+    @Test
+    fun `a non-admin is not offered the Server admin entry (T-220)`() {
+        // An affordance only — the server refuses every admin route whatever the drawer shows.
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        setDrawerContent(loginViewModel)
+
+        composeTestRule.onNodeWithContentDescription("Menu").performClick()
+
+        composeTestRule.onNodeWithText("Settings").assertExists()
+        composeTestRule.onNodeWithText("Server admin").assertDoesNotExist()
     }
 
     @Test

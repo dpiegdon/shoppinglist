@@ -140,6 +140,7 @@ export const en = {
   // ---- navigation ----
   "nav.overview": "Overview",
   "nav.joinList": "Join a list",
+  "nav.serverAdmin": "Server admin",
   "nav.logOut": "Log out",
   "nav.menu": "Menu",
 
@@ -156,7 +157,7 @@ export const en = {
   // Two routes back to the overview, worded differently on purpose: this is the visible breadcrumb
   // above the title, `backToAllLists` below is the tooltip on the title itself (T-109).
   // The arrow is part of the translation rather than the markup so that a right-to-left language
-  // can turn it around — "back" points rightward in Arabic. Same for `admin.backToSettings`.
+  // can turn it around — "back" points rightward in Arabic.
   "list.allListsLink": "← All lists",
   "list.backToAllLists": "Back to all lists",
   "list.allItems": "All items",
@@ -169,7 +170,6 @@ export const en = {
   // ---- settings ----
   "settings.language": "Language",
   "settings.title": "Settings",
-  "settings.serverAdmin": "Server admin",
   "settings.defaultCurrency": "Default currency",
   "settings.currentlyCached": "Currently cached: {currency}",
   "settings.thisDevice": "(this device)",
@@ -183,14 +183,12 @@ export const en = {
   "settings.emailChanged": "Email changed",
   "settings.sessions": "Sessions",
   "settings.deleteAccount": "Delete account",
-  "settings.openServerAdmin": "Open server admin",
   "settings.deleteMyAccount": "Delete my account",
   "settings.password": "Password",
   "settings.deleteConfirm": "This permanently deletes your account. Are you sure?",
 
   // ---- admin ----
   "admin.title": "Server admin",
-  "admin.backToSettings": "← Settings",
   "admin.registration": "Registration",
   "admin.registrationHelp": "Runtime override — resets to the server\'s configured default on restart.",
   "admin.newPasswordFor": "New password for {email} — shown once, send it securely:",

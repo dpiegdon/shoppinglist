@@ -52,7 +52,6 @@ import org.p23q.shoppinglist.ui.update.UpdateStatus
 @Composable
 fun SettingsScreen(
     onAccountDeleted: () -> Unit,
-    onOpenAdmin: () -> Unit = {},
     /** What the check made on opening this screen found (T-149); hoisted like the locale below. */
     updateStatus: UpdateStatus = UpdateStatus.Idle,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -86,12 +85,6 @@ fun SettingsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        // Admin-only entry to the server console (T-107); shown from the login response flag.
-        if (state.isAdmin) {
-            Button(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.nav_server_admin)) }
-            Spacer(Modifier.height(16.dp))
-        }
-
         LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
         Spacer(Modifier.height(16.dp))
 

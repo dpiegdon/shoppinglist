@@ -117,6 +117,7 @@ export const ptBR: Catalog = {
 
   "nav.overview": "Visão geral",
   "nav.joinList": "Entrar em uma lista",
+  "nav.serverAdmin": "Administração do servidor",
   "nav.logOut": "Sair",
   "nav.menu": "Menu",
 
@@ -139,7 +140,6 @@ export const ptBR: Catalog = {
 
   "settings.language": "Idioma",
   "settings.title": "Configurações",
-  "settings.serverAdmin": "Administração do servidor",
   "settings.defaultCurrency": "Moeda padrão",
   "settings.currentlyCached": "Em cache agora: {currency}",
   "settings.thisDevice": "(este dispositivo)",
@@ -153,13 +153,11 @@ export const ptBR: Catalog = {
   "settings.emailChanged": "E-mail alterado",
   "settings.sessions": "Sessões",
   "settings.deleteAccount": "Excluir conta",
-  "settings.openServerAdmin": "Abrir administração do servidor",
   "settings.deleteMyAccount": "Excluir minha conta",
   "settings.password": "Senha",
   "settings.deleteConfirm": "Isso excluirá sua conta permanentemente. Tem certeza?",
 
   "admin.title": "Administração do servidor",
-  "admin.backToSettings": "← Configurações",
   "admin.registration": "Cadastro",
   "admin.registrationHelp": "Ajuste temporário — volta ao padrão configurado ao reiniciar.",
   "admin.newPasswordFor": "Nova senha para {email} — exibida uma única vez, envie com segurança:",

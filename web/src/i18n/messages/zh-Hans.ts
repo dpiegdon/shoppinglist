@@ -118,6 +118,7 @@ export const zhHans: Catalog = {
 
   "nav.overview": "总览",
   "nav.joinList": "加入清单",
+  "nav.serverAdmin": "服务器管理",
   "nav.logOut": "退出登录",
   "nav.menu": "菜单",
 
@@ -140,7 +141,6 @@ export const zhHans: Catalog = {
 
   "settings.language": "语言",
   "settings.title": "设置",
-  "settings.serverAdmin": "服务器管理",
   "settings.defaultCurrency": "默认货币",
   "settings.currentlyCached": "当前缓存：{currency}",
   "settings.thisDevice": "（本设备）",
@@ -154,13 +154,11 @@ export const zhHans: Catalog = {
   "settings.emailChanged": "邮箱已修改",
   "settings.sessions": "会话",
   "settings.deleteAccount": "删除账户",
-  "settings.openServerAdmin": "打开服务器管理",
   "settings.deleteMyAccount": "删除我的账户",
   "settings.password": "密码",
   "settings.deleteConfirm": "这将永久删除你的账户。确定吗？",
 
   "admin.title": "服务器管理",
-  "admin.backToSettings": "← 设置",
   "admin.registration": "注册",
   "admin.registrationHelp": "临时覆盖 — 重启后恢复为服务器配置的默认值。",
   "admin.newPasswordFor": "{email} 的新密码 — 仅显示一次，请安全发送：",

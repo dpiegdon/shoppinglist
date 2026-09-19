@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import * as api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { AdminUser } from "../api/contract";
@@ -59,7 +59,7 @@ function ToggleSwitch({
 
 /**
  * Admin-only server console (T-107): toggle registration for this run, reset a user's password,
- * delete a user. Reached from Settings; gated on the login response's is_admin. Destructive actions
+ * delete a user. Reached from the main menu (T-220); gated on the login response's is_admin. Destructive actions
  * re-verify the admin's own password (entered once below), and deleting a user requires an explicit
  * confirmation naming them so a stray click can't nuke an account (T-112).
  */
@@ -150,9 +150,6 @@ export default function AdminPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
-      <Link to="/settings" className="muted" style={{ fontSize: "0.85rem" }}>
-        {t("admin.backToSettings")}
-      </Link>
       <h1 style={{ fontSize: "1.3rem" }}>{t("admin.title")}</h1>
 
       {error && <p className="error-text">{error}</p>}

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -357,7 +358,6 @@ fun ShoppingListNavHost(
                             launchSingleTop = true
                         }
                     },
-                    onOpenAdmin = { navController.navigate(Routes.ADMIN) },
                 )
             }
         }
@@ -477,6 +477,19 @@ internal fun AppDrawerScaffold(
                     onClick = { navigateTo(Routes.SETTINGS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                // Administering the server is not a personal preference, so it sits beside
+                // Settings rather than inside it (T-220). Hiding it from a non-admin is an
+                // affordance only — the server enforces admin on every /admin route regardless
+                // of what this drawer offers.
+                if (loginViewModel.isAdmin) {
+                    NavigationDrawerItem(
+                        icon = { Icon(imageVector = Icons.Default.Build, contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_server_admin)) },
+                        selected = currentRoute == Routes.ADMIN,
+                        onClick = { navigateTo(Routes.ADMIN) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                }
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_log_out)) },

@@ -65,6 +65,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <Link to="/settings" style={navLinkStyle}>
               {t("settings.title")}
             </Link>
+            {/* Administering the server is not a personal preference, so it sits beside Settings
+                rather than inside it (T-220). Hiding it from a non-admin is an affordance only —
+                the server enforces admin on every /admin route regardless of what the menu shows. */}
+            {account?.isAdmin && (
+              <Link to="/admin" style={navLinkStyle}>
+                {t("nav.serverAdmin")}
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => logout()}

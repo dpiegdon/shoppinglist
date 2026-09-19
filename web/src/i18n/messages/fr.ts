@@ -116,6 +116,7 @@ export const fr: Catalog = {
 
   "nav.overview": "Vue d'ensemble",
   "nav.joinList": "Rejoindre une liste",
+  "nav.serverAdmin": "Administration du serveur",
   "nav.logOut": "Se déconnecter",
   "nav.menu": "Menu",
 
@@ -138,7 +139,6 @@ export const fr: Catalog = {
 
   "settings.language": "Langue",
   "settings.title": "Paramètres",
-  "settings.serverAdmin": "Administration du serveur",
   "settings.defaultCurrency": "Devise par défaut",
   "settings.currentlyCached": "En cache actuellement : {currency}",
   "settings.thisDevice": "(cet appareil)",
@@ -152,13 +152,11 @@ export const fr: Catalog = {
   "settings.emailChanged": "E-mail modifié",
   "settings.sessions": "Sessions",
   "settings.deleteAccount": "Supprimer le compte",
-  "settings.openServerAdmin": "Ouvrir l'administration du serveur",
   "settings.deleteMyAccount": "Supprimer mon compte",
   "settings.password": "Mot de passe",
   "settings.deleteConfirm": "Cela supprimera définitivement ton compte. Es-tu sûr ?",
 
   "admin.title": "Administration du serveur",
-  "admin.backToSettings": "← Paramètres",
   "admin.registration": "Inscription",
   "admin.registrationHelp": "Réglage temporaire — revient à la valeur configurée au redémarrage.",
   "admin.newPasswordFor": "Nouveau mot de passe pour {email} — affiché une seule fois, transmets-le de façon sécurisée :",

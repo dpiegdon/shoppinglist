@@ -163,6 +163,10 @@ class LoginViewModel @Inject constructor(
 
     /** Notes "user info": the drawer (A6) shows this alongside the Log out entry. */
     val loggedInEmail: String? get() = sessionState.accountEmail
+
+    /** Whether to offer the drawer's Server admin entry (T-220). Read from the same session state
+     *  as [loggedInEmail], so the drawer needs no second view model of its own. */
+    val isAdmin: Boolean get() = sessionState.isAdmin
 }
 
 private fun isValidHttpsUrl(url: String): Boolean {

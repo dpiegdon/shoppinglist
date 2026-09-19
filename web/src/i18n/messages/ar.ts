@@ -120,6 +120,7 @@ export const ar: Catalog = {
 
   "nav.overview": "نظرة عامة",
   "nav.joinList": "الانضمام إلى قائمة",
+  "nav.serverAdmin": "إدارة الخادم",
   "nav.logOut": "تسجيل الخروج",
   "nav.menu": "القائمة",
 
@@ -142,7 +143,6 @@ export const ar: Catalog = {
 
   "settings.language": "اللغة",
   "settings.title": "الإعدادات",
-  "settings.serverAdmin": "إدارة الخادم",
   "settings.defaultCurrency": "العملة الافتراضية",
   "settings.currentlyCached": "المخزَّن حاليًا: {currency}",
   "settings.thisDevice": "(هذا الجهاز)",
@@ -156,13 +156,11 @@ export const ar: Catalog = {
   "settings.emailChanged": "تم تغيير البريد الإلكتروني",
   "settings.sessions": "الجلسات",
   "settings.deleteAccount": "حذف الحساب",
-  "settings.openServerAdmin": "فتح إدارة الخادم",
   "settings.deleteMyAccount": "حذف حسابي",
   "settings.password": "كلمة المرور",
   "settings.deleteConfirm": "سيؤدي هذا إلى حذف حسابك نهائيًا. هل أنت متأكد؟",
 
   "admin.title": "إدارة الخادم",
-  "admin.backToSettings": "→ الإعدادات",
   "admin.registration": "التسجيل",
   "admin.registrationHelp": "تجاوز مؤقت — يعود إلى الإعداد الافتراضي للخادم عند إعادة التشغيل.",
   "admin.newPasswordFor": "كلمة مرور جديدة لـ {email} — تظهر مرة واحدة، أرسلها بأمان:",
