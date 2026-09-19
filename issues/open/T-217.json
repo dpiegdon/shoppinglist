@@ -1,0 +1,11 @@
+{
+  "body": "Release 2.0.0: the Tuppu rebrand. Unreleased on main since 1.17.0: T-212\n(category reorder arrows), T-213 (web login mark), T-210 (refused item marker),\nT-214 (unknown_list sentence), T-209 (Robolectric flake root-caused to\nWorkManager), T-215 (the name), T-216 (the mark).\nMajor version: a rebrand of the product; the wire contract is unchanged, so\n1.x clients keep working. Chosen over 1.0.0, which would sort below every\ninstalled 1.17.0 and be offered to no device by the update check.",
+  "created_at": "2026-09-19T11:36:54+00:00",
+  "id": "T-217",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 2.0.0",
+  "updated_at": "2026-09-19T11:36:54+00:00"
+}
