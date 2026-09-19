@@ -51,7 +51,10 @@ upgrades) is in [`server/README.md`](server/README.md).
 
 ## Building a checkout
 
-To run the server from source:
+`./bootstrap.sh` prepares a fresh machine for everything below and for the
+tests: the server venv, the web dependencies, the Android SDK location, and a
+check for what it cannot install (a JDK, a UTF-8 locale). `--android-sdk` also
+downloads a minimal SDK. To run the server from source:
 
 ```bash
 cd server
