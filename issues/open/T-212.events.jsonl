@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-19T10:23:50+00:00", "kind": "created", "ref": "main@90ae6ff", "text": "Web: reordering categories in list properties swaps raw category_order positions, so a hidden entry makes an arrow press do nothing"}

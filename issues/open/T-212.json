@@ -1,0 +1,13 @@
+{
+  "body": "Reported by the maintainer on a checklist: the bottom row's up-arrow does nothing on the first press, while a shopping list behaves.\n\nCause (web/src/pages/ListPropsPage.tsx, moveCategory): the rows are rendered from a normalised view of category_order \u2014 trimmed, blanks dropped, case-insensitive duplicates collapsed to the first \u2014 but the arrows swap RAW positions of the stored array. A stored entry the page does not render (a blank, or a second casing of a category already listed, e.g. \"Sonstiges\" and \"sonstiges\", possible from before T-108 made categories case-insensitive) sits between two rendered rows; a swap with it changes nothing visible, and only the second press moves the row. Which list is affected depends purely on what its stored order contains, not on its kind.\n\nAlso: the top row's up and the last ordered row's down are enabled and silently no-op (moveCategory bounds-checks and returns); and orderIndexOf takes the FIRST case-insensitive match, so with duplicates the wrong entry can be swapped.\n\nFix: move and save in terms of the normalised ordered list (drop blanks, dedupe by key, canonical casing \u2014 the same normalisation planCategoryRename already applies), so one press always swaps with the rendered neighbour and the next save writes a clean order; disable the arrows at the ends. Android's ListPropsViewModel already swaps within its deduplicated display list (buildCategoryDisplay) \u2014 check whether its arrows are disabled at the ends and keep the two clients identical. Tests: an order with a case-duplicate before the last row \u2014 one up-press moves the row above its rendered predecessor and the saved order is deduplicated; end arrows disabled; a plain order still swaps.",
+  "created_at": "2026-09-19T10:23:50+00:00",
+  "id": "T-212",
+  "labels": [
+    "bug",
+    "ux",
+    "ready"
+  ],
+  "priority": 2,
+  "title": "Web: reordering categories in list properties swaps raw category_order positions, so a hidden entry makes an arrow press do nothing",
+  "updated_at": "2026-09-19T10:23:50+00:00"
+}
