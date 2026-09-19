@@ -1,0 +1,13 @@
+{
+  "body": "Maintainer's pick (2026-09-19) from the Tuppu Mark canvas: writing #4 of the six eBL lists for \u1e6duppu I \u2014\nIM.DUB, \ud808\udd4e\ud808\udc7e (U+1214E U+1207E). DUB is the logogram \"tablet\", read with its Akkadian value \u1e6duppu; the\nIM before it is a determinative, \"clay\", written but not spoken. So the pair reads simply \u1e6duppu and\nliterally writes \"clay tablet\", which is the About sentence. Attested for this exact word in both\neBL's dictionary line (CDA: DUB; IM; IM.DUB) and its sign database (ebl.lmu.de/tools/dictionary/\u1e6duppu I).\n\nShipped as a vector, never as text: nearly no phone or browser has a cuneiform font, so the Unicode\ncharacters would render as boxes. Outline from Noto Sans Cuneiform (OFL; embedding a glyph shape is\npermitted, the reserved-name clause only covers derivative fonts), composed with IM's advance, y\nflipped, origin at 0,0: 3419 x 1137 units, one path, commands M/L/H/V/Q/Z. Web: public/tuppu-cuneiform.svg,\ndrawn tinted to the current text colour (a CSS mask over currentColor, since an <img> cannot follow the\ntheme). Android: drawable/ic_cuneiform_tuppu.xml, tinted onSurface. Same path in both.\n\nPlacement, both clients: under the \"Tuppu\" heading on About, about 64dp tall, with the transliteration\n\"\u1e6duppu\" in small italics beneath it (one new string pair, identical in every locale, like the licence\nline). Prepared files: scratchpad cunei/tuppu-cuneiform.svg and ic_cuneiform_tuppu.xml.",
+  "created_at": "2026-09-19T20:23:52+00:00",
+  "id": "T-225",
+  "labels": [
+    "feature",
+    "ux",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "The About screen shows the name in cuneiform: IM.DUB, read \u1e6duppu",
+  "updated_at": "2026-09-19T20:23:52+00:00"
+}
