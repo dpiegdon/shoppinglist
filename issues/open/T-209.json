@@ -1,0 +1,12 @@
+{
+  "body": "Seen by two independent agents on clean checkouts under load (other Gradle runs on the box), so it is pre-existing, not from the T-196..T-207 fixes:\n\n- ExpenseFormViewModelTest > \"a blank name blocks the save and is reported\": 2 failures in 3 runs of `:app:testDebugUnitTest --rerun-tasks`, 2 in 2 when `:app:lintDebug` runs in the same invocation.\n- ListsRepoTest > setCategoryOrder\u2026, ItemsRepoTest > duplicateForList with nothing to copy\u2026: intermittent, same signature.\n\nSignature: `UncaughtExceptionsBeforeTest`, suppressed cause \"Illegal connection pointer\" / Room InvalidationTracker refresh touching an abandoned connection from the previous test. These test classes build an in-memory Room DB with BundledSQLiteDriver and never close it in teardown, so the tracker's refresh thread can outlive the test.\n\nPasses on rerun, so `./verify-all.sh` and `release.sh` may need a second run until fixed. Likely fix: close the DB in @After in every class that opens one (one agent tried it in ExpenseFormViewModelTest alone: fewer failures, not zero \u2014 the invalidation tracker may need to be stopped or the dispatcher drained first). Check AGENTS.md's Robolectric notes and add whatever the durable fix is there.",
+  "created_at": "2026-09-19T00:18:32+00:00",
+  "id": "T-209",
+  "labels": [
+    "chore",
+    "reliability"
+  ],
+  "priority": 3,
+  "title": "Android: Robolectric repo/view-model tests flake with UncaughtExceptionsBeforeTest from a Room invalidation refresh crossing test boundaries",
+  "updated_at": "2026-09-19T00:18:32+00:00"
+}
