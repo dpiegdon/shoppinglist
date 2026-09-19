@@ -75,3 +75,16 @@ describe("registration disabled by the server (T-61)", () => {
     expect(screen.queryByText("Registration is disabled on this server.")).toBeNull();
   });
 });
+
+describe("LoginPage header (T-213)", () => {
+  afterEach(cleanup);
+
+  it("opens with the brand mark over a centred title, as the app's login screen does", () => {
+    renderLogin();
+    const mark = document.querySelector('img[src$="/favicon.svg"]') as HTMLImageElement | null;
+    expect(mark).not.toBeNull();
+    expect(mark!.getAttribute("width")).toBe("72");
+    const title = screen.getByRole("heading", { level: 1, name: "Shopping List" });
+    expect(title.style.textAlign).toBe("center");
+  });
+});
