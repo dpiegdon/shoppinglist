@@ -1,0 +1,12 @@
+{
+  "body": "Since T-200 a refused expense says so on its row and in the form (warning mark + the server's reason, kept on the row as syncBlockedCode/syncBlockedAccountId). Shopping and checklist items that the server quarantines (422 with row_id: invalid_name, invalid_price, unknown_list, ...) still show nothing on the row \u2014 the only signal is the Overview attention banner, which navigates to the list and leaves the user to guess which item.\n\nGive ItemRow in ui/list/ListScreen.kt the same treatment: the warning mark with the \"Not saved to the list\" label (expense_not_saved) and ErrorText.refusal(code, null) for the reason where one is mapped; the EditItemDialog could show the banner the expense form shows. The data is already on the row; this is rendering only. Screen test in ListScreenTest, and the web has no equivalent because it pushes synchronously and reports at save time.",
+  "created_at": "2026-09-19T00:47:47+00:00",
+  "id": "T-210",
+  "labels": [
+    "ux",
+    "reliability"
+  ],
+  "priority": 4,
+  "title": "Android: a quarantined shopping-list item has no marker on its row, unlike an expense",
+  "updated_at": "2026-09-19T00:47:47+00:00"
+}
