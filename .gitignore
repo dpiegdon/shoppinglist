@@ -11,3 +11,6 @@ __pycache__/
 *.swp
 *.swo
 *~
+
+# Agent worktrees Claude Code creates for parallel work; never content
+.claude/worktrees/
