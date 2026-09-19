@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T22:13:55+00:00", "kind": "created", "ref": "main@3e3bb9b", "text": "sync: deduplicate and cap full_lists"}
 {"actor": "user", "at": "2026-09-19T22:31:40+00:00", "kind": "closed", "ref": "main@e8dd9bc", "text": ""}
+{"actor": "user", "at": "2026-09-19T22:31:40+00:00", "kind": "note", "ref": "main@e8dd9bc", "text": "Landed in bbc4f8f (Opus agent). full_lists deduplicated (first-seen order) then capped at MAX_FULL_LISTS_PER_SYNC = 250 with 422 invalid_full_lists; wire contract Sync bullet and error row. 3 new tests incl. a delta spy proving one snapshot per repeated id."}
