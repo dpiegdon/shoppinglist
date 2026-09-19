@@ -455,6 +455,13 @@ Recorded: `account.registered`, `auth.login`, `auth.logout`,
 `db.contention`, and `authz.denied` for every 401/403 (carrying the error code,
 so failed logins and cross-account attempts are both visible).
 
+Each record is one line of `key=value` pairs. Some values are client-chosen
+(the `platform` a login declares, the `path` a denied request asked for), so
+every value is escaped before it is written: control characters — newlines above
+all — become `\n`-style escapes, and a value longer than 200 characters is cut
+with a `...[truncated]` marker. One request can neither forge a second record
+nor bloat the log.
+
 **The log contains no email addresses and no credentials**, by construction —
 accounts appear as opaque ids and forbidden keys are redacted even if a future
 call site passes them. That is deliberate: logs are usually retained longer and

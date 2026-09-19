@@ -207,3 +207,54 @@ def test_auditing_never_breaks_the_request_it_observes(records):
     # Must not propagate: the log is an observer, and an observer that can fail the observed
     # action is worse than no log at all.
     audit.record("test.event", weird=Explodes())
+
+
+# ---- a client-supplied value cannot forge or bloat a record ------------------
+
+
+def test_a_newline_in_the_login_platform_cannot_forge_a_second_record(client, records):
+    client.post("/api/v1/register", json={"email": EMAIL, "password": PW})
+    records.clear()
+
+    client.post(
+        "/api/v1/login",
+        json={
+            "email": EMAIL,
+            "password": PW,
+            "device_label": "d",
+            "platform": "web\nevent=admin.user_deleted outcome=ok",
+        },
+    )
+
+    messages = _messages(records)
+    assert len(messages) == 1
+    assert "\n" not in messages[0]
+    assert "platform=web\\nevent=admin.user_deleted" in messages[0]
+    assert [e["event"] for e in _events(records)] == ["auth.login"]
+
+
+def test_a_newline_in_the_request_path_cannot_forge_a_second_record(client, records):
+    resp = client.get("/api/v1/lists/x%0Aevent=forged/members")
+    assert resp.status_code == 401
+
+    messages = _messages(records)
+    assert len(messages) == 1
+    assert "\n" not in messages[0]
+    assert "path=/api/v1/lists/x\\nevent=forged/members" in messages[0]
+    assert [e["event"] for e in _events(records)] == ["authz.denied"]
+
+
+def test_a_tab_or_other_control_character_is_escaped_too(records):
+    audit.record("test.event", note="a\tb\rc\x00d")
+
+    message = _messages(records)[0]
+    assert "note=a\\tb\\rc\\x00d" in message
+
+
+def test_an_overlong_value_is_capped_with_a_visible_marker(records):
+    audit.record("test.event", note="x" * 5000)
+
+    value = _messages(records)[0].split("note=", 1)[1]
+    assert len(value) == 200
+    assert value.startswith("x" * 100)
+    assert value.endswith("...[truncated]")

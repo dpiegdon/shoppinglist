@@ -14,6 +14,11 @@ Two deliberate omissions, both load-bearing:
 
 `_REDACTED_KEYS` enforces both against caller mistakes rather than trusting every call site.
 
+Records are `key=value` pairs on one line, and some values come from the client (the `platform` a
+login declares, the `path` a denied request asked for). Every field therefore goes through
+`_sanitize`, which escapes control characters and caps the length, so no value can smuggle a
+newline into the log and forge a second record, or bloat it with a megabyte of text.
+
 The `ip` field is only as trustworthy as the deployment: behind the mandatory reverse proxy it is
 the proxy's address unless the host app wires up `werkzeug.middleware.proxy_fix.ProxyFix`. See
 "Audit log" in server/README.md.
@@ -44,16 +49,44 @@ _REDACTED_KEYS = frozenset(
 )
 
 
+# A field value is one whitespace-separated token on one line, so anything that could end the line
+# or the token has to be neutered before it is written. Control characters become escapes (a
+# literal backslash is escaped too, so the escapes are unambiguous) and the result is capped: a
+# client can choose some of these values, and an audit log nobody can trust — or that one request
+# can fill — is worse than none.
+_ESCAPES = {"\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t"}
+_MAX_VALUE_CHARS = 200
+_TRUNCATION_MARKER = "...[truncated]"
+
+
+def _sanitize(value) -> str:
+    """Render one field value as a single-line token of at most `_MAX_VALUE_CHARS` characters."""
+    text = value if isinstance(value, str) else repr(value)
+    out = []
+    for char in text:
+        escape = _ESCAPES.get(char)
+        if escape is not None:
+            out.append(escape)
+        elif char < "\x20" or "\x7f" <= char <= "\x9f":
+            out.append(f"\\x{ord(char):02x}")
+        else:
+            out.append(char)
+    text = "".join(out)
+    if len(text) > _MAX_VALUE_CHARS:
+        text = text[: _MAX_VALUE_CHARS - len(_TRUNCATION_MARKER)] + _TRUNCATION_MARKER
+    return text
+
+
 def record(event: str, *, account_id: str | None = None, outcome: str = "ok", **details) -> None:
     """Emit one audit record. Never raises: observation must not break the observed request."""
     try:
-        fields = [f"event={event}", f"outcome={outcome}"]
+        fields = [f"event={_sanitize(event)}", f"outcome={_sanitize(outcome)}"]
         if account_id:
-            fields.append(f"account_id={account_id}")
+            fields.append(f"account_id={_sanitize(account_id)}")
         if has_request_context():
-            fields.append(f"ip={request.remote_addr}")
+            fields.append(f"ip={_sanitize(request.remote_addr)}")
         for key in sorted(details):
-            value = "<redacted>" if key in _REDACTED_KEYS else details[key]
+            value = "<redacted>" if key in _REDACTED_KEYS else _sanitize(details[key])
             fields.append(f"{key}={value}")
         logger.info(" ".join(fields))
     except Exception:  # pragma: no cover - defensive; auditing must never break a request
