@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T20:53:09+00:00", "kind": "created", "ref": "main@be54eac", "text": "Release 2.1.0"}
 {"actor": "user", "at": "2026-09-19T21:01:38+00:00", "kind": "note", "ref": "main@d397cdc", "text": "Released as 2.1.0: commit d397cdc, tag v2.1.0. versionCode 26, APK signed with the same key as 2.0.0, verify-all green inside the run (incl. the new preflight stage), wheel smoke test 32/32. Wheel sha256 83e78bbdd9b102e49e11d016de8534c5d1bf80a552289faa1ec190025bfffb8b. The rebuilt web_dist carries the About page and tuppu-cuneiform.svg."}
+{"actor": "user", "at": "2026-09-19T21:01:38+00:00", "kind": "closed", "ref": "main@d397cdc", "text": ""}
