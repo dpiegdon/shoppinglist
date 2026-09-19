@@ -1,0 +1,12 @@
+{
+  "body": "What a fresh box needed by hand today: server/.venv with pip install -e '.[dev]'; web/node_modules;\nan Android SDK (cmdline-tools, platforms;android-36, build-tools) and android/local.properties pointing\nat it; a JDK with javac; a UTF-8 locale. A bootstrap.sh that does the installable parts, points at the\nrest, and ends by running the preflight. Idempotent; never touches keystores or the database.",
+  "created_at": "2026-09-19T20:35:34+00:00",
+  "id": "T-229",
+  "labels": [
+    "ops",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "bootstrap.sh: set up a fresh machine to run verify-all.sh in one command",
+  "updated_at": "2026-09-19T20:35:34+00:00"
+}
