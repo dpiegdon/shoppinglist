@@ -1,0 +1,13 @@
+{
+  "body": "Two problems with the admin screen's user list, on a server that may have hundreds of accounts.\n\n1. It is fetched eagerly. Web AdminPage.tsx runs load() from a useEffect on mount; Android\n   AdminViewModel has init { load() }. Opening the console to flip the registration toggle pulls\n   every account with it.\n   Fix: the registration toggle keeps loading on open (it is one value). The user list goes behind\n   an explicit control \u2014 a \"Show registered users\" button that fetches on demand and then shows the\n   list with its count, plus a way to refresh it once shown. One admin screen, not a submenu: the\n   screen is otherwise small, and a submenu costs a navigation step on both clients for no gain.\n   Needs one new string pair in all nine locales on both clients (identical English, so\n   crossClient.test.ts pairs them); commit 15d9088 (T-199) is the model for adding one.\n\n2. It is sorted by creation date, not by email. accounts.py:248 ends\n   \"GROUP BY accounts.id ORDER BY accounts.created_at\", and neither client re-sorts.\n   Fix: order by email, case-insensitively, so the list reads alphabetically; lower(email) already\n   has a unique index (idx_accounts_email_lower). Sort server-side so both clients agree for free.\n   Update the GET /admin/users row in docs/wire-contract.md to say the order, the way other\n   endpoints document theirs (see the members roster's \"oldest membership first\" wording).",
+  "created_at": "2026-09-19T17:02:28+00:00",
+  "id": "T-221",
+  "labels": [
+    "ux",
+    "perf",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "The admin user list loads only when asked for, and is sorted by email",
+  "updated_at": "2026-09-19T17:02:28+00:00"
+}
