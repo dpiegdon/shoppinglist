@@ -1,0 +1,11 @@
+{
+  "body": "Unreleased since 2.0.0: T-218/T-219 (housekeeping sweep and audit; retention 45 days, invites 7), T-220/T-221 (admin in the menu, users on request sorted by email), T-212 (category arrows), T-213 (web login mark), T-210/T-214 (refused items marked; unknown_list sentence), T-209 (flake), T-222/T-223 (gittoc link, README), T-224/T-225 (About screen, cuneiform), T-226..T-229 (Gradle cache, preflight, worktree docs, bootstrap). Minor version: new behaviour, wire contract only gained a documented order.",
+  "created_at": "2026-09-19T20:53:09+00:00",
+  "id": "T-230",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 2.1.0",
+  "updated_at": "2026-09-19T20:53:09+00:00"
+}
