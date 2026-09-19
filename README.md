@@ -30,7 +30,28 @@ The repository, the Python package (`shoppinglist_server`), the APK's download
 path and the Android application id keep the project's original name,
 `shoppinglist`: changing the application id would strand every installed app.
 
-## Quick start
+## Running a release
+
+A release tag already contains the built web bundle and the signed Android APK,
+so building its wheel needs only Python 3.11 or newer: no Node, no Android SDK,
+no signing key.
+
+```bash
+git checkout vX.Y.Z
+cd server && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]" && cd ..
+./build-wheel.sh          # -> server/dist/shoppinglist_server-X.Y.Z-py3-none-any.whl
+./smoke-wheel.sh          # installs it in a throwaway venv and exercises it
+```
+
+The APK inside the wheel is the one committed at the tag, byte for byte. It
+cannot be rebuilt by anyone else with the same signature: the release keystore
+is never committed, and Android refuses an update signed with a different key.
+Installing and running the wheel (mounting, configuration, TLS, backups,
+upgrades) is in [`server/README.md`](server/README.md).
+
+## Building a checkout
+
+To run the server from source:
 
 ```bash
 cd server
@@ -39,17 +60,15 @@ DATABASE_PATH=dev.db INVITE_HMAC_KEY=dev-key BASE_URL=http://localhost:5000 \
   flask --app app.py run
 ```
 
-Then open <http://localhost:5000>. The built web client is committed, so running
-the server needs no Node. Deploying for real (mounting, configuration, TLS,
-backups, upgrades) is in [`server/README.md`](server/README.md).
+Then open <http://localhost:5000>. It serves the committed web bundle, which
+between releases lags `web/src`; `cd web && npm install && npm run build`
+rebuilds it into the server package, and `npm run dev` runs a dev server. See
+[`web/README.md`](web/README.md).
 
-- **Web:** `cd web && npm install && npm run build` rebuilds the bundle into the
-  server package; `npm run dev` runs a dev server. See
-  [`web/README.md`](web/README.md).
-- **Android:** `cd android && ./gradlew assembleDebug` (JDK 17 and the Android
-  SDK). Runs on Android 8.0 and newer. The login screen prefills
-  `https://p23q.org/shopping`; to ship a build that prefills your own server,
-  see [`android/README.md`](android/README.md).
+For the Android app, `cd android && ./gradlew assembleDebug` (JDK 17 and the
+Android SDK). It runs on Android 8.0 and newer and prefills
+`https://p23q.org/shopping` on the login screen; to ship a build that prefills
+your own server, see [`android/README.md`](android/README.md).
 
 ## Testing
 
@@ -59,23 +78,23 @@ failure. The server lint stage only checks; `cd server && .venv/bin/isort . &&
 .venv/bin/black .` fixes the layout. The Android stage needs a JDK, from
 `JAVA_HOME` or the `PATH`.
 
-## Releases
+## Making a release
 
 Every part shares one version number, because one wheel ships them all
 ([SemVer](https://semver.org/), tagged `vX.Y.Z`).
 
 ```bash
-./release.sh 1.17.0 T-nnn [--notes FILE]   # version, and the ticket the release is filed under
+./release.sh X.Y.Z T-nnn [--notes FILE]   # version, and the ticket the release is filed under
 ```
 
 It bumps the version in every part, rebuilds the web bundle and the signed
 release APK, and runs `verify-all.sh`. It then checks that the APK carries the
-new version and is signed with the same key as the previous release, since
-Android refuses an update signed with a different key. Finally it builds the wheel
-(`build-wheel.sh`), smoke-tests it in a clean venv (`smoke-wheel.sh`), commits
-and tags. It needs a clean tree on `main`, npm, the Android SDK and the release
-keystore ([`android/README.md`](android/README.md)), and it touches no remote.
-Without `--notes`, the tag message is the commit subjects since the last tag.
+new version and is signed with the same key as the previous release. Finally it
+builds the wheel (`build-wheel.sh`), smoke-tests it in a clean venv
+(`smoke-wheel.sh`), commits and tags. It needs a clean tree on `main`, npm, the
+Android SDK and the release keystore ([`android/README.md`](android/README.md)),
+and it touches no remote. Without `--notes`, the tag message is the commit
+subjects since the last tag.
 
 `build-wheel.sh` alone does not rebuild the web bundle or the APK, so a wheel
 built by hand after skipping either ships the previous build of it.
