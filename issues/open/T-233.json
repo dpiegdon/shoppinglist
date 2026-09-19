@@ -1,0 +1,13 @@
+{
+  "body": "Today an invite reaches its addressee only as a URL they have to be handed and paste, even when they already have an account. The overview should show the invites addressed to the signed-in email, below the lists, so people see them on their main screen and join or ignore right there.\n\nServer: `GET /invites/pending` \u2014 the caller's live invites (email match, case-insensitive; not used, revoked or expired; list live and not closed; caller not already a member), each with the list's name and kind, the inviter's initials, `expires_at` and the token. Returning the token to its own addressee is what the URL does anyway, and it admits only that email. Joining reuses `POST /invites/redeem`.\n\nClients (web + Android): an \"Invitations\" section under the lists, one card per invite \u2014 kind icon, list name, \"From AL\", \"Expires in 5 d\" \u2014 with Join and Ignore. Join redeems, pulls the list and opens it. Ignore is client-side only: the invite moves to a greyed \"Ignored\" section at the very bottom, where Join is still offered, so a change of mind costs nothing; the decision is remembered on the device. Fetched when the overview opens and on refresh; offline it simply is not shown, like the members screen.\n\nNine locales on both clients, wire contract updated.",
+  "created_at": "2026-09-19T21:46:06+00:00",
+  "id": "T-233",
+  "labels": [
+    "server",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Show pending invites on the overview, with Join and Ignore",
+  "updated_at": "2026-09-19T21:46:06+00:00"
+}
