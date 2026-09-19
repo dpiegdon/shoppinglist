@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T22:13:54+00:00", "kind": "created", "ref": "main@3e3bb9b", "text": "Audit log: escape control characters and cap client-controlled values"}
 {"actor": "user", "at": "2026-09-19T22:31:39+00:00", "kind": "closed", "ref": "main@e8dd9bc", "text": ""}
+{"actor": "user", "at": "2026-09-19T22:31:39+00:00", "kind": "note", "ref": "main@e8dd9bc", "text": "Landed in 1a92407 + 1b9e278 (Opus agent). audit._sanitize: control chars and backslash escaped, space escaped as \\x20 so a value cannot add a field either, 200-char cap with marker, non-strings via repr; applied to every field. 5 new tests incl. both confirmed vectors; README Audit log paragraph."}
