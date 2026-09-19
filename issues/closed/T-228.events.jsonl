@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T20:35:34+00:00", "kind": "created", "ref": "main@b1e67f2", "text": "AGENTS.md: how agents work in worktrees, who closes tickets, and the exact commit trailer"}
 {"actor": "user", "at": "2026-09-19T20:36:45+00:00", "kind": "note", "ref": "main@9874db8", "text": "Done in 9874db8: new 'Working in parallel' section between Workflow and Both clients \u2014 worktree setup (own venv, symlinked node_modules, local.properties, gradlew --stop), the agent/orchestrator split with review kept manual, a 2-3 concurrent Android builds cap for a swapless host, and the exact trailer."}
+{"actor": "user", "at": "2026-09-19T20:36:45+00:00", "kind": "closed", "ref": "main@9874db8", "text": ""}
