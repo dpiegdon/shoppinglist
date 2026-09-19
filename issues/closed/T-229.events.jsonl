@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T20:35:34+00:00", "kind": "created", "ref": "main@b1e67f2", "text": "bootstrap.sh: set up a fresh machine to run verify-all.sh in one command"}
 {"actor": "user", "at": "2026-09-19T20:48:10+00:00", "kind": "note", "ref": "main@e2629c5", "text": "Done in e2629c5. Idempotent bootstrap.sh; ran as a no-op pass on this already-set-up box; README points at it. The --android-sdk download path mirrors what was done by hand on 2026-09-18."}
+{"actor": "user", "at": "2026-09-19T20:48:10+00:00", "kind": "closed", "ref": "main@e2629c5", "text": ""}
