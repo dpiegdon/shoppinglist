@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-09-19T21:16:13+00:00", "kind": "created", "ref": "main@d397cdc", "text": "Release 2.1.1"}
 {"actor": "user", "at": "2026-09-19T21:26:04+00:00", "kind": "note", "ref": "main@f107811", "text": "Released as 2.1.1: commit f107811, tag v2.1.1. versionCode 27, APK signed with the same key as 2.1.0 (unchanged app), verify-all green inside the run, wheel smoke test 32/32. Wheel sha256 d5f65e6b84acb5a90b70bc86f2587e54f1ea4dab0f08126b973b9245562bb2ac. Supersedes 2.1.0, which stays tagged. Notes corrected before the tag: the adblocker, not a browser, produced the console error; the one fault was the SPA fallback."}
 {"actor": "user", "at": "2026-09-19T21:26:04+00:00", "kind": "closed", "ref": "main@f107811", "text": ""}
+{"actor": "user", "at": "2026-09-19T21:39:47+00:00", "kind": "updated", "ref": "main@883d40d", "text": "fields updated"}
