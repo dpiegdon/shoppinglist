@@ -72,8 +72,8 @@ class RedeemViewModelTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
-        db.close()
+        if (::server.isInitialized) server.shutdown()
+        if (::db.isInitialized) db.close()
     }
 
     private fun newViewModel(): RedeemViewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())

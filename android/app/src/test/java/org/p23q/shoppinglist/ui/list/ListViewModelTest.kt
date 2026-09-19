@@ -112,7 +112,7 @@ class ListViewModelTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        if (::server.isInitialized) server.shutdown()
     }
 
     private fun newViewModel(defaultCurrencyState: DefaultCurrencyState = DefaultCurrencyState(sessionState)): ListViewModel =

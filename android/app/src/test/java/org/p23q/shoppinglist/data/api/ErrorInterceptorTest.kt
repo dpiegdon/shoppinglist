@@ -32,7 +32,7 @@ class ErrorInterceptorTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        if (::server.isInitialized) server.shutdown()
     }
 
     private fun buildApi(tokenProvider: TokenProvider, sessionEvents: SessionEvents): Api {

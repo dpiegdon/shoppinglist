@@ -53,7 +53,7 @@ class SettingsScreenTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        if (::server.isInitialized) server.shutdown()
     }
 
     @Test

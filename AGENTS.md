@@ -72,6 +72,12 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   - If a view model keeps requests running after a screen test, cancel its
     `viewModelScope` at the end. Otherwise later tests flake with "Dispatchers.Main
     is used concurrently".
+  - Tests run under `RobolectricTestApp`, not the real `ShoppingListApp`: that one
+    starts WorkManager, whose own Room database sits on Robolectric's SQLite
+    shadows and outlives the test, so its invalidation refresh blames the *next*
+    test with "uncaught exceptions before the test started" (T-209). A `tearDown`
+    closing a `lateinit` field guards it with `::field.isInitialized`, so an
+    aborted `setUp` reports its real cause.
 
 ## Releases
 

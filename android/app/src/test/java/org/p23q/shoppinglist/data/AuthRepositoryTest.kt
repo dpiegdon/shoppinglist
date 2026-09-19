@@ -68,8 +68,8 @@ class AuthRepositoryTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
-        db.close()
+        if (::server.isInitialized) server.shutdown()
+        if (::db.isInitialized) db.close()
     }
 
     private suspend fun pointAtServer() {

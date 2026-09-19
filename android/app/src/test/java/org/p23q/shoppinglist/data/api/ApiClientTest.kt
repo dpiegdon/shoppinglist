@@ -28,7 +28,7 @@ class ApiClientTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        if (::server.isInitialized) server.shutdown()
     }
 
     private fun buildApi(tokenProvider: TokenProvider): Api {

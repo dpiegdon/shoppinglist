@@ -33,7 +33,7 @@ class AuthInterceptorTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        if (::server.isInitialized) server.shutdown()
     }
 
     private fun authHeaderFor(path: String): String? {

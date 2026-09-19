@@ -38,7 +38,9 @@ class ListTitleViewModelTest {
     }
 
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        if (::db.isInitialized) db.close()
+    }
 
     @Test
     fun `name exposes the list name and updates live on rename`() = runTest(mainDispatcherRule.dispatcher) {

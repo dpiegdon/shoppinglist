@@ -70,7 +70,9 @@ class AdminViewModelTest {
     }
 
     @After
-    fun tearDown() = server.shutdown()
+    fun tearDown() {
+        if (::server.isInitialized) server.shutdown()
+    }
 
     /** Routes by method + path so init's two GETs and later PUT/DELETE each get the right response. */
     private fun route(registrationAfterPut: Boolean = false) {

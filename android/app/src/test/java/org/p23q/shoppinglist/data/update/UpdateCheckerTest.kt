@@ -66,7 +66,7 @@ class UpdateCheckerTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        if (::server.isInitialized) server.shutdown()
     }
 
     private fun offering(version: String) = MockResponse()
