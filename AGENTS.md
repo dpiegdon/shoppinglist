@@ -93,14 +93,3 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   after Android work (`cd android && ./gradlew --stop`), batch Android builds, and
   don't leave watchers or dev servers running. Only touch your own user's
   processes.
-- Moving the checkout breaks absolute paths silently. Rewrite
-  `.git/gittoc/.git` and `.git/worktrees/gittoc/gitdir`, and rebuild
-  `server/.venv` (`python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`).
-
-## Open threads (as of 2026-09-18)
-
-- **A new name.** "Shopping List" now covers one of three list kinds. The
-  maintainer is deciding; "Tessera" was suggested because the "Tally" names are
-  taken. Nothing to do until they decide.
-- **Unreleased on `main` since v1.16.0:** T-191 to T-195. The next release would
-  be 1.17.0.
