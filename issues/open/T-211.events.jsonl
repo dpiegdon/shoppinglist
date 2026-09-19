@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-19T00:48:08+00:00", "kind": "created", "ref": "main@0939216", "text": "Release 1.17.0"}
+{"actor": "user", "at": "2026-09-19T01:00:18+00:00", "kind": "note", "ref": "main@90ae6ff", "text": "Released as 1.17.0: commit 90ae6ff, tag v1.17.0. versionCode 24, APK signed with the same key as 1.16.0, verify-all green inside the run, wheel smoke test 32 checks passed. Wheel sha256 2abd626dee1d6679002607564210fb8890d29d074c4ab765af7e68216471fbc9."}
