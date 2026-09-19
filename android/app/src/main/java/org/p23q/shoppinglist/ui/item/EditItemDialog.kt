@@ -38,6 +38,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.data.db.Status
@@ -113,6 +114,10 @@ fun EditItemDialog(
                                 .verticalScroll(rememberScrollState())
                                 .padding(16.dp),
                         ) {
+                            // The server refused this item and the device parked it (T-210), as the
+                            // expense form has said since T-200: whoever opened the row to fix it is
+                            // already looking here. No participant to name, so no `who`.
+                            if (state.isBlocked) BlockedBanner(code = state.blockedCode, who = null)
                             OutlinedTextField(
                                 value = state.name,
                                 onValueChange = viewModel::onNameChange,

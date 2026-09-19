@@ -47,6 +47,14 @@ data class ItemFormUiState(
     val currencyError: UiText? = null,
     val note: String = "",
     val status: Status = Status.TODO,
+    /**
+     * The server refused this row's last push and it is parked on the device (T-210), with the code
+     * it answered. The form says so at the top, as the expense form does (T-200): the only other
+     * signal is the Overview banner, which points at the list and not at the item. Never set in add
+     * mode — a row that has never been pushed cannot have been refused.
+     */
+    val isBlocked: Boolean = false,
+    val blockedCode: String? = null,
     val isDeleteConfirmOpen: Boolean = false,
     val isSaved: Boolean = false,
     val isDeleted: Boolean = false,
@@ -124,6 +132,8 @@ class ItemFormViewModel @Inject constructor(
             priceCurrency = price?.currency ?: sessionState.defaultCurrency ?: "",
             note = item.note.value ?: "",
             status = Status.fromWireValue(item.status.value),
+            isBlocked = item.syncBlocked,
+            blockedCode = item.syncBlockedCode,
         )
         // Seeded status equals the item's stored status here, so snapshotFrom captures the baseline
         // to diff against on save (T-88).

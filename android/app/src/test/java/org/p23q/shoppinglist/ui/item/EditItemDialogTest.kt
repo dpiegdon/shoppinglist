@@ -63,4 +63,27 @@ class EditItemDialogTest {
         assertTrue(viewModel.uiState.value.isDeleteConfirmOpen)
         assertEquals(false, dismissed)
     }
+
+    @Test
+    fun `an item the server refused opens with the reason at the top (T-210)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        // What SyncEngine leaves on a row the server refused with a 422 (T-32, T-200).
+        db.itemDao().blockRow(itemId, "invalid_price", null)
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
+
+        composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Not saved to the list").assertExists()
+        composeTestRule.onNodeWithText("That price isn't valid").assertExists()
+        db.close()
+    }
 }

@@ -375,6 +375,78 @@ class ListScreenTest {
     }
 
     @Test
+    fun `a quarantined item says on its row that it was not saved, and why (T-210)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        // What SyncEngine leaves on a row the server refused with a 422 (T-32, T-200).
+        db.itemDao().blockRow(itemId, "invalid_price", null)
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_blocked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            apiProvider,
+        )
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        // The reason where one is mapped, and the mark itself as what TalkBack hears on the row.
+        composeTestRule.onNodeWithText("That price isn't valid").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Not saved to the list").assertExists()
+        db.close()
+    }
+
+    @Test
+    fun `an item the server never refused carries no mark (T-210)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        itemsRepo.createItem(listId, "Bread", status = Status.TODO)
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_unblocked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            apiProvider,
+        )
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Bread").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Not saved to the list").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Not saved to the list").assertDoesNotExist()
+        db.close()
+    }
+
+    @Test
     fun `Show checked carries a check while it is on, as on the web (T-174)`() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())

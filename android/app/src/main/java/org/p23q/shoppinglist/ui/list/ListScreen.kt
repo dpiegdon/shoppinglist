@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -70,7 +71,9 @@ import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.ui.AddFab
+import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -307,6 +310,32 @@ private fun ItemRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                }
+                // The server refused this row and the device parked it (T-32). Until T-210 the only
+                // signal was the Overview's attention banner, which lands on the list and leaves the
+                // user to guess which item; the expense list has said it on the row since T-200, so
+                // say it here the same way. The web needs no equivalent: it pushes synchronously and
+                // reports the refusal at save time.
+                if (item.syncBlocked) {
+                    val notSaved = stringResource(R.string.expense_not_saved)
+                    // No participant to name on an item, so the codes that name one cannot arise.
+                    val reason = ErrorText.refusal(item.syncBlockedCode, null)?.asString()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The icon carries the "not saved" half for anyone who cannot see the colour,
+                        // which leaves the line itself for the reason.
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = notSaved,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = reason ?: notSaved,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
             if (authorMember != null) {
