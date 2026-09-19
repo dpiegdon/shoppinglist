@@ -73,6 +73,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 {t("nav.serverAdmin")}
               </Link>
             )}
+            {/* Last before Log out (T-224): what the app is, not something you do with it. */}
+            <Link to="/about" style={navLinkStyle}>
+              {t("nav.about")}
+            </Link>
             <button
               type="button"
               onClick={() => logout()}

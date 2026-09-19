@@ -121,6 +121,7 @@ export const ja: Catalog = {
   "nav.overview": "概要",
   "nav.joinList": "リストに参加",
   "nav.serverAdmin": "サーバー管理",
+  "nav.about": "このアプリについて",
   "nav.logOut": "ログアウト",
   "nav.menu": "メニュー",
 
@@ -159,6 +160,10 @@ export const ja: Catalog = {
   "settings.deleteMyAccount": "自分のアカウントを削除",
   "settings.password": "パスワード",
   "settings.deleteConfirm": "アカウントが完全に削除されます。よろしいですか？",
+
+  "about.tagline": "Tuppu はアッカド語で粘土板を意味します — リストを押し刻んだ、あの板のことです。",
+  "about.version": "バージョン {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   "admin.title": "サーバー管理",
   "admin.registration": "新規登録",

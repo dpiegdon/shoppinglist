@@ -120,6 +120,7 @@ export const zhHans: Catalog = {
   "nav.overview": "总览",
   "nav.joinList": "加入清单",
   "nav.serverAdmin": "服务器管理",
+  "nav.about": "关于",
   "nav.logOut": "退出登录",
   "nav.menu": "菜单",
 
@@ -158,6 +159,10 @@ export const zhHans: Catalog = {
   "settings.deleteMyAccount": "删除我的账户",
   "settings.password": "密码",
   "settings.deleteConfirm": "这将永久删除你的账户。确定吗？",
+
+  "about.tagline": "Tuppu 是阿卡德语中表示泥板的词 — 清单就压印在那样的板子上。",
+  "about.version": "版本 {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   "admin.title": "服务器管理",
   "admin.registration": "注册",

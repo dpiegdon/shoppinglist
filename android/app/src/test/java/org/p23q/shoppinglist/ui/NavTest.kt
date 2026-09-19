@@ -17,6 +17,7 @@ class NavTest {
         assertEquals("login", Routes.LOGIN)
         assertEquals("overview", Routes.OVERVIEW)
         assertEquals("settings", Routes.SETTINGS)
+        assertEquals("about", Routes.ABOUT)
     }
 
     @Test

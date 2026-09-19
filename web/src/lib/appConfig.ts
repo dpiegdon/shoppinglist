@@ -17,6 +17,15 @@ export function appBasename(): string {
   return metaContent("app-basename") ?? "";
 }
 
+/**
+ * The version of the server package serving us, shown on the About page (T-224). One version
+ * number ships every part, so this is also the version of this bundle. Empty when the tag is
+ * absent — a dev server without the Flask host — rather than a guess or a crash.
+ */
+export function appVersion(): string {
+  return metaContent("app-version") ?? "";
+}
+
 /** Whether this server accepts new-account registration (T-61). */
 export function allowRegistration(): boolean {
   return metaContent("app-allow-registration") !== "false";

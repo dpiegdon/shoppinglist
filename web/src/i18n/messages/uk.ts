@@ -120,6 +120,7 @@ export const uk: Catalog = {
   "nav.overview": "Огляд",
   "nav.joinList": "Приєднатися до списку",
   "nav.serverAdmin": "Адміністрування сервера",
+  "nav.about": "Про застосунок",
   "nav.logOut": "Вийти",
   "nav.menu": "Меню",
 
@@ -158,6 +159,10 @@ export const uk: Catalog = {
   "settings.deleteMyAccount": "Видалити мій обліковий запис",
   "settings.password": "Пароль",
   "settings.deleteConfirm": "Це назавжди видалить твій обліковий запис. Ти впевнений?",
+
+  "about.tagline": "Tuppu — це аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.",
+  "about.version": "Версія {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   "admin.title": "Адміністрування сервера",
   "admin.registration": "Реєстрація",

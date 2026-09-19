@@ -176,3 +176,28 @@ describe("SettingsPage no longer holds the server console (T-220)", () => {
     expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();
   });
 });
+
+describe("SettingsPage keeps account preferences only (T-224)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(api.getToken).mockReturnValue("tok");
+    vi.mocked(api.listSessions).mockResolvedValue({ sessions: [] });
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "BO" });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("says nothing about the version or the app itself — that is the About page", async () => {
+    // This page never carried a version line, where Android's did; its one moved to About with
+    // the update block. The check is here so the two settings screens keep saying the same thing.
+    renderSettingsPage();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("BO"));
+
+    expect(screen.queryByText(/version/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(en["about.tagline"])).not.toBeInTheDocument();
+    expect(screen.queryByText(en["about.license"])).not.toBeInTheDocument();
+  });
+});

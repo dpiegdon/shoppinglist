@@ -29,7 +29,6 @@ import org.p23q.shoppinglist.data.api.UpdateSettingsRequest
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
-import org.p23q.shoppinglist.data.update.UpdatePrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
@@ -67,8 +66,6 @@ data class SettingsUiState(
     val crashLogPath: String? = null,
     /** Global collaborator-change notifications on/off (T-65). */
     val notificationsEnabled: Boolean = true,
-    /** Automatic app-update checking on/off (T-135); device-local, like notifications. */
-    val autoUpdateCheckEnabled: Boolean = true,
     /** Diagnostics: when the background (WorkManager) sync last ran, humanized (T-112). */
     val lastBackgroundSyncText: UiText = UiText.res(R.string.background_sync_never),
 )
@@ -84,7 +81,6 @@ class SettingsViewModel @Inject constructor(
     private val crashLogWriter: CrashLogWriter,
     private val defaultCurrencyState: DefaultCurrencyState,
     private val notificationPrefs: NotificationPrefsStore,
-    private val updatePrefs: UpdatePrefsStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -112,11 +108,6 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            updatePrefs.autoCheckEnabled.collect { enabled ->
-                _uiState.update { it.copy(autoUpdateCheckEnabled = enabled) }
-            }
-        }
-        viewModelScope.launch {
             notificationPrefs.lastBackgroundSyncAt.collect { at ->
                 _uiState.update { it.copy(lastBackgroundSyncText = formatBackgroundSync(at)) }
             }
@@ -126,11 +117,6 @@ class SettingsViewModel @Inject constructor(
     /** Global collaborator-change notification toggle (T-65); per-list mutes live in list properties. */
     fun setNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {
         notificationPrefs.setNotificationsEnabled(enabled)
-    }
-
-    /** Automatic app-update checking (T-135); off means no request at all, not a silent check. */
-    fun setAutoUpdateCheckEnabled(enabled: Boolean): Job = viewModelScope.launch {
-        updatePrefs.setAutoCheckEnabled(enabled)
     }
 
     fun loadSessions(): Job = viewModelScope.launch {

@@ -47,13 +47,10 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.data.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
-import org.p23q.shoppinglist.ui.update.UpdateStatus
 
 @Composable
 fun SettingsScreen(
     onAccountDeleted: () -> Unit,
-    /** What the check made on opening this screen found (T-149); hoisted like the locale below. */
-    updateStatus: UpdateStatus = UpdateStatus.Idle,
     viewModel: SettingsViewModel = hiltViewModel(),
     // Plain hoisted state, not a second hiltViewModel() default — see LoginScreen (T-127).
     selectedLocale: AppLocale = deviceLocale(),
@@ -61,9 +58,6 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val appVersion = remember {
-        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
-    }
 
     LaunchedEffect(Unit) { viewModel.loadSessions() }
     LaunchedEffect(Unit) { viewModel.loadInitials() }
@@ -157,46 +151,6 @@ fun SettingsScreen(
                     if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
-                },
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-
-        // App updates (T-135). Device-local like the notification toggle above — whether this
-        // phone checks is a property of the phone, not the account, so it isn't synced. Off
-        // means no request at all, not a silent check.
-        Text(stringResource(R.string.settings_updates), style = MaterialTheme.typography.titleMedium)
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_auto_update_check))
-                Text(
-                    stringResource(R.string.settings_auto_update_check_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(
-                checked = state.autoUpdateCheckEnabled,
-                onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
-            )
-        }
-        // The answer to the check this screen made when it opened (T-149). Silent while switched
-        // off, which is also when no request was made.
-        val updateLine = when (updateStatus) {
-            UpdateStatus.Idle -> null
-            UpdateStatus.Checking -> stringResource(R.string.update_checking)
-            is UpdateStatus.UpToDate -> stringResource(R.string.update_up_to_date, updateStatus.version)
-            is UpdateStatus.Available -> stringResource(R.string.update_available_status, updateStatus.version)
-            UpdateStatus.Failed -> stringResource(R.string.update_check_failed)
-        }
-        if (updateLine != null) {
-            Text(
-                updateLine,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (updateStatus is UpdateStatus.Available) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
                 },
             )
         }
@@ -315,9 +269,6 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.settings_version, appVersion), style = MaterialTheme.typography.bodySmall)
     }
 
     if (state.isDeleteConfirmOpen) {

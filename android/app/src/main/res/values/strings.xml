@@ -39,6 +39,7 @@
     <string name="nav_list_properties">List properties</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_server_admin">Server admin</string>
+    <string name="nav_about">About</string>
     <string name="nav_log_out">Log out</string>
     <string name="nav_join_list">Join a list</string>
 
@@ -152,6 +153,23 @@
     <string name="listprops_leave_confirm_title">Leave this list?</string>
     <string name="listprops_leave_confirm_body">You\'ll stop receiving updates for \"%1$s\" on this device.</string>
 
+    <!-- about: the mark, what Tuppu means, the version, the licence, and
+         the app-update block that moved off the settings screen (T-224) -->
+    <string name="about_tagline">Tuppu is the Akkadian word for a clay tablet — the thing a list was pressed into.</string>
+    <string name="about_license">MIT, © 2026 David R. Piegdon</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_updates">App updates</string>
+    <string name="about_auto_update_check">Check for updates automatically</string>
+    <string name="about_auto_update_check_help">Ask this server whether a newer version of the app is available. Only this device is affected.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Version %1$s of the app is available. You have %2$s.</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_up_to_date">You have the latest version (%1$s).</string>
+    <string name="update_available_status">Version %1$s is available.</string>
+    <string name="update_check_failed">Couldn\'t check for updates.</string>
+    <string name="action_update">Update</string>
+    <string name="action_skip">Skip</string>
+
     <!-- settings -->
     <string name="settings_language">Language</string>
     <string name="settings_account">Account</string>
@@ -175,21 +193,9 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Collaborator changes</string>
     <string name="settings_collaborator_changes_help">Notify when someone else edits a shared list. Mute individual lists in their list properties.</string>
-    <string name="settings_updates">App updates</string>
-    <string name="settings_auto_update_check">Check for updates automatically</string>
-    <string name="settings_auto_update_check_help">Ask this server whether a newer version of the app is available. Only this device is affected.</string>
-    <string name="update_available_title">Update available</string>
-    <string name="update_available_body">Version %1$s of the app is available. You have %2$s.</string>
-    <string name="update_checking">Checking for updates…</string>
-    <string name="update_up_to_date">You have the latest version (%1$s).</string>
-    <string name="update_available_status">Version %1$s is available.</string>
-    <string name="update_check_failed">Couldn\'t check for updates.</string>
-    <string name="action_update">Update</string>
-    <string name="action_skip">Skip</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_last_background_sync">Last background sync: %1$s</string>
     <string name="settings_server">Server: %1$s</string>
-    <string name="settings_version">Version %1$s</string>
     <string name="settings_share_crash_logs">Share crash logs</string>
     <string name="settings_trust_self_signed">Trust self-signed certificates</string>
     <string name="settings_trust_self_signed_help">Developer option — skips TLS certificate checks. Insecure; debug builds only.</string>

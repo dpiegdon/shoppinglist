@@ -9,6 +9,7 @@ import RegistryPage from "./pages/RegistryPage";
 import ListPropsPage from "./pages/ListPropsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/AdminPage";
+import AboutPage from "./pages/AboutPage";
 import RedeemPage from "./pages/RedeemPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -79,6 +80,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/about"
+        element={
+          <ProtectedRoute>
+            <AboutPage />
           </ProtectedRoute>
         }
       />

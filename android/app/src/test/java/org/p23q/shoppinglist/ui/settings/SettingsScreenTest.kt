@@ -1,8 +1,6 @@
 package org.p23q.shoppinglist.ui.settings
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -38,8 +36,6 @@ import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
-import org.p23q.shoppinglist.data.update.UpdatePrefsStore
-import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -113,11 +109,6 @@ class SettingsScreenTest {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            UpdatePrefsStore(
-                PreferenceDataStoreFactory.create {
-                    File.createTempFile("settings_screen_update_prefs", ".preferences_pb").apply { deleteOnExit() }
-                },
-            ),
         )
         var deleted = false
 
@@ -189,11 +180,6 @@ class SettingsScreenTest {
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
-                },
-            ),
-            UpdatePrefsStore(
-                PreferenceDataStoreFactory.create {
-                    File.createTempFile("settings_screen_update_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
         )
@@ -275,11 +261,6 @@ class SettingsScreenTest {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            UpdatePrefsStore(
-                PreferenceDataStoreFactory.create {
-                    File.createTempFile("settings_screen_update_prefs", ".preferences_pb").apply { deleteOnExit() }
-                },
-            ),
         )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
@@ -290,80 +271,6 @@ class SettingsScreenTest {
 
         composeTestRule.onNodeWithText("No crash logs yet").assertExists()
         assertEquals(null, viewModel.uiState.value.crashLogPath)
-        db.close()
-    }
-
-    @Test
-    fun `the update check made on opening shows its answer under the switch (T-149)`() = runBlocking {
-        server = MockWebServer()
-        server.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest): MockResponse = when {
-                request.path?.endsWith("/account/sessions") == true ->
-                    MockResponse().setResponseCode(200).setBody("""{"sessions": []}""")
-                request.path?.endsWith("/settings") == true ->
-                    MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}""")
-                else -> MockResponse().setResponseCode(404)
-            }
-        }
-        server.start()
-        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
-            .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.Unconfined)
-            .build()
-        fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_update_server_config") })
-        serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeSessionState().apply {
-            token = "tok-123"
-            accountEmail = "milk@example.com"
-            defaultCurrency = "EUR"
-        }
-        val json = Json { ignoreUnknownKeys = true }
-        val viewModel = SettingsViewModel(
-            ApiProvider(
-                serverConfig = serverConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
-                json = json,
-            ),
-            sessionState,
-            serverConfig,
-            ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_update_theme") }),
-            db,
-            CrashLogWriter(File.createTempFile("settings_update_crashlog", ".txt").apply { deleteOnExit() }),
-            DefaultCurrencyState(sessionState),
-            NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_update_notif") }),
-            UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_update_prefs") }),
-        )
-        var status by mutableStateOf<UpdateStatus>(UpdateStatus.Idle)
-        composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel, updateStatus = status) }
-        composeTestRule.waitForIdle()
-
-        val lines = listOf(
-            "Checking for updates…",
-            "You have the latest version (1.14.0).",
-            "Version 1.15.0 is available.",
-            "Couldn't check for updates.",
-        )
-        // Nothing to say before a check, or with checking switched off.
-        lines.forEach { composeTestRule.onNodeWithText(it).assertDoesNotExist() }
-
-        for ((next, line) in listOf(
-            UpdateStatus.Checking to lines[0],
-            UpdateStatus.UpToDate("1.14.0") to lines[1],
-            UpdateStatus.Available("1.15.0") to lines[2],
-            UpdateStatus.Failed to lines[3],
-        )) {
-            status = next
-            composeTestRule.waitForIdle()
-            composeTestRule.onNodeWithText(line).assertExists()
-            (lines - line).forEach { composeTestRule.onNodeWithText(it).assertDoesNotExist() }
-        }
-        // The screen's own loads must not outlive the test: a sessions reply landing after it would
-        // resume on Dispatchers.Main while the next class's MainDispatcherRule is replacing it,
-        // which failed SettingsViewModelTest with "Dispatchers.Main is used concurrently".
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.initials == "MI" }
-        viewModel.viewModelScope.cancel()
         db.close()
     }
 
@@ -409,7 +316,6 @@ class SettingsScreenTest {
             CrashLogWriter(File.createTempFile("settings_admin_crashlog", ".txt").apply { deleteOnExit() }),
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_notif") }),
-            UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_prefs") }),
         )
 
         composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
@@ -422,6 +328,65 @@ class SettingsScreenTest {
 
         composeTestRule.onNodeWithText("boss@example.com").assertExists()
         composeTestRule.onNodeWithText("Server admin").assertDoesNotExist()
+
+        viewModel.viewModelScope.cancel()
+        db.close()
+    }
+
+    @Test
+    fun `settings keeps account preferences only — no version, no update controls (T-224)`() = runBlocking {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path?.endsWith("/account/sessions") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"sessions": []}""")
+                request.path?.endsWith("/settings") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}""")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_about_server_config") })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val sessionState = FakeSessionState().apply {
+            token = "tok-123"
+            accountEmail = "milk@example.com"
+            defaultCurrency = "EUR"
+        }
+        val json = Json { ignoreUnknownKeys = true }
+        val viewModel = SettingsViewModel(
+            ApiProvider(
+                serverConfig = serverConfig,
+                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                json = json,
+            ),
+            sessionState,
+            serverConfig,
+            ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_about_theme") }),
+            db,
+            CrashLogWriter(File.createTempFile("settings_about_crashlog", ".txt").apply { deleteOnExit() }),
+            DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_about_notif") }),
+        )
+
+        composeTestRule.setContent { SettingsScreen(onAccountDeleted = {}, viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.initials == "MI"
+        }
+
+        // Still a settings screen: the account preferences are all here.
+        composeTestRule.onNodeWithText("Notifications").performScrollTo().assertExists()
+        // The whole App-updates block and the version line moved to About.
+        composeTestRule.onNodeWithText("App updates").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Check for updates automatically").assertDoesNotExist()
+        composeTestRule.onAllNodesWithText("Version", substring = true).assertCountEquals(0)
 
         viewModel.viewModelScope.cancel()
         db.close()

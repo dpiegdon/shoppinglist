@@ -122,6 +122,7 @@ export const ar: Catalog = {
   "nav.overview": "نظرة عامة",
   "nav.joinList": "الانضمام إلى قائمة",
   "nav.serverAdmin": "إدارة الخادم",
+  "nav.about": "حول التطبيق",
   "nav.logOut": "تسجيل الخروج",
   "nav.menu": "القائمة",
 
@@ -160,6 +161,10 @@ export const ar: Catalog = {
   "settings.deleteMyAccount": "حذف حسابي",
   "settings.password": "كلمة المرور",
   "settings.deleteConfirm": "سيؤدي هذا إلى حذف حسابك نهائيًا. هل أنت متأكد؟",
+
+  "about.tagline": "Tuppu هي الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.",
+  "about.version": "الإصدار {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   "admin.title": "إدارة الخادم",
   "admin.registration": "التسجيل",

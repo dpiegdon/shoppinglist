@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -60,6 +61,7 @@ import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.ui.about.AboutScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.expense.ExpenseDialog
 import org.p23q.shoppinglist.ui.expense.ExpenseListScreen
@@ -83,6 +85,7 @@ object Routes {
     const val OVERVIEW = "overview"
     const val SETTINGS = "settings"
     const val ADMIN = "admin"
+    const val ABOUT = "about"
 
     const val LIST_ID_ARG = "listId"
     const val LIST_PATTERN = "list/{$LIST_ID_ARG}"
@@ -343,13 +346,8 @@ fun ShoppingListNavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            // Opening settings asks the server right away (T-149): past the twelve-hour interval,
-            // with the ordinary prompt if there is something newer and a status line either way.
-            LaunchedEffect(Unit) { updateViewModel.checkNow() }
-            val updateStatus by updateViewModel.status.collectAsStateWithLifecycle()
             AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_settings)) {
                 SettingsScreen(
-                    updateStatus = updateStatus,
                     selectedLocale = selectedLocale,
                     onSelectLocale = localeViewModel::setLocale,
                     onAccountDeleted = {
@@ -364,6 +362,21 @@ fun ShoppingListNavHost(
         composable(Routes.ADMIN) {
             AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_server_admin)) {
                 AdminScreen()
+            }
+        }
+        composable(Routes.ABOUT) {
+            // Opening About asks the server right away (T-149; settings did it until T-224): past
+            // the twelve-hour interval, with the ordinary prompt if there is something newer and a
+            // status line either way. The block it answers lives on this screen now.
+            val updateStatus by updateViewModel.status.collectAsStateWithLifecycle()
+            val autoCheckEnabled by updateViewModel.autoCheckEnabled.collectAsStateWithLifecycle()
+            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_about)) {
+                AboutScreen(
+                    updateStatus = updateStatus,
+                    autoCheckEnabled = autoCheckEnabled,
+                    onSetAutoCheckEnabled = { updateViewModel.setAutoCheckEnabled(it) },
+                    onOpened = { updateViewModel.checkNow() },
+                )
             }
         }
     }
@@ -490,6 +503,14 @@ internal fun AppDrawerScaffold(
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
+                // Last before Log out (T-224): what the app is, not something you do with it.
+                NavigationDrawerItem(
+                    icon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_about)) },
+                    selected = currentRoute == Routes.ABOUT,
+                    onClick = { navigateTo(Routes.ABOUT) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_log_out)) },

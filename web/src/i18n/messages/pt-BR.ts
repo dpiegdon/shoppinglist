@@ -119,6 +119,7 @@ export const ptBR: Catalog = {
   "nav.overview": "Visão geral",
   "nav.joinList": "Entrar em uma lista",
   "nav.serverAdmin": "Administração do servidor",
+  "nav.about": "Sobre",
   "nav.logOut": "Sair",
   "nav.menu": "Menu",
 
@@ -157,6 +158,10 @@ export const ptBR: Catalog = {
   "settings.deleteMyAccount": "Excluir minha conta",
   "settings.password": "Senha",
   "settings.deleteConfirm": "Isso excluirá sua conta permanentemente. Tem certeza?",
+
+  "about.tagline": "Tuppu é a palavra acádia para uma tabuinha de argila — aquilo em que uma lista era impressa.",
+  "about.version": "Versão {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   "admin.title": "Administração do servidor",
   "admin.registration": "Cadastro",

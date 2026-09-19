@@ -74,11 +74,11 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
 
 Once installed, the app keeps itself current: on foreground (at most twice a
 day) it asks the server via `GET /api/v1/app-version` whether a newer version
-exists, and offers each new version once. Opening Settings checks right away,
+exists, and offers each new version once. Opening About checks right away,
 says what it found, and offers a version you declined again. Accepting hands the
 APK URL to the system, which installs it the same way a sideload does — the app
 downloads and installs nothing itself and asks for no extra permissions. The
-check can be turned off under Settings → App updates. A server that carries no
+check can be turned off under About → App updates. A server that carries no
 APK answers 404 and the app stays quiet.
 
 On first launch the login screen shows the **server URL** — prefilled with

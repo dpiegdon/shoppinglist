@@ -38,7 +38,7 @@ async function openMenu() {
   await userEvent.click(screen.getByRole("button", { name: en["nav.menu"] }));
 }
 
-describe("AppShell menu (T-220)", () => {
+describe("AppShell menu (T-220, T-224)", () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -65,5 +65,25 @@ describe("AppShell menu (T-220)", () => {
 
     expect(screen.getByRole("link", { name: en["settings.title"] })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: en["nav.serverAdmin"] })).not.toBeInTheDocument();
+  });
+
+  it("offers About last, right before Log out (T-224)", async () => {
+    renderShell(false);
+    await openMenu();
+
+    const entry = screen.getByRole("link", { name: en["nav.about"] });
+    expect(entry).toHaveAttribute("href", "/about");
+    const labels = screen.getAllByRole("link").map((el) => el.textContent);
+    // The last link in the menu; Log out is a button after it.
+    expect(labels[labels.length - 1]).toBe(en["nav.about"]);
+    expect(labels.indexOf(en["nav.about"])).toBe(labels.indexOf(en["settings.title"]) + 1);
+  });
+
+  it("keeps Server admin between Settings and About for an admin (T-220, T-224)", async () => {
+    renderShell(true);
+    await openMenu();
+
+    const labels = screen.getAllByRole("link").map((el) => el.textContent);
+    expect(labels.indexOf(en["nav.about"])).toBe(labels.indexOf(en["nav.serverAdmin"]) + 1);
   });
 });

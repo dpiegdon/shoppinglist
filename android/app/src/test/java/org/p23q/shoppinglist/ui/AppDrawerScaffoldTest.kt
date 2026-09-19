@@ -61,6 +61,7 @@ class AppDrawerScaffoldTest {
                 }
                 composable(Routes.SETTINGS) { Text("Settings content") }
                 composable(Routes.ADMIN) { Text("Admin content") }
+                composable(Routes.ABOUT) { Text("About content") }
                 composable(Routes.LOGIN) { Text("Login content") }
             }
         }
@@ -142,5 +143,34 @@ class AppDrawerScaffoldTest {
 
         // A fresh SyncStatus has never synced: the dot says so in its description.
         composeTestRule.onNodeWithContentDescription("Not synced yet").assertExists()
+    }
+
+    @Test
+    fun `About is the last entry before Log out and opens the About screen (T-224)`() {
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val getNavController = setDrawerContent(loginViewModel)
+
+        composeTestRule.onNodeWithContentDescription("Menu").performClick()
+
+        // After Settings, before Log out — by where the rows actually sit in the sheet.
+        val y = { text: String -> composeTestRule.onNodeWithText(text).fetchSemanticsNode().positionInRoot.y }
+        assertTrue(y("Settings") < y("About"))
+        assertTrue(y("About") < y("Log out"))
+
+        composeTestRule.onNodeWithText("About").performClick()
+        assertEquals(Routes.ABOUT, getNavController().currentBackStackEntry?.destination?.route)
+    }
+
+    @Test
+    fun `an admin sees Server admin between Settings and About (T-220, T-224)`() {
+        val sessionState = FakeSessionState().apply { isAdmin = true }
+        val loginViewModel = LoginViewModel(NoopAuthRepository(), newServerConfig(), sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        setDrawerContent(loginViewModel)
+
+        composeTestRule.onNodeWithContentDescription("Menu").performClick()
+
+        val y = { text: String -> composeTestRule.onNodeWithText(text).fetchSemanticsNode().positionInRoot.y }
+        assertTrue(y("Server admin") < y("About"))
+        assertTrue(y("About") < y("Log out"))
     }
 }

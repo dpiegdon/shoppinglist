@@ -116,6 +116,7 @@ export const es: Catalog = {
   "nav.overview": "Resumen",
   "nav.joinList": "Unirse a una lista",
   "nav.serverAdmin": "Administración del servidor",
+  "nav.about": "Acerca de",
   "nav.logOut": "Cerrar sesión",
   "nav.menu": "Menú",
 
@@ -154,6 +155,10 @@ export const es: Catalog = {
   "settings.deleteMyAccount": "Eliminar mi cuenta",
   "settings.password": "Contraseña",
   "settings.deleteConfirm": "Esto eliminará tu cuenta de forma permanente. ¿Estás seguro?",
+
+  "about.tagline": "Tuppu es la palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.",
+  "about.version": "Versión {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   "admin.title": "Administración del servidor",
   "admin.registration": "Registro",

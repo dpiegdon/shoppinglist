@@ -41,7 +41,7 @@ your source changes.
 - `src/pages/` — one file per route. `ListRoute.tsx` picks the screen by list
   kind: `ListPage` for shopping lists and checklists, `ExpenseListPage` and
   `BalancesPage` for expense lists. `RegistryPage` is All items; `AdminPage` is
-  Server admin.
+  Server admin; `AboutPage` is About.
 - `src/lib/` — pure logic, tested on its own: category grouping, expense
   arithmetic (`expenses.ts`), name order (`nameOrder.ts`), money and date
   formatting (`format.ts`). The expense and name-order rules are tested against

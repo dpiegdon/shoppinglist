@@ -142,6 +142,7 @@ export const en = {
   "nav.overview": "Overview",
   "nav.joinList": "Join a list",
   "nav.serverAdmin": "Server admin",
+  "nav.about": "About",
   "nav.logOut": "Log out",
   "nav.menu": "Menu",
 
@@ -187,6 +188,11 @@ export const en = {
   "settings.deleteMyAccount": "Delete my account",
   "settings.password": "Password",
   "settings.deleteConfirm": "This permanently deletes your account. Are you sure?",
+
+  // ---- about (T-224) ----
+  "about.tagline": "Tuppu is the Akkadian word for a clay tablet — the thing a list was pressed into.",
+  "about.version": "Version {version}",
+  "about.license": "MIT, © 2026 David R. Piegdon",
 
   // ---- admin ----
   "admin.title": "Server admin",
