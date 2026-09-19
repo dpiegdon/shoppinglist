@@ -1,0 +1,12 @@
+{
+  "body": "Security review of the server API (2026-09-19), finding 1 of 4. Blocks the next release.\n\nInvite emails are a claim, not a verified identity: there is no email verification (README, Out of scope). Until T-233 that was defence in depth \u2014 redeeming needed the token too, which the inviter hands to the real person out of band. `GET /invites/pending` (T-233, unreleased) returns every live invite addressed to the caller's email *with its token*, so the email claim alone now suffices. Attack: the inviter types an address that is not registered yet (the normal case for a new invitee); an attacker registers that address first, or changes their own account's email to it, opens the overview and joins \u2014 and a member sees the whole list.\n\nFix that keeps the requested use case (people who already have an account see their invites): only offer an invite to an account that held the address *before* the invite was minted. Add `accounts.email_set_at` (migration; backfill from `created_at`), set it in `register` and `change_email`, and filter `pending_for` on `accounts.email_set_at < invites.created_at`. A person who registers after being invited keeps the link flow exactly as today. Both clients unchanged. Tests: the squatter (registered after mint, or email changed after mint) sees nothing; the pre-existing account sees it. Document the rule in the wire contract's `/invites/pending` paragraph and in the README's trade-offs.",
+  "created_at": "2026-09-19T22:13:54+00:00",
+  "id": "T-234",
+  "labels": [
+    "server",
+    "security"
+  ],
+  "priority": 2,
+  "title": "Overview invite inbox: only offer an invite to an account that held the email before it was minted",
+  "updated_at": "2026-09-19T22:13:54+00:00"
+}
