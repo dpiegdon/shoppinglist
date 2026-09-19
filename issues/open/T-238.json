@@ -1,0 +1,11 @@
+{
+  "body": "Minor release: the invite inbox on the overview (T-233) with its follow-up (T-234), the cuneiform rendering fix for the web client (T-231), and the server hardening from the API security review (T-235, T-236, T-237). Supersedes 2.1.0; 2.1.1 was dropped before publication. Server, web and Android all change (Android: the overview's Invitations and Ignored sections).",
+  "created_at": "2026-09-19T22:35:17+00:00",
+  "id": "T-238",
+  "labels": [
+    "ops"
+  ],
+  "priority": 1,
+  "title": "Release 2.2.0",
+  "updated_at": "2026-09-19T22:35:17+00:00"
+}
