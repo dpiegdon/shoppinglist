@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-19T11:36:54+00:00", "kind": "created", "ref": "main@f072f3e", "text": "Release 2.0.0"}
+{"actor": "user", "at": "2026-09-19T11:44:05+00:00", "kind": "note", "ref": "main@57d5b38", "text": "Released as 2.0.0: commit 57d5b38, tag v2.0.0. versionCode 25, APK signed with the same key as 1.17.0, verify-all green inside the run, wheel smoke test 32/32. Wheel sha256 da929fb71ae74c964c950003c13e981eb6aa4e6d6eadc578b658286d7e968099. The rebuilt web_dist carries the Tuppu favicon."}
