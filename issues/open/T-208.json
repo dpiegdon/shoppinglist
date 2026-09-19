@@ -1,0 +1,12 @@
+{
+  "body": "Open threads belong in gittoc, not in the standing instructions: a thread worth keeping becomes a ticket. The moving-the-checkout note under Host notes goes too.",
+  "created_at": "2026-09-19T00:04:31+00:00",
+  "id": "T-208",
+  "labels": [
+    "docs",
+    "chore"
+  ],
+  "priority": 3,
+  "title": "AGENTS.md: drop the Open threads section and the moving-the-checkout note",
+  "updated_at": "2026-09-19T00:04:31+00:00"
+}
