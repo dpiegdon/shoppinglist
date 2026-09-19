@@ -1,0 +1,11 @@
+{
+  "body": "The README had no section on the most common thing a stranger wants: building the wheel for an existing release from a clone. That needs only Python, since a tag already carries the built web bundle and the signed APK; verified against a clean clone of v2.0.0 (the APK in the wheel is byte-identical to the one at the tag). Reorder to: what this is and its parts; run a tag; build and run a current checkout; testing; making a release; license. Same facts, no new claims beyond the tag section; the release example version becomes a placeholder.",
+  "created_at": "2026-09-19T19:45:51+00:00",
+  "id": "T-223",
+  "labels": [
+    "docs"
+  ],
+  "priority": 3,
+  "title": "Restructure the root README: what it is, running a tag, building a checkout, testing, releasing, license",
+  "updated_at": "2026-09-19T19:45:51+00:00"
+}
