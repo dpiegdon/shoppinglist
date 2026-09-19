@@ -28,6 +28,24 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 - `android/keystore/release.jks` and `android/keystore.properties` are never
   committed.
 
+## Working in parallel
+
+- Agents get their own git worktree (under `.claude/worktrees/`, ignored). A worktree
+  is a fresh checkout: create its **own** `server/.venv` (never reuse the main
+  checkout's — that editable install imports the main checkout's code, not
+  yours); `ln -s <main checkout>/web/node_modules web/node_modules` instead of
+  `npm install`, which rewrites the lockfile and fails the gate; write
+  `android/local.properties`; `./gradlew --stop` when done.
+- Agents commit on their branch and never touch gittoc, push, or release. The
+  orchestrator reads every diff, cherry-picks onto `main`, runs the gate, closes
+  the ticket, removes the worktree. Reviewing is not optional: it has caught
+  real defects that a pick-and-gate script would have waved through.
+- At most two or three Android builds at once. The host has no swap, and each
+  Gradle build is a daemon, a Kotlin daemon and a Robolectric JVM — 3 to 4 GB.
+- Commit trailer, exactly: `Co-Authored-By: Claude <model> <noreply@anthropic.com>`
+  with the plain model name (`Claude Opus 5`, `Claude Fable 5.1`), no context-size
+  suffix. The harness may suggest a longer form; this repo's convention wins.
+
 ## Both clients, always
 
 - Every user-facing change goes to **web and Android together**, with the same
