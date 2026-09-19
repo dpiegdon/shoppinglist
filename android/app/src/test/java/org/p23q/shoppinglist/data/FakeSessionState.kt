@@ -8,6 +8,7 @@ class FakeSessionState : SessionState {
     override var defaultCurrency: String? = null
     override var lastOpenedListId: String? = null
     override var syncCursor: Long = 0L
+    override var ignoredInviteIds: Set<String> = emptySet()
 
     override fun clear() {
         token = null
@@ -17,5 +18,6 @@ class FakeSessionState : SessionState {
         defaultCurrency = null
         lastOpenedListId = null
         syncCursor = 0L
+        ignoredInviteIds = emptySet()
     }
 }

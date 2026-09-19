@@ -40,6 +40,12 @@ export const ptBR: Catalog = {
 
   "common.loading": "Carregando…",
   "overview.empty": "Nenhuma lista ainda. Crie uma para começar.",
+  "overview.invites": "Convites",
+  "overview.invitesIgnored": "Ignorados",
+  "overview.invite.from": "De {initials}",
+  "overview.invite.expiresMinutes": "Expira em {count} min",
+  "overview.invite.expiresHours": "Expira em {count} h",
+  "overview.invite.expiresDays": "Expira em {count} d",
   "list.registry.empty": "Nenhum item encontrado.",
   "list.categoryFixed": "Maiúsculas corrigidas em {category}: {count}",
 
@@ -108,6 +114,8 @@ export const ptBR: Catalog = {
   "action.revoke": "Revogar",
   "action.undo": "Desfazer",
   "action.invite": "Convidar",
+  "action.join": "Entrar",
+  "action.ignore": "Ignorar",
   "action.create": "Criar",
   "action.duplicate": "Duplicar",
   "action.add": "Adicionar",

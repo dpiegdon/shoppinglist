@@ -42,6 +42,12 @@ export const de: Catalog = {
 
   "common.loading": "Wird geladen…",
   "overview.empty": "Noch keine Listen. Erstelle eine, um loszulegen.",
+  "overview.invites": "Einladungen",
+  "overview.invitesIgnored": "Ignoriert",
+  "overview.invite.from": "Von {initials}",
+  "overview.invite.expiresMinutes": "Läuft ab in {count} Min",
+  "overview.invite.expiresHours": "Läuft ab in {count} Std",
+  "overview.invite.expiresDays": "Läuft ab in {count} T",
   "list.registry.empty": "Keine Artikel gefunden.",
   "list.categoryFixed": "Schreibweise in {category} korrigiert: {count}",
 
@@ -110,6 +116,8 @@ export const de: Catalog = {
   "action.revoke": "Widerrufen",
   "action.undo": "Rückgängig",
   "action.invite": "Einladen",
+  "action.join": "Beitreten",
+  "action.ignore": "Ignorieren",
   "action.create": "Erstellen",
   "action.duplicate": "Duplizieren",
   "action.add": "Hinzufügen",

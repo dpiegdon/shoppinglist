@@ -223,6 +223,22 @@ data class CreateInviteResponse(
     @SerialName("expires_at") val expiresAt: Long,
 )
 
+/** An invite waiting for the signed-in account, as the overview offers it (T-233). */
+@Serializable
+data class InviteForMeDto(
+    val id: String,
+    @SerialName("list_id") val listId: String,
+    @SerialName("list_name") val listName: String,
+    @SerialName("list_kind") val listKind: String,
+    @SerialName("invited_by_initials") val invitedByInitials: String,
+    @SerialName("expires_at") val expiresAt: Long,
+    /** The same token the share URL carries; joining is a plain redeem. */
+    val token: String,
+)
+
+@Serializable
+data class PendingInvitesResponse(val invites: List<InviteForMeDto>)
+
 @Serializable
 data class RedeemInviteRequest(val token: String)
 

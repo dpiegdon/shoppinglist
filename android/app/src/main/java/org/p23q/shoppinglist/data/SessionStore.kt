@@ -40,6 +40,11 @@ interface SessionState {
     var defaultCurrency: String?
     var lastOpenedListId: String?
     var syncCursor: Long
+    /**
+     * Invites this device chose to ignore on the overview (T-233). A device-local choice, as in the
+     * web client's browser storage: the invite sits greyed at the bottom, still joinable.
+     */
+    var ignoredInviteIds: Set<String>
 
     /** Wipes all session state, e.g. on logout. */
     fun clear()
@@ -87,6 +92,10 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         get() = prefs.getLong(KEY_SYNC_CURSOR, 0L)
         set(value) = prefs.edit().putLong(KEY_SYNC_CURSOR, value).apply()
 
+    override var ignoredInviteIds: Set<String>
+        get() = prefs.getStringSet(KEY_IGNORED_INVITE_IDS, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit().putStringSet(KEY_IGNORED_INVITE_IDS, value).apply()
+
     override fun clear() = prefs.edit().clear().apply()
 
     private fun createEncryptedPrefs(context: Context): SharedPreferences =
@@ -107,6 +116,7 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         const val KEY_DEFAULT_CURRENCY = "default_currency"
         const val KEY_LAST_OPENED_LIST_ID = "last_opened_list_id"
         const val KEY_SYNC_CURSOR = "sync_cursor"
+        const val KEY_IGNORED_INVITE_IDS = "ignored_invite_ids"
     }
 }
 

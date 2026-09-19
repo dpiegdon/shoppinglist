@@ -1,15 +1,15 @@
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import OverviewPage, { LAST_LIST_STORAGE_KEY, _resetInitialResumeForTests } from "./OverviewPage";
+import OverviewPage, { IGNORED_INVITES_STORAGE_KEY, LAST_LIST_STORAGE_KEY, _resetInitialResumeForTests } from "./OverviewPage";
 import { SyncProvider } from "../hooks/SyncContext";
 import { AuthProvider } from "../auth/AuthContext";
 import * as api from "../api/client";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
-  return { ...actual, sync: vi.fn(), getSettings: vi.fn() };
+  return { ...actual, sync: vi.fn(), getSettings: vi.fn(), getPendingInvites: vi.fn(), redeemInvite: vi.fn() };
 });
 
 function syncResponse(listId: string) {
@@ -51,6 +51,7 @@ describe("OverviewPage last-opened-list resume", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [] });
     vi.mocked(api.sync).mockResolvedValue(syncResponse("list-1"));
   });
 
@@ -156,6 +157,7 @@ describe("OverviewPage with expenses lists", () => {
       JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
     );
     vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [] });
     vi.mocked(api.sync).mockResolvedValue(expensesSyncResponse());
   });
 
@@ -216,5 +218,115 @@ describe("OverviewPage with expenses lists", () => {
       .flatMap((request) => request.changes.lists ?? [])
       .at(-1);
     expect(pushed?.fields.currency?.value).toBe("EUR");
+  });
+});
+
+// ---- invites waiting for this account (T-233) ---------------------------------
+
+const NOW = Date.now();
+const DAY = 24 * 60 * 60 * 1000;
+
+function invite(id: string, listName: string) {
+  return {
+    id,
+    list_id: `list-${id}`,
+    list_name: listName,
+    list_kind: "shopping" as const,
+    invited_by_initials: "AL",
+    expires_at: NOW + 5 * DAY + 60_000,
+    token: `token-${id}`,
+  };
+}
+
+describe("OverviewPage pending invites", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    _resetInitialResumeForTests();
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.sync).mockResolvedValue(syncResponse("list-1"));
+    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [invite("a", "Camping"), invite("b", "Chores")] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("lists them under the lists, with who invited and how long they stand", async () => {
+    renderOverview();
+
+    expect(await screen.findByRole("heading", { name: "Invitations" })).toBeInTheDocument();
+    expect(screen.getByText("Camping")).toBeInTheDocument();
+    expect(screen.getAllByText("From AL · Expires in 5 d")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Join" })).toHaveLength(2);
+    expect(screen.queryByRole("heading", { name: "Ignored" })).not.toBeInTheDocument();
+    // The section comes after the lists.
+    const listCard = screen.getByText("My List");
+    const heading = screen.getByRole("heading", { name: "Invitations" });
+    expect(listCard.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("moves an ignored invite to the greyed section at the bottom, still joinable, and remembers it", async () => {
+    renderOverview();
+    await screen.findByRole("heading", { name: "Invitations" });
+
+    const campingCard = screen.getByText("Camping").closest<HTMLElement>(".card")!;
+    await userEvent.click(within(campingCard).getByRole("button", { name: "Ignore" }));
+
+    const ignoredHeading = screen.getByRole("heading", { name: "Ignored" });
+    const shelved = screen.getByText("Camping").closest<HTMLElement>(".card")!;
+    expect(ignoredHeading.compareDocumentPosition(shelved) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(shelved).getByRole("button", { name: "Join" })).toBeInTheDocument();
+    expect(within(shelved).queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
+    // "Chores" is still offered above; the other section lies below it.
+    const choresCard = screen.getByText("Chores").closest<HTMLElement>(".card")!;
+    expect(choresCard.compareDocumentPosition(ignoredHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem(IGNORED_INVITES_STORAGE_KEY)!)).toEqual(["a"]);
+  });
+
+  it("starts an invite out in the ignored section when this browser ignored it before", async () => {
+    localStorage.setItem(IGNORED_INVITES_STORAGE_KEY, JSON.stringify(["b"]));
+    renderOverview();
+
+    await screen.findByRole("heading", { name: "Ignored" });
+    const shelved = screen.getByText("Chores").closest<HTMLElement>(".card")!;
+    expect(within(shelved).queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
+    expect(within(screen.getByText("Camping").closest<HTMLElement>(".card")!).getByRole("button", { name: "Ignore" })).toBeInTheDocument();
+  });
+
+  it("joins with the invite's own token, pulls the list and opens it", async () => {
+    vi.mocked(api.redeemInvite).mockResolvedValue({ list_id: "list-a" });
+    renderOverview();
+    await screen.findByRole("heading", { name: "Invitations" });
+
+    const campingCard = screen.getByText("Camping").closest<HTMLElement>(".card")!;
+    await userEvent.click(within(campingCard).getByRole("button", { name: "Join" }));
+
+    await waitFor(() => expect(screen.getByText("list screen")).toBeInTheDocument());
+    expect(api.redeemInvite).toHaveBeenCalledWith("token-a");
+    // The full pull of the newly joined list, as the redeem page does it.
+    expect(vi.mocked(api.sync).mock.calls.some((call) => call[0].full_lists.includes("list-a"))).toBe(true);
+    expect(localStorage.getItem(LAST_LIST_STORAGE_KEY)).toBe("list-a");
+  });
+
+  it("says why a join failed, in the server's words, and re-reads the inbox", async () => {
+    vi.mocked(api.redeemInvite).mockRejectedValue(new api.ApiError(409, "invite_revoked", "revoked"));
+    renderOverview();
+    await screen.findByRole("heading", { name: "Invitations" });
+    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [invite("b", "Chores")] });
+
+    await userEvent.click(within(screen.getByText("Camping").closest<HTMLElement>(".card")!).getByRole("button", { name: "Join" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This invite was withdrawn");
+    await waitFor(() => expect(screen.queryByText("Camping")).not.toBeInTheDocument());
+  });
+
+  it("shows no section at all when the inbox cannot be read", async () => {
+    vi.mocked(api.getPendingInvites).mockRejectedValue(new TypeError("Failed to fetch"));
+    renderOverview();
+
+    await screen.findByText("My List");
+    expect(screen.queryByRole("heading", { name: "Invitations" })).not.toBeInTheDocument();
   });
 });

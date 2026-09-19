@@ -35,3 +35,17 @@ export function formatLastSeen(lastSeenAt: number, now: number, t: TranslateFn):
   if (elapsed < DAY) return t("ago.hours", { count: Math.floor(elapsed / HOUR) });
   return t("ago.days", { count: Math.floor(elapsed / DAY) });
 }
+
+/**
+ * How long an invite still stands, for its card on the overview (T-233). The same coarse,
+ * abbreviated units as `formatLastSeen`, for the same reasons: an invite lives seven days, so
+ * "Expires in 5 d" is the precision worth stating, and no string has to agree with its number.
+ * Never below one minute — a server only returns invites that are still live, and "in 0 min"
+ * would read as already gone. Matches Android's formatExpiresIn.
+ */
+export function formatExpiresIn(expiresAt: number, now: number, t: TranslateFn): string {
+  const remaining = Math.max(expiresAt - now, MINUTE);
+  if (remaining < HOUR) return t("overview.invite.expiresMinutes", { count: Math.floor(remaining / MINUTE) });
+  if (remaining < DAY) return t("overview.invite.expiresHours", { count: Math.floor(remaining / HOUR) });
+  return t("overview.invite.expiresDays", { count: Math.floor(remaining / DAY) });
+}

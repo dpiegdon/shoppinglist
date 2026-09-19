@@ -234,6 +234,7 @@ the one that made the change.
 | `POST /lists/{id}/invites` | `{"invited_email"}` | `201 {"invite_id", "token", "url", "expires_at"}` |
 | `DELETE /invites/{id}` | — | `204` |
 | `POST /invites/redeem` | `{"token"}` | `200 {"list_id"}` |
+| `GET /invites/pending` | — | `200 {"invites": [{"id", "list_id", "list_name", "list_kind", "invited_by_initials", "expires_at", "token"}]}` |
 
 `GET /lists` is a convenience summary; the full list state (including `notes` and
 `kind`) comes through `POST /sync`.
@@ -241,6 +242,13 @@ the one that made the change.
 `GET /lists/{id}/members` returns a uniform `403 not_a_member` whether or not the
 list exists, so a non-member cannot probe for existence. `initials` is resolved
 server-side so clients rendering the last-touched-by badge need no second lookup.
+
+`GET /invites/pending` is the caller's inbox: every invite addressed to the
+account's email (compared case-insensitively) that `POST /invites/redeem` would
+still accept — not used, revoked or expired, on a list that exists and is not
+closed — and whose list the caller is not already on. Each entry carries the
+invite's own `token`, so joining from the overview is an ordinary redeem; the
+token admits only this address, which the caller already holds. Oldest first.
 
 ### Sync
 

@@ -12,9 +12,10 @@ kinds:
   balance, and the transfers that settle it. The members close one by
   unanimous vote; after that it is a read-only record.
 
-Lists are shared by invite link, and every member has the same access. You run
-the server; a web client and an Android app talk to it. The Android app works
-offline and syncs when it can.
+Lists are shared by invite, addressed to an email: the invitee sees it on their
+overview and joins there, or opens the invite link. Every member has the same
+access. You run the server; a web client and an Android app talk to it. The
+Android app works offline and syncs when it can.
 
 ## Parts
 

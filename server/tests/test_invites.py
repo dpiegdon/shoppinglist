@@ -2,7 +2,7 @@
 
 import pytest
 
-from shoppinglist_server import accounts, auth, invites, sync
+from shoppinglist_server import accounts, auth, closing, invites, sync
 from shoppinglist_server.errors import ApiError
 
 PW = "password123"
@@ -560,3 +560,133 @@ def test_redeem_joins_the_list_recorded_in_the_db_not_the_one_in_the_token(db_co
     assert joined == "list-real"
     assert _membership_exists(db_conn, invitee, "list-real")
     assert not _membership_exists(db_conn, invitee, "list-other")
+
+
+# ---- pending invites for the overview (T-233) ---------------------------------
+
+
+def _pending(conn, account_id, email):
+    return invites.pending_for(conn, KEY, auth.Account(id=account_id, email=email))
+
+
+def test_pending_lists_the_live_invites_addressed_to_my_email_and_nothing_else(db_conn):
+    owner = _register(db_conn, "owner@example.com")
+    me = _register(db_conn, "me@example.com")
+    for list_id, name in [
+        ("mine", "Groceries"),
+        ("revoked", "Revoked"),
+        ("expired", "Expired"),
+        ("theirs", "Theirs"),
+        ("joined", "Joined"),
+    ]:
+        _create_list(db_conn, owner, "dev", list_id=list_id, name=name)
+
+    live = invites.mint(db_conn, KEY, BASE_URL, "mine", "Me@Example.com", owner)  # case differs
+    revoked = invites.mint(db_conn, KEY, BASE_URL, "revoked", "me@example.com", owner)
+    invites.revoke(db_conn, owner, revoked["invite_id"])
+    expired = invites.mint(db_conn, KEY, BASE_URL, "expired", "me@example.com", owner)
+    db_conn.execute(
+        "UPDATE invites SET expires_at = ? WHERE id = ?",
+        (auth.now_ms() - 1, expired["invite_id"]),
+    )
+    invites.mint(db_conn, KEY, BASE_URL, "theirs", "someone-else@example.com", owner)
+    joined = invites.mint(db_conn, KEY, BASE_URL, "joined", "me@example.com", owner)
+    invites.redeem(db_conn, KEY, auth.Account(id=me, email="me@example.com"), joined["token"])
+    # A second invite to a list I am already on is redeemable, but pointless to offer.
+    invites.mint(db_conn, KEY, BASE_URL, "joined", "me@example.com", owner)
+
+    pending = _pending(db_conn, me, "me@example.com")
+
+    assert [entry["list_name"] for entry in pending] == ["Groceries"]
+    (entry,) = pending
+    assert entry["id"] == live["invite_id"]
+    assert entry["list_id"] == "mine"
+    assert entry["list_kind"] == "shopping"
+    assert entry["invited_by_initials"] == accounts.resolve_initials("owner@example.com", None)
+    assert entry["expires_at"] == live["expires_at"]
+    # The token is the one the share URL carries, so Join from the overview is a plain redeem.
+    assert entry["token"] == live["token"]
+
+
+def test_pending_hides_an_invite_to_a_closed_or_deleted_list(db_conn):
+    owner = _register(db_conn, "owner@example.com")
+    me = _register(db_conn, "me@example.com")
+    sync.apply_changes(
+        db_conn,
+        owner,
+        "dev",
+        {
+            "lists": [
+                {
+                    "id": "ledger",
+                    "created_at": 1000,
+                    "fields": {
+                        "name": {"value": "Ledger", "updated_at": 100, "updated_by": "dev"},
+                        "kind": {"value": "expenses", "updated_at": 100, "updated_by": "dev"},
+                        "currency": {"value": "EUR", "updated_at": 100, "updated_by": "dev"},
+                    },
+                }
+            ]
+        },
+    )
+    _create_list(db_conn, owner, "dev", list_id="gone", name="Gone")
+    invites.mint(db_conn, KEY, BASE_URL, "ledger", "me@example.com", owner)
+    invites.mint(db_conn, KEY, BASE_URL, "gone", "me@example.com", owner)
+    assert len(_pending(db_conn, me, "me@example.com")) == 2
+
+    closing.cast_vote(db_conn, owner, "ledger")  # the only member's vote closes it at once
+    invites.leave(db_conn, owner, "gone")  # the last member leaving tombstones the list
+
+    assert _pending(db_conn, me, "me@example.com") == []
+
+
+def test_pending_invites_http_then_join_with_the_token(client):
+    owner_token = _register_and_login_http(client, "owner8@example.com")
+    me_token = _register_and_login_http(client, "me8@example.com")
+    _sync_http(
+        client,
+        owner_token,
+        {
+            "lists": [
+                {
+                    "id": "list-h8",
+                    "fields": {
+                        "name": {"value": "Camping", "updated_at": 100, "updated_by": "dev"}
+                    },
+                }
+            ]
+        },
+    )
+    client.post(
+        "/api/v1/lists/list-h8/invites",
+        json={"invited_email": "me8@example.com"},
+        headers=_auth(owner_token),
+    )
+
+    resp = client.get("/api/v1/invites/pending", headers=_auth(me_token))
+    assert resp.status_code == 200
+    (entry,) = resp.get_json()["invites"]
+    assert set(entry) == {
+        "id",
+        "list_id",
+        "list_name",
+        "list_kind",
+        "invited_by_initials",
+        "expires_at",
+        "token",
+    }
+    assert entry["list_name"] == "Camping"
+
+    resp = client.post(
+        "/api/v1/invites/redeem", json={"token": entry["token"]}, headers=_auth(me_token)
+    )
+    assert resp.status_code == 200
+    assert resp.get_json() == {"list_id": "list-h8"}
+    assert client.get("/api/v1/invites/pending", headers=_auth(me_token)).get_json() == {
+        "invites": []
+    }
+    # Only the addressee's inbox ever showed it.
+    assert client.get("/api/v1/invites/pending", headers=_auth(owner_token)).get_json() == {
+        "invites": []
+    }
+    assert client.get("/api/v1/invites/pending").status_code == 401

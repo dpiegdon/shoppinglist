@@ -43,6 +43,12 @@ export const ar: Catalog = {
 
   "common.loading": "جارٍ التحميل…",
   "overview.empty": "لا توجد قوائم بعد. أنشئ واحدة للبدء.",
+  "overview.invites": "الدعوات",
+  "overview.invitesIgnored": "تم تجاهلها",
+  "overview.invite.from": "من {initials}",
+  "overview.invite.expiresMinutes": "تنتهي خلال {count} د",
+  "overview.invite.expiresHours": "تنتهي خلال {count} س",
+  "overview.invite.expiresDays": "تنتهي خلال {count} ي",
   "list.registry.empty": "لم يتم العثور على عناصر.",
   "list.categoryFixed": "تم تصحيح الأحرف في {category}: {count}",
 
@@ -111,6 +117,8 @@ export const ar: Catalog = {
   "action.revoke": "إبطال",
   "action.undo": "تراجع",
   "action.invite": "دعوة",
+  "action.join": "انضمام",
+  "action.ignore": "تجاهل",
   "action.create": "إنشاء",
   "action.duplicate": "تكرار",
   "action.add": "إضافة",

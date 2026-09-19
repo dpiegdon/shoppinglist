@@ -39,6 +39,12 @@ export const fr: Catalog = {
 
   "common.loading": "Chargement…",
   "overview.empty": "Aucune liste pour l'instant. Crées-en une pour commencer.",
+  "overview.invites": "Invitations",
+  "overview.invitesIgnored": "Ignorées",
+  "overview.invite.from": "De {initials}",
+  "overview.invite.expiresMinutes": "Expire dans {count} min",
+  "overview.invite.expiresHours": "Expire dans {count} h",
+  "overview.invite.expiresDays": "Expire dans {count} j",
   "list.registry.empty": "Aucun article trouvé.",
   "list.categoryFixed": "Casse corrigée dans {category} : {count}",
 
@@ -107,6 +113,8 @@ export const fr: Catalog = {
   "action.revoke": "Révoquer",
   "action.undo": "Annuler",
   "action.invite": "Inviter",
+  "action.join": "Rejoindre",
+  "action.ignore": "Ignorer",
   "action.create": "Créer",
   "action.duplicate": "Dupliquer",
   "action.add": "Ajouter",

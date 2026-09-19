@@ -207,6 +207,22 @@ export interface MembersResponse {
   invites: PendingInvite[];
 }
 
+/** An invite waiting for the signed-in account, as the overview offers it (T-233). */
+export interface InviteForMe {
+  id: string;
+  list_id: string;
+  list_name: string;
+  list_kind: ListKind;
+  invited_by_initials: string;
+  expires_at: number;
+  /** The same token the share URL carries; joining is a plain redeem. */
+  token: string;
+}
+
+export interface PendingInvitesResponse {
+  invites: InviteForMe[];
+}
+
 export interface MintInviteResponse {
   invite_id: string;
   token: string;

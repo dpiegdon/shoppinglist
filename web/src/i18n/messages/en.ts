@@ -50,6 +50,14 @@ export const en = {
   // ---- overview / list ----
   "common.loading": "Loading…",
   "overview.empty": "No lists yet. Create one to get started.",
+  // Invites addressed to this account, offered on the overview (T-233). Ignoring is a
+  // client-side choice: the invite moves to the greyed section at the bottom, still joinable.
+  "overview.invites": "Invitations",
+  "overview.invitesIgnored": "Ignored",
+  "overview.invite.from": "From {initials}",
+  "overview.invite.expiresMinutes": "Expires in {count} min",
+  "overview.invite.expiresHours": "Expires in {count} h",
+  "overview.invite.expiresDays": "Expires in {count} d",
   "list.registry.empty": "No items found.",
   "list.categoryFixed": "Casing fixed in {category}: {count}",
 
@@ -130,6 +138,8 @@ export const en = {
   "action.revoke": "Revoke",
   "action.undo": "Undo",
   "action.invite": "Invite",
+  "action.join": "Join",
+  "action.ignore": "Ignore",
   "action.create": "Create",
   "action.duplicate": "Duplicate",
   "action.add": "Add",

@@ -10,15 +10,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.api.ApiException
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.InviteForMeDto
+import org.p23q.shoppinglist.data.api.RedeemInviteRequest
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.SyncState
 import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.p23q.shoppinglist.data.sync.Syncer
+import org.p23q.shoppinglist.ui.ErrorText
+import org.p23q.shoppinglist.ui.UiText
+import java.io.IOException
 import javax.inject.Inject
 
 /** What an expenses list's card shows instead of an open-item count. */
@@ -47,6 +55,14 @@ data class OverviewUiState(
     val attentionListId: String? = null,
     /** True while a user-initiated pull-to-refresh sync is running, for the spinner (T-36). */
     val isRefreshing: Boolean = false,
+    /** Invites addressed to this account, offered below the lists (T-233). Empty offline. */
+    val invites: List<InviteForMeDto> = emptyList(),
+    /** The ones this device ignored: greyed, at the very bottom, still joinable. */
+    val ignoredInviteIds: Set<String> = emptySet(),
+    val joiningInviteId: String? = null,
+    val inviteError: UiText? = null,
+    /** Set once a Join went through; the screen opens this list, then calls [OverviewViewModel.joinedListOpened]. */
+    val joinedListId: String? = null,
 )
 
 @HiltViewModel
@@ -56,12 +72,14 @@ class OverviewViewModel @Inject constructor(
     private val sessionState: SessionState,
     private val syncer: Syncer,
     syncStatus: SyncStatus,
+    private val apiProvider: ApiProvider,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(OverviewUiState())
+    private val _uiState = MutableStateFlow(OverviewUiState(ignoredInviteIds = sessionState.ignoredInviteIds))
     val uiState: StateFlow<OverviewUiState> = _uiState.asStateFlow()
 
     init {
+        loadInvites()
         viewModelScope.launch {
             combine(listsRepo.activeLists(), itemsRepo.openItemCounts(), ::Pair).collect { (lists, counts) ->
                 _uiState.update { it.copy(lists = lists, openCounts = counts) }
@@ -152,8 +170,54 @@ class OverviewViewModel @Inject constructor(
         _uiState.update { it.copy(isRefreshing = true) }
         try {
             syncer.syncNow(emptyList())
+            loadInvites().join()
         } finally {
             _uiState.update { it.copy(isRefreshing = false) }
         }
     }
+
+    /**
+     * The invites waiting for this account (T-233). Online only, like the members screen: when the
+     * request fails the section is simply absent, or keeps its last good answer.
+     */
+    fun loadInvites(): Job = viewModelScope.launch {
+        try {
+            val invites = apiProvider.get().pendingInvites().invites
+            // An ignored id the server no longer offers is dead (used, withdrawn or expired):
+            // forget it, so the stored set cannot grow without bound.
+            val live = sessionState.ignoredInviteIds.filterTo(mutableSetOf()) { id -> invites.any { it.id == id } }
+            if (live != sessionState.ignoredInviteIds) sessionState.ignoredInviteIds = live
+            _uiState.update { it.copy(invites = invites, ignoredInviteIds = live) }
+        } catch (e: IOException) {
+            // Offline: nothing to show, nothing to say.
+        } catch (e: ApiException) {
+            // A server without the endpoint, or a session that just ended: the same.
+        }
+    }
+
+    /** A device-local choice: the invite moves to the greyed section at the bottom, where Join still is. */
+    fun ignoreInvite(inviteId: String) {
+        val next = sessionState.ignoredInviteIds + inviteId
+        sessionState.ignoredInviteIds = next
+        _uiState.update { it.copy(ignoredInviteIds = next) }
+    }
+
+    /** Join from the overview: the same path as a pasted link — redeem, pull the list, open it. */
+    fun joinInvite(invite: InviteForMeDto): Job = viewModelScope.launch {
+        _uiState.update { it.copy(joiningInviteId = invite.id, inviteError = null) }
+        try {
+            val listId = apiProvider.get().redeemInvite(RedeemInviteRequest(invite.token)).listId
+            syncer.syncNow(listOf(listId))
+            sessionState.lastOpenedListId = listId
+            _uiState.update { it.copy(joiningInviteId = null, joinedListId = listId) }
+        } catch (e: ApiException) {
+            val message = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))
+            _uiState.update { it.copy(joiningInviteId = null, inviteError = message) }
+            loadInvites() // a used, withdrawn or expired invite drops out of the section
+        } catch (e: IOException) {
+            _uiState.update { it.copy(joiningInviteId = null, inviteError = UiText.res(R.string.error_offline)) }
+        }
+    }
+
+    fun joinedListOpened() = _uiState.update { it.copy(joinedListId = null) }
 }

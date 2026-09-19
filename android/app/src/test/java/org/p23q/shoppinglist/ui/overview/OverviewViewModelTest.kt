@@ -1,10 +1,17 @@
 package org.p23q.shoppinglist.ui.overview
 
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -14,8 +21,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.api.AuthInterceptor
+import org.p23q.shoppinglist.data.api.ErrorInterceptor
+import org.p23q.shoppinglist.data.api.SessionEvents
+import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -24,7 +38,9 @@ import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.data.sync.SyncResult
 import org.p23q.shoppinglist.data.sync.SyncStatus
 import org.p23q.shoppinglist.data.sync.Syncer
+import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class OverviewViewModelTest {
@@ -38,10 +54,34 @@ class OverviewViewModelTest {
     private lateinit var sessionState: FakeSessionState
     private lateinit var syncStatus: SyncStatus
     private var syncCalls = 0
+    private val syncedFullLists = mutableListOf<List<String>>()
     private lateinit var viewModel: OverviewViewModel
+    private lateinit var server: MockWebServer
+    private lateinit var apiProvider: ApiProvider
+
+    /** What the fake server answers to the inbox and redeem requests (T-233); tests reassign these. */
+    private var inboxJson = """{"invites": []}"""
+    private var redeemResponse: () -> MockResponse = { MockResponse().setBody("""{"list_id": "list-a"}""") }
+
+    private fun inviteJson(id: String, listName: String) =
+        """{"id": "$id", "list_id": "list-$id", "list_name": "$listName", "list_kind": "shopping",
+           "invited_by_initials": "AL", "expires_at": ${System.currentTimeMillis() + 5 * 86_400_000L}, "token": "token-$id"}"""
 
     @Before
     fun setUp() {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/api/v1/invites/pending" -> MockResponse().setBody(inboxJson)
+                "/api/v1/invites/redeem" -> redeemResponse()
+                else -> MockResponse().setResponseCode(404).setBody("""{"error": "not_found"}""")
+            }
+        }
+        server.start()
+        val serverConfigFile = File.createTempFile("overview_vm_server_config", ".preferences_pb")
+        serverConfigFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        kotlinx.coroutines.runBlocking { serverConfig.setServerUrl(server.url("/").toString()) }
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
@@ -49,13 +89,31 @@ class OverviewViewModelTest {
         val deviceId = DeviceIdProvider { "device-1" }
         listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
         itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        sessionState = FakeSessionState()
+        sessionState = FakeSessionState().apply { token = "tok-123" }
         syncStatus = SyncStatus()
-        val syncer = Syncer {
+        val json = Json { ignoreUnknownKeys = true }
+        apiProvider = ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
+            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
+            json = json,
+        )
+        viewModel = newViewModel()
+    }
+
+    private fun newViewModel(): OverviewViewModel {
+        val syncer = Syncer { fullLists ->
             syncCalls++
+            syncedFullLists += fullLists
             SyncResult.Success(0, 0, 0, 0)
         }
-        viewModel = OverviewViewModel(listsRepo, itemsRepo, sessionState, syncer, syncStatus)
+        return OverviewViewModel(listsRepo, itemsRepo, sessionState, syncer, syncStatus, apiProvider)
+    }
+
+    @After
+    fun tearDown() {
+        if (::server.isInitialized) server.shutdown()
+        if (::db.isInitialized) db.close()
     }
 
     @Test
@@ -187,5 +245,87 @@ class OverviewViewModelTest {
 
         // What the web counts too: every expense, since none is ever ticked off.
         assertEquals(2, counts[id])
+    }
+
+    // ---- invites waiting for this account (T-233) ----------------------------------------------
+
+    @Test
+    fun `pending invites load into the state, those ignored before already shelved`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}, ${inviteJson("b", "Chores")}]}"""
+        sessionState.ignoredInviteIds = setOf("b")
+
+        val state = newViewModel().uiState.first { it.invites.isNotEmpty() }
+
+        assertEquals(listOf("Camping", "Chores"), state.invites.map { it.listName })
+        assertEquals("AL", state.invites.first().invitedByInitials)
+        assertEquals(setOf("b"), state.ignoredInviteIds)
+    }
+
+    @Test
+    fun `ignoring an invite is remembered on the device`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.invites.isNotEmpty() }
+
+        viewModel.ignoreInvite("a")
+
+        assertEquals(setOf("a"), viewModel.uiState.value.ignoredInviteIds)
+        assertEquals(setOf("a"), sessionState.ignoredInviteIds)
+    }
+
+    @Test
+    fun `an ignored id the server no longer offers is forgotten`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        sessionState.ignoredInviteIds = setOf("a", "long-gone")
+
+        val state = newViewModel().uiState.first { it.invites.isNotEmpty() }
+
+        assertEquals(setOf("a"), state.ignoredInviteIds)
+        assertEquals(setOf("a"), sessionState.ignoredInviteIds)
+    }
+
+    @Test
+    fun `joining redeems with the invite's own token, pulls the list and opens it`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        val viewModel = newViewModel()
+        val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
+
+        viewModel.joinInvite(invite).join()
+
+        assertEquals("list-a", viewModel.uiState.value.joinedListId)
+        assertEquals("list-a", sessionState.lastOpenedListId)
+        assertTrue(syncedFullLists.contains(listOf("list-a")))
+        assertNull(viewModel.uiState.value.inviteError)
+        val redeem = (0 until server.requestCount).map { server.takeRequest() }.single { it.path == "/api/v1/invites/redeem" }
+        assertTrue(redeem.body.readUtf8().contains(""""token":"token-a""""))
+
+        viewModel.joinedListOpened()
+        assertNull(viewModel.uiState.value.joinedListId)
+    }
+
+    @Test
+    fun `a refused join says why, in the server's words, and re-reads the inbox`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        redeemResponse = { MockResponse().setResponseCode(409).setBody("""{"error": "invite_revoked", "message": "revoked"}""") }
+        val viewModel = newViewModel()
+        val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
+        inboxJson = """{"invites": []}"""
+
+        viewModel.joinInvite(invite).join()
+
+        assertEquals(UiText.res(R.string.api_error_invite_revoked), viewModel.uiState.value.inviteError)
+        assertNull(viewModel.uiState.value.joinedListId)
+        viewModel.uiState.first { it.invites.isEmpty() }
+    }
+
+    @Test
+    fun `an unreachable inbox leaves the section absent`() = runTest(mainDispatcherRule.dispatcher) {
+        server.shutdown()
+
+        val viewModel = newViewModel()
+        viewModel.refresh().join()
+
+        assertTrue(viewModel.uiState.value.invites.isEmpty())
+        assertNull(viewModel.uiState.value.inviteError)
     }
 }

@@ -1,20 +1,38 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Navigate, Link, useNavigate } from "react-router-dom";
+import * as api from "../api/client";
 import AddFab from "../components/AddFab";
 import { useSyncContext } from "../hooks/SyncContext";
-import { fieldPatch } from "../hooks/useSync";
+import { fieldPatch, nowMs } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
+import { errorMessage } from "../i18n/apiErrors";
+import { formatExpiresIn } from "../lib/relativeTime";
 import { DEFAULT_LIST_KIND, isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
 import { balancesFor, expenseTotalCents } from "../lib/expenses";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useAuth } from "../auth/AuthContext";
-import type { Expense } from "../api/contract";
+import type { Expense, InviteForMe } from "../api/contract";
 import type { ListKind } from "../api/contract";
 import { useT } from "../i18n";
 import { byName } from "../lib/nameOrder";
 import { balanceColor, useFormat } from "../lib/format";
 
 export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
+/** Invite ids this browser chose to ignore (T-233): a JSON array. A device-local choice, as on Android. */
+export const IGNORED_INVITES_STORAGE_KEY = "shoppinglist_ignored_invites";
+
+function readIgnoredInvites(): Set<string> {
+  try {
+    const raw = localStorage.getItem(IGNORED_INVITES_STORAGE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeIgnoredInvites(ids: Set<string>) {
+  localStorage.setItem(IGNORED_INVITES_STORAGE_KEY, JSON.stringify([...ids]));
+}
 
 // Resuming the last-opened list must happen once, on first entry into the
 // app (Spec: "on login, open the list the user last had open") - NOT on
@@ -31,7 +49,8 @@ export function _resetInitialResumeForTests() {
 export default function OverviewPage() {
   const t = useT();
   const fmt = useFormat();
-  const { lists, items, loading, push, deviceId } = useSyncContext();
+  const { lists, items, loading, push, deviceId, lastSyncAt } = useSyncContext();
+  const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   // Shopping is preselected so creating a list behaves exactly as it always has (T-110).
@@ -41,6 +60,58 @@ export default function OverviewPage() {
   const [newCurrency, setNewCurrency] = useState("");
   const { account } = useAuth();
   const [redirectTo, setRedirectTo] = useState<string | null | undefined>(undefined);
+  // Invites addressed to this account (T-233). Online only, like the members screen: when the
+  // request fails the section is simply absent, and the last good answer stays up meanwhile.
+  const [invites, setInvites] = useState<InviteForMe[]>([]);
+  const [ignoredInvites, setIgnoredInvites] = useState<Set<string>>(readIgnoredInvites);
+  const [joiningInviteId, setJoiningInviteId] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const loadInvites = useCallback(async () => {
+    try {
+      const response = await api.getPendingInvites();
+      setInvites(response.invites);
+      // An ignored id the server no longer offers is dead (used, withdrawn or expired): forget it,
+      // so the stored set cannot grow without bound.
+      setIgnoredInvites((current) => {
+        const live = new Set([...current].filter((id) => response.invites.some((invite) => invite.id === id)));
+        if (live.size !== current.size) writeIgnoredInvites(live);
+        return live;
+      });
+    } catch {
+      // Offline, or a server without the endpoint: nothing to show, nothing to say.
+    }
+  }, []);
+
+  // Re-checked after every successful sync, so an invite minted while the tab sits on the
+  // overview turns up within the sync interval rather than on the next page load.
+  useEffect(() => {
+    void loadInvites();
+  }, [loadInvites, lastSyncAt]);
+
+  function ignoreInvite(inviteId: string) {
+    const next = new Set(ignoredInvites).add(inviteId);
+    writeIgnoredInvites(next);
+    setIgnoredInvites(next);
+  }
+
+  async function joinInvite(invite: InviteForMe) {
+    setJoiningInviteId(invite.id);
+    setInviteError(null);
+    try {
+      // The same path as a pasted link: redeem, pull the list's full state, open it.
+      const { list_id } = await api.redeemInvite(invite.token);
+      await push({}, [list_id]);
+      localStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
+      navigate(`/list/${list_id}`);
+    } catch (err) {
+      setInviteError(errorMessage(t, err, "redeem.error", { invalid_token: "apiError.inviteNotFound" }));
+      // A used, withdrawn or expired invite drops out of the section on this reload.
+      void loadInvites();
+    } finally {
+      setJoiningInviteId(null);
+    }
+  }
 
   useEffect(() => {
     if (loading) return;
@@ -128,6 +199,47 @@ export default function OverviewPage() {
     );
   }
 
+  const openInvites = invites.filter((invite) => !ignoredInvites.has(invite.id));
+  const shelvedInvites = invites.filter((invite) => ignoredInvites.has(invite.id));
+  const now = nowMs();
+
+  function inviteCard(invite: InviteForMe, ignored: boolean) {
+    const kindLabel = t(listKindLabelKey(invite.list_kind));
+    return (
+      <div
+        key={invite.id}
+        className="card"
+        style={{ padding: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+      >
+        <span aria-label={kindLabel} title={kindLabel}>
+          {listKindIcon(invite.list_kind)}
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span dir="auto" style={{ display: "block", fontWeight: 600 }}>
+            {invite.list_name}
+          </span>
+          <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>
+            {t("overview.invite.from", { initials: invite.invited_by_initials })} ·{" "}
+            {formatExpiresIn(invite.expires_at, now, t)}
+          </span>
+        </span>
+        {!ignored && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => ignoreInvite(invite.id)}
+            disabled={joiningInviteId !== null}
+          >
+            {t("action.ignore")}
+          </button>
+        )}
+        <button type="button" className="btn" onClick={() => joinInvite(invite)} disabled={joiningInviteId !== null}>
+          {t("action.join")}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       {/* "Overview", as the menus on both clients call it (T-186); it said "Your lists". */}
@@ -177,6 +289,35 @@ export default function OverviewPage() {
           );
         })}
       </div>
+
+      {/* Invites waiting for this account (T-233), below the lists so what you have comes first.
+          Ignoring is this browser's choice alone: the card moves to the greyed section at the very
+          bottom, where Join is still offered, so changing one's mind costs nothing. */}
+      {openInvites.length > 0 && (
+        <section aria-labelledby="invites-heading" style={{ marginTop: "1.5rem" }}>
+          <h2 id="invites-heading" style={{ fontSize: "1rem", margin: "0 0 0.6rem" }}>
+            {t("overview.invites")}
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            {openInvites.map((invite) => inviteCard(invite, false))}
+          </div>
+        </section>
+      )}
+      {inviteError && (
+        <p className="error-text" role="alert">
+          {inviteError}
+        </p>
+      )}
+      {shelvedInvites.length > 0 && (
+        <section aria-labelledby="ignored-invites-heading" style={{ marginTop: "1.5rem", opacity: 0.6 }}>
+          <h2 id="ignored-invites-heading" className="muted" style={{ fontSize: "1rem", margin: "0 0 0.6rem" }}>
+            {t("overview.invitesIgnored")}
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            {shelvedInvites.map((invite) => inviteCard(invite, true))}
+          </div>
+        </section>
+      )}
 
       <div className="fab-spacer" aria-hidden="true" />
       {/* Bottom right, like Add on every list and like the app's overview (T-174). */}

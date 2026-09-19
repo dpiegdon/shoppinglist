@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n";
-import { formatLastSeen } from "./relativeTime";
+import { formatExpiresIn, formatLastSeen } from "./relativeTime";
 
 // A real English translate, so these still assert the exact wording users see.
 const t = (k: MessageKey, p?: Record<string, string | number>) => translate("en", k, p);
@@ -43,5 +43,18 @@ describe("formatLastSeen", () => {
     // The web window is 7 days; a session at 6 days must read as nearly-dead,
     // not round down into hours.
     expect(formatLastSeen(NOW - 6 * DAY, NOW, t)).toBe("6 d ago");
+  });
+});
+
+describe("formatExpiresIn", () => {
+  it("counts down in the same abbreviated units, days first (T-233)", () => {
+    expect(formatExpiresIn(NOW + 6 * DAY + 5 * HOUR, NOW, t)).toBe("Expires in 6 d");
+    expect(formatExpiresIn(NOW + 5 * HOUR + 30 * MINUTE, NOW, t)).toBe("Expires in 5 h");
+    expect(formatExpiresIn(NOW + 20 * MINUTE, NOW, t)).toBe("Expires in 20 min");
+  });
+
+  it("never says an invite the server still offers has no time left", () => {
+    expect(formatExpiresIn(NOW + 10_000, NOW, t)).toBe("Expires in 1 min");
+    expect(formatExpiresIn(NOW, NOW, t)).toBe("Expires in 1 min");
   });
 });

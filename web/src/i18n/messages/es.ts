@@ -37,6 +37,12 @@ export const es: Catalog = {
 
   "common.loading": "Cargando…",
   "overview.empty": "Aún no hay listas. Crea una para empezar.",
+  "overview.invites": "Invitaciones",
+  "overview.invitesIgnored": "Ignoradas",
+  "overview.invite.from": "De {initials}",
+  "overview.invite.expiresMinutes": "Caduca en {count} min",
+  "overview.invite.expiresHours": "Caduca en {count} h",
+  "overview.invite.expiresDays": "Caduca en {count} d",
   "list.registry.empty": "No se han encontrado artículos.",
   "list.categoryFixed": "Mayúsculas corregidas en {category}: {count}",
 
@@ -105,6 +111,8 @@ export const es: Catalog = {
   "action.revoke": "Revocar",
   "action.undo": "Deshacer",
   "action.invite": "Invitar",
+  "action.join": "Unirse",
+  "action.ignore": "Ignorar",
   "action.create": "Crear",
   "action.duplicate": "Duplicar",
   "action.add": "Añadir",

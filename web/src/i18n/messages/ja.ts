@@ -42,6 +42,12 @@ export const ja: Catalog = {
 
   "common.loading": "読み込み中…",
   "overview.empty": "リストがまだありません。作成して始めましょう。",
+  "overview.invites": "招待",
+  "overview.invitesIgnored": "無視済み",
+  "overview.invite.from": "{initials} から",
+  "overview.invite.expiresMinutes": "{count} 分後に期限切れ",
+  "overview.invite.expiresHours": "{count} 時間後に期限切れ",
+  "overview.invite.expiresDays": "{count} 日後に期限切れ",
   "list.registry.empty": "アイテムが見つかりません。",
   "list.categoryFixed": "{category} の表記を修正しました：{count}",
 
@@ -110,6 +116,8 @@ export const ja: Catalog = {
   "action.revoke": "取り消す",
   "action.undo": "元に戻す",
   "action.invite": "招待",
+  "action.join": "参加",
+  "action.ignore": "無視",
   "action.create": "作成",
   "action.duplicate": "複製",
   "action.add": "追加",

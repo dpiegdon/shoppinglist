@@ -27,6 +27,7 @@
     <string name="action_leave">مغادرة</string>
     <string name="action_invite">دعوة</string>
     <string name="action_join">انضمام</string>
+    <string name="action_ignore">تجاهل</string>
     <string name="action_duplicate">تكرار</string>
     <string name="action_unsubscribe">إلغاء الاشتراك</string>
     <string name="nav_menu">القائمة</string>
@@ -63,6 +64,12 @@
     <string name="list_kind_expenses">المصروفات</string>
     <string name="overview_new_list">قائمة جديدة</string>
     <string name="overview_no_lists">لا توجد قوائم بعد</string>
+    <string name="overview_invites">الدعوات</string>
+    <string name="overview_invites_ignored">تم تجاهلها</string>
+    <string name="overview_invite_from">من %1$s</string>
+    <string name="overview_invite_expires_minutes">تنتهي خلال %1$d د</string>
+    <string name="overview_invite_expires_hours">تنتهي خلال %1$d س</string>
+    <string name="overview_invite_expires_days">تنتهي خلال %1$d ي</string>
     <string name="overview_list_name">اسم القائمة</string>
     <string name="overview_type">النوع</string>
     <string name="overview_kind_checklist">أسماء وفئات وملاحظات فقط.</string>

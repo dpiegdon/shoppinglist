@@ -39,6 +39,15 @@ def register_routes(bp):
         audit.record("invite.revoked", account_id=g.account.id, invite_id=invite_id)
         return "", 204
 
+    @bp.route("/invites/pending", methods=["GET"])
+    @authed
+    def pending_invites_view():
+        """The invites waiting for the caller, so the overview can offer them (T-233)."""
+        conn = get_db()
+        config = get_config()
+        pending = invites.pending_for(conn, config["invite_hmac_key"], g.account)
+        return jsonify({"invites": pending}), 200
+
     @bp.route("/invites/redeem", methods=["POST"])
     @authed
     def redeem_invite_view():

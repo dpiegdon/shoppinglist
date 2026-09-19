@@ -98,6 +98,10 @@ interface Api {
     @POST("api/v1/invites/redeem")
     suspend fun redeemInvite(@Body body: RedeemInviteRequest): RedeemInviteResponse
 
+    /** The invites addressed to the signed-in account that are still open to join (T-233). */
+    @GET("api/v1/invites/pending")
+    suspend fun pendingInvites(): PendingInvitesResponse
+
     @POST("api/v1/sync")
     suspend fun sync(@Body body: SyncRequest): SyncResponse
 

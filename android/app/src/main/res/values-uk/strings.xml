@@ -27,6 +27,7 @@
     <string name="action_leave">Покинути</string>
     <string name="action_invite">Запросити</string>
     <string name="action_join">Приєднатися</string>
+    <string name="action_ignore">Ігнорувати</string>
     <string name="action_duplicate">Дублювати</string>
     <string name="action_unsubscribe">Відписатися</string>
     <string name="nav_menu">Меню</string>
@@ -63,6 +64,12 @@
     <string name="list_kind_expenses">Витрати</string>
     <string name="overview_new_list">Новий список</string>
     <string name="overview_no_lists">Списків ще немає</string>
+    <string name="overview_invites">Запрошення</string>
+    <string name="overview_invites_ignored">Проігноровані</string>
+    <string name="overview_invite_from">Від %1$s</string>
+    <string name="overview_invite_expires_minutes">Спливає через %1$d хв</string>
+    <string name="overview_invite_expires_hours">Спливає через %1$d год</string>
+    <string name="overview_invite_expires_days">Спливає через %1$d дн</string>
     <string name="overview_list_name">Назва списку</string>
     <string name="overview_type">Тип</string>
     <string name="overview_kind_checklist">Лише назви, категорії та нотатки.</string>

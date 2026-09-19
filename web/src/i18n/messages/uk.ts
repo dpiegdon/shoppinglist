@@ -41,6 +41,12 @@ export const uk: Catalog = {
 
   "common.loading": "Завантаження…",
   "overview.empty": "Списків ще немає. Створи один, щоб почати.",
+  "overview.invites": "Запрошення",
+  "overview.invitesIgnored": "Проігноровані",
+  "overview.invite.from": "Від {initials}",
+  "overview.invite.expiresMinutes": "Спливає через {count} хв",
+  "overview.invite.expiresHours": "Спливає через {count} год",
+  "overview.invite.expiresDays": "Спливає через {count} дн",
   "list.registry.empty": "Товарів не знайдено.",
   "list.categoryFixed": "Регістр виправлено в {category}: {count}",
 
@@ -109,6 +115,8 @@ export const uk: Catalog = {
   "action.revoke": "Відкликати",
   "action.undo": "Скасувати дію",
   "action.invite": "Запросити",
+  "action.join": "Приєднатися",
+  "action.ignore": "Ігнорувати",
   "action.create": "Створити",
   "action.duplicate": "Дублювати",
   "action.add": "Додати",

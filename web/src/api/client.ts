@@ -8,6 +8,7 @@ import type {
   LoginResponse,
   MembersResponse,
   MintInviteResponse,
+  PendingInvitesResponse,
   RedeemResponse,
   RegisterRequest,
   RegisterResponse,
@@ -210,6 +211,11 @@ export function revokeInvite(inviteId: string): Promise<void> {
 
 export function redeemInvite(token: string): Promise<RedeemResponse> {
   return apiFetch("/invites/redeem", { method: "POST", body: { token } });
+}
+
+/** The invites addressed to the signed-in account that are still open to join (T-233). */
+export function getPendingInvites(): Promise<PendingInvitesResponse> {
+  return apiFetch("/invites/pending", { method: "GET" });
 }
 
 export function sync(body: SyncRequest): Promise<SyncResponse> {

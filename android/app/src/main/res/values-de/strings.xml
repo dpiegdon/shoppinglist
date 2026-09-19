@@ -27,6 +27,7 @@
     <string name="action_leave">Verlassen</string>
     <string name="action_invite">Einladen</string>
     <string name="action_join">Beitreten</string>
+    <string name="action_ignore">Ignorieren</string>
     <string name="action_duplicate">Duplizieren</string>
     <string name="action_unsubscribe">Abbestellen</string>
     <string name="nav_menu">Menü</string>
@@ -63,6 +64,12 @@
     <string name="list_kind_expenses">Ausgaben</string>
     <string name="overview_new_list">Neue Liste</string>
     <string name="overview_no_lists">Noch keine Listen</string>
+    <string name="overview_invites">Einladungen</string>
+    <string name="overview_invites_ignored">Ignoriert</string>
+    <string name="overview_invite_from">Von %1$s</string>
+    <string name="overview_invite_expires_minutes">Läuft ab in %1$d Min</string>
+    <string name="overview_invite_expires_hours">Läuft ab in %1$d Std</string>
+    <string name="overview_invite_expires_days">Läuft ab in %1$d T</string>
     <string name="overview_list_name">Listenname</string>
     <string name="overview_type">Typ</string>
     <string name="overview_kind_checklist">Nur Namen, Kategorien und Notizen.</string>

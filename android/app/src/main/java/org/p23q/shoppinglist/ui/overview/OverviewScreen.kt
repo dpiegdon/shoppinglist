@@ -28,9 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -38,10 +40,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.data.api.InviteForMeDto
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 
@@ -52,6 +56,15 @@ fun OverviewScreen(
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val nowMs = rememberTickingNowMs()
+
+    // A Join that went through opens the list, as redeeming a pasted link does (T-233).
+    LaunchedEffect(state.joinedListId) {
+        state.joinedListId?.let { listId ->
+            viewModel.joinedListOpened()
+            onOpenList(listId)
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -65,7 +78,7 @@ fun OverviewScreen(
             // the banner for rows that failed to sync, which needs the room and the tap target.
             SyncStatusBar(
                 state = state.sync,
-                nowMs = rememberTickingNowMs(),
+                nowMs = nowMs,
                 onAttentionClick = { state.attentionListId?.let(onOpenList) },
                 showRecency = false,
             )
@@ -74,7 +87,9 @@ fun OverviewScreen(
                 onRefresh = { viewModel.refresh() },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (state.lists.isEmpty()) {
+                val openInvites = state.invites.filter { it.id !in state.ignoredInviteIds }
+                val shelvedInvites = state.invites.filter { it.id in state.ignoredInviteIds }
+                if (state.lists.isEmpty() && state.invites.isEmpty()) {
                     // Scrollable so the pull gesture still fires with no lists to scroll.
                     Box(
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -87,6 +102,16 @@ fun OverviewScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                     ) {
+                        if (state.lists.isEmpty()) {
+                            // Only invites to show: say the lists are empty where they would be.
+                            item(key = "no-lists") {
+                                Text(
+                                    stringResource(R.string.overview_no_lists),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                         items(state.lists, key = { it.id }) { list ->
                             Card(
                                 modifier = Modifier
@@ -147,6 +172,49 @@ fun OverviewScreen(
                                         )
                                     }
                                 }
+                            }
+                        }
+                        // Invites waiting for this account (T-233), below the lists so what you have
+                        // comes first. Ignoring is this device's choice alone: the card moves to the
+                        // greyed section at the very bottom, where Join is still offered.
+                        if (openInvites.isNotEmpty()) {
+                            item(key = "invites-heading") {
+                                SectionHeading(stringResource(R.string.overview_invites))
+                            }
+                            items(openInvites, key = { "invite-" + it.id }) { invite ->
+                                InviteCard(
+                                    invite = invite,
+                                    nowMs = nowMs,
+                                    ignored = false,
+                                    busy = state.joiningInviteId != null,
+                                    onJoin = { viewModel.joinInvite(invite) },
+                                    onIgnore = { viewModel.ignoreInvite(invite.id) },
+                                )
+                            }
+                        }
+                        state.inviteError?.let { error ->
+                            item(key = "invite-error") {
+                                Text(
+                                    error.asString(),
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                        if (shelvedInvites.isNotEmpty()) {
+                            item(key = "ignored-heading") {
+                                SectionHeading(stringResource(R.string.overview_invites_ignored), muted = true)
+                            }
+                            items(shelvedInvites, key = { "ignored-" + it.id }) { invite ->
+                                InviteCard(
+                                    invite = invite,
+                                    nowMs = nowMs,
+                                    ignored = true,
+                                    busy = state.joiningInviteId != null,
+                                    onJoin = { viewModel.joinInvite(invite) },
+                                    onIgnore = {},
+                                )
                             }
                         }
                     }
@@ -223,5 +291,55 @@ fun OverviewScreen(
                 TextButton(onClick = viewModel::dismissCreateDialog) { Text(stringResource(R.string.action_cancel)) }
             },
         )
+    }
+}
+
+@Composable
+private fun SectionHeading(text: String, muted: Boolean = false) {
+    Text(
+        text,
+        modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+    )
+}
+
+/** One invite on the overview (T-233): kind, list name, who invited and how long it stands, then Ignore and Join. */
+@Composable
+private fun InviteCard(
+    invite: InviteForMeDto,
+    nowMs: Long,
+    ignored: Boolean,
+    busy: Boolean,
+    onJoin: () -> Unit,
+    onIgnore: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            // Greyed once ignored, as the web does it; the card otherwise reads the same.
+            .alpha(if (ignored) 0.6f else 1f),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = ListKind.icon(invite.listKind), modifier = Modifier.padding(end = 8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = invite.listName)
+                Text(
+                    // "From AL · Expires in 5 d", as the web writes it.
+                    text = stringResource(R.string.overview_invite_from, invite.invitedByInitials) +
+                        " · " + formatExpiresIn(invite.expiresAt, nowMs).asString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (!ignored) {
+                TextButton(onClick = onIgnore, enabled = !busy) { Text(stringResource(R.string.action_ignore)) }
+            }
+            TextButton(onClick = onJoin, enabled = !busy) { Text(stringResource(R.string.action_join)) }
+        }
     }
 }

@@ -28,6 +28,7 @@
     <string name="action_leave">Leave</string>
     <string name="action_invite">Invite</string>
     <string name="action_join">Join</string>
+    <string name="action_ignore">Ignore</string>
     <string name="action_duplicate">Duplicate</string>
     <string name="action_unsubscribe">Unsubscribe</string>
 
@@ -80,6 +81,12 @@
     <!-- overview -->
     <string name="overview_new_list">New list</string>
     <string name="overview_no_lists">No lists yet</string>
+    <string name="overview_invites">Invitations</string>
+    <string name="overview_invites_ignored">Ignored</string>
+    <string name="overview_invite_from">From %1$s</string>
+    <string name="overview_invite_expires_minutes">Expires in %1$d min</string>
+    <string name="overview_invite_expires_hours">Expires in %1$d h</string>
+    <string name="overview_invite_expires_days">Expires in %1$d d</string>
     <string name="overview_list_name">List name</string>
     <string name="overview_type">Type</string>
     <string name="overview_kind_checklist">Just names, categories and notes.</string>

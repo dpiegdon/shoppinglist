@@ -9,7 +9,7 @@ import uuid
 from hashlib import sha256
 
 from . import db as db_module
-from .auth import EMAIL_RE, now_ms
+from .auth import EMAIL_RE, now_ms, resolve_initials
 from .errors import ApiError
 
 INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000  # fixed 7 days; never client-supplied
@@ -157,6 +157,51 @@ def redeem(conn, key: bytes, account, token: str | None) -> str:
     conn.execute("UPDATE invites SET used_at = ? WHERE id = ?", (now_ms(), invite_id))
     touch_list(conn, list_id)  # the joiner is now in every member's roster (T-152)
     return list_id
+
+
+def pending_for(conn, key: bytes, account) -> list[dict]:
+    """The live invites addressed to `account`'s email, for the overview (T-233).
+
+    Live means what `redeem` would accept: not used, not revoked, not expired, on a list that
+    still exists and is not closed. A list the account is already on is left out too — that
+    invite is redeemable (the membership insert is a no-op) but pointless to offer.
+
+    Each row carries its token, minted again from the row (the encoding is deterministic). That
+    is the credential the share URL hands the same person, and it admits only this address, so
+    the addressee learns nothing they were not meant to hold — and joining from the overview is
+    `redeem`, with every check that path has, rather than a second grant path.
+    """
+    rows = conn.execute(
+        "SELECT invites.id AS id, invites.list_id AS list_id, "
+        "invites.invited_email AS invited_email, invites.expires_at AS expires_at, "
+        "lists.name AS list_name, lists.kind AS list_kind, "
+        "inviter.email AS inviter_email, inviter_settings.initials AS inviter_initials "
+        "FROM invites JOIN lists ON lists.id = invites.list_id "
+        "JOIN accounts AS inviter ON inviter.id = invites.created_by "
+        "JOIN account_settings AS inviter_settings ON inviter_settings.account_id = inviter.id "
+        "WHERE lower(invites.invited_email) = lower(?) "
+        "AND invites.revoked = 0 AND invites.used_at IS NULL AND invites.expires_at > ? "
+        "AND lists.deleted = 0 AND lists.closed_at IS NULL "
+        "AND NOT EXISTS (SELECT 1 FROM memberships "
+        "WHERE memberships.list_id = lists.id AND memberships.account_id = ?) "
+        "ORDER BY invites.created_at",
+        (account.email, now_ms(), account.id),
+    ).fetchall()
+    return [
+        {
+            "id": row["id"],
+            "list_id": row["list_id"],
+            "list_name": row["list_name"],
+            "list_kind": row["list_kind"] or "shopping",
+            # Always someone: deleting an account deletes the invites it minted (T-84).
+            "invited_by_initials": resolve_initials(row["inviter_email"], row["inviter_initials"]),
+            "expires_at": row["expires_at"],
+            "token": _encode_token(
+                key, row["id"], row["list_id"], row["invited_email"], row["expires_at"]
+            ),
+        }
+        for row in rows
+    ]
 
 
 # ---- leave / orphans -----------------------------------------------------------

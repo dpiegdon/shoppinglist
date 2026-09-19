@@ -41,6 +41,12 @@ export const zhHans: Catalog = {
 
   "common.loading": "加载中…",
   "overview.empty": "还没有清单。创建一个开始吧。",
+  "overview.invites": "邀请",
+  "overview.invitesIgnored": "已忽略",
+  "overview.invite.from": "来自 {initials}",
+  "overview.invite.expiresMinutes": "{count} 分钟后过期",
+  "overview.invite.expiresHours": "{count} 小时后过期",
+  "overview.invite.expiresDays": "{count} 天后过期",
   "list.registry.empty": "未找到物品。",
   "list.categoryFixed": "已修正 {category} 的大小写：{count}",
 
@@ -109,6 +115,8 @@ export const zhHans: Catalog = {
   "action.revoke": "撤销",
   "action.undo": "撤消",
   "action.invite": "邀请",
+  "action.join": "加入",
+  "action.ignore": "忽略",
   "action.create": "创建",
   "action.duplicate": "复制",
   "action.add": "添加",
