@@ -304,8 +304,10 @@ private fun List<String>.swap(i: Int, j: Int): List<String> =
  * their position (even if no item currently carries them); the rest are appended alphabetically.
  */
 private fun buildCategoryDisplay(currentOrder: List<String>, rawCategories: List<String>): List<String> {
-    val names = CategoryCanon.canonicalNames(rawCategories, currentOrder)
-    val orderedKeys = currentOrder.map { CategoryCanon.key(it) }.filter { it.isNotEmpty() }.distinct()
+    // The same clean order the web shows and both clients save (T-212): first casing wins.
+    val order = CategoryCanon.normalizeOrder(currentOrder)
+    val names = CategoryCanon.canonicalNames(rawCategories, order)
+    val orderedKeys = order.map(CategoryCanon::key)
     val leftover = names.keys.filter { it !in orderedKeys }
         .sortedWith(compareBy(NameOrder.names) { key: String -> names.getValue(key) }.thenBy { it })
     return (orderedKeys + leftover).mapNotNull { names[it] }

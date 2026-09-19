@@ -70,6 +70,27 @@ export function distinctCanonicalStores(rawStores: string[]): string[] {
   return distinctCanonicalCategories(rawStores, []);
 }
 
+/**
+ * A clean `category_order` (T-212): entries trimmed, blanks dropped, and a case-insensitive
+ * duplicate collapsed onto its first occurrence, whose casing stays — it is the one the user set.
+ * Every write of the order goes through this, and list settings renders exactly what it would
+ * save: an entry that is stored but not shown (a blank, or a second casing left from before
+ * categories were case-insensitive, T-108) once made the reorder arrows swap with an invisible
+ * neighbour, so a press changed nothing on screen.
+ */
+export function normalizeCategoryOrder(order: string[]): string[] {
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const entry of order) {
+    const trimmed = entry.trim();
+    const key = trimmed.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    clean.push(trimmed);
+  }
+  return clean;
+}
+
 export interface CategoryRenamePlan {
   /** Ids of items whose `category` should be rewritten to `toName` (excludes ones already equal). */
   itemIds: string[];
@@ -96,23 +117,11 @@ export function planCategoryRename(
     .filter((it) => categoryKey(it.category) === fromKey && it.category.trim() !== to)
     .map((it) => it.id);
 
-  let orderChanged = false;
-  const seen = new Set<string>();
-  const nextCategoryOrder: string[] = [];
-  for (const entry of categoryOrder) {
-    const replaced = categoryKey(entry) === fromKey ? to : entry;
-    const replacedKey = categoryKey(replaced);
-    if (!replacedKey) {
-      orderChanged = true; // dropped an empty entry
-      continue;
-    }
-    if (seen.has(replacedKey)) {
-      orderChanged = true; // de-duplicated a case-insensitive collision (merge)
-      continue;
-    }
-    seen.add(replacedKey);
-    if (replaced !== entry) orderChanged = true;
-    nextCategoryOrder.push(replaced);
-  }
+  const nextCategoryOrder = normalizeCategoryOrder(
+    categoryOrder.map((entry) => (categoryKey(entry) === fromKey ? to : entry)),
+  );
+  const orderChanged =
+    nextCategoryOrder.length !== categoryOrder.length ||
+    nextCategoryOrder.some((entry, i) => entry !== categoryOrder[i]);
   return { itemIds, nextCategoryOrder, orderChanged };
 }

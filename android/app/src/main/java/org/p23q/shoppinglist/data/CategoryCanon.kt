@@ -48,6 +48,20 @@ object CategoryCanon {
     fun distinctCanonical(rawCategories: List<String>, categoryOrder: List<String>): List<String> =
         canonicalNames(rawCategories, categoryOrder).values.sorted()
 
+    /**
+     * A clean `category_order` (T-212): entries trimmed, blanks dropped, and a case-insensitive
+     * duplicate collapsed onto its first occurrence, whose casing stays — it is the one the user
+     * set. Every write of the order goes through this, on both clients, so a stale entry from
+     * before categories were case-insensitive (T-108) cannot outlive the next edit.
+     */
+    fun normalizeOrder(order: List<String>): List<String> {
+        val seen = HashSet<String>()
+        return order.mapNotNull { entry ->
+            val trimmed = entry.trim()
+            trimmed.takeIf { it.isNotEmpty() && seen.add(it.lowercase()) }
+        }
+    }
+
     data class RenamePlan(
         val itemIds: List<String>,
         val nextCategoryOrder: List<String>,
@@ -71,23 +85,8 @@ object CategoryCanon {
             .filter { key(it.second) == fromKey && it.second.trim() != to }
             .map { it.first }
 
-        var orderChanged = false
-        val seen = HashSet<String>()
-        val nextOrder = ArrayList<String>()
-        for (entry in categoryOrder) {
-            val replaced = if (key(entry) == fromKey) to else entry
-            val replacedKey = key(replaced)
-            if (replacedKey.isEmpty()) {
-                orderChanged = true
-                continue
-            }
-            if (!seen.add(replacedKey)) {
-                orderChanged = true
-                continue
-            }
-            if (replaced != entry) orderChanged = true
-            nextOrder.add(replaced)
-        }
+        val nextOrder = normalizeOrder(categoryOrder.map { if (key(it) == fromKey) to else it })
+        val orderChanged = nextOrder != categoryOrder
         return RenamePlan(itemIds, nextOrder, orderChanged)
     }
 }

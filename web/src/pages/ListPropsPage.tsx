@@ -4,7 +4,7 @@ import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
-import { canonicalCategoryNames, categoryKey, planCategoryRename } from "../lib/categories";
+import { canonicalCategoryNames, categoryKey, normalizeCategoryOrder, planCategoryRename } from "../lib/categories";
 import { isExpenses, listKind, listKindLabelKey } from "../lib/listKind";
 import CloseVoteBanner from "../components/CloseVoteBanner";
 import { useAuth } from "../auth/AuthContext";
@@ -88,20 +88,22 @@ export default function ListPropsPage() {
   // The full set of categories in this list (T-108) — everything on an item PLUS anything the
   // user has explicitly ordered — so casing can be fixed here for any of them, not just ordered
   // ones. Canonical casing, ordered ones first (in order), the rest alphabetically.
+  // The order as the page shows and saves it (T-212): the stored array may still carry a blank or a
+  // second casing from before categories were case-insensitive; moving by RAW position swapped
+  // with such an invisible neighbour and a press did nothing visible.
+  const order = normalizeCategoryOrder(categoryOrder);
   const canonicalNames = canonicalCategoryNames(
     liveItems.map((i) => itemFieldValue(i, "category") ?? ""),
-    categoryOrder,
+    order,
   );
-  const orderedKeys = categoryOrder
-    .map(categoryKey)
-    .filter((k, i, arr) => k !== "" && arr.indexOf(k) === i);
+  const orderedKeys = order.map(categoryKey);
   const categoryKeys = [
     ...orderedKeys.filter((k) => canonicalNames.has(k)),
     ...Array.from(canonicalNames.keys())
       .filter((k) => !orderedKeys.includes(k))
       .sort((a, b) => compareNames(canonicalNames.get(a)!, canonicalNames.get(b)!) || (a < b ? -1 : a > b ? 1 : 0)),
   ];
-  const orderIndexOf = (key: string) => categoryOrder.findIndex((e) => categoryKey(e) === key);
+  const orderIndexOf = (key: string) => order.findIndex((e) => categoryKey(e) === key);
 
   async function saveName(e: FormEvent) {
     e.preventDefault();
@@ -135,12 +137,14 @@ export default function ListPropsPage() {
   }
 
   async function saveCategoryOrder(next: string[]) {
-    setCategoryOrder(next);
-    await push({ lists: [{ id, fields: fieldPatch(deviceId, "category_order", next) }] });
+    const clean = normalizeCategoryOrder(next);
+    setCategoryOrder(clean);
+    await push({ lists: [{ id, fields: fieldPatch(deviceId, "category_order", clean) }] });
   }
 
+  /** Swap with the neighbouring ROW: indices are into `order`, never the stored array (T-212). */
   function moveCategory(index: number, delta: number) {
-    const next = [...categoryOrder];
+    const next = [...order];
     const target = index + delta;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
@@ -148,15 +152,15 @@ export default function ListPropsPage() {
   }
 
   function removeCategory(index: number) {
-    saveCategoryOrder(categoryOrder.filter((_, i) => i !== index));
+    saveCategoryOrder(order.filter((_, i) => i !== index));
   }
 
   function addCategory(e: FormEvent) {
     e.preventDefault();
     const trimmed = newCategory.trim();
     // Case-insensitive dedup (T-108): don't add "Group" when "group" is already ordered.
-    if (!trimmed || categoryOrder.some((c) => categoryKey(c) === categoryKey(trimmed))) return;
-    saveCategoryOrder([...categoryOrder, trimmed]);
+    if (!trimmed || order.some((c) => categoryKey(c) === categoryKey(trimmed))) return;
+    saveCategoryOrder([...order, trimmed]);
     setNewCategory("");
   }
 
@@ -417,7 +421,7 @@ export default function ListPropsPage() {
                 <button
                   type="button"
                   className="btn-icon"
-                  disabled={!inOrder}
+                  disabled={!inOrder || index === 0}
                   onClick={() => moveCategory(index, -1)}
                   aria-label={t("listProps.moveUp")}
                 >
@@ -426,7 +430,7 @@ export default function ListPropsPage() {
                 <button
                   type="button"
                   className="btn-icon"
-                  disabled={!inOrder}
+                  disabled={!inOrder || index === order.length - 1}
                   onClick={() => moveCategory(index, 1)}
                   aria-label={t("listProps.moveDown")}
                 >
@@ -440,7 +444,7 @@ export default function ListPropsPage() {
                   <button
                     type="button"
                     className="btn-icon"
-                    onClick={() => saveCategoryOrder([...categoryOrder, canonicalNames.get(key)!])}
+                    onClick={() => saveCategoryOrder([...order, canonicalNames.get(key)!])}
                     aria-label={t("listProps.addToOrder")}
                   >
                     +

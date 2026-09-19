@@ -69,4 +69,12 @@ class CategoryCanonTest {
         assertEquals(listOf("Other"), plan.nextCategoryOrder)
         assertFalse(plan.orderChanged)
     }
+
+    @Test
+    fun `normalizeOrder drops blanks and collapses a case-insensitive duplicate onto the first (T-212)`() {
+        assertEquals(
+            listOf("Dairy", "Bread"),
+            CategoryCanon.normalizeOrder(listOf("Dairy", " ", "dairy", "Bread", "bread ")),
+        )
+    }
 }

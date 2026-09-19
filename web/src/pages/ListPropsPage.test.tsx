@@ -347,3 +347,82 @@ describe("ListPropsPage invite link (T-83)", () => {
     expect(vi.mocked(api.mintInvite)).toHaveBeenCalledWith("list-1", "friend@example.com");
   });
 });
+
+// ---- reordering categories (T-212) -----------------------------------------------------------
+
+describe("reordering categories in list properties (T-212)", () => {
+  function listWithOrder(order: string[]) {
+    const base = listObj();
+    return { ...base, fields: { ...base.fields, category_order: clock(order) } };
+  }
+
+  /** The category_order of the first list push, if any. */
+  function pushedOrder(): string[] | undefined {
+    const call = vi
+      .mocked(api.sync)
+      .mock.calls.map((c) => c[0])
+      .find((req) => (req.changes.lists?.length ?? 0) > 0);
+    return call?.changes.lists?.[0].fields.category_order?.value as string[] | undefined;
+  }
+
+  beforeEach(() => {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: "acct-me", email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("one press moves the last row above the row shown before it, even with a stale entry stored between them", async () => {
+    // "dairy" is a second casing of "Dairy", left from before categories were case-insensitive: it
+    // is stored but not shown. Swapping RAW positions swapped Bread with it, and nothing moved.
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "dairy", "Bread"])], items: [] },
+    });
+    await renderListPropsPageViaListPage();
+
+    const ups = await screen.findAllByRole("button", { name: "Move up" });
+    expect(ups).toHaveLength(2);
+    await userEvent.click(ups[1]);
+
+    // Moved in one press, and the saved order is clean: the stale casing is gone.
+    await waitFor(() => expect(pushedOrder()).toEqual(["Bread", "Dairy"]));
+  });
+
+  it("disables the arrows at the ends of the order", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "Bread"])], items: [] },
+    });
+    await renderListPropsPageViaListPage();
+
+    const ups = (await screen.findAllByRole("button", { name: "Move up" })) as HTMLButtonElement[];
+    const downs = screen.getAllByRole("button", { name: "Move down" }) as HTMLButtonElement[];
+    expect(ups.map((b) => b.disabled)).toEqual([true, false]);
+    expect(downs.map((b) => b.disabled)).toEqual([false, true]);
+  });
+
+  it("a plain order still swaps with the neighbour", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "Bread", "Fruit"])], items: [] },
+    });
+    await renderListPropsPageViaListPage();
+
+    const downs = await screen.findAllByRole("button", { name: "Move down" });
+    await userEvent.click(downs[0]);
+
+    await waitFor(() => expect(pushedOrder()).toEqual(["Bread", "Dairy", "Fruit"]));
+  });
+});

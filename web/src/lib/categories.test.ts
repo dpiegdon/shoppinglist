@@ -3,6 +3,7 @@ import {
   canonicalCategoryNames,
   categoryKey,
   distinctCanonicalCategories,
+  normalizeCategoryOrder,
   planCategoryRename,
 } from "./categories";
 
@@ -70,5 +71,15 @@ describe("planCategoryRename", () => {
     const plan = planCategoryRename(items, ["Other"], "group", "Group");
     expect(plan.nextCategoryOrder).toEqual(["Other"]);
     expect(plan.orderChanged).toBe(false);
+  });
+});
+
+describe("normalizeCategoryOrder (T-212)", () => {
+  it("drops blanks and collapses a case-insensitive duplicate onto its first occurrence", () => {
+    expect(normalizeCategoryOrder(["Dairy", " ", "dairy", "Bread", "bread "])).toEqual(["Dairy", "Bread"]);
+  });
+
+  it("trims entries and leaves a clean order as it is", () => {
+    expect(normalizeCategoryOrder([" Dairy", "Bread"])).toEqual(["Dairy", "Bread"]);
   });
 });
