@@ -1,0 +1,12 @@
+{
+  "body": "Maintainer's decision (2026-09-19), landing with the housekeeping sweep T-218.\n\n1. Tombstone retention 90 -> 45 days (gc.RETENTION_MS). The window exists so a device that was\n   offline can still catch up incrementally: past it, its cursor falls below meta.gc_horizon and it\n   gets 410 full_resync_required, which both clients handle by pushing their dirty rows first and\n   then wiping and re-pulling from cursor 0 \u2014 so the cost of a shorter window is a full resync for a\n   device idle longer than it, not lost data. The residual risk it buys down is resurrection: a\n   device offline past the window holding a pending edit to a row deleted meanwhile would push that\n   edit back. Six weeks is judged sufficient for that.\n\n2. Dead invites are purged 7 days after death, not after the tombstone window. An invite's job ends\n   when it is used, revoked or expired; nothing syncs an invite (no change_seq), so purging one\n   early cannot affect any client, and the row holds invited_email \u2014 a third party's address, for\n   someone who may never have become a user. Keep the existing \"measure a used invite's age from\n   used_at, an unused one from expires_at\" rule; only the grace period changes. Give it its own\n   constant rather than reusing RETENTION_MS, since the two now mean different things.\n\nEffect on the maintainer's live database, measured from a copy: the tombstoned lists at 72, 66 and\n56 days and all the invites that died 58-65 days ago are purged on the first sweep after deploy;\nthe two tombstones from today stay until day 45. Nothing else changes.",
+  "created_at": "2026-09-19T16:40:19+00:00",
+  "id": "T-219",
+  "labels": [
+    "feature",
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Tombstone retention drops to 45 days, and a dead invite is purged 7 days after it dies",
+  "updated_at": "2026-09-19T16:40:19+00:00"
+}
