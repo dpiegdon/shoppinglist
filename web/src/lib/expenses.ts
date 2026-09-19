@@ -118,7 +118,9 @@ export interface Balance {
  *
  * Everyone named anywhere is included, whether or not they are still a member — their debts and
  * credits do not disappear when they leave, and neither does a member who has not spent anything
- * yet. Largest credit first, then alphabetical by id so the order is stable.
+ * yet. Largest credit first, then by account id so the order is stable — plain comparison rather
+ * than localeCompare, as in [settle] (T-204): ids are opaque and the order must not depend on the
+ * viewer's locale. The shared case table pins it.
  *
  * The balances always sum to zero, because every expense's two maps sum to the same amount.
  */
@@ -144,7 +146,11 @@ export function balancesFor(expenses: Expense[], participantIds: string[]): Bala
       shareCents: share,
       balanceCents: paid - share,
     }))
-    .sort((a, b) => b.balanceCents - a.balanceCents || a.accountId.localeCompare(b.accountId));
+    .sort(
+      (a, b) =>
+        b.balanceCents - a.balanceCents ||
+        (a.accountId < b.accountId ? -1 : a.accountId > b.accountId ? 1 : 0),
+    );
 }
 
 /** The expenses of a list's items, newest date first, then newest created. */

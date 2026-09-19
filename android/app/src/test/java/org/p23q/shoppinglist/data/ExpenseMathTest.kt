@@ -134,6 +134,9 @@ class ExpenseMathTest {
                 value.jsonObject.mapValues { (_, amount) -> amount.jsonPrimitive.content }
             }
             assertEquals(name, expected, rendered)
+            // The table lists people in the order balancesFor must return them: largest credit
+            // first, then by plain id comparison rather than any locale's collation (T-204).
+            assertEquals(name, expected.keys.toList(), balances.map { it.accountId })
 
             // The property that makes the screen trustworthy: nothing is owed to nobody.
             assertEquals(name, 0L, balances.sumOf { it.balanceCents })

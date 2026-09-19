@@ -114,7 +114,9 @@ object ExpenseMath {
      *
      * Everyone named anywhere is included, whether or not they are still a member — debts and
      * credits do not disappear when someone leaves — and so is a member who has spent nothing.
-     * Largest credit first, then by id so the order is stable.
+     * Largest credit first, then by id so the order is stable — plain string comparison, never a
+     * locale-aware one (T-204): ids are opaque and the order must not depend on who is looking.
+     * The shared case table pins it, as it does [settle]'s.
      *
      * The balances always sum to zero, because every expense's two maps sum to the same amount.
      */

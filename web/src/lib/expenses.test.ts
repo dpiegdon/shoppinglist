@@ -94,6 +94,9 @@ describe("balances", () => {
       ]),
     );
     expect(rendered).toEqual(testCase.expect);
+    // The table lists people in the order balancesFor must return them: largest credit first,
+    // then by plain id comparison rather than the viewer's locale (T-204).
+    expect(balances.map((balance) => balance.accountId)).toEqual(Object.keys(testCase.expect));
 
     // The property that makes the screen trustworthy: nothing is owed to nobody.
     expect(balances.reduce((sum, balance) => sum + balance.balanceCents, 0)).toBe(0);

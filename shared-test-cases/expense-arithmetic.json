@@ -11,6 +11,10 @@
     "one each to the first auto participants in the given order. A participant whose share comes",
     "out at zero is absent from the result, never present with a zero amount.",
     "",
+    "balances: largest credit first, then by account id compared as plain strings, NEVER with a",
+    "locale-aware comparison — ids are opaque and the order must not depend on who is looking.",
+    "The mixed-case case below is the one that tells the two rules apart.",
+    "",
     "settle (T-163): input is each participant's signed balance, output the ordered transfers",
     "that zero them. Greedy: the largest debtor pays the largest creditor the smaller amount,",
     "whoever reaches zero drops out, repeat; ties in amount go by account id. Not always the",
@@ -221,6 +225,22 @@
       ],
       "expect": { "a": { "paid": "96.50", "share": "96.50", "balance": "0.00" } },
       "total": "96.50"
+    },
+    {
+      "name": "tied balances go by plain id order, not the viewer's locale",
+      "participants": ["a1", "A1", "a-1"],
+      "expenses": [
+        {
+          "paid_by": { "A1": "10.00", "a1": "10.00", "a-1": "10.00" },
+          "paid_for": { "A1": "10.00", "a1": "10.00", "a-1": "10.00" }
+        }
+      ],
+      "expect": {
+        "A1": { "paid": "10.00", "share": "10.00", "balance": "0.00" },
+        "a-1": { "paid": "10.00", "share": "10.00", "balance": "0.00" },
+        "a1": { "paid": "10.00", "share": "10.00", "balance": "0.00" }
+      },
+      "total": "30.00"
     },
     {
       "name": "an empty list",
