@@ -1,0 +1,12 @@
+{
+  "body": "Maintainer picked variant A from the mark options (2026-09-19): a fired clay slab, rounded corners each slightly different, with three rows of cuneiform wedges \u2014 the list pressed into the tablet \u2014 in the existing violet-to-blue gradient (#863BFF -> #47BFFF), wedges white. One path for the slab, one for the rows, 48x48 viewBox, so both clients draw the identical picture (today's favicon glow layers were never reproducible in the VectorDrawable).\n\nReplace every use of the bolt: web/public/favicon.svg (browser tab, login page img at 72x72), android drawable/ic_brand_logo.xml (login screen, overview corner) and drawable/ic_launcher_foreground.xml (adaptive-icon foreground: same mark inside the 66dp safe zone of the 108dp canvas), plus any other copy of the old path (grep for its fingerprint M25.946). The committed server web_dist copy follows at the next release, as every web change does. Design sketch: the \"Tuppu Mark\" canvas artifact. Ships with the rename, T-215.",
+  "created_at": "2026-09-19T11:14:22+00:00",
+  "id": "T-216",
+  "labels": [
+    "feature",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "The Tuppu mark: a clay tablet with wedge rows replaces the bolt, everywhere the old mark is used",
+  "updated_at": "2026-09-19T11:14:22+00:00"
+}
