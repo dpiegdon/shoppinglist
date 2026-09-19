@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-19T20:23:52+00:00", "kind": "created", "ref": "main@014d2f2", "text": "The About screen shows the name in cuneiform: IM.DUB, read \u1e6duppu"}
+{"actor": "user", "at": "2026-09-19T20:24:19+00:00", "kind": "note", "ref": "main@014d2f2", "text": "Scope addition (maintainer, 2026-09-19): the same cuneiform also goes on both login screens, under the mark and the title, at a smaller size than on About and without the transliteration caption there. Same asset, same tint rule."}
