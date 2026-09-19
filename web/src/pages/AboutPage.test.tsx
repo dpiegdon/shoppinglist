@@ -50,11 +50,12 @@ describe("AboutPage (T-224)", () => {
   it("shows the name in cuneiform over its transliteration (T-225)", () => {
     render(<MemoryRouter><AboutPage /></MemoryRouter>);
 
-    // A masked div, not an <img>: an image cannot inherit currentColor, and the sign has to
-    // follow the text on both themes. Its accessible name is the transliteration.
+    // An inline svg, not an <img>: nothing to fetch or route, and it follows currentColor on both
+    // themes. Its accessible name is the transliteration.
     const sign = screen.getByRole("img", { name: en["about.transliteration"] });
-    expect(sign.style.backgroundColor).toBe("currentcolor");
-    expect(sign.style.getPropertyValue("mask-image")).toContain("tuppu-cuneiform.svg");
+    expect(sign.style.fill).toMatch(/currentcolor/i);
+    expect(sign.tagName.toLowerCase()).toBe("svg"); // inline path, nothing fetched (T-231)
+    expect(sign.querySelector("path")).not.toBeNull();
     expect(sign.style.height).toBe("64px");
     // About, unlike login, also spells the reading out under the sign.
     expect(screen.getByText(en["about.transliteration"])).toBeInTheDocument();

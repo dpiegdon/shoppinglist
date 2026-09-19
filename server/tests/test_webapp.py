@@ -12,7 +12,7 @@ from flask import Flask
 
 from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
-from shoppinglist_server.routes.webapp import DEFAULT_WEB_DIST_DIR
+from shoppinglist_server.routes.webapp import ASSET_MAX_AGE, DEFAULT_WEB_DIST_DIR
 
 
 def _make_app(tmp_path, serve_web_client=True, web_dist_dir=None):
@@ -87,6 +87,30 @@ def test_favicon_served(tmp_path):
     resp = client.get("/favicon.svg")
 
     assert resp.status_code == 200
+
+
+def test_a_root_file_of_the_bundle_is_served_not_swallowed_by_the_spa(tmp_path):
+    """Any file at web_dist's root — what Vite copies from web/public/ — must be served as an
+    asset (T-231). Only favicon.svg had a route, so tuppu-cuneiform.svg came back as index.html."""
+    web_dist = tmp_path / "web_dist"
+    web_dist.mkdir()
+    (web_dist / "index.html").write_text('<div id="root"></div>')
+    (web_dist / "assets").mkdir()
+    (web_dist / "tuppu-cuneiform.svg").write_text("<svg/>")
+    app = _make_app(tmp_path, web_dist_dir=str(web_dist))
+    client = app.test_client()
+
+    resp = client.get("/tuppu-cuneiform.svg")
+    assert resp.status_code == 200
+    assert resp.mimetype == "image/svg+xml"
+    assert resp.get_data(as_text=True) == "<svg/>"
+    assert resp.cache_control.max_age == ASSET_MAX_AGE
+
+    # A name that is no file still gets the single-page app, as every client route must.
+    resp = client.get("/no-such-file.svg")
+    assert resp.status_code == 200
+    assert resp.mimetype == "text/html"
+    assert '<div id="root">' in resp.get_data(as_text=True)
 
 
 def test_api_routes_unaffected_by_spa_catchall(tmp_path):

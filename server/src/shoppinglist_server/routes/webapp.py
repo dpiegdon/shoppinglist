@@ -87,6 +87,18 @@ def register_routes(
     @app.route(f"{root_path}/")
     @app.route(f"{root_path}/<path:spa_path>")
     def web_index(spa_path=None):
+        # A file that exists at the root of the built client — anything Vite copies from
+        # web/public/ — is served as an asset (T-231). Until this, only favicon.svg had a
+        # route, so the SPA fallback swallowed every other such file: the browser fetched
+        # tuppu-cuneiform.svg and received index.html, whose router sent a logged-out visitor
+        # to the login page. send_from_directory refuses traversal; the isfile check keeps
+        # directories and unknown names on the SPA path.
+        if (
+            spa_path
+            and "/" not in spa_path
+            and os.path.isfile(os.path.join(web_dist_dir, spa_path))
+        ):
+            return send_from_directory(web_dist_dir, spa_path, max_age=ASSET_MAX_AGE)
         response = app.response_class(index_html, mimetype="text/html")
         # Same must-revalidate behavior the old send_from_directory(max_age=0) gave.
         response.cache_control.no_cache = True

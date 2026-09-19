@@ -409,6 +409,7 @@ share URL has no API segment and the web client must boot from the root.
 | `GET /` and `GET /<path>` | Embedded web client (SPA fallback) |
 | `GET /assets/*` | Hashed web-client bundle, long cache lifetime |
 | `GET /favicon.svg` | Web client favicon |
+| `GET /<file>` | Any other file at the root of the built web client (what Vite copies from `web/public/`), cacheable like `/assets/*`. A name that is no such file is the SPA fallback. |
 
 `/api/v1/*`, `/invite/<token>`, and `/shoppinglist.apk` all rank above the SPA
 catch-all — Werkzeug sorts routes by rule specificity, not registration order.

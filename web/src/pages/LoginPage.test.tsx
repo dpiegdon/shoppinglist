@@ -92,7 +92,8 @@ describe("LoginPage header (T-213)", () => {
     renderLogin();
 
     const sign = screen.getByRole("img", { name: "ṭuppu" });
-    expect(sign.style.getPropertyValue("mask-image")).toContain("tuppu-cuneiform.svg");
+    expect(sign.tagName.toLowerCase()).toBe("svg"); // inline path, nothing fetched (T-231)
+    expect(sign.querySelector("path")).not.toBeNull();
     // Smaller than About's 64px, and without the transliteration spelled out beside it: here the
     // sign is a mark, not the explanation.
     expect(sign.style.height).toBe("40px");
