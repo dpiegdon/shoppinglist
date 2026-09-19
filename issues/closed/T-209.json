@@ -8,5 +8,5 @@
   ],
   "priority": 3,
   "title": "Android: Robolectric repo/view-model tests flake with UncaughtExceptionsBeforeTest from a Room invalidation refresh crossing test boundaries",
-  "updated_at": "2026-09-19T00:18:32+00:00"
+  "updated_at": "2026-09-19T11:19:46+00:00"
 }
