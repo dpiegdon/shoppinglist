@@ -15,7 +15,7 @@ Requires Python 3.9+ and git. The setup script assumes gittoc repo is installed 
 To do that, execute in root of your repo:
 
 ```bash
-mkdir -p .agents/skills/ && git clone --depth=1 https://codeberg.org/dpiegdon/gittoc .agents/skills/gittoc && ./.agents/skills/gittoc/scripts/setup
+mkdir -p .agents/skills/ && git clone --depth=1 https://github.com/dpiegdon/gittoc .agents/skills/gittoc && ./.agents/skills/gittoc/scripts/setup
 ```
 
 ### Local-only install (shared repos)
@@ -33,8 +33,7 @@ collaborator who wants gittoc installs it themselves the same way.
 
 ## Repository
 
-- authoritative repository: https://codeberg.org/dpiegdon/gittoc
-- GitHub mirror: https://github.com/dpiegdon/gittoc
+- authoritative repository: https://github.com/dpiegdon/gittoc
 
 ## What it is
 

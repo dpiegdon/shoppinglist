@@ -85,5 +85,5 @@ built by hand after skipping either ships the previous build of it.
 [MIT](LICENSE) © 2026 David R. Piegdon.
 
 The vendored ticket tracker in `.agents/skills/gittoc/` is a separate MIT-licensed
-project ([codeberg.org/dpiegdon/gittoc](https://codeberg.org/dpiegdon/gittoc)) and
+project ([github.com/dpiegdon/gittoc](https://github.com/dpiegdon/gittoc)) and
 carries its own `LICENSE.txt`.
