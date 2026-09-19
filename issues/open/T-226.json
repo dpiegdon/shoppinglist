@@ -1,0 +1,13 @@
+{
+  "body": "android/gradle.properties carries org.gradle.workers.max=2 and heap caps sized for the original Raspberry\nPi (4 cores, 3.7 GB). They are repo-wide, so every other host pays for them: this 8-core box builds with\ntwo workers. Gradle's precedence puts ~/.gradle/gradle.properties above the project file, so the Pi can\nkeep its caps there and the repo can stop imposing them. Also org.gradle.caching=true is off: with\nseveral worktrees building the same sources, the build cache lets them reuse each other's task outputs.\nMeasure the Android stage before and after with --rerun-tasks and record both.",
+  "created_at": "2026-09-19T20:35:34+00:00",
+  "id": "T-226",
+  "labels": [
+    "ops",
+    "perf",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Gradle is throttled for the Pi in the repo: lift the caps, enable the build cache",
+  "updated_at": "2026-09-19T20:35:34+00:00"
+}
