@@ -16,6 +16,7 @@
     <string name="action_save">حفظ</string>
     <string name="action_add">إضافة</string>
     <string name="action_delete">حذف</string>
+    <string name="action_refresh">تحديث</string>
     <string name="action_revoke">إبطال</string>
     <string name="action_undo">تراجع</string>
     <string name="action_back">رجوع</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">تجاوز مؤقت — يعود إلى الإعداد الافتراضي للخادم عند إعادة التشغيل.</string>
     <string name="admin_is_admin_suffix"> (مسؤول)</string>
     <string name="admin_users">المستخدمون</string>
+    <string name="admin_show_users">إظهار المستخدمين المسجّلين</string>
+    <string name="admin_user_count">المستخدمون المسجّلون: %1$d</string>
     <string name="admin_your_password">كلمة المرور الخاصة بك (لإعادة التعيين أو الحذف)</string>
     <string name="admin_session_count">الجلسات: %1$d</string>
     <string name="admin_new_password_for">كلمة مرور جديدة لـ %1$s — تظهر مرة واحدة، أرسلها بأمان:</string>

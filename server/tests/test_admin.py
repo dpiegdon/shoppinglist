@@ -101,6 +101,26 @@ def test_admin_lists_all_users_with_admin_flag(tmp_path):
     assert by_email["a@example.com"]["is_admin"] is False
 
 
+def test_admin_users_are_ordered_by_email_case_insensitively(tmp_path):
+    client = _admin_app(tmp_path).test_client()
+    # Registered newest-first alphabetically, so created_at order is the reverse of the answer;
+    # and the mixed case would put every capital before every lowercase in raw byte order.
+    for email in ("Zoe@example.com", "milk@example.com", "carol@example.com", "Adam@example.com"):
+        _register(client, email)
+    _register(client, ADMIN_EMAIL)
+    token = _login(client, ADMIN_EMAIL)["token"]
+
+    users = client.get("/api/v1/admin/users", headers=_bearer(token)).get_json()["users"]
+
+    assert [u["email"] for u in users] == [
+        "Adam@example.com",
+        ADMIN_EMAIL,
+        "carol@example.com",
+        "milk@example.com",
+        "Zoe@example.com",
+    ]
+
+
 # ---- registration override (runtime, non-durable) -------------------------
 
 

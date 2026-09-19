@@ -16,6 +16,7 @@
     <string name="action_save">Enregistrer</string>
     <string name="action_add">Ajouter</string>
     <string name="action_delete">Supprimer</string>
+    <string name="action_refresh">Actualiser</string>
     <string name="action_revoke">Révoquer</string>
     <string name="action_undo">Annuler</string>
     <string name="action_back">Retour</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">Réglage temporaire — revient à la valeur configurée au redémarrage.</string>
     <string name="admin_is_admin_suffix"> (admin)</string>
     <string name="admin_users">Utilisateurs</string>
+    <string name="admin_show_users">Afficher les utilisateurs enregistrés</string>
+    <string name="admin_user_count">Utilisateurs enregistrés : %1$d</string>
     <string name="admin_your_password">Ton mot de passe (pour réinitialiser ou supprimer)</string>
     <string name="admin_session_count">Sessions : %1$d</string>
     <string name="admin_new_password_for">Nouveau mot de passe pour %1$s — affiché une seule fois, transmets-le de façon sécurisée :</string>

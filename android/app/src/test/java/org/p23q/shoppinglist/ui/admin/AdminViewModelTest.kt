@@ -27,6 +27,7 @@ import org.p23q.shoppinglist.data.api.SessionEvents
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.util.concurrent.TimeUnit
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
 
@@ -74,7 +75,8 @@ class AdminViewModelTest {
         if (::server.isInitialized) server.shutdown()
     }
 
-    /** Routes by method + path so init's two GETs and later PUT/DELETE each get the right response. */
+    /** Routes by method + path so the settings GET on open, the users GET on request and the later
+     *  PUT/DELETE each get the right response. */
     private fun route(registrationAfterPut: Boolean = false) {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -98,13 +100,28 @@ class AdminViewModelTest {
     private fun newViewModel() = AdminViewModel(apiProvider, sessionState)
 
     @Test
-    fun `load populates users and the registration flag`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `opening the console loads the registration flag and no users (T-221)`() = runTest(mainDispatcherRule.dispatcher) {
         route()
         val viewModel = newViewModel()
 
-        val state = viewModel.uiState.first { it.users.isNotEmpty() }
-        assertEquals(2, state.users.size)
+        val state = viewModel.uiState.first { it.allowRegistration != null }
         assertTrue(state.allowRegistration == true)
+        // Not "loaded and empty": never asked for.
+        assertEquals(null, state.users)
+        // And the console made exactly the one request, for the toggle — none for the user list.
+        assertTrue(server.takeRequest().path!!.endsWith("/admin/server-settings"))
+        assertEquals(null, server.takeRequest(1, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun `loadUsers fetches the list only when asked (T-221)`() = runTest(mainDispatcherRule.dispatcher) {
+        route()
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+
+        viewModel.loadUsers().join()
+
+        assertEquals(2, viewModel.uiState.value.users?.size)
     }
 
     @Test
@@ -123,8 +140,11 @@ class AdminViewModelTest {
         runTest(mainDispatcherRule.dispatcher) {
             route()
             val viewModel = newViewModel()
-            val loaded = viewModel.uiState.first { it.users.isNotEmpty() }
-            val victim = loaded.users.first { it.id == "user-2" }
+            // Await the load init started as well, so no coroutine of this view model's outlives
+            // the test and resumes on Main while the next class is replacing it.
+            viewModel.uiState.first { it.allowRegistration != null }
+            viewModel.loadUsers().join()
+            val victim = viewModel.uiState.value.users!!.first { it.id == "user-2" }
 
             // requirePassword is what the screen calls before opening the delete confirmation.
             assertFalse(viewModel.requirePassword())
@@ -147,16 +167,17 @@ class AdminViewModelTest {
     fun `deleteUser requires the step-up password and removes the row`() = runTest(mainDispatcherRule.dispatcher) {
         route()
         val viewModel = newViewModel()
-        val loaded = viewModel.uiState.first { it.users.isNotEmpty() }
-        val victim = loaded.users.first { it.id == "user-2" }
+        viewModel.uiState.first { it.allowRegistration != null }
+        viewModel.loadUsers().join()
+        val victim = viewModel.uiState.value.users!!.first { it.id == "user-2" }
 
         // No password yet → guarded, nothing removed.
         assertEquals(null, viewModel.deleteUser(victim))
-        assertTrue(viewModel.uiState.value.users.any { it.id == "user-2" })
+        assertTrue(viewModel.uiState.value.users!!.any { it.id == "user-2" })
 
         viewModel.onPasswordChange("adminpw")
         viewModel.deleteUser(victim)?.join()
 
-        assertFalse(viewModel.uiState.value.users.any { it.id == "user-2" })
+        assertFalse(viewModel.uiState.value.users!!.any { it.id == "user-2" })
     }
 }

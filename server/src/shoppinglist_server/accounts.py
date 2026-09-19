@@ -240,12 +240,17 @@ def admin_delete_account(conn: sqlite3.Connection, account_id: str) -> None:
 
 def list_all_accounts(conn: sqlite3.Connection, admin_emails) -> list:
     """Every account, for the admin users list (T-107). is_admin is derived from the static
-    config set, never stored."""
+    config set, never stored.
+
+    Ordered by email, case-insensitively, so the list reads alphabetically and an admin can find
+    someone by name (T-221); registration order told them nothing. Sorted here rather than in each
+    client, so the two agree for free. `lower(email)` is the expression idx_accounts_email_lower
+    already indexes, so this reuses that index instead of asking for a second one."""
     rows = conn.execute(
         "SELECT accounts.id AS id, accounts.email AS email, accounts.created_at AS created_at, "
         "COUNT(auth_tokens.id) AS session_count "
         "FROM accounts LEFT JOIN auth_tokens ON auth_tokens.account_id = accounts.id "
-        "GROUP BY accounts.id ORDER BY accounts.created_at"
+        "GROUP BY accounts.id ORDER BY lower(accounts.email)"
     ).fetchall()
     return [
         {

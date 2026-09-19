@@ -17,6 +17,7 @@
     <string name="action_save">Save</string>
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
+    <string name="action_refresh">Refresh</string>
     <string name="action_revoke">Revoke</string>
     <string name="action_undo">Undo</string>
     <string name="action_back">Back</string>
@@ -253,6 +254,8 @@
     <string name="admin_registration_help">Runtime override — resets to the server\'s configured default on restart.</string>
     <string name="admin_is_admin_suffix"> (admin)</string>
     <string name="admin_users">Users</string>
+    <string name="admin_show_users">Show registered users</string>
+    <string name="admin_user_count">Registered users: %1$d</string>
     <string name="admin_your_password">Your password (for reset/delete)</string>
     <string name="admin_session_count">Sessions: %1$d</string>
     <string name="admin_new_password_for">New password for %1$s — shown once, send it securely:</string>

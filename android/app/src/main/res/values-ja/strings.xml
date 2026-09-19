@@ -16,6 +16,7 @@
     <string name="action_save">保存</string>
     <string name="action_add">追加</string>
     <string name="action_delete">削除</string>
+    <string name="action_refresh">更新</string>
     <string name="action_revoke">取り消す</string>
     <string name="action_undo">元に戻す</string>
     <string name="action_back">戻る</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">一時的な上書きです — 再起動するとサーバーの設定値に戻ります。</string>
     <string name="admin_is_admin_suffix">（管理者）</string>
     <string name="admin_users">ユーザー</string>
+    <string name="admin_show_users">登録済みユーザーを表示</string>
+    <string name="admin_user_count">登録済みユーザー：%1$d</string>
     <string name="admin_your_password">あなたのパスワード（リセット・削除に必要）</string>
     <string name="admin_session_count">セッション：%1$d</string>
     <string name="admin_new_password_for">%1$s の新しいパスワード — 一度だけ表示されます。安全な方法で伝えてください：</string>

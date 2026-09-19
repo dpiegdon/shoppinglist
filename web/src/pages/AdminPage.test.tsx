@@ -20,6 +20,12 @@ vi.mock("../api/client", async () => {
   };
 });
 
+/** Opens the console and asks for the user list, which no longer loads on its own (T-221). */
+async function showUsers() {
+  await userEvent.click(await screen.findByRole("button", { name: "Show registered users" }));
+  await screen.findByText("u@example.com");
+}
+
 function renderAdmin() {
   // Seed a logged-in admin account into storage so AuthProvider hydrates it.
   localStorage.setItem(
@@ -59,7 +65,7 @@ describe("AdminPage (T-107)", () => {
     vi.mocked(api.setServerSettings).mockResolvedValue({ allow_registration: false });
     renderAdmin();
 
-    expect(await screen.findByText("u@example.com")).toBeInTheDocument();
+    await showUsers();
     const toggle = await screen.findByRole("switch", { name: "Allow new accounts" });
     await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
 
@@ -73,7 +79,7 @@ describe("AdminPage (T-107)", () => {
     vi.mocked(api.adminDeleteUser).mockResolvedValue(undefined);
     renderAdmin();
 
-    await screen.findByText("u@example.com");
+    await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
     // First click opens a confirmation dialog — nothing deleted yet.
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -89,7 +95,7 @@ describe("AdminPage (T-107)", () => {
 
   it("says the password is required instead of silently doing nothing (T-113)", async () => {
     renderAdmin();
-    await screen.findByText("u@example.com");
+    await showUsers();
 
     // No password typed: clicking Delete must explain why nothing happened.
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -102,7 +108,7 @@ describe("AdminPage (T-107)", () => {
 
   it("says the password is required for a reset too (T-113)", async () => {
     renderAdmin();
-    await screen.findByText("u@example.com");
+    await showUsers();
 
     await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[0]!);
 
@@ -112,7 +118,7 @@ describe("AdminPage (T-107)", () => {
 
   it("clears the password complaint once one is typed (T-113)", async () => {
     renderAdmin();
-    await screen.findByText("u@example.com");
+    await showUsers();
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
 
@@ -125,7 +131,7 @@ describe("AdminPage (T-107)", () => {
     vi.mocked(api.adminDeleteUser).mockResolvedValue(undefined);
     renderAdmin();
 
-    await screen.findByText("u@example.com");
+    await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -136,7 +142,7 @@ describe("AdminPage (T-107)", () => {
 
   it("offers no Delete button for an admin or your own account", async () => {
     renderAdmin();
-    await screen.findByText("boss@example.com");
+    await showUsers();
     // Only the one non-admin user (u@example.com) has a Delete button.
     expect(screen.getAllByRole("button", { name: "Delete" })).toHaveLength(1);
   });
@@ -145,12 +151,64 @@ describe("AdminPage (T-107)", () => {
     vi.mocked(api.adminResetPassword).mockResolvedValue({ password: "NEWpw123456" });
     renderAdmin();
 
-    await screen.findByText("u@example.com");
+    await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
     // The first "Reset password" is the admin's own row; use the non-admin user's.
     const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
 
     expect(await screen.findByText("NEWpw123456")).toBeInTheDocument();
+  });
+});
+
+describe("AdminPage loads the user list only when asked (T-221)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true });
+    vi.mocked(api.getAdminUsers).mockResolvedValue({
+      users: [
+        { id: "admin-1", email: "boss@example.com", created_at: 1, session_count: 1, is_admin: true },
+        { id: "user-2", email: "u@example.com", created_at: 2, session_count: 0, is_admin: false },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("opens with the registration toggle and no users fetched", async () => {
+    renderAdmin();
+
+    // The toggle is one value, so it still loads on open.
+    const toggle = await screen.findByRole("switch", { name: "Allow new accounts" });
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
+
+    expect(api.getAdminUsers).not.toHaveBeenCalled();
+    expect(screen.queryByText("u@example.com")).not.toBeInTheDocument();
+    // Nothing to step up for yet either.
+    expect(screen.queryByLabelText(/Your password/)).not.toBeInTheDocument();
+  });
+
+  it("fetches and shows the list with its count when asked, and refreshes it in place", async () => {
+    renderAdmin();
+    await screen.findByRole("switch", { name: "Allow new accounts" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Show registered users" }));
+
+    expect(await screen.findByText("u@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Registered users: 2")).toBeInTheDocument();
+    expect(api.getAdminUsers).toHaveBeenCalledTimes(1);
+    // The button is spent: the list is what stands in its place now.
+    expect(screen.queryByRole("button", { name: "Show registered users" })).not.toBeInTheDocument();
+
+    vi.mocked(api.getAdminUsers).mockResolvedValue({
+      users: [{ id: "admin-1", email: "boss@example.com", created_at: 1, session_count: 1, is_admin: true }],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    await waitFor(() => expect(screen.getByText("Registered users: 1")).toBeInTheDocument());
+    expect(screen.queryByText("u@example.com")).not.toBeInTheDocument();
   });
 });

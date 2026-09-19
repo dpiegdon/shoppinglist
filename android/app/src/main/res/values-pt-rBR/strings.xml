@@ -16,6 +16,7 @@
     <string name="action_save">Salvar</string>
     <string name="action_add">Adicionar</string>
     <string name="action_delete">Excluir</string>
+    <string name="action_refresh">Atualizar</string>
     <string name="action_revoke">Revogar</string>
     <string name="action_undo">Desfazer</string>
     <string name="action_back">Voltar</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">Ajuste temporário — volta ao padrão configurado ao reiniciar.</string>
     <string name="admin_is_admin_suffix"> (admin)</string>
     <string name="admin_users">Usuários</string>
+    <string name="admin_show_users">Mostrar usuários registrados</string>
+    <string name="admin_user_count">Usuários registrados: %1$d</string>
     <string name="admin_your_password">Sua senha (para redefinir ou excluir)</string>
     <string name="admin_session_count">Sessões: %1$d</string>
     <string name="admin_new_password_for">Nova senha para %1$s — exibida uma única vez, envie com segurança:</string>

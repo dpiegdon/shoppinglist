@@ -16,6 +16,7 @@
     <string name="action_save">保存</string>
     <string name="action_add">添加</string>
     <string name="action_delete">删除</string>
+    <string name="action_refresh">刷新</string>
     <string name="action_revoke">撤销</string>
     <string name="action_undo">撤消</string>
     <string name="action_back">返回</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">临时覆盖 — 重启后恢复为服务器配置的默认值。</string>
     <string name="admin_is_admin_suffix">（管理员）</string>
     <string name="admin_users">用户</string>
+    <string name="admin_show_users">显示注册用户</string>
+    <string name="admin_user_count">注册用户：%1$d</string>
     <string name="admin_your_password">你的密码（重置或删除时需要）</string>
     <string name="admin_session_count">会话：%1$d</string>
     <string name="admin_new_password_for">%1$s 的新密码 — 仅显示一次，请安全发送：</string>

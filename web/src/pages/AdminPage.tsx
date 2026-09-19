@@ -66,7 +66,9 @@ function ToggleSwitch({
 export default function AdminPage() {
   const t = useT();
   const { account } = useAuth();
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  // null until asked for (T-221): opening the console must not pull every account on an instance
+  // with hundreds of them. The registration toggle below is one value, so that still loads on open.
+  const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [allowRegistration, setAllowRegistration] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -89,18 +91,28 @@ export default function AdminPage() {
     return false;
   }
 
-  async function load() {
+  async function loadSettings() {
     try {
-      const [usersResp, settings] = await Promise.all([api.getAdminUsers(), api.getServerSettings()]);
-      setUsers(usersResp.users);
+      const settings = await api.getServerSettings();
       setAllowRegistration(settings.allow_registration);
     } catch (err) {
       setError(errorMessage(t, err, "admin.loadFailed"));
     }
   }
 
+  /** Fetches (or re-fetches) the user list. Server-ordered by email, so nothing is sorted here. */
+  async function loadUsers() {
+    try {
+      const usersResp = await api.getAdminUsers();
+      setUsers(usersResp.users);
+      setError(null);
+    } catch (err) {
+      setError(errorMessage(t, err, "admin.loadFailed"));
+    }
+  }
+
   useEffect(() => {
-    load();
+    loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -142,7 +154,7 @@ export default function AdminPage() {
     if (!user) return;
     try {
       await api.adminDeleteUser(user.id, password);
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setUsers((prev) => prev && prev.filter((u) => u.id !== user.id));
     } catch (err) {
       setError(errorMessage(t, err, "admin.deleteFailed"));
     }
@@ -174,77 +186,105 @@ export default function AdminPage() {
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("admin.users")}</h2>
-        <div className="form-field">
-          <label htmlFor="admin-password">{t("admin.yourPassword")}</label>
-          <input
-            id="admin-password"
-            type="password"
-            ref={passwordRef}
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (e.target.value) setPasswordError(null);
-            }}
-            autoComplete="current-password"
-            aria-invalid={passwordError ? true : undefined}
-          />
-          {passwordError && (
-            <p className="error-text" role="alert">
-              {passwordError}
-            </p>
-          )}
-        </div>
-
-        {resetResult && (
-          <div
-            style={{
-              margin: "0.5rem 0",
-              padding: "0.6rem",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius)",
-            }}
-          >
-            <p className="muted" style={{ margin: "0 0 0.3rem", fontSize: "0.85rem" }}>
-              {t("admin.newPasswordFor", { email: resetResult.email })}
-            </p>
-            <code style={{ userSelect: "all" }}>{resetResult.password}</code>
-          </div>
+        {/* One screen, not a submenu (T-221): the console is small, and a second navigation step
+            on both clients would buy nothing. The list is simply not fetched until asked for. */}
+        {users === null && (
+          <button type="button" className="btn" onClick={loadUsers}>
+            {t("admin.showUsers")}
+          </button>
         )}
 
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {users.map((user) => (
-            <li
-              key={user.id}
+        {users !== null && (
+          <>
+            <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.4rem 0",
-                borderTop: "1px solid var(--color-border)",
+                justifyContent: "space-between",
+                gap: "1rem",
+                marginBottom: "0.5rem",
               }}
             >
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
-                {user.email}
-                {user.is_admin && <strong> {t("admin.isAdmin")}</strong>}
-                <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
-                  {t("admin.sessionCount", { count: user.session_count })}
-                </span>
+              <span className="muted" style={{ fontSize: "0.85rem" }}>
+                {t("admin.userCount", { count: users.length })}
               </span>
-              <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
-                <button type="button" className="btn btn-secondary" onClick={() => resetPassword(user)}>
-                  {t("admin.resetPassword")}
-                </button>
-                {/* Admins and your own account can't be deleted here (the server enforces this too). */}
-                {!user.is_admin && user.id !== account?.id && (
-                  <button type="button" className="btn btn-danger" onClick={() => requestDelete(user)}>
-                    {t("action.delete")}
-                  </button>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+              <button type="button" className="btn btn-secondary" onClick={loadUsers}>
+                {t("action.refresh")}
+              </button>
+            </div>
+            <div className="form-field">
+              <label htmlFor="admin-password">{t("admin.yourPassword")}</label>
+              <input
+                id="admin-password"
+                type="password"
+                ref={passwordRef}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (e.target.value) setPasswordError(null);
+                }}
+                autoComplete="current-password"
+                aria-invalid={passwordError ? true : undefined}
+              />
+              {passwordError && (
+                <p className="error-text" role="alert">
+                  {passwordError}
+                </p>
+              )}
+            </div>
+
+            {resetResult && (
+              <div
+                style={{
+                  margin: "0.5rem 0",
+                  padding: "0.6rem",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius)",
+                }}
+              >
+                <p className="muted" style={{ margin: "0 0 0.3rem", fontSize: "0.85rem" }}>
+                  {t("admin.newPasswordFor", { email: resetResult.email })}
+                </p>
+                <code style={{ userSelect: "all" }}>{resetResult.password}</code>
+              </div>
+            )}
+
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {users.map((user) => (
+                <li
+                  key={user.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.4rem 0",
+                    borderTop: "1px solid var(--color-border)",
+                  }}
+                >
+                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {user.email}
+                    {user.is_admin && <strong> {t("admin.isAdmin")}</strong>}
+                    <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
+                      {t("admin.sessionCount", { count: user.session_count })}
+                    </span>
+                  </span>
+                  <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => resetPassword(user)}>
+                      {t("admin.resetPassword")}
+                    </button>
+                    {/* Admins and your own account can't be deleted here (the server enforces this too). */}
+                    {!user.is_admin && user.id !== account?.id && (
+                      <button type="button" className="btn btn-danger" onClick={() => requestDelete(user)}>
+                        {t("action.delete")}
+                      </button>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
 
       {deleteTarget && (

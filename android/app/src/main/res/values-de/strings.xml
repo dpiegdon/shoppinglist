@@ -16,6 +16,7 @@
     <string name="action_save">Speichern</string>
     <string name="action_add">Hinzufügen</string>
     <string name="action_delete">Löschen</string>
+    <string name="action_refresh">Aktualisieren</string>
     <string name="action_revoke">Widerrufen</string>
     <string name="action_undo">Rückgängig</string>
     <string name="action_back">Zurück</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">Laufzeit-Übersteuerung — wird beim Neustart auf den konfigurierten Standard zurückgesetzt.</string>
     <string name="admin_is_admin_suffix"> (Admin)</string>
     <string name="admin_users">Benutzer</string>
+    <string name="admin_show_users">Registrierte Benutzer anzeigen</string>
+    <string name="admin_user_count">Registrierte Benutzer: %1$d</string>
     <string name="admin_your_password">Dein Passwort (für Zurücksetzen/Löschen)</string>
     <string name="admin_session_count">Sitzungen: %1$d</string>
     <string name="admin_new_password_for">Neues Passwort für %1$s — wird nur einmal angezeigt, sende es sicher:</string>

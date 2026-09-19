@@ -286,11 +286,16 @@ The destructive two re-verify the calling admin's **own** password (step-up).
 
 | Endpoint | Request body | Success response |
 |---|---|---|
-| `GET /admin/users` | — | `200 {"users": [{"id", "email", "created_at", "session_count", "is_admin"}]}` |
+| `GET /admin/users` | — | `200 {"users": [{"id", "email", "created_at", "session_count", "is_admin"}]}`, by email, case-insensitively |
 | `GET /admin/server-settings` | — | `200 {"allow_registration"}` |
 | `PUT /admin/server-settings` | `{"allow_registration"}` | `200 {"allow_registration"}` |
 | `POST /admin/users/{account_id}/reset-password` | `{"password"}` | `200 {"password"}` |
 | `DELETE /admin/users/{account_id}` | `{"password"}` | `204` |
+
+`GET /admin/users` is ordered server-side so both clients agree without sorting
+of their own; neither re-orders what it is given. Clients fetch it on request
+rather than on opening the console, which is why the registration settings sit
+on endpoints of their own.
 
 The `PUT` is a **runtime override** that resets to the config default on restart.
 The reset-password response carries the newly generated password, shown once to

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -82,36 +83,59 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
         Spacer(Modifier.height(16.dp))
 
         Text(stringResource(R.string.admin_users), style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = state.password,
-            onValueChange = viewModel::onPasswordChange,
-            label = { Text(stringResource(R.string.admin_your_password)) },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true,
-            isError = state.passwordError != null,
-            supportingText = state.passwordError?.let { { Text(it.asString()) } },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // One screen, not a submenu (T-221): the console is small, and a second navigation step on
+        // both clients would buy nothing. The list is simply not fetched until asked for.
+        val users = state.users
+        if (users == null) {
+            Button(onClick = { viewModel.loadUsers() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.admin_show_users))
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.admin_user_count, users.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = { viewModel.loadUsers() }) {
+                    Text(stringResource(R.string.action_refresh))
+                }
+            }
+            OutlinedTextField(
+                value = state.password,
+                onValueChange = viewModel::onPasswordChange,
+                label = { Text(stringResource(R.string.admin_your_password)) },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                isError = state.passwordError != null,
+                supportingText = state.passwordError?.let { { Text(it.asString()) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-        if (state.resetPassword != null) {
+            if (state.resetPassword != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.admin_new_password_for, state.resetEmail ?: ""),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(state.resetPassword!!, style = MaterialTheme.typography.bodyLarge)
+            }
             Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.admin_new_password_for, state.resetEmail ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(state.resetPassword!!, style = MaterialTheme.typography.bodyLarge)
-        }
-        Spacer(Modifier.height(8.dp))
 
-        state.users.forEach { user ->
-            UserRow(
-                user = user,
-                deletable = !user.isAdmin && user.id != state.currentAccountId,
-                onReset = { viewModel.resetPassword(user) },
-                onDelete = { if (viewModel.requirePassword()) pendingDelete = user },
-            )
-            HorizontalDivider()
+            users.forEach { user ->
+                UserRow(
+                    user = user,
+                    deletable = !user.isAdmin && user.id != state.currentAccountId,
+                    onReset = { viewModel.resetPassword(user) },
+                    onDelete = { if (viewModel.requirePassword()) pendingDelete = user },
+                )
+                HorizontalDivider()
+            }
         }
     }
 

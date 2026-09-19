@@ -16,6 +16,7 @@
     <string name="action_save">Зберегти</string>
     <string name="action_add">Додати</string>
     <string name="action_delete">Видалити</string>
+    <string name="action_refresh">Оновити</string>
     <string name="action_revoke">Відкликати</string>
     <string name="action_undo">Скасувати дію</string>
     <string name="action_back">Назад</string>
@@ -208,6 +209,8 @@
     <string name="admin_registration_help">Тимчасове перевизначення — після перезапуску повертається до налаштованого значення.</string>
     <string name="admin_is_admin_suffix"> (адмін)</string>
     <string name="admin_users">Користувачі</string>
+    <string name="admin_show_users">Показати зареєстрованих користувачів</string>
+    <string name="admin_user_count">Зареєстровані користувачі: %1$d</string>
     <string name="admin_your_password">Твій пароль (для скидання чи видалення)</string>
     <string name="admin_session_count">Сеанси: %1$d</string>
     <string name="admin_new_password_for">Новий пароль для %1$s — показується один раз, надішли його безпечно:</string>

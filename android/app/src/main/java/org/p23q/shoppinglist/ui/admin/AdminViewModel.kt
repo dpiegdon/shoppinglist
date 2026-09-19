@@ -22,7 +22,8 @@ import java.io.IOException
 import javax.inject.Inject
 
 data class AdminUiState(
-    val users: List<AdminUserDto> = emptyList(),
+    /** null until the list has been asked for (T-221); the console does not pull it on open. */
+    val users: List<AdminUserDto>? = null,
     /** null = not loaded yet. */
     val allowRegistration: Boolean? = null,
     /** The admin's own password, entered once for step-up on reset/delete (T-107). */
@@ -50,16 +51,28 @@ class AdminViewModel @Inject constructor(
     val uiState: StateFlow<AdminUiState> = _uiState.asStateFlow()
 
     init {
-        load()
+        // Only the registration flag, which is one value. Pulling every account just to open the
+        // console is the wrong default on an instance with hundreds of them (T-221).
+        loadSettings()
     }
 
-    fun load(): Job = viewModelScope.launch {
+    fun loadSettings(): Job = viewModelScope.launch {
+        try {
+            val settings = apiProvider.get().adminGetServerSettings()
+            _uiState.update { it.copy(allowRegistration = settings.allowRegistration, error = null) }
+        } catch (e: ApiException) {
+            _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
+        } catch (e: IOException) {
+            _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline_admin)) }
+        }
+    }
+
+    /** Fetches (or re-fetches) the user list on request. Server-ordered by email — nothing sorts
+     *  it here, so both clients read the same way (T-221). */
+    fun loadUsers(): Job = viewModelScope.launch {
         try {
             val users = apiProvider.get().adminUsers().users
-            val settings = apiProvider.get().adminGetServerSettings()
-            _uiState.update {
-                it.copy(users = users, allowRegistration = settings.allowRegistration, error = null)
-            }
+            _uiState.update { it.copy(users = users, error = null) }
         } catch (e: ApiException) {
             _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
         } catch (e: IOException) {
@@ -122,7 +135,7 @@ class AdminViewModel @Inject constructor(
             try {
                 apiProvider.get().adminDeleteUser(user.id, AdminPasswordRequest(pw))
                 _uiState.update {
-                    it.copy(users = it.users.filterNot { u -> u.id == user.id }, error = null)
+                    it.copy(users = it.users?.filterNot { u -> u.id == user.id }, error = null)
                 }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_delete_failed)) }
