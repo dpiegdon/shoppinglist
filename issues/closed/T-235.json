@@ -8,5 +8,5 @@
   ],
   "priority": 3,
   "title": "Audit log: escape control characters and cap client-controlled values",
-  "updated_at": "2026-09-19T22:13:54+00:00"
+  "updated_at": "2026-09-19T22:31:39+00:00"
 }
