@@ -568,8 +568,10 @@ describe("closing an expenses list", () => {
     await userEvent.click(await screen.findByText("Dinner"));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
+    // Both causes in one sentence (T-203): the server refuses a former member's change too, and
+    // the code alone does not say which of the two this was.
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      `${OTHER}@example.com has agreed to close the list`,
+      `The amounts of ${OTHER}@example.com are fixed`,
     );
   });
 });
@@ -642,6 +644,29 @@ describe("editing an expense that involves a frozen participant", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(pushedExpense().paid_for).toEqual({ [ME]: "21.34", [OTHER]: "21.33", [GONE]: "21.33" });
+  });
+
+  it("says why each frozen participant is frozen (T-203)", async () => {
+    // One expense with both kinds on it: THIRD has voted to close, GONE has left. The lock is the
+    // same, the reason is not — and "agreed to close" is simply untrue of someone who left.
+    const supper: Expense = {
+      paid_by: { [ME]: "60.00" },
+      equal_by: true,
+      paid_for: { [ME]: "20.00", [THIRD]: "20.00", [GONE]: "20.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    };
+    setUp(expenseList([ME, OTHER, THIRD], [THIRD]), [expenseItem("e1", "Supper", supper)]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Supper"));
+
+    // Once per side, since both sections list every participant.
+    const voter = screen.getAllByText("agreed to close — amounts fixed");
+    expect(voter).toHaveLength(2);
+    expect(voter[0].closest("label")).toHaveTextContent(`${THIRD}@example.com`);
+    const former = screen.getAllByText("no longer a member — amounts fixed");
+    expect(former).toHaveLength(2);
+    expect(former[0].closest("label")).toHaveTextContent(/^Former member/);
   });
 });
 

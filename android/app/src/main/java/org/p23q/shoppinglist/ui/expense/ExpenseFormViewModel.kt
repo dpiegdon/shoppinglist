@@ -22,6 +22,13 @@ import javax.inject.Inject
 /** Which of an expense's two distributions a field belongs to. */
 enum class Side { PAID_BY, PAID_FOR }
 
+/**
+ * Why a participant's amounts may not move (T-203), because the row says so: the same lock is
+ * reached by agreeing to close and by leaving the list, and "agreed to close" is simply untrue of
+ * someone who left.
+ */
+enum class FrozenReason { NONE, VOTER, FORMER }
+
 /** One participant's row in a distribution. [text] empty means auto: share whatever is left. */
 data class ShareRow(
     val accountId: String,
@@ -33,12 +40,14 @@ data class ShareRow(
     /** The share this participant would get as things stand, for the placeholder. */
     val derivedCents: Long,
     /**
-     * Their amounts may not move (T-157): they have agreed to close the list, or have left it.
-     * The row still shows what they paid or owe — it is part of the record — but nothing about it
-     * can be edited, and it never absorbs a change elsewhere.
+     * Whether their amounts may not move, and why (T-157, T-203): they have agreed to close the
+     * list, or have left it. The row still shows what they paid or owe — it is part of the
+     * record — but nothing about it can be edited, and it never absorbs a change elsewhere.
      */
-    val frozen: Boolean = false,
-)
+    val frozen: FrozenReason = FrozenReason.NONE,
+) {
+    val isFrozen: Boolean get() = frozen != FrozenReason.NONE
+}
 
 data class ExpenseFormUiState(
     val isEditMode: Boolean = false,
@@ -209,8 +218,15 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     /** Voters, plus anyone on this expense who is no longer a member (T-157). */
-    private fun isFrozen(accountId: String): Boolean =
-        accountId in frozenIds || members.none { it.accountId == accountId }
+    private fun isFrozen(accountId: String): Boolean = frozenReason(accountId) != FrozenReason.NONE
+
+    /** Which of the two put the lock there (T-203), for the row to say. A voter who has also left
+     *  is named as a voter: that is the choice they made, and the one they can still withdraw. */
+    private fun frozenReason(accountId: String): FrozenReason = when {
+        accountId in frozenIds -> FrozenReason.VOTER
+        members.none { it.accountId == accountId } -> FrozenReason.FORMER
+        else -> FrozenReason.NONE
+    }
 
     private fun frozenShares(stored: Map<String, String>): Map<String, String> =
         stored.filterKeys(::isFrozen)
@@ -285,7 +301,7 @@ class ExpenseFormViewModel @Inject constructor(
                 selected = id in selected[side].orEmpty(),
                 text = typed[side].orEmpty()[id].orEmpty(),
                 derivedCents = shares[id] ?: 0,
-                frozen = isFrozen(id),
+                frozen = frozenReason(id),
             )
         }
     }

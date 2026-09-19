@@ -314,14 +314,21 @@ private fun ShareSection(
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = row.selected,
-                enabled = !row.frozen,
+                enabled = !row.isFrozen,
                 onCheckedChange = { onToggle(row.accountId) },
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.bodyMedium)
-                if (row.frozen) {
+                // Why, not just that (T-203): "agreed to close" was said of everyone frozen, which
+                // is untrue of someone who has simply left the list.
+                val reason = when (row.frozen) {
+                    FrozenReason.VOTER -> R.string.expense_frozen_voter
+                    FrozenReason.FORMER -> R.string.expense_frozen_former
+                    FrozenReason.NONE -> null
+                }
+                if (reason != null) {
                     Text(
-                        stringResource(R.string.expense_frozen),
+                        stringResource(reason),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -333,7 +340,7 @@ private fun ShareSection(
                 // The derived share is the PLACEHOLDER, never the value: as the value it would come
                 // straight back when the field was cleared, so typing over it appended to it.
                 placeholder = { Text(ExpenseMath.fromCents(row.derivedCents)) },
-                enabled = row.selected && !row.frozen,
+                enabled = row.selected && !row.isFrozen,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.width(120.dp),

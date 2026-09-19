@@ -308,7 +308,8 @@
     <string name="expense_agree_count">Votes to close: %1$d of %2$d</string>
     <string name="expense_closed_on">Closed on %1$s</string>
     <string name="expense_vote_failed">Could not record your vote.</string>
-    <string name="expense_frozen">agreed to close — amounts fixed</string>
+    <string name="expense_frozen_voter">agreed to close — amounts fixed</string>
+    <string name="expense_frozen_former">no longer a member — amounts fixed</string>
     <string name="expense_closed">Closed</string>
     <string name="expense_settle_up">Settle up</string>
     <string name="expense_transfer">%1$s pays %2$s</string>
@@ -342,4 +343,5 @@
     <string name="api_error_payload_too_large">That\'s too much to send at once</string>
     <string name="api_error_voted_to_close">You\'ve agreed to close this list, so you can\'t change it any more. Withdraw your vote to make changes.</string>
     <string name="expense_delete_blocked">This expense can\'t be deleted: it involves someone whose amounts are fixed.</string>
+    <string name="expense_error_frozen">The amounts of %1$s are fixed: they have agreed to close the list, or have left it.</string>
 </resources>

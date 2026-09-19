@@ -73,6 +73,25 @@ function normalise(value: string): string {
  */
 const ALLOWED: Record<string, string> = {};
 
+/**
+ * Strings in the expense and error families that one client alone has, each with the reason (T-203).
+ *
+ * Pairing by English says nothing about a string the other client never wrote: expense.error.frozen
+ * lived on the web alone for two releases and this file was happy. So the two families where the
+ * clients must agree — the expense form and the server's error table — are also checked for a key
+ * that pairs with nothing. Everything outside them (navigation labels, platform-specific screens)
+ * is left alone: those differ by design and listing them all would be noise.
+ */
+const ONE_SIDED: Record<string, string> = {
+  "expense.total": "the web labels the field 'Total' and puts the currency beside it; Android folds it into the label (expense_total_with_currency)",
+  expense_total_with_currency: "the web's expense.total, with the currency in the label",
+  "expense.error.total": "the web says 'Enter a total.' under the shares; Android leaves TOTAL_NOT_POSITIVE silent and keeps the Save button off",
+  expense_total_spent_value: "one line on Android's balances screen, two stacked labels on the web's",
+  expense_currency_value: "list properties reads the currency out on Android, where the web has a labelled field",
+  expense_delete_title: "Android confirms a delete in a dialog; the web's delete button acts at once",
+  expense_delete_body: "the body of that same Android-only confirmation",
+};
+
 describe("the two clients say the same thing (T-148)", () => {
   const androidEn = androidStrings(LOCALES[0][1]);
   const webEn = en as Record<string, string>;
@@ -85,6 +104,19 @@ describe("the two clients say the same thing (T-148)", () => {
   for (const [webKey, value] of Object.entries(webEn)) {
     for (const name of byEnglish.get(normalise(value)) ?? []) pairs.push([webKey, name]);
   }
+
+  it("no expense or error string lives on one client only (T-203)", () => {
+    const inFamily = (key: string) =>
+      key.startsWith("expense.") || key.startsWith("apiError.") ||
+      key.startsWith("expense_") || key.startsWith("api_error_");
+    const pairedWeb = new Set(pairs.map(([webKey]) => webKey));
+    const pairedAndroid = new Set(pairs.map(([, name]) => name));
+    const lonely = [
+      ...Object.keys(webEn).filter((key) => !pairedWeb.has(key)),
+      ...[...androidEn.keys()].filter((name) => !pairedAndroid.has(name)),
+    ].filter((key) => inFamily(key) && !ONE_SIDED[key]);
+    expect(lonely, `${lonely.length} strings have no twin on the other client`).toEqual([]);
+  });
 
   it("pairs a meaningful share of the strings", () => {
     // A guard on the guard: if parsing broke, there would be nothing to compare and every check

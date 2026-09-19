@@ -261,7 +261,8 @@
     <string name="expense_agree_count">Votos para cerrar: %1$d de %2$d</string>
     <string name="expense_closed_on">Cerrada el %1$s</string>
     <string name="expense_vote_failed">No se pudo registrar tu voto.</string>
-    <string name="expense_frozen">aceptó cerrar: importes fijados</string>
+    <string name="expense_frozen_voter">aceptó cerrar: importes fijados</string>
+    <string name="expense_frozen_former">ya no es miembro: importes fijados</string>
     <string name="expense_closed">Cerrada</string>
     <string name="expense_settle_up">Saldar cuentas</string>
     <string name="expense_transfer">%1$s paga a %2$s</string>
@@ -295,4 +296,5 @@
     <string name="api_error_payload_too_large">Es demasiado para enviar de una vez</string>
     <string name="api_error_voted_to_close">Aceptaste cerrar esta lista, así que ya no puedes cambiarla. Retira tu voto para hacer cambios.</string>
     <string name="expense_delete_blocked">Este gasto no se puede eliminar: incluye a alguien cuyos importes están fijados.</string>
+    <string name="expense_error_frozen">Los importes de %1$s están fijados: esa persona aceptó cerrar la lista o la abandonó.</string>
 </resources>

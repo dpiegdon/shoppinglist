@@ -261,7 +261,8 @@
     <string name="expense_agree_count">締めへの同意：%1$d / %2$d</string>
     <string name="expense_closed_on">%1$s に締め済み</string>
     <string name="expense_vote_failed">投票を記録できませんでした。</string>
-    <string name="expense_frozen">締めに同意済み — 金額は確定</string>
+    <string name="expense_frozen_voter">締めに同意済み — 金額は確定</string>
+    <string name="expense_frozen_former">退出済み — 金額は確定</string>
     <string name="expense_closed">締め済み</string>
     <string name="expense_settle_up">精算</string>
     <string name="expense_transfer">%1$s が %2$s に支払う</string>
@@ -295,4 +296,5 @@
     <string name="api_error_payload_too_large">一度に送信できる量を超えています</string>
     <string name="api_error_voted_to_close">このリストの締めに同意しているため、変更できません。変更するには同意を取り消してください。</string>
     <string name="expense_delete_blocked">この支出は削除できません：金額が確定している人が関わっています。</string>
+    <string name="expense_error_frozen">%1$s の金額は確定しています。締めに同意したか、リストを退出したためです。</string>
 </resources>

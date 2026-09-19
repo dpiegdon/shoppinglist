@@ -261,7 +261,8 @@
     <string name="expense_agree_count">Votos para encerrar: %1$d de %2$d</string>
     <string name="expense_closed_on">Encerrada em %1$s</string>
     <string name="expense_vote_failed">Não foi possível registrar seu voto.</string>
-    <string name="expense_frozen">concordou em encerrar — valores fixados</string>
+    <string name="expense_frozen_voter">concordou em encerrar — valores fixados</string>
+    <string name="expense_frozen_former">não é mais integrante — valores fixados</string>
     <string name="expense_closed">Encerrada</string>
     <string name="expense_settle_up">Acertar contas</string>
     <string name="expense_transfer">%1$s paga %2$s</string>
@@ -295,4 +296,5 @@
     <string name="api_error_payload_too_large">É coisa demais para enviar de uma vez</string>
     <string name="api_error_voted_to_close">Você concordou em encerrar esta lista, então não pode mais alterá-la. Retire seu voto para fazer alterações.</string>
     <string name="expense_delete_blocked">Esta despesa não pode ser excluída: ela envolve alguém cujos valores estão fixados.</string>
+    <string name="expense_error_frozen">Os valores de %1$s estão fixados: essa pessoa concordou em encerrar a lista ou saiu dela.</string>
 </resources>

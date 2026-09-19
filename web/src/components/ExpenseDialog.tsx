@@ -137,14 +137,21 @@ export default function ExpenseDialog({
   }, [members, seed]);
 
   /**
-   * Whose amounts may not move: whoever has agreed to close, and anyone no longer on the roster.
-   * Their rows render locked rather than hidden — the amount is part of the record, and a share
-   * that vanished from the form would be silently dropped on the next save.
+   * Whose amounts may not move, and why (T-203): whoever has agreed to close, and anyone no longer
+   * on the roster. Their rows render locked rather than hidden — the amount is part of the record,
+   * and a share that vanished from the form would be silently dropped on the next save. The reason
+   * is kept because the row says it: "agreed to close" is a lie about someone who simply left.
    */
-  const frozen = useMemo(() => {
+  const frozenReason = useMemo(() => {
     const current = new Set(members.map((member) => member.account_id));
-    return new Set(participantIds.filter((id) => closeVotes.includes(id) || !current.has(id)));
+    const reasons = new Map<string, "voter" | "former">();
+    for (const id of participantIds) {
+      if (closeVotes.includes(id)) reasons.set(id, "voter");
+      else if (!current.has(id)) reasons.set(id, "former");
+    }
+    return reasons;
   }, [participantIds, members, closeVotes]);
+  const frozen = useMemo(() => new Set(frozenReason.keys()), [frozenReason]);
 
   const [name, setName] = useState(() =>
     editingItem ? itemFieldValue(editingItem, "name") ?? "" : prefill?.name ?? "",
@@ -231,7 +238,7 @@ export default function ExpenseDialog({
         {participantIds.map((id) => {
           const selected = Boolean(state.selected[id]);
           const typed = state.text[id] ?? "";
-          const isFrozen = frozen.has(id);
+          const reason = frozenReason.get(id);
           // The derived share is the PLACEHOLDER, never the value. As the value it would come
           // straight back the moment the field was cleared, so typing over it appended to it.
           // Empty means auto, which is also what the greyed-out number says.
@@ -242,7 +249,7 @@ export default function ExpenseDialog({
                 type="checkbox"
                 id={`${which}-${id}`}
                 checked={selected}
-                disabled={isFrozen}
+                disabled={reason !== undefined}
                 onChange={(e) =>
                   setState({
                     selected: { ...state.selected, [id]: e.target.checked },
@@ -255,16 +262,16 @@ export default function ExpenseDialog({
               {/* Wraps rather than truncates: in a form, who a share belongs to must stay readable. */}
               <label htmlFor={`${which}-${id}`} style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }} dir="auto">
                 {labelFor(id)}
-                {isFrozen && (
+                {reason && (
                   <span className="muted" style={{ fontSize: "0.75rem", display: "block" }}>
-                    {t("expense.frozen")}
+                    {t(reason === "voter" ? "expense.frozenVoter" : "expense.frozenFormer")}
                   </span>
                 )}
               </label>
               <input
                 aria-label={`${which === "by" ? t("expense.paidBy") : t("expense.paidFor")} ${labelFor(id)}`}
                 inputMode="decimal"
-                disabled={!selected || isFrozen}
+                disabled={!selected || reason !== undefined}
                 value={typed}
                 placeholder={derived}
                 style={{ width: "6rem", textAlign: "end" }}

@@ -261,7 +261,8 @@
     <string name="expense_agree_count">Zustimmungen zum Abschluss: %1$d von %2$d</string>
     <string name="expense_closed_on">Abgeschlossen am %1$s</string>
     <string name="expense_vote_failed">Deine Stimme konnte nicht gespeichert werden.</string>
-    <string name="expense_frozen">hat zugestimmt – Beträge festgeschrieben</string>
+    <string name="expense_frozen_voter">hat zugestimmt – Beträge festgeschrieben</string>
+    <string name="expense_frozen_former">nicht mehr Mitglied – Beträge festgeschrieben</string>
     <string name="expense_closed">Abgeschlossen</string>
     <string name="expense_settle_up">Ausgleichen</string>
     <string name="expense_transfer">%1$s zahlt an %2$s</string>
@@ -295,4 +296,5 @@
     <string name="api_error_payload_too_large">Das ist zu viel auf einmal</string>
     <string name="api_error_voted_to_close">Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.</string>
     <string name="expense_delete_blocked">Diese Ausgabe kann nicht gelöscht werden: Sie betrifft jemanden, dessen Beträge festgeschrieben sind.</string>
+    <string name="expense_error_frozen">Die Beträge von %1$s sind festgeschrieben: Die Person hat dem Abschluss zugestimmt oder die Liste verlassen.</string>
 </resources>

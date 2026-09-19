@@ -261,7 +261,8 @@
     <string name="expense_agree_count">الأصوات المؤيدة للإغلاق: %1$d من %2$d</string>
     <string name="expense_closed_on">أُغلقت في %1$s</string>
     <string name="expense_vote_failed">تعذّر تسجيل تصويتك.</string>
-    <string name="expense_frozen">وافق على الإغلاق — المبالغ ثابتة</string>
+    <string name="expense_frozen_voter">وافق على الإغلاق — المبالغ ثابتة</string>
+    <string name="expense_frozen_former">لم يعد عضوًا — المبالغ ثابتة</string>
     <string name="expense_closed">مغلقة</string>
     <string name="expense_settle_up">تسوية الحسابات</string>
     <string name="expense_transfer">%1$s يدفع إلى %2$s</string>
@@ -295,4 +296,5 @@
     <string name="api_error_payload_too_large">هذا أكثر مما يمكن إرساله دفعة واحدة</string>
     <string name="api_error_voted_to_close">لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.</string>
     <string name="expense_delete_blocked">لا يمكن حذف هذا المصروف: فهو يخص شخصًا مبالغه ثابتة.</string>
+    <string name="expense_error_frozen">مبالغ %1$s ثابتة: فقد وافق على إغلاق القائمة أو غادرها.</string>
 </resources>

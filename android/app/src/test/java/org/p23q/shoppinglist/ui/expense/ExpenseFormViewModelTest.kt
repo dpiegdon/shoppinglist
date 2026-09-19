@@ -344,10 +344,11 @@ class ExpenseFormViewModelTest {
 
         val theirs = viewModel.uiState.value.paidFor.first { it.accountId == other }
         val mine = viewModel.uiState.value.paidFor.first { it.accountId == me }
-        assertTrue(theirs.frozen)
+        // Frozen, and the row says which of the two put the lock there (T-203).
+        assertEquals(FrozenReason.VOTER, theirs.frozen)
         assertTrue(theirs.selected)
         // The freeze is about their money; everyone else is still editable.
-        assertFalse(mine.frozen)
+        assertEquals(FrozenReason.NONE, mine.frozen)
     }
 
     @Test
@@ -432,7 +433,11 @@ class ExpenseFormViewModelTest {
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
 
-        assertTrue(viewModel.uiState.value.paidFor.first { it.accountId == other }.frozen)
+        // Frozen for having left, not for a vote they never cast (T-203).
+        assertEquals(
+            FrozenReason.FORMER,
+            viewModel.uiState.value.paidFor.first { it.accountId == other }.frozen,
+        )
     }
 
     // ---- a pre-filled settlement (T-165) ---------------------------------------
