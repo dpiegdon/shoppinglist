@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T22:13:54+00:00", "kind": "created", "ref": "main@3e3bb9b", "text": "Overview invite inbox: only offer an invite to an account that held the email before it was minted"}
 {"actor": "user", "at": "2026-09-19T22:31:39+00:00", "kind": "closed", "ref": "main@e8dd9bc", "text": ""}
+{"actor": "user", "at": "2026-09-19T22:31:39+00:00", "kind": "note", "ref": "main@e8dd9bc", "text": "Landed in e8dd9bc (Opus agent, reviewed and cherry-picked). accounts.email_set_at via migration 9 (backfilled from created_at), set on register and change_email; pending_for filters email_set_at < invites.created_at. redeem unchanged. Wire contract and README trade-offs updated. 5 new tests; verify-all green."}
