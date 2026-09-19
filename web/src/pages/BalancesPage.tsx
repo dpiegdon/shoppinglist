@@ -204,6 +204,7 @@ export default function BalancesPage() {
           closeVotes={closeVotes}
           currency={currency}
           myAccountId={account.id}
+          formerNumbers={formerNumbers}
           prefill={{
             name: t("expense.settlement"),
             // Equal split of one on each side: the total drives the amounts, so editing it is how

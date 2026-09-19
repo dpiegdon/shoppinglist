@@ -266,6 +266,29 @@ class ExpenseFormViewModelTest {
         }
 
     @Test
+    fun `former members are numbered across the list, not within the one expense`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val goneA = "acct-gone-a"
+            val goneB = "acct-gone-b"
+            // Numbered by first appearance newest-first, which is the order the list shows: the
+            // taxi's departed participant is 1 and the museum's is 2, on every screen (T-197).
+            itemsRepo.createExpense(
+                listId,
+                "Taxi",
+                Expense(mapOf(me to "20.00"), true, mapOf(me to "10.00", goneA to "10.00"), true, "2026-09-17"),
+            )
+            val museum = itemsRepo.createExpense(
+                listId,
+                "Museum",
+                Expense(mapOf(me to "30.00"), true, mapOf(me to "15.00", goneB to "15.00"), true, "2026-09-16"),
+            )
+            val viewModel = newViewModel()
+            viewModel.startEdit(museum).join()
+
+            assertEquals(2, viewModel.uiState.value.paidFor.first { it.accountId == goneB }.formerNumber)
+        }
+
+    @Test
     fun `an untouched edit writes nothing at all`() = runTest(mainDispatcherRule.dispatcher) {
         val expense = Expense(mapOf(me to "64.00"), true, mapOf(me to "32.00", other to "32.00"), true, "2026-09-17")
         val itemId = itemsRepo.createExpense(listId, "Dinner", expense)

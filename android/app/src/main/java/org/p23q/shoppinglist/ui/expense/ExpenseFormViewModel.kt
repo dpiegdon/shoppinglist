@@ -99,6 +99,8 @@ class ExpenseFormViewModel @Inject constructor(
     private var typed = mapOf(Side.PAID_BY to emptyMap<String, String>(), Side.PAID_FOR to emptyMap())
     /** The expense as loaded, so an edit only writes what actually changed (T-88). */
     private var frozenIds: Set<String> = emptySet()
+    /** Numbering for participants who have left, taken across the whole list (T-197). */
+    private var formerNumbers: Map<String, Int> = emptyMap()
     private var loaded: Expense? = null
     private var loadedName: String = ""
     private var loadedNote: String? = null
@@ -195,6 +197,14 @@ class ExpenseFormViewModel @Inject constructor(
         members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList()
         participantIds = members.map { it.accountId }
         frozenIds = list?.let { listsRepo.decodeCloseVotes(it.closeVotesJson) }?.toSet() ?: emptySet()
+        // Across the list's expenses in the order the list shows them, which is how the list and
+        // balances screens number them (T-197): numbering only the expense being edited would call
+        // the same person something else here. Read once rather than observed: the numbering is
+        // fixed when the form opens, as everything else in it is.
+        formerNumbers = ExpenseMath.formerMemberNumbers(
+            expenseRowsOf(itemsRepo.activeItemsForListOnce(listId), itemsRepo).map { it.expense },
+            members.map { it.accountId }.toSet(),
+        )
         _uiState.update { it.copy(currency = list?.currency?.value.orEmpty()) }
     }
 
@@ -265,10 +275,6 @@ class ExpenseFormViewModel @Inject constructor(
 
     private fun rowsFor(side: Side, result: ExpenseMath.DistributeResult): List<ShareRow> {
         val shares = (result as? ExpenseMath.DistributeResult.Shares)?.shares.orEmpty()
-        val formerNumbers = ExpenseMath.formerMemberNumbers(
-            listOfNotNull(loaded),
-            members.map { it.accountId }.toSet(),
-        )
         return participantIds.map { id ->
             ShareRow(
                 accountId = id,

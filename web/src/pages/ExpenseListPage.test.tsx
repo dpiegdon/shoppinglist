@@ -646,6 +646,74 @@ describe("editing an expense that involves a frozen participant", () => {
 });
 
 
+// ---- one numbering for former members (T-197) --------------------------------
+
+describe("numbering the members who have left", () => {
+  const GONE_A = "acct-gone-a";
+  const GONE_B = "acct-gone-b";
+  // Numbered by first appearance newest-first, so the taxi's departed participant is 1 and the
+  // museum's is 2 — everywhere the list, the balances and the form name them.
+  const taxi: Expense = {
+    paid_by: { [ME]: "20.00" },
+    equal_by: true,
+    paid_for: { [ME]: "10.00", [GONE_A]: "10.00" },
+    equal_for: true,
+    date: "2026-09-17",
+  };
+  const museum: Expense = {
+    paid_by: { [ME]: "30.00" },
+    equal_by: true,
+    paid_for: { [ME]: "15.00", [GONE_B]: "15.00" },
+    equal_for: true,
+    date: "2026-09-16",
+  };
+
+  beforeEach(() => {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [expenseList()],
+        items: [expenseItem("e1", "Taxi", taxi), expenseItem("e2", "Museum", museum)],
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("gives the form the same number as the row it was opened from", async () => {
+    renderAt("/list/list-1");
+
+    expect(await screen.findByText(/for ME, Former member 1$/)).toBeInTheDocument();
+    expect(screen.getByText(/for ME, Former member 2$/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("Museum"));
+    // Not "Former member 1", which numbering this one expense on its own would give, and not
+    // "Former member 3", which counting the two current members first would.
+    expect(screen.getByLabelText("For Former member 2")).toBeInTheDocument();
+  });
+
+  it("gives the balances screen the same numbers", async () => {
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Former member 1")).toBeInTheDocument();
+    expect(screen.getByText("Former member 2")).toBeInTheDocument();
+  });
+});
+
+
 // ---- settling up (T-164) -----------------------------------------------------
 
 describe("settling up", () => {

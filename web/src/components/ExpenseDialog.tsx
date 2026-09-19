@@ -29,6 +29,12 @@ interface ExpenseDialogProps {
   currency: string;
   /** The signed-in account, which is who a new expense defaults to having been paid by. */
   myAccountId: string;
+  /**
+   * How to number participants who are no longer members (T-152), numbered across the whole list
+   * by whoever renders it. The form is given it rather than numbering its own participants
+   * (T-197), which called the same person one number here and another on the list and balances.
+   */
+  formerNumbers: ReadonlyMap<string, number>;
   /** Present for edit mode, absent for add mode. */
   editingItem?: ItemObject;
   /**
@@ -107,6 +113,7 @@ export default function ExpenseDialog({
   closeVotes,
   currency,
   myAccountId,
+  formerNumbers,
   editingItem,
   prefill,
   onClose,
@@ -192,7 +199,7 @@ export default function ExpenseDialog({
   function labelFor(id: string): string {
     const member = members.find((m) => m.account_id === id);
     if (member) return member.email;
-    return t("expense.formerMember", { number: String(participantIds.indexOf(id) + 1) });
+    return t("expense.formerMember", { number: formerNumbers.get(id) ?? 0 });
   }
 
   function errorText(error: DistributeError, sumCents: number): string {

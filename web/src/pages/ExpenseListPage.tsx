@@ -227,6 +227,7 @@ export default function ExpenseListPage() {
           closeVotes={closeVotes}
           currency={currency}
           myAccountId={account.id}
+          formerNumbers={formerNumbers}
           editingItem={dialogItem === "new" ? undefined : dialogItem}
           onClose={() => setDialogItem(null)}
           onSave={handleSave}

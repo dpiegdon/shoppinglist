@@ -29,6 +29,21 @@ import javax.inject.Inject
 /** One expense, with its money tuple already decoded for rendering. */
 data class ExpenseRow(val item: ItemEntity, val expense: Expense)
 
+/**
+ * A list's expenses in the order they are shown: newest date first, then newest created. Sorted
+ * here rather than in SQL, since the date lives inside the expense JSON, which SQLite cannot order
+ * by without unpacking it.
+ *
+ * The former-member numbering follows this order, so the form takes it from here too (T-197) —
+ * numbering within one expense would name the same person differently there.
+ */
+fun expenseRowsOf(items: List<ItemEntity>, itemsRepo: ItemsRepo): List<ExpenseRow> =
+    items
+        .mapNotNull { item -> itemsRepo.decodeExpense(item.expense.value)?.let { ExpenseRow(item, it) } }
+        .sortedWith(
+            compareByDescending<ExpenseRow> { it.expense.date }.thenByDescending { it.item.createdAt },
+        )
+
 data class ExpenseListUiState(
     val currency: String = "",
     val members: List<ListMember> = emptyList(),
@@ -137,16 +152,7 @@ class ExpenseListViewModel @Inject constructor(
             combine(listsRepo.observeById(listId), itemsRepo.itemsForList(listId), ::Pair)
                 .collect { (list, items) ->
                     val members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList()
-                    // Sorted here rather than in SQL: the date lives inside the expense JSON, which
-                    // SQLite cannot order by without unpacking it.
-                    val rows = items
-                        .mapNotNull { item ->
-                            itemsRepo.decodeExpense(item.expense.value)?.let { ExpenseRow(item, it) }
-                        }
-                        .sortedWith(
-                            compareByDescending<ExpenseRow> { it.expense.date }
-                                .thenByDescending { it.item.createdAt },
-                        )
+                    val rows = expenseRowsOf(items, itemsRepo)
                     val expenses = rows.map { it.expense }
                     val balances = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
                     _uiState.update {
