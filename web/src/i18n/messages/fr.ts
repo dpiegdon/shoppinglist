@@ -158,6 +158,8 @@ export const fr: Catalog = {
   "settings.password": "Mot de passe",
   "settings.deleteConfirm": "Cela supprimera définitivement ton compte. Es-tu sûr ?",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu est le mot akkadien pour une tablette d'argile — ce dans quoi on pressait une liste.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",

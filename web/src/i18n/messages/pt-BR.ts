@@ -159,6 +159,8 @@ export const ptBR: Catalog = {
   "settings.password": "Senha",
   "settings.deleteConfirm": "Isso excluirá sua conta permanentemente. Tem certeza?",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu é a palavra acádia para uma tabuinha de argila — aquilo em que uma lista era impressa.",
   "about.version": "Versão {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",

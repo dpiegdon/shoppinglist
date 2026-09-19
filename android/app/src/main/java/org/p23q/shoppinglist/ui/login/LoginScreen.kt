@@ -28,6 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -81,6 +84,18 @@ fun LoginScreen(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+        Spacer(Modifier.height(8.dp))
+        // The name in cuneiform, IM.DUB — read ṭuppu (T-225); About explains the signs. Smaller
+        // here and without the transliteration caption: this is a mark, not the explanation.
+        // Tinted to onSurface so it follows the text colour on both themes.
+        Image(
+            painter = painterResource(R.drawable.ic_cuneiform_tuppu),
+            contentDescription = stringResource(R.string.about_transliteration),
+            contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+            // Height only: the sign is about 3:1, so the width follows from it.
+            modifier = Modifier.height(40.dp).align(Alignment.CenterHorizontally).testTag("login-cuneiform"),
         )
         Spacer(Modifier.height(24.dp))
 

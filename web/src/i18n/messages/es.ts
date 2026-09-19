@@ -156,6 +156,8 @@ export const es: Catalog = {
   "settings.password": "Contraseña",
   "settings.deleteConfirm": "Esto eliminará tu cuenta de forma permanente. ¿Estás seguro?",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu es la palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.",
   "about.version": "Versión {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",

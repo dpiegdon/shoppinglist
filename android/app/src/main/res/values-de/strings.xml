@@ -123,6 +123,7 @@
     <string name="listprops_leave_list">Liste verlassen</string>
     <string name="listprops_leave_confirm_title">Diese Liste verlassen?</string>
     <string name="listprops_leave_confirm_body">Du erhältst auf diesem Gerät keine Updates mehr für \"%1$s\".</string>
+    <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Tuppu ist das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">Version %1$s</string>

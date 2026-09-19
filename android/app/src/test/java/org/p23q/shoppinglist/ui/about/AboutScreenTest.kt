@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.isToggleable
@@ -46,6 +47,20 @@ class AboutScreenTest {
         // The app's own version, as the package manager reports it — not a literal in the source.
         composeTestRule.onNodeWithText("Version ${installedVersion()}").assertExists()
         composeTestRule.onNodeWithText("MIT, © 2026 David R. Piegdon").assertExists()
+    }
+
+    @Test
+    fun `shows the name in cuneiform over its transliteration (T-225)`() {
+        composeTestRule.setContent { AboutScreen() }
+
+        // The sign is a tinted vector, not text: no phone carries a cuneiform font. It is the
+        // name, so it has a content description rather than being decorative like the mark.
+        composeTestRule
+            .onNodeWithTag("about-cuneiform", useUnmergedTree = true)
+            .assertExists()
+            .assertContentDescriptionEquals("ṭuppu")
+        // About, unlike the login screen, also spells the reading out under the sign.
+        composeTestRule.onNodeWithText("ṭuppu").assertExists()
     }
 
     @Test

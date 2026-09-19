@@ -123,6 +123,7 @@
     <string name="listprops_leave_list">Salir de la lista</string>
     <string name="listprops_leave_confirm_title">¿Salir de esta lista?</string>
     <string name="listprops_leave_confirm_body">Dejarás de recibir novedades de \"%1$s\" en este dispositivo.</string>
+    <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Tuppu es la palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">Versión %1$s</string>

@@ -1,5 +1,6 @@
 import { appBasename, appVersion } from "../lib/appConfig";
 import { useT } from "../i18n";
+import CuneiformName from "../components/CuneiformName";
 
 /**
  * What the app is and where its name comes from (T-224).
@@ -37,6 +38,16 @@ export default function AboutPage() {
         style={{ display: "block", margin: "1.5rem auto 0.75rem" }}
       />
       <h1 style={{ fontSize: "1.4rem", marginTop: 0, textAlign: "center" }}>{t("app.title")}</h1>
+
+      {/* The name in cuneiform under the heading, with its transliteration beneath (T-225). The
+          login screens carry the same sign smaller and without the caption. */}
+      <CuneiformName height={64} style={{ margin: "0 auto 0.25rem" }} />
+      <p
+        className="muted"
+        style={{ textAlign: "center", fontStyle: "italic", fontSize: "0.85rem", marginTop: 0 }}
+      >
+        {t("about.transliteration")}
+      </p>
 
       <p style={{ textAlign: "center" }}>{t("about.tagline")}</p>
 

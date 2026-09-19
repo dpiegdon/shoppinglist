@@ -123,6 +123,7 @@
     <string name="listprops_leave_list">مغادرة القائمة</string>
     <string name="listprops_leave_confirm_title">مغادرة هذه القائمة؟</string>
     <string name="listprops_leave_confirm_body">لن تتلقى تحديثات \"%1$s\" على هذا الجهاز بعد الآن.</string>
+    <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Tuppu هي الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">الإصدار %1$s</string>

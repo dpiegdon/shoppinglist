@@ -87,4 +87,15 @@ describe("LoginPage header (T-213)", () => {
     const title = screen.getByRole("heading", { level: 1, name: "Tuppu" });
     expect(title.style.textAlign).toBe("center");
   });
+
+  it("carries the name in cuneiform under the title, smaller and uncaptioned (T-225)", () => {
+    renderLogin();
+
+    const sign = screen.getByRole("img", { name: "ṭuppu" });
+    expect(sign.style.getPropertyValue("mask-image")).toContain("tuppu-cuneiform.svg");
+    // Smaller than About's 64px, and without the transliteration spelled out beside it: here the
+    // sign is a mark, not the explanation.
+    expect(sign.style.height).toBe("40px");
+    expect(screen.queryByText("ṭuppu")).toBeNull();
+  });
 });

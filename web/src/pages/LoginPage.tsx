@@ -6,6 +6,7 @@ import { allowRegistration, appBasename } from "../lib/appConfig";
 import { useT } from "../i18n";
 import LanguagePicker from "../components/LanguagePicker";
 import { errorMessage } from "../i18n/apiErrors";
+import CuneiformName from "../components/CuneiformName";
 
 const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
@@ -81,6 +82,9 @@ export default function LoginPage() {
           style={{ display: "block", margin: "0 auto 0.75rem" }}
         />
         <h1 style={{ fontSize: "1.4rem", marginTop: 0, textAlign: "center" }}>{t("app.title")}</h1>
+        {/* The name in cuneiform under the title, smaller than on About and without the
+            transliteration caption — here it is a mark, not the explanation (T-225). */}
+        <CuneiformName height={40} style={{ margin: "0 auto 1rem" }} />
         <div className="form-field">
           <label htmlFor="email">{t("login.email")}</label>
           <input

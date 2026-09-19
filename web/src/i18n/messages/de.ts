@@ -161,6 +161,8 @@ export const de: Catalog = {
   "settings.password": "Passwort",
   "settings.deleteConfirm": "Dadurch wird dein Konto dauerhaft gelöscht. Bist du sicher?",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu ist das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",

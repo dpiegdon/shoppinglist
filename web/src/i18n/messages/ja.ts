@@ -161,6 +161,8 @@ export const ja: Catalog = {
   "settings.password": "パスワード",
   "settings.deleteConfirm": "アカウントが完全に削除されます。よろしいですか？",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu はアッカド語で粘土板を意味します — リストを押し刻んだ、あの板のことです。",
   "about.version": "バージョン {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",

@@ -47,6 +47,19 @@ describe("AboutPage (T-224)", () => {
     expect(screen.getByText(en["about.license"])).toBeInTheDocument();
   });
 
+  it("shows the name in cuneiform over its transliteration (T-225)", () => {
+    render(<MemoryRouter><AboutPage /></MemoryRouter>);
+
+    // A masked div, not an <img>: an image cannot inherit currentColor, and the sign has to
+    // follow the text on both themes. Its accessible name is the transliteration.
+    const sign = screen.getByRole("img", { name: en["about.transliteration"] });
+    expect(sign.style.backgroundColor).toBe("currentcolor");
+    expect(sign.style.getPropertyValue("mask-image")).toContain("tuppu-cuneiform.svg");
+    expect(sign.style.height).toBe("64px");
+    // About, unlike login, also spells the reading out under the sign.
+    expect(screen.getByText(en["about.transliteration"])).toBeInTheDocument();
+  });
+
   it("shows the version line empty rather than crashing when the server injected no meta tag", () => {
     // A dev server (Vite alone) serves index.html untouched, so there is no version to read.
     render(<MemoryRouter><AboutPage /></MemoryRouter>);

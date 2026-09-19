@@ -19,10 +19,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
@@ -71,6 +74,31 @@ fun AboutScreen(
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            // The name written IM.DUB, 𒅎𒁾 (T-225): DUB is the logogram "tablet", read with its
+            // Akkadian value ṭuppu, and the IM before it is the determinative "clay", written but
+            // not spoken — so it reads simply ṭuppu, and literally writes "clay tablet". A vector,
+            // never the Unicode characters: almost no phone carries a cuneiform font, so the text
+            // would come out as boxes. Tinted to onSurface so the sign follows the text colour on
+            // the light theme and the dark one alike; the web masks the same path over
+            // currentColor. The login screen shows it smaller and without the caption.
+            Image(
+                painter = painterResource(R.drawable.ic_cuneiform_tuppu),
+                contentDescription = stringResource(R.string.about_transliteration),
+                contentScale = ContentScale.Fit,
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+                // Height only: the sign is about 3:1, so the width follows from it.
+                modifier = Modifier.height(64.dp).align(Alignment.CenterHorizontally).testTag("about-cuneiform"),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.about_transliteration),
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
             Spacer(Modifier.height(16.dp))

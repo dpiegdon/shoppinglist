@@ -162,6 +162,8 @@ export const ar: Catalog = {
   "settings.password": "كلمة المرور",
   "settings.deleteConfirm": "سيؤدي هذا إلى حذف حسابك نهائيًا. هل أنت متأكد؟",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu هي الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.",
   "about.version": "الإصدار {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",

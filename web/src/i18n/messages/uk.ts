@@ -160,6 +160,8 @@ export const uk: Catalog = {
   "settings.password": "Пароль",
   "settings.deleteConfirm": "Це назавжди видалить твій обліковий запис. Ти впевнений?",
 
+  "about.transliteration": "ṭuppu",
+
   "about.tagline": "Tuppu — це аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.",
   "about.version": "Версія {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
