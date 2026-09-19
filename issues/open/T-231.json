@@ -1,0 +1,12 @@
+{
+  "body": "Reported by the maintainer on p23q.org/shopping after 2.1.0: the login page shows no cuneiform, and\nhttps://p23q.org/shopping/tuppu-cuneiform.svg lands on the login page.\n\nCause: routes/webapp.py serves exactly two static things at the site root \u2014 /assets/<path> and\n/favicon.svg \u2014 and everything else under the prefix falls into the SPA catch-all\n(GET /<path:spa_path> -> index.html), whose router sends a logged-out visitor to login. The favicon\nonly works because it has an explicit route; T-225 put a second file in web/public/ and nothing\nserved it. The wheel smoke test checks that the favicon is served and not that any other root file is,\nso it passed.\n\nFix the class: any regular file that exists at the root of the built web client (web_dist/, not\ndirectories, no traversal \u2014 send_from_directory's safe join) is served as a cacheable asset before\nthe catch-all; a path that names no file still falls through to index.html. Server tests on both the\nplain and the prefix mount: the svg is 200 image/svg+xml with the asset cache header, an unknown\nfile name still gets the SPA page. smoke-wheel.sh checks the cuneiform is served, so this cannot ship\nsilently again. docs/wire-contract.md's site-root table gains the row.\n\n2.1.0 stays tagged; this supersedes it as 2.1.1.",
+  "created_at": "2026-09-19T21:13:02+00:00",
+  "id": "T-231",
+  "labels": [
+    "bug",
+    "ready"
+  ],
+  "priority": 1,
+  "title": "A file at the root of the web bundle other than favicon.svg is swallowed by the SPA fallback \u2014 tuppu-cuneiform.svg redirects to login under a prefix mount",
+  "updated_at": "2026-09-19T21:13:02+00:00"
+}
