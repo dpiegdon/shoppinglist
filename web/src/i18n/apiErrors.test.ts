@@ -18,6 +18,12 @@ describe("server errors in the app's language", () => {
     );
   });
 
+  it("names the list that is gone rather than leaving a parked row with no reason (T-214)", () => {
+    expect(errorMessage(t, apiError("unknown_list"), "apiError.serverBusy")).toBe(
+      en["apiError.unknownList"],
+    );
+  });
+
   it("falls back to the screen's own message for a code no person can cause", () => {
     expect(errorMessage(t, apiError("invalid_cursor"), "apiError.serverBusy")).toBe(
       en["apiError.serverBusy"],

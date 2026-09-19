@@ -287,6 +287,7 @@
     <string name="api_error_invite_email_mismatch">هذه الدعوة مخصصة لعنوان بريد إلكتروني آخر</string>
     <string name="api_error_cannot_delete_expense_list">لا يمكن حذف قائمة المصروفات. أغلقها ثم غادرها.</string>
     <string name="api_error_not_a_member">لم تعد عضوًا في هذه القائمة</string>
+    <string name="api_error_unknown_list">لم تعد هذه القائمة متاحة لك</string>
     <string name="api_error_not_admin">لا يمكن القيام بذلك إلا للمسؤول</string>
     <string name="api_error_cannot_delete_admin">لا يمكن حذف المسؤولين من هنا</string>
     <string name="api_error_cannot_delete_self">احذف حسابك من الإعدادات</string>

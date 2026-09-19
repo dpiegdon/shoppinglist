@@ -36,6 +36,9 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   voted_to_close: "apiError.votedToClose",
   cannot_delete_expense_list: "apiError.cannotDeleteExpenseList",
   not_a_member: "apiError.notAMember",
+  // A pushed item names a list the caller can no longer write to — deleted, or left while offline
+  // (T-214). The Android row that gets parked for it shows this rather than the bare "not saved".
+  unknown_list: "apiError.unknownList",
   not_admin: "apiError.notAdmin",
   cannot_delete_admin: "apiError.cannotDeleteAdmin",
   cannot_delete_self: "apiError.cannotDeleteSelf",

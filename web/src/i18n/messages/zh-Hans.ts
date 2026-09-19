@@ -255,6 +255,7 @@ export const zhHans: Catalog = {
   "apiError.inviteEmailMismatch": "此邀请属于另一个邮箱地址",
   "apiError.cannotDeleteExpenseList": "支出清单无法删除。请先结算，再退出。",
   "apiError.notAMember": "你已不是此清单的成员",
+  "apiError.unknownList": "此清单已不再对你可用",
   "apiError.notAdmin": "只有管理员才能执行此操作",
   "apiError.cannotDeleteAdmin": "无法在此删除管理员",
   "apiError.cannotDeleteSelf": "请在设置中删除你自己的账户",

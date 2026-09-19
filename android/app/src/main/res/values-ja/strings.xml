@@ -287,6 +287,7 @@
     <string name="api_error_invite_email_mismatch">この招待は別のメールアドレス宛てです</string>
     <string name="api_error_cannot_delete_expense_list">支出リストは削除できません。締めてから退出してください。</string>
     <string name="api_error_not_a_member">このリストのメンバーではなくなりました</string>
+    <string name="api_error_unknown_list">このリストは利用できなくなりました</string>
     <string name="api_error_not_admin">この操作は管理者のみが行えます</string>
     <string name="api_error_cannot_delete_admin">管理者はここでは削除できません</string>
     <string name="api_error_cannot_delete_self">自分のアカウントは設定から削除してください</string>

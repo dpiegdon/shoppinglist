@@ -254,6 +254,7 @@ export const ptBR: Catalog = {
   "apiError.inviteEmailMismatch": "Este convite é para outro endereço de e-mail",
   "apiError.cannotDeleteExpenseList": "Uma lista de despesas não pode ser excluída. Encerre-a e depois saia dela.",
   "apiError.notAMember": "Você não é mais membro desta lista",
+  "apiError.unknownList": "Esta lista não está mais disponível para você",
   "apiError.notAdmin": "Só um administrador pode fazer isso",
   "apiError.cannotDeleteAdmin": "Administradores não podem ser excluídos aqui",
   "apiError.cannotDeleteSelf": "Exclua sua própria conta em Configurações",

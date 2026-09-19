@@ -334,6 +334,7 @@
     <string name="api_error_invite_email_mismatch">This invite is for a different email address</string>
     <string name="api_error_cannot_delete_expense_list">An expenses list can\'t be deleted. Close it, then leave it.</string>
     <string name="api_error_not_a_member">You\'re no longer a member of this list</string>
+    <string name="api_error_unknown_list">This list is no longer available to you</string>
     <string name="api_error_not_admin">Only an admin can do that</string>
     <string name="api_error_cannot_delete_admin">Admins can\'t be deleted here</string>
     <string name="api_error_cannot_delete_self">Delete your own account in Settings</string>

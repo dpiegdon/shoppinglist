@@ -256,6 +256,7 @@ export const de: Catalog = {
   "apiError.inviteEmailMismatch": "Diese Einladung gilt für eine andere E-Mail-Adresse",
   "apiError.cannotDeleteExpenseList": "Eine Ausgabenliste kann nicht gelöscht werden. Schließe sie ab und verlasse sie dann.",
   "apiError.notAMember": "Du bist kein Mitglied dieser Liste mehr",
+  "apiError.unknownList": "Diese Liste ist für dich nicht mehr verfügbar",
   "apiError.notAdmin": "Das darf nur ein Admin",
   "apiError.cannotDeleteAdmin": "Admins können hier nicht gelöscht werden",
   "apiError.cannotDeleteSelf": "Dein eigenes Konto löschst du in den Einstellungen",

@@ -253,6 +253,7 @@ export const fr: Catalog = {
   "apiError.inviteEmailMismatch": "Cette invitation est destinée à une autre adresse e-mail",
   "apiError.cannotDeleteExpenseList": "Une liste de dépenses ne peut pas être supprimée. Clôturez-la, puis quittez-la.",
   "apiError.notAMember": "Vous n'êtes plus membre de cette liste",
+  "apiError.unknownList": "Cette liste n'est plus disponible pour vous",
   "apiError.notAdmin": "Seul un administrateur peut faire cela",
   "apiError.cannotDeleteAdmin": "Les administrateurs ne peuvent pas être supprimés ici",
   "apiError.cannotDeleteSelf": "Supprimez votre propre compte dans les Paramètres",

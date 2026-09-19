@@ -256,6 +256,7 @@ export const ja: Catalog = {
   "apiError.inviteEmailMismatch": "この招待は別のメールアドレス宛てです",
   "apiError.cannotDeleteExpenseList": "支出リストは削除できません。締めてから退出してください。",
   "apiError.notAMember": "このリストのメンバーではなくなりました",
+  "apiError.unknownList": "このリストは利用できなくなりました",
   "apiError.notAdmin": "この操作は管理者のみが行えます",
   "apiError.cannotDeleteAdmin": "管理者はここでは削除できません",
   "apiError.cannotDeleteSelf": "自分のアカウントは設定から削除してください",

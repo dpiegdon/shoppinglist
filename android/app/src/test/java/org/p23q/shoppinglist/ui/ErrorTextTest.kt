@@ -48,6 +48,11 @@ class ErrorTextTest {
     }
 
     @Test
+    fun `a list the account can no longer write to is named, not left as a bare not-saved (T-214)`() {
+        assertEquals(UiText.res(R.string.api_error_unknown_list), ErrorText.of(apiError("unknown_list"), R.string.redeem_msg_failed))
+    }
+
+    @Test
     fun `an unknown code falls back to the screen's own message`() {
         assertEquals(UiText.res(R.string.redeem_msg_failed), ErrorText.of(apiError("invalid_cursor"), R.string.redeem_msg_failed))
     }

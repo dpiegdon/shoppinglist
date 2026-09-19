@@ -287,6 +287,7 @@
     <string name="api_error_invite_email_mismatch">Este convite é para outro endereço de e-mail</string>
     <string name="api_error_cannot_delete_expense_list">Uma lista de despesas não pode ser excluída. Encerre-a e depois saia dela.</string>
     <string name="api_error_not_a_member">Você não é mais membro desta lista</string>
+    <string name="api_error_unknown_list">Esta lista não está mais disponível para você</string>
     <string name="api_error_not_admin">Só um administrador pode fazer isso</string>
     <string name="api_error_cannot_delete_admin">Administradores não podem ser excluídos aqui</string>
     <string name="api_error_cannot_delete_self">Exclua sua própria conta em Configurações</string>

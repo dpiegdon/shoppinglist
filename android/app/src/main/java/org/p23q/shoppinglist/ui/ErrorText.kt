@@ -40,6 +40,9 @@ object ErrorText {
         "voted_to_close" to UiText.res(R.string.api_error_voted_to_close),
         "cannot_delete_expense_list" to UiText.res(R.string.api_error_cannot_delete_expense_list),
         "not_a_member" to UiText.res(R.string.api_error_not_a_member),
+        // A pushed item names a list this account can no longer write to — deleted, or left while
+        // offline (T-214) — so the parked row can say more than "not saved".
+        "unknown_list" to UiText.res(R.string.api_error_unknown_list),
         "not_admin" to UiText.res(R.string.api_error_not_admin),
         "cannot_delete_admin" to UiText.res(R.string.api_error_cannot_delete_admin),
         "cannot_delete_self" to UiText.res(R.string.api_error_cannot_delete_self),

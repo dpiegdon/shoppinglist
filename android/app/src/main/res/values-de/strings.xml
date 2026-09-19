@@ -287,6 +287,7 @@
     <string name="api_error_invite_email_mismatch">Diese Einladung gilt für eine andere E-Mail-Adresse</string>
     <string name="api_error_cannot_delete_expense_list">Eine Ausgabenliste kann nicht gelöscht werden. Schließe sie ab und verlasse sie dann.</string>
     <string name="api_error_not_a_member">Du bist kein Mitglied dieser Liste mehr</string>
+    <string name="api_error_unknown_list">Diese Liste ist für dich nicht mehr verfügbar</string>
     <string name="api_error_not_admin">Das darf nur ein Admin</string>
     <string name="api_error_cannot_delete_admin">Admins können hier nicht gelöscht werden</string>
     <string name="api_error_cannot_delete_self">Dein eigenes Konto löschst du in den Einstellungen</string>

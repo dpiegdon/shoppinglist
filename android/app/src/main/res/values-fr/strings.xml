@@ -287,6 +287,7 @@
     <string name="api_error_invite_email_mismatch">Cette invitation est destinée à une autre adresse e-mail</string>
     <string name="api_error_cannot_delete_expense_list">Une liste de dépenses ne peut pas être supprimée. Clôturez-la, puis quittez-la.</string>
     <string name="api_error_not_a_member">Vous n\'êtes plus membre de cette liste</string>
+    <string name="api_error_unknown_list">Cette liste n\'est plus disponible pour vous</string>
     <string name="api_error_not_admin">Seul un administrateur peut faire cela</string>
     <string name="api_error_cannot_delete_admin">Les administrateurs ne peuvent pas être supprimés ici</string>
     <string name="api_error_cannot_delete_self">Supprimez votre propre compte dans les Paramètres</string>

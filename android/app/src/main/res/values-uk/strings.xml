@@ -287,6 +287,7 @@
     <string name="api_error_invite_email_mismatch">Це запрошення для іншої адреси електронної пошти</string>
     <string name="api_error_cannot_delete_expense_list">Список витрат не можна видалити. Закрийте його, а потім залиште.</string>
     <string name="api_error_not_a_member">Ви більше не учасник цього списку</string>
+    <string name="api_error_unknown_list">Цей список для вас більше недоступний</string>
     <string name="api_error_not_admin">Це може зробити лише адмін</string>
     <string name="api_error_cannot_delete_admin">Адмінів не можна видалити тут</string>
     <string name="api_error_cannot_delete_self">Власний обліковий запис видаляйте в налаштуваннях</string>

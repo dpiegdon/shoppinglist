@@ -251,6 +251,7 @@ export const es: Catalog = {
   "apiError.inviteEmailMismatch": "Esta invitación es para otra dirección de correo",
   "apiError.cannotDeleteExpenseList": "Una lista de gastos no se puede eliminar. Ciérrala y luego abandónala.",
   "apiError.notAMember": "Ya no eres miembro de esta lista",
+  "apiError.unknownList": "Esta lista ya no está disponible para ti",
   "apiError.notAdmin": "Solo un administrador puede hacer eso",
   "apiError.cannotDeleteAdmin": "Los administradores no se pueden eliminar aquí",
   "apiError.cannotDeleteSelf": "Elimina tu propia cuenta en Ajustes",

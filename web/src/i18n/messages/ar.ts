@@ -257,6 +257,7 @@ export const ar: Catalog = {
   "apiError.inviteEmailMismatch": "هذه الدعوة مخصصة لعنوان بريد إلكتروني آخر",
   "apiError.cannotDeleteExpenseList": "لا يمكن حذف قائمة المصروفات. أغلقها ثم غادرها.",
   "apiError.notAMember": "لم تعد عضوًا في هذه القائمة",
+  "apiError.unknownList": "لم تعد هذه القائمة متاحة لك",
   "apiError.notAdmin": "لا يمكن القيام بذلك إلا للمسؤول",
   "apiError.cannotDeleteAdmin": "لا يمكن حذف المسؤولين من هنا",
   "apiError.cannotDeleteSelf": "احذف حسابك من الإعدادات",

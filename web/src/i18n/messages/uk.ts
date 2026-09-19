@@ -255,6 +255,7 @@ export const uk: Catalog = {
   "apiError.inviteEmailMismatch": "Це запрошення для іншої адреси електронної пошти",
   "apiError.cannotDeleteExpenseList": "Список витрат не можна видалити. Закрийте його, а потім залиште.",
   "apiError.notAMember": "Ви більше не учасник цього списку",
+  "apiError.unknownList": "Цей список для вас більше недоступний",
   "apiError.notAdmin": "Це може зробити лише адмін",
   "apiError.cannotDeleteAdmin": "Адмінів не можна видалити тут",
   "apiError.cannotDeleteSelf": "Власний обліковий запис видаляйте в налаштуваннях",

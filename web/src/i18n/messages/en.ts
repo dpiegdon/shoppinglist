@@ -285,6 +285,7 @@ export const en = {
   "apiError.inviteEmailMismatch": "This invite is for a different email address",
   "apiError.cannotDeleteExpenseList": "An expenses list can't be deleted. Close it, then leave it.",
   "apiError.notAMember": "You're no longer a member of this list",
+  "apiError.unknownList": "This list is no longer available to you",
   "apiError.notAdmin": "Only an admin can do that",
   "apiError.cannotDeleteAdmin": "Admins can't be deleted here",
   "apiError.cannotDeleteSelf": "Delete your own account in Settings",
