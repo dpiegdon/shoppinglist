@@ -1,0 +1,11 @@
+{
+  "body": "The server answers 422 unknown_list with row_id when a pushed item names a list the caller cannot write to (deleted, or left while offline) - see docs/wire-contract.md, Sync. Neither web/src/i18n/apiErrors.ts nor android ui/ErrorText.kt maps it, so on Android a parked item shows only the generic \"Not saved to the list\" (T-210) and the web shows its screen fallback. Add one sentence on both clients, identical English, nine locales, e.g. \"This list is no longer available to you.\" Found while doing T-210.",
+  "created_at": "2026-09-19T10:54:34+00:00",
+  "id": "T-214",
+  "labels": [
+    "ux"
+  ],
+  "priority": 4,
+  "title": "unknown_list has no user-facing sentence on either client",
+  "updated_at": "2026-09-19T10:54:34+00:00"
+}
