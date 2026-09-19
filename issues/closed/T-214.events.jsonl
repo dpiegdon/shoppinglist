@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T10:54:34+00:00", "kind": "created", "ref": "main@da106a0", "text": "unknown_list has no user-facing sentence on either client"}
 {"actor": "user", "at": "2026-09-19T11:02:47+00:00", "kind": "note", "ref": "main@a8e36f3", "text": "Fixed in a8e36f3: unknown_list mapped in apiErrors.ts and ErrorText.kt to \"This list is no longer available to you\" (apiError.unknownList / api_error_unknown_list), nine locales each, tests on both clients. Gate green: server 461, web 406, Android."}
+{"actor": "user", "at": "2026-09-19T11:02:47+00:00", "kind": "closed", "ref": "main@a8e36f3", "text": ""}
