@@ -8,5 +8,5 @@
   ],
   "priority": 1,
   "title": "A file at the root of the web bundle other than favicon.svg is swallowed by the SPA fallback \u2014 tuppu-cuneiform.svg redirects to login under a prefix mount",
-  "updated_at": "2026-09-19T21:13:02+00:00"
+  "updated_at": "2026-09-19T21:19:25+00:00"
 }
