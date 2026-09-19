@@ -11,3 +11,5 @@
 # Release signing (T-49): never commit the keystore or its credentials.
 /keystore/
 /keystore.properties
+# Kotlin compiler session data (Kotlin 2.x writes it beside the build)
+.kotlin/
