@@ -1,8 +1,9 @@
-from flask import g, jsonify, request
+from flask import g, jsonify
 
 from .. import accounts, audit, get_config, get_db, server_settings
 from ..auth import admin_required, is_admin_email
 from ..errors import ApiError
+from ..request_body import json_body
 
 
 def register_routes(bp):
@@ -32,7 +33,7 @@ def register_routes(bp):
     @bp.route("/admin/server-settings", methods=["PUT"])
     @admin_required
     def admin_set_server_settings_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         allow = data.get("allow_registration")
         if not isinstance(allow, bool):
             raise ApiError(422, "invalid_request", "allow_registration must be true or false.")
@@ -47,7 +48,7 @@ def register_routes(bp):
     @bp.route("/admin/users/<account_id>/reset-password", methods=["POST"])
     @admin_required
     def admin_reset_password_view(account_id):
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         accounts.require_password(conn, g.account.id, data.get("password"))  # step-up
         new_password = accounts.admin_reset_password(conn, account_id)
@@ -60,7 +61,7 @@ def register_routes(bp):
     @bp.route("/admin/users/<account_id>", methods=["DELETE"])
     @admin_required
     def admin_delete_user_view(account_id):
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         accounts.require_password(conn, g.account.id, data.get("password"))  # step-up
         if account_id == g.account.id:

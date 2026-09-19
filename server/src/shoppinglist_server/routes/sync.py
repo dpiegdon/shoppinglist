@@ -1,9 +1,10 @@
-from flask import g, jsonify, request
+from flask import g, jsonify
 
 from .. import get_db
 from .. import sync as sync_engine
 from ..auth import authed
 from ..errors import ApiError
+from ..request_body import json_body
 
 
 def _touched_list_ids(conn, changes):
@@ -38,7 +39,7 @@ def register_routes(bp):
     @bp.route("/sync", methods=["POST"])
     @authed
     def sync_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         cursor = data.get("cursor")
         # Bounded above too: the cursor binds into SQL, and anything past SQLite's
         # signed int64 range raises OverflowError at bind time (T-85).

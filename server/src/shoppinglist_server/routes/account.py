@@ -1,14 +1,15 @@
-from flask import g, jsonify, request
+from flask import g, jsonify
 
 from .. import accounts, audit, get_db
 from ..auth import authed
+from ..request_body import json_body
 
 
 def register_routes(bp):
     @bp.route("/account/change-password", methods=["POST"])
     @authed
     def change_password_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         accounts.change_password(
             conn,
@@ -23,7 +24,7 @@ def register_routes(bp):
     @bp.route("/account/change-email", methods=["POST"])
     @authed
     def change_email_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         accounts.change_email(conn, g.account.id, data.get("password"), data.get("new_email"))
         # The new address itself is deliberately not logged — see audit.py on keeping PII out.
@@ -50,7 +51,7 @@ def register_routes(bp):
     @bp.route("/account", methods=["DELETE"])
     @authed
     def delete_account_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         accounts.delete_account(conn, g.account.id, data.get("password"))
         audit.record("account.deleted", account_id=g.account.id)
@@ -65,7 +66,7 @@ def register_routes(bp):
     @bp.route("/settings", methods=["PATCH"])
     @authed
     def update_settings_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         # PATCH, not PUT (T-87): only forward keys the caller actually sent, so an
         # absent key means "leave unchanged" rather than being coerced to None and

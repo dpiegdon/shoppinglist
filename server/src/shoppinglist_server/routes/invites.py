@@ -1,14 +1,15 @@
-from flask import g, jsonify, request
+from flask import g, jsonify
 
 from .. import audit, get_config, get_db, invites
 from ..auth import authed
+from ..request_body import json_body
 
 
 def register_routes(bp):
     @bp.route("/lists/<list_id>/invites", methods=["POST"])
     @authed
     def create_invite_view(list_id):
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         config = get_config()
         result = invites.mint(
@@ -51,7 +52,7 @@ def register_routes(bp):
     @bp.route("/invites/redeem", methods=["POST"])
     @authed
     def redeem_invite_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         config = get_config()
         list_id = invites.redeem(conn, config["invite_hmac_key"], g.account, data.get("token"))

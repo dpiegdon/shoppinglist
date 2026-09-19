@@ -1,4 +1,4 @@
-from flask import g, jsonify, request
+from flask import g, jsonify
 
 from .. import audit, get_config, get_db, server_settings
 from ..auth import authed, is_admin_email
@@ -6,6 +6,7 @@ from ..auth import login as auth_login
 from ..auth import logout as auth_logout
 from ..auth import register as auth_register
 from ..errors import ApiError
+from ..request_body import json_body
 
 
 def register_routes(bp):
@@ -18,7 +19,7 @@ def register_routes(bp):
         default = get_config().get("allow_registration", True)
         if not server_settings.effective_allow_registration(conn, default):
             raise ApiError(403, "registration_disabled", "Registration is disabled on this server.")
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         account_id = auth_register(conn, data.get("email"), data.get("password"))
         audit.record("account.registered", account_id=account_id)
         return jsonify({"account_id": account_id}), 201
@@ -38,7 +39,7 @@ def register_routes(bp):
 
     @bp.route("/login", methods=["POST"])
     def login_view():
-        data = request.get_json(force=True, silent=True) or {}
+        data = json_body()
         conn = get_db()
         token, account_id = auth_login(
             conn,
