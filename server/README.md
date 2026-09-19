@@ -174,9 +174,10 @@ flask --app app.py shoppinglist audit                  # check database invarian
 Both of the above also run by themselves, driven by ordinary traffic — there is
 no background thread and no cron job to install:
 
-- **The retention GC** (`gc`: tombstones past the 90-day window, dead invites,
-  sessions past their idle window) runs at most about once a day, on the first
-  authenticated request after that day has passed.
+- **The retention GC** (`gc`) runs at most about once a day, on the first
+  authenticated request after that day has passed. It hard-deletes tombstones
+  past the 45-day retention window, invites that have been dead (used, expired
+  or revoked) for a week, and sessions past their idle window.
 - **The full housekeeping sweep** — the retention GC plus the invariant audit —
   runs on the first authenticated request of a server run, and about weekly
   after that. Its findings go to the audit log (see Audit log below) as

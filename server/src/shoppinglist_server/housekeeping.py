@@ -98,8 +98,8 @@ class Finding:
 # The SQL is used twice — wrapped in a COUNT for the total, and with a LIMIT for
 # the samples — so it must be a bare SELECT with no trailing clause of its own.
 #
-# `:cutoff` is bound to now - gc.RETENTION_MS, `:expenses_kind` to
-# sync.EXPENSES_KIND.
+# `:cutoff` is bound to now - gc.RETENTION_MS, `:invite_cutoff` to
+# now - gc.INVITE_GRACE_MS, `:expenses_kind` to sync.EXPENSES_KIND.
 
 _MISSING_ACCOUNT_CHECKS: list[tuple[str, str]] = [
     (
@@ -168,19 +168,23 @@ _CHECKS: list[tuple[str, str]] = [
     *_MISSING_ACCOUNT_CHECKS,
     # 2. Rows referencing a list that no longer exists.
     *_MISSING_LIST_CHECKS,
-    # 3. Invites past their usable life that survive beyond retention. The
-    #    condition mirrors gc._purge_dead_invites_for_live_lists exactly,
-    #    including its restriction to LIVE lists: a dead invite on a list that
-    #    is itself tombstoned but not yet past retention is deliberately kept
-    #    (it goes with the list, in the same statement, when the list is
-    #    purged), so counting it here would report the GC's own design as a
-    #    defect. What this does catch is a GC that is overdue or broken.
+    # 3. Invites past their usable life that survive beyond their grace window.
+    #    The condition mirrors gc._purge_dead_invites_for_live_lists exactly —
+    #    including `:invite_cutoff`, which is gc.INVITE_GRACE_MS (a week) and
+    #    NOT the tombstone retention window (T-219), and including the
+    #    restriction to LIVE lists: a dead invite on a list that is itself
+    #    tombstoned but not yet past retention is deliberately kept (it goes
+    #    with the list, in the same statement, when the list is purged), so
+    #    counting it here would report the GC's own design as a defect. What
+    #    this does catch is a GC that is overdue or broken — and, because the
+    #    rows hold a third party's email address, it is the check most worth
+    #    being told about.
     (
-        "invites_past_retention",
+        "invites_past_grace",
         "SELECT invites.id FROM invites JOIN lists ON lists.id = invites.list_id "
         "WHERE lists.deleted = 0 AND ("
-        "  (invites.used_at IS NOT NULL AND invites.used_at < :cutoff)"
-        "  OR (invites.used_at IS NULL AND invites.expires_at < :cutoff))",
+        "  (invites.used_at IS NOT NULL AND invites.used_at < :invite_cutoff)"
+        "  OR (invites.used_at IS NULL AND invites.expires_at < :invite_cutoff))",
     ),
     # 4. A live list nobody is a member of. Unreachable today — every path that
     #    removes a membership calls invites.orphan_check or invites.leave, and
@@ -270,7 +274,11 @@ def audit(conn: sqlite3.Connection, now_ms: int | None = None) -> list[Finding]:
     tombstone ages the way test_gc.py does.
     """
     now = _current_now_ms() if now_ms is None else now_ms
-    params = {"cutoff": now - gc.RETENTION_MS, "expenses_kind": EXPENSES_KIND}
+    params = {
+        "cutoff": now - gc.RETENTION_MS,
+        "invite_cutoff": now - gc.INVITE_GRACE_MS,
+        "expenses_kind": EXPENSES_KIND,
+    }
     findings = []
     for name, sql in _CHECKS:
         finding = _run_check(conn, name, sql, params)
@@ -285,8 +293,8 @@ def _tombstone_orphaned_live_lists(conn: sqlite3.Connection) -> list[str]:
     Reuses invites.clear_and_tombstone, so an orphan found here ends up in
     exactly the state invites.orphan_check would have left it in at the moment
     its last member left: items tombstoned, list tombstoned, change_seq bumped
-    for each, `deleted_by` = SERVER_ORPHAN. Retention then removes it 90 days
-    later like any other tombstone.
+    for each, `deleted_by` = SERVER_ORPHAN. Retention then removes it once
+    gc.RETENTION_MS has passed, like any other tombstone.
     """
     from . import invites  # deferred: invites -> auth -> this package's __init__
 

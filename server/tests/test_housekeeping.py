@@ -160,7 +160,9 @@ def _baseline(conn):
     _membership(conn, "a1", "t1")
     _item(conn, "i2", "t1", deleted=1, deleted_ts=NOW - 1000)
     _vote(conn, "t1", "a2")
-    _invite(conn, "inv-dead", "t1", "a1", expires_at=NOW - gc.RETENTION_MS - 1000)
+    # Long past its grace window: what keeps it out of the findings is that its
+    # list is tombstoned, not its age.
+    _invite(conn, "inv-dead", "t1", "a1", expires_at=NOW - gc.INVITE_GRACE_MS - 1000)
     conn.commit()
 
 
@@ -315,14 +317,14 @@ def test_a_dangling_reference_the_foreign_key_still_guards_cannot_be_created(db_
 # ---- the remaining checks ------------------------------------------------------
 
 
-def test_a_dead_invite_on_a_live_list_past_retention_is_reported(db_conn):
+def test_a_dead_invite_on_a_live_list_past_its_grace_window_is_reported(db_conn):
     _baseline(db_conn)
-    _invite(db_conn, "inv-stale", "l1", "a1", expires_at=NOW - gc.RETENTION_MS - 1000)
+    _invite(db_conn, "inv-stale", "l1", "a1", expires_at=NOW - gc.INVITE_GRACE_MS - 1000)
     db_conn.commit()
 
     findings = housekeeping.audit(db_conn, NOW)
 
-    assert _checks(findings) == ["invites_past_retention"]
+    assert _checks(findings) == ["invites_past_grace"]
     assert findings[0].samples == ("inv-stale",)
 
 
@@ -430,7 +432,7 @@ def test_sweep_tombstones_an_orphaned_live_list_instead_of_deleting_it(db_conn):
     assert result["lists_tombstoned"] == 1
     # Tombstoned, NOT hard-deleted: the row must survive so every device that
     # still holds the list converges on the deletion through sync, and
-    # retention takes it 90 days later like any other tombstone.
+    # retention takes it later like any other tombstone.
     row = db_conn.execute("SELECT deleted, deleted_by FROM lists WHERE id = 'orphan'").fetchone()
     assert row["deleted"] == 1
     assert row["deleted_by"] == invites.SERVER_ORPHAN

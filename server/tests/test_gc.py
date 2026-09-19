@@ -8,7 +8,14 @@ from shoppinglist_server.errors import ApiError
 PW = "password123"
 KEY = b"test-invite-hmac-key"
 BASE_URL = "http://testserver"
-NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
+DAY_MS = 24 * 60 * 60 * 1000
+# Ages are derived from the policy constants rather than written out, so these
+# tests go on testing the behaviour when the policy changes. The numbers
+# themselves are pinned once, in test_the_retention_policy_constants (T-219).
+PAST_RETENTION = gc.RETENTION_MS + DAY_MS
+WITHIN_RETENTION = gc.RETENTION_MS - DAY_MS
+PAST_INVITE_GRACE = gc.INVITE_GRACE_MS + DAY_MS
+WITHIN_INVITE_GRACE = gc.INVITE_GRACE_MS - DAY_MS
 NOW = 10_000_000_000_000  # arbitrary but comfortably larger than any retention window
 
 
@@ -122,13 +129,11 @@ def test_fresh_tombstone_survives(db_conn):
     assert _item_exists(db_conn, "item-1")
 
 
-def test_91_day_old_item_tombstone_is_purged(db_conn):
+def test_item_tombstone_past_retention_is_purged(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(
-        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
-    )
+    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - PAST_RETENTION)
 
     result = gc.run(db_conn, NOW)
 
@@ -138,13 +143,11 @@ def test_91_day_old_item_tombstone_is_purged(db_conn):
     assert _list_exists(db_conn, "list-1")
 
 
-def test_89_day_old_tombstone_survives(db_conn):
+def test_item_tombstone_within_retention_survives(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(
-        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (89 * 24 * 60 * 60 * 1000)
-    )
+    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - WITHIN_RETENTION)
 
     result = gc.run(db_conn, NOW)
 
@@ -165,9 +168,7 @@ def test_gc_horizon_advances_and_stale_cursor_then_gets_410(db_conn):
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
     baseline_cursor = sync.delta(db_conn, account_id, cursor=0, full_lists=[])["cursor"]
-    _delete_item(
-        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
-    )
+    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - PAST_RETENTION)
 
     gc.run(db_conn, NOW)
 
@@ -192,7 +193,7 @@ def test_orphaned_list_and_lingering_membership_purged_together(db_conn):
     # membership row so sibling devices see the tombstone (T-6). Back-date it
     # so it's eligible for purge.
     invites.leave(db_conn, account_id, "list-1")
-    old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
+    old_ts = NOW - PAST_RETENTION
     db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = ?", (old_ts, "list-1"))
     db_conn.execute("UPDATE items SET deleted_ts = ? WHERE list_id = ?", (old_ts, "list-1"))
     db_conn.commit()
@@ -252,7 +253,7 @@ def test_purging_a_list_also_removes_invites_referencing_it(db_conn):
 
     invites.leave(db_conn, owner, "list-1")  # invitee remains -> list survives
     invites.leave(db_conn, invitee, "list-1")  # last member -> orphans
-    old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
+    old_ts = NOW - PAST_RETENTION
     db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = 'list-1'", (old_ts,))
     db_conn.execute("UPDATE items SET deleted_ts = ? WHERE list_id = 'list-1'", (old_ts,))
     db_conn.commit()
@@ -276,7 +277,7 @@ def test_purging_a_list_removes_its_items_even_if_not_independently_old(db_conn)
     _create_list(db_conn, account_id, "devA")
     _create_item(db_conn, account_id, "devA", "item-1")
     invites.leave(db_conn, account_id, "list-1")  # orphans: list + item tombstoned together
-    old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
+    old_ts = NOW - PAST_RETENTION
     db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = ?", (old_ts, "list-1"))
     # Deliberately do NOT back-date the item's own deleted_ts (simulates any
     # skew between list and item tombstone timestamps).
@@ -298,14 +299,15 @@ def test_purging_a_list_removes_its_items_even_if_not_independently_old(db_conn)
 # Invites for lists that get hard-deleted are already handled above (cascade
 # delete alongside the list). These tests cover the *additive* case: a list
 # that is still alive, but whose invites have gone clearly dead (expired,
-# used, or revoked) and aged past the retention window. Purging these must
+# used, or revoked) and aged past gc.INVITE_GRACE_MS — a week, and
+# deliberately not the tombstone retention window (T-219). Purging these must
 # NOT advance gc_horizon — invites are not part of the sync change_seq stream.
 
 
-def test_expired_invite_older_than_retention_is_purged(db_conn):
+def test_expired_invite_past_the_grace_window_is_purged(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    old_expiry = NOW - PAST_INVITE_GRACE
     _insert_invite(
         db_conn,
         "inv-1",
@@ -327,10 +329,10 @@ def test_expired_invite_older_than_retention_is_purged(db_conn):
     assert _list_exists(db_conn, "list-1")  # the list itself is untouched, still live
 
 
-def test_used_invite_older_than_retention_is_purged(db_conn):
+def test_used_invite_past_the_grace_window_is_purged(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    old_used_at = NOW - NINETY_DAYS_MS - 1000
+    old_used_at = NOW - PAST_INVITE_GRACE
     _insert_invite(
         db_conn,
         "inv-1",
@@ -351,10 +353,10 @@ def test_used_invite_older_than_retention_is_purged(db_conn):
     assert not _invite_exists(db_conn, "inv-1")
 
 
-def test_revoked_invite_older_than_retention_is_purged(db_conn):
+def test_revoked_invite_past_the_grace_window_is_purged(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    old_expiry = NOW - PAST_INVITE_GRACE
     _insert_invite(
         db_conn,
         "inv-1",
@@ -401,7 +403,7 @@ def test_pending_unexpired_invite_is_kept(db_conn):
 def test_recently_expired_invite_within_window_is_kept(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    recent_expiry = NOW - (10 * 24 * 60 * 60 * 1000)  # expired 10 days ago
+    recent_expiry = NOW - WITHIN_INVITE_GRACE  # dead, but not yet a week dead
     _insert_invite(
         db_conn,
         "inv-1",
@@ -425,7 +427,7 @@ def test_recently_expired_invite_within_window_is_kept(db_conn):
 def test_recently_used_invite_within_window_is_kept(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    recent_used_at = NOW - (10 * 24 * 60 * 60 * 1000)
+    recent_used_at = NOW - WITHIN_INVITE_GRACE
     _insert_invite(
         db_conn,
         "inv-1",
@@ -449,7 +451,7 @@ def test_recently_used_invite_within_window_is_kept(db_conn):
 def test_dead_invite_purge_does_not_advance_gc_horizon(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    old_expiry = NOW - PAST_INVITE_GRACE
     _insert_invite(
         db_conn,
         "inv-1",
@@ -474,7 +476,7 @@ def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_c
     # old enough) removes them, not this additive live-list purge.
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
-    old_expiry = NOW - NINETY_DAYS_MS - 1000
+    old_expiry = NOW - PAST_INVITE_GRACE
     _insert_invite(
         db_conn,
         "inv-1",
@@ -500,6 +502,46 @@ def test_dead_invite_on_still_tombstoned_list_is_untouched_by_the_new_purge(db_c
     assert _invite_exists(db_conn, "inv-1")
 
 
+# ---- the two windows are two windows (T-219) ----------------------------------
+
+
+def test_the_retention_policy_constants():
+    """Pinned deliberately, in one place, because everything else in this file
+    derives its ages from them. Changing either number is a policy decision and
+    has to be made here, in the open."""
+    assert gc.RETENTION_MS == 45 * 24 * 60 * 60 * 1000  # six weeks
+    assert gc.INVITE_GRACE_MS == 7 * 24 * 60 * 60 * 1000  # one week
+
+
+def test_at_one_week_a_dead_invite_goes_and_a_tombstone_stays(db_conn):
+    """The two windows must not quietly collapse back into one.
+
+    At exactly the same age — a week and a day dead — the invite is purged and
+    the item tombstone is not. An invite is nobody's sync state and holds a
+    third party's email address; a tombstone is how an offline device learns
+    that a row was deleted.
+    """
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "dev")
+    _create_item(db_conn, account_id, "dev", "item-1")
+    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - PAST_INVITE_GRACE)
+    _insert_invite(
+        db_conn,
+        "inv-1",
+        "list-1",
+        account_id,
+        created_at=NOW - PAST_INVITE_GRACE - (7 * 24 * 60 * 60 * 1000),
+        expires_at=NOW - PAST_INVITE_GRACE,
+    )
+
+    result = gc.run(db_conn, NOW)
+
+    assert result["invites_purged"] == 1
+    assert not _invite_exists(db_conn, "inv-1")
+    assert result["items_purged"] == 0
+    assert _item_exists(db_conn, "item-1")
+
+
 # ---- maybe_run ----------------------------------------------------------------
 
 
@@ -507,9 +549,7 @@ def test_maybe_run_noops_within_24h(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(
-        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
-    )
+    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - PAST_RETENTION)
     db_conn.execute("UPDATE meta SET last_gc_at = ? WHERE id = 1", (NOW - 1000,))  # 1s ago
     db_conn.commit()
 
@@ -523,9 +563,7 @@ def test_maybe_run_runs_after_24h(db_conn, monkeypatch):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "dev")
     _create_item(db_conn, account_id, "dev", "item-1")
-    _delete_item(
-        db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000)
-    )
+    _delete_item(db_conn, account_id, "dev", "item-1", "list-1", ts=NOW - PAST_RETENTION)
     day = 24 * 60 * 60 * 1000
     db_conn.execute("UPDATE meta SET last_gc_at = ? WHERE id = 1", (NOW - day - 1,))
     db_conn.commit()
@@ -588,7 +626,7 @@ def test_sync_endpoint_triggers_opportunistic_gc(client, app, monkeypatch):
 
     config = get_config_by_name(app)
     conn = db_module.connect(config["database_path"])
-    old_ts = NOW - (91 * 24 * 60 * 60 * 1000)
+    old_ts = NOW - PAST_RETENTION
     conn.execute("UPDATE items SET deleted = 1, deleted_ts = ? WHERE id = 'item-http'", (old_ts,))
     conn.execute("UPDATE meta SET last_gc_at = 0")  # force opportunistic GC eligible
     conn.commit()
@@ -621,7 +659,7 @@ def test_gc_cli_runs(cli_runner, app, monkeypatch):
     account_id = _register(conn, "clitest@example.com")
     _create_list(conn, account_id, "dev")
     _create_item(conn, account_id, "dev", "item-1")
-    _delete_item(conn, account_id, "dev", "item-1", "list-1", ts=NOW - (91 * 24 * 60 * 60 * 1000))
+    _delete_item(conn, account_id, "dev", "item-1", "list-1", ts=NOW - PAST_RETENTION)
     conn.commit()  # apply_changes() never commits; the /sync route normally would
     conn.close()
 

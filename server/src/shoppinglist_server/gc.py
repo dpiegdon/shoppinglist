@@ -2,7 +2,33 @@
 
 from .auth import now_ms as _current_now_ms
 
-RETENTION_MS = 90 * 24 * 60 * 60 * 1000  # fixed 90-day tombstone retention (Spec §6)
+# Fixed tombstone retention (Spec §6). Six weeks, down from the original 90 days
+# (T-219).
+#
+# The window exists so a device that has been offline can still catch up
+# INCREMENTALLY: past it, its cursor has fallen below `meta.gc_horizon` and
+# `sync.check_cursor` answers `410 full_resync_required`, which both clients
+# handle by pushing their dirty rows first and then wiping and re-pulling from
+# cursor 0. So shortening the window costs a device idle longer than it one full
+# resync — never data.
+#
+# What it buys down is resurrection: a device that comes back after the window
+# holding a pending edit to a row that was deleted meanwhile pushes that edit,
+# and the tombstone it would have lost to is gone. Six weeks is judged long
+# enough for a phone left in a drawer over a holiday, and short enough that the
+# resurrection window is not a season.
+RETENTION_MS = 45 * 24 * 60 * 60 * 1000
+
+# How long a clearly-dead invite is kept after it died (T-219). Deliberately its
+# own constant and NOT RETENTION_MS: the two now answer different questions.
+# Tombstone retention is about how long an offline device may stay away and
+# still sync incrementally, and an invite is not part of that at all — invites
+# have no `change_seq`, nothing syncs them, so purging one early cannot affect
+# any client. What an invite row does hold is `invited_email`: a third party's
+# address, belonging to someone who may never have become a user of this server.
+# There is no reason to keep that around for a season.
+INVITE_GRACE_MS = 7 * 24 * 60 * 60 * 1000
+
 MAYBE_RUN_INTERVAL_MS = 24 * 60 * 60 * 1000  # opportunistic GC runs at most ~once/day
 
 
@@ -26,7 +52,9 @@ def run(conn, now_ms: int) -> dict:
 
     Finally, clearly-dead invites (expired, used, or revoked) on lists that
     are still alive are purged once they're old enough — see
-    `_purge_dead_invites_for_live_lists` below. This is additive to the
+    `_purge_dead_invites_for_live_lists` below. Their age is measured against
+    INVITE_GRACE_MS (7 days), not the tombstone retention window: see that
+    constant for why the two are separate (T-219). This is additive to the
     cascade delete above: invites on a list that itself just got purged are
     already gone by the time this step runs, so it only ever touches invites
     whose list survives. Invites are not part of the sync change_seq stream
@@ -71,7 +99,8 @@ def run(conn, now_ms: int) -> dict:
         conn.execute("DELETE FROM items WHERE id = ?", (row["id"],))
     items_purged += len(item_rows)
 
-    invites_purged = _purge_dead_invites_for_live_lists(conn, cutoff)
+    # Its own cutoff, on its own clock — INVITE_GRACE_MS, not RETENTION_MS (T-219).
+    invites_purged = _purge_dead_invites_for_live_lists(conn, now_ms - INVITE_GRACE_MS)
     sessions_purged = _purge_expired_sessions(conn, now_ms)
 
     if max_seq > 0:
@@ -91,22 +120,27 @@ def _purge_dead_invites_for_live_lists(conn, cutoff: int) -> int:
     """Hard-delete clearly-dead invites — expired, used, or revoked — that
     reference a still-LIVE list and are old enough to clear `cutoff`.
 
+    `cutoff` is `now - INVITE_GRACE_MS`, i.e. dead for a week, and is passed in
+    separately from the tombstone cutoff the rest of `run` works with (T-219).
+
     Invites for lists that get hard-deleted above are already gone by the
     time this runs, so this only ever touches lists with `deleted = 0`.
 
-    "Dead" here reduces to a single check per invite:
+    "Dead" here reduces to a single check per invite, and the age rule is
+    unchanged by T-219 — only the window it is measured against:
       - used: `used_at` is the moment it stopped being actionable, so age is
-        measured from `used_at` regardless of `expires_at`/`revoked` (this
-        also means a *recently*-used invite is kept even if its nominal
+        measured from `used_at` regardless of `expires_at`/`revoked`. A
+        *recently*-used invite is therefore kept even if its nominal
         `expires_at` is already old, per "keep recently-used ones so the
-        members screen history stays sensible").
+        members screen history stays sensible" — a week still covers that: the
+        history worth reading is "who joined, and when", and by then the
+        joiner is simply a member like any other.
       - not used: `expires_at` is used as the death marker for BOTH the
         naturally-expired and the revoked case. There's no dedicated
-        `revoked_at` column, but once `expires_at` is itself older than the
-        retention window the invite is unusable either way (it's long past
-        its own 7-day life), so this is a safe, conservative proxy — a
-        revoked invite is never purged earlier than an equivalent
-        never-revoked one would be.
+        `revoked_at` column, but once `expires_at` is itself a week in the past
+        the invite is unusable either way (it is past its own 7-day life on top
+        of that), so this is a safe, conservative proxy — a revoked invite is
+        never purged earlier than an equivalent never-revoked one would be.
 
     Does NOT touch `meta.gc_horizon` / `change_seq` — invites have no
     `change_seq` column and are not part of the sync stream.
