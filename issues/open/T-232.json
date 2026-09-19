@@ -1,0 +1,11 @@
+{
+  "body": "Supersedes 2.1.0, which is kept tagged (AGENTS.md: never re-cut). One fix, T-231: the cuneiform on the web login and About pages did not render \u2014 the SPA fallback swallowed the separately fetched svg, and Firefox refused the mask \u2014 so the sign is inlined and the server now serves any root-level bundle file. Patch version: a defect in 2.1.0 with no new behaviour; the APK is rebuilt by release.sh as always but nothing in it changed.",
+  "created_at": "2026-09-19T21:16:13+00:00",
+  "id": "T-232",
+  "labels": [
+    "ops"
+  ],
+  "priority": 1,
+  "title": "Release 2.1.1",
+  "updated_at": "2026-09-19T21:16:13+00:00"
+}
