@@ -1,0 +1,13 @@
+{
+  "body": "Three things cost a fresh machine an investigation today, each surfacing as a cryptic error minutes in:\na JRE with no javac (Gradle: \"toolchain does not provide JAVA_COMPILER\"); a JVM whose sun.jnu.encoding\nis not UTF-8 (Kotlin internal compiler error writing a class file for a test name containing an em\ndash); and the Android stage's --offline, which fails on any clone whose Gradle cache is cold. Add a\npreflight to verify-all.sh's Android stage that checks javac, the JVM's file.encoding/sun.jnu.encoding,\nand sdk.dir, and fails with one sentence each; and make --offline a fallback for a warm cache rather\nthan an unconditional flag.",
+  "created_at": "2026-09-19T20:35:34+00:00",
+  "id": "T-227",
+  "labels": [
+    "ops",
+    "reliability",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "verify-all.sh preflight: name a missing javac, a non-UTF-8 JVM, a cold Gradle cache \u2014 before Gradle does, cryptically",
+  "updated_at": "2026-09-19T20:35:34+00:00"
+}
