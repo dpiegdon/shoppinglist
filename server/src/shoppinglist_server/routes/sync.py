@@ -56,6 +56,16 @@ def register_routes(bp):
         full_lists = data.get("full_lists") or []
         if not isinstance(full_lists, list) or not all(isinstance(x, str) for x in full_lists):
             raise ApiError(422, "invalid_full_lists", "full_lists must be a list of strings.")
+        # Deduplicated before the cap (T-237): a repeated id costs delta another snapshot query
+        # pair and adds nothing, since the response merges rows by id. dict.fromkeys keeps
+        # first-seen order, so which entry a 403 not_a_member blames stays deterministic.
+        full_lists = list(dict.fromkeys(full_lists))
+        if len(full_lists) > sync_engine.MAX_FULL_LISTS_PER_SYNC:
+            raise ApiError(
+                422,
+                "invalid_full_lists",
+                f"full_lists may name at most {sync_engine.MAX_FULL_LISTS_PER_SYNC} lists.",
+            )
         changes = data.get("changes") or {}
 
         conn = get_db()

@@ -501,6 +501,60 @@ def test_sync_full_lists_not_a_list_422(client):
     assert resp.status_code == 422
 
 
+def test_sync_full_lists_over_the_cap_422(client):
+    """The pull side is capped too (T-237): each entry costs delta a snapshot query pair."""
+    token = _register_and_login(client)
+    over = [f"list-{n}" for n in range(sync.MAX_FULL_LISTS_PER_SYNC + 1)]
+
+    resp = client.post(
+        "/api/v1/sync",
+        json={"cursor": 0, "device_id": "devA", "full_lists": over, "changes": {}},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_full_lists"
+
+
+def test_sync_full_lists_at_the_cap_passes_validation(client):
+    """Exactly the cap is not over it — these ids name no list of the caller's, so the request
+    gets as far as the membership check and fails there, not at the cap."""
+    token = _register_and_login(client)
+    at_cap = [f"list-{n}" for n in range(sync.MAX_FULL_LISTS_PER_SYNC)]
+
+    resp = client.post(
+        "/api/v1/sync",
+        json={"cursor": 0, "device_id": "devA", "full_lists": at_cap, "changes": {}},
+        headers=_auth(token),
+    )
+
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "not_a_member"
+
+
+def test_sync_full_lists_repeats_are_deduplicated(client, monkeypatch):
+    """One id repeated thousands of times used to make delta snapshot it thousands of times
+    (T-237). It is now asked for once, and answered once."""
+    token = _register_and_login(client)
+    _seed_list(client, token)
+
+    asked_for = []
+    real_delta = sync.delta
+
+    def spy(conn, account_id, cursor, full_lists=None):
+        asked_for.append(list(full_lists or []))
+        return real_delta(conn, account_id, cursor, full_lists)
+
+    monkeypatch.setattr(sync, "delta", spy)
+
+    # 500 repeats: also above the cap, which the deduplication legitimately takes it under.
+    resp = _sync(client, token, cursor=0, device_id="devA", full_lists=["list-1"] * 500)
+
+    assert resp.status_code == 200
+    assert asked_for == [["list-1"]]
+    assert [row["id"] for row in resp.get_json()["changes"]["lists"]] == ["list-1"]
+
+
 def test_sync_device_id_non_string_422(client):
     token = _register_and_login(client)
     resp = client.post(

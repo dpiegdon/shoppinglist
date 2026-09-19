@@ -278,6 +278,11 @@ all live rows of any `full_lists`, plus the new cursor.
   a larger backlog over consecutive requests, lists first (a list must never
   arrive in a later request than items referencing it). The cap exists because
   applying a batch holds SQLite's single write lock for its whole duration.
+- **`full_lists` names at most 250 lists**, and is deduplicated before that cap is
+  applied — a repeated id is collapsed, and the response carries one snapshot of
+  each list either way. Over the cap the request is refused with
+  `422 invalid_full_lists`. Each entry costs the server a full snapshot of that
+  list, so the pull side is bounded just as a push is.
 - **A row naming a list the caller cannot write to** gets
   `422 unknown_list` + `row_id` — the *same* answer whether the list does not
   exist or exists but belongs to someone else, so a non-member cannot probe which
@@ -467,7 +472,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 413 | `payload_too_large` | The request body is over the size cap (4 MB by default). |
 | 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers a body that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`) — on any route that takes one. |
 | 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
-| 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. |
+| 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
 | 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`, or names a list the caller cannot write to. |
 | 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. |

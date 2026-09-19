@@ -135,6 +135,11 @@ CLOCK_SKEW_ALLOWANCE_MS = 60 * 60 * 1000  # 1 hour
 # above any real edit burst. Only a bulk import exceeds it, and clients chunk to stay under.
 # Note this bounds PUSHES only — a first-sync pull is a delta, which this does not touch.
 MAX_CHANGES_PER_SYNC = 250
+# The pull-side twin of the row cap (T-237): `delta` runs a snapshot query pair per
+# full_lists entry, so an uncapped list let one member multiply the read work of a single
+# request without pushing a single row. Same number as the push cap — a client joining more
+# lists than this at once can ask for the rest in the next sync.
+MAX_FULL_LISTS_PER_SYNC = MAX_CHANGES_PER_SYNC
 
 ITEM_TSBY = {key: (ts, by) for key, ts, by in ITEM_FIELD_META}
 LIST_TSBY = {key: (ts, by) for key, ts, by in LIST_FIELD_META}
