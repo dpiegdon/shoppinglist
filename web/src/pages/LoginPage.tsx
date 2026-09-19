@@ -72,12 +72,12 @@ export default function LoginPage() {
     >
       <form onSubmit={handleSubmit} className="card" style={{ padding: "2rem", width: "100%", maxWidth: "22rem" }}>
         {/* The brand mark over a centred title, as the app's login screen opens (T-213): the
-            favicon is the same silhouette ic_brand_logo draws, at the app's 72dp. */}
+            favicon and ic_brand_logo draw the same two paths (T-216), here at the app's 72dp. */}
         <img
           src={`${appBasename()}/favicon.svg`}
           alt=""
           width={72}
-          height={69}
+          height={72}
           style={{ display: "block", margin: "0 auto 0.75rem" }}
         />
         <h1 style={{ fontSize: "1.4rem", marginTop: 0, textAlign: "center" }}>{t("app.title")}</h1>

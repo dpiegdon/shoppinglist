@@ -1,0 +1,13 @@
+<!-- Status-bar icon (T-216). Android draws a notification's small icon as an alpha mask, so the
+     coloured mark would collapse into a solid rounded square there; this one is the slab with
+     the wedge rows cut out (even-odd fill), which the mask renders as a tablet with three lines. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M9 3H41C43.2 3 45 4.8 45 7V38C45 41.9 41.9 45 38 45H6C4.3 45 3 43.7 3 42V9C3 5.7 5.7 3 9 3ZM11 10.8L18 14L11 17.2ZM16 12.9L37 13.45L37 14.55L16 15.1ZM11 20.8L18 24L11 27.2ZM16 22.9L30 23.45L30 24.55L16 25.1ZM11 30.8L18 34L11 37.2ZM16 32.9L34 33.45L34 34.55L16 35.1Z" />
+</vector>

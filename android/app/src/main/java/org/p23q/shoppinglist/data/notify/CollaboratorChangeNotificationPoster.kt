@@ -84,7 +84,9 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
             context, 0, tapIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_brand_logo)
+            // Alpha-only, as the status bar draws small icons (T-216): the coloured mark would
+            // collapse into a solid square there.
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(pending)

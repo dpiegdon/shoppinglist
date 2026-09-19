@@ -1,23 +1,27 @@
-<!-- App/web brand mark (the web favicon's main silhouette). The favicon's glow/blur layers aren't
-     representable as a VectorDrawable, but its violet-to-blue gradient is (aapt:attr gradient, API
-     24+; minSdk is 26). Used on the login screen, the Overview top-right corner, and as the
-     launcher-icon foreground. -->
+<!-- The Tuppu mark (T-216): a clay tablet with three rows of cuneiform wedges, the list pressed
+     into it, in the app's violet-to-blue gradient. The web favicon draws the same two paths, so
+     both clients show the identical picture. Used on the login screen and the Overview corner;
+     the launcher foreground (ic_launcher_foreground.xml) and the notification icon
+     (ic_notification.xml) carry copies of the paths, since a drawable cannot include another. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="48dp"
-    android:height="46dp"
+    android:height="48dp"
     android:viewportWidth="48"
-    android:viewportHeight="46">
-    <path android:pathData="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z">
+    android:viewportHeight="48">
+    <path android:pathData="M9 3H41C43.2 3 45 4.8 45 7V38C45 41.9 41.9 45 38 45H6C4.3 45 3 43.7 3 42V9C3 5.7 5.7 3 9 3Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="0"
-                android:startY="0"
-                android:endX="48"
-                android:endY="44.938"
+                android:startX="3"
+                android:startY="3"
+                android:endX="45"
+                android:endY="45"
                 android:startColor="#863BFF"
                 android:endColor="#47BFFF" />
         </aapt:attr>
     </path>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11 10.8L18 14L11 17.2ZM16 12.9L37 13.45L37 14.55L16 15.1ZM11 20.8L18 24L11 27.2ZM16 22.9L30 23.45L30 24.55L16 25.1ZM11 30.8L18 34L11 37.2ZM16 32.9L34 33.45L34 34.55L16 35.1Z" />
 </vector>
