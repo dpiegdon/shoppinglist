@@ -1,0 +1,12 @@
+{
+  "body": "Six agents today each needed the same briefing: in a worktree, create your OWN server venv (the main\ncheckout's editable install imports the main checkout's code, not yours); symlink web/node_modules\nrather than npm install (it rewrites the lockfile and the gate now fails on drift); write\nandroid/local.properties; stop the Gradle daemon when done. Also the split that worked: agents commit\non their branch and never touch gittoc; the orchestrator reviews the diff, cherry-picks onto main, runs\nthe gate, closes the ticket, removes the worktree. And the commit trailer: every agent flagged that\nthe harness asks for a different Co-Authored-By than the repo uses \u2014 state the repo's exactly.",
+  "created_at": "2026-09-19T20:35:34+00:00",
+  "id": "T-228",
+  "labels": [
+    "docs",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "AGENTS.md: how agents work in worktrees, who closes tickets, and the exact commit trailer",
+  "updated_at": "2026-09-19T20:35:34+00:00"
+}
