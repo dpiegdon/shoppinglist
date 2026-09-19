@@ -248,7 +248,7 @@ describe("catalog registration (T-124)", () => {
   // not go through translate(), so this asserts the wiring rather than the content.
   it("resolves German through translate(), not just from the imported module", () => {
     expect(translate("de", "action.save")).toBe("Speichern");
-    expect(translate("de", "app.title")).toBe("Einkaufsliste");
+    expect(translate("de", "app.title")).toBe("Tuppu");
   });
 
   it("every shipped locale with a catalog file is actually registered", () => {
@@ -274,16 +274,20 @@ describe("catalog registration (T-124)", () => {
 });
 
 describe("the browser tab follows the language (T-148's review)", () => {
-  it("names the tab in the chosen language, not only the page", async () => {
+  it("names the tab from the app's own strings whichever language is chosen", async () => {
     const { renderHook, act } = await import("@testing-library/react");
     const { I18nProvider, useI18n } = await import("./index");
 
     const { result } = renderHook(() => useI18n(), { wrapper: I18nProvider });
 
+    // The product name is a proper noun since T-215, the same in every language — so the
+    // check is that the provider writes the title at all, for each locale, not that it differs.
+    document.title = "stale";
     act(() => result.current.setLocale("de"));
-    expect(document.title).toBe("Einkaufsliste");
+    expect(document.title).toBe("Tuppu");
+    document.title = "stale";
     act(() => result.current.setLocale("en"));
-    expect(document.title).toBe("Shopping List");
+    expect(document.title).toBe("Tuppu");
   });
 });
 

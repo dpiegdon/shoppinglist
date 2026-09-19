@@ -16,7 +16,7 @@ import type { Catalog } from "./en";
  * value is a number, while nothing here interpolates a Latin word directly against punctuation.
  */
 export const zhHans: Catalog = {
-  "app.title": "购物清单",
+  "app.title": "Tuppu",
 
   "ago.justNow": "刚刚",
   "ago.minutes": "{count} 分钟前",

@@ -1,4 +1,4 @@
-# Shopping List — Android client
+# Tuppu — Android client
 
 Jetpack Compose client for the shopping-list server (`server/`). Offline-first:
 it keeps a full local Room mirror and syncs to the server in the background, so

@@ -10,7 +10,7 @@
 -->
 <resources>
 
-    <string name="app_name">Liste de courses</string>
+    <string name="app_name">Tuppu</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Enregistrer</string>

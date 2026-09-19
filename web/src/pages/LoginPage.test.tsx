@@ -84,7 +84,7 @@ describe("LoginPage header (T-213)", () => {
     const mark = document.querySelector('img[src$="/favicon.svg"]') as HTMLImageElement | null;
     expect(mark).not.toBeNull();
     expect(mark!.getAttribute("width")).toBe("72");
-    const title = screen.getByRole("heading", { level: 1, name: "Shopping List" });
+    const title = screen.getByRole("heading", { level: 1, name: "Tuppu" });
     expect(title.style.textAlign).toBe("center");
   });
 });

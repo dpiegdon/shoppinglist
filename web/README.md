@@ -1,4 +1,4 @@
-# Shopping List — web client
+# Tuppu — web client
 
 React + TypeScript SPA for the shopping-list server (`../server/`). Online
 only (no offline storage) — same-origin with its own API by construction, so

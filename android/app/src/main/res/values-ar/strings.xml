@@ -10,7 +10,7 @@
 -->
 <resources>
 
-    <string name="app_name">قائمة التسوق</string>
+    <string name="app_name">Tuppu</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_ok">حسنًا</string>
     <string name="action_save">حفظ</string>

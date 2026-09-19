@@ -17,7 +17,7 @@ import type { Catalog } from "./en";
  * Punctuation is full-width (：、。？). Numbers stay ASCII, matching the wire format (T-125).
  */
 export const ja: Catalog = {
-  "app.title": "買い物リスト",
+  "app.title": "Tuppu",
 
   "ago.justNow": "たった今",
   "ago.minutes": "{count} 分前",

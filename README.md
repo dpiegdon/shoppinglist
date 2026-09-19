@@ -1,6 +1,7 @@
-# Shopping List
+# Tuppu
 
-A self-hosted app for shared lists, of three kinds:
+Tuppu (Akkadian: a clay tablet) is a self-hosted app for shared lists, of three
+kinds:
 
 - **Shopping lists** remember every item ever added. Items move between
   *backlog* (known, not needed), *todo* (to buy) and *checked* (bought), and
@@ -24,6 +25,10 @@ offline and syncs when it can.
 | [`android/`](android/README.md) | Kotlin/Compose client with a local Room mirror. Installable from a running server at `/shoppinglist.apk`. |
 | `shared-test-cases/` | Case tables both clients are tested against (expense arithmetic, name order), so the two cannot drift apart. |
 | [`docs/wire-contract.md`](docs/wire-contract.md) | The client/server interface, and the authority on it. Past design documents are in [`docs/archive/`](docs/archive/README.md). |
+
+The repository, the Python package (`shoppinglist_server`), the APK's download
+path and the Android application id keep the project's original name,
+`shoppinglist`: changing the application id would strand every installed app.
 
 ## Quick start
 

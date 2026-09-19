@@ -10,7 +10,7 @@
 -->
 <resources>
 
-    <string name="app_name">购物清单</string>
+    <string name="app_name">Tuppu</string>
     <string name="action_cancel">取消</string>
     <string name="action_ok">确定</string>
     <string name="action_save">保存</string>

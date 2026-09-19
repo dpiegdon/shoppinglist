@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Shopping List Invite</title>
+  <title>Tuppu invite</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -36,7 +36,7 @@
 </head>
 <body>
 {% if state == "valid" %}
-  <h1>You've been invited to a shopping list</h1>
+  <h1>You've been invited to a list on Tuppu</h1>
   <p>This invite is for <strong>{{ invited_email }}</strong>.</p>
   <p><a class="button" href="{{ intent_url }}">Open in app</a></p>
   {% if web_redeem_url %}

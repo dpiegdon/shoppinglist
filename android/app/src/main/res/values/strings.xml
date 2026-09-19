@@ -9,7 +9,7 @@
   nothing extra beyond translation.
 -->
 <resources>
-    <string name="app_name">Shopping List</string>
+    <string name="app_name">Tuppu</string>
 
     <!-- generic actions, reused across screens -->
     <string name="action_cancel">Cancel</string>

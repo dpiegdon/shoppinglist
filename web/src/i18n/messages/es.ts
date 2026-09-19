@@ -12,7 +12,7 @@ import type { Catalog } from "./en";
  * state actually means to a user; the hint string carries the precise definition.
  */
 export const es: Catalog = {
-  "app.title": "Lista de la compra",
+  "app.title": "Tuppu",
 
   "ago.justNow": "ahora mismo",
   "ago.minutes": "hace {count} min",

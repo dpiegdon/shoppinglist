@@ -18,7 +18,7 @@ import type { Catalog } from "./en";
  *   Eastern Arabic numerals into UI labels next to ASCII-only inputs reads inconsistently.
  */
 export const ar: Catalog = {
-  "app.title": "قائمة التسوق",
+  "app.title": "Tuppu",
 
   "ago.justNow": "الآن",
   "ago.minutes": "قبل {count} د",

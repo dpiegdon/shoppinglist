@@ -18,7 +18,7 @@
  *   translate for nothing, so the catalog is pruned rather than pre-populated.
  */
 export const en = {
-  "app.title": "Shopping List",
+  "app.title": "Tuppu",
 
   // ---- shared relative-time labels ----
   // One set, used by both the session list and the sync indicator: the wording is identical, so

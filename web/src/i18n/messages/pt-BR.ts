@@ -15,7 +15,7 @@ import type { Catalog } from "./en";
  * it is worth a reviewer knowing which variant this is meant to be.
  */
 export const ptBR: Catalog = {
-  "app.title": "Lista de compras",
+  "app.title": "Tuppu",
 
   "ago.justNow": "agora mesmo",
   "ago.minutes": "há {count} min",

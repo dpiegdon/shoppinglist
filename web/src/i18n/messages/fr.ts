@@ -14,7 +14,7 @@ import type { Catalog } from "./en";
  * the difference is typographic rather than semantic — worth raising with a native reviewer.
  */
 export const fr: Catalog = {
-  "app.title": "Liste de courses",
+  "app.title": "Tuppu",
 
   "ago.justNow": "à l'instant",
   "ago.minutes": "il y a {count} min",

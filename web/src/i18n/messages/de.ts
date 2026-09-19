@@ -17,7 +17,7 @@ import type { Catalog } from "./en";
  *   on this trip's list". The hint string carries the actual explanation.
  */
 export const de: Catalog = {
-  "app.title": "Einkaufsliste",
+  "app.title": "Tuppu",
 
   "ago.justNow": "gerade eben",
   "ago.minutes": "vor {count} Min",

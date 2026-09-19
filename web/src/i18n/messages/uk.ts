@@ -16,7 +16,7 @@ import type { Catalog } from "./en";
  * пошта" not "почта", and the vocative is avoided since the app never addresses a user by name.
  */
 export const uk: Catalog = {
-  "app.title": "Список покупок",
+  "app.title": "Tuppu",
 
   "ago.justNow": "щойно",
   "ago.minutes": "{count} хв тому",
