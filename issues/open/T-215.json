@@ -1,0 +1,12 @@
+{
+  "body": "Maintainer's decision (2026-09-19): the app is called \"Tuppu\" (Akkadian: a clay tablet) \u2014 \"Shopping List\" now names one of three list kinds and no longer fits as the product name.\n\nScope: the user-facing name only. app.title (web, 9 locales) and app_name (Android, 9 locales) become the proper noun \"Tuppu\", untranslated; web/index.html <title>; the invite landing page title; README.md, android/README.md, web/README.md headings and a line saying what the name means; server/pyproject.toml description. Tests that assert the old name (web i18n.test.ts document.title and translate(\"de\",\"app.title\"), LoginPage.test.tsx heading, any Android test) follow.\n\nOut of scope, deliberately: every technical identifier stays \u2014 applicationId org.p23q.shoppinglist (changing it strands every installed app), the shoppinglist_server package and wheel, the /shoppinglist.apk route the update checker polls, the repo name, and the \"Shopping list\" LIST KIND label, which is a kind, not the product.",
+  "created_at": "2026-09-19T11:04:41+00:00",
+  "id": "T-215",
+  "labels": [
+    "feature",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Rebrand the product name to Tuppu on both clients, the invite page and the docs",
+  "updated_at": "2026-09-19T11:04:41+00:00"
+}
