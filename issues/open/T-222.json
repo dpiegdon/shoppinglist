@@ -1,0 +1,12 @@
+{
+  "body": "gittoc moved its authoritative repository from codeberg.org/dpiegdon/gittoc to\ngithub.com/dpiegdon/gittoc (upstream commit 22fd7b0, \"switch authoritative repository to github\").\n\nTwo things: the root README's attribution link still points at codeberg, and the vendored copy at\n.agents/skills/gittoc/ is one file behind main \u2014 its own README.md still gives the codeberg clone\nURL and lists GitHub as a mirror. Everything else in the vendored copy already matches upstream\nmain byte for byte, and the version is unchanged at 0.8.0, so this is a link resync, not a tool\nupgrade: no CLI behaviour or tracker data format changes.\n\nLeft deliberately unvendored, as before: upstream's own dev tooling and repo files (.isort.cfg,\nAGENTS.md, scripts/dev/check, scripts/dev/requirements.txt, assets/gittoc_logo.png). AGENTS.md\nespecially \u2014 a second AGENTS.md inside this repo would be read as instructions for work here.",
+  "created_at": "2026-09-19T19:28:52+00:00",
+  "id": "T-222",
+  "labels": [
+    "docs",
+    "chore"
+  ],
+  "priority": 3,
+  "title": "The gittoc link points at the new GitHub upstream, and the vendored copy is resynced to main",
+  "updated_at": "2026-09-19T19:28:52+00:00"
+}
