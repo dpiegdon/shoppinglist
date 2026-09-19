@@ -1,0 +1,12 @@
+{
+  "body": "Android LoginScreen shows ic_brand_logo at 72dp, centred, with the app name under it; the web login card opens with the bare title. Show the same mark (the web favicon.svg is the same silhouette) above a centred title so the two login screens match.",
+  "created_at": "2026-09-19T10:47:10+00:00",
+  "id": "T-213",
+  "labels": [
+    "ux",
+    "feature"
+  ],
+  "priority": 3,
+  "title": "Web: the login page shows the brand mark above the title, as the app's login screen does",
+  "updated_at": "2026-09-19T10:47:10+00:00"
+}
