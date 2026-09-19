@@ -1,0 +1,12 @@
+{
+  "body": "Server admin is reached from inside normal user settings on both clients: web SettingsPage.tsx:163\n(a Link to /admin) and Android SettingsScreen.kt:91 (a Button), both shown only when the account is\nan admin. It belongs beside Settings in the main menu instead \u2014 administering the server is not a\npersonal preference.\n\nBoth menus currently hold Overview, Join list, Settings, Log out: web AppShell.tsx's burger nav,\nAndroid the ModalDrawerSheet's NavigationDrawerItem list in Nav.kt (~line 455). Add a \"Server admin\"\nentry after Settings, shown only to an admin, and remove the entry from the settings screens. The\nroute stays as it is on both (/admin, Routes.ADMIN).\n\nWeb already has the flag in the shell: useAuth()'s account.isAdmin, and AppShell already reads\naccount.email. The Android drawer has no session state today; SessionStore.isAdmin exists (it is\nwhat SettingsViewModel reads at line 102), so the drawer needs it wired through.\n\nThe existing label string (nav_server_admin / its web twin) is reused \u2014 no new string.",
+  "created_at": "2026-09-19T17:02:28+00:00",
+  "id": "T-220",
+  "labels": [
+    "ux",
+    "ready"
+  ],
+  "priority": 3,
+  "title": "Server admin gets its own entry in the main menu, out of user settings",
+  "updated_at": "2026-09-19T17:02:28+00:00"
+}
