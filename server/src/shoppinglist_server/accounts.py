@@ -64,7 +64,13 @@ def change_email(
     # Pending invites bound to the old address stop matching automatically:
     # redemption always compares against the account's *current* email (S6).
     try:
-        conn.execute("UPDATE accounts SET email = ? WHERE id = ?", (new_email, account_id))
+        # email_set_at moves with the address: the account holds the new one only
+        # from now on, so the invite inbox offers it nothing that was minted for
+        # that address earlier (T-234).
+        conn.execute(
+            "UPDATE accounts SET email = ?, email_set_at = ? WHERE id = ?",
+            (new_email, auth.now_ms(), account_id),
+        )
     except sqlite3.IntegrityError as exc:
         raise ApiError(409, "email_taken", "An account with this email already exists.") from exc
     invites.touch_lists_of_account(conn, account_id)  # the roster shows the address (T-152)

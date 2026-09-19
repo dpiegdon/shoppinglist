@@ -434,6 +434,13 @@ Known, accepted trade-off:
   the same `invalid_credentials` for an unknown email and a wrong password, and
   performs the same scrypt verify either way, so the two are not distinguishable
   by timing.
+- **Invite addresses are a claim, not an identity.** Nothing verifies that an
+  invited email belongs to the account that holds it, so `GET /invites/pending`
+  hands out an invite's token only to an account that already held the address
+  when the invite was minted (`accounts.email_set_at`). An invite to an address
+  with no account yet is reachable only through the link the inviter passes on
+  out of band, which is the check that email verification would otherwise
+  provide.
 
 ## Audit log
 

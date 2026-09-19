@@ -306,3 +306,60 @@ def test_fresh_schema_and_migration_8_agree_on_the_housekeeping_columns(tmp_path
         assert _columns(fresh, table) == _columns(migrated, table), table
     fresh.close()
     migrated.close()
+
+
+def test_migration_9_backfills_email_set_at_from_created_at(tmp_path):
+    """Nothing recorded when an existing account took its address, so the
+    migration credits it with the one instant that is certain to be no later:
+    registration (T-234)."""
+    path = tmp_path / "pre_t234.db"
+    conn = sqlite3.connect(str(path))
+    conn.row_factory = sqlite3.Row
+    # accounts as it existed before migration 9.
+    conn.execute(
+        "CREATE TABLE accounts (id TEXT PRIMARY KEY, email TEXT NOT NULL, "
+        "password_hash TEXT NOT NULL, created_at INTEGER NOT NULL)"
+    )
+    for account_id, created_at in [("a1", 1000), ("a2", 1700000000000)]:
+        conn.execute(
+            "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, 'x', ?)",
+            (account_id, f"{account_id}@example.com", created_at),
+        )
+    conn.commit()
+
+    for statement in dict(migrations_module.MIGRATIONS)[9]:
+        conn.execute(statement)
+    conn.commit()
+
+    assert {
+        row["id"]: row["email_set_at"]
+        for row in conn.execute("SELECT id, email_set_at FROM accounts").fetchall()
+    } == {"a1": 1000, "a2": 1700000000000}
+    conn.close()
+
+
+def test_fresh_schema_and_migration_9_agree_on_the_accounts_columns(tmp_path):
+    """schema.sql and the migration must produce the same end state (see the
+    migrations.py docstring) — column names, types, NOT NULL and DEFAULT."""
+    fresh = db_module.connect(str(tmp_path / "fresh_t234.db"))
+    db_module.init_db(fresh)
+
+    migrated = sqlite3.connect(str(tmp_path / "migrated_t234.db"))
+    migrated.row_factory = sqlite3.Row
+    migrated.execute(
+        "CREATE TABLE accounts (id TEXT PRIMARY KEY, email TEXT NOT NULL, "
+        "password_hash TEXT NOT NULL, created_at INTEGER NOT NULL)"
+    )
+    for statement in dict(migrations_module.MIGRATIONS)[9]:
+        migrated.execute(statement)
+    migrated.commit()
+
+    def _columns(conn):
+        return [
+            (row["name"], row["type"], row["notnull"], row["dflt_value"])
+            for row in conn.execute("PRAGMA table_info(accounts)").fetchall()
+        ]
+
+    assert _columns(fresh) == _columns(migrated)
+    fresh.close()
+    migrated.close()

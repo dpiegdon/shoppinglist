@@ -640,6 +640,45 @@ def test_pending_hides_an_invite_to_a_closed_or_deleted_list(db_conn):
     assert _pending(db_conn, me, "me@example.com") == []
 
 
+def test_pending_offers_an_invite_to_the_account_that_already_held_the_address(db_conn):
+    """The use case the inbox exists for: the invitee has an account, and the address
+    on the invite has been theirs all along (T-234)."""
+    me = _register(db_conn, "me@example.com")
+    owner = _register(db_conn, "owner@example.com")
+    _create_list(db_conn, owner, "dev")
+    invites.mint(db_conn, KEY, BASE_URL, "list-1", "me@example.com", owner)
+
+    assert [entry["list_id"] for entry in _pending(db_conn, me, "me@example.com")] == ["list-1"]
+
+
+def test_pending_hides_an_invite_minted_before_the_account_registered(db_conn):
+    """An invited address is an unverified claim. Inviting one that has no account yet is
+    the ordinary case, so whoever registers it afterwards must not be handed the token
+    (T-234) — they can only join through the link the inviter sent them."""
+    owner = _register(db_conn, "owner@example.com")
+    _create_list(db_conn, owner, "dev")
+    minted = invites.mint(db_conn, KEY, BASE_URL, "list-1", "invitee@example.com", owner)
+    squatter = _register(db_conn, "invitee@example.com")
+
+    assert _pending(db_conn, squatter, "invitee@example.com") == []
+    # redeem is untouched: the real invitee, holding the link, still joins.
+    account = auth.Account(id=squatter, email="invitee@example.com")
+    assert invites.redeem(db_conn, KEY, account, minted["token"]) == "list-1"
+
+
+def test_pending_hides_an_invite_from_an_account_that_took_the_address_later(db_conn):
+    """Renaming an account onto an invited address is the same claim by another route:
+    the account existed before the invite, but did not hold that address (T-234)."""
+    owner = _register(db_conn, "owner@example.com")
+    other = _register(db_conn, "other@example.com")
+    _create_list(db_conn, owner, "dev")
+    invites.mint(db_conn, KEY, BASE_URL, "list-1", "invitee@example.com", owner)
+
+    accounts.change_email(db_conn, other, PW, "invitee@example.com")
+
+    assert _pending(db_conn, other, "invitee@example.com") == []
+
+
 def test_pending_invites_http_then_join_with_the_token(client):
     owner_token = _register_and_login_http(client, "owner8@example.com")
     me_token = _register_and_login_http(client, "me8@example.com")

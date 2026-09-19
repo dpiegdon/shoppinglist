@@ -2,7 +2,15 @@ CREATE TABLE IF NOT EXISTS accounts (
     id TEXT PRIMARY KEY,
     email TEXT NOT NULL,
     password_hash TEXT NOT NULL,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    -- When this account started holding its CURRENT address: created_at at
+    -- registration, and the moment of the change on every later email change
+    -- (T-234). The invite inbox (GET /invites/pending) only offers invites minted
+    -- after this instant, so an address that appears in an invite cannot be
+    -- claimed afterwards by registering it or by renaming an account onto it.
+    -- The DEFAULT is what migration 9 needed to add the column to an existing
+    -- table; both writers pass a value explicitly.
+    email_set_at INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email_lower ON accounts (lower(email));
 

@@ -249,6 +249,11 @@ still accept — not used, revoked or expired, on a list that exists and is not
 closed — and whose list the caller is not already on. Each entry carries the
 invite's own `token`, so joining from the overview is an ordinary redeem; the
 token admits only this address, which the caller already holds. Oldest first.
+An invite is only listed if the account already held the address when the invite
+was minted; email addresses are not verified, so an invite to an address that had
+no account yet is never offered to whoever registers or renames onto it
+afterwards. They still join through the invite link, which `POST /invites/redeem`
+accepts unchanged.
 
 ### Sync
 

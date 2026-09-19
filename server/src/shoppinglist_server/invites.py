@@ -170,6 +170,14 @@ def pending_for(conn, key: bytes, account) -> list[dict]:
     is the credential the share URL hands the same person, and it admits only this address, so
     the addressee learns nothing they were not meant to hold — and joining from the overview is
     `redeem`, with every check that path has, rather than a second grant path.
+
+    Handing the token out on the strength of the address alone is why the inbox is narrower than
+    `redeem`: an invited address is an unverified claim, so an invite is only offered to an
+    account that already held the address when the invite was minted (T-234). Otherwise an
+    inviter typing an address that has no account yet — the ordinary case — would be inviting
+    whoever registers it first, or renames their own account onto it. Someone who registers
+    afterwards is not shut out; they join through the link the inviter sent them, exactly as
+    before, and `redeem` is unchanged.
     """
     rows = conn.execute(
         "SELECT invites.id AS id, invites.list_id AS list_id, "
@@ -177,15 +185,18 @@ def pending_for(conn, key: bytes, account) -> list[dict]:
         "lists.name AS list_name, lists.kind AS list_kind, "
         "inviter.email AS inviter_email, inviter_settings.initials AS inviter_initials "
         "FROM invites JOIN lists ON lists.id = invites.list_id "
+        "JOIN accounts AS me ON me.id = ? "
         "JOIN accounts AS inviter ON inviter.id = invites.created_by "
         "JOIN account_settings AS inviter_settings ON inviter_settings.account_id = inviter.id "
         "WHERE lower(invites.invited_email) = lower(?) "
+        # The address has to predate the invite, or the invite is not this account's (T-234).
+        "AND me.email_set_at < invites.created_at "
         "AND invites.revoked = 0 AND invites.used_at IS NULL AND invites.expires_at > ? "
         "AND lists.deleted = 0 AND lists.closed_at IS NULL "
         "AND NOT EXISTS (SELECT 1 FROM memberships "
         "WHERE memberships.list_id = lists.id AND memberships.account_id = ?) "
         "ORDER BY invites.created_at",
-        (account.email, now_ms(), account.id),
+        (account.id, account.email, now_ms(), account.id),
     ).fetchall()
     return [
         {

@@ -171,8 +171,11 @@ def register(conn: sqlite3.Connection, email: str | None, password: str | None) 
 
     try:
         conn.execute(
-            "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-            (account_id, email, password_hash, now),
+            "INSERT INTO accounts (id, email, password_hash, created_at, email_set_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            # The address is held from this instant on, which is what the invite
+            # inbox compares an invite's age against (T-234).
+            (account_id, email, password_hash, now, now),
         )
     except sqlite3.IntegrityError as exc:
         raise ApiError(409, "email_taken", "An account with this email already exists.") from exc

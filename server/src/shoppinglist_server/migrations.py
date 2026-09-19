@@ -108,6 +108,22 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "ALTER TABLE server_runtime ADD COLUMN audit_boot_id TEXT",
         ],
     ),  # T-218: housekeeping sweep bookkeeping (last sweep, and the run it ran for)
+    (
+        9,
+        [
+            # The DEFAULT only exists because SQLite cannot add a NOT NULL column
+            # without one; the backfill below immediately replaces it, and
+            # schema.sql carries the same default so a fresh and a migrated
+            # database are identical.
+            "ALTER TABLE accounts ADD COLUMN email_set_at INTEGER NOT NULL DEFAULT 0",
+            # Backfill from created_at. An account that never changed its address
+            # has held it since registration, which is the truth; one that did
+            # change it gets an earlier instant than the real one, which only
+            # keeps invites already visible before the upgrade visible. Nothing
+            # recorded the change, so this is the most that can be reconstructed.
+            "UPDATE accounts SET email_set_at = created_at",
+        ],
+    ),  # T-234: when the account started holding its current email address
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0
