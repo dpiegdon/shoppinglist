@@ -1,0 +1,11 @@
+{
+  "body": "Security review of the server API (2026-09-19), finding 4 of 4. Low.\n\n`POST /sync` accepts `full_lists` as any list of strings: no length cap and no deduplication. `delta` runs a full snapshot query pair per entry, so one authenticated member can send the same big list id thousands of times in one 4 MB request and multiply the read work (the response is deduplicated by dict, the queries are not). The row cap `too_many_changes` (T-114) only bounds pushes.\n\nFix: deduplicate (`set`) and cap `full_lists` \u2014 250 entries, the same scale as MAX_CHANGES_PER_SYNC \u2014 answering `422 invalid_full_lists` above it (an existing code; no client change). Test: 251 entries rejected, duplicates collapsed to one query.",
+  "created_at": "2026-09-19T22:13:55+00:00",
+  "id": "T-237",
+  "labels": [
+    "server"
+  ],
+  "priority": 4,
+  "title": "sync: deduplicate and cap full_lists",
+  "updated_at": "2026-09-19T22:13:55+00:00"
+}
