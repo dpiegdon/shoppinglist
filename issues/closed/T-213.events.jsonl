@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-19T10:47:10+00:00", "kind": "created", "ref": "main@ccad969", "text": "Web: the login page shows the brand mark above the title, as the app's login screen does"}
 {"actor": "user", "at": "2026-09-19T10:49:48+00:00", "kind": "note", "ref": "main@c2678fa", "text": "Fixed in c2678fa: favicon.svg (prefix-aware via appBasename) at 72x69 above a centred h1 on the login card. Web-only markup; the web stage of the gate (vitest 405, tsc, lint) is green and no server or Android file changed."}
+{"actor": "user", "at": "2026-09-19T10:49:48+00:00", "kind": "closed", "ref": "main@c2678fa", "text": ""}
