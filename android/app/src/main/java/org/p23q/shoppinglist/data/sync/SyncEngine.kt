@@ -134,7 +134,10 @@ class SyncEngine @Inject constructor(
                 // state changed. The Wire Contract answers 422-with-row_id precisely so the device
                 // parks the row instead.
                 if (itemDao.getById(badRowId) != null) {
-                    itemDao.blockRow(badRowId)
+                    // The refusal rides along with the quarantine (T-200): the row is the only place
+                    // that can later say why it was parked, and a push queue empties while nobody
+                    // is looking — by the time anyone sees it, this exception is long gone.
+                    itemDao.blockRow(badRowId, e.code, e.accountId)
                     return syncNow(fullLists)
                 }
                 if (listDao.getById(badRowId) != null) {
@@ -350,6 +353,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
     val mergedDirty = name.dirty || category.dirty || stores.dirty || quantity.dirty || price.dirty ||
         note.dirty || status.dirty || expense.dirty || deleted.dirty
+    val stillBlocked = local.syncBlocked && mergedDirty
 
     return ItemEntity(
         id = local.id,
@@ -368,8 +372,11 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
         // A quarantined row stays quarantined only while it still has unpushed local state; once a
         // merge leaves nothing dirty (remote fully superseded the local edits) the block is moot.
         // A user edit clears it regardless (ItemsRepo). syncBlocked isn't a synced field, so it's
-        // taken from the local row, never the remote DTO.
-        syncBlocked = local.syncBlocked && mergedDirty,
+        // taken from the local row, never the remote DTO. The refusal goes with it (T-200): it
+        // describes a value that is no longer what the row holds.
+        syncBlocked = stillBlocked,
+        syncBlockedCode = local.syncBlockedCode.takeIf { stillBlocked },
+        syncBlockedAccountId = local.syncBlockedAccountId.takeIf { stillBlocked },
         // Not an LWW field (T-64) — always mirrors the server's latest report, unconditionally.
         lastTouchedByAccountId = remote.lastTouchedBy,
     )

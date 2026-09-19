@@ -297,4 +297,5 @@
     <string name="api_error_voted_to_close">Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.</string>
     <string name="expense_delete_blocked">Diese Ausgabe kann nicht gelöscht werden: Sie betrifft jemanden, dessen Beträge festgeschrieben sind.</string>
     <string name="expense_error_frozen">Die Beträge von %1$s sind festgeschrieben: Die Person hat dem Abschluss zugestimmt oder die Liste verlassen.</string>
+    <string name="expense_not_saved">Nicht in der Liste gespeichert</string>
 </resources>

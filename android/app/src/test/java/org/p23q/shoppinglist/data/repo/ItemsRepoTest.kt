@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -283,12 +284,15 @@ class ItemsRepoTest {
     @Test
     fun `a quarantined row is skipped by dirtyRows but re-editing it clears the block`() = runTest {
         val itemId = repo.createItem(listId = "list-1", name = "Milk")
-        db.itemDao().blockRow(itemId)
+        db.itemDao().blockRow(itemId, "participant_frozen", "acct-other")
 
         // Quarantined: still in the mirror, but not offered for push.
         assertEquals(1, repo.blockedRowCount())
         assertFalse(repo.dirtyRows().any { it.id == itemId })
         assertTrue(repo.getById(itemId)!!.syncBlocked)
+        // The server's reason is parked with it (T-200), for the row to show.
+        assertEquals("participant_frozen", repo.getById(itemId)!!.syncBlockedCode)
+        assertEquals("acct-other", repo.getById(itemId)!!.syncBlockedAccountId)
 
         // Editing the row (fixing the bad value) clears the block and re-queues it.
         repo.setQuantity(itemId, "2l")
@@ -296,5 +300,8 @@ class ItemsRepoTest {
         assertFalse(repo.getById(itemId)!!.syncBlocked)
         assertTrue(repo.dirtyRows().any { it.id == itemId })
         assertEquals(0, repo.blockedRowCount())
+        // And the reason goes with it: it described a value this row no longer holds (T-200).
+        assertNull(repo.getById(itemId)!!.syncBlockedCode)
+        assertNull(repo.getById(itemId)!!.syncBlockedAccountId)
     }
 }

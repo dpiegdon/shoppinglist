@@ -222,6 +222,7 @@ export const ptBR: Catalog = {
   "expense.frozenVoter": "concordou em encerrar — valores fixados",
   "expense.frozenFormer": "não é mais integrante — valores fixados",
   "expense.error.frozen": "Os valores de {who} estão fixados: essa pessoa concordou em encerrar a lista ou saiu dela.",
+  "expense.notSaved": "Não salvo na lista",
   "expense.error.closed": "Esta lista foi encerrada e não pode mais ser alterada.",
   "expense.settleUp": "Acertar contas",
   "expense.transfer": "{from} paga {to}",

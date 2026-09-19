@@ -193,6 +193,52 @@ class ExpenseClosingTest {
         assertEquals(dinnerId, opened)
     }
 
+    // ---- a write the server refused (T-200) ------------------------------------
+
+    /** What SyncEngine leaves on a row the server refused: parked, with the reason on it. */
+    private suspend fun park(code: String?, accountId: String? = null) =
+        db.itemDao().blockRow(dinnerId, code, accountId)
+
+    @Test
+    fun `a refused expense says on the list why it was not saved, naming the person`() = runBlocking<Unit> {
+        // The race the form cannot pre-empt: other voted while this edit sat in the push queue.
+        park("participant_frozen", other)
+        showList()
+
+        composeTestRule.onNodeWithText("The amounts of OT are fixed", substring = true).assertIsDisplayed()
+        // The mark is on the row, so it is also what TalkBack hears there.
+        composeTestRule.onNodeWithContentDescription("Not saved to the list").assertExists()
+    }
+
+    @Test
+    fun `the form opens with the reason at the top, in its own labelling`() = runBlocking<Unit> {
+        park("participant_frozen", other)
+        showDinner()
+
+        composeTestRule.onNodeWithText("Not saved to the list").assertIsDisplayed()
+        // The form names people by email, as its share rows do, not by the list's initials.
+        composeTestRule
+            .onNodeWithText("The amounts of $other@example.com are fixed", substring = true)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `a refusal this build cannot explain still marks the row`() = runBlocking<Unit> {
+        // A code from a newer server, or a row parked before the reason was stored at all.
+        park(code = null)
+        showList()
+
+        composeTestRule.onNodeWithText("Not saved to the list").assertIsDisplayed()
+    }
+
+    @Test
+    fun `an expense the server never refused carries no mark`() = runBlocking<Unit> {
+        showList()
+
+        composeTestRule.onNodeWithText("Not saved to the list").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Not saved to the list").assertDoesNotExist()
+    }
+
     // ---- deleting (T-193) -----------------------------------------------------
 
     private fun showDinner() {

@@ -13,6 +13,7 @@ import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
+import org.p23q.shoppinglist.data.db.unblocked
 import org.p23q.shoppinglist.data.sync.SyncTrigger
 import java.util.UUID
 import javax.inject.Inject
@@ -150,7 +151,7 @@ class ItemsRepo @Inject constructor(
         val by = deviceId.get()
         val now = System.currentTimeMillis()
         checked.forEach { item ->
-            itemDao.upsert(item.copy(status = Status.BACKLOG.wireValue.toLww(by, now), dirty = true, syncBlocked = false))
+            itemDao.upsert(item.copy(status = Status.BACKLOG.wireValue.toLww(by, now), dirty = true).unblocked())
         }
         syncTrigger.scheduleAfterEdit()
         return checked.map { it.id }
@@ -164,7 +165,7 @@ class ItemsRepo @Inject constructor(
         var changed = false
         itemIds.forEach { id ->
             val current = itemDao.getById(id) ?: return@forEach
-            itemDao.upsert(current.copy(status = status.wireValue.toLww(by, now), dirty = true, syncBlocked = false))
+            itemDao.upsert(current.copy(status = status.wireValue.toLww(by, now), dirty = true).unblocked())
             changed = true
         }
         if (changed) syncTrigger.scheduleAfterEdit()
@@ -181,7 +182,7 @@ class ItemsRepo @Inject constructor(
         var changed = false
         itemIds.forEach { id ->
             val current = itemDao.getById(id) ?: return@forEach
-            itemDao.upsert(current.copy(category = category.toLwwOptional(by, now), dirty = true, syncBlocked = false))
+            itemDao.upsert(current.copy(category = category.toLwwOptional(by, now), dirty = true).unblocked())
             changed = true
         }
         if (changed) syncTrigger.scheduleAfterEdit()
@@ -259,7 +260,7 @@ class ItemsRepo @Inject constructor(
     private suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val current = itemDao.getById(itemId) ?: return
         // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.
-        itemDao.upsert(mutate(current).copy(dirty = true, syncBlocked = false))
+        itemDao.upsert(mutate(current).copy(dirty = true).unblocked())
         syncTrigger.scheduleAfterEdit()
     }
 }

@@ -253,6 +253,7 @@ export const en = {
   "expense.frozenVoter": "agreed to close — amounts fixed",
   "expense.frozenFormer": "no longer a member — amounts fixed",
   "expense.error.frozen": "The amounts of {who} are fixed: they have agreed to close the list, or have left it.",
+  "expense.notSaved": "Not saved to the list",
   "expense.error.closed": "This list has been closed and can no longer be changed.",
   "expense.settleUp": "Settle up",
   "expense.transfer": "{from} pays {to}",

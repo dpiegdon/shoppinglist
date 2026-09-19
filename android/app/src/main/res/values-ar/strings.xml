@@ -297,4 +297,5 @@
     <string name="api_error_voted_to_close">لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.</string>
     <string name="expense_delete_blocked">لا يمكن حذف هذا المصروف: فهو يخص شخصًا مبالغه ثابتة.</string>
     <string name="expense_error_frozen">مبالغ %1$s ثابتة: فقد وافق على إغلاق القائمة أو غادرها.</string>
+    <string name="expense_not_saved">لم يُحفظ في القائمة</string>
 </resources>

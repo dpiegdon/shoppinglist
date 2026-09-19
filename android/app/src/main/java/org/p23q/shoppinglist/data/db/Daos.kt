@@ -84,9 +84,15 @@ interface ItemDao {
     @Query("UPDATE items SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
 
-    /** Quarantine a row the server rejected (T-32); dirtyRows() then skips it until it's re-edited. */
-    @Query("UPDATE items SET syncBlocked = 1 WHERE id = :id")
-    suspend fun blockRow(id: String)
+    /**
+     * Quarantine a row the server rejected (T-32); dirtyRows() then skips it until it's re-edited.
+     * The refusal is kept with it (T-200) so the row can say why it is parked.
+     */
+    @Query(
+        "UPDATE items SET syncBlocked = 1, syncBlockedCode = :code, syncBlockedAccountId = :accountId " +
+            "WHERE id = :id",
+    )
+    suspend fun blockRow(id: String, code: String?, accountId: String?)
 
     @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
     suspend fun blockedRowCount(): Int

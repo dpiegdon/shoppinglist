@@ -31,6 +31,13 @@ class ErrorInterceptor @Inject constructor(
             }
             throw UnauthorizedException(message)
         }
-        throw ApiException(code, message, httpCode, rowId = envelope?.rowId, field = envelope?.field)
+        throw ApiException(
+            code,
+            message,
+            httpCode,
+            rowId = envelope?.rowId,
+            field = envelope?.field,
+            accountId = envelope?.accountId,
+        )
     }
 }

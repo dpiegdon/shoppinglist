@@ -219,6 +219,7 @@ export const es: Catalog = {
   "expense.frozenVoter": "aceptó cerrar: importes fijados",
   "expense.frozenFormer": "ya no es miembro: importes fijados",
   "expense.error.frozen": "Los importes de {who} están fijados: esa persona aceptó cerrar la lista o la abandonó.",
+  "expense.notSaved": "No se guardó en la lista",
   "expense.error.closed": "Esta lista está cerrada y ya no se puede modificar.",
   "expense.settleUp": "Saldar cuentas",
   "expense.transfer": "{from} paga a {to}",

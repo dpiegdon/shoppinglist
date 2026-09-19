@@ -146,7 +146,7 @@ class OverviewViewModelTest {
     fun `a quarantined row surfaces its list for the attention banner (T-47)`() = runTest(mainDispatcherRule.dispatcher) {
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
-        db.itemDao().blockRow(itemId)
+        db.itemDao().blockRow(itemId, "invalid_price", null)
 
         syncStatus.failed("bad row", pending = 0, blocked = 1)
 

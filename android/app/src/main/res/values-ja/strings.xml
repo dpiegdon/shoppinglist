@@ -297,4 +297,5 @@
     <string name="api_error_voted_to_close">このリストの締めに同意しているため、変更できません。変更するには同意を取り消してください。</string>
     <string name="expense_delete_blocked">この支出は削除できません：金額が確定している人が関わっています。</string>
     <string name="expense_error_frozen">%1$s の金額は確定しています。締めに同意したか、リストを退出したためです。</string>
+    <string name="expense_not_saved">リストに保存されていません</string>
 </resources>

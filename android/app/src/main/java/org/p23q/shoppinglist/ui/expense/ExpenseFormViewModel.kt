@@ -69,6 +69,14 @@ data class ExpenseFormUiState(
     val soloList: Boolean = false,
     val isDeleteConfirmOpen: Boolean = false,
     /**
+     * The server refused this row's last push and it is parked on the device (T-200), with the
+     * code it answered and the participant it named where it named one. The form says so at the
+     * top: without it the only signal was a count in the sync status bar, on another screen.
+     */
+    val isBlocked: Boolean = false,
+    val blockedCode: String? = null,
+    val blockedAccountId: String? = null,
+    /**
      * False when deleting would take a frozen participant's amounts to zero, which the freeze
      * forbids (T-157) — the form says so instead of letting the server refuse it (T-193).
      */
@@ -190,6 +198,9 @@ class ExpenseFormViewModel @Inject constructor(
                 isEditMode = true,
                 itemId = itemId,
                 canDelete = (expense.paidBy.keys + expense.paidFor.keys).none(::isFrozen),
+                isBlocked = item.syncBlocked,
+                blockedCode = item.syncBlockedCode,
+                blockedAccountId = item.syncBlockedAccountId,
                 name = item.name.value,
                 note = item.note.value.orEmpty(),
                 date = expense.date,

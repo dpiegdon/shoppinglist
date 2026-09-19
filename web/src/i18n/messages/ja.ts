@@ -224,6 +224,7 @@ export const ja: Catalog = {
   "expense.frozenVoter": "締めに同意済み — 金額は確定",
   "expense.frozenFormer": "退出済み — 金額は確定",
   "expense.error.frozen": "{who} の金額は確定しています。締めに同意したか、リストを退出したためです。",
+  "expense.notSaved": "リストに保存されていません",
   "expense.error.closed": "このリストは締め済みで、変更できません。",
   "expense.settleUp": "精算",
   "expense.transfer": "{from} が {to} に支払う",

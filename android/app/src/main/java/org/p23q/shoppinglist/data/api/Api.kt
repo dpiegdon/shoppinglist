@@ -22,6 +22,8 @@ open class ApiException(
     /** For a /sync validation 422: the offending row + field, so the client can quarantine it (T-32). */
     val rowId: String? = null,
     val field: String? = null,
+    /** The account a 422 named, where its code carries one — participant_frozen does (T-200). */
+    val accountId: String? = null,
 ) : IOException(message)
 
 /** 401 responses always mean the caller must re-authenticate. */

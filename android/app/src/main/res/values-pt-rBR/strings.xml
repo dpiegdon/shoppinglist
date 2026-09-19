@@ -297,4 +297,5 @@
     <string name="api_error_voted_to_close">Você concordou em encerrar esta lista, então não pode mais alterá-la. Retire seu voto para fazer alterações.</string>
     <string name="expense_delete_blocked">Esta despesa não pode ser excluída: ela envolve alguém cujos valores estão fixados.</string>
     <string name="expense_error_frozen">Os valores de %1$s estão fixados: essa pessoa concordou em encerrar a lista ou saiu dela.</string>
+    <string name="expense_not_saved">Não salvo na lista</string>
 </resources>

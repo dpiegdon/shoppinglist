@@ -297,4 +297,5 @@
     <string name="api_error_voted_to_close">Aceptaste cerrar esta lista, así que ya no puedes cambiarla. Retira tu voto para hacer cambios.</string>
     <string name="expense_delete_blocked">Este gasto no se puede eliminar: incluye a alguien cuyos importes están fijados.</string>
     <string name="expense_error_frozen">Los importes de %1$s están fijados: esa persona aceptó cerrar la lista o la abandonó.</string>
+    <string name="expense_not_saved">No se guardó en la lista</string>
 </resources>

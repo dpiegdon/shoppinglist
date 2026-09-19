@@ -292,6 +292,31 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `a 422 participant_frozen parks the expense with the reason on it (T-200)`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("dinner", "Dinner", dirty = true))
+
+        // Someone voted to close while this edit was queued offline — the race the form cannot
+        // pre-empt, and the one where an explanation is owed.
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody(
+                """{"error": "participant_frozen", "message": "frozen", "row_id": "dinner", """ +
+                    """"field": "expense", "account_id": "acct-other"}""",
+            ),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val parked = db.itemDao().getById("dinner")!!
+        assertTrue(parked.syncBlocked)
+        // Not just that it was refused: the code and the participant it named, so the row itself
+        // can say why long after the exception is gone.
+        assertEquals("participant_frozen", parked.syncBlockedCode)
+        assertEquals("acct-other", parked.syncBlockedAccountId)
+    }
+
+    @Test
     fun `a 422 voted_to_close naming a list row parks it instead of wedging the queue (T-198)`() = runTest {
         pointAtServer()
         // A list edit queued before its author voted to close the list, plus an unrelated item edit.

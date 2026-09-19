@@ -224,6 +224,7 @@ export const de: Catalog = {
   "expense.frozenVoter": "hat zugestimmt – Beträge festgeschrieben",
   "expense.frozenFormer": "nicht mehr Mitglied – Beträge festgeschrieben",
   "expense.error.frozen": "Die Beträge von {who} sind festgeschrieben: Die Person hat dem Abschluss zugestimmt oder die Liste verlassen.",
+  "expense.notSaved": "Nicht in der Liste gespeichert",
   "expense.error.closed": "Diese Liste ist abgeschlossen und kann nicht mehr geändert werden.",
   "expense.settleUp": "Ausgleichen",
   "expense.transfer": "{from} zahlt an {to}",

@@ -13,7 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 7, exportSchema = true)
+@Database(entities = [ListEntity::class, ItemEntity::class], version = 8, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao
@@ -79,6 +79,16 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/** Adds items.syncBlockedCode and items.syncBlockedAccountId (T-200): what the server said when it
+ *  refused the row, kept beside the quarantine flag so the row can show the reason. Existing
+ *  quarantined rows arrive with no reason, which the screens render as the bare "not saved" mark. */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE items ADD COLUMN syncBlockedCode TEXT")
+        db.execSQL("ALTER TABLE items ADD COLUMN syncBlockedAccountId TEXT")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -88,6 +98,7 @@ object DatabaseModule {
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+                MIGRATION_7_8,
             )
             .build()
 

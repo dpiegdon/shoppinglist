@@ -225,6 +225,7 @@ export const ar: Catalog = {
   "expense.frozenVoter": "وافق على الإغلاق — المبالغ ثابتة",
   "expense.frozenFormer": "لم يعد عضوًا — المبالغ ثابتة",
   "expense.error.frozen": "مبالغ {who} ثابتة: فقد وافق على إغلاق القائمة أو غادرها.",
+  "expense.notSaved": "لم يُحفظ في القائمة",
   "expense.error.closed": "أُغلقت هذه القائمة ولم يعد بالإمكان تغييرها.",
   "expense.settleUp": "تسوية الحسابات",
   "expense.transfer": "{from} يدفع إلى {to}",

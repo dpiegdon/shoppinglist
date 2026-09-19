@@ -221,6 +221,7 @@ export const fr: Catalog = {
   "expense.frozenVoter": "a accepté la clôture — montants figés",
   "expense.frozenFormer": "n'est plus membre — montants figés",
   "expense.error.frozen": "Les montants de {who} sont figés : cette personne a accepté de clore la liste ou l'a quittée.",
+  "expense.notSaved": "Non enregistré dans la liste",
   "expense.error.closed": "Cette liste est close et ne peut plus être modifiée.",
   "expense.settleUp": "Régler les comptes",
   "expense.transfer": "{from} paie {to}",

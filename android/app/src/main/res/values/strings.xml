@@ -344,4 +344,5 @@
     <string name="api_error_voted_to_close">You\'ve agreed to close this list, so you can\'t change it any more. Withdraw your vote to make changes.</string>
     <string name="expense_delete_blocked">This expense can\'t be deleted: it involves someone whose amounts are fixed.</string>
     <string name="expense_error_frozen">The amounts of %1$s are fixed: they have agreed to close the list, or have left it.</string>
+    <string name="expense_not_saved">Not saved to the list</string>
 </resources>

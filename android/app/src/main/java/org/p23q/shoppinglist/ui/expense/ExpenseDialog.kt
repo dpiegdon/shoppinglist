@@ -59,9 +59,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -137,6 +139,7 @@ fun ExpenseDialog(
                     Column(
                         modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                     ) {
+                        BlockedBanner(state)
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::onNameChange,
@@ -293,6 +296,38 @@ fun ExpenseDialog(
             }
         }
     }
+}
+
+/**
+ * The server refused this expense and the device has parked it (T-200). Shown at the top of the
+ * form, where whoever opens the row to fix it is already looking: the sync status bar counts the
+ * parked rows but says neither which nor why, and the races this covers — someone votes to close
+ * while you are editing offline — are exactly when an explanation is owed.
+ */
+@Composable
+private fun BlockedBanner(state: ExpenseFormUiState) {
+    if (!state.isBlocked) return
+    // Labelled as the share rows label the same person: an email while they are a member, a number
+    // once they have left (T-197).
+    val row = (state.paidBy + state.paidFor).firstOrNull { it.accountId == state.blockedAccountId }
+    val who = row?.let { it.email ?: stringResource(R.string.expense_former_member, it.formerNumber) }
+    val reason = ErrorText.refusal(state.blockedCode, who)?.asString()
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(stringResource(R.string.expense_not_saved), style = MaterialTheme.typography.titleSmall)
+            // Only when the refusal says more than the heading already does.
+            if (reason != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(reason, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+    Spacer(Modifier.height(12.dp))
 }
 
 @Composable

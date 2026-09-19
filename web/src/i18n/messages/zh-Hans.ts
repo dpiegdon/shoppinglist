@@ -223,6 +223,7 @@ export const zhHans: Catalog = {
   "expense.frozenVoter": "已同意结算 — 金额已锁定",
   "expense.frozenFormer": "已退出 — 金额已锁定",
   "expense.error.frozen": "{who} 的金额已锁定：该成员已同意结算，或已退出清单。",
+  "expense.notSaved": "未保存到清单",
   "expense.error.closed": "此清单已结算，无法再更改。",
   "expense.settleUp": "结算",
   "expense.transfer": "{from} 支付给 {to}",

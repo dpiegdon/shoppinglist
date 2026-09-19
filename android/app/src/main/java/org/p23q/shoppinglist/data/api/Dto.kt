@@ -84,6 +84,8 @@ data class ErrorEnvelope(
     val message: String,
     @SerialName("row_id") val rowId: String? = null,
     val field: String? = null,
+    /** Which participant a participant_frozen refusal is about (T-200). */
+    @SerialName("account_id") val accountId: String? = null,
 )
 
 @Serializable

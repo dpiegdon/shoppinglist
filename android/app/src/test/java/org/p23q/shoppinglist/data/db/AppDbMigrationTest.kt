@@ -46,7 +46,7 @@ import java.lang.reflect.Proxy
 class AppDbMigrationTest {
 
     /**
-     * Version 1: the schema before any migration, taken from app/schemas/…/7.json minus every
+     * Version 1: the schema before any migration, taken from app/schemas/…/8.json minus every
      * column the later migrations add — so it is Room's own SQL, not a hand-written guess at it.
      */
     private val v1Lists =
@@ -73,6 +73,7 @@ class AppDbMigrationTest {
 
     private val migrations = listOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+        MIGRATION_7_8,
     )
 
     /**
@@ -143,9 +144,9 @@ class AppDbMigrationTest {
         return columns
     }
 
-    /** What Room says version 6 must look like — its own exported schema, committed alongside. */
+    /** What Room says the current version must look like — its own exported schema, committed alongside. */
     private fun expectedColumns(table: String): Set<Column> {
-        val file = File("schemas/org.p23q.shoppinglist.data.db.AppDb/7.json")
+        val file = File("schemas/org.p23q.shoppinglist.data.db.AppDb/8.json")
         assertTrue("exported schema missing — run the ksp task: ${file.absolutePath}", file.exists())
         val entity = Json.parseToJsonElement(file.readText())
             .jsonObject["database"]!!.jsonObject["entities"]!!.jsonArray
@@ -169,16 +170,34 @@ class AppDbMigrationTest {
         connection.prepare(sql).use { if (it.step()) (if (it.isNull(0)) null else it.getLong(0)) else null }
 
     @Test
-    fun `migrating 6 to 7 lands on exactly the schema Room expects`() {
-        val connection = openFresh("v6")
+    fun `migrating 7 to 8 lands on exactly the schema Room expects`() {
+        val connection = openFresh("v7")
         try {
             seedV1(connection)
-            runMigrations(connection, from = 1, to = 6)
-            // Only the step under test from here, against the schema 1.16.0 left on real phones.
-            MIGRATION_6_7.migrate(supportFacade(connection))
+            runMigrations(connection, from = 1, to = 7)
+            // Only the step under test from here, on top of everything that came before it.
+            MIGRATION_7_8.migrate(supportFacade(connection))
 
             assertEquals(expectedColumns("lists"), actualColumns(connection, "lists"))
             assertEquals(expectedColumns("items"), actualColumns(connection, "items"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 7 to 8 keeps the rows and leaves the refusal columns empty`() {
+        val connection = openFresh("v7-rows")
+        try {
+            seedV1(connection)
+            runMigrations(connection, from = 1, to = 7)
+            MIGRATION_7_8.migrate(supportFacade(connection))
+
+            assertEquals("Milk", readText(connection, "SELECT name_value FROM items"))
+            // A row parked before these columns existed has no stored refusal (T-200), and must
+            // arrive saying nothing rather than inventing a code the screens would then translate.
+            assertNull(readText(connection, "SELECT syncBlockedCode FROM items"))
+            assertNull(readText(connection, "SELECT syncBlockedAccountId FROM items"))
         } finally {
             connection.close()
         }
@@ -229,11 +248,11 @@ class AppDbMigrationTest {
     }
 
     @Test
-    fun `migrating 1 to 7 lands on the same schema and keeps the rows`() {
+    fun `migrating 1 to 8 lands on the same schema and keeps the rows`() {
         val connection = openFresh("v1")
         try {
             seedV1(connection)
-            runMigrations(connection, from = 1, to = 7)
+            runMigrations(connection, from = 1, to = 8)
 
             assertEquals(expectedColumns("lists"), actualColumns(connection, "lists"))
             assertEquals(expectedColumns("items"), actualColumns(connection, "items"))
@@ -256,7 +275,7 @@ class AppDbMigrationTest {
         // exported schema left stale by a build that was never re-run. @Database is compile-time
         // retained, so the declared version is read from the schema Room exported from it — the
         // same file the other tests here compare against.
-        val exported = File("schemas/org.p23q.shoppinglist.data.db.AppDb/7.json")
+        val exported = File("schemas/org.p23q.shoppinglist.data.db.AppDb/8.json")
         assertTrue("exported schema missing: ${exported.absolutePath}", exported.exists())
         val declared = Json.parseToJsonElement(exported.readText())
             .jsonObject["database"]!!.jsonObject["version"]!!.jsonPrimitive.content.toInt()

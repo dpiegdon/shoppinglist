@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -50,7 +52,9 @@ import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.ui.AddFab
+import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 import java.util.Date
 
 /**
@@ -224,6 +228,7 @@ fun ExpenseListScreen(
                                     .map { participantLabel(it, state) }
                                     .joinToString(", "),
                                 forLabel = forWhomLabel(row.expense, state),
+                                refusal = refusalOf(row, state),
                                 // Nothing to open on a closed list, nor for someone who has agreed to close (T-193).
                                 onClick = if (state.isClosed || state.iHaveVoted) null else ({ onEditExpense(row.item.id) }),
                             )
@@ -243,12 +248,32 @@ fun ExpenseListScreen(
     }
 }
 
+/** The "not saved" mark on a parked row, and the reason where the refusal gave one (T-200). */
+internal data class RowRefusal(val label: String, val reason: String?)
+
+/**
+ * Why the server refused this expense's last push, or null when nothing of it is parked (T-200).
+ * The sync status bar counts the rows needing attention; only the row itself can say which one and
+ * what went wrong, and the user is never watching when the push queue empties.
+ */
+@Composable
+internal fun refusalOf(row: ExpenseRow, state: ExpenseListUiState): RowRefusal? {
+    if (!row.item.syncBlocked) return null
+    val who = row.item.syncBlockedAccountId?.let { participantLabel(it, state) }
+    return RowRefusal(
+        label = stringResource(R.string.expense_not_saved),
+        reason = ErrorText.refusal(row.item.syncBlockedCode, who)?.asString(),
+    )
+}
+
 @Composable
 private fun ExpenseRowView(
     row: ExpenseRow,
     currency: String,
     paidByLabel: String,
     forLabel: String,
+    /** Set when the server refused this row's last push and the device parked it (T-200). */
+    refusal: RowRefusal?,
     /** Null on a closed list: the row is still there to read, it just cannot be opened. */
     onClick: (() -> Unit)?,
 ) {
@@ -266,6 +291,24 @@ private fun ExpenseRowView(
                 stringResource(R.string.expense_row_by, paidByLabel, forLabel),
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (refusal != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // The icon carries the "not saved" half for anyone who cannot see the colour,
+                    // which leaves the line itself for the reason.
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = refusal.label,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        refusal.reason ?: refusal.label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
         Text(
             AppFormat.money(ExpenseMath.expenseTotalCents(row.expense), currency, appLocale()),

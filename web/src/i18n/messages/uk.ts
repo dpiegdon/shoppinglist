@@ -223,6 +223,7 @@ export const uk: Catalog = {
   "expense.frozenVoter": "погодився закрити — суми зафіксовано",
   "expense.frozenFormer": "більше не учасник — суми зафіксовано",
   "expense.error.frozen": "Суми {who} зафіксовано: ця людина погодилася закрити список або залишила його.",
+  "expense.notSaved": "Не збережено до списку",
   "expense.error.closed": "Цей список закрито, змінити його вже не можна.",
   "expense.settleUp": "Розрахуватися",
   "expense.transfer": "{from} платить {to}",

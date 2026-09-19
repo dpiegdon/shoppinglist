@@ -50,6 +50,21 @@ object ErrorText {
     )
 
     /**
+     * Why a row this device had queued was refused, for the row itself to show (T-200). [code] is
+     * what the server answered, [who] the participant it named, already labelled the way the screen
+     * labels people. Null when there is nothing better to say than "not saved": an unknown code, or
+     * participant_frozen from a server too old to name the account.
+     *
+     * Separate from [of] because there is no exception left by then — the refusal was stored on the
+     * row when the push failed, possibly days earlier, with nobody watching.
+     */
+    fun refusal(code: String?, who: String?): UiText? = when {
+        code == null -> null
+        code == "participant_frozen" -> who?.let { UiText.res(R.string.expense_error_frozen, it) }
+        else -> byCode[code]
+    }
+
+    /**
      * [e] as a message for the user: the code's translation if it has one, else [fallback].
      * [overrides] lets a screen say something narrower for a code — "Current password is incorrect"
      * rather than "Incorrect email or password" on the change-password form.

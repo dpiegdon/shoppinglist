@@ -261,7 +261,8 @@
     <string name="expense_agree_count">Голоси за закриття: %1$d з %2$d</string>
     <string name="expense_closed_on">Закрито %1$s</string>
     <string name="expense_vote_failed">Не вдалося зарахувати ваш голос.</string>
-    <string name="expense_frozen">погодився закрити — суми зафіксовано</string>
+    <string name="expense_frozen_voter">погодився закрити — суми зафіксовано</string>
+    <string name="expense_frozen_former">більше не учасник — суми зафіксовано</string>
     <string name="expense_closed">Закрито</string>
     <string name="expense_settle_up">Розрахуватися</string>
     <string name="expense_transfer">%1$s платить %2$s</string>
@@ -295,4 +296,6 @@
     <string name="api_error_payload_too_large">Забагато даних для одного надсилання</string>
     <string name="api_error_voted_to_close">Ви погодилися закрити цей список, тому більше не можете його змінювати. Відкличте свою згоду, щоб вносити зміни.</string>
     <string name="expense_delete_blocked">Цю витрату не можна видалити: вона стосується когось, чиї суми зафіксовано.</string>
+    <string name="expense_error_frozen">Суми %1$s зафіксовано: ця людина погодилася закрити список або залишила його.</string>
+    <string name="expense_not_saved">Не збережено до списку</string>
 </resources>
