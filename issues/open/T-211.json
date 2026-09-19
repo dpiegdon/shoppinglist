@@ -1,0 +1,11 @@
+{
+  "body": "Expense-list review release. Unreleased on main since 1.16.0: T-191 (overview\ncount), T-192, T-193 (a voter changes nothing), T-194, T-195 (docs), plus the\nreview fixes T-196..T-207 (T-202 rejected as not a defect) and T-208 (AGENTS.md).\nMinor version: new behaviour (voter lock-out, refusal reasons in the app, the\ncurrency fixed server-side, a new error code invalid_list_currency, Android\nschema migrations 7 and 8).",
+  "created_at": "2026-09-19T00:48:08+00:00",
+  "id": "T-211",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "Release 1.17.0",
+  "updated_at": "2026-09-19T00:48:08+00:00"
+}
