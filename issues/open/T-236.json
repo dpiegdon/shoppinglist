@@ -1,0 +1,11 @@
+{
+  "body": "Security review of the server API (2026-09-19), finding 3 of 4.\n\nEvery JSON route does `data = request.get_json(force=True, silent=True) or {}` and then `data.get(...)`. A body that is valid JSON but not an object \u2014 `[1]`, `\"abc\"`, `5`, `true` \u2014 is truthy, is not a dict, and `.get` raises `AttributeError`: an unhandled 500 with a traceback in the server log. Confirmed on `POST /register` and `POST /login`, i.e. reachable unauthenticated; the same shape is in every other body-taking route (`/sync`, `/settings`, `/account/*`, `/invites/redeem`, `/lists/{id}/invites`, `/admin/*`). No data exposure, but the wire contract promises the JSON error envelope on every failure, and an unauthenticated crash path is noise an operator has to triage.\n\nFix: one helper (`json_body()` in `errors.py` or a small `request_body` module) that returns the parsed object or raises `422 invalid_request` when it is not a JSON object; use it at every call site. Parametrised HTTP test over the routes with the four bodies above. `invalid_request` already exists in the error table.",
+  "created_at": "2026-09-19T22:13:55+00:00",
+  "id": "T-236",
+  "labels": [
+    "server"
+  ],
+  "priority": 3,
+  "title": "A non-object JSON body 500s on every route, including register and login",
+  "updated_at": "2026-09-19T22:13:55+00:00"
+}
