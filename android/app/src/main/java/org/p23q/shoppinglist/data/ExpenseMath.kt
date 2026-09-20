@@ -101,16 +101,74 @@ object ExpenseMath {
     /** An expense's total: the sum of either map, since the server guarantees the two agree. */
     fun expenseTotalCents(expense: Expense): Long = mapTotalCents(expense.paidBy)
 
+    /**
+     * Which of the three an entry is (T-245). An absent type is an [ExpenseType.EXPENSE] — that is
+     * every entry written before the type existed — and so is anything unrecognised: the server
+     * refuses those, so one arriving here is a newer client's word this one does not know yet, and
+     * reading it as an ordinary expense keeps the screen arithmetic sane instead of dropping the
+     * entry.
+     */
+    fun entryType(expense: Expense): ExpenseType = when (expense.type) {
+        ExpenseType.INCOME.wire -> ExpenseType.INCOME
+        ExpenseType.TRANSFER.wire -> ExpenseType.TRANSFER
+        else -> ExpenseType.EXPENSE
+    }
+
+    /**
+     * What one entry does to one account's balance, in signed cents (T-245).
+     *
+     * An expense credits whoever paid and debits whoever it was for; an income is the same reading
+     * mirrored, because money coming in owes the group rather than the other way round; a transfer
+     * moves a debt from the sender to the recipient. Zero when the account is not on the entry.
+     */
+    fun entryEffectCents(expense: Expense, accountId: String): Long {
+        val net = (toCents(expense.paidBy[accountId] ?: "0") ?: 0) -
+            (toCents(expense.paidFor[accountId] ?: "0") ?: 0)
+        return if (entryType(expense) == ExpenseType.INCOME) -net else net
+    }
+
+    /** What a ledger has spent: expenses, income and the net of the two, in cents. */
+    data class SpentTotals(
+        val expensesCents: Long,
+        val incomeCents: Long,
+        /** Expenses minus income. Negative when a ledger has taken in more than it laid out. */
+        val netCents: Long,
+    )
+
+    /**
+     * Net spent over a ledger (T-245). Transfers count for nothing: settling up moves money
+     * between members without the group having spent or received a thing.
+     */
+    fun spentTotals(expenses: List<Expense>): SpentTotals {
+        var expensesCents = 0L
+        var incomeCents = 0L
+        for (expense in expenses) {
+            when (entryType(expense)) {
+                ExpenseType.EXPENSE -> expensesCents += expenseTotalCents(expense)
+                ExpenseType.INCOME -> incomeCents += expenseTotalCents(expense)
+                ExpenseType.TRANSFER -> Unit
+            }
+        }
+        return SpentTotals(expensesCents, incomeCents, expensesCents - incomeCents)
+    }
+
     data class Balance(
         val accountId: String,
+        /** What they laid out on expenses, less what they took in on income. */
         val paidCents: Long,
+        /** What they consumed of the expenses, less what income was credited to them. */
         val shareCents: Long,
+        /** Transfers: what they have sent, less what they have received. */
+        val settledCents: Long = 0,
         /** What the list owes them: positive is a credit, negative a debt. */
         val balanceCents: Long,
     )
 
+    /** The three running figures of one participant while [balancesFor] adds a ledger up. */
+    private data class Totals(var paid: Long = 0, var share: Long = 0, var settled: Long = 0)
+
     /**
-     * Per-participant totals over a list's expenses.
+     * Per-participant totals over a list's entries.
      *
      * Everyone named anywhere is included, whether or not they are still a member — debts and
      * credits do not disappear when someone leaves — and so is a member who has spent nothing.
@@ -118,30 +176,47 @@ object ExpenseMath {
      * locale-aware one (T-204): ids are opaque and the order must not depend on who is looking.
      * The shared case table pins it, as it does [settle]'s.
      *
-     * The balances always sum to zero, because every expense's two maps sum to the same amount.
+     * Each type lands in its own figure (T-245). An income is an expense read backwards, so it
+     * comes off `paid` and `share` rather than adding to them. A transfer goes into `settled`
+     * alone — deliberately out of `paid` and `share`, so those two keep meaning "what this person
+     * laid out / consumed" and paying a debt back never looks like more spending. The three then
+     * add up: `balance = paid - share + settled`.
+     *
+     * The balances always sum to zero, because every entry's two maps sum to the same amount
+     * whichever figures they land in.
      */
     fun balancesFor(expenses: List<Expense>, participantIds: List<String>): List<Balance> {
-        val paid = LinkedHashMap<String, Long>()
-        val share = LinkedHashMap<String, Long>()
-        for (id in participantIds) {
-            paid.putIfAbsent(id, 0)
-            share.putIfAbsent(id, 0)
-        }
+        val totals = LinkedHashMap<String, Totals>()
+        fun touch(id: String): Totals = totals.getOrPut(id) { Totals() }
+        for (id in participantIds) touch(id)
         for (expense in expenses) {
+            val type = entryType(expense)
             for ((id, amount) in expense.paidBy) {
-                paid[id] = (paid[id] ?: 0) + (toCents(amount) ?: 0)
-                share.putIfAbsent(id, 0)
+                val cents = toCents(amount) ?: 0
+                when (type) {
+                    ExpenseType.TRANSFER -> touch(id).settled += cents
+                    ExpenseType.INCOME -> touch(id).paid -= cents
+                    ExpenseType.EXPENSE -> touch(id).paid += cents
+                }
             }
             for ((id, amount) in expense.paidFor) {
-                share[id] = (share[id] ?: 0) + (toCents(amount) ?: 0)
-                paid.putIfAbsent(id, 0)
+                val cents = toCents(amount) ?: 0
+                when (type) {
+                    ExpenseType.TRANSFER -> touch(id).settled -= cents
+                    ExpenseType.INCOME -> touch(id).share -= cents
+                    ExpenseType.EXPENSE -> touch(id).share += cents
+                }
             }
         }
-        return paid.keys
-            .map { id ->
-                val paidCents = paid[id] ?: 0
-                val shareCents = share[id] ?: 0
-                Balance(id, paidCents, shareCents, paidCents - shareCents)
+        return totals
+            .map { (id, running) ->
+                Balance(
+                    accountId = id,
+                    paidCents = running.paid,
+                    shareCents = running.share,
+                    settledCents = running.settled,
+                    balanceCents = running.paid - running.share + running.settled,
+                )
             }
             .sortedWith(compareByDescending<Balance> { it.balanceCents }.thenBy { it.accountId })
     }
