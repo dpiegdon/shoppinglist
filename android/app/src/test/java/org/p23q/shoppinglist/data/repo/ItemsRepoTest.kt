@@ -15,6 +15,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.Expense
+import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -279,6 +281,30 @@ class ItemsRepoTest {
         // Strictly decoded this is null, and the screens drop a null expense — so every expense on
         // every list would silently vanish until the app was updated (T-205).
         assertEquals(expense, repo.decodeExpense(stored))
+    }
+
+    @Test
+    fun `an entry's type round-trips, and an absent one is an expense (T-245)`() {
+        val income = Expense(
+            paidBy = mapOf("acc-1" to "10.00"),
+            equalBy = true,
+            paidFor = mapOf("acc-1" to "10.00"),
+            equalFor = true,
+            date = "2026-09-18",
+            type = "income",
+        )
+        assertTrue(repo.encodeExpense(income).contains(""""type":"income""""))
+        assertEquals(income, repo.decodeExpense(repo.encodeExpense(income)))
+
+        // An entry written before the type existed says nothing, and the wire keeps it that way:
+        // absent MEANS expense, and writing the word would be a change where there was none.
+        val untyped = income.copy(type = null)
+        assertFalse(repo.encodeExpense(untyped).contains("type"))
+        assertEquals(ExpenseType.EXPENSE, ExpenseMath.entryType(repo.decodeExpense(repo.encodeExpense(untyped))!!))
+
+        // A word a later release invents must not take the entry off the screen with it.
+        val newer = repo.encodeExpense(untyped).dropLast(1) + ""","type":"pledge"}"""
+        assertEquals(ExpenseType.EXPENSE, ExpenseMath.entryType(repo.decodeExpense(newer)!!))
     }
 
     @Test
