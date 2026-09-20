@@ -86,6 +86,7 @@ export function useFormat() {
       money: (cents: number, currency: string | null | undefined) => formatMoney(cents, currency, locale),
       signedMoney: (cents: number, currency: string | null | undefined) => formatSignedMoney(cents, currency, locale),
       number: (cents: number) => formatNumber(cents, locale),
+      signedNumber: (cents: number) => formatNumber(cents, locale, "exceptZero"),
       date: (isoDate: string) => formatCalendarDate(isoDate, locale),
       day: (epochMillis: number) => formatDay(epochMillis, locale),
     }),

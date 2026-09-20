@@ -7,11 +7,11 @@ import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import {
   balancesFor,
-  expenseTotalCents,
   formerMemberNumbers,
   fromCents,
   settle,
   sortedExpenses,
+  spentTotals,
   type Transfer,
 } from "../lib/expenses";
 import type { Expense } from "../api/contract";
@@ -73,7 +73,7 @@ export default function BalancesPage() {
     );
   }
 
-  const totalCents = expenses.reduce((sum, expense) => sum + expenseTotalCents(expense), 0);
+  const spent = spentTotals(expenses);
   const currentIds = new Set(members.map((member) => member.account_id));
 
   function labelFor(id: string): string {
@@ -123,9 +123,19 @@ export default function BalancesPage() {
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <ExpenseListHeader listId={listId} listName={listFieldValue(list, "name") ?? ""} view="balances" />
 
-      <p className="muted" style={{ marginTop: 0 }}>
-        {t("expense.totalSpent")}: <strong>{fmt.money(totalCents, currency)}</strong>
+      <p className="muted" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
+        {t("expense.totalSpent")}: <strong>{fmt.money(spent.netCents, currency)}</strong>
       </p>
+      {/* Where income exists, the net alone hides half the story: say what went out and what
+          came in (T-245). A ledger with none is exactly as it was. */}
+      {spent.incomeCents !== 0 && (
+        <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
+          {t("expense.spentBreakdown", {
+            spent: fmt.money(spent.expensesCents, currency),
+            income: fmt.money(spent.incomeCents, currency),
+          })}
+        </p>
+      )}
 
       <div className="rows">
         {balances.map((balance) => {
@@ -144,10 +154,20 @@ export default function BalancesPage() {
                   {labelFor(balance.accountId)}
                 </span>
                 <span className="muted" style={{ fontSize: "0.8rem" }}>
-                  {t("expense.paidAndShare", {
-                    paid: fmt.number(balance.paidCents),
-                    share: fmt.number(balance.shareCents),
-                  })}
+                  {/* Settled is what transfers moved, sent minus received — signed, because
+                      which way it went is the whole of what it says, and left uncoloured: only
+                      the balance itself is a position (T-245). Absent when nothing was settled,
+                      which is every ledger that has not been paid back yet. */}
+                  {balance.settledCents === 0
+                    ? t("expense.paidAndShare", {
+                        paid: fmt.number(balance.paidCents),
+                        share: fmt.number(balance.shareCents),
+                      })
+                    : t("expense.paidShareSettled", {
+                        paid: fmt.number(balance.paidCents),
+                        share: fmt.number(balance.shareCents),
+                        settled: fmt.signedNumber(balance.settledCents),
+                      })}
                 </span>
               </span>
               <strong
@@ -207,9 +227,11 @@ export default function BalancesPage() {
           formerNumbers={formerNumbers}
           prefill={{
             name: t("expense.settlement"),
-            // Equal split of one on each side: the total drives the amounts, so editing it is how
-            // a partial settlement works.
+            // A settlement is a transfer (T-245): the debtor hands the creditor money, and the
+            // ledger's net spending does not move. The total drives the amounts, so editing it is
+            // how a partial settlement works.
             expense: {
+              type: "transfer",
               paid_by: { [recording.from]: fromCents(recording.cents) },
               equal_by: true,
               paid_for: { [recording.to]: fromCents(recording.cents) },

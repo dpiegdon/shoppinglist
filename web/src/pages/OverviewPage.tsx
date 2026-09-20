@@ -8,7 +8,7 @@ import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { errorMessage } from "../i18n/apiErrors";
 import { formatExpiresIn } from "../lib/relativeTime";
 import { DEFAULT_LIST_KIND, isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
-import { balancesFor, expenseTotalCents } from "../lib/expenses";
+import { balancesFor, spentTotals } from "../lib/expenses";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useAuth } from "../auth/AuthContext";
 import type { Expense, InviteForMe } from "../api/contract";
@@ -180,7 +180,8 @@ export default function OverviewPage() {
   function expenseSummary(list: (typeof listArray)[number]) {
     const expenses = expensesByList.get(list.id) ?? [];
     const currency = listFieldValue(list, "currency") ?? "";
-    const total = expenses.reduce((sum, expense) => sum + expenseTotalCents(expense), 0);
+    // Net spent, as on the ledger itself: income off it, settlements counting for nothing (T-245).
+    const total = spentTotals(expenses).netCents;
     const members = list.members ?? [];
     const mine = balancesFor(expenses, members.map((m) => m.account_id)).find(
       (balance) => balance.accountId === account?.id,

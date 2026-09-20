@@ -33,6 +33,14 @@ describe("amounts in the app's language (T-187)", () => {
     expect(formatNumber(6400, "de")).toBe("64,00");
     expect(formatNumber(6400, "en")).toBe("64.00");
   });
+
+  it("signs a bare number on request, which is what the settled figure needs (T-245)", () => {
+    // Sent minus received: which way it went is the whole of what the number says, so a credit
+    // carries its plus rather than reading like an amount.
+    expect(formatNumber(2000, "en", "exceptZero")).toBe("+20.00");
+    expect(formatNumber(-2000, "en", "exceptZero")).toBe("-20.00");
+    expect(formatNumber(0, "en", "exceptZero")).toBe("0.00");
+  });
 });
 
 describe("dates in the app's language (T-180)", () => {

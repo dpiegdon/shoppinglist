@@ -1131,3 +1131,188 @@ describe("the entry dialog knows three types", () => {
     expect(screen.getByRole("radio", { name: "Income" })).toBeEnabled();
   });
 });
+
+
+// ---- the screens read a ledger of three types (T-245) -------------------------
+
+describe("a ledger's entries on screen", () => {
+  const THIRD = "acct-third";
+
+  function setUp(list: ReturnType<typeof expenseList>, items: ReturnType<typeof expenseItem>[]) {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [list], items } });
+  }
+
+  /** The hand-verified refund scenario of the design, with a third person along for the ride. */
+  const groupDinner: Expense = {
+    type: "expense",
+    paid_by: { [ME]: "60.00" },
+    equal_by: true,
+    paid_for: { [ME]: "20.00", [OTHER]: "20.00", [THIRD]: "20.00" },
+    equal_for: true,
+    date: "2026-09-17",
+  };
+  const refund: Expense = {
+    type: "income",
+    paid_by: { [ME]: "30.00" },
+    equal_by: true,
+    paid_for: { [ME]: "10.00", [OTHER]: "10.00", [THIRD]: "10.00" },
+    equal_for: true,
+    date: "2026-09-16",
+  };
+  const payback: Expense = {
+    type: "transfer",
+    paid_by: { [OTHER]: "20.00" },
+    equal_by: true,
+    paid_for: { [ME]: "20.00" },
+    equal_for: true,
+    date: "2026-09-15",
+  };
+  /** An expense between the other two: nothing of mine moves. */
+  const theirTaxi: Expense = {
+    paid_by: { [OTHER]: "12.00" },
+    equal_by: true,
+    paid_for: { [OTHER]: "6.00", [THIRD]: "6.00" },
+    equal_for: true,
+    date: "2026-09-14",
+  };
+
+  function ledger() {
+    setUp(expenseList([ME, OTHER, THIRD]), [
+      expenseItem("e1", "Dinner", groupDinner),
+      expenseItem("e2", "Deposit back", refund),
+      expenseItem("e3", "Payback", payback),
+      expenseItem("e4", "Their taxi", theirTaxi),
+    ]);
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  /** The row a title sits on, once the list has arrived. */
+  const rowOf = async (title: string) =>
+    (await screen.findByText(title)).closest("button") as HTMLElement;
+
+  it("marks an income and a transfer, and says nothing about an ordinary expense", async () => {
+    ledger();
+    renderAt("/list/list-1");
+
+    expect(within(await rowOf("Deposit back")).getByText("Income")).toBeInTheDocument();
+    expect(within(await rowOf("Payback")).getByText("Transfer")).toBeInTheDocument();
+    expect(within(await rowOf("Dinner")).queryByText("Expense")).toBeNull();
+  });
+
+  it("reads each entry's sub-line the way its type reads its two maps", async () => {
+    ledger();
+    renderAt("/list/list-1");
+
+    expect(await screen.findByText("paid by ME · for everyone")).toBeInTheDocument();
+    expect(screen.getByText("received by ME · for everyone")).toBeInTheDocument();
+    // A transfer is not "paid by … for …": it is one person handing another the money.
+    expect(screen.getByText("OT → ME")).toBeInTheDocument();
+  });
+
+  it("prefixes an income's total with a plus and leaves every other total plain", async () => {
+    ledger();
+    renderAt("/list/list-1");
+
+    expect(within(await rowOf("Deposit back")).getByText("+€30.00")).toBeInTheDocument();
+    expect(within(await rowOf("Dinner")).getByText("€60.00")).toBeInTheDocument();
+    expect(within(await rowOf("Payback")).getByText("€20.00")).toBeInTheDocument();
+  });
+
+  it("shows what each entry did to my own balance, in the balance colours", async () => {
+    ledger();
+    renderAt("/list/list-1");
+
+    // I paid 60 and consumed 20: the list owes me 40 for the dinner.
+    const mine = within(await rowOf("Dinner")).getByText("+€40.00");
+    expect(mine.style.color).toBe("var(--color-positive)");
+    // The refund came in to me, so 20 of it is not mine to keep.
+    const refunded = within(await rowOf("Deposit back")).getByText("-€20.00");
+    expect(refunded.style.color).toBe("var(--color-danger)");
+    // Being paid back costs me the credit I had.
+    expect(within(await rowOf("Payback")).getByText("-€20.00").style.color).toBe("var(--color-danger)");
+  });
+
+  it("says nothing about an entry that is not mine", async () => {
+    ledger();
+    renderAt("/list/list-1");
+
+    const theirs = await rowOf("Their taxi");
+    expect(within(theirs).getByText("€12.00")).toBeInTheDocument();
+    // Not a signed amount, and not a zero either: an entry I am not on says nothing about me.
+    expect(within(theirs).queryByText(/^[-+]€/)).toBeNull();
+    expect(within(theirs).queryByText("€0.00")).toBeNull();
+    expect(within(theirs).getAllByText(/€/)).toHaveLength(1);
+  });
+
+  it("nets income off what the ledger has spent, and settlements not at all", async () => {
+    ledger();
+    renderAt("/list/list-1");
+
+    // 60 + 12 spent, 30 back, the 20 handed over counting for nothing.
+    const summary = (await screen.findByText("Net spent")).closest(".card") as HTMLElement;
+    expect(within(summary).getByText("€42.00")).toBeInTheDocument();
+  });
+
+  it("breaks the net down on the balances screen, once there is income to break out", async () => {
+    ledger();
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Expenses €72.00 · Income €30.00")).toBeInTheDocument();
+  });
+
+  it("keeps the breakdown out of a ledger that has taken nothing in", async () => {
+    setUp(expenseList([ME, OTHER, THIRD]), [expenseItem("e1", "Dinner", groupDinner)]);
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Balances")).toBeInTheDocument();
+    expect(screen.queryByText(/Income/)).toBeNull();
+  });
+
+  it("carries the settled column for whoever has settled, and only for them", async () => {
+    setUp(expenseList([ME, OTHER, THIRD]), [
+      expenseItem("e1", "Dinner", groupDinner),
+      expenseItem("e2", "Deposit back", refund),
+      expenseItem("e3", "Payback", payback),
+    ]);
+    renderAt("/list/list-1/balances");
+
+    // The design's worked example: A is square, B is owed 10, C owes 10.
+    const mine = (await screen.findByText(`${ME}@example.com`)).closest("div") as HTMLElement;
+    expect(within(mine).getByText("paid 30.00 · share 10.00 · settled -20.00")).toBeInTheDocument();
+    const theirs = screen.getByText(`${OTHER}@example.com`).closest("div") as HTMLElement;
+    expect(within(theirs).getByText("paid 0.00 · share 10.00 · settled +20.00")).toBeInTheDocument();
+    // Nobody has paid the third person anything, so there is no settled figure to show.
+    const third = screen.getByText(`${THIRD}@example.com`).closest("div") as HTMLElement;
+    expect(within(third).getByText("paid 0.00 · share 10.00")).toBeInTheDocument();
+  });
+
+  it("records a reimbursement as a transfer between the two people it names", async () => {
+    setUp(expenseList([ME, OTHER]), [expenseItem("e1", "Dinner", dinner)]);
+    renderAt("/list/list-1/balances");
+
+    // The other member owes me 32 of the dinner.
+    await userEvent.click(await screen.findByRole("button", { name: "Reimburse" }));
+    expect(screen.getByRole("radio", { name: "Transfer" })).toBeChecked();
+    expect(screen.getByLabelText("What")).toHaveValue("Settlement");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const settlement = pushedExpense();
+    expect(settlement.type).toBe("transfer");
+    expect(settlement.paid_by).toEqual({ [OTHER]: "32.00" });
+    expect(settlement.paid_for).toEqual({ [ME]: "32.00" });
+  });
+});

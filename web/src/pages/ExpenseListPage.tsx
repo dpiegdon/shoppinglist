@@ -10,9 +10,12 @@ import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useS
 import { useLiveListSync } from "../hooks/useLiveListSync";
 import {
   balancesFor,
+  entryEffectCents,
+  entryType,
   expenseTotalCents,
   formerMemberNumbers,
   sortedExpenses,
+  spentTotals,
 } from "../lib/expenses";
 import type { Expense, ItemObject } from "../api/contract";
 import { useT } from "../i18n";
@@ -75,10 +78,10 @@ export default function ExpenseListPage() {
     );
   }
 
-  const totalCents = expenses.reduce(
-    (sum, item) => sum + expenseTotalCents(itemFieldValue(item, "expense") as Expense),
-    0,
-  );
+  // What the list has spent, income taken off it and settlements counting for nothing (T-245).
+  const netCents = spentTotals(
+    expenses.map((item) => itemFieldValue(item, "expense") as Expense),
+  ).netCents;
   const myBalance = balances.find((balance) => balance.accountId === account?.id);
 
   function nameOf(id: string): string {
@@ -95,6 +98,16 @@ export default function ExpenseListPage() {
       ids.length === members.length &&
       members.every((member) => ids.includes(member.account_id));
     return everyone ? t("expense.forEveryone") : ids.map(nameOf).join(", ");
+  }
+
+  /** Who an entry moved money between, said the way its type reads it (T-245). */
+  function subLine(expense: Expense): string {
+    const by = Object.keys(expense.paid_by).map(nameOf).join(", ");
+    if (entryType(expense) === "transfer") {
+      return t("expense.rowTransfer", { from: by, to: Object.keys(expense.paid_for).map(nameOf).join(", ") });
+    }
+    const key = entryType(expense) === "income" ? "expense.rowReceivedBy" : "expense.rowBy";
+    return t(key, { by, for: forWhom(expense) });
   }
 
   async function handleSave(values: ExpenseSaveValues) {
@@ -147,7 +160,8 @@ export default function ExpenseListPage() {
           <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>
             {t("expense.totalSpent")}
           </span>
-          <strong>{fmt.money(totalCents, currency)}</strong>
+          {/* Never coloured: what a group spent is not a position anyone is up or down (T-245). */}
+          <strong>{fmt.money(netCents, currency)}</strong>
         </span>
         {members.length > 1 && myBalance && (
           <span style={{ textAlign: "end" }}>
@@ -178,6 +192,11 @@ export default function ExpenseListPage() {
           <div className="rows">
             {rows.map((item) => {
               const expense = itemFieldValue(item, "expense") as Expense;
+              const type = entryType(expense);
+              const totalCents = expenseTotalCents(expense);
+              // What this one entry does to my own balance, which is the only figure on the row
+              // that is mine rather than the group's — so the only one that is coloured (T-245).
+              const myEffect = account ? entryEffectCents(expense, account.id) : 0;
               return (
                 <button
                   key={item.id}
@@ -196,15 +215,30 @@ export default function ExpenseListPage() {
                   <span style={{ minWidth: 0 }}>
                     <span dir="auto" style={{ display: "block" }}>
                       {itemFieldValue(item, "name")}
+                      {/* An expense is the ordinary case and says nothing; the other two say what
+                          they are, quietly, beside the title. */}
+                      {type !== "expense" && (
+                        <span className="muted" style={{ fontSize: "0.75rem", marginInlineStart: "0.4rem" }}>
+                          {t(type === "income" ? "expense.type.income" : "expense.type.transfer")}
+                        </span>
+                      )}
                     </span>
                     <span className="muted" style={{ fontSize: "0.8rem" }}>
-                      {t("expense.rowBy", {
-                        by: Object.keys(expense.paid_by).map(nameOf).join(", "),
-                        for: forWhom(expense),
-                      })}
+                      {subLine(expense)}
                     </span>
                   </span>
-                  <strong style={{ whiteSpace: "nowrap" }}>{fmt.money(expenseTotalCents(expense), currency)}</strong>
+                  <span style={{ whiteSpace: "nowrap", textAlign: "end" }}>
+                    <strong style={{ display: "block" }}>
+                      {type === "income"
+                        ? fmt.signedMoney(totalCents, currency)
+                        : fmt.money(totalCents, currency)}
+                    </strong>
+                    {myEffect !== 0 && (
+                      <span style={{ fontSize: "0.8rem", color: balanceColor(myEffect) }}>
+                        {fmt.signedMoney(myEffect, currency)}
+                      </span>
+                    )}
+                  </span>
                 </button>
               );
             })}

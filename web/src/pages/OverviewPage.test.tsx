@@ -179,6 +179,35 @@ describe("OverviewPage with expenses lists", () => {
     expect(screen.getByText("1")).toBeInTheDocument();
   });
 
+  it("counts a ledger's income against what it spent", async () => {
+    const clock = <T,>(value: T) => ({ value, updated_at: 1, updated_by: "dev" });
+    const response = expensesSyncResponse();
+    response.changes.items.push({
+      id: "e2",
+      list_id: "trip",
+      created_at: 0,
+      fields: {
+        name: clock("Deposit back"),
+        expense: clock({
+          type: "income",
+          paid_by: { [ME]: "20.00" },
+          equal_by: true,
+          paid_for: { [ME]: "10.00", "acct-other": "10.00" },
+          equal_for: true,
+          date: "2026-09-16",
+        }),
+        deleted: clock(false),
+      },
+    } as (typeof response.changes.items)[number]);
+    vi.mocked(api.sync).mockResolvedValue(response);
+    renderOverview();
+
+    // 60 out, 20 back: the card reads the net, exactly as the ledger itself does (T-245).
+    expect(await screen.findByText("Trip")).toBeInTheDocument();
+    expect(screen.getByText(/^CHF\s40\.00$/)).toBeInTheDocument();
+    expect(screen.getByText(/^\+CHF\s20\.00$/)).toBeInTheDocument();
+  });
+
   it("asks for a currency when creating an expenses list, and pushes it", async () => {
     renderOverview();
     await screen.findByText("Trip");
