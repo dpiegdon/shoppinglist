@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-20T01:21:42+00:00", "kind": "created", "ref": "main@ba8a089", "text": "Protocol versioning: a too-old client is turned away and sent to the update mechanism (design)"}
