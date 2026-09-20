@@ -18,7 +18,29 @@
     "settle (T-163): input is each participant's signed balance, output the ordered transfers",
     "that zero them. Greedy: the largest debtor pays the largest creditor the smaller amount,",
     "whoever reaches zero drops out, repeat; ties in amount go by account id. Not always the",
-    "fewest transfers, and both clients must produce exactly this order."
+    "fewest transfers, and both clients must produce exactly this order.",
+    "",
+    "ENTRY TYPES (T-245). Every entry in the balances/spent/effect groups carries an optional",
+    "'type': 'expense', 'income' or 'transfer'. ABSENT MEANS 'expense' — that is every entry",
+    "written before the type existed, and several cases leave it out on purpose to pin that",
+    "default. All amounts stay positive whichever type it is; the sign lives in the type:",
+    "  expense  someone paid for the group     paid += paid_by[a], share += paid_for[a]",
+    "  income   the group received money       paid -= paid_by[a], share -= paid_for[a]",
+    "  transfer one member pays another        settled += paid_by[a], settled -= paid_for[a]",
+    "and balance = paid - share + settled, for every participant, always summing to zero over the",
+    "whole ledger. Transfers stay OUT of paid/share so those two keep meaning 'what this person",
+    "laid out / consumed' and settling a debt never looks like more spending; 'settled' carries",
+    "them so the three figures still add up to the balance. paid, share and settled may each be",
+    "negative, and the balances group's 'total' is the GROSS sum of every entry's amount, all",
+    "three types included — it is not net spent, which is the 'spent' group below.",
+    "",
+    "spent (T-245): a ledger's entries -> what it spent. expenses = the total of every expense",
+    "entry, income = the total of every income entry, net = expenses - income (may be negative).",
+    "Transfers count for nothing. This is the 'Net spent' figure on every screen.",
+    "",
+    "effect (T-245): ONE entry and ONE account -> what that entry alone does to that account's",
+    "balance, signed. expense and transfer give paid_by[a] - paid_for[a]; income negates it.",
+    "'0.00' where the account is not on the entry, or the two sides cancel out."
   ],
 
   "to_cents": [
@@ -159,9 +181,9 @@
         }
       ],
       "expect": {
-        "a": { "paid": "64.00", "share": "21.34", "balance": "42.66" },
-        "b": { "paid": "0.00", "share": "21.33", "balance": "-21.33" },
-        "c": { "paid": "0.00", "share": "21.33", "balance": "-21.33" }
+        "a": { "paid": "64.00", "share": "21.34", "settled": "0.00", "balance": "42.66" },
+        "b": { "paid": "0.00", "share": "21.33", "settled": "0.00", "balance": "-21.33" },
+        "c": { "paid": "0.00", "share": "21.33", "settled": "0.00", "balance": "-21.33" }
       },
       "total": "64.00"
     },
@@ -173,8 +195,8 @@
         { "paid_by": { "b": "30.00" }, "paid_for": { "a": "15.00", "b": "15.00" } }
       ],
       "expect": {
-        "a": { "paid": "30.00", "share": "30.00", "balance": "0.00" },
-        "b": { "paid": "30.00", "share": "30.00", "balance": "0.00" }
+        "a": { "paid": "30.00", "share": "30.00", "settled": "0.00", "balance": "0.00" },
+        "b": { "paid": "30.00", "share": "30.00", "settled": "0.00", "balance": "0.00" }
       },
       "total": "60.00"
     },
@@ -188,9 +210,9 @@
         }
       ],
       "expect": {
-        "a": { "paid": "40.00", "share": "21.34", "balance": "18.66" },
-        "b": { "paid": "24.00", "share": "21.33", "balance": "2.67" },
-        "c": { "paid": "0.00", "share": "21.33", "balance": "-21.33" }
+        "a": { "paid": "40.00", "share": "21.34", "settled": "0.00", "balance": "18.66" },
+        "b": { "paid": "24.00", "share": "21.33", "settled": "0.00", "balance": "2.67" },
+        "c": { "paid": "0.00", "share": "21.33", "settled": "0.00", "balance": "-21.33" }
       },
       "total": "64.00"
     },
@@ -201,8 +223,8 @@
         { "paid_by": { "a": "50.00" }, "paid_for": { "a": "25.00", "gone": "25.00" } }
       ],
       "expect": {
-        "a": { "paid": "50.00", "share": "25.00", "balance": "25.00" },
-        "gone": { "paid": "0.00", "share": "25.00", "balance": "-25.00" }
+        "a": { "paid": "50.00", "share": "25.00", "settled": "0.00", "balance": "25.00" },
+        "gone": { "paid": "0.00", "share": "25.00", "settled": "0.00", "balance": "-25.00" }
       },
       "total": "50.00"
     },
@@ -211,8 +233,8 @@
       "participants": ["a", "quiet"],
       "expenses": [{ "paid_by": { "a": "10.00" }, "paid_for": { "a": "10.00" } }],
       "expect": {
-        "a": { "paid": "10.00", "share": "10.00", "balance": "0.00" },
-        "quiet": { "paid": "0.00", "share": "0.00", "balance": "0.00" }
+        "a": { "paid": "10.00", "share": "10.00", "settled": "0.00", "balance": "0.00" },
+        "quiet": { "paid": "0.00", "share": "0.00", "settled": "0.00", "balance": "0.00" }
       },
       "total": "10.00"
     },
@@ -223,7 +245,7 @@
         { "paid_by": { "a": "84.20" }, "paid_for": { "a": "84.20" } },
         { "paid_by": { "a": "12.30" }, "paid_for": { "a": "12.30" } }
       ],
-      "expect": { "a": { "paid": "96.50", "share": "96.50", "balance": "0.00" } },
+      "expect": { "a": { "paid": "96.50", "share": "96.50", "settled": "0.00", "balance": "0.00" } },
       "total": "96.50"
     },
     {
@@ -236,9 +258,9 @@
         }
       ],
       "expect": {
-        "A1": { "paid": "10.00", "share": "10.00", "balance": "0.00" },
-        "a-1": { "paid": "10.00", "share": "10.00", "balance": "0.00" },
-        "a1": { "paid": "10.00", "share": "10.00", "balance": "0.00" }
+        "A1": { "paid": "10.00", "share": "10.00", "settled": "0.00", "balance": "0.00" },
+        "a-1": { "paid": "10.00", "share": "10.00", "settled": "0.00", "balance": "0.00" },
+        "a1": { "paid": "10.00", "share": "10.00", "settled": "0.00", "balance": "0.00" }
       },
       "total": "30.00"
     },
@@ -247,12 +269,274 @@
       "participants": ["a", "b"],
       "expenses": [],
       "expect": {
-        "a": { "paid": "0.00", "share": "0.00", "balance": "0.00" },
-        "b": { "paid": "0.00", "share": "0.00", "balance": "0.00" }
+        "a": { "paid": "0.00", "share": "0.00", "settled": "0.00", "balance": "0.00" },
+        "b": { "paid": "0.00", "share": "0.00", "settled": "0.00", "balance": "0.00" }
       },
       "total": "0.00"
+    },
+    {
+      "name": "income alone: whoever took it in owes the group their share of it",
+      "participants": ["a", "b", "c"],
+      "expenses": [
+        {
+          "type": "income",
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "c": "10.00" }
+        }
+      ],
+      "expect": {
+        "b": { "paid": "0.00", "share": "-10.00", "settled": "0.00", "balance": "10.00" },
+        "c": { "paid": "0.00", "share": "-10.00", "settled": "0.00", "balance": "10.00" },
+        "a": { "paid": "-30.00", "share": "-10.00", "settled": "0.00", "balance": "-20.00" }
+      },
+      "total": "30.00"
+    },
+    {
+      "name": "the refund scenario: an expense, a settlement, then a refund of part of it",
+      "participants": ["a", "b", "c"],
+      "expenses": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "60.00" },
+          "paid_for": { "a": "20.00", "b": "20.00", "c": "20.00" }
+        },
+        { "type": "transfer", "paid_by": { "b": "20.00" }, "paid_for": { "a": "20.00" } },
+        {
+          "type": "income",
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "c": "10.00" }
+        }
+      ],
+      "expect": {
+        "b": { "paid": "0.00", "share": "10.00", "settled": "20.00", "balance": "10.00" },
+        "a": { "paid": "30.00", "share": "10.00", "settled": "-20.00", "balance": "0.00" },
+        "c": { "paid": "0.00", "share": "10.00", "settled": "0.00", "balance": "-10.00" }
+      },
+      "total": "110.00"
+    },
+    {
+      "name": "a transfer settles a debt exactly to zero",
+      "participants": ["a", "b"],
+      "expenses": [
+        { "paid_by": { "a": "30.00" }, "paid_for": { "a": "15.00", "b": "15.00" } },
+        { "type": "transfer", "paid_by": { "b": "15.00" }, "paid_for": { "a": "15.00" } }
+      ],
+      "expect": {
+        "a": { "paid": "30.00", "share": "15.00", "settled": "-15.00", "balance": "0.00" },
+        "b": { "paid": "0.00", "share": "15.00", "settled": "15.00", "balance": "0.00" }
+      },
+      "total": "45.00"
+    },
+    {
+      "name": "a transfer from someone who owed nothing leaves them in credit",
+      "participants": ["a", "b", "c"],
+      "expenses": [
+        { "paid_by": { "a": "20.00" }, "paid_for": { "a": "10.00", "b": "10.00" } },
+        { "type": "transfer", "paid_by": { "c": "5.00" }, "paid_for": { "a": "5.00" } }
+      ],
+      "expect": {
+        "a": { "paid": "20.00", "share": "10.00", "settled": "-5.00", "balance": "5.00" },
+        "c": { "paid": "0.00", "share": "0.00", "settled": "5.00", "balance": "5.00" },
+        "b": { "paid": "0.00", "share": "10.00", "settled": "0.00", "balance": "-10.00" }
+      },
+      "total": "25.00"
+    },
+    {
+      "name": "income above the expenses turns the payer's credit into a debt",
+      "participants": ["a", "b"],
+      "expenses": [
+        { "paid_by": { "a": "10.00" }, "paid_for": { "a": "5.00", "b": "5.00" } },
+        {
+          "type": "income",
+          "paid_by": { "a": "40.00" },
+          "paid_for": { "a": "20.00", "b": "20.00" }
+        }
+      ],
+      "expect": {
+        "b": { "paid": "0.00", "share": "-15.00", "settled": "0.00", "balance": "15.00" },
+        "a": { "paid": "-30.00", "share": "-15.00", "settled": "0.00", "balance": "-15.00" }
+      },
+      "total": "50.00"
+    },
+    {
+      "name": "an uneven income splits like an expense: leftover cents to the first participants",
+      "participants": ["a", "b", "c"],
+      "expenses": [
+        {
+          "type": "income",
+          "paid_by": { "a": "10.00" },
+          "paid_for": { "a": "3.34", "b": "3.33", "c": "3.33" }
+        }
+      ],
+      "expect": {
+        "b": { "paid": "0.00", "share": "-3.33", "settled": "0.00", "balance": "3.33" },
+        "c": { "paid": "0.00", "share": "-3.33", "settled": "0.00", "balance": "3.33" },
+        "a": { "paid": "-10.00", "share": "-3.34", "settled": "0.00", "balance": "-6.66" }
+      },
+      "total": "10.00"
+    },
+    {
+      "name": "a mixed ledger of all three types, one entry with no type at all",
+      "participants": ["a", "b", "c", "d"],
+      "expenses": [
+        {
+          "paid_by": { "a": "40.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "c": "10.00", "d": "10.00" }
+        },
+        { "type": "expense", "paid_by": { "b": "12.00" }, "paid_for": { "b": "6.00", "c": "6.00" } },
+        {
+          "type": "income",
+          "paid_by": { "c": "9.00" },
+          "paid_for": { "a": "3.00", "b": "3.00", "c": "3.00" }
+        },
+        { "type": "transfer", "paid_by": { "d": "10.00" }, "paid_for": { "a": "10.00" } }
+      ],
+      "expect": {
+        "a": { "paid": "40.00", "share": "7.00", "settled": "-10.00", "balance": "23.00" },
+        "d": { "paid": "0.00", "share": "10.00", "settled": "10.00", "balance": "0.00" },
+        "b": { "paid": "12.00", "share": "13.00", "settled": "0.00", "balance": "-1.00" },
+        "c": { "paid": "-9.00", "share": "13.00", "settled": "0.00", "balance": "-22.00" }
+      },
+      "total": "71.00"
     }
   ],
+
+  "spent": [
+    {
+      "name": "expenses alone: the net is what was laid out",
+      "expenses": [
+        { "type": "expense", "paid_by": { "a": "60.00" }, "paid_for": { "a": "60.00" } },
+        { "paid_by": { "b": "10.00" }, "paid_for": { "b": "10.00" } }
+      ],
+      "expect": { "expenses": "70.00", "income": "0.00", "net": "70.00" }
+    },
+    {
+      "name": "the refund scenario: the refund comes off what was spent",
+      "expenses": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "60.00" },
+          "paid_for": { "a": "20.00", "b": "20.00", "c": "20.00" }
+        },
+        { "type": "transfer", "paid_by": { "b": "20.00" }, "paid_for": { "a": "20.00" } },
+        {
+          "type": "income",
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "c": "10.00" }
+        }
+      ],
+      "expect": { "expenses": "60.00", "income": "30.00", "net": "30.00" }
+    },
+    {
+      "name": "transfers count for nothing: settling up is not spending",
+      "expenses": [
+        { "type": "transfer", "paid_by": { "a": "25.00" }, "paid_for": { "b": "25.00" } }
+      ],
+      "expect": { "expenses": "0.00", "income": "0.00", "net": "0.00" }
+    },
+    {
+      "name": "income above the expenses is a negative net",
+      "expenses": [
+        { "type": "expense", "paid_by": { "a": "10.00" }, "paid_for": { "a": "10.00" } },
+        { "type": "income", "paid_by": { "a": "40.00" }, "paid_for": { "a": "40.00" } }
+      ],
+      "expect": { "expenses": "10.00", "income": "40.00", "net": "-30.00" }
+    },
+    {
+      "name": "an entry with no type counts as an expense",
+      "expenses": [{ "paid_by": { "a": "25.00" }, "paid_for": { "a": "25.00" } }],
+      "expect": { "expenses": "25.00", "income": "0.00", "net": "25.00" }
+    },
+    {
+      "name": "an empty ledger has spent nothing",
+      "expenses": [],
+      "expect": { "expenses": "0.00", "income": "0.00", "net": "0.00" }
+    }
+  ],
+
+  "effect": [
+    {
+      "name": "an expense credits whoever paid it",
+      "expense": {
+        "type": "expense",
+        "paid_by": { "a": "64.00" },
+        "paid_for": { "a": "21.34", "b": "21.33", "c": "21.33" }
+      },
+      "account": "a",
+      "expect": "42.66"
+    },
+    {
+      "name": "an expense debits whoever it was for",
+      "expense": {
+        "type": "expense",
+        "paid_by": { "a": "64.00" },
+        "paid_for": { "a": "21.34", "b": "21.33", "c": "21.33" }
+      },
+      "account": "b",
+      "expect": "-21.33"
+    },
+    {
+      "name": "an entry does nothing to an account that is not on it",
+      "expense": {
+        "type": "expense",
+        "paid_by": { "a": "64.00" },
+        "paid_for": { "a": "21.34", "b": "21.33", "c": "21.33" }
+      },
+      "account": "d",
+      "expect": "0.00"
+    },
+    {
+      "name": "paying only for yourself cancels out",
+      "expense": { "paid_by": { "a": "10.00" }, "paid_for": { "a": "10.00" } },
+      "account": "a",
+      "expect": "0.00"
+    },
+    {
+      "name": "an entry with no type counts as an expense",
+      "expense": { "paid_by": { "a": "10.00" }, "paid_for": { "a": "4.00", "b": "6.00" } },
+      "account": "a",
+      "expect": "6.00"
+    },
+    {
+      "name": "income debits whoever received it",
+      "expense": {
+        "type": "income",
+        "paid_by": { "a": "30.00" },
+        "paid_for": { "a": "10.00", "b": "10.00", "c": "10.00" }
+      },
+      "account": "a",
+      "expect": "-20.00"
+    },
+    {
+      "name": "income credits whoever it was credited to",
+      "expense": {
+        "type": "income",
+        "paid_by": { "a": "30.00" },
+        "paid_for": { "a": "10.00", "b": "10.00", "c": "10.00" }
+      },
+      "account": "b",
+      "expect": "10.00"
+    },
+    {
+      "name": "a transfer credits the sender",
+      "expense": { "type": "transfer", "paid_by": { "b": "20.00" }, "paid_for": { "a": "20.00" } },
+      "account": "b",
+      "expect": "20.00"
+    },
+    {
+      "name": "a transfer debits the recipient",
+      "expense": { "type": "transfer", "paid_by": { "b": "20.00" }, "paid_for": { "a": "20.00" } },
+      "account": "a",
+      "expect": "-20.00"
+    },
+    {
+      "name": "a transfer does nothing to anyone else",
+      "expense": { "type": "transfer", "paid_by": { "b": "20.00" }, "paid_for": { "a": "20.00" } },
+      "account": "c",
+      "expect": "0.00"
+    }
+  ],
+
   "settle": [
     {
       "name": "one debt, one credit",

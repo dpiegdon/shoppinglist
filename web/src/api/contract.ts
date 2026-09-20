@@ -15,6 +15,18 @@ export interface Price {
 }
 
 /**
+ * What a ledger entry is (T-245). Every amount on the wire stays positive whichever it is: the
+ * sign lives in the type, so an entry is structurally exactly one of the three.
+ *
+ * - `expense`: someone paid for the group. `paid_by` / `paid_for`.
+ * - `income`: the group received money (a refund, a deposit, a sale). The same two maps read
+ *   "received by" / "credited to", and the entry counts against what was spent.
+ * - `transfer`: one member pays another directly — a settlement. Exactly one sender in `paid_by`
+ *   and one different recipient in `paid_for`; it moves a debt without spending anything.
+ */
+export type ExpenseType = "expense" | "income" | "transfer";
+
+/**
  * The whole money tuple of an expense (T-151), and ONE LWW field: the "both maps sum to the same
  * amount" invariant cannot survive being split across several fields that resolve independently.
  * There is no stored total — it is the sum of either map. `equal_*` record that the map was an
@@ -22,6 +34,12 @@ export interface Price {
  * Amounts are positive decimal strings, and a participant with no share is absent, never zero.
  */
 export interface Expense {
+  /**
+   * Which of the three an entry is (T-245). Optional here, not on the wire: the server fills it in
+   * when serving a row written before the type existed, and a client still defaults an absent one
+   * to `expense` defensively — see `entryType` in lib/expenses.
+   */
+  type?: ExpenseType;
   paid_by: Record<string, string>;
   equal_by: boolean;
   paid_for: Record<string, string>;

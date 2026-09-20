@@ -1,4 +1,4 @@
-import type { Expense, ItemObject, ListMember } from "../api/contract";
+import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 
 /**
@@ -105,16 +105,67 @@ export function expenseTotalCents(expense: Expense): number {
   return mapTotalCents(expense.paid_by);
 }
 
+/**
+ * Which of the three an entry is (T-245). An absent type is an `expense` — that is every entry
+ * written before the type existed — and so is anything unrecognised: the server refuses those, so
+ * one arriving here is a newer client's word this one does not know yet, and reading it as an
+ * ordinary expense keeps the screen arithmetic sane instead of dropping the entry.
+ */
+export function entryType(expense: Expense): ExpenseType {
+  const type = expense.type;
+  return type === "income" || type === "transfer" ? type : "expense";
+}
+
+/**
+ * What one entry does to one account's balance, in signed cents (T-245).
+ *
+ * An expense credits whoever paid and debits whoever it was for; an income is the same reading
+ * mirrored, because money coming in owes the group rather than the other way round; a transfer
+ * moves a debt from the sender to the recipient. Zero when the account is not on the entry.
+ */
+export function entryEffectCents(expense: Expense, accountId: string): number {
+  const net =
+    toCents(expense.paid_by[accountId] ?? "0") - toCents(expense.paid_for[accountId] ?? "0");
+  return entryType(expense) === "income" ? -net : net;
+}
+
+/** What a ledger has spent: expenses, income and the net of the two, in cents. */
+export interface SpentTotals {
+  expensesCents: number;
+  incomeCents: number;
+  /** Expenses minus income. Negative when a ledger has taken in more than it laid out. */
+  netCents: number;
+}
+
+/**
+ * Net spent over a ledger (T-245). Transfers count for nothing: settling up moves money between
+ * members without the group having spent or received a thing.
+ */
+export function spentTotals(expenses: Expense[]): SpentTotals {
+  let expensesCents = 0;
+  let incomeCents = 0;
+  for (const expense of expenses) {
+    const type = entryType(expense);
+    if (type === "expense") expensesCents += expenseTotalCents(expense);
+    else if (type === "income") incomeCents += expenseTotalCents(expense);
+  }
+  return { expensesCents, incomeCents, netCents: expensesCents - incomeCents };
+}
+
 export interface Balance {
   accountId: string;
+  /** What they laid out on expenses, less what they took in on income. */
   paidCents: number;
+  /** What they consumed of the expenses, less what income was credited to them. */
   shareCents: number;
+  /** Transfers: what they have sent, less what they have received. */
+  settledCents: number;
   /** What the list owes them: positive is a credit, negative is a debt. */
   balanceCents: number;
 }
 
 /**
- * Per-participant totals over a list's expenses.
+ * Per-participant totals over a list's entries.
  *
  * Everyone named anywhere is included, whether or not they are still a member — their debts and
  * credits do not disappear when they leave, and neither does a member who has not spent anything
@@ -122,29 +173,48 @@ export interface Balance {
  * than localeCompare, as in [settle] (T-204): ids are opaque and the order must not depend on the
  * viewer's locale. The shared case table pins it.
  *
- * The balances always sum to zero, because every expense's two maps sum to the same amount.
+ * Each type lands in its own figure (T-245). An income is an expense read backwards, so it comes
+ * off `paid` and `share` rather than adding to them. A transfer goes into `settled` alone —
+ * deliberately out of `paid` and `share`, so those two keep meaning "what this person laid out /
+ * consumed" and paying a debt back never looks like more spending. The three then add up:
+ * `balance = paid - share + settled`.
+ *
+ * The balances always sum to zero, because every entry's two maps sum to the same amount whichever
+ * figures they land in.
  */
 export function balancesFor(expenses: Expense[], participantIds: string[]): Balance[] {
-  const totals = new Map<string, { paid: number; share: number }>();
+  const totals = new Map<string, { paid: number; share: number; settled: number }>();
   const touch = (id: string) => {
     let entry = totals.get(id);
     if (!entry) {
-      entry = { paid: 0, share: 0 };
+      entry = { paid: 0, share: 0, settled: 0 };
       totals.set(id, entry);
     }
     return entry;
   };
   for (const id of participantIds) touch(id);
   for (const expense of expenses) {
-    for (const [id, amount] of Object.entries(expense.paid_by)) touch(id).paid += toCents(amount);
-    for (const [id, amount] of Object.entries(expense.paid_for)) touch(id).share += toCents(amount);
+    const type = entryType(expense);
+    for (const [id, amount] of Object.entries(expense.paid_by)) {
+      const cents = toCents(amount);
+      if (type === "transfer") touch(id).settled += cents;
+      else if (type === "income") touch(id).paid -= cents;
+      else touch(id).paid += cents;
+    }
+    for (const [id, amount] of Object.entries(expense.paid_for)) {
+      const cents = toCents(amount);
+      if (type === "transfer") touch(id).settled -= cents;
+      else if (type === "income") touch(id).share -= cents;
+      else touch(id).share += cents;
+    }
   }
   return [...totals.entries()]
-    .map(([accountId, { paid, share }]) => ({
+    .map(([accountId, { paid, share, settled }]) => ({
       accountId,
       paidCents: paid,
       shareCents: share,
-      balanceCents: paid - share,
+      settledCents: settled,
+      balanceCents: paid - share + settled,
     }))
     .sort(
       (a, b) =>

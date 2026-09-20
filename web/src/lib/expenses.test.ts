@@ -3,12 +3,15 @@ import cases from "../../../shared-test-cases/expense-arithmetic.json";
 import {
   balancesFor,
   distribute,
+  entryEffectCents,
+  entryType,
   expenseTotalCents,
   formerMemberNumbers,
   fromCents,
   settle,
   sharesToWire,
   splitEqually,
+  spentTotals,
   toCents,
   type ShareEntry,
 } from "./expenses";
@@ -89,6 +92,7 @@ describe("balances", () => {
         {
           paid: fromCents(balance.paidCents),
           share: fromCents(balance.shareCents),
+          settled: fromCents(balance.settledCents),
           balance: fromCents(balance.balanceCents),
         },
       ]),
@@ -103,6 +107,18 @@ describe("balances", () => {
     expect(expenses.reduce((sum, expense) => sum + expenseTotalCents(expense), 0)).toBe(
       toCents(testCase.total),
     );
+    // The three figures are the balance broken down, whatever mix of types produced it.
+    for (const balance of balances) {
+      expect(balance.paidCents - balance.shareCents + balance.settledCents).toBe(balance.balanceCents);
+    }
+    // And a balance is exactly what every entry did to that account, one by one.
+    for (const balance of balances) {
+      const summed = expenses.reduce(
+        (sum, expense) => sum + entryEffectCents(expense, balance.accountId),
+        0,
+      );
+      expect(summed).toBe(balance.balanceCents);
+    }
   });
 
   it("puts the largest credit first and the deepest debt last", () => {
@@ -117,6 +133,147 @@ describe("balances", () => {
     const balances = balancesFor([expense("a", "30.00"), expense("b", "30.00")], ["a", "b", "c"]);
     expect(balances.map((balance) => balance.accountId)).toEqual(["a", "b", "c"]);
     expect(balances.map((balance) => balance.balanceCents)).toEqual([1000, 1000, -2000]);
+  });
+
+  it("keeps a settlement out of what people paid and consumed", () => {
+    const transfer: Expense = {
+      type: "transfer",
+      paid_by: { b: "15.00" },
+      equal_by: true,
+      paid_for: { a: "15.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    };
+    const [first, second] = balancesFor([transfer], ["a", "b"]);
+    expect(first).toEqual({ accountId: "b", paidCents: 0, shareCents: 0, settledCents: 1500, balanceCents: 1500 });
+    expect(second).toEqual({ accountId: "a", paidCents: 0, shareCents: 0, settledCents: -1500, balanceCents: -1500 });
+  });
+});
+
+describe("entry types", () => {
+  const entry = (type?: string): Expense =>
+    ({
+      type,
+      paid_by: { a: "10.00" },
+      equal_by: true,
+      paid_for: { b: "10.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    }) as Expense;
+
+  it("reads the three types it knows", () => {
+    expect(entryType(entry("expense"))).toBe("expense");
+    expect(entryType(entry("income"))).toBe("income");
+    expect(entryType(entry("transfer"))).toBe("transfer");
+  });
+
+  it("treats an absent type as an expense — every entry written before types existed is one", () => {
+    expect(entryType(entry(undefined))).toBe("expense");
+  });
+
+  it("treats a word it does not know as an expense rather than dropping the entry", () => {
+    // The server refuses these, so one arriving is a newer client's vocabulary; the screen still
+    // has to add up.
+    expect(entryType(entry("Income"))).toBe("expense");
+    expect(entryType(entry("refund"))).toBe("expense");
+  });
+});
+
+describe("net spent", () => {
+  it.each(cases.spent)("$name", (testCase) => {
+    const totals = spentTotals(testCase.expenses as unknown as Expense[]);
+    expect({
+      expenses: fromCents(totals.expensesCents),
+      income: fromCents(totals.incomeCents),
+      net: fromCents(totals.netCents),
+    }).toEqual(testCase.expect);
+  });
+});
+
+describe("what one entry does to one account", () => {
+  it.each(cases.effect)("$name", (testCase) => {
+    const expense = testCase.expense as unknown as Expense;
+    expect(fromCents(entryEffectCents(expense, testCase.account))).toBe(testCase.expect);
+  });
+});
+
+describe("a ledger of random entries (property test)", () => {
+  /** A seeded generator: the same ledgers every run, so a failure can be reproduced. */
+  function rng(seed: number): () => number {
+    let state = seed >>> 0;
+    return () => {
+      // xorshift32 — small, deterministic and identical on every engine.
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      state >>>= 0;
+      return state / 0x100000000;
+    };
+  }
+
+  /** An equal-ish split of `totalCents` over `ids`, in the wire's positive decimal strings. */
+  function wireSplit(totalCents: number, ids: string[]): Record<string, string> {
+    return sharesToWire(splitEqually(totalCents, ids));
+  }
+
+  it("balances sum to zero, settling zeroes them, and net is expenses minus income", () => {
+    const random = rng(20260920);
+    const pick = (n: number) => Math.floor(random() * n);
+    for (let round = 0; round < 300; round += 1) {
+      const people = 2 + pick(4);
+      const ids = Array.from({ length: people }, (_, index) => `p${index}`);
+      const expenses: Expense[] = [];
+      const entries = 1 + pick(6);
+      for (let index = 0; index < entries; index += 1) {
+        const type = (["expense", "income", "transfer"] as const)[pick(3)];
+        const totalCents = 1 + pick(20000);
+        if (type === "transfer") {
+          const from = pick(people);
+          const to = (from + 1 + pick(people - 1)) % people;
+          expenses.push({
+            type,
+            paid_by: { [ids[from]]: fromCents(totalCents) },
+            equal_by: true,
+            paid_for: { [ids[to]]: fromCents(totalCents) },
+            equal_for: true,
+            date: "2026-09-17",
+          });
+          continue;
+        }
+        const payers = ids.filter(() => random() < 0.5);
+        const forWhom = ids.filter(() => random() < 0.7);
+        expenses.push({
+          type,
+          paid_by: wireSplit(totalCents, payers.length ? payers : [ids[pick(people)]]),
+          equal_by: true,
+          paid_for: wireSplit(totalCents, forWhom.length ? forWhom : [ids[pick(people)]]),
+          equal_for: true,
+          date: "2026-09-17",
+        });
+      }
+
+      const balances = balancesFor(expenses, ids);
+      expect(balances.reduce((sum, balance) => sum + balance.balanceCents, 0)).toBe(0);
+      for (const balance of balances) {
+        expect(balance.paidCents - balance.shareCents + balance.settledCents).toBe(balance.balanceCents);
+      }
+
+      // Settling the suggested transfers really does leave everyone square.
+      const remaining = new Map(balances.map((b) => [b.accountId, b.balanceCents]));
+      for (const transfer of settle(balances)) {
+        expect(transfer.cents).toBeGreaterThan(0);
+        remaining.set(transfer.from, (remaining.get(transfer.from) ?? 0) + transfer.cents);
+        remaining.set(transfer.to, (remaining.get(transfer.to) ?? 0) - transfer.cents);
+      }
+      expect([...remaining.values()].every((cents) => cents === 0)).toBe(true);
+
+      const totals = spentTotals(expenses);
+      expect(totals.netCents).toBe(totals.expensesCents - totals.incomeCents);
+      const gross = expenses
+        .filter((expense) => entryType(expense) !== "transfer")
+        .reduce((sum, expense) => sum + expenseTotalCents(expense), 0);
+      expect(totals.expensesCents + totals.incomeCents).toBe(gross);
+    }
   });
 });
 
