@@ -70,6 +70,15 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   instead of wedging their push queue.
 - Run `cd server && .venv/bin/isort . && .venv/bin/black .` before verifying.
   The lint stage only checks.
+- **Protocol version.** Every API request carries `X-Client-Protocol`; anything
+  older than the server's `PROTOCOL_VERSION` is refused `426 client_outdated`
+  before authentication. Bump that number only for a wire change an installed
+  client of the previous protocol cannot handle correctly — a bump turns away
+  every app in the field, so the release that ships it is a **major** one, and
+  `release.sh` refuses a release whose version and protocol disagree. The number
+  lives in three files that must agree (`server/…/protocol.py`,
+  `web/src/api/protocol.ts`, Android's `Protocol.kt`), and every bump adds a row
+  to the changelog in the "Protocol version" section of `docs/wire-contract.md`.
 
 ## Tests
 

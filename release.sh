@@ -52,6 +52,25 @@ CURRENT_CODE=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' android/app/build.gr
 [ "$CURRENT_VERSION" != "$VERSION" ] || die "server/pyproject.toml is already at $VERSION"
 NEXT_CODE=$((CURRENT_CODE + 1))
 
+# The protocol version and the version number have to agree before anything is written (T-243):
+# a protocol bump turns away every installed client, which is a MAJOR release by definition. The
+# rules live in release-guard.py so they can be unit-tested; here we only read the four numbers.
+# A previous tag older than protocol.py yields an empty string, which the guard counts as 0.
+PROTOCOL_FILE=server/src/shoppinglist_server/protocol.py
+read_protocol() { sed -n 's/^PROTOCOL_VERSION *= *\([0-9]*\).*/\1/p' | head -1; }
+NEW_MAJOR="${VERSION%%.*}"
+TREE_PROTOCOL=$(read_protocol < "$PROTOCOL_FILE")
+[ -n "$TREE_PROTOCOL" ] || die "could not read PROTOCOL_VERSION from $PROTOCOL_FILE"
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
+PREV_PROTOCOL=""
+PREV_MAJOR=""
+if [[ "$LAST_TAG" =~ ^v([0-9]+)\.[0-9]+\.[0-9]+$ ]]; then
+  PREV_MAJOR="${BASH_REMATCH[1]}"
+  PREV_PROTOCOL=$(git show "$LAST_TAG:$PROTOCOL_FILE" 2>/dev/null | read_protocol)
+fi
+GUARD_REFUSAL=$(python3 release-guard.py "$TREE_PROTOCOL" "$NEW_MAJOR" "$PREV_PROTOCOL" "$PREV_MAJOR") ||
+  die "${GUARD_REFUSAL:-release-guard.py failed}"
+
 [ -f android/keystore.properties ] || die "android/keystore.properties missing — a release build cannot be signed"
 command -v npm >/dev/null || die "npm not found — the web bundle has to be rebuilt"
 
@@ -91,6 +110,7 @@ fi
 
 echo "  version     $CURRENT_VERSION -> $VERSION"
 echo "  versionCode $CURRENT_CODE -> $NEXT_CODE"
+echo "  protocol    ${PREV_PROTOCOL:-0} -> $TREE_PROTOCOL"
 echo "  ticket      ${TICKET:-(none given)}"
 echo "  aapt2       $AAPT2_BIN"
 echo "  apksigner   $APKSIGNER_BIN"
@@ -202,7 +222,6 @@ step "smoke-testing the wheel"
 # ---------------------------------------------------------------------------
 step "committing and tagging"
 
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
 if [ -n "$NOTES_FILE" ]; then
   NOTES=$(cat "$NOTES_FILE")
 elif [ -n "$LAST_TAG" ]; then
