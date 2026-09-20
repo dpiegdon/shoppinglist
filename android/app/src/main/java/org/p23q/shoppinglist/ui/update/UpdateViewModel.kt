@@ -75,6 +75,29 @@ class UpdateViewModel @Inject constructor(
     }
 
     /**
+     * The check the blocking "update required" screen makes (T-244), and makes again on Retry.
+     *
+     * Reports through the same [status] and [availableUpdate] as the About screen's check, so the
+     * screen offers the download exactly the way the ordinary prompt does — the difference is only
+     * that [UpdateChecker.checkForced] asks whatever the switch and the interval say.
+     */
+    fun checkRequired(): Job = viewModelScope.launch {
+        _status.value = UpdateStatus.Checking
+        _status.value = when (val outcome = updateChecker.checkForced()) {
+            is CheckOutcome.Available -> {
+                _availableUpdate.value = outcome.update
+                UpdateStatus.Available(outcome.update.version)
+            }
+            is CheckOutcome.UpToDate -> UpdateStatus.UpToDate(outcome.version)
+            CheckOutcome.Failed -> UpdateStatus.Failed
+            // "Could not be asked" — there is no server configured, the only thing that still
+            // stops a forced check. Reported as a failed check rather than as Idle, which the
+            // blocking screen reads as "still checking" and would sit on forever.
+            CheckOutcome.NotChecked -> UpdateStatus.Failed
+        }
+    }
+
+    /**
      * Closes the prompt and records the version as asked-about — called for BOTH answers, since
      * the question was put either way and asking again would defeat the once-per-version rule.
      */

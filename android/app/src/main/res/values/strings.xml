@@ -135,6 +135,13 @@
     <string name="sync_pending_suffix">%1$s · %2$d pending</string>
     <string name="sync_attention">Items needing attention: %1$d</string>
 
+    <!-- protocol version: this build is older than the server (T-244) -->
+    <string name="api_error_client_outdated">This app is too old for this server</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_body">The server has been updated. Install the new version to continue.</string>
+    <string name="update_required_unavailable">This server has no newer app to offer. Ask whoever runs it for an update.</string>
+    <string name="action_retry">Retry</string>
+
     <!-- list properties -->
     <string name="listprops_list_name">List name</string>
     <string name="listprops_type">Type</string>

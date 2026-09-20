@@ -107,6 +107,12 @@
     <string name="sync_failed_since">Помилка синхронізації · востаннє успішно %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d в черзі</string>
     <string name="sync_attention">Товари, що потребують уваги: %1$d</string>
+
+    <string name="api_error_client_outdated">Цей застосунок застарий для цього сервера</string>
+    <string name="update_required_title">Потрібне оновлення</string>
+    <string name="update_required_body">Сервер оновлено. Встанови нову версію, щоб продовжити.</string>
+    <string name="update_required_unavailable">Цей сервер не пропонує новішого застосунку. Попроси оновлення в того, хто його адмініструє.</string>
+    <string name="action_retry">Спробувати ще раз</string>
     <string name="listprops_list_name">Назва списку</string>
     <string name="listprops_type">Тип</string>
     <string name="listprops_kind_checklist">Товари мають назву, категорію та нотатку.</string>

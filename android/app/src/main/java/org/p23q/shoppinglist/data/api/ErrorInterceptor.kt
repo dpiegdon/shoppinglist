@@ -9,6 +9,9 @@ import javax.inject.Inject
 class ErrorInterceptor @Inject constructor(
     private val json: Json,
     private val sessionEvents: SessionEvents,
+    // Defaulted only so the many tests that build an interceptor by hand and care about neither
+    // the protocol nor the state do not all have to name it; Hilt always injects the singleton.
+    private val protocolState: ProtocolState = ProtocolState(),
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val response = chain.proceed(chain.request())
@@ -30,6 +33,14 @@ class ErrorInterceptor @Inject constructor(
                 sessionEvents.notifyForcedLogout()
             }
             throw UnauthorizedException(message)
+        }
+        // 426: this build's protocol is older than the server's (T-240). It says nothing about the
+        // session and nothing about the row that happened to be in flight, so it raises the
+        // app-wide state and otherwise goes on to be an ordinary ApiException — no forced logout,
+        // no quarantine. One choke point here covers foreground screens and the background worker
+        // alike, exactly as the 401 rule above does.
+        if (httpCode == 426) {
+            protocolState.notifyClientOutdated()
         }
         throw ApiException(
             code,

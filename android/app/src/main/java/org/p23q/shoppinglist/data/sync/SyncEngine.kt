@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.data.api.ItemFieldsDto
 import org.p23q.shoppinglist.data.api.ListDto
 import org.p23q.shoppinglist.data.api.ListFieldsDto
 import org.p23q.shoppinglist.data.api.PriceDto
+import org.p23q.shoppinglist.data.api.ProtocolState
 import org.p23q.shoppinglist.data.api.SyncChanges
 import org.p23q.shoppinglist.data.api.SyncRequest
 import org.p23q.shoppinglist.data.api.UnauthorizedException
@@ -36,6 +37,12 @@ import javax.net.ssl.SSLException
 sealed interface SyncResult {
     data class Success(val pushedItems: Int, val pushedLists: Int, val pulledItems: Int, val pulledLists: Int) : SyncResult
     data object Unauthorized : SyncResult
+    /**
+     * This app is too old for the server (T-240). Distinct from [Failed] because it must not be
+     * retried: the server will refuse every request until the app is updated, and the update
+     * prompt — not a backoff — is what resolves it.
+     */
+    data object UpdateRequired : SyncResult
     data class Failed(val message: String) : SyncResult
 }
 
@@ -54,6 +61,9 @@ class SyncEngine @Inject constructor(
     private val appDb: AppDb,
     private val syncStatus: SyncStatus,
     private val notifier: CollaboratorChangeNotifier,
+    // Last with a default for the same reason as ErrorInterceptor's: the tests that exercise the
+    // 426 path pass the same instance the interceptor got, the rest need not know it exists.
+    private val protocolState: ProtocolState = ProtocolState(),
 ) {
     companion object {
         /**
@@ -67,6 +77,11 @@ class SyncEngine @Inject constructor(
     }
 
     suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
+        // Too old for this server (T-240): stop before reading, sending or reporting anything. The
+        // dirty rows stay dirty and stay pushable — the app being outdated says nothing about
+        // them, and they go out unchanged the moment an updated build talks to the server again.
+        if (protocolState.updateRequired.value) return SyncResult.UpdateRequired
+
         val allDirtyItems = itemDao.dirtyRows()
         val allDirtyLists = listDao.dirtyRows()
         val pendingBefore = allDirtyItems.size + allDirtyLists.size
@@ -95,6 +110,15 @@ class SyncEngine @Inject constructor(
             syncStatus.stoppedUnauthorized(pending = pendingBefore, blocked = blockedCount())
             return SyncResult.Unauthorized
         } catch (e: ApiException) {
+            // Too old for this server (T-240). ErrorInterceptor has already raised the app-wide
+            // state; this is only about leaving the queue untouched. It is emphatically NOT a row
+            // refusal — the request never reached a row — so it must return before the 422
+            // quarantine rules below, which would otherwise be reached if the server ever sent a
+            // row_id along with it.
+            if (e.httpStatus == 426) {
+                syncStatus.stoppedOutdated(pending = pendingBefore, blocked = blockedCount())
+                return SyncResult.UpdateRequired
+            }
             if (e.code == "full_resync_required") {
                 // The server still applied our pushed changes before rejecting the cursor (Wire
                 // Contract), so it's safe to wipe: nothing pushed is lost, a fresh cursor-0 pull

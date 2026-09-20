@@ -50,6 +50,10 @@ object ErrorText {
         "session_not_found" to UiText.res(R.string.api_error_session_not_found),
         "server_busy" to UiText.res(R.string.api_error_server_busy),
         "payload_too_large" to UiText.res(R.string.api_error_payload_too_large),
+        // 426: this build's protocol is older than the server's (T-240). The blocking update
+        // screen is what the user actually deals with, but a code the server can answer to any
+        // request belongs in the table rather than falling back to "something went wrong".
+        "client_outdated" to UiText.res(R.string.api_error_client_outdated),
     )
 
     /**

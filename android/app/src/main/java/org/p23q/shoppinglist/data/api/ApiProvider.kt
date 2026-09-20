@@ -38,6 +38,9 @@ class ApiProvider @Inject constructor(
     private val authInterceptor: AuthInterceptor,
     private val errorInterceptor: ErrorInterceptor,
     private val json: Json,
+    // Stateless, and last with a default, so the existing tests that build a provider by hand keep
+    // compiling; every client this builds sends the header either way.
+    private val protocolInterceptor: ProtocolInterceptor = ProtocolInterceptor(),
 ) {
     private val mutex = Mutex()
     private var cachedUrl: String? = null
@@ -59,6 +62,8 @@ class ApiProvider @Inject constructor(
 
     private fun buildApi(url: String, allowSelfSignedCerts: Boolean): Api {
         val client = OkHttpClient.Builder()
+            // First in the chain: the protocol header rides on every request there is (T-240).
+            .addInterceptor(protocolInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(errorInterceptor)
             // No-op in release (see DevCertTrust.kt); honored only in debug builds when the dev

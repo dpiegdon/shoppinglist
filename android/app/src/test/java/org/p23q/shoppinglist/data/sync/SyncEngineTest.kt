@@ -23,6 +23,7 @@ import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
+import org.p23q.shoppinglist.data.api.ProtocolState
 import org.p23q.shoppinglist.data.api.SyncRequest
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
@@ -49,6 +50,7 @@ class SyncEngineTest {
     private lateinit var sessionState: FakeSessionState
     private lateinit var syncStatus: SyncStatus
     private lateinit var syncEngine: SyncEngine
+    private lateinit var protocolState: ProtocolState
     private val notifier = RecordingNotifier()
 
     @Before
@@ -68,15 +70,20 @@ class SyncEngineTest {
         sessionState = FakeSessionState()
 
         val json = Json { ignoreUnknownKeys = true }
+        // One ProtocolState for both, as Hilt hands out: the interceptor raises it, the engine
+        // reads it (T-244).
+        protocolState = ProtocolState()
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents(), protocolState),
             json = json,
         )
 
         syncStatus = SyncStatus()
-        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus, notifier)
+        syncEngine = SyncEngine(
+            db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus, notifier, protocolState,
+        )
     }
 
     @After
@@ -409,6 +416,56 @@ class SyncEngineTest {
 
         assertTrue(result is SyncResult.Unauthorized)
         assertTrue("dirty row should be untouched", db.itemDao().getById("item-1")!!.dirty)
+    }
+
+    // --- Too old for this server (T-244) -----------------------------------------------------
+
+    @Test
+    fun `426 stops the sync without quarantining, dropping or wiping anything`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
+        db.listDao().upsert(dummyList("list-1", "Groceries", dirty = true))
+        server.enqueue(
+            MockResponse().setResponseCode(426)
+                .setBody("""{"error": "client_outdated", "message": "too old", "protocol": 3}"""),
+        )
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.UpdateRequired)
+        // The app being outdated says nothing about the queue: every row is still there, still
+        // dirty, still unblocked, ready to go out unchanged from an updated build.
+        val item = db.itemDao().getById("item-1")!!
+        assertTrue("dirty item should be untouched", item.dirty)
+        assertFalse("nothing was quarantined", item.syncBlocked)
+        val list = db.listDao().getById("list-1")!!
+        assertTrue("dirty list should be untouched", list.dirty)
+        assertFalse("nothing was quarantined", list.syncBlocked)
+        assertEquals(0, syncStatus.state.value.blockedCount)
+        // Not a loud failure either: the blocking update screen is what the user is looking at.
+        assertNull(syncStatus.state.value.lastError)
+        assertFalse(syncStatus.state.value.inProgress)
+    }
+
+    @Test
+    fun `once the state is set no further request goes out at all`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
+        server.enqueue(
+            MockResponse().setResponseCode(426)
+                .setBody("""{"error": "client_outdated", "message": "too old", "protocol": 3}"""),
+        )
+
+        assertTrue(syncEngine.syncNow() is SyncResult.UpdateRequired)
+        val afterFirst = server.requestCount
+
+        // The point of the guard: a scheduled worker and every screen's refresh would otherwise
+        // keep hammering a server that will refuse them until the app is updated.
+        assertTrue(syncEngine.syncNow() is SyncResult.UpdateRequired)
+        assertTrue(syncEngine.syncNow(fullLists = listOf("list-1")) is SyncResult.UpdateRequired)
+
+        assertEquals(afterFirst, server.requestCount)
+        assertTrue("dirty row should still be pushable", db.itemDao().getById("item-1")!!.dirty)
     }
 
     // --- Collaborator-change detection (T-65) -----------------------------------------------

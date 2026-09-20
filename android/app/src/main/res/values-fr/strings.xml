@@ -107,6 +107,12 @@
     <string name="sync_failed_since">Échec de la synchronisation · dernier succès %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d en attente</string>
     <string name="sync_attention">Articles nécessitant votre attention : %1$d</string>
+
+    <string name="api_error_client_outdated">Cette application est trop ancienne pour ce serveur</string>
+    <string name="update_required_title">Mise à jour requise</string>
+    <string name="update_required_body">Le serveur a été mis à jour. Installe la nouvelle version pour continuer.</string>
+    <string name="update_required_unavailable">Ce serveur ne propose aucune application plus récente. Demande une mise à jour à la personne qui l\'administre.</string>
+    <string name="action_retry">Réessayer</string>
     <string name="listprops_list_name">Nom de la liste</string>
     <string name="listprops_type">Type</string>
     <string name="listprops_kind_checklist">Les articles ont un nom, une catégorie et une note.</string>

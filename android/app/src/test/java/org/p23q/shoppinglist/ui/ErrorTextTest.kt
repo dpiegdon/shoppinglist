@@ -58,6 +58,14 @@ class ErrorTextTest {
     }
 
     @Test
+    fun `an app too old for its server says so rather than falling back (T-244)`() {
+        assertEquals(
+            UiText.res(R.string.api_error_client_outdated),
+            ErrorText.of(ApiException("client_outdated", "too old", 426), R.string.redeem_msg_failed),
+        )
+    }
+
+    @Test
     fun `a network failure falls back too, rather than showing the platform's English`() {
         assertEquals(
             UiText.res(R.string.redeem_msg_failed),

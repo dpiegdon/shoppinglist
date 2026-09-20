@@ -4,8 +4,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -19,6 +21,7 @@ import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.SessionEvents
 import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.data.update.AvailableUpdate
 import org.p23q.shoppinglist.data.update.UpdateChecker
 import org.p23q.shoppinglist.data.update.UpdatePrefsStore
 import org.robolectric.RobolectricTestRunner
@@ -78,5 +81,65 @@ class UpdateViewModelTest {
 
             assertFalse(viewModel.autoCheckEnabled.first { !it })
             assertFalse(prefs.autoCheckEnabled.first())
+        }
+
+    @Test
+    fun `the blocking screen's check reports through the same status and update (T-244)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            // Switched off AND freshly rate-limited: neither may silence the check that is the
+            // only way back into an app the server has refused.
+            prefs.setAutoCheckEnabled(false)
+            prefs.recordCheck(System.currentTimeMillis())
+            server.enqueue(
+                MockResponse().setResponseCode(200)
+                    .setBody("""{"version": "99.0.0", "download_url": "https://example.com/shoppinglist.apk"}"""),
+            )
+            val viewModel = UpdateViewModel(checker, prefs)
+
+            viewModel.checkRequired().join()
+
+            assertEquals(UpdateStatus.Available("99.0.0"), viewModel.status.value)
+            assertEquals(
+                AvailableUpdate("99.0.0", "https://example.com/shoppinglist.apk"),
+                viewModel.availableUpdate.value,
+            )
+        }
+
+    @Test
+    fun `a check that could not be made is reported, not left looking like it is still running`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            server.shutdown()
+            val viewModel = UpdateViewModel(checker, prefs)
+
+            viewModel.checkRequired().join()
+
+            // Idle reads as "still checking" on the blocking screen, which would be a dead end.
+            assertEquals(UpdateStatus.Failed, viewModel.status.value)
+        }
+
+    @Test
+    fun `a check with nothing to ask is reported the same way, not as still checking`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            // No server configured is the one thing that still stops a forced check. The About
+            // screen renders that outcome as silence; the blocking screen must not, or it would
+            // sit on its spinner with no way out.
+            val configFile = File.createTempFile("update_vm_no_server", ".preferences_pb").apply { deleteOnExit() }
+            val emptyConfig = ServerConfig(PreferenceDataStoreFactory.create { configFile })
+            val json = Json { ignoreUnknownKeys = true }
+            val unconfigured = UpdateChecker(
+                apiProvider = ApiProvider(
+                    serverConfig = emptyConfig,
+                    authInterceptor = AuthInterceptor(TokenProvider { null }),
+                    errorInterceptor = ErrorInterceptor(json, SessionEvents()),
+                    json = json,
+                ),
+                serverConfig = emptyConfig,
+                prefs = prefs,
+            )
+            val viewModel = UpdateViewModel(unconfigured, prefs)
+
+            viewModel.checkRequired().join()
+
+            assertEquals(UpdateStatus.Failed, viewModel.status.value)
         }
 }

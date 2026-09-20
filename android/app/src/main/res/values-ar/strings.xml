@@ -107,6 +107,12 @@
     <string name="sync_failed_since">فشلت المزامنة · آخر نجاح %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d قيد الانتظار</string>
     <string name="sync_attention">عناصر تحتاج إلى انتباه: %1$d</string>
+
+    <string name="api_error_client_outdated">هذا التطبيق قديم جدًا على هذا الخادم</string>
+    <string name="update_required_title">التحديث مطلوب</string>
+    <string name="update_required_body">تم تحديث الخادم. ثبّت الإصدار الجديد للمتابعة.</string>
+    <string name="update_required_unavailable">لا يوفّر هذا الخادم تطبيقًا أحدث. اطلب تحديثًا ممن يديره.</string>
+    <string name="action_retry">إعادة المحاولة</string>
     <string name="listprops_list_name">اسم القائمة</string>
     <string name="listprops_type">النوع</string>
     <string name="listprops_kind_checklist">العناصر لها اسم وفئة وملاحظة.</string>

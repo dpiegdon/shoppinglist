@@ -51,4 +51,15 @@ class SyncStatus @Inject constructor() {
     fun stoppedUnauthorized(pending: Int, blocked: Int) = _state.update {
         it.copy(inProgress = false, pendingCount = pending, blockedCount = blocked)
     }
+
+    /**
+     * This app is too old for the server (T-240). Like [stoppedUnauthorized] this clears the
+     * spinner without recording an error: the blocking update screen is what the user is looking
+     * at, and a red "sync failed" behind it would only add noise to a state they cannot act on
+     * from here. The pending and blocked counts are left exactly as they were — nothing about the
+     * queue changed.
+     */
+    fun stoppedOutdated(pending: Int, blocked: Int) = _state.update {
+        it.copy(inProgress = false, pendingCount = pending, blockedCount = blocked)
+    }
 }

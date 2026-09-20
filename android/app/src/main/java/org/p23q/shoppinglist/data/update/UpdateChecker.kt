@@ -76,6 +76,27 @@ class UpdateChecker @Inject constructor(
         }
     }
 
+    /**
+     * The check the "update required" screen makes (T-244). Updating is not optional here — every
+     * request is being refused until it happens — so neither of [checkNow]'s remaining rules
+     * applies: not the twelve-hour interval, and not the "check automatically" switch, which is a
+     * preference about being *offered* updates, not about being allowed to have one. Only "no
+     * server configured" still stops it, because there is nothing to ask.
+     */
+    suspend fun checkForced(currentVersion: String = BuildConfig.VERSION_NAME): CheckOutcome {
+        if (serverConfig.serverUrl.first().isNullOrBlank()) return CheckOutcome.NotChecked
+        // Counts as the automatic check too, so a foreground right after this does not ask again.
+        prefs.recordCheck(System.currentTimeMillis())
+
+        val response = fetchLatest() ?: return CheckOutcome.Failed
+        val order = compareVersions(response.version, currentVersion) ?: return CheckOutcome.Failed
+        return if (order > 0) {
+            CheckOutcome.Available(AvailableUpdate(response.version, response.downloadUrl))
+        } else {
+            CheckOutcome.UpToDate(currentVersion)
+        }
+    }
+
     /** The server's current app version, or null for every way of not getting one. */
     private suspend fun fetchLatest() = try {
         apiProvider.get().appVersion()

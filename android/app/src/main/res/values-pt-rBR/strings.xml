@@ -107,6 +107,12 @@
     <string name="sync_failed_since">Falha na sincronização · último sucesso %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d pendentes</string>
     <string name="sync_attention">Itens que precisam de atenção: %1$d</string>
+
+    <string name="api_error_client_outdated">Este aplicativo é antigo demais para este servidor</string>
+    <string name="update_required_title">Atualização necessária</string>
+    <string name="update_required_body">O servidor foi atualizado. Instale a nova versão para continuar.</string>
+    <string name="update_required_unavailable">Este servidor não tem um aplicativo mais recente a oferecer. Peça uma atualização a quem o administra.</string>
+    <string name="action_retry">Tentar de novo</string>
     <string name="listprops_list_name">Nome da lista</string>
     <string name="listprops_type">Tipo</string>
     <string name="listprops_kind_checklist">Os itens têm nome, categoria e observação.</string>

@@ -6,11 +6,13 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.AuthRepository
+import org.p23q.shoppinglist.data.api.ProtocolState
 import org.p23q.shoppinglist.data.api.SessionEvents
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,6 +44,20 @@ class RootViewModelTest {
 
         assertEquals(1, received.size)
     }
+
+    @Test
+    fun `updateRequired re-exposes the protocol state the root blocks on (T-244)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val protocolState = ProtocolState()
+            val viewModel = RootViewModel(SessionEvents(), FakeAuthRepository(), protocolState)
+
+            assertFalse(viewModel.updateRequired.value)
+            protocolState.notifyClientOutdated()
+
+            // A state, not an event: the root reads the current value, so a screen recomposing
+            // after the refusal still blocks instead of having missed the moment.
+            assertTrue(viewModel.updateRequired.value)
+        }
 
     @Test
     fun `onForcedLogout clears the local session`() = runTest(mainDispatcherRule.dispatcher) {

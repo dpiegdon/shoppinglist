@@ -27,6 +27,9 @@ class SyncWorker @AssistedInject constructor(
             // Unauthorized needs the user to re-login, not a retry; LoginViewModel/UI surfaces that
             // the next time a screen tries to use the API and gets the same UnauthorizedException.
             is SyncResult.Unauthorized -> Result.failure()
+            // Retrying would hammer a server that will refuse every request until this app is
+            // updated (T-240); the blocking update screen is what resolves it, not a backoff.
+            is SyncResult.UpdateRequired -> Result.failure()
             is SyncResult.Failed -> Result.retry()
         }
     }

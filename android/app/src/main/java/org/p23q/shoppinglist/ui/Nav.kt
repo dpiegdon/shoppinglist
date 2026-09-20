@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -77,6 +78,7 @@ import org.p23q.shoppinglist.ui.redeem.RedeemDialog
 import org.p23q.shoppinglist.ui.redeem.RedeemScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
+import org.p23q.shoppinglist.ui.update.UpdateRequiredScreen
 import org.p23q.shoppinglist.ui.update.UpdateViewModel
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
@@ -171,6 +173,24 @@ fun ShoppingListNavHost(
     val updateViewModel: UpdateViewModel = hiltViewModel()
     val availableUpdate by updateViewModel.availableUpdate.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updateViewModel.check() }
+
+    // Too old for this server (T-240). Rendered INSTEAD of the NavHost, not over it: every request
+    // is being refused, so whatever is behind it could only show stale data and a sync that never
+    // succeeds. The state is only ever set, never cleared — a successful install restarts the app.
+    val updateRequired by rootViewModel.updateRequired.collectAsStateWithLifecycle()
+    if (updateRequired) {
+        val updateStatus by updateViewModel.status.collectAsStateWithLifecycle()
+        val context = LocalContext.current
+        UpdateRequiredScreen(
+            status = updateStatus,
+            update = availableUpdate,
+            // Ignores the auto-check switch and the twelve-hour interval: this one is not optional.
+            onOpened = { updateViewModel.checkRequired() },
+            onRetry = { updateViewModel.checkRequired() },
+            onDownload = { update -> openDownload(context, update.downloadUrl) },
+        )
+        return
+    }
 
     NavHost(
         navController = navController,
@@ -399,18 +419,7 @@ fun ShoppingListNavHost(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    // Handed to the system rather than downloaded in-app: no extra permission, no
-                    // installer session to babysit, and the user gets the standard install flow
-                    // they already know. NEW_TASK because this leaves our task entirely.
-                    try {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, update.downloadUrl.toUri())
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    } catch (e: ActivityNotFoundException) {
-                        // No browser/download handler on this device. Nothing useful to say, and
-                        // crashing over an optional convenience would be worse.
-                    }
+                    openDownload(context, update.downloadUrl)
                     updateViewModel.dismiss()
                 }) { Text(stringResource(R.string.action_update)) }
             },
@@ -421,6 +430,25 @@ fun ShoppingListNavHost(
                 }
             },
         )
+    }
+}
+
+/**
+ * Opens the app package the server is offering (T-135), for the ordinary prompt and for the
+ * blocking "update required" screen alike (T-240).
+ *
+ * Handed to the system rather than downloaded in-app: no extra permission, no installer session to
+ * babysit, and the user gets the standard install flow they already know. NEW_TASK because this
+ * leaves our task entirely.
+ */
+private fun openDownload(context: Context, downloadUrl: String) {
+    try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, downloadUrl.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    } catch (e: ActivityNotFoundException) {
+        // No browser/download handler on this device. Nothing useful to say, and crashing over
+        // this would be worse — on the blocking screen it would also take the only way out.
     }
 }
 

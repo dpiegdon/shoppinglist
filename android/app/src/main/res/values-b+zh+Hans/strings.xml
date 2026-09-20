@@ -107,6 +107,12 @@
     <string name="sync_failed_since">同步失败 · 上次成功 %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d 项待同步</string>
     <string name="sync_attention">需要处理的物品：%1$d</string>
+
+    <string name="api_error_client_outdated">此应用对该服务器来说版本过旧</string>
+    <string name="update_required_title">需要更新</string>
+    <string name="update_required_body">服务器已更新。请安装新版本以继续。</string>
+    <string name="update_required_unavailable">该服务器没有更新的应用可供下载。请向管理服务器的人索取更新。</string>
+    <string name="action_retry">重试</string>
     <string name="listprops_list_name">清单名称</string>
     <string name="listprops_type">类型</string>
     <string name="listprops_kind_checklist">物品包含名称、分类和备注。</string>

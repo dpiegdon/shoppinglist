@@ -107,6 +107,12 @@
     <string name="sync_failed_since">同期に失敗しました · 最終成功 %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d 件保留中</string>
     <string name="sync_attention">対応が必要なアイテム：%1$d</string>
+
+    <string name="api_error_client_outdated">このアプリはこのサーバーには古すぎます</string>
+    <string name="update_required_title">更新が必要です</string>
+    <string name="update_required_body">サーバーが更新されました。続けるには新しいバージョンをインストールしてください。</string>
+    <string name="update_required_unavailable">このサーバーには新しいアプリがありません。運用している人に更新を依頼してください。</string>
+    <string name="action_retry">再試行</string>
     <string name="listprops_list_name">リスト名</string>
     <string name="listprops_type">種類</string>
     <string name="listprops_kind_checklist">アイテムには名前、カテゴリ、メモがあります。</string>

@@ -107,6 +107,12 @@
     <string name="sync_failed_since">Error de sincronización · último correcto %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d pendientes</string>
     <string name="sync_attention">Artículos que requieren atención: %1$d</string>
+
+    <string name="api_error_client_outdated">Esta aplicación es demasiado antigua para este servidor</string>
+    <string name="update_required_title">Actualización necesaria</string>
+    <string name="update_required_body">El servidor se ha actualizado. Instala la nueva versión para continuar.</string>
+    <string name="update_required_unavailable">Este servidor no ofrece ninguna aplicación más reciente. Pide una actualización a quien lo administra.</string>
+    <string name="action_retry">Reintentar</string>
     <string name="listprops_list_name">Nombre de la lista</string>
     <string name="listprops_type">Tipo</string>
     <string name="listprops_kind_checklist">Los artículos tienen nombre, categoría y nota.</string>

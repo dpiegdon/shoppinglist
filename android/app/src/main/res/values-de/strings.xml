@@ -107,6 +107,12 @@
     <string name="sync_failed_since">Sync fehlgeschlagen · zuletzt erfolgreich %1$s</string>
     <string name="sync_pending_suffix">%1$s · %2$d ausstehend</string>
     <string name="sync_attention">Artikel, die Aufmerksamkeit brauchen: %1$d</string>
+
+    <string name="api_error_client_outdated">Diese App ist zu alt für diesen Server</string>
+    <string name="update_required_title">Update erforderlich</string>
+    <string name="update_required_body">Der Server wurde aktualisiert. Installiere die neue Version, um fortzufahren.</string>
+    <string name="update_required_unavailable">Dieser Server bietet keine neuere App an. Bitte den Betreiber um ein Update.</string>
+    <string name="action_retry">Erneut versuchen</string>
     <string name="listprops_list_name">Listenname</string>
     <string name="listprops_type">Typ</string>
     <string name="listprops_kind_checklist">Artikel haben Name, Kategorie und Notiz.</string>

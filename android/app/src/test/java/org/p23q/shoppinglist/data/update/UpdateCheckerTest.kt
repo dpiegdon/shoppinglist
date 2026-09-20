@@ -250,6 +250,72 @@ class UpdateCheckerTest {
         assertEquals(0, server.requestCount)
     }
 
+    // ---- the check the "update required" screen makes (T-244) ---------------------
+
+    @Test
+    fun `a forced check asks even with the switch off — updating is not optional here`() = runTest {
+        // The switch is a preference about being OFFERED updates. Once the server has refused this
+        // build outright, it is the only way back in, so the switch cannot suppress the question.
+        prefs.setAutoCheckEnabled(false)
+        server.enqueue(offering("1.12.0"))
+
+        val outcome = checker.checkForced(currentVersion = "1.11.0")
+
+        assertEquals(CheckOutcome.Available(AvailableUpdate("1.12.0", "https://example.com/shoppinglist.apk")), outcome)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `a forced check ignores the twelve-hour interval`() = runTest {
+        prefs.recordCheck(System.currentTimeMillis())
+        server.enqueue(offering("1.12.0"))
+
+        assertTrue(checker.checkForced(currentVersion = "1.11.0") is CheckOutcome.Available)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `a forced check offers a version that was skipped`() = runTest {
+        checker.markPrompted("1.12.0")
+        server.enqueue(offering("1.12.0"))
+
+        assertTrue(checker.checkForced(currentVersion = "1.11.0") is CheckOutcome.Available)
+    }
+
+    @Test
+    fun `a server with no newer app to offer, and one that cannot be asked`() = runTest {
+        // Both are the same thing to the blocking screen: nothing to install, ask the operator.
+        server.enqueue(offering("1.11.0"))
+        assertEquals(CheckOutcome.UpToDate("1.11.0"), checker.checkForced(currentVersion = "1.11.0"))
+
+        // 404 no_app_package: the server carries no APK, which is also what a pre-T-135 server says.
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "no_app_package", "message": "nope"}"""))
+        assertEquals(CheckOutcome.Failed, checker.checkForced(currentVersion = "1.11.0"))
+
+        server.shutdown()
+        assertEquals(CheckOutcome.Failed, checker.checkForced(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `a forced check with no server configured asks nothing`() = runTest {
+        val emptyConfigFile = File.createTempFile("update_forced_no_server", ".preferences_pb")
+        emptyConfigFile.deleteOnExit()
+        val json = Json { ignoreUnknownKeys = true }
+        val emptyConfig = ServerConfig(PreferenceDataStoreFactory.create { emptyConfigFile })
+        val unconfigured = UpdateChecker(
+            apiProvider = ApiProvider(
+                serverConfig = emptyConfig,
+                authInterceptor = AuthInterceptor(TokenProvider { null }),
+                errorInterceptor = ErrorInterceptor(json, SessionEvents()),
+                json = json,
+            ),
+            serverConfig = emptyConfig,
+            prefs = prefs,
+        )
+
+        assertEquals(CheckOutcome.NotChecked, unconfigured.checkForced(currentVersion = "1.11.0"))
+    }
+
     @Test
     fun `the settings check counts as the automatic one`() = runTest {
         server.enqueue(offering("1.12.0"))
