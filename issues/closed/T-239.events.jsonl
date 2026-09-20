@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-20T01:21:42+00:00", "kind": "created", "ref": "main@ba8a089", "text": "Ledger: expense lists become ledgers with expense, income and transfer entries (design)"}
 {"actor": "user", "at": "2026-09-20T10:33:38+00:00", "kind": "note", "ref": "main@3567d41", "text": "Done: server (T-242), colours (T-241), web (T-245), Android (T-246) are on main and the gate is green. Not released: this ships as 3.0.0 (protocol 3). Known: web uses radio buttons for the type choice, Android a segmented control; existing 'Settlement' entries recorded as expenses stay counted as spending until edited to Transfer."}
+{"actor": "user", "at": "2026-09-20T10:33:38+00:00", "kind": "closed", "ref": "main@3567d41", "text": ""}
