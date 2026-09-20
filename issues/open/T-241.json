@@ -1,0 +1,12 @@
+{
+  "body": "Expense/ledger numbers that carry meaning use red and green by their standard meaning. Today a\nnegative balance is red and a positive one is the THEME colour (blue on web, violet on Android),\nwhich spends the theme colour on meaning and makes the two clients differ.\n\nScope, web AND Android, identical behaviour:\n* Positive balance (someone owes you) = green, negative (you owe) = red, zero = grey (muted).\n  Applies to: the Overview card's balance, the ledger header's \"Your balance\", the Balances\n  rows. Totals (spent/net) and counts stay neutral. The theme colour stays for accents (date\n  headings, buttons, counts).\n* New tokens. Web: `--color-positive`, #15803d on the light theme, #4ade80 on the dark one, in\n  index.css next to `--color-danger`; `balanceColor()` returns it for cents > 0. Android: the same\n  two hex values as a light/dark pair (not derived from the Material colour scheme; dynamic colour\n  is off by default and the green stays fixed if it is on), red stays `colorScheme.error`;\n  `balanceColor()` uses them.\n* Colour is never the only signal: a positive balance is shown with a \"+\" prefix (a new\n  `signedMoney` next to `money` in web format.ts / Android AppFormat, locale-correct including\n  Arabic and RTL, negatives keep the minus sign they have). Use it for the balance values above.\n* Tests: unit tests for balanceColor on both clients (negative/zero/positive, light and dark);\n  unit tests for signedMoney across locales incl. ar/ja/de; a contrast test on each client that\n  both green values and the red reach WCAG AA (>= 4.5:1) on their theme background/surface; a test\n  that the two clients' green hex values are identical (read Android's constant from web the way\n  crossClient.test.ts reads the Android resources). Existing tests updated, and each new test must\n  fail when its change is reverted.\n* No new user-visible strings. README/wording untouched (the ledger tickets rewrite those).",
+  "created_at": "2026-09-20T01:21:42+00:00",
+  "id": "T-241",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Balance colours: green for owed, red for owing; the theme colour is not for meaning",
+  "updated_at": "2026-09-20T01:21:42+00:00"
+}
