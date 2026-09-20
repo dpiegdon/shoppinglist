@@ -147,7 +147,7 @@ class ExpenseScreensTest {
         // Once, as the heading of that day's group rather than on every row (T-168).
         composeTestRule.onAllNodesWithText("Sep 17, 2026").assertCountEquals(1)
         // Add is the floating button every list has now (T-168).
-        composeTestRule.onNodeWithContentDescription("Add expense").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Add entry").assertIsDisplayed()
     }
 
     @Test
@@ -164,7 +164,7 @@ class ExpenseScreensTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Total spent").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
         // I paid 64 and owe 32, so the list owes me 32 — a credit, so signed (T-241).
         composeTestRule.onNodeWithText("+€32.00").assertIsDisplayed()
 
@@ -174,9 +174,9 @@ class ExpenseScreensTest {
         composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Dinner").assertDoesNotExist()
         // Adding belongs to the expenses view.
-        composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Add entry").assertDoesNotExist()
 
-        composeTestRule.onNodeWithText("Expenses").performClick()
+        composeTestRule.onNodeWithText("Ledger").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
     }
@@ -193,7 +193,7 @@ class ExpenseScreensTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("No expenses yet. Add one to get started.").assertIsDisplayed()
+        composeTestRule.onNodeWithText("No entries yet. Add one to get started.").assertIsDisplayed()
     }
 
     @Test
@@ -234,7 +234,7 @@ class ExpenseScreensTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Total spent").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
         // Always zero on a list of one, so saying it would be noise.
         composeTestRule.onNodeWithText("Your balance").assertDoesNotExist()
     }
@@ -263,7 +263,7 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("Total spent: €64.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Net spent: €64.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
@@ -381,7 +381,7 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("Total spent: €12.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Net spent: €12.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Settle up").assertDoesNotExist()
     }
 
@@ -427,7 +427,7 @@ class ExpenseScreensTest {
         composeTestRule.waitForIdle()
 
         // An empty list is exactly when someone pulls to see whether anything has arrived.
-        composeTestRule.onNodeWithText("No expenses yet. Add one to get started.").performTouchInput {
+        composeTestRule.onNodeWithText("No entries yet. Add one to get started.").performTouchInput {
             swipeDown(startY = top, endY = top + 800f, durationMillis = 400)
         }
         composeTestRule.waitForIdle()

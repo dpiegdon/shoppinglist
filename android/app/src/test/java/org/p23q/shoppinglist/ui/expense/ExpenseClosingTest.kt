@@ -165,7 +165,7 @@ class ExpenseClosingTest {
 
         composeTestRule.onNodeWithText("Withdraw").assertIsDisplayed()
         // Agreeing to close means being done: no Add for a voter (T-192).
-        composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Add entry").assertDoesNotExist()
         composeTestRule.onNodeWithText("Agree to close").assertDoesNotExist()
     }
 
@@ -254,7 +254,7 @@ class ExpenseClosingTest {
         showDinner()
 
         composeTestRule.onNodeWithText("Delete").performScrollTo().assertIsNotEnabled()
-        composeTestRule.onNodeWithText("This expense can't be deleted", substring = true).assertExists()
+        composeTestRule.onNodeWithText("This entry can't be deleted", substring = true).assertExists()
     }
 
     @Test
@@ -262,7 +262,7 @@ class ExpenseClosingTest {
         showDinner()
 
         composeTestRule.onNodeWithText("Delete").performScrollTo().assertIsEnabled()
-        composeTestRule.onNodeWithText("This expense can't be deleted", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("This entry can't be deleted", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -273,7 +273,7 @@ class ExpenseClosingTest {
         composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
         // By description: the Add button is an icon, so looking for it as text passed whether or not
         // it was there (T-168 found this).
-        composeTestRule.onNodeWithContentDescription("Add expense").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Add entry").assertDoesNotExist()
         composeTestRule.onNodeWithText("Votes to close: 1 of 2").assertDoesNotExist()
     }
 }
