@@ -28,8 +28,11 @@ PROTOCOL_HEADER = "X-Client-Protocol"
 
 # Plain ASCII digits only. `str.isdigit()` and `\d` both accept other scripts' digits (and
 # `int()` accepts "+3", "  3  " and "3_0"), which would let a client that formats its header
-# wrongly pass the gate here and then be parsed differently by the next reader.
-_DIGITS = re.compile(r"[0-9]+")
+# wrongly pass the gate here and then be parsed differently by the next reader. Bounded, too:
+# `int()` refuses a string of more than 4300 digits, so an unbounded match let a header of a
+# few thousand digits crash the request (T-248). Nine digits is more protocol versions than
+# there will ever be.
+_DIGITS = re.compile(r"[0-9]{1,9}")
 
 
 def client_is_current(header_value: str | None) -> bool:

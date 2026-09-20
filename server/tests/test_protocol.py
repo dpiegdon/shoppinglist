@@ -40,7 +40,26 @@ SAMPLE_ROUTES = [
 
 # Everything a client can send that is not a plain positive integer, plus the versions that are
 # too old. `""` and `" "` are what a client that built the header from an empty variable sends.
-REFUSED_HEADERS = ["", " ", " 3", "3 ", "abc", "3.0", "v3", "+3", "-1", "-3", "0", "1", "2", "٣"]
+# The last two are the same digit string at ten and at five thousand digits: the first is one past
+# the bound, the second is what int() itself refuses to convert (T-248) — a 500 until the bound.
+REFUSED_HEADERS = [
+    "",
+    " ",
+    " 3",
+    "3 ",
+    "abc",
+    "3.0",
+    "v3",
+    "+3",
+    "-1",
+    "-3",
+    "0",
+    "1",
+    "2",
+    "٣",
+    "3" * 10,
+    "9" * 5000,
+]
 
 ACCEPTED_HEADERS = [str(PROTOCOL_VERSION), str(PROTOCOL_VERSION + 1), "99", "0003"]
 
