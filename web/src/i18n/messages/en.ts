@@ -69,6 +69,14 @@ export const en = {
   "sync.never": "Not synced yet",
   "sync.now": "Sync now",
 
+  // ---- protocol version: this build is older than the server (T-244) ----
+  // The whole-page notice that replaces the app once the automatic reload has not helped, and the
+  // server's own code for the refusal that raised it.
+  "outdated.title": "Update required",
+  "outdated.body": "The server has been updated. Reload this page to continue.",
+  "outdated.reload": "Reload",
+  "apiError.clientOutdated": "This app is too old for this server",
+
   // ---- sessions ----
   "lastSeen.activeNow": "Active now",
 

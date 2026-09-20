@@ -46,6 +46,10 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   session_not_found: "apiError.sessionNotFound",
   server_busy: "apiError.serverBusy",
   payload_too_large: "apiError.payloadTooLarge",
+  // 426: this bundle is older than the server's protocol (T-240). A screen rarely gets to show
+  // it — the client reloads, and then the full-page notice takes over — but a code the server can
+  // answer to any request belongs in the table rather than falling back to "something went wrong".
+  client_outdated: "apiError.clientOutdated",
 };
 
 /**

@@ -57,6 +57,11 @@ export const uk: Catalog = {
   "sync.never": "Ще не синхронізовано",
   "sync.now": "Синхронізувати зараз",
 
+  "outdated.title": "Потрібне оновлення",
+  "outdated.body": "Сервер оновлено. Перезавантаж цю сторінку, щоб продовжити.",
+  "outdated.reload": "Перезавантажити",
+  "apiError.clientOutdated": "Цей застосунок застарий для цього сервера",
+
   "lastSeen.activeNow": "Зараз активний",
 
   "item.add": "Додати товар",

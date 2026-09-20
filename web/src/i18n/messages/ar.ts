@@ -59,6 +59,11 @@ export const ar: Catalog = {
   "sync.never": "لم تتم المزامنة بعد",
   "sync.now": "مزامنة الآن",
 
+  "outdated.title": "التحديث مطلوب",
+  "outdated.body": "تم تحديث الخادم. أعد تحميل هذه الصفحة للمتابعة.",
+  "outdated.reload": "إعادة التحميل",
+  "apiError.clientOutdated": "هذا التطبيق قديم جدًا على هذا الخادم",
+
   "lastSeen.activeNow": "نشط الآن",
 
   "item.add": "إضافة عنصر",

@@ -53,6 +53,11 @@ export const es: Catalog = {
   "sync.never": "Aún sin sincronizar",
   "sync.now": "Sincronizar ahora",
 
+  "outdated.title": "Actualización necesaria",
+  "outdated.body": "El servidor se ha actualizado. Recarga esta página para continuar.",
+  "outdated.reload": "Recargar",
+  "apiError.clientOutdated": "Esta aplicación es demasiado antigua para este servidor",
+
   "lastSeen.activeNow": "Activo ahora",
 
   "item.add": "Añadir artículo",

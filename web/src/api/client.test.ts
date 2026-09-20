@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, getToken, login, onForcedLogout, register, setToken } from "./client";
+import { ApiError, apiFetch, getToken, login, onForcedLogout, register, setToken, sync } from "./client";
+import {
+  PROTOCOL_VERSION,
+  RELOAD_STORAGE_KEY,
+  onClientOutdated,
+  resetClientOutdatedForTests,
+} from "./protocol";
 
 function mockFetchOnce(status: number, body?: unknown, headers?: Record<string, string>) {
   const responseHeaders = new Headers(headers ?? (body !== undefined ? { "content-type": "application/json" } : {}));
@@ -155,6 +161,88 @@ describe("forced logout on 401 (T-89)", () => {
 
     expect(getToken()).toBeNull();
     expect(handler).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("the protocol header and 426 client_outdated (T-244)", () => {
+  /** Every request's headers, in call order. */
+  const sentHeaders = () =>
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(
+      ([, init]) => (init as RequestInit).headers as Record<string, string>,
+    );
+
+  beforeEach(() => {
+    setToken(null);
+    sessionStorage.removeItem(RELOAD_STORAGE_KEY);
+    resetClientOutdatedForTests();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    sessionStorage.removeItem(RELOAD_STORAGE_KEY);
+    resetClientOutdatedForTests();
+  });
+
+  it("goes out on every request, credential exchanges included", async () => {
+    // The server checks the protocol BEFORE it authenticates, so login and register need the
+    // header exactly as much as a signed-in /sync does.
+    mockFetchOnce(200, { ok: true });
+    await login({ email: "a@example.com", password: "pw", device_label: "web", platform: "web" });
+    await register({ email: "b@example.com", password: "pw" });
+    await sync({ cursor: 0, device_id: "dev-1", full_lists: [], changes: {} });
+    await apiFetch("/lists", { method: "GET" });
+
+    expect(sentHeaders()).toHaveLength(4);
+    for (const headers of sentHeaders()) {
+      expect(headers["X-Client-Protocol"]).toBe(String(PROTOCOL_VERSION));
+    }
+  });
+
+  it("reloads once on a 426, and raises the notice when the next one arrives too soon", async () => {
+    const notice = vi.fn();
+    onClientOutdated(notice);
+    const outdated = () =>
+      apiFetch("/sync", { method: "POST", body: {} }).catch((err: unknown) => err);
+
+    mockFetchOnce(426, { error: "client_outdated", message: "too old", protocol: 3 });
+    const first = await outdated();
+
+    // The refusal still reaches the caller as an ordinary ApiError with the server's code.
+    expect(first).toMatchObject({ status: 426, code: "client_outdated" });
+    // The reload itself is jsdom's to refuse; what this level can see is that it was attempted
+    // (protocol.test.ts asserts the call), and that no notice was raised yet.
+    expect(sessionStorage.getItem(RELOAD_STORAGE_KEY)).not.toBeNull();
+    expect(notice).not.toHaveBeenCalled();
+
+    mockFetchOnce(426, { error: "client_outdated", message: "still too old", protocol: 3 });
+    await outdated();
+
+    expect(notice).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not touch the session on a 426 — being outdated is not being logged out", async () => {
+    setToken("still-valid-token");
+    const forcedLogout = vi.fn();
+    onForcedLogout(forcedLogout);
+    mockFetchOnce(426, { error: "client_outdated", message: "too old", protocol: 3 });
+
+    await expect(apiFetch("/lists", { method: "GET" })).rejects.toBeInstanceOf(ApiError);
+
+    expect(getToken()).toBe("still-valid-token");
+    expect(forcedLogout).not.toHaveBeenCalled();
+    onForcedLogout(null);
+    setToken(null);
+  });
+
+  it("leaves every other failure alone — no reload, no notice", async () => {
+    const notice = vi.fn();
+    onClientOutdated(notice);
+    mockFetchOnce(500, { error: "server_error", message: "boom" });
+
+    await expect(apiFetch("/lists", { method: "GET" })).rejects.toBeInstanceOf(ApiError);
+
+    expect(sessionStorage.getItem(RELOAD_STORAGE_KEY)).toBeNull();
+    expect(notice).not.toHaveBeenCalled();
   });
 });
 

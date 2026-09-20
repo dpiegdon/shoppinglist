@@ -56,6 +56,11 @@ export const ptBR: Catalog = {
   "sync.never": "Ainda não sincronizado",
   "sync.now": "Sincronizar agora",
 
+  "outdated.title": "Atualização necessária",
+  "outdated.body": "O servidor foi atualizado. Recarregue esta página para continuar.",
+  "outdated.reload": "Recarregar",
+  "apiError.clientOutdated": "Este aplicativo é antigo demais para este servidor",
+
   "lastSeen.activeNow": "Ativo agora",
 
   "item.add": "Adicionar item",

@@ -58,6 +58,11 @@ export const ja: Catalog = {
   "sync.never": "まだ同期していません",
   "sync.now": "今すぐ同期",
 
+  "outdated.title": "更新が必要です",
+  "outdated.body": "サーバーが更新されました。続けるにはこのページを再読み込みしてください。",
+  "outdated.reload": "再読み込み",
+  "apiError.clientOutdated": "このアプリはこのサーバーには古すぎます",
+
   "lastSeen.activeNow": "現在アクティブ",
 
   "item.add": "アイテムを追加",

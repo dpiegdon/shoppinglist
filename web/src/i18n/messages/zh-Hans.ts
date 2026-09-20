@@ -57,6 +57,11 @@ export const zhHans: Catalog = {
   "sync.never": "尚未同步",
   "sync.now": "立即同步",
 
+  "outdated.title": "需要更新",
+  "outdated.body": "服务器已更新。请重新加载此页面以继续。",
+  "outdated.reload": "重新加载",
+  "apiError.clientOutdated": "此应用对该服务器来说版本过旧",
+
   "lastSeen.activeNow": "当前活跃",
 
   "item.add": "添加物品",

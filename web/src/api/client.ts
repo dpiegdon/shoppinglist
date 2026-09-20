@@ -19,6 +19,7 @@ import type {
   UpdateSettingsRequest,
 } from "./contract";
 import { appBasename } from "../lib/appConfig";
+import { PROTOCOL_HEADER, PROTOCOL_VERSION, reportClientOutdated } from "./protocol";
 
 // Resolved per-request against the server-injected mount root, so an instance
 // served at e.g. /shopping calls /shopping/api/v1 (T-60). "" in dev = /api/v1.
@@ -90,7 +91,9 @@ interface RequestOptions {
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions): Promise<T> {
-  const headers: Record<string, string> = {};
+  // On EVERY request, login and register included (T-240): the server checks the protocol before
+  // it authenticates, so a request without the header is refused whoever sends it.
+  const headers: Record<string, string> = { [PROTOCOL_HEADER]: String(PROTOCOL_VERSION) };
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
@@ -121,6 +124,12 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
     if (response.status === 401 && tokenSent) {
       setToken(null);
       forcedLogoutHandler?.();
+    }
+    // 426 means this bundle is older than the server's protocol (T-240). The session is fine and
+    // the request is not at fault, so nothing is cleared here: one automatic reload fetches the
+    // current bundle from that same server, and only a second 426 raises the notice.
+    if (response.status === 426) {
+      reportClientOutdated();
     }
     const body = data as ApiErrorBody | undefined;
     throw new ApiError(
