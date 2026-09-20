@@ -1,0 +1,12 @@
+{
+  "body": "Found in the ledger/protocol review. `protocol.client_is_current` matches the header with `[0-9]+` and then calls `int()`; Python refuses to convert more than 4300 digits (ValueError), so an unauthenticated request with a 5000-digit `X-Client-Protocol` header is a 500 with a traceback instead of 426. The regex is bounded to at most nine digits (no protocol version will ever need more); anything longer is simply not a current client. Test with a 5000-digit header.",
+  "created_at": "2026-09-20T10:50:04+00:00",
+  "id": "T-248",
+  "labels": [
+    "server",
+    "security"
+  ],
+  "priority": 3,
+  "title": "Protocol gate: a header of thousands of digits is a 500, not a 426",
+  "updated_at": "2026-09-20T10:50:04+00:00"
+}
