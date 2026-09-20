@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneOffset
 import java.util.Locale
@@ -38,6 +39,35 @@ class AppFormatTest {
     fun `a bare number has two decimals`() {
         assertEquals("64,00", AppFormat.number(6400, de))
         assertEquals("64.00", AppFormat.number(6400, en))
+    }
+
+    @Test
+    fun `a credit is signed, a debt keeps its minus and a square balance stays bare`() {
+        assertEquals("+€32.00", AppFormat.signedMoney(3200, "EUR", en))
+        assertEquals("-€32.00", AppFormat.signedMoney(-3200, "EUR", en))
+        assertEquals("€0.00", AppFormat.signedMoney(0, "EUR", en))
+        assertEquals("+32,00 €", plain(AppFormat.signedMoney(3200, "EUR", de)))
+        assertEquals("-32,00 €", plain(AppFormat.signedMoney(-3200, "EUR", de)))
+    }
+
+    @Test
+    fun `a signed amount keeps the language's own formatting`() {
+        assertEquals("+￥1,500", AppFormat.signedMoney(150000, "JPY", Locale.JAPANESE))
+        assertEquals("+¥1,500.50", AppFormat.signedMoney(150050, "JPY", en))
+        assertEquals("+12.00 pizza slices", AppFormat.signedMoney(1200, "pizza slices", en))
+        assertEquals("+12,50 Tokens", plain(AppFormat.signedMoney(1250, "Tokens", de)))
+    }
+
+    @Test
+    fun `Arabic's plus sits where Arabic's minus sits, bidi marks and all`() {
+        // Not a "+" glued to the front: in an RTL line the sign belongs where the language writes
+        // it, after the marks that keep the digits and the currency in order.
+        val ar = Locale.forLanguageTag("ar")
+        val credit = AppFormat.signedMoney(6400, "EUR", ar)
+        val debt = AppFormat.money(-6400, "EUR", ar)
+        assertEquals(debt.replace('-', '+'), credit)
+        assertEquals(debt.indexOf('-'), credit.indexOf('+'))
+        assertTrue("the sign should not be first in an RTL amount", credit.indexOf('+') > 0)
     }
 
     @Test

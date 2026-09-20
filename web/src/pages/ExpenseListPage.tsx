@@ -155,7 +155,7 @@ export default function ExpenseListPage() {
               {t("expense.yourBalance")}
             </span>
             <strong style={{ color: balanceColor(myBalance.balanceCents) }}>
-              {fmt.money(myBalance.balanceCents, currency)}
+              {fmt.signedMoney(myBalance.balanceCents, currency)}
             </strong>
           </span>
         )}

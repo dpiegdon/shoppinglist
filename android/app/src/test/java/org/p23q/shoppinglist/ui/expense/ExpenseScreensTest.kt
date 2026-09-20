@@ -165,8 +165,8 @@ class ExpenseScreensTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Total spent").assertIsDisplayed()
-        // I paid 64 and owe 32, so the list owes me 32.
-        composeTestRule.onNodeWithText("€32.00").assertIsDisplayed()
+        // I paid 64 and owe 32, so the list owes me 32 — a credit, so signed (T-241).
+        composeTestRule.onNodeWithText("+€32.00").assertIsDisplayed()
 
         // Balances is the other half of this screen now, behind the selector (T-172).
         composeTestRule.onNodeWithText("Balances").performClick()
@@ -267,8 +267,10 @@ class ExpenseScreensTest {
         composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
-        // Once as my balance and once as the transfer that settles it (T-165).
-        composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(2)
+        // My balance is a credit, so it is signed (T-241); the transfer that settles it (T-165)
+        // is a plain amount.
+        composeTestRule.onNodeWithText("+€32.00").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(1)
         composeTestRule.onNodeWithText("-€32.00").assertIsDisplayed()
     }
 
@@ -284,8 +286,10 @@ class ExpenseScreensTest {
 
         // Only an account id remains, so there is no name or email to show.
         composeTestRule.onNodeWithText("Former member 1").assertIsDisplayed()
-        // Once as their balance and once as the transfer that would settle it (T-165).
-        composeTestRule.onAllNodesWithText("€10.00").assertCountEquals(2)
+        // Their balance is a credit, so it is signed (T-241); the transfer that would settle it
+        // (T-165) is a plain amount.
+        composeTestRule.onNodeWithText("+€10.00").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("€10.00").assertCountEquals(1)
         composeTestRule.onNodeWithText("-€10.00").assertIsDisplayed()
     }
 
@@ -306,8 +310,9 @@ class ExpenseScreensTest {
 
         composeTestRule.onNodeWithText("Settle up").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
-        // Once as my balance, once as the transfer.
-        composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(2)
+        // My balance signed (T-241), the transfer plain.
+        composeTestRule.onNodeWithText("+€32.00").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(1)
 
         composeTestRule.onNodeWithText("Reimburse").performClick()
         val prefill = checkNotNull(recorded)

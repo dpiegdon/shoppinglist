@@ -40,6 +40,31 @@ object AppFormat {
         return if (label.isNotEmpty()) "$number $label" else number
     }
 
+    /**
+     * [money] with a "+" on a credit: +64,00 €, and -32,00 € unchanged (T-241). A balance's colour
+     * is never its only signal, so the sign carries the same meaning for a reader who cannot tell
+     * the green from the red.
+     *
+     * The plus goes exactly where the language puts its minus, which is why it is found by
+     * formatting the amount both ways rather than pasted onto the front: Arabic writes its sign
+     * after a bidi mark, and a "+" glued to the front of an RTL amount lands on the wrong end of
+     * the line. java.text has no sign-display option and no plus-sign accessor to ask instead.
+     */
+    fun signedMoney(cents: Long, currency: String?, locale: Locale): String {
+        val positive = money(cents, currency, locale)
+        if (cents <= 0L) return positive
+        val negative = money(-cents, currency, locale)
+        val prefix = negative.commonPrefixWith(positive).length
+        val suffix = negative.commonSuffixWith(positive).length
+        // What the negative rendering adds is the sign, mark and all.
+        if (prefix + suffix >= negative.length) return "+$positive"
+        val minus = negative.substring(prefix, negative.length - suffix)
+        val plus = minus.replace('-', '+').replace('−', '+')
+        // A language that brackets its negatives instead of signing them: fall back to a plain plus.
+        if (plus == minus) return "+$positive"
+        return negative.substring(0, prefix) + plus + negative.substring(negative.length - suffix)
+    }
+
     /** 64,00 / 64.00: the number alone, always with two decimals. */
     fun number(cents: Long, locale: Locale): String = NumberFormat.getNumberInstance(locale).apply {
         minimumFractionDigits = 2

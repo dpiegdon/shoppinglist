@@ -173,8 +173,8 @@ describe("OverviewPage with expenses lists", () => {
 
     expect(await screen.findByText("Trip")).toBeInTheDocument();
     expect(screen.getByText(/^CHF\s60\.00$/)).toBeInTheDocument();
-    // I paid 60 and owe 30, so the list owes me 30.
-    expect(screen.getByText(/^CHF\s30\.00$/)).toBeInTheDocument();
+    // I paid 60 and owe 30, so the list owes me 30 — a credit, so signed (T-241).
+    expect(screen.getByText(/^\+CHF\s30\.00$/)).toBeInTheDocument();
     // One expense on the list, counted as the app counts it (T-191).
     expect(screen.getByText("1")).toBeInTheDocument();
   });

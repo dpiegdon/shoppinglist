@@ -9,6 +9,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -56,6 +58,26 @@ private val DarkColors = darkColorScheme(
     onTertiaryContainer = Color(0xFFC7E7FF),
 )
 
+// The green a credit is written in (T-241): a fixed light/dark pair rather than a colour-scheme
+// slot, because it carries a meaning — red owed, green owing to you — and a meaning must not move
+// with the wallpaper when dynamic colour is switched on. The same two values are the web's
+// --color-positive in web/src/index.css; web/src/lib/balanceColors.test.ts reads this file and
+// fails if the two clients drift apart. Red stays colorScheme.error.
+val BalancePositiveLight = Color(0xFF15803D)
+val BalancePositiveDark = Color(0xFF4ADE80)
+
+/** The green for the theme being rendered — dark schemes included, dynamic or not. */
+fun positiveBalanceColor(variant: ThemeVariant): Color = when (variant) {
+    ThemeVariant.DARK, ThemeVariant.DYNAMIC_DARK -> BalancePositiveDark
+    ThemeVariant.LIGHT, ThemeVariant.DYNAMIC_LIGHT -> BalancePositiveLight
+}
+
+/**
+ * [positiveBalanceColor] for the theme in scope, so a composable showing a balance need not know
+ * whether the system is in dark mode. [ShoppingListTheme] provides it.
+ */
+val LocalPositiveBalanceColor = staticCompositionLocalOf { BalancePositiveLight }
+
 private val AppTypography = Typography(
     titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
 )
@@ -85,9 +107,11 @@ fun ShoppingListTheme(
         if (darkTheme) DarkColors else LightColors
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content,
-    )
+    CompositionLocalProvider(LocalPositiveBalanceColor provides positiveBalanceColor(variant)) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content,
+        )
+    }
 }

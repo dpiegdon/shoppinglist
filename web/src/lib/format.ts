@@ -14,23 +14,51 @@ const ISO_CURRENCY = /^[A-Z]{3}$/;
 
 /** 64,00 € / €64.00 — or "12,00 pizza slices" when the label is not a currency code. */
 export function formatMoney(cents: number, currency: string | null | undefined, locale: string): string {
+  return money(cents, currency, locale, "auto");
+}
+
+/**
+ * [formatMoney] with a "+" on a credit: +64,00 €, and −32,00 € unchanged (T-241). A balance's
+ * colour is never its only signal, so the sign carries the same meaning for a reader who cannot
+ * tell the green from the red. The language places the sign, so Arabic gets its plus the way it
+ * gets its minus, with the bidi marks that keep an RTL line in order.
+ */
+export function formatSignedMoney(cents: number, currency: string | null | undefined, locale: string): string {
+  return money(cents, currency, locale, "exceptZero");
+}
+
+function money(
+  cents: number,
+  currency: string | null | undefined,
+  locale: string,
+  signDisplay: "auto" | "exceptZero",
+): string {
   const label = (currency ?? "").trim();
   if (ISO_CURRENCY.test(label)) {
     try {
       // A currency's own precision (none for yen), unless the amount really has cents to show.
       const exact = cents % 100 === 0 ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
-      return new Intl.NumberFormat(locale, { style: "currency", currency: label, ...exact }).format(cents / 100);
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: label,
+        signDisplay,
+        ...exact,
+      }).format(cents / 100);
     } catch {
       // A three-letter label Intl does not know as a currency: shown as a label below.
     }
   }
-  const number = formatNumber(cents, locale);
+  const number = formatNumber(cents, locale, signDisplay);
   return label ? `${number} ${label}` : number;
 }
 
 /** 64,00 / 64.00: the number alone, always with two decimals. */
-export function formatNumber(cents: number, locale: string): string {
-  return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
+export function formatNumber(cents: number, locale: string, signDisplay: "auto" | "exceptZero" = "auto"): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay,
+  }).format(cents / 100);
 }
 
 /**
@@ -56,6 +84,7 @@ export function useFormat() {
   return useMemo(
     () => ({
       money: (cents: number, currency: string | null | undefined) => formatMoney(cents, currency, locale),
+      signedMoney: (cents: number, currency: string | null | undefined) => formatSignedMoney(cents, currency, locale),
       number: (cents: number) => formatNumber(cents, locale),
       date: (isoDate: string) => formatCalendarDate(isoDate, locale),
       day: (epochMillis: number) => formatDay(epochMillis, locale),
@@ -64,9 +93,13 @@ export function useFormat() {
   );
 }
 
-/** Owed is red, owing-to-you is the accent, square is grey — the same everywhere (T-182). */
+/**
+ * Owed is red, owing-to-you is green, square is grey — the same everywhere (T-182, T-241). Green
+ * rather than the theme's accent: the accent belongs to headings and buttons, and a number that
+ * means something should read by the colour everyone already reads money in.
+ */
 export function balanceColor(cents: number): string {
   if (cents < 0) return "var(--color-danger)";
-  if (cents > 0) return "var(--color-accent)";
+  if (cents > 0) return "var(--color-positive)";
   return "var(--color-text-muted)";
 }

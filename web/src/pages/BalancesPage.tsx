@@ -156,7 +156,7 @@ export default function BalancesPage() {
                   color: balanceColor(balance.balanceCents),
                 }}
               >
-                {fmt.money(balance.balanceCents, currency)}
+                {fmt.signedMoney(balance.balanceCents, currency)}
               </strong>
             </div>
           );

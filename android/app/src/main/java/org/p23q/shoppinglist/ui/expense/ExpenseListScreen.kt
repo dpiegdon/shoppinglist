@@ -55,6 +55,7 @@ import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
 import java.util.Date
 
 /**
@@ -170,7 +171,7 @@ fun ExpenseListScreen(
                                 style = MaterialTheme.typography.labelSmall,
                             )
                             Text(
-                                AppFormat.money(myBalance.balanceCents, state.currency, appLocale()),
+                                AppFormat.signedMoney(myBalance.balanceCents, state.currency, appLocale()),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = balanceColor(myBalance.balanceCents),
                             )
@@ -339,10 +340,15 @@ internal fun forWhomLabel(expense: Expense, state: ExpenseListUiState): String {
     }
 }
 
+/**
+ * Owed is red, owing-to-you is green, square is grey — as the web's balanceColor does it
+ * (T-182, T-241). Green rather than the theme's primary: the brand colour belongs to headings and
+ * buttons, and a number that means something reads by the colour money is already read in.
+ */
 @Composable
 internal fun balanceColor(cents: Long) = when {
     cents < 0 -> MaterialTheme.colorScheme.error
-    cents > 0 -> MaterialTheme.colorScheme.primary
+    cents > 0 -> LocalPositiveBalanceColor.current
     else -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 

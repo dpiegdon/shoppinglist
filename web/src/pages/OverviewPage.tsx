@@ -193,7 +193,9 @@ export default function OverviewPage() {
           {fmt.money(total, currency)}
         </span>
         {showBalance && (
-          <span style={{ color: balanceColor(mine.balanceCents) }}>{fmt.money(mine.balanceCents, currency)}</span>
+          <span style={{ color: balanceColor(mine.balanceCents) }}>
+            {fmt.signedMoney(mine.balanceCents, currency)}
+          </span>
         )}
       </span>
     );

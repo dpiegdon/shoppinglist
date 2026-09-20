@@ -140,8 +140,8 @@ describe("expense list screen", () => {
     // A plain summary now; the selector is the way to balances (T-172).
     const summary = screen.getByText("Total spent").closest(".card") as HTMLElement;
     expect(within(summary).getByText("€64.00")).toBeInTheDocument();
-    // I paid 64 and my share is 32, so the list owes me 32.
-    expect(within(summary).getByText("€32.00")).toBeInTheDocument();
+    // I paid 64 and my share is 32, so the list owes me 32 — a credit, so signed (T-241).
+    expect(within(summary).getByText("+€32.00")).toBeInTheDocument();
     expect(screen.getByText("paid by ME · for everyone")).toBeInTheDocument();
     // The date heading in the app's language, not the stored 2026-09-17 (T-180).
     expect(screen.getByRole("heading", { name: "Sep 17, 2026" })).toBeInTheDocument();
@@ -390,14 +390,14 @@ describe("balances screen", () => {
     expect(await screen.findByText("Balances")).toBeInTheDocument();
     expect(screen.getByText("Former member 1")).toBeInTheDocument();
 
-    const rows = screen.getAllByText(/^-?€\d+\.\d\d$/);
+    const rows = screen.getAllByText(/^[-+]?€\d+\.\d\d$/);
     const amounts = rows
       .map((node) => node.textContent ?? "")
       .filter((text) => text !== "€84.00");
-    // Balances: me +22.00, the other -32.00, the departed member +10.00.
-    expect(amounts).toContain("€22.00");
+    // Balances: me +22.00, the other -32.00, the departed member +10.00 — each signed (T-241).
+    expect(amounts).toContain("+€22.00");
     expect(amounts).toContain("-€32.00");
-    expect(amounts).toContain("€10.00");
+    expect(amounts).toContain("+€10.00");
   });
 
   it("shows what each participant paid and what their share was", async () => {

@@ -150,7 +150,7 @@ fun OverviewScreen(
                                             )
                                             summary.myBalanceCents?.let { balance ->
                                                 Text(
-                                                    text = AppFormat.money(balance, summary.currency, locale),
+                                                    text = AppFormat.signedMoney(balance, summary.currency, locale),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     // Square is grey, as everywhere else (T-182).
                                                     color = balanceColor(balance),

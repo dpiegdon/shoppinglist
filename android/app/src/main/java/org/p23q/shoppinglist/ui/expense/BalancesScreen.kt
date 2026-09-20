@@ -84,7 +84,7 @@ fun BalancesContent(
                         )
                     }
                     Text(
-                        text = AppFormat.money(balance.balanceCents, state.currency, appLocale()),
+                        text = AppFormat.signedMoney(balance.balanceCents, state.currency, appLocale()),
                         style = MaterialTheme.typography.titleSmall,
                         color = balanceColor(balance.balanceCents),
                     )
