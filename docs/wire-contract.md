@@ -15,6 +15,10 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
 - **Auth.** `Authorization: Bearer <token>` on every endpoint except
   `POST /register`, `POST /login`, `GET /registration-status`,
   `GET /app-version`, and the site-root pages.
+- **Protocol.** `X-Client-Protocol: <integer>` on **every** API request,
+  including `POST /register` and `POST /login`. A client older than the server
+  is refused with `426 client_outdated` before anything else happens — see
+  "Protocol version". The site-root pages and `GET /app-version` do not need it.
 - **Error envelope.** Every non-2xx JSON response is
   `{"error": "<code>", "message": "<text>"}`, sometimes with extra keys (never
   shadowing those two) — e.g. `row_id`/`field` on a `/sync` validation failure.
@@ -31,6 +35,48 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
   retry — nothing was applied.
 - **Input caps.** `email` ≤ 254 bytes and may not contain `:`; `password` ≤ 320
   bytes (≥ 8); `device_label` ≤ 128 bytes. Over-cap values are `422`.
+
+## Protocol version
+
+The interface has a single integer version, **3**. Both clients send it on every
+API request as `X-Client-Protocol`, and the server compares it with its own
+`PROTOCOL_VERSION` (`server/src/shoppinglist_server/protocol.py`,
+`web/src/api/protocol.ts`, the Android client's `Protocol.kt` — all three carry
+the same number).
+
+| The client sends | The server answers |
+|---|---|
+| nothing (every client built before 3.0.0) | `426 client_outdated` |
+| anything but a plain positive integer (`abc`, `3.0`, `-1`, `0`, an empty value) | `426 client_outdated` |
+| a number below the server's | `426 client_outdated` |
+| the server's number, or a higher one | the request is served normally |
+
+The refusal is the standard envelope plus the server's version:
+
+```json
+{"error": "client_outdated", "message": "...", "protocol": 3}
+```
+
+It is decided before authentication and before the database is opened: nothing is
+read, written, swept or audited, and a valid bearer token neither helps nor is
+harmed. The only exemptions are `GET /app-version` — how an outdated app finds
+the update that fixes this — and the site-root routes, which a browser opens
+with no protocol to declare.
+
+A client **newer** than the server is deliberately not refused: an older server
+cannot know what a newer client needs. Upgrade the server before its clients.
+
+**When the number changes.** A change to this contract that an already-installed
+client of the previous protocol cannot handle correctly bumps `PROTOCOL_VERSION`,
+and the release that ships it is a new **MAJOR** version. Additive changes an old
+client simply ignores — a new optional response field, an endpoint it never calls
+— do not bump it. The protocol version never exceeds the release's major version,
+and a major release with no wire change leaves the protocol alone. `release.sh`
+refuses a release that breaks either rule.
+
+| Protocol | Introduced in | What an older client cannot handle |
+|---|---|---|
+| 3 | 3.0.0 | Ledger entry types. |
 
 ## Field clock
 
@@ -347,7 +393,7 @@ returns `403 cannot_delete_admin` (remove them from the config instead).
 
 | Endpoint | Request body | Success response |
 |---|---|---|
-| `GET /app-version` | — | `200 {"version", "download_url"}` |
+| `GET /app-version` | — | `200 {"version", "download_url", "protocol"}` |
 
 Unauthenticated, like `/registration-status`: checking for an update is not an
 account operation, and the download it points at is public anyway. The Android
@@ -361,6 +407,11 @@ version number, so the two are the same thing by construction.
 `download_url` is **absolute**, built from the instance's `base_url`, so it
 survives a prefix mount and can be handed straight to an Android intent. It
 points at the site-root `GET /shoppinglist.apk` below.
+
+`protocol` is the server's `PROTOCOL_VERSION`. This endpoint is the one an
+outdated client can still reach (see "Protocol version"), so it is where a client
+refused with `426` reads what it has to catch up to. It is also unauthenticated
+and ungated for exactly that reason.
 
 `404 no_app_package` when this instance serves no APK — because
 `serve_android_apk` is off, no APK is packaged, or the server is running from a
@@ -510,4 +561,5 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`, or names a list the caller cannot write to. |
 | 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. `invalid_expense` covers every rule on a ledger entry: its `type` (one of `expense`, `income`, `transfer`, or absent for `expense`), the transfer's one sender and one different recipient, the positive amounts, the two maps summing alike, the date, the participants, and an entry on a list that is not a ledger. |
 | 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
+| 426 | `client_outdated` | The request declared no `X-Client-Protocol`, a malformed one, or a version below the server's. Carries the server's `protocol`. See "Protocol version". |
 | 503 | `server_busy` | See "Conventions". Always safe to retry. |

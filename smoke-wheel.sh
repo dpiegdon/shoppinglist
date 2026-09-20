@@ -48,6 +48,7 @@ from flask import Flask
 
 from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
+from shoppinglist_server.protocol import PROTOCOL_HEADER, PROTOCOL_VERSION
 
 failures = []
 checks = 0
@@ -95,6 +96,9 @@ app.register_blueprint(
     )
 )
 c = app.test_client()
+# Every API request declares the protocol (T-243); without the header the gate answers 426
+# before the route runs, which is what the check below proves.
+c.environ_base[f"HTTP_{PROTOCOL_HEADER.upper().replace('-', '_')}"] = str(PROTOCOL_VERSION)
 API = "/shopping/api/v1"
 
 # --- the API answers ------------------------------------------------------
@@ -284,6 +288,11 @@ if r.status_code == 200:
         payload.get("version") == installed,
         f"{payload.get('version')} != {installed}",
     )
+    check(
+        "app-version reports the protocol version",
+        payload.get("protocol") == PROTOCOL_VERSION,
+        f"{payload.get('protocol')} != {PROTOCOL_VERSION}",
+    )
     url = payload.get("download_url", "")
     check(
         "its download_url is absolute and prefix-aware",
@@ -303,6 +312,22 @@ check("the invite page sends no referrer", r.headers.get("Referrer-Policy") == "
 r = c.get(f"{API}/lists")
 check("an unauthenticated API call is refused", r.status_code == 401, str(r.status_code))
 check("errors use the JSON envelope", set(r.get_json() or {}) >= {"error", "message"})
+
+# --- the protocol gate ----------------------------------------------------
+# A client that declares nothing is every app built before 3.0.0.
+old = app.test_client()
+r = old.get(f"{API}/lists")
+check("a client with no protocol header is refused", r.status_code == 426, str(r.status_code))
+check(
+    "the refusal names the server's protocol",
+    (r.get_json() or {}).get("error") == "client_outdated"
+    and (r.get_json() or {}).get("protocol") == PROTOCOL_VERSION,
+    r.get_data(as_text=True)[:120],
+)
+r = old.get(f"{API}/app-version")
+check("app-version stays reachable by an outdated client", r.status_code == 200, str(r.status_code))
+r = old.get("/shopping/")
+check("the web client stays reachable by a browser", r.status_code == 200, str(r.status_code))
 
 print()
 if failures:

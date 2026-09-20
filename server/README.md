@@ -194,6 +194,31 @@ one worth wiring into cron or a monitoring check if you want to be told about a
 problem rather than finding it in the log. Running `gc` from cron is still
 optional, and only buys a tidier database on a server that is going unused.
 
+## Protocol version
+
+The client/server interface carries an integer version, `PROTOCOL_VERSION` in
+`shoppinglist_server/protocol.py`. Every API request must declare it as
+`X-Client-Protocol: <integer>`; a request that declares nothing, something
+malformed, or an older version is answered
+
+```json
+{"error": "client_outdated", "message": "...", "protocol": 3}
+```
+
+with status `426`, decided before authentication and before the database is
+opened. `GET /app-version` (which reports `protocol` alongside `version`) and the
+site-root routes — the web client, the invite landing page, the APK — are exempt,
+so an outdated app can still find its update and a browser can still load the
+SPA.
+
+Both clients carry the same constant (`web/src/api/protocol.ts`, the Android
+client's `Protocol.kt`). A client newer than the server is **not** refused, so
+upgrade the server first. The number is bumped only by a change an installed
+client of the previous protocol cannot handle, which makes that release a major
+one; `../release.sh` refuses a release whose version and protocol disagree. The
+policy and the changelog live in
+[`docs/wire-contract.md`](../docs/wire-contract.md).
+
 ## Deploying and upgrading
 
 1. Build the wheel (see the root README) and `pip install` it on the host.
@@ -203,7 +228,9 @@ optional, and only buys a tidier database on a server that is going unused.
 
 To upgrade, install the new wheel and restart. An existing database migrates
 itself the first time the new version opens it; take a backup first (see
-Backups), since migrations only run forward.
+Backups), since migrations only run forward. A **major** upgrade also raises the
+protocol version (see above), so every installed app has to be updated with it;
+until it is, it is answered `426 client_outdated` and pointed at the download.
 
 ## Running the dev server
 
@@ -221,17 +248,18 @@ needed. Try the register/login round trip:
 
 ```bash
 curl -s -X POST http://localhost:5000/api/v1/register \
-  -H 'Content-Type: application/json' \
+  -H 'Content-Type: application/json' -H 'X-Client-Protocol: 3' \
   -d '{"email": "you@example.com", "password": "a long password"}'
 
 curl -s -X POST http://localhost:5000/api/v1/login \
-  -H 'Content-Type: application/json' \
+  -H 'Content-Type: application/json' -H 'X-Client-Protocol: 3' \
   -d '{"email": "you@example.com", "password": "a long password", "device_label": "curl"}'
 ```
 
-The second call returns a bearer token; pass it as `Authorization: Bearer
-<token>` on every other endpoint (see the wire contract linked above for the
-full list).
+`X-Client-Protocol` is required on every API call (see Protocol version above);
+without it the server answers `426 client_outdated`. The second call returns a
+bearer token; pass it as `Authorization: Bearer <token>` on every other endpoint
+(see the wire contract linked above for the full list).
 
 ## Web client
 
@@ -293,10 +321,11 @@ sync with. `GET /api/v1/app-version` answers with the version this server
 carries and the absolute URL to fetch it:
 
 ```json
-{"version": "1.12.0", "download_url": "https://example.com/shopping/shoppinglist.apk"}
+{"version": "1.12.0", "download_url": "https://example.com/shopping/shoppinglist.apk", "protocol": 3}
 ```
 
-It is unauthenticated (like `/registration-status`), and the version reported is
+It is unauthenticated (like `/registration-status`) and exempt from the protocol
+gate, since an app refused as outdated finds its update here. The version reported is
 this **package's** version rather than one parsed out of the APK — the single
 artifact shares one version number, so those are the same thing. The Android
 client checks on foreground, at most twice a day, and offers each new version

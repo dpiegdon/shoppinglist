@@ -7,6 +7,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from . import audit
 from . import db as db_module
 from .errors import ApiError
+from .protocol import PROTOCOL_HEADER, PROTOCOL_VERSION, client_is_current
 
 EXTENSION_KEY = "shoppinglist_server"
 
@@ -197,6 +198,36 @@ def create_blueprint(
                 )
             if registered:
                 owned_endpoints |= _WEBAPP_ENDPOINTS
+
+    @bp.before_request
+    def _check_client_protocol():
+        """Turn away a client older than this server's protocol, before anything else (T-243).
+
+        Blueprint-scoped, so it guards every API route of THIS instance and nothing else: a
+        co-mounted blueprint's routes and our own site-root routes (`/`, `/invite/<token>`, the
+        web bundle, `/shoppinglist.apk`) are untouched — a browser opening the landing page has
+        no protocol to declare, and the SPA it downloads is always this server's own. Each
+        mounted instance registers its own hook, so each answers for itself.
+
+        First hook, and it touches nothing: no authentication, no database connection, no audit
+        record, no housekeeping sweep. An outdated client is turned away by the cheapest possible
+        answer, and a request that never reaches a route cannot half-apply anything.
+
+        `GET /app-version` is the one exemption: it is how an outdated app finds the update that
+        fixes this, so gating it would close the only door out. Its endpoint is compared against
+        this instance's own blueprint name rather than a bare suffix, so another mounted
+        instance's endpoint of the same name is not accidentally exempted here.
+        """
+        if request.endpoint == f"{bp.name}.app_version_view":
+            return None
+        if client_is_current(request.headers.get(PROTOCOL_HEADER)):
+            return None
+        raise ApiError(
+            426,
+            "client_outdated",
+            "This app is too old for this server. Update it and try again.",
+            details={"protocol": PROTOCOL_VERSION},
+        )
 
     @bp.after_request
     def _housekeeping(response):
