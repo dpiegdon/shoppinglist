@@ -898,3 +898,236 @@ describe("settling up", () => {
     expect(screen.queryByText("Settle up")).not.toBeInTheDocument();
   });
 });
+
+
+// ---- the three entry types (T-245) -------------------------------------------
+
+describe("the entry dialog knows three types", () => {
+  function setUp(list: ReturnType<typeof expenseList>, items: ReturnType<typeof expenseItem>[]) {
+    api.setToken("test-token");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: ME, email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [list], items } });
+  }
+
+  /** Opens the add form on a two-member ledger holding one ordinary dinner. */
+  async function openAddForm() {
+    setUp(expenseList(), [expenseItem("e1", "Dinner", dinner)]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("offers all three, with Expense the one a new entry starts as", async () => {
+    await openAddForm();
+
+    expect(screen.getByRole("radio", { name: "Expense" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Income" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "Transfer" })).toBeEnabled();
+    // The expense form is exactly what it was.
+    expect(screen.getByText("Paid by")).toBeInTheDocument();
+    expect(screen.getByText("For")).toBeInTheDocument();
+  });
+
+  it("reads an income's two sides as received and credited", async () => {
+    await openAddForm();
+    await userEvent.click(screen.getByRole("radio", { name: "Income" }));
+
+    expect(screen.getByText("Received by")).toBeInTheDocument();
+    expect(screen.getByText("Credited to")).toBeInTheDocument();
+    expect(screen.queryByText("Paid by")).not.toBeInTheDocument();
+    // Still the same form underneath: the shares are there to be edited.
+    expect(screen.getByLabelText(`Received by ${ME}@example.com`)).toBeInTheDocument();
+  });
+
+  it("saves an income with its type and none of its amounts negated", async () => {
+    await openAddForm();
+    await userEvent.click(screen.getByRole("radio", { name: "Income" }));
+    await userEvent.type(screen.getByLabelText("What"), "Deposit back");
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "30.00");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const income = pushedExpense();
+    expect(income.type).toBe("income");
+    expect(income.paid_by).toEqual({ [ME]: "30.00" });
+    expect(income.paid_for).toEqual({ [ME]: "15.00", [OTHER]: "15.00" });
+  });
+
+  it("swaps the split for a sender and a recipient on a transfer, and saves one of each", async () => {
+    await openAddForm();
+    await userEvent.click(screen.getByRole("radio", { name: "Transfer" }));
+
+    // No split to make: one person hands money to another.
+    expect(screen.queryByText("Paid by")).not.toBeInTheDocument();
+    // The value is the account id; what it reads as is the member's own label.
+    expect(screen.getByLabelText("From")).toHaveValue(ME);
+    expect(screen.getByLabelText("From")).toHaveTextContent(`${ME}@example.com`);
+    expect(screen.getByLabelText("To")).toHaveValue(OTHER);
+
+    await userEvent.type(screen.getByLabelText("What"), "Payback");
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "20.00");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const transfer = pushedExpense();
+    expect(transfer.type).toBe("transfer");
+    expect(transfer.paid_by).toEqual({ [ME]: "20.00" });
+    expect(transfer.paid_for).toEqual({ [OTHER]: "20.00" });
+    expect(transfer.equal_by).toBe(true);
+  });
+
+  it("neither picker offers the other's choice", async () => {
+    await openAddForm();
+    await userEvent.click(screen.getByRole("radio", { name: "Transfer" }));
+
+    const from = screen.getByLabelText("From") as HTMLSelectElement;
+    const to = screen.getByLabelText("To") as HTMLSelectElement;
+    expect([...from.options].map((option) => option.value)).toEqual([ME]);
+    expect([...to.options].map((option) => option.value)).toEqual([OTHER]);
+  });
+
+  it("keeps the title, the total, the date and the note across a change of type", async () => {
+    await openAddForm();
+    await userEvent.type(screen.getByLabelText("What"), "Market");
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "18.00");
+    await userEvent.type(screen.getByLabelText("Note"), "in cash");
+
+    for (const type of ["Income", "Transfer", "Expense"]) {
+      await userEvent.click(screen.getByRole("radio", { name: type }));
+      expect(screen.getByLabelText("What")).toHaveValue("Market");
+      expect(screen.getByLabelText("Total (EUR)")).toHaveValue("18.00");
+      expect(screen.getByLabelText("Note")).toHaveValue("in cash");
+      expect(screen.getByLabelText("Date")).toHaveValue(today());
+    }
+  });
+
+  it("keeps the participants when an expense becomes an income and back", async () => {
+    await openAddForm();
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "40.00");
+    // A share typed by hand, so the maps are no longer the untouched default.
+    await userEvent.type(screen.getByLabelText(`For ${OTHER}@example.com`), "10.00");
+
+    await userEvent.click(screen.getByRole("radio", { name: "Income" }));
+    expect(screen.getByLabelText(`Credited to ${OTHER}@example.com`)).toHaveValue("10.00");
+    expect(screen.getByLabelText(`Credited to ${ME}@example.com`)).toHaveAttribute("placeholder", "30.00");
+
+    await userEvent.click(screen.getByRole("radio", { name: "Expense" }));
+    expect(screen.getByLabelText(`For ${OTHER}@example.com`)).toHaveValue("10.00");
+  });
+
+  it("turns a transfer back into an expense the sender paid and the recipient owes", async () => {
+    await openAddForm();
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "20.00");
+    await userEvent.click(screen.getByRole("radio", { name: "Transfer" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Expense" }));
+    await userEvent.type(screen.getByLabelText("What"), "Loan");
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    // The sender is the whole of "paid by", the recipient the whole of "for": the same movement
+    // of money, now counted as spending.
+    expect(pushedExpense().type).toBe("expense");
+    expect(pushedExpense().paid_by).toEqual({ [ME]: "20.00" });
+    expect(pushedExpense().paid_for).toEqual({ [OTHER]: "20.00" });
+  });
+
+  it("names a blank income and a blank transfer after their type, but still asks an expense", async () => {
+    await openAddForm();
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "12.00");
+    // An expense with no title cannot be saved, as it never could.
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("radio", { name: "Income" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(pushedItem()?.fields.name?.value).toBe("Income");
+  });
+
+  it("names a blank transfer after its type", async () => {
+    await openAddForm();
+    await userEvent.type(screen.getByLabelText("Total (EUR)"), "12.00");
+    await userEvent.click(screen.getByRole("radio", { name: "Transfer" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(pushedItem()?.fields.name?.value).toBe("Transfer");
+  });
+
+  it("opens an entry stored before types existed as the expense it has always been", async () => {
+    setUp(expenseList(), [expenseItem("e1", "Dinner", dinner)]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    expect(screen.getByRole("heading", { name: "Edit entry" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Expense" })).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(pushedExpense().type).toBe("expense");
+  });
+
+  it("opens a stored transfer on its own two pickers", async () => {
+    const payback: Expense = {
+      type: "transfer",
+      paid_by: { [OTHER]: "15.00" },
+      equal_by: true,
+      paid_for: { [ME]: "15.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    };
+    setUp(expenseList(), [expenseItem("e1", "Payback", payback)]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Payback"));
+
+    expect(screen.getByRole("radio", { name: "Transfer" })).toBeChecked();
+    expect(screen.getByLabelText("From")).toHaveValue(OTHER);
+    expect(screen.getByLabelText("To")).toHaveValue(ME);
+    expect(screen.getByLabelText("Total (EUR)")).toHaveValue("15.00");
+  });
+
+  it("refuses a transfer that pays its own sender", async () => {
+    // Nothing the form can produce — the pickers exclude each other — but a row written by
+    // another client can say it, and saving it on would only earn a refusal.
+    const circular: Expense = {
+      type: "transfer",
+      paid_by: { [ME]: "5.00" },
+      equal_by: true,
+      paid_for: { [ME]: "5.00" },
+      equal_for: true,
+      date: "2026-09-17",
+    };
+    setUp(expenseList(), [expenseItem("e1", "Odd one", circular)]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Odd one"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Choose two different people.");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("does not offer a transfer to someone whose amounts are frozen", async () => {
+    const THIRD = "acct-third";
+    setUp(expenseList([ME, OTHER, THIRD], [THIRD]), [expenseItem("e1", "Dinner", dinner)]);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Transfer" }));
+
+    const to = screen.getByLabelText("To") as HTMLSelectElement;
+    expect([...to.options].map((option) => option.value)).not.toContain(THIRD);
+  });
+
+  it("cannot record a transfer on a list of one", async () => {
+    setUp(expenseList([ME]), []);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
+
+    expect(screen.getByRole("radio", { name: "Transfer" })).toBeDisabled();
+    expect(screen.getByText("A transfer needs two different people on this list.")).toBeInTheDocument();
+    // Income is still on offer: one person can be refunded.
+    expect(screen.getByRole("radio", { name: "Income" })).toBeEnabled();
+  });
+});

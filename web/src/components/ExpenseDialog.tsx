@@ -1,9 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "../api/client";
-import type { Expense, ItemObject, ListMember } from "../api/contract";
+import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import {
   distribute,
+  entryType,
   expenseTotalCents,
   fromCents,
   sharesToWire,
@@ -96,6 +97,22 @@ function entriesOf(state: ShareState, ids: string[], frozen?: Set<string>): Shar
     });
 }
 
+/** The three types in the order the segmented control offers them. */
+const TYPES: ExpenseType[] = ["expense", "income", "transfer"];
+
+/** The i18n key of a type's label — also the title a blank income or transfer falls back to. */
+function typeLabelKey(type: ExpenseType): "expense.type.expense" | "expense.type.income" | "expense.type.transfer" {
+  if (type === "income") return "expense.type.income";
+  if (type === "transfer") return "expense.type.transfer";
+  return "expense.type.expense";
+}
+
+/** The single account named in one side of a transfer, or "" for anything else. */
+function soleParticipant(shares: Record<string, string>): string {
+  const ids = Object.keys(shares);
+  return ids.length === 1 ? ids[0] : "";
+}
+
 /** A new expense can never involve a frozen participant, so they start unselected. */
 function frozenFreeSelection(
   ids: string[],
@@ -183,8 +200,63 @@ export default function ExpenseDialog({
           text: {},
         },
   );
+  // Which of the three this entry is (T-245). An entry stored before types existed opens as the
+  // Expense it has always been, and can be corrected here — that is how a "Settlement" someone
+  // recorded as an expense becomes a Transfer.
+  const [type, setType] = useState<ExpenseType>(() => (seed ? entryType(seed) : "expense"));
+  // A transfer names one sender and one recipient rather than distributing anything.
+  const [transferFrom, setTransferFrom] = useState(() =>
+    seed && entryType(seed) === "transfer" ? soleParticipant(seed.paid_by) : "",
+  );
+  const [transferTo, setTransferTo] = useState(() =>
+    seed && entryType(seed) === "transfer" ? soleParticipant(seed.paid_for) : "",
+  );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  /** Who a transfer may name: nobody whose amounts are frozen can be moved onto or off one. */
+  const transferCandidates = participantIds.filter((id) => !frozen.has(id));
+  // A list of one has nobody to pay, so Transfer is not on offer at all. An entry that already is
+  // one keeps its segment whatever the roster now looks like, so it can still be read and retyped.
+  const canTransfer = transferCandidates.length >= 2 || type === "transfer";
+
+  /**
+   * Changing the type keeps everything the types have in common — title, date, note, total — and
+   * translates what they do not (T-245).
+   *
+   * Expense and Income are the same form read two ways, so their maps survive untouched. A
+   * transfer has no maps to keep: it becomes the one sender and one recipient the maps already
+   * described when they described exactly one of each, and otherwise starts from me and the first
+   * other person. Coming back the other way, the sender is the sole payer and the recipient the
+   * sole beneficiary, each an equal share of one.
+   */
+  function changeType(next: ExpenseType) {
+    if (next === type) return;
+    if (next === "transfer") {
+      const payers = participantIds.filter((id) => paidBy.selected[id]);
+      const beneficiaries = participantIds.filter((id) => paidFor.selected[id]);
+      if (payers.length === 1 && beneficiaries.length === 1 && payers[0] !== beneficiaries[0]) {
+        setTransferFrom(payers[0]);
+        setTransferTo(beneficiaries[0]);
+      } else {
+        const from = transferCandidates.includes(myAccountId)
+          ? myAccountId
+          : (payers.find((id) => transferCandidates.includes(id)) ?? transferCandidates[0] ?? "");
+        // The beneficiaries say more about what the user meant than the roster does, so they are
+        // asked first; the first other member is the fallback.
+        const to =
+          beneficiaries.find((id) => id !== from && transferCandidates.includes(id)) ??
+          transferCandidates.find((id) => id !== from) ??
+          "";
+        setTransferFrom(from);
+        setTransferTo(to);
+      }
+    } else if (type === "transfer") {
+      setPaidBy({ selected: transferFrom ? { [transferFrom]: true } : {}, text: {} });
+      setPaidFor({ selected: transferTo ? { [transferTo]: true } : {}, text: {} });
+    }
+    setType(next);
+  }
 
   // Whether deleting is off the table: it would take a frozen participant's amounts to zero (T-193).
   const deleteBlocked =
@@ -218,6 +290,16 @@ export default function ExpenseDialog({
     return t("expense.error.total");
   }
 
+  /**
+   * What the two sides are called. Income is the same form read the other way round: the money
+   * came in to someone and was credited to the others, so the two legends say so rather than
+   * leaving "Paid by" over a refund.
+   */
+  function sideLabel(which: "by" | "for"): string {
+    if (type === "income") return which === "by" ? t("expense.receivedBy") : t("expense.creditedTo");
+    return which === "by" ? t("expense.paidBy") : t("expense.paidFor");
+  }
+
   function sumOf(state: ShareState): number {
     return entriesOf(state, participantIds, frozen).reduce((sum, entry) => sum + (entry.fixed ?? 0), 0);
   }
@@ -233,7 +315,7 @@ export default function ExpenseDialog({
     return (
       <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
         <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
-          {which === "by" ? t("expense.paidBy") : t("expense.paidFor")}
+          {sideLabel(which)}
         </legend>
         {participantIds.map((id) => {
           const selected = Boolean(state.selected[id]);
@@ -269,7 +351,7 @@ export default function ExpenseDialog({
                 )}
               </label>
               <input
-                aria-label={`${which === "by" ? t("expense.paidBy") : t("expense.paidFor")} ${labelFor(id)}`}
+                aria-label={`${sideLabel(which)} ${labelFor(id)}`}
                 inputMode="decimal"
                 disabled={!selected || reason !== undefined}
                 value={typed}
@@ -297,26 +379,46 @@ export default function ExpenseDialog({
     );
   }
 
+  /** Whether a transfer names two different people, which is the only shape the server takes. */
+  const transferOk = transferFrom !== "" && transferTo !== "" && transferFrom !== transferTo;
+  const sharesOk = type === "transfer" ? totalCents > 0 && transferOk : byResult.ok && forResult.ok;
+  // An expense still needs a title. An income or a transfer falls back to its own name, because
+  // "Income" is all there is to say about most refunds and making people type it is friction.
+  const titleOk = type !== "expense" || name.trim() !== "";
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed || !byResult.ok || !forResult.ok) return;
+    const title = name.trim() || (type === "expense" ? "" : t(typeLabelKey(type)));
+    if (!title || !sharesOk) return;
 
     setSaving(true);
     setSaveError(null);
     try {
       await onSave({
         itemId: editingItem?.id ?? crypto.randomUUID(),
-        name: trimmed,
+        name: title,
         note: note.trim(),
-        expense: {
-          paid_by: sharesToWire(byResult.shares),
-          // "Everyone selected is auto" is exactly what makes a later total change redistribute.
-          equal_by: entriesOf(paidBy, participantIds, frozen).every((entry) => entry.fixed == null),
-          paid_for: sharesToWire(forResult.shares),
-          equal_for: entriesOf(paidFor, participantIds, frozen).every((entry) => entry.fixed == null),
-          date,
-        },
+        expense:
+          type === "transfer"
+            ? {
+                type,
+                // One sender, one recipient, the same amount on both sides: the total is the whole
+                // of it, so a partial settlement is recorded by editing the total.
+                paid_by: { [transferFrom]: fromCents(totalCents) },
+                equal_by: true,
+                paid_for: { [transferTo]: fromCents(totalCents) },
+                equal_for: true,
+                date,
+              }
+            : {
+                type,
+                paid_by: sharesToWire(byResult.ok ? byResult.shares : {}),
+                // "Everyone selected is auto" is exactly what makes a later total change redistribute.
+                equal_by: entriesOf(paidBy, participantIds, frozen).every((entry) => entry.fixed == null),
+                paid_for: sharesToWire(forResult.ok ? forResult.shares : {}),
+                equal_for: entriesOf(paidFor, participantIds, frozen).every((entry) => entry.fixed == null),
+                date,
+              },
       });
       onClose();
     } catch (err) {
@@ -334,7 +436,37 @@ export default function ExpenseDialog({
     return errorMessage(t, err, "item.saveFailed");
   }
 
-  const canSave = name.trim() !== "" && byResult.ok && forResult.ok && !saving;
+  const canSave = titleOk && sharesOk && !saving;
+
+  /** One side of a transfer. The other side's choice is not on offer: nobody pays themselves. */
+  function renderTransferPicker(
+    which: "from" | "to",
+    value: string,
+    other: string,
+    setValue: (next: string) => void,
+  ) {
+    return (
+      <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
+        <label htmlFor={`expense-${which}`}>{t(which === "from" ? "expense.from" : "expense.to")}</label>
+        <select
+          id={`expense-${which}`}
+          value={value}
+          // A frozen participant's amounts may not move, so an entry that names one cannot be
+          // pointed at somebody else here; the server would refuse it anyway.
+          disabled={frozen.has(value)}
+          onChange={(e) => setValue(e.target.value)}
+        >
+          {participantIds
+            .filter((id) => (id !== other || id === value) && (!frozen.has(id) || id === value))
+            .map((id) => (
+              <option key={id} value={id}>
+                {labelFor(id)}
+              </option>
+            ))}
+        </select>
+      </div>
+    );
+  }
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
@@ -348,12 +480,41 @@ export default function ExpenseDialog({
           </p>
         )}
 
+        {/* What kind of entry this is, before anything else: it decides what the rest of the
+            form means (T-245). */}
+        <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
+          <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
+            {t("expense.type")}
+          </legend>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+            {TYPES.map((option) => (
+              <label key={option} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <input
+                  type="radio"
+                  name="expense-type"
+                  value={option}
+                  checked={type === option}
+                  disabled={option === "transfer" && !canTransfer}
+                  onChange={() => changeType(option)}
+                />
+                <span>{t(typeLabelKey(option))}</span>
+              </label>
+            ))}
+          </div>
+          {!canTransfer && (
+            <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
+              {t("expense.error.needTwoMembers")}
+            </p>
+          )}
+        </fieldset>
+
         <div className="form-field">
           <label htmlFor="expense-what">{t("expense.what")}</label>
           <input
             id="expense-what"
             autoFocus
-            required
+            // An income or a transfer names itself when left blank, so only an expense insists.
+            required={type === "expense"}
             autoComplete="off"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -386,10 +547,25 @@ export default function ExpenseDialog({
           </div>
         </div>
 
+        {/* A transfer has nothing to split: it is one person handing money to another. */}
+        {type === "transfer" && (
+          <>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              {renderTransferPicker("from", transferFrom, transferTo, setTransferFrom)}
+              {renderTransferPicker("to", transferTo, transferFrom, setTransferTo)}
+            </div>
+            {transferFrom !== "" && transferFrom === transferTo && (
+              <p className="error-text" role="alert" style={{ margin: "0 0 0.75rem" }}>
+                {t("expense.error.sameMember")}
+              </p>
+            )}
+          </>
+        )}
+
         {/* Nothing to choose on a list of one: they paid, and it was for them. */}
-        {!soloList && renderShares("by", paidBy, setPaidBy, byResult)}
-        {!soloList && renderShares("for", paidFor, setPaidFor, forResult)}
-        {soloList && (
+        {type !== "transfer" && !soloList && renderShares("by", paidBy, setPaidBy, byResult)}
+        {type !== "transfer" && !soloList && renderShares("for", paidFor, setPaidFor, forResult)}
+        {type !== "transfer" && soloList && (
           <p className="muted" style={{ fontSize: "0.85rem" }}>
             {t("expense.soloHint")}
           </p>
