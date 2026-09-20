@@ -138,7 +138,7 @@ describe("expense list screen", () => {
 
     expect(await screen.findByText("Dinner")).toBeInTheDocument();
     // A plain summary now; the selector is the way to balances (T-172).
-    const summary = screen.getByText("Total spent").closest(".card") as HTMLElement;
+    const summary = screen.getByText("Net spent").closest(".card") as HTMLElement;
     expect(within(summary).getByText("€64.00")).toBeInTheDocument();
     // I paid 64 and my share is 32, so the list owes me 32 — a credit, so signed (T-241).
     expect(within(summary).getByText("+€32.00")).toBeInTheDocument();
@@ -155,10 +155,10 @@ describe("expense list screen", () => {
 
     // The header every list has (T-172): the list's name, not a title of the view.
     expect(await screen.findByRole("heading", { name: "Trip" })).toBeInTheDocument();
-    const expenses = screen.getByRole("link", { name: "Expenses" });
+    const expenses = screen.getByRole("link", { name: "Entries" });
     expect(expenses).toHaveAttribute("aria-current", "page");
     // The active view is checked, like Show checked when it is on (T-174).
-    expect(expenses).toHaveTextContent("✓ Expenses");
+    expect(expenses).toHaveTextContent("✓ Entries");
     expect(screen.getByRole("link", { name: "Balances" })).not.toHaveTextContent("✓");
     expect(screen.getByRole("link", { name: "Balances" })).not.toHaveAttribute("aria-current");
 
@@ -167,13 +167,13 @@ describe("expense list screen", () => {
     expect(screen.getByRole("heading", { name: "Trip" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Balances" })).toHaveAttribute("aria-current", "page");
 
-    await userEvent.click(screen.getByRole("link", { name: "Expenses" }));
+    await userEvent.click(screen.getByRole("link", { name: "Entries" }));
     expect(await screen.findByText("Dinner")).toBeInTheDocument();
   });
 
   it("adds an expense paid by me and split equally, with the leftover cent to the first", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
 
     await userEvent.type(screen.getByLabelText("What"), "Taxi");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "0.01");
@@ -189,7 +189,7 @@ describe("expense list screen", () => {
 
   it("redistributes the auto shares when the total changes", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
     await userEvent.type(screen.getByLabelText("What"), "Hotel");
 
     const total = screen.getByLabelText("Total (EUR)");
@@ -206,7 +206,7 @@ describe("expense list screen", () => {
 
   it("leaves a share the user typed alone, and lets the others absorb a change", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
     await userEvent.type(screen.getByLabelText("What"), "Lobster");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "60.00");
 
@@ -229,7 +229,7 @@ describe("expense list screen", () => {
 
   it("refuses a fully typed split that misses the total, and offers to use the sum", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
     await userEvent.type(screen.getByLabelText("What"), "Groceries");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "60.00");
 
@@ -248,7 +248,7 @@ describe("expense list screen", () => {
 
   it("refuses typed shares that exceed the total", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
     await userEvent.type(screen.getByLabelText("What"), "Too much");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "10.00");
 
@@ -275,7 +275,7 @@ describe("expense list screen", () => {
 
   it("asks rather than guessing when typed payer amounts no longer match the total", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
     await userEvent.type(screen.getByLabelText("What"), "Split bill");
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "64.00");
 
@@ -325,7 +325,7 @@ describe("expense list screen, on a list of one", () => {
 
   it("hides the distributions entirely and books the whole amount to me", async () => {
     renderAt("/list/list-1");
-    await userEvent.click(await screen.findByRole("button", { name: "Add expense" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add entry" }));
 
     expect(screen.queryByText("Paid by")).not.toBeInTheDocument();
     expect(screen.queryByText("For")).not.toBeInTheDocument();
@@ -341,7 +341,7 @@ describe("expense list screen, on a list of one", () => {
   it("shows no balance for a list of one, since it is always zero", async () => {
     renderAt("/list/list-1");
 
-    expect(await screen.findByText("Total spent")).toBeInTheDocument();
+    expect(await screen.findByText("Net spent")).toBeInTheDocument();
     expect(screen.queryByText("Your balance")).not.toBeInTheDocument();
   });
 });
@@ -476,7 +476,7 @@ describe("closing an expenses list", () => {
 
     expect(await screen.findByRole("button", { name: "Withdraw" })).toBeInTheDocument();
     // Agreeing to close means being done: the server refuses a voter's new expenses.
-    expect(screen.queryByRole("button", { name: "Add expense" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add entry" })).not.toBeInTheDocument();
   });
 
   it("opens no expense once I have agreed to close, though the rows stay to read (T-193)", async () => {
@@ -541,7 +541,7 @@ describe("closing an expenses list", () => {
     renderAt("/list/list-1");
 
     expect(await screen.findByText(/^Closed on /)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add expense" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add entry" })).not.toBeInTheDocument();
     // The row is still there to read, it just cannot be opened.
     expect(screen.getByText("Dinner").closest("button")).toBeDisabled();
   });

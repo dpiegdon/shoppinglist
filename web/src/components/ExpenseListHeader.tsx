@@ -9,9 +9,9 @@ interface ExpenseListHeaderProps {
 }
 
 /**
- * The top of both views of an expenses list (T-172): the header every list has — the all-lists
+ * The top of both views of a ledger (T-172): the header every list has — the all-lists
  * link and the list's name, which leads back to the overview like ListPage's — and under it, where
- * a shopping list keeps its controls row, the Expenses | Balances selector with settings beside it.
+ * a shopping list keeps its controls row, the Entries | Balances selector with settings beside it.
  *
  * It replaces a balances page titled "Balances" that did not lead anywhere, reached only through
  * a summary card nothing marked as a link. The selector's two entries are links, so each view
@@ -53,7 +53,7 @@ export default function ExpenseListHeader({ listId, listName, view }: ExpenseLis
               screen readers, which announce aria-current instead. */}
           <Link to={`/list/${listId}`} replace aria-current={view === "expenses" ? "page" : undefined}>
             {view === "expenses" && <span aria-hidden="true">✓ </span>}
-            {t("listKind.expenses")}
+            {t("expense.entries")}
           </Link>
           <Link to={`/list/${listId}/balances`} replace aria-current={view === "balances" ? "page" : undefined}>
             {view === "balances" && <span aria-hidden="true">✓ </span>}

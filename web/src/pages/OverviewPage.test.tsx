@@ -188,7 +188,7 @@ describe("OverviewPage with expenses lists", () => {
 
     // No currency field until the kind actually needs one.
     expect(screen.queryByLabelText("Currency")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("radio", { name: /Expenses/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Ledger/ }));
     await userEvent.clear(screen.getByLabelText("Currency"));
     await userEvent.type(screen.getByLabelText("Currency"), "pizza slices");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -208,7 +208,7 @@ describe("OverviewPage with expenses lists", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "New list" }));
     await userEvent.type(screen.getByLabelText("Name"), "Ski trip");
-    await userEvent.click(screen.getByRole("radio", { name: /Expenses/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Ledger/ }));
     expect(screen.getByLabelText("Currency")).toHaveValue("EUR");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
