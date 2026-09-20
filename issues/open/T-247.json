@@ -1,0 +1,12 @@
+{
+  "body": "On the About page of both clients the name is written four times in a row: the heading, the cuneiform sign, the transliteration subtitle, and then the sentence \"Tuppu is the Akkadian word for a clay tablet \u2014 ...\". The sentence no longer repeats the name: it reads \"The Akkadian word for a clay tablet \u2014 the thing a list was pressed into.\" in English and the equivalent in the other eight locales, on both clients (about.tagline / about_tagline). Tests: the English text on both clients, and a web test that the tagline does not repeat the name.",
+  "created_at": "2026-09-20T10:14:53+00:00",
+  "id": "T-247",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 3,
+  "title": "About page: the description no longer repeats the name a fourth time",
+  "updated_at": "2026-09-20T10:14:53+00:00"
+}
