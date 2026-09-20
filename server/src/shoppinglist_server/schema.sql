@@ -138,11 +138,14 @@ CREATE TABLE IF NOT EXISTS items (
     status_ts INTEGER NOT NULL,
     status_by TEXT NOT NULL,
 
-    -- The whole money tuple of an expense (T-151), canonical JSON:
-    -- {"paid_by": {account_id: amount}, "equal_by": bool,
+    -- The whole money tuple of a ledger entry (T-151), canonical JSON:
+    -- {"type": "expense" | "income" | "transfer",
+    --  "paid_by": {account_id: amount}, "equal_by": bool,
     --  "paid_for": {account_id: amount}, "equal_for": bool, "date": "YYYY-MM-DD"}.
-    -- ONE field, not five, so the "both maps sum to the same amount" invariant is written and
-    -- resolved by LWW as a unit. Non-NULL exactly on the live items of an 'expenses' list.
+    -- ONE field, not six, so the "both maps sum to the same amount" invariant and the type that
+    -- gives those amounts their sign are written and resolved by LWW as a unit. Amounts are
+    -- always positive; the sign is the type's. 'type' is absent on rows written before it
+    -- existed, which reads as 'expense'. Non-NULL exactly on the live items of an 'expenses' list.
     expense TEXT,
     expense_ts INTEGER NOT NULL DEFAULT 0,
     expense_by TEXT NOT NULL DEFAULT '',

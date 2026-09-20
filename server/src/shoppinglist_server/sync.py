@@ -114,6 +114,16 @@ CURRENCY_LABEL_MAX_LENGTH = 32
 EXPENSE_SHARES_MAX = 200
 EXPENSE_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
+# The three kinds of entry an expenses list (a ledger) holds. The sign lives in the type, never in
+# the amounts — everything on the wire stays a positive decimal — so an entry is structurally
+# exactly one of the three: money the group spent, money it received, or money one member handed
+# another. An absent `type` means `expense`, which is what every row written before this existed
+# is; the server stores it normalised so a reader never has to infer it.
+EXPENSE_TYPE_EXPENSE = "expense"
+EXPENSE_TYPE_INCOME = "income"
+EXPENSE_TYPE_TRANSFER = "transfer"
+EXPENSE_TYPES = (EXPENSE_TYPE_EXPENSE, EXPENSE_TYPE_INCOME, EXPENSE_TYPE_TRANSFER)
+
 # ---- clock clamping (T-86) --------------------------------------------------
 # A client-supplied updated_at/created_at that is wildly in the future (broken
 # or malicious clock) would otherwise beat every honest edit until that moment
@@ -182,8 +192,22 @@ def _item_field_to_columns(key, value) -> dict:
     return {key: value}
 
 
+def expense_type(expense) -> str:
+    """The type of one decoded entry, defaulting an absent one to `expense`.
+
+    Rows written before the type existed carry no `type` key, and a client may legitimately omit
+    it; both mean the same thing.
+    """
+    if not expense:
+        return EXPENSE_TYPE_EXPENSE
+    return expense.get("type") or EXPENSE_TYPE_EXPENSE
+
+
 def _encode_expense(value) -> str:
-    """Canonical JSON of a validated expense: exactly the five known keys, stable key order.
+    """Canonical JSON of a validated expense: exactly the six known keys, stable key order.
+
+    `type` is written normalised, so an absent one survives only on rows stored before it existed,
+    and only until their next write.
 
     Unknown keys a client sent are dropped rather than stored, so a newer client cannot bloat a row
     with fields this server does not understand and then have them served to every member.
@@ -191,7 +215,17 @@ def _encode_expense(value) -> str:
     canonical = {
         key: value[key] for key in ("paid_by", "equal_by", "paid_for", "equal_for", "date")
     }
+    canonical["type"] = expense_type(value)
     return json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+
+
+def _decode_expense(stored: str) -> dict:
+    """A stored expense as it goes on the wire: `type` filled in for a row written before the type
+    existed, so every reader sees one (clients still default it defensively)."""
+    value = json.loads(stored)
+    if isinstance(value, dict):
+        value.setdefault("type", EXPENSE_TYPE_EXPENSE)
+    return value
 
 
 def _item_load_field(key, row):
@@ -202,7 +236,7 @@ def _item_load_field(key, row):
             return None
         return {"amount": row["price_amount"], "currency": row["price_currency"]}
     if key == "expense":
-        return None if row["expense"] is None else json.loads(row["expense"])
+        return None if row["expense"] is None else _decode_expense(row["expense"])
     if key == "deleted":
         return bool(row["deleted"])
     return row[key]
@@ -437,6 +471,15 @@ def _validate_expense(value):
         return  # permitted by shape; _check_expense_against_list decides per list kind
     if not isinstance(value, dict):
         raise ApiError(422, "invalid_expense", "expense must be an object.")
+    # Absent is the one thing other than the three words that is accepted: rows written before the
+    # type existed have none. An explicit null, a wrong case or an unknown word is refused rather
+    # than coerced — silently filing someone's income as an expense flips a whole ledger's sign.
+    # isinstance first: an unhashable value would otherwise be compared against the tuple's words.
+    entry_type = value.get("type", EXPENSE_TYPE_EXPENSE)
+    if not isinstance(entry_type, str) or entry_type not in EXPENSE_TYPES:
+        raise ApiError(
+            422, "invalid_expense", f"expense type must be one of: {', '.join(EXPENSE_TYPES)}."
+        )
     paid_by = _validate_share_map("paid_by", value.get("paid_by"))
     paid_for = _validate_share_map("paid_for", value.get("paid_for"))
     for key in ("equal_by", "equal_for"):
@@ -457,6 +500,19 @@ def _validate_expense(value):
         raise ApiError(
             422, "invalid_expense", "expense paid_by and paid_for must sum to the same amount."
         )
+    if entry_type == EXPENSE_TYPE_TRANSFER:
+        # One member hands another money, so the two maps name one account each and not the same
+        # one. That the amounts match is already the equal-sum rule above.
+        if len(value["paid_by"]) != 1 or len(value["paid_for"]) != 1:
+            raise ApiError(
+                422,
+                "invalid_expense",
+                "a transfer must have exactly one sender and exactly one recipient.",
+            )
+        if next(iter(value["paid_by"])) == next(iter(value["paid_for"])):
+            raise ApiError(
+                422, "invalid_expense", "a transfer's sender and recipient must be different."
+            )
 
 
 def _validate_price(value):
@@ -612,7 +668,7 @@ def _expense_before_and_after(existing, fields):
     stored = None
     was_deleted = False
     if existing is not None:
-        stored = json.loads(existing["expense"]) if existing["expense"] else None
+        stored = _decode_expense(existing["expense"]) if existing["expense"] else None
         was_deleted = bool(existing["deleted"])
 
     after = (
@@ -669,7 +725,7 @@ def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fie
 
     already_present = set()
     if existing is not None and existing["expense"] is not None:
-        stored = json.loads(existing["expense"])
+        stored = _decode_expense(existing["expense"])
         already_present = set(stored["paid_by"]) | set(stored["paid_for"])
     members = {
         row["account_id"]

@@ -1,4 +1,6 @@
-"""Expense lists, phase 1 (T-151): the `expenses` kind, the list `currency`, and the item `expense`.
+"""Expense lists (T-151): the `expenses` kind, the list `currency`, and the item `expense` — the
+whole money tuple, including the entry `type` that says whether it is an expense, income or a
+transfer between two members (T-242).
 
 Design and reasons: docs/archive/specs/2026-09-17-expense-lists-design.md.
 """
@@ -34,14 +36,22 @@ def _expense_list(list_id="trip", currency="EUR", ts=100, kind="expenses"):
     return {"id": list_id, "created_at": 1000, "fields": fields}
 
 
-def _expense(paid_by, paid_for, date="2026-09-17", equal_by=False, equal_for=True):
-    return {
+def _expense(paid_by, paid_for, date="2026-09-17", equal_by=False, equal_for=True, entry_type=...):
+    expense = {
         "paid_by": paid_by,
         "equal_by": equal_by,
         "paid_for": paid_for,
         "equal_for": equal_for,
         "date": date,
     }
+    if entry_type is not ...:  # ... means "send no type at all", which reads as an expense
+        expense["type"] = entry_type
+    return expense
+
+
+def _as_served(expense):
+    """The entry as the server serves it back: the type filled in when the client sent none."""
+    return {**expense, "type": expense.get("type", "expense")}
 
 
 def _expense_item(item_id, expense, name="Dinner", list_id="trip", ts=100, by="devA"):
@@ -190,7 +200,7 @@ def test_an_expense_round_trips_as_one_field(db_conn, trip):
     _apply(db_conn, a, items=[_expense_item("e1", expense)])
 
     wire = _wire_item(db_conn, a, "e1")
-    assert wire["fields"]["expense"]["value"] == expense
+    assert wire["fields"]["expense"]["value"] == _as_served(expense)
     assert wire["fields"]["expense"]["updated_at"] == 100
 
 
@@ -200,7 +210,7 @@ def test_unknown_keys_inside_an_expense_are_dropped_not_stored(db_conn, trip):
     _apply(db_conn, a, items=[_expense_item("e1", expense)])
 
     stored = json.loads(db_conn.execute("SELECT expense FROM items").fetchone()["expense"])
-    assert set(stored) == {"paid_by", "equal_by", "paid_for", "equal_for", "date"}
+    assert set(stored) == {"type", "paid_by", "equal_by", "paid_for", "equal_for", "date"}
 
 
 def test_amounts_are_compared_in_cents_not_as_strings(db_conn, trip):
@@ -255,6 +265,164 @@ def test_a_malformed_expense_is_rejected_naming_the_row(db_conn, trip, expense):
     assert error.details == {"row_id": "e1", "field": "expense"}
 
 
+# ---- the item: the entry type ------------------------------------------------
+
+
+@pytest.mark.parametrize("entry_type", ["expense", "income", "transfer"])
+def test_each_entry_type_round_trips(db_conn, trip, entry_type):
+    a, b = trip["alice"], trip["bob"]
+    entry = _expense({a: "30.00"}, {b: "30.00"}, entry_type=entry_type)
+    _apply(db_conn, a, items=[_expense_item("e1", entry)])
+
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == entry
+
+
+def test_an_entry_without_a_type_is_stored_and_served_as_an_expense(db_conn, trip):
+    """Absent means expense, and the server normalises it on the way in rather than leaving every
+    reader to infer it."""
+    a = trip["alice"]
+    _apply(db_conn, a, items=[_expense_item("e1", _expense({a: "5"}, {a: "5"}))])
+
+    stored = json.loads(db_conn.execute("SELECT expense FROM items").fetchone()["expense"])
+    assert stored["type"] == "expense"
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"]["type"] == "expense"
+
+
+def test_an_entry_written_before_types_existed_reads_back_as_an_expense(db_conn, trip):
+    """Every row stored before this change has no `type` key at all — inserted here directly,
+    because no code path can produce one any more. A reader must still be served one."""
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_expense_item("e1", _expense({a: "30"}, {a: "15", b: "15"}))])
+    legacy = json.dumps(
+        {
+            "paid_by": {a: "30"},
+            "equal_by": False,
+            "paid_for": {a: "15", b: "15"},
+            "equal_for": True,
+            "date": "2026-09-17",
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    db_conn.execute("UPDATE items SET expense = ? WHERE id = 'e1'", (legacy,))
+
+    value = _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"]
+    assert value["type"] == "expense"
+    assert value["paid_by"] == {a: "30"}
+
+
+@pytest.mark.parametrize(
+    "entry_type",
+    [
+        pytest.param(None, id="explicit-null"),
+        pytest.param("", id="empty-string"),
+        pytest.param("Expense", id="wrong-case"),
+        pytest.param("INCOME", id="shouting"),
+        pytest.param(" transfer", id="padded"),
+        pytest.param("settlement", id="unknown-word"),
+        pytest.param(1, id="number"),
+        pytest.param(True, id="boolean"),
+        pytest.param(["income"], id="list"),
+        pytest.param({"type": "income"}, id="object"),
+    ],
+)
+def test_an_unknown_entry_type_is_refused_naming_the_row(db_conn, trip, entry_type):
+    """Coercing an unrecognised type to `expense` would silently file someone's income as a cost
+    and flip the sign of a whole ledger, so it is refused like any other bad shape."""
+    a, b = trip["alice"], trip["bob"]
+    entry = _expense({a: "30"}, {b: "30"}, entry_type=entry_type)
+
+    error = _rejects(db_conn, a, "invalid_expense", items=[_expense_item("e1", entry)])
+    assert error.details == {"row_id": "e1", "field": "expense"}
+
+
+def _invalid_transfers():
+    a, b, c = "acct-a", "acct-b", "acct-c"
+    return [
+        pytest.param(
+            _expense({a: "10", b: "10"}, {c: "20"}, entry_type="transfer"), id="two-senders"
+        ),
+        pytest.param(
+            _expense({a: "20"}, {b: "10", c: "10"}, entry_type="transfer"), id="two-recipients"
+        ),
+        pytest.param(_expense({a: "10"}, {a: "10"}, entry_type="transfer"), id="same-account"),
+        pytest.param(_expense({a: "10"}, {b: "5"}, entry_type="transfer"), id="sums-differ"),
+    ]
+
+
+@pytest.mark.parametrize("entry", _invalid_transfers())
+def test_a_malformed_transfer_is_refused(db_conn, trip, entry):
+    """One sender, one recipient, two different accounts — a transfer is one member handing
+    another money, and anything else is not one."""
+    error = _rejects(db_conn, trip["alice"], "invalid_expense", items=[_expense_item("e1", entry)])
+    assert error.details == {"row_id": "e1", "field": "expense"}
+
+
+def test_a_transfer_between_two_members_is_accepted(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    transfer = _expense({a: "12.50"}, {b: "12.50"}, entry_type="transfer", equal_by=True)
+
+    _apply(db_conn, a, items=[_expense_item("e1", transfer, name="Settlement")])
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == transfer
+
+
+def test_several_payers_are_still_fine_for_income(db_conn, trip):
+    """The one-to-one rule is the transfer's alone: income splits exactly like an expense."""
+    a, b = trip["alice"], trip["bob"]
+    income = _expense({a: "20", b: "10"}, {a: "15", b: "15"}, entry_type="income")
+
+    _apply(db_conn, a, items=[_expense_item("e1", income, name="Deposit back")])
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == income
+
+
+@pytest.mark.parametrize("entry_type", ["expense", "income", "transfer"])
+def test_an_entry_of_any_type_is_refused_on_a_shopping_list(db_conn, alice, entry_type):
+    _apply(db_conn, alice, lists=[_expense_list(kind="shopping")])
+    other = _register(db_conn, "other@example.com")
+    entry = _expense({alice: "5"}, {other: "5"}, entry_type=entry_type)
+
+    error = _rejects(db_conn, alice, "invalid_expense", items=[_expense_item("e1", entry)])
+    assert error.details == {"row_id": "e1", "field": "expense"}
+
+
+def test_the_type_travels_with_the_amounts_under_last_write_wins(db_conn, trip):
+    """Type and amounts are one field, so a later write replaces both together."""
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_expense_item("e1", _expense({a: "30"}, {b: "30"}), ts=100)])
+
+    income = _expense({a: "30"}, {b: "30"}, entry_type="income")
+    _apply(db_conn, a, items=[_expense_item("e1", income, ts=200)])
+
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == income
+
+
+def test_a_stale_type_change_is_discarded_silently(db_conn, trip):
+    """A write that loses last-write-wins is discarded, never refused — the type is no different."""
+    a, b = trip["alice"], trip["bob"]
+    newer = _expense({a: "30"}, {b: "30"}, entry_type="income")
+    _apply(db_conn, a, items=[_expense_item("e1", newer, ts=300)])
+
+    stale = _expense({a: "30"}, {b: "30"}, entry_type="transfer")
+    _apply(db_conn, b, items=[_expense_item("e1", stale, ts=100, by="devB")], device="devB")
+
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == newer
+
+
+@pytest.mark.parametrize(
+    "entry_type", [pytest.param("Transfer", id="wrong-case"), pytest.param(None, id="null")]
+)
+def test_a_malformed_type_is_refused_even_when_the_write_would_lose(db_conn, trip, entry_type):
+    """Shape is context-free: it is checked before anything asks whether the write would win, so a
+    client cannot smuggle a junk value in on a stale clock."""
+    a, b = trip["alice"], trip["bob"]
+    winner = _expense({a: "30"}, {b: "30"})
+    _apply(db_conn, a, items=[_expense_item("e1", winner, ts=300)])
+
+    stale = _expense({a: "30"}, {b: "30"}, entry_type=entry_type)
+    _rejects(db_conn, a, "invalid_expense", items=[_expense_item("e1", stale, ts=100)])
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == _as_served(winner)
+
+
 # ---- the item: which list it may sit on --------------------------------------
 
 
@@ -293,7 +461,7 @@ def test_a_stale_null_expense_is_discarded_not_refused(db_conn, trip):
 
     _apply(db_conn, a, items=[_expense_item("e1", None, ts=100)])  # stale: ts=100 < 200
 
-    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == original
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == _as_served(original)
 
 
 def test_other_fields_of_an_expense_can_be_edited_without_resending_it(db_conn, trip):
@@ -330,7 +498,7 @@ def test_an_expense_involving_someone_who_left_stays_editable(db_conn, trip):
     # Correcting how the living members split it, leaving the departed member's own share alone.
     edit = _expense({b: "30"}, {a: "15", b: "10", carol: "5"})
     _apply(db_conn, a, items=[_expense_item("e1", edit, ts=200)])
-    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == edit
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == _as_served(edit)
 
 
 def test_someone_who_left_cannot_be_added_to_a_different_expense(db_conn, trip):
@@ -356,7 +524,7 @@ def test_a_stale_write_naming_a_departed_member_is_not_rejected(db_conn, trip):
     stale = _expense({a: "10"}, {a: "5", carol: "5"})
     _apply(db_conn, b, items=[_expense_item("e1", stale, ts=200, by="devB")], device="devB")
 
-    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == newer
+    assert _wire_item(db_conn, a, "e1")["fields"]["expense"]["value"] == _as_served(newer)
 
 
 # ---- names are not unique on an expenses list --------------------------------
@@ -418,7 +586,7 @@ def test_a_solo_expenses_list_lifecycle(db_conn, alice):
 
     corrected = _expense({alice: "48.20"}, {alice: "48.20"}, equal_by=True)
     _apply(db_conn, alice, items=[_expense_item("e1", corrected, "Groceries", "me", ts=200)])
-    assert _wire_item(db_conn, alice, "e1")["fields"]["expense"]["value"] == corrected
+    assert _wire_item(db_conn, alice, "e1")["fields"]["expense"]["value"] == _as_served(corrected)
 
     _apply(db_conn, alice, items=[{"id": "e1", "fields": {"deleted": _clock(True, 300)}}])
     assert _wire_item(db_conn, alice, "e1")["fields"]["deleted"]["value"] is True
@@ -471,6 +639,63 @@ def test_sync_endpoint_quarantinable_422_and_no_merge_for_expenses(client):
     assert body["error"] == "invalid_expense"
     assert body["row_id"] == "e3"
     assert body["field"] == "expense"
+
+
+def test_one_entry_of_each_type_reaches_the_other_member(client):
+    """The whole round trip: one member pushes an expense, an income and a transfer, and the
+    other pulls all three back with their types over the real endpoint."""
+    token_a, alice_id = _login(client, "ledger-a@example.com")
+    token_b, bob_id = _login(client, "ledger-b@example.com")
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+
+    resp = client.post(
+        "/api/v1/sync",
+        headers=headers_a,
+        json={"cursor": 0, "device_id": "devA", "changes": {"lists": [_expense_list()]}},
+    )
+    assert resp.status_code == 200
+
+    invite = client.post(
+        "/api/v1/lists/trip/invites",
+        headers=headers_a,
+        json={"invited_email": "ledger-b@example.com"},
+    ).get_json()
+    assert (
+        client.post(
+            "/api/v1/invites/redeem", headers=headers_b, json={"token": invite["token"]}
+        ).status_code
+        == 200
+    )
+
+    entries = {
+        "e-expense": _expense({alice_id: "60"}, {alice_id: "30", bob_id: "30"}),
+        "e-income": _expense({alice_id: "30"}, {alice_id: "15", bob_id: "15"}, entry_type="income"),
+        "e-transfer": _expense({bob_id: "15"}, {alice_id: "15"}, entry_type="transfer"),
+    }
+    resp = client.post(
+        "/api/v1/sync",
+        headers=headers_a,
+        json={
+            "cursor": 0,
+            "device_id": "devA",
+            "changes": {
+                "items": [
+                    _expense_item(item_id, entry, name=item_id)
+                    for item_id, entry in entries.items()
+                ]
+            },
+        },
+    )
+    assert resp.status_code == 200, resp.get_json()
+
+    body = client.post(
+        "/api/v1/sync",
+        headers=headers_b,
+        json={"cursor": 0, "device_id": "devB", "full_lists": ["trip"], "changes": {}},
+    ).get_json()
+    served = {item["id"]: item["fields"]["expense"]["value"] for item in body["changes"]["items"]}
+    assert served == {item_id: _as_served(entry) for item_id, entry in entries.items()}
 
 
 # ---- the migration -----------------------------------------------------------

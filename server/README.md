@@ -476,15 +476,29 @@ call site passes them. That is deliberate: logs are usually retained longer and
 guarded less than the database, and everything this server stores is personal
 data. Resolve an id to a person via `GET /admin/users` when you actually need to.
 
-## Expenses lists
+## Ledgers
 
-A list whose `kind` is `expenses` holds shared costs rather than things to buy:
-each item carries who paid what and who owes what, and the clients render
-balances from it. Three rules are enforced here rather than in the clients,
-because they are what the feature means:
+A list whose `kind` is `expenses` is a ledger: it holds shared money rather than
+things to buy, and the clients render balances from it. Each item is one entry,
+carrying who paid or received what, who owes or is credited with what, and which
+of three types it is:
 
-- **It cannot be converted.** A list is created as an expenses list or never
-  becomes one, in either direction — the item shapes are incompatible.
+- **`expense`** — someone paid for the group, the original case, and what an
+  entry with no type at all means.
+- **`income`** — the group received money (a refund, a deposit, a sale). The
+  same shape, counting the other way.
+- **`transfer`** — one member handed another money to settle up: exactly one
+  sender, exactly one different recipient, and nothing spent overall.
+
+Amounts are always positive; the type carries the sign. The type lives inside
+the same single last-write-wins field as the amounts, so it can never drift
+apart from them.
+
+Three rules are enforced here rather than in the clients, because they are what
+the feature means:
+
+- **It cannot be converted.** A list is created as a ledger or never becomes
+  one, in either direction — the item shapes are incompatible.
 - **It is closed by unanimous vote** (`POST /lists/{id}/close-votes`). Once
   every current member has agreed, the list becomes a read-only archive: no
   writes, no new members, and pending invite links stop redeeming. Closing is
@@ -492,13 +506,14 @@ because they are what the feature means:
 - **It cannot be left while open, or deleted at all.** Leaving becomes possible
   once the list is closed, and the last member out orphans it as usual. Deleting
   an *account* is never refused, whatever it is a member of; the departed id
-  stays in the expenses it was part of.
+  stays in the entries it was part of.
 
 While the list is open, anyone who has voted to close — or who has left — has
-their amounts frozen: no write may change what they paid or owe, so an expense
-naming them cannot be deleted either. Someone who has voted also changes
-nothing on the list themselves until they withdraw. That is what makes agreeing
-to close mean something.
+their amounts frozen: no write may change what they paid or owe, so an entry
+naming them cannot be deleted either, and neither can its type be changed, which
+moves everyone in it. Someone who has voted also changes nothing on the list
+themselves until they withdraw. That is what makes agreeing to close mean
+something.
 
 The wire shapes, error codes and the exact freeze rule are in
 [`../docs/wire-contract.md`](../docs/wire-contract.md).

@@ -86,13 +86,15 @@ changed); **responses always carry all 9 fields**.
 
 ### Expenses
 
-On a list whose `kind` is `expenses`, every item is an expense. Its title is
-`name`, which is **not unique** there — several "Dinner at Luigi's" are several
-dinners, and the server's same-name merge never runs on such a list. `note` stays
-usable; `category`, `stores`, `quantity`, `price` and `status` carry no meaning.
+A list whose `kind` is `expenses` is a **ledger**: every item is one entry in it.
+Its title is `name`, which is **not unique** there — several "Dinner at Luigi's"
+are several dinners, and the server's same-name merge never runs on such a list.
+`note` stays usable; `category`, `stores`, `quantity`, `price` and `status` carry
+no meaning.
 
 ```json
 "expense": {"value": {
+  "type":      "expense",
   "paid_by":   {"<account-id>": "40.00", "<account-id>": "24.00"},
   "equal_by":  false,
   "paid_for":  {"<account-id>": "21.34", "<account-id>": "21.33", "<account-id>": "21.33"},
@@ -101,6 +103,23 @@ usable; `category`, `stores`, `quantity`, `price` and `status` carry no meaning.
 }, "...": "..."}
 ```
 
+An entry is exactly one of three types, and **every amount stays positive**
+whichever it is: the sign lives in the type, never on the wire.
+
+| `type` | meaning | the two maps | effect on account *a*'s balance |
+|---|---|---|---|
+| `expense` | someone paid for the group | paid by / paid for | `paid_by[a] - paid_for[a]` |
+| `income` | the group received money (refund, deposit, sale) | received by / credited to | `-(paid_by[a] - paid_for[a])` |
+| `transfer` | one member pays another directly (a settlement) | sender / recipient | `paid_by[a] - paid_for[a]` |
+
+- `type` is one of those three words, lower case. **Absent means `"expense"`** —
+  every entry written before the type existed is one — but an explicit `null`,
+  another word or another case is refused rather than coerced. The server stores
+  the type normalised and fills in `"type": "expense"` when serving a row written
+  without one, so a reader always sees it.
+- A `transfer` names **exactly one** account in `paid_by` and exactly one in
+  `paid_for`, and the two are **different** accounts. (Their amounts match by the
+  equal-sum rule below.)
 - Both maps are non-empty, and each holds at most **200** participants — far
   beyond any real list, so the cap only blocks bloat. Every amount is a
   **positive** decimal string in the `price` amount format
@@ -109,19 +128,22 @@ usable; `category`, `stores`, `quantity`, `price` and `status` carry no meaning.
 - The two maps **sum to the same value**, compared in whole cents. There is no
   stored total; it is the sum of either map.
 - Every key is an account id that is a current member of the list, or is already
-  present in the item's stored expense (so an expense involving someone who has
+  present in the item's stored entry (so an entry involving someone who has
   since left stays editable). That check applies only to a write that would win
   last-write-wins; a stale write is discarded without error.
 - `equal_by` / `equal_for` record that the map was an equal split, so a client
-  reopening the expense redistributes on a changed total. The server stores them
+  reopening the entry redistributes on a changed total. The server stores them
   and does not cross-check them against the amounts.
 - `date` is a calendar date, `YYYY-MM-DD`, with no time or zone.
 - Unknown keys inside the object are dropped, not stored.
 
+The whole object is **one** LWW field, so the type travels with the amounts it
+signs and a client never sees half of a changed entry.
+
 Any violation is `422 invalid_expense` with `row_id` and `field`. An `expense`
-value on any other kind of list is refused the same way; `null` there is fine.
-Creating an item on an `expenses` list without one, or nulling it later, is
-refused too.
+value on any other kind of list is refused the same way, whatever its type;
+`null` there is fine. Creating an item on an `expenses` list without one, or
+nulling it later, is refused too.
 
 ## List object
 
@@ -385,13 +407,19 @@ While an expenses list is open, a **frozen** participant's numbers may not move.
 Frozen means: has voted to close, or is no longer a member.
 
 > Any write that would change a frozen participant's total paid or total owed on
-> an expense is `422 participant_frozen`, carrying `row_id`, `field` and the
+> an entry is `422 participant_frozen`, carrying `row_id`, `field` and the
 > `account_id` in question.
 
+Amounts are compared with the entry type's sign applied (income counts against
+an expense; a transfer counts like an expense), and **changing an entry's `type`
+counts as changing every account involved in it**, even when the amounts stay
+identical: turning an expense into a transfer is refused when any account in it
+is frozen, and allowed when none is.
+
 A new row counts as a change from zero and a deletion as a change to zero, so
-neither is a way around it — so an expense naming a voter or a former member
+neither is a way around it — so an entry naming a voter or a former member
 cannot be deleted by anyone until the vote is withdrawn. Everything else about
-such an expense stays editable by non-voters — its title, its note, and the other
+such an entry stays editable by non-voters — its title, its note, and the other
 participants' shares — because the rule is about money, not about the row.
 
 The check is applied only to the value that would actually win last-write-wins.
@@ -480,6 +508,6 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
 | 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`, or names a list the caller cannot write to. |
-| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. |
+| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. `invalid_expense` covers every rule on a ledger entry: its `type` (one of `expense`, `income`, `transfer`, or absent for `expense`), the transfer's one sender and one different recipient, the positive amounts, the two maps summing alike, the date, the participants, and an entry on a list that is not a ledger. |
 | 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
 | 503 | `server_busy` | See "Conventions". Always safe to retry. |

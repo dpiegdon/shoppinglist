@@ -24,14 +24,17 @@ def _register(conn, email):
     return auth.register(conn, email, PW)
 
 
-def _expense(paid_by, paid_for, date="2026-09-17"):
-    return {
+def _expense(paid_by, paid_for, date="2026-09-17", entry_type=...):
+    expense = {
         "paid_by": paid_by,
         "equal_by": False,
         "paid_for": paid_for,
         "equal_for": False,
         "date": date,
     }
+    if entry_type is not ...:  # ... means "send no type", which reads as an expense
+        expense["type"] = entry_type
+    return expense
 
 
 def _item(item_id, expense, name="Dinner", ts=100, by="devA", deleted=None):
@@ -528,7 +531,7 @@ def test_a_stale_write_that_would_move_a_voter_is_not_rejected(db_conn, trip):
     _apply(db_conn, b, items=[_item("e1", stale, ts=200, by="devB")], device="devB")
 
     row = sync.delta(db_conn, a, 0)["changes"]["items"][0]
-    assert row["fields"]["expense"]["value"] == newer
+    assert row["fields"]["expense"]["value"] == {**newer, "type": "expense"}
 
 
 def test_an_unrelated_field_of_a_frozen_expense_can_still_be_edited(db_conn, trip):
@@ -537,6 +540,172 @@ def test_an_unrelated_field_of_a_frozen_expense_can_still_be_edited(db_conn, tri
     closing.cast_vote(db_conn, b, "trip")
 
     _apply(db_conn, trip["alice"], items=[_item("e1", ..., name="Dinner at Luigi's", ts=300)])
+
+
+# ---- the freeze and the entry type (T-242) -----------------------------------
+
+
+ENTRY_TYPES = ["expense", "income", "transfer"]
+
+
+def _wire_expense(conn, account_id, item_id):
+    items = sync.delta(conn, account_id, 0)["changes"]["items"]
+    return next(item for item in items if item["id"] == item_id)["fields"]["expense"]["value"]
+
+
+def test_the_amounts_of_an_entry_carry_the_types_sign(db_conn):
+    """Income is the mirror of an expense; a transfer moves money exactly as an expense does."""
+    paid = {"a": "30.00"}
+    owed = {"b": "30.00"}
+
+    assert closing.expense_amounts(_expense(paid, owed)) == {"a": (3000, 0), "b": (0, 3000)}
+    assert closing.expense_amounts(_expense(paid, owed, entry_type="expense")) == {
+        "a": (3000, 0),
+        "b": (0, 3000),
+    }
+    assert closing.expense_amounts(_expense(paid, owed, entry_type="transfer")) == {
+        "a": (3000, 0),
+        "b": (0, 3000),
+    }
+    assert closing.expense_amounts(_expense(paid, owed, entry_type="income")) == {
+        "a": (-3000, 0),
+        "b": (0, -3000),
+    }
+
+
+@pytest.mark.parametrize("entry_type", ENTRY_TYPES)
+def test_a_new_entry_of_any_type_cannot_involve_a_voter(db_conn, trip, entry_type):
+    a, b = trip["alice"], trip["bob"]
+    closing.cast_vote(db_conn, b, "trip")
+
+    entry = _expense({a: "10"}, {b: "10"}, entry_type=entry_type)
+    error = _rejects(db_conn, a, "participant_frozen", items=[_item("e2", entry)])
+    assert error.details == {"row_id": "e2", "field": "expense", "account_id": b}
+
+
+@pytest.mark.parametrize("entry_type", ENTRY_TYPES)
+def test_the_amounts_of_an_entry_of_any_type_are_frozen(db_conn, trip, entry_type):
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {b: "10"}, entry_type=entry_type))])
+    closing.cast_vote(db_conn, b, "trip")
+
+    bigger = _expense({a: "20"}, {b: "20"}, entry_type=entry_type)
+    _rejects(db_conn, a, "participant_frozen", items=[_item("e2", bigger, ts=300)])
+
+
+@pytest.mark.parametrize("entry_type", ENTRY_TYPES)
+def test_an_entry_of_any_type_involving_a_voter_cannot_be_deleted(db_conn, trip, entry_type):
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {b: "10"}, entry_type=entry_type))])
+    closing.cast_vote(db_conn, b, "trip")
+
+    _rejects(db_conn, a, "participant_frozen", items=[_item("e2", ..., deleted=True, ts=300)])
+
+
+def test_flipping_an_expense_to_an_income_is_refused_when_a_voter_is_involved(db_conn, trip):
+    """Same amounts, opposite meaning: what bob owed becomes what he is owed."""
+    a, b = trip["alice"], trip["bob"]
+    closing.cast_vote(db_conn, b, "trip")
+
+    flipped = _expense({a: "30"}, {a: "15", b: "15"}, entry_type="income")
+    error = _rejects(db_conn, a, "participant_frozen", items=[_item("e1", flipped, ts=300)])
+    assert error.details == {"row_id": "e1", "field": "expense", "account_id": b}
+
+
+def test_changing_only_the_type_is_refused_when_a_voter_is_involved(db_conn, trip):
+    """The amounts are untouched, so only the type rule catches this: an expense turned into a
+    transfer is no longer money the group spent, which moves everyone in it."""
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {b: "10"}))])
+    closing.cast_vote(db_conn, b, "trip")
+
+    transfer = _expense({a: "10"}, {b: "10"}, entry_type="transfer")
+    error = _rejects(db_conn, a, "participant_frozen", items=[_item("e2", transfer, ts=300)])
+    assert error.details == {"row_id": "e2", "field": "expense", "account_id": b}
+
+
+def test_changing_only_the_type_is_refused_when_a_departed_member_is_involved(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {b: "10"}))])
+    accounts.delete_account(db_conn, b, PW)
+
+    transfer = _expense({a: "10"}, {b: "10"}, entry_type="transfer")
+    error = _rejects(db_conn, a, "participant_frozen", items=[_item("e2", transfer, ts=300)])
+    assert error.details["account_id"] == b
+
+
+def test_changing_only_the_type_is_fine_when_nobody_is_frozen(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {b: "10"}))])
+
+    transfer = _expense({a: "10"}, {b: "10"}, entry_type="transfer")
+    _apply(db_conn, a, items=[_item("e2", transfer, ts=300)])
+
+    assert _wire_expense(db_conn, a, "e2") == transfer
+
+
+def test_a_non_voter_may_change_the_type_of_an_entry_involving_nobody_frozen(db_conn, trip):
+    """Someone else's vote freezes their own numbers, not the whole ledger."""
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    _apply(db_conn, a, items=[_item("e2", _expense({a: "10"}, {b: "10"}))])
+    closing.cast_vote(db_conn, carol, "trip")
+
+    transfer = _expense({a: "10"}, {b: "10"}, entry_type="transfer")
+    _apply(db_conn, a, items=[_item("e2", transfer, ts=300)])
+
+    assert _wire_expense(db_conn, a, "e2") == transfer
+
+
+def test_a_new_income_among_the_unfrozen_is_still_fine(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    carol = _register(db_conn, "carol@example.com")
+    _add_member(db_conn, carol)
+    closing.cast_vote(db_conn, b, "trip")
+
+    income = _expense({a: "10"}, {carol: "10"}, entry_type="income")
+    _apply(db_conn, a, items=[_item("e2", income)])
+
+    assert _wire_expense(db_conn, a, "e2") == income
+
+
+def test_a_stale_type_change_that_would_move_a_voter_is_not_rejected(db_conn, trip):
+    """It loses last-write-wins and changes nothing, so it is discarded like any other stale
+    write rather than quarantining the row on the device that made it offline."""
+    a, b = trip["alice"], trip["bob"]
+    newer = _expense({a: "10"}, {b: "10"})
+    _apply(db_conn, a, items=[_item("e2", newer, ts=500)])
+    closing.cast_vote(db_conn, b, "trip")
+
+    stale = _expense({a: "10"}, {b: "10"}, entry_type="transfer")
+    _apply(db_conn, b, items=[_item("e2", stale, ts=200, by="devB")], device="devB")
+
+    assert _wire_expense(db_conn, a, "e2") == {**newer, "type": "expense"}
+
+
+def test_a_ledger_of_all_three_types_still_closes_by_unanimous_vote(db_conn, trip):
+    a, b = trip["alice"], trip["bob"]
+    _apply(
+        db_conn,
+        a,
+        items=[
+            _item("e2", _expense({a: "30"}, {a: "15", b: "15"}, entry_type="income")),
+            _item("e3", _expense({b: "15"}, {a: "15"}, entry_type="transfer")),
+        ],
+    )
+
+    closing.cast_vote(db_conn, a, "trip")
+    assert not closing.is_closed(db_conn, "trip")
+    closing.cast_vote(db_conn, b, "trip")
+
+    assert closing.is_closed(db_conn, "trip")
+    _rejects(
+        db_conn,
+        a,
+        "list_closed",
+        items=[_item("e4", _expense({a: "5"}, {b: "5"}, entry_type="transfer"), ts=900)],
+    )
 
 
 # ---- over HTTP ---------------------------------------------------------------

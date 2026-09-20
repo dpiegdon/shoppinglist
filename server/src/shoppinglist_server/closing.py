@@ -20,7 +20,7 @@ Two rules hang off that:
 from . import db as db_module
 from .auth import now_ms
 from .errors import ApiError
-from .sync import EXPENSES_KIND, amount_cents
+from .sync import EXPENSE_TYPE_INCOME, EXPENSES_KIND, amount_cents, expense_type
 
 
 def _list_row(conn, list_id):
@@ -156,15 +156,33 @@ def close_if_unanimous_after_membership_change(conn, list_id: str) -> None:
 
 
 def expense_amounts(expense) -> dict:
-    """Flatten one expense to {account_id: (paid_by_cents, paid_for_cents)} for comparison."""
+    """Flatten one entry to {account_id: (paid_by_cents, paid_for_cents)} for comparison, with the
+    entry type's sign applied.
+
+    Amounts on the wire are always positive; the sign is the type's. Income is money coming back,
+    so it moves every participant the other way, and a transfer moves money exactly as an expense
+    does. Applying the sign here is what lets the freeze see an expense turned into an income for
+    the change to everyone's numbers that it is.
+    """
     amounts = {}
     if not expense:
         return amounts
+    sign = -1 if expense_type(expense) == EXPENSE_TYPE_INCOME else 1
     for key, index in (("paid_by", 0), ("paid_for", 1)):
         for account_id, amount in (expense.get(key) or {}).items():
             current = amounts.setdefault(account_id, [0, 0])
-            current[index] += amount_cents(amount)
+            current[index] += sign * amount_cents(amount)
     return {account_id: tuple(pair) for account_id, pair in amounts.items()}
+
+
+def _type_changed(before_value, after_value) -> bool:
+    """Whether this write changes the type of an entry that exists before and after.
+
+    Creation and deletion are already changes from and to zero, so only an edit needs this.
+    """
+    if not before_value or not after_value:
+        return False
+    return expense_type(before_value) != expense_type(after_value)
 
 
 def check_voter_may_change(conn, list_id: str, account_id: str, row_id: str, changes: bool) -> None:
@@ -196,17 +214,22 @@ def check_write_against_freeze(conn, list_id: str, item_id: str, before_value, a
     Both arguments are decoded expenses or None — the caller has already resolved which value wins
     last-write-wins, and whether the row ends up deleted. A new row therefore arrives as a change
     from None and a deletion as a change to None, so neither is a way around the rule.
+
+    Changing an entry's TYPE counts as changing every account involved in it, even where the
+    amounts are untouched: an expense turned into a transfer is no longer money the group spent,
+    which moves every participant's standing as surely as rewriting the shares would.
     """
     before = expense_amounts(before_value)
     after = expense_amounts(after_value)
-    if before == after:
+    type_changed = _type_changed(before_value, after_value)
+    if before == after and not type_changed:
         return
     members = _members(conn, list_id)
     voters = set(votes(conn, list_id))
     if not voters and not (set(before) | set(after)) - members:
         return  # nobody is frozen on this list, which is the normal case
     for account_id in sorted(set(before) | set(after)):
-        if before.get(account_id, (0, 0)) == after.get(account_id, (0, 0)):
+        if not type_changed and before.get(account_id, (0, 0)) == after.get(account_id, (0, 0)):
             continue
         if is_frozen(conn, list_id, account_id, members=members, voters=voters):
             raise ApiError(
