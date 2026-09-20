@@ -42,7 +42,7 @@ class AboutScreenTest {
         composeTestRule.onNodeWithTag("about-mark", useUnmergedTree = true).assertExists()
         composeTestRule.onNodeWithText("Tuppu").assertExists()
         composeTestRule
-            .onNodeWithText("Tuppu is the Akkadian word for a clay tablet — the thing a list was pressed into.")
+            .onNodeWithText("The Akkadian word for a clay tablet — the thing a list was pressed into.")
             .assertExists()
         // The app's own version, as the package manager reports it — not a literal in the source.
         composeTestRule.onNodeWithText("Version ${installedVersion()}").assertExists()

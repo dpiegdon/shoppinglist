@@ -43,6 +43,10 @@ describe("AboutPage (T-224)", () => {
     expect(mark!.getAttribute("width")).toBe("72");
     expect(screen.getByRole("heading", { level: 1, name: en["app.title"] })).toBeInTheDocument();
     expect(screen.getByText(en["about.tagline"])).toBeInTheDocument();
+    // The heading, the sign and its transliteration already say the name three times: the sentence
+    // under them starts with what it means, not with the name a fourth time.
+    expect(en["about.tagline"]).toBe("The Akkadian word for a clay tablet — the thing a list was pressed into.");
+    expect(en["about.tagline"]).not.toMatch(/tuppu/i);
     expect(screen.getByText("Version 2.0.0")).toBeInTheDocument();
     expect(screen.getByText(en["about.license"])).toBeInTheDocument();
   });

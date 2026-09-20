@@ -137,7 +137,7 @@
     <string name="listprops_leave_confirm_title">Quitter cette liste ?</string>
     <string name="listprops_leave_confirm_body">Tu ne recevras plus les mises à jour de \"%1$s\" sur cet appareil.</string>
     <string name="about_transliteration">ṭuppu</string>
-    <string name="about_tagline">Tuppu est le mot akkadien pour une tablette d\'argile — ce dans quoi on pressait une liste.</string>
+    <string name="about_tagline">Le mot akkadien pour une tablette d\'argile — ce dans quoi on pressait une liste.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">Mises à jour de l\'application</string>

@@ -171,7 +171,7 @@ export const es: Catalog = {
 
   "about.transliteration": "ṭuppu",
 
-  "about.tagline": "Tuppu es la palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.",
+  "about.tagline": "La palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.",
   "about.version": "Versión {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
 

@@ -175,7 +175,7 @@ export const uk: Catalog = {
 
   "about.transliteration": "ṭuppu",
 
-  "about.tagline": "Tuppu — це аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.",
+  "about.tagline": "Аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.",
   "about.version": "Версія {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
 

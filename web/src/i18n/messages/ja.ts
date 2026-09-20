@@ -176,7 +176,7 @@ export const ja: Catalog = {
 
   "about.transliteration": "ṭuppu",
 
-  "about.tagline": "Tuppu はアッカド語で粘土板を意味します — リストを押し刻んだ、あの板のことです。",
+  "about.tagline": "アッカド語で粘土板を意味する言葉 — リストを押し刻んだ、あの板のことです。",
   "about.version": "バージョン {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
 

@@ -137,7 +137,7 @@
     <string name="listprops_leave_confirm_title">Покинути цей список?</string>
     <string name="listprops_leave_confirm_body">На цьому пристрої ти більше не отримуватимеш оновлення для \"%1$s\".</string>
     <string name="about_transliteration">ṭuppu</string>
-    <string name="about_tagline">Tuppu — це аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.</string>
+    <string name="about_tagline">Аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">Версія %1$s</string>
     <string name="about_updates">Оновлення застосунку</string>

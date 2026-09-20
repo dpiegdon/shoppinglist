@@ -177,7 +177,7 @@ export const ar: Catalog = {
 
   "about.transliteration": "ṭuppu",
 
-  "about.tagline": "Tuppu هي الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.",
+  "about.tagline": "الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.",
   "about.version": "الإصدار {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
 

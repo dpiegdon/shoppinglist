@@ -137,7 +137,7 @@
     <string name="listprops_leave_confirm_title">要退出此清单吗？</string>
     <string name="listprops_leave_confirm_body">此设备将不再接收「%1$s」的更新。</string>
     <string name="about_transliteration">ṭuppu</string>
-    <string name="about_tagline">Tuppu 是阿卡德语中表示泥板的词 — 清单就压印在那样的板子上。</string>
+    <string name="about_tagline">阿卡德语中表示泥板的词 — 清单就压印在那样的板子上。</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">版本 %1$s</string>
     <string name="about_updates">应用更新</string>

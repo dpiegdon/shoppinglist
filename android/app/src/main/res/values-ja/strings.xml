@@ -137,7 +137,7 @@
     <string name="listprops_leave_confirm_title">このリストから退出しますか？</string>
     <string name="listprops_leave_confirm_body">この端末では「%1$s」の更新を受け取らなくなります。</string>
     <string name="about_transliteration">ṭuppu</string>
-    <string name="about_tagline">Tuppu はアッカド語で粘土板を意味します — リストを押し刻んだ、あの板のことです。</string>
+    <string name="about_tagline">アッカド語で粘土板を意味する言葉 — リストを押し刻んだ、あの板のことです。</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">バージョン %1$s</string>
     <string name="about_updates">アプリの更新</string>

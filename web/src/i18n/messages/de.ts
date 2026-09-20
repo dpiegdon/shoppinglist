@@ -176,7 +176,7 @@ export const de: Catalog = {
 
   "about.transliteration": "ṭuppu",
 
-  "about.tagline": "Tuppu ist das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.",
+  "about.tagline": "Das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
 

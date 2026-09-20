@@ -172,7 +172,7 @@
     <!-- Under the cuneiform sign on About, and the content description for it there and on the
          login screen (T-225). The same text in every language: a transliteration, not a translation. -->
     <string name="about_transliteration">ṭuppu</string>
-    <string name="about_tagline">Tuppu is the Akkadian word for a clay tablet — the thing a list was pressed into.</string>
+    <string name="about_tagline">The Akkadian word for a clay tablet — the thing a list was pressed into.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">App updates</string>

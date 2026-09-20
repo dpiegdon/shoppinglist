@@ -211,7 +211,7 @@ export const en = {
   // Under the cuneiform sign on About, and the accessible label for it there and on login (T-225).
   // The same text in every language, like the licence line: a transliteration, not a translation.
   "about.transliteration": "ṭuppu",
-  "about.tagline": "Tuppu is the Akkadian word for a clay tablet — the thing a list was pressed into.",
+  "about.tagline": "The Akkadian word for a clay tablet — the thing a list was pressed into.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
 
