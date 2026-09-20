@@ -40,11 +40,12 @@ your source changes.
   only: with no durable local mirror, every page load asks for a full snapshot.
 - `src/pages/` — one file per route. `ListRoute.tsx` picks the screen by list
   kind: `ListPage` for shopping lists and checklists, `ExpenseListPage` and
-  `BalancesPage` for expense lists. `RegistryPage` is All items; `AdminPage` is
+  `BalancesPage` for ledgers. `RegistryPage` is All items; `AdminPage` is
   Server admin; `AboutPage` is About.
-- `src/lib/` — pure logic, tested on its own: category grouping, expense
-  arithmetic (`expenses.ts`), name order (`nameOrder.ts`), money and date
-  formatting (`format.ts`). The expense and name-order rules are tested against
+- `src/lib/` — pure logic, tested on its own: category grouping, ledger
+  arithmetic (`expenses.ts`: the split, each entry type's effect on a balance,
+  the net spent and who pays whom), name order (`nameOrder.ts`), money and date
+  formatting (`format.ts`). The ledger and name-order rules are tested against
   the same case tables as Android, in `../shared-test-cases/`.
 - `src/i18n/` — the nine catalogs in `messages/` (English is the fallback), and
   `apiErrors.ts`, which translates server errors by their code.

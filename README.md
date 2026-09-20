@@ -8,8 +8,10 @@ kinds:
   carry a category, stores, quantity and price.
 - **Checklists** are the same without the shopping fields: packing lists,
   chores.
-- **Expense lists** track shared costs: who paid what for whom, everyone's
-  balance, and the transfers that settle it. The members close one by
+- **Ledgers** track shared money. Every entry is an *expense* (someone paid for
+  the group), an *income* (money came in — a refund, a deposit, a sale) or a
+  *transfer* (one member paid another). They give the net spent, everyone's
+  balance and the transfers that settle it. The members close a ledger by
   unanimous vote; after that it is a read-only record.
 
 Lists are shared by invite, addressed to an email: the invitee sees it on their
