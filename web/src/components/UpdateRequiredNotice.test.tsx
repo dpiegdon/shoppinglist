@@ -34,8 +34,10 @@ describe("the update-required notice", () => {
   });
 
   it("replaces the whole app once a second 426 has raised it, so nothing keeps syncing", () => {
-    // The first refusal is handled by the automatic reload; the app carries on meanwhile.
+    // The first refusal is handled by the automatic reload; the reloaded page is a fresh module
+    // over the same sessionStorage, which resetting the module state models.
     reportClientOutdated(vi.fn(), 1_000_000);
+    resetClientOutdatedForTests();
     render(
       <MemoryRouter>
         <App />
@@ -57,6 +59,7 @@ describe("the update-required notice", () => {
   it("is already up when the refusal beat the app to the screen", () => {
     // The first sync starts from a mount effect, so a 426 can be raised before the root mounts.
     reportClientOutdated(vi.fn(), 1_000_000);
+    resetClientOutdatedForTests(); // the reloaded page
     reportClientOutdated(vi.fn(), 1_000_001);
 
     render(

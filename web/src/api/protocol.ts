@@ -60,6 +60,7 @@ export function clientOutdatedAction(now: number = Date.now()): "reload" | "noti
 // not be lost: a late subscriber is told immediately.
 let noticeHandler: (() => void) | null = null;
 let noticeRaised = false;
+let reloadStarted = false;
 
 /** Registers the app root's "show the full-page notice" handler; null unregisters. */
 export function onClientOutdated(handler: (() => void) | null): void {
@@ -82,7 +83,13 @@ export function reportClientOutdated(
   reload: () => void = () => window.location.reload(),
   now: number = Date.now(),
 ): void {
+  // The reload is under way and this page is about to be replaced. Requests that were already in
+  // flight when the first 426 came back are refused too; without this they would find the reload
+  // marker set, conclude that reloading did not help and flash the notice on a page that is
+  // already going away.
+  if (reloadStarted) return;
   if (clientOutdatedAction(now) === "reload") {
+    reloadStarted = true;
     reload();
     return;
   }
@@ -94,4 +101,5 @@ export function reportClientOutdated(
 export function resetClientOutdatedForTests(): void {
   noticeRaised = false;
   noticeHandler = null;
+  reloadStarted = false;
 }

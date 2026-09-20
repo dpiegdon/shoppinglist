@@ -214,6 +214,9 @@ describe("the protocol header and 426 client_outdated (T-244)", () => {
     expect(sessionStorage.getItem(RELOAD_STORAGE_KEY)).not.toBeNull();
     expect(notice).not.toHaveBeenCalled();
 
+    // The reload replaced the page: a fresh module, the same sessionStorage.
+    resetClientOutdatedForTests();
+    onClientOutdated(notice);
     mockFetchOnce(426, { error: "client_outdated", message: "still too old", protocol: 3 });
     await outdated();
 
