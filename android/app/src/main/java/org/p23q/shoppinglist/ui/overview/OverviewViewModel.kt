@@ -96,7 +96,9 @@ class OverviewViewModel @Inject constructor(
                     val balance = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
                         .firstOrNull { b -> b.accountId == sessionState.accountId }
                     list.id to ExpenseSummary(
-                        totalCents = expenses.sumOf(ExpenseMath::expenseTotalCents),
+                        // Net spent, as on the ledger itself: income off it, settlements counting
+                        // for nothing (T-245).
+                        totalCents = ExpenseMath.spentTotals(expenses).netCents,
                         // A list of one is always square with itself, so its balance says nothing.
                         myBalanceCents = balance?.balanceCents?.takeIf { members.size > 1 },
                         currency = list.currency.value.orEmpty(),

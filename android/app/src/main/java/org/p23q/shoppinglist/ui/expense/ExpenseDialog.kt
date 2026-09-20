@@ -1,9 +1,11 @@
 package org.p23q.shoppinglist.ui.expense
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,12 +25,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
@@ -68,11 +76,14 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * Add or edit one expense (T-154). Full-screen with a fixed action bar for the same reason
- * AddItemDialog is (T-80): the soft keyboard must never cover the buttons.
+ * Add or edit one ledger entry (T-154, T-245). Full-screen with a fixed action bar for the same
+ * reason AddItemDialog is (T-80): the soft keyboard must never cover the buttons.
  *
- * [itemId] null means a new expense on [listId]; otherwise that expense is edited. [prefill]
- * seeds a new expense with what Reimburse on the balances screen chose (T-165).
+ * The type comes first, because it decides what the rest of the form means: an expense and an
+ * income are the same two distributions read opposite ways, and a transfer has none at all.
+ *
+ * [itemId] null means a new entry on [listId]; otherwise that entry is edited. [prefill] seeds a
+ * new one with what Reimburse on the balances screen chose (T-165).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -139,6 +150,14 @@ fun ExpenseDialog(
                         modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                     ) {
                         ExpenseBlockedBanner(state)
+                        // What kind of entry this is, before anything else: it decides what the
+                        // rest of the form means (T-245).
+                        TypeSection(
+                            type = state.type,
+                            canTransfer = state.canTransfer,
+                            onChange = viewModel::onTypeChange,
+                        )
+                        Spacer(Modifier.height(16.dp))
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::onNameChange,
@@ -175,10 +194,26 @@ fun ExpenseDialog(
                             )
                         }
 
-                        if (!state.soloList) {
+                        // A transfer has nothing to split: it is one person handing money to another.
+                        if (state.type == ExpenseType.TRANSFER) {
+                            Spacer(Modifier.height(8.dp))
+                            TransferPickers(
+                                state = state,
+                                onFrom = viewModel::onTransferFromChange,
+                                onTo = viewModel::onTransferToChange,
+                            )
+                        } else if (!state.soloList) {
                             Spacer(Modifier.height(16.dp))
                             ShareSection(
-                                title = stringResource(R.string.expense_paid_by),
+                                // Income is the same form read the other way round: the money came
+                                // in to someone and was credited to the others (T-245).
+                                title = stringResource(
+                                    if (state.type == ExpenseType.INCOME) {
+                                        R.string.expense_received_by
+                                    } else {
+                                        R.string.expense_paid_by
+                                    },
+                                ),
                                 rows = state.paidBy,
                                 error = state.paidByError,
                                 sumCents = state.paidBySumCents,
@@ -189,7 +224,13 @@ fun ExpenseDialog(
                             )
                             Spacer(Modifier.height(16.dp))
                             ShareSection(
-                                title = stringResource(R.string.expense_paid_for),
+                                title = stringResource(
+                                    if (state.type == ExpenseType.INCOME) {
+                                        R.string.expense_credited_to
+                                    } else {
+                                        R.string.expense_paid_for
+                                    },
+                                ),
                                 rows = state.paidFor,
                                 error = state.paidForError,
                                 sumCents = state.paidForSumCents,
@@ -236,7 +277,10 @@ fun ExpenseDialog(
                     ) {
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = { viewModel.save() }, enabled = state.canSave) {
+                        // An income or a transfer left untitled names itself, and only the screen
+                        // can say what that name is in the app's language (T-245).
+                        val typeLabel = stringResource(typeLabelOf(state.type))
+                        Button(onClick = { viewModel.save(typeLabel) }, enabled = state.canSave) {
                             Text(stringResource(if (state.isEditMode) R.string.action_save else R.string.action_add))
                         }
                     }
@@ -308,9 +352,143 @@ private fun ExpenseBlockedBanner(state: ExpenseFormUiState) {
     // Labelled as the share rows label the same person: an email while they are a member, a number
     // once they have left (T-197).
     val row = (state.paidBy + state.paidFor).firstOrNull { it.accountId == state.blockedAccountId }
-    val who = row?.let { it.email ?: stringResource(R.string.expense_former_member, it.formerNumber) }
+    val who = row?.let { participantLabel(it) }
     BlockedBanner(code = state.blockedCode, who = who)
 }
+
+/** The i18n key of a type's label — also the title a blank income or transfer falls back to. */
+internal fun typeLabelOf(type: ExpenseType): Int = when (type) {
+    ExpenseType.EXPENSE -> R.string.expense_type_expense
+    ExpenseType.INCOME -> R.string.expense_type_income
+    ExpenseType.TRANSFER -> R.string.expense_type_transfer
+}
+
+/**
+ * Which of the three this entry is (T-245): Expense | Income | Transfer, the segmented control the
+ * ledger design asks for, and the one this screen's own Entries | Balances selector already uses.
+ *
+ * Transfer is off a list with fewer than two people whose amounts can move — there is nobody to
+ * pay — and the hint below says why rather than leaving a dead segment unexplained.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TypeSection(type: ExpenseType, canTransfer: Boolean, onChange: (ExpenseType) -> Unit) {
+    Text(stringResource(R.string.expense_type), style = MaterialTheme.typography.titleSmall)
+    Spacer(Modifier.height(4.dp))
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        ExpenseType.entries.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = type == option,
+                onClick = { onChange(option) },
+                enabled = option != ExpenseType.TRANSFER || canTransfer,
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = ExpenseType.entries.size),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                Text(stringResource(typeLabelOf(option)), style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+    if (!canTransfer) {
+        Text(
+            stringResource(R.string.expense_error_need_two_members),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * A transfer's two ends (T-245): who paid and who was paid, one person each. Neither picker offers
+ * the other's choice — nobody pays themselves — nor anyone whose amounts are frozen, which the
+ * server would refuse anyway; a stored entry that already names one keeps it, unchangeable.
+ */
+@Composable
+private fun TransferPickers(
+    state: ExpenseFormUiState,
+    onFrom: (String) -> Unit,
+    onTo: (String) -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TransferPicker(
+            label = stringResource(R.string.expense_from),
+            value = state.transferFrom,
+            other = state.transferTo,
+            participants = state.participants,
+            onSelect = onFrom,
+            modifier = Modifier.weight(1f),
+        )
+        TransferPicker(
+            label = stringResource(R.string.expense_to),
+            value = state.transferTo,
+            other = state.transferFrom,
+            participants = state.participants,
+            onSelect = onTo,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    if (state.sameMemberError) {
+        Text(
+            stringResource(R.string.expense_error_same_member),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}
+
+@Composable
+private fun TransferPicker(
+    label: String,
+    value: String,
+    /** The other end's choice, which this one does not offer. */
+    other: String,
+    participants: List<ShareRow>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val chosen = participants.firstOrNull { it.accountId == value }
+    // A frozen participant's amounts may not move, so an entry that names one cannot be pointed
+    // at somebody else here; the server would refuse it anyway.
+    val enabled = chosen == null || !chosen.isFrozen
+
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = chosen?.let { participantLabel(it) }.orEmpty(),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (enabled) Modifier.clickable { expanded = true } else Modifier)
+                .padding(vertical = 8.dp),
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // A popup is its own window (T-131), so the chosen language has to be carried in.
+            LocalizedOverlay {
+                participants
+                    .filter { (it.accountId != other || it.accountId == value) }
+                    .filter { !it.isFrozen || it.accountId == value }
+                    .forEach { row ->
+                        DropdownMenuItem(
+                            text = { Text(participantLabel(row)) },
+                            onClick = {
+                                expanded = false
+                                onSelect(row.accountId)
+                            },
+                        )
+                    }
+            }
+        }
+    }
+}
+
+/** An email while they are a member, a stable number once they have left (T-152, T-197). */
+@Composable
+private fun participantLabel(row: ShareRow): String =
+    row.email ?: stringResource(R.string.expense_former_member, row.formerNumber)
 
 @Composable
 private fun ShareSection(
@@ -326,8 +504,7 @@ private fun ShareSection(
 ) {
     Text(title, style = MaterialTheme.typography.titleSmall)
     rows.forEach { row ->
-        val label = row.email
-            ?: stringResource(R.string.expense_former_member, row.formerNumber)
+        val label = participantLabel(row)
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = row.selected,

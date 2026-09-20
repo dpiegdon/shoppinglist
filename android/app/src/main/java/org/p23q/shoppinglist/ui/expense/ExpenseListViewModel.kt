@@ -49,7 +49,8 @@ data class ExpenseListUiState(
     val members: List<ListMember> = emptyList(),
     /** Newest date first; within a date, newest first. */
     val rows: List<ExpenseRow> = emptyList(),
-    val totalCents: Long = 0,
+    /** What the ledger spent, took in and the net of the two (T-245). */
+    val spent: ExpenseMath.SpentTotals = ExpenseMath.SpentTotals(0, 0, 0),
     val balances: List<ExpenseMath.Balance> = emptyList(),
     /** Numbering for participants who are no longer members (T-152). */
     val formerMemberNumbers: Map<String, Int> = emptyMap(),
@@ -64,6 +65,9 @@ data class ExpenseListUiState(
     /** Who pays whom to zero the balances (T-165), in the order the shared algorithm fixes. */
     val transfers: List<ExpenseMath.Transfer> = emptyList(),
 ) {
+    /** What the screens show as "Net spent": expenses less income, settlements counting for nothing. */
+    val totalCents: Long get() = spent.netCents
+
     val isClosed: Boolean get() = closedAt != null
     val iHaveVoted: Boolean get() = myAccountId != null && myAccountId in closeVotes
 
@@ -163,7 +167,7 @@ class ExpenseListViewModel @Inject constructor(
                             closedAt = list?.closedAt,
                             members = members,
                             rows = rows,
-                            totalCents = expenses.sumOf(ExpenseMath::expenseTotalCents),
+                            spent = ExpenseMath.spentTotals(expenses),
                             balances = balances,
                             transfers = ExpenseMath.settle(balances),
                             formerMemberNumbers = ExpenseMath.formerMemberNumbers(

@@ -24,17 +24,19 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.ui.appLocale
 import java.time.LocalDate
 
 /**
- * Who is up and who is down on an expenses list (T-154), and below it who should pay whom to make
- * it all zero (T-165). The Balances half of the expense list screen's selector (T-172), so it takes
- * that screen's state rather than a view model of its own.
+ * Who is up and who is down on a ledger (T-154), and below it who should pay whom to make it all
+ * zero (T-165). The Balances half of the expense list screen's selector (T-172), so it takes that
+ * screen's state rather than a view model of its own.
  *
  * Everyone named anywhere appears, including people who have since left: their debts and credits
  * do not leave with them. The rows always sum to zero. Reimburse on a transfer hands a pre-filled
- * expense to [onReimburse]; what gets saved is an ordinary expense, so nothing here is stored.
+ * Transfer entry to [onReimburse] (T-245); what gets saved is an ordinary entry, so nothing here
+ * is stored.
  */
 @Composable
 fun BalancesContent(
@@ -55,6 +57,19 @@ fun BalancesContent(
             ),
             style = MaterialTheme.typography.titleMedium,
         )
+        // Where income exists, the net alone hides half the story: say what went out and what came
+        // in (T-245). A ledger with none is exactly as it was.
+        if (state.spent.incomeCents != 0L) {
+            Text(
+                stringResource(
+                    R.string.expense_spent_breakdown,
+                    AppFormat.money(state.spent.expensesCents, state.currency, appLocale()),
+                    AppFormat.money(state.spent.incomeCents, state.currency, appLocale()),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -75,11 +90,24 @@ fun BalancesContent(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            text = stringResource(
-                                R.string.expense_paid_and_share,
-                                AppFormat.number(balance.paidCents, appLocale()),
-                                AppFormat.number(balance.shareCents, appLocale()),
-                            ),
+                            // Settled is what transfers moved, sent minus received — signed,
+                            // because which way it went is the whole of what it says, and left
+                            // uncoloured: only the balance itself is a position (T-245). Absent
+                            // when nothing was settled, which is every ledger not yet paid back.
+                            text = if (balance.settledCents == 0L) {
+                                stringResource(
+                                    R.string.expense_paid_and_share,
+                                    AppFormat.number(balance.paidCents, appLocale()),
+                                    AppFormat.number(balance.shareCents, appLocale()),
+                                )
+                            } else {
+                                stringResource(
+                                    R.string.expense_paid_share_settled,
+                                    AppFormat.number(balance.paidCents, appLocale()),
+                                    AppFormat.number(balance.shareCents, appLocale()),
+                                    AppFormat.signedNumber(balance.settledCents, appLocale()),
+                                )
+                            },
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -135,14 +163,17 @@ fun BalancesContent(
                                     onReimburse(
                                         ExpensePrefill(
                                             name = settlementTitle,
-                                            // Equal split of one on each side: the total drives the
-                                            // amounts, so editing it is how a partial settlement works.
+                                            // A settlement is a transfer (T-245): the debtor hands
+                                            // the creditor money, and the ledger's net spending
+                                            // does not move. The total drives the amounts, so
+                                            // editing it is how a partial settlement works.
                                             expense = Expense(
                                                 paidBy = mapOf(transfer.from to amount),
                                                 equalBy = true,
                                                 paidFor = mapOf(transfer.to to amount),
                                                 equalFor = true,
                                                 date = LocalDate.now().toString(),
+                                                type = ExpenseType.TRANSFER.wire,
                                             ),
                                         ),
                                     )

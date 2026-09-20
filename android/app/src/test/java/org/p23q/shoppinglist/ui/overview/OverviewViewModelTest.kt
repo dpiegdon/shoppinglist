@@ -235,6 +235,33 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `a ledger's card shows net spent, not everything that ever moved (T-245)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+            val dinner = org.p23q.shoppinglist.data.Expense(
+                mapOf("me" to "60.00"), true, mapOf("me" to "60.00"), true, "2026-09-18",
+            )
+            itemsRepo.createExpense(id, "Dinner", dinner)
+            // A refund comes off what was spent, and a settlement counts for nothing at all.
+            itemsRepo.createExpense(
+                id,
+                "Deposit back",
+                dinner.copy(paidBy = mapOf("me" to "20.00"), paidFor = mapOf("me" to "20.00"), type = "income"),
+            )
+            itemsRepo.createExpense(
+                id,
+                "Payback",
+                dinner.copy(paidBy = mapOf("you" to "5.00"), paidFor = mapOf("me" to "5.00"), type = "transfer"),
+            )
+
+            val summary = viewModel.uiState
+                .first { it.expenseSummaries[id] != null }
+                .expenseSummaries.getValue(id)
+
+            assertEquals(4000L, summary.totalCents)
+        }
+
+    @Test
     fun `an expense list's count is its number of expenses (T-191)`() = runTest(mainDispatcherRule.dispatcher) {
         val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
         val expense = org.p23q.shoppinglist.data.Expense(mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18")

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -56,8 +57,23 @@ data class ExpenseFormUiState(
     val name: String = "",
     val nameError: Boolean = false,
     val totalText: String = "",
+    /** [totalText] in cents, or zero when it is empty or not a number yet. */
+    val totalCents: Long = 0,
     val date: String = "",
     val note: String = "",
+    /** Which of the three this entry is (T-245). A new one starts as an ordinary expense. */
+    val type: ExpenseType = ExpenseType.EXPENSE,
+    /**
+     * False on a list with fewer than two people whose amounts can move: there is nobody to pay,
+     * so Transfer is not on offer. An entry that already is one keeps the choice whatever the
+     * roster now looks like, so it can still be read and retyped.
+     */
+    val canTransfer: Boolean = true,
+    /** A transfer's single sender and single recipient; empty for the other two types. */
+    val transferFrom: String = "",
+    val transferTo: String = "",
+    /** Everyone the two pickers may offer, labelled as the share rows label them. */
+    val participants: List<ShareRow> = emptyList(),
     val paidBy: List<ShareRow> = emptyList(),
     val paidFor: List<ShareRow> = emptyList(),
     val paidByError: ExpenseMath.DistributeError? = null,
@@ -84,8 +100,26 @@ data class ExpenseFormUiState(
     val isSaved: Boolean = false,
     val isDeleted: Boolean = false,
 ) {
+    /** Whether a transfer names two different people, the only shape the server takes (T-245). */
+    val isTransferValid: Boolean
+        get() = transferFrom.isNotEmpty() && transferTo.isNotEmpty() && transferFrom != transferTo
+
+    /** Set only while a transfer points both ends at the same person, which is what the form says. */
+    val sameMemberError: Boolean
+        get() = type == ExpenseType.TRANSFER && transferFrom.isNotEmpty() && transferFrom == transferTo
+
     val canSave: Boolean
-        get() = name.isNotBlank() && paidByError == null && paidForError == null
+        get() {
+            // An expense still needs a title; an income or a transfer falls back to its own name,
+            // because "Income" is all there is to say about most refunds (T-245).
+            val titleOk = type != ExpenseType.EXPENSE || name.isNotBlank()
+            val sharesOk = if (type == ExpenseType.TRANSFER) {
+                totalCents > 0 && isTransferValid
+            } else {
+                paidByError == null && paidForError == null
+            }
+            return titleOk && sharesOk
+        }
 }
 
 /**
@@ -95,9 +129,10 @@ data class ExpenseFormUiState(
 data class ExpensePrefill(val name: String, val expense: Expense)
 
 /**
- * The expense form (T-154). The total drives: typed shares stay as typed, and everything still on
- * auto absorbs the difference. The arithmetic itself is [ExpenseMath], shared with the web client
- * through one case table; this only holds what the user has typed so far.
+ * The ledger entry form (T-154, T-245). The total drives: typed shares stay as typed, and
+ * everything still on auto absorbs the difference. The arithmetic itself is [ExpenseMath], shared
+ * with the web client through one case table; this only holds what the user has typed so far,
+ * including which of the three an entry is and what switching between them does.
  */
 @HiltViewModel
 class ExpenseFormViewModel @Inject constructor(
@@ -147,6 +182,9 @@ class ExpenseFormViewModel @Inject constructor(
                     name = prefill.name,
                     date = expense.date,
                     totalText = ExpenseMath.fromCents(ExpenseMath.expenseTotalCents(expense)),
+                    type = ExpenseMath.entryType(expense),
+                    transferFrom = transferEnd(expense, expense.paidBy),
+                    transferTo = transferEnd(expense, expense.paidFor),
                 )
             }
         } else {
@@ -169,6 +207,14 @@ class ExpenseFormViewModel @Inject constructor(
         }
         recompute()
     }
+
+    /** The one account named on a side of a stored transfer, or "" for anything else (T-245). */
+    private fun transferEnd(expense: Expense, shares: Map<String, String>): String =
+        if (ExpenseMath.entryType(expense) == ExpenseType.TRANSFER) {
+            shares.keys.singleOrNull().orEmpty()
+        } else {
+            ""
+        }
 
     fun startEdit(itemId: String): Job = viewModelScope.launch {
         val item = itemsRepo.getById(itemId) ?: return@launch
@@ -205,6 +251,12 @@ class ExpenseFormViewModel @Inject constructor(
                 note = item.note.value.orEmpty(),
                 date = expense.date,
                 totalText = ExpenseMath.fromCents(ExpenseMath.expenseTotalCents(expense)),
+                // An entry stored before types existed opens as the Expense it has always been,
+                // and can be corrected here — that is how a "Settlement" someone recorded as an
+                // expense becomes a Transfer (T-245).
+                type = ExpenseMath.entryType(expense),
+                transferFrom = transferEnd(expense, expense.paidBy),
+                transferTo = transferEnd(expense, expense.paidFor),
                 isSaved = false,
                 isDeleted = false,
             )
@@ -241,6 +293,66 @@ class ExpenseFormViewModel @Inject constructor(
 
     private fun frozenShares(stored: Map<String, String>): Map<String, String> =
         stored.filterKeys(::isFrozen)
+
+    /** Whose amounts may move, and so who a transfer may name (T-245). */
+    private fun transferCandidates(): List<String> = participantIds.filterNot(::isFrozen)
+
+    /**
+     * Changing the type keeps everything the types have in common — title, date, note, total — and
+     * translates what they do not (T-245).
+     *
+     * Expense and Income are the same form read two ways, so their maps survive untouched. A
+     * transfer has no maps to keep: it becomes the one sender and one recipient the maps already
+     * described when they described exactly one of each, and otherwise starts from me and the
+     * first other person. Coming back the other way, the sender becomes the sole payer and the
+     * recipient the sole beneficiary, each an equal share of one.
+     */
+    fun onTypeChange(next: ExpenseType) {
+        val current = _uiState.value.type
+        if (next == current) return
+        val candidates = transferCandidates()
+        if (next == ExpenseType.TRANSFER) {
+            val payers = participantIds.filter { it in selected[Side.PAID_BY].orEmpty() }
+            val beneficiaries = participantIds.filter { it in selected[Side.PAID_FOR].orEmpty() }
+            val from: String
+            val to: String
+            if (payers.size == 1 && beneficiaries.size == 1 && payers[0] != beneficiaries[0]) {
+                from = payers[0]
+                to = beneficiaries[0]
+            } else {
+                val me = sessionState.accountId
+                from = if (me != null && me in candidates) {
+                    me
+                } else {
+                    payers.firstOrNull { it in candidates } ?: candidates.firstOrNull().orEmpty()
+                }
+                // The beneficiaries say more about what the user meant than the roster does, so
+                // they are asked first; the first other member is the fallback.
+                to = beneficiaries.firstOrNull { it != from && it in candidates }
+                    ?: candidates.firstOrNull { it != from }.orEmpty()
+            }
+            _uiState.update { it.copy(type = next, transferFrom = from, transferTo = to) }
+        } else {
+            if (current == ExpenseType.TRANSFER) {
+                val state = _uiState.value
+                selected = mapOf(
+                    Side.PAID_BY to setOfNotNull(state.transferFrom.ifEmpty { null }),
+                    Side.PAID_FOR to setOfNotNull(state.transferTo.ifEmpty { null }),
+                )
+                typed = mapOf(Side.PAID_BY to emptyMap(), Side.PAID_FOR to emptyMap())
+            }
+            _uiState.update { it.copy(type = next) }
+        }
+        recompute()
+    }
+
+    fun onTransferFromChange(accountId: String) {
+        _uiState.update { it.copy(transferFrom = accountId) }
+    }
+
+    fun onTransferToChange(accountId: String) {
+        _uiState.update { it.copy(transferTo = accountId) }
+    }
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value, nameError = false) }
 
@@ -290,6 +402,11 @@ class ExpenseFormViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 soloList = participantIds.size <= 1,
+                totalCents = totalCents,
+                // A list of one has nobody to pay; an entry that already is a transfer keeps the
+                // choice so it can still be read and retyped (T-245).
+                canTransfer = transferCandidates().size >= 2 || state.type == ExpenseType.TRANSFER,
+                participants = participantRows(),
                 paidBy = rowsFor(Side.PAID_BY, results.getValue(Side.PAID_BY)),
                 paidFor = rowsFor(Side.PAID_FOR, results.getValue(Side.PAID_FOR)),
                 paidByError = (results.getValue(Side.PAID_BY) as? ExpenseMath.DistributeResult.Failed)?.error,
@@ -298,6 +415,23 @@ class ExpenseFormViewModel @Inject constructor(
                 paidForSumCents = entries(Side.PAID_FOR).sumOf { it.fixed ?: 0 },
             )
         }
+    }
+
+    /**
+     * Everyone the transfer pickers may offer, labelled exactly as the share rows label them
+     * (T-197): an email while they are a member, a number once they have left. Neither side of a
+     * distribution, so nothing here is selected or typed.
+     */
+    private fun participantRows(): List<ShareRow> = participantIds.map { id ->
+        ShareRow(
+            accountId = id,
+            email = members.firstOrNull { it.accountId == id }?.email,
+            formerNumber = formerNumbers[id] ?: 0,
+            selected = false,
+            text = "",
+            derivedCents = 0,
+            frozen = frozenReason(id),
+        )
     }
 
     private fun rowsFor(side: Side, result: ExpenseMath.DistributeResult): List<ShareRow> {
@@ -317,40 +451,63 @@ class ExpenseFormViewModel @Inject constructor(
         }
     }
 
-    /** Returns null when the form is not saveable, so the dialog stays open. */
-    fun save(): Job? {
+    /**
+     * Returns null when the form is not saveable, so the dialog stays open.
+     *
+     * [typeLabel] is the current type's own localized name — "Income", "Transfer" — which is what
+     * an income or a transfer left untitled falls back to (T-245); the screen holds the string
+     * resources, this does not. An expense ignores it and still insists on a title.
+     */
+    fun save(typeLabel: String = ""): Job? {
         val state = _uiState.value
-        if (state.name.isBlank()) {
+        val title = state.name.trim().ifBlank {
+            if (state.type == ExpenseType.EXPENSE) "" else typeLabel.trim()
+        }
+        if (title.isBlank()) {
             _uiState.update { it.copy(nameError = true) }
             return null
         }
-        val byResult = ExpenseMath.distribute(totalCents(), entries(Side.PAID_BY))
-        val forResult = ExpenseMath.distribute(totalCents(), entries(Side.PAID_FOR))
-        if (byResult !is ExpenseMath.DistributeResult.Shares) return null
-        if (forResult !is ExpenseMath.DistributeResult.Shares) return null
-
-        val expense = Expense(
-            paidBy = ExpenseMath.sharesToWire(byResult.shares),
-            // "Everything selected is on auto" is exactly what makes a later total change
-            // redistribute instead of refusing.
-            equalBy = entries(Side.PAID_BY).all { it.fixed == null },
-            paidFor = ExpenseMath.sharesToWire(forResult.shares),
-            equalFor = entries(Side.PAID_FOR).all { it.fixed == null },
-            date = state.date,
-        )
-        val name = state.name.trim()
+        val expense = if (state.type == ExpenseType.TRANSFER) {
+            if (!state.isTransferValid || state.totalCents <= 0) return null
+            val amount = ExpenseMath.fromCents(state.totalCents)
+            // One sender, one recipient, the same amount on both sides: the total is the whole of
+            // it, so a partial settlement is recorded by editing the total.
+            Expense(
+                paidBy = mapOf(state.transferFrom to amount),
+                equalBy = true,
+                paidFor = mapOf(state.transferTo to amount),
+                equalFor = true,
+                date = state.date,
+                type = ExpenseType.TRANSFER.wire,
+            )
+        } else {
+            val byResult = ExpenseMath.distribute(totalCents(), entries(Side.PAID_BY))
+            val forResult = ExpenseMath.distribute(totalCents(), entries(Side.PAID_FOR))
+            if (byResult !is ExpenseMath.DistributeResult.Shares) return null
+            if (forResult !is ExpenseMath.DistributeResult.Shares) return null
+            Expense(
+                paidBy = ExpenseMath.sharesToWire(byResult.shares),
+                // "Everything selected is on auto" is exactly what makes a later total change
+                // redistribute instead of refusing.
+                equalBy = entries(Side.PAID_BY).all { it.fixed == null },
+                paidFor = ExpenseMath.sharesToWire(forResult.shares),
+                equalFor = entries(Side.PAID_FOR).all { it.fixed == null },
+                date = state.date,
+                type = state.type.wire,
+            )
+        }
         val note = state.note.trim().ifBlank { null }
 
         return viewModelScope.launch {
             val itemId = state.itemId
             if (itemId == null) {
-                itemsRepo.createExpense(listId, name, expense, note)
+                itemsRepo.createExpense(listId, title, expense, note)
             } else {
                 // Change-scoped (T-88): an untouched field keeps its clock and cannot revert a
                 // collaborator's concurrent edit to it.
-                if (name != loadedName) itemsRepo.rename(itemId, name)
+                if (title != loadedName) itemsRepo.rename(itemId, title)
                 if (note != loadedNote) itemsRepo.setNote(itemId, note)
-                if (expense != loaded) itemsRepo.setExpense(itemId, expense)
+                if (!isUnchanged(expense)) itemsRepo.setExpense(itemId, expense)
             }
             _uiState.update { it.copy(isSaved = true) }
         }
@@ -358,6 +515,19 @@ class ExpenseFormViewModel @Inject constructor(
 
     private fun totalCents(): Long =
         ExpenseMath.toCents(_uiState.value.totalText.trim().ifEmpty { "0" }) ?: 0
+
+    /**
+     * Whether saving would change the stored entry at all (T-88).
+     *
+     * Spelling out the type an entry already had is not a change: an absent type IS `expense`
+     * (T-245), so an entry written before types existed and opened without being touched must
+     * still write nothing — re-stamping its clock would let it revert a collaborator's edit.
+     */
+    private fun isUnchanged(expense: Expense): Boolean {
+        val stored = loaded ?: return false
+        if (expense == stored) return true
+        return stored.type == null && expense == stored.copy(type = ExpenseType.EXPENSE.wire)
+    }
 
     fun requestDelete() = _uiState.update { it.copy(isDeleteConfirmOpen = true) }
 

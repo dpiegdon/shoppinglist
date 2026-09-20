@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.expense
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -27,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.Expense
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ListMember
@@ -123,6 +125,26 @@ class ExpenseScreensTest {
         date = "2026-09-17",
     )
 
+    /** A 30.00 refund received by [receivedBy] and credited to both of us (T-245). */
+    private fun refund(receivedBy: String = me) = Expense(
+        paidBy = mapOf(receivedBy to "30.00"),
+        equalBy = true,
+        paidFor = mapOf(me to "15.00", other to "15.00"),
+        equalFor = true,
+        date = "2026-09-17",
+        type = ExpenseType.INCOME.wire,
+    )
+
+    /** [from] hands [to] money directly: a settlement, which spends nothing (T-245). */
+    private fun payback(from: String = other, to: String = me, amount: String = "17.00") = Expense(
+        paidBy = mapOf(from to amount),
+        equalBy = true,
+        paidFor = mapOf(to to amount),
+        equalFor = true,
+        date = "2026-09-17",
+        type = ExpenseType.TRANSFER.wire,
+    )
+
     // ---- the list screen ------------------------------------------------------
 
     @Test
@@ -165,8 +187,9 @@ class ExpenseScreensTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
-        // I paid 64 and owe 32, so the list owes me 32 — a credit, so signed (T-241).
-        composeTestRule.onNodeWithText("+€32.00").assertIsDisplayed()
+        // I paid 64 and owe 32, so the list owes me 32 — a credit, so signed (T-241). Twice over:
+        // once as my balance in the summary card, once as what this one entry did to it (T-245).
+        composeTestRule.onAllNodesWithText("+€32.00").assertCountEquals(2)
 
         // Balances is the other half of this screen now, behind the selector (T-172).
         composeTestRule.onNodeWithText("Balances").performClick()
@@ -176,7 +199,7 @@ class ExpenseScreensTest {
         // Adding belongs to the expenses view.
         composeTestRule.onNodeWithContentDescription("Add entry").assertDoesNotExist()
 
-        composeTestRule.onNodeWithText("Ledger").performClick()
+        composeTestRule.onNodeWithText("Entries").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Dinner").assertIsDisplayed()
     }
@@ -237,6 +260,78 @@ class ExpenseScreensTest {
         composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
         // Always zero on a list of one, so saying it would be noise.
         composeTestRule.onNodeWithText("Your balance").assertDoesNotExist()
+    }
+
+    // ---- income and transfer rows (T-245) -------------------------------------
+
+    /** Opens the entries view with whatever is already on the list. */
+    private fun showEntries() {
+        composeTestRule.setContent {
+            ExpenseListScreen(
+                onAddExpense = {},
+                onEditExpense = {},
+                onOpenListProps = {},
+                viewModel = viewModel(),
+            )
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `an income says so, reads the other way round and counts against what was spent`() =
+        runBlocking<Unit> {
+            itemsRepo.createExpense(listId, "Dinner", dinner())
+            itemsRepo.createExpense(listId, "Deposit back", refund())
+
+            showEntries()
+
+            // The type, quietly beside the title: an expense is the ordinary case and says nothing.
+            composeTestRule.onNodeWithText("Income").assertIsDisplayed()
+            composeTestRule.onNodeWithText("received by ME · for everyone").assertIsDisplayed()
+            // Money coming in reads the other way, so the amount carries a plus.
+            composeTestRule.onNodeWithText("+€30.00").assertIsDisplayed()
+            // I received it and a third of it was mine, so it took 15 off what the list owes me.
+            composeTestRule.onNodeWithText("-€15.00").assertIsDisplayed()
+            // Net spent: 64 laid out less 30 taken in.
+            composeTestRule.onNodeWithText("€34.00").assertIsDisplayed()
+        }
+
+    @Test
+    fun `a transfer is named, reads from one person to another and spends nothing`() =
+        runBlocking<Unit> {
+            itemsRepo.createExpense(listId, "Dinner", dinner())
+            itemsRepo.createExpense(listId, "Payback", payback())
+
+            showEntries()
+
+            composeTestRule.onNodeWithText("Transfer").assertIsDisplayed()
+            composeTestRule.onNodeWithText("OT → ME").assertIsDisplayed()
+            // A settlement moves money without the group spending a thing, so the net stays 64.
+            composeTestRule.onAllNodesWithText("€64.00").assertCountEquals(2)
+            // Plain, not signed: what the group moved is nobody's position.
+            composeTestRule.onNodeWithText("€17.00").assertIsDisplayed()
+            // It was paid to me, so it takes 17 off what I am owed.
+            composeTestRule.onNodeWithText("-€17.00").assertIsDisplayed()
+        }
+
+    @Test
+    fun `an entry that does nothing to my balance shows no figure of mine`() = runBlocking<Unit> {
+        setMembers(me, other, "acct-third")
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        // Between the other two: I am on neither side of it.
+        itemsRepo.createExpense(listId, "Their deal", payback(from = other, to = "acct-third"))
+
+        showEntries()
+
+        composeTestRule.onNodeWithText("OT → TH").assertIsDisplayed()
+        composeTestRule.onNodeWithText("€17.00").assertIsDisplayed()
+        // Nothing signed on that row: my own effect is zero, so it says nothing about me — and no
+        // bare zero either, which would be a figure claiming to mean something.
+        composeTestRule.onAllNodesWithText("+€17.00").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("-€17.00").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("€0.00").assertCountEquals(0)
+        // The dinner, which I did pay for, still states mine — on the row and in the card.
+        composeTestRule.onAllNodesWithText("+€32.00").assertCountEquals(2)
     }
 
     // ---- the balances view (T-172: a half of the expense list screen) ----------
@@ -383,6 +478,132 @@ class ExpenseScreensTest {
 
         composeTestRule.onNodeWithText("Net spent: €12.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Settle up").assertDoesNotExist()
+    }
+
+    // ---- a ledger of all three types, on the balances view (T-245) --------------
+
+    @Test
+    fun `balances break the net down and carry what was settled`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        itemsRepo.createExpense(listId, "Deposit back", refund())
+        itemsRepo.createExpense(listId, "Payback", payback())
+
+        showBalances()
+
+        // 64 laid out less 30 taken in, and the settlement counting for nothing.
+        composeTestRule.onNodeWithText("Net spent: €34.00").assertIsDisplayed()
+        // The net alone would hide half the story wherever income exists.
+        composeTestRule.onNodeWithText("Expenses €64.00 · Income €30.00").assertIsDisplayed()
+        // I laid out 64 and took 30 back in; a third of each was mine; and I was paid 17.
+        composeTestRule.onNodeWithText("paid 34.00 · share 17.00 · settled -17.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("paid 0.00 · share 17.00 · settled +17.00").assertIsDisplayed()
+        // The payback squared us exactly.
+        composeTestRule.onNodeWithText("All settled").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a ledger with no settlements says nothing about settling`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+
+        showBalances()
+
+        // Every ledger that has not been paid back yet: the figure would be a zero saying nothing.
+        composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("settled", substring = true).assertCountEquals(0)
+        // And with no income, the breakdown line is absent too.
+        composeTestRule.onAllNodesWithText("Expenses", substring = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun `Reimburse hands over a transfer, not an expense`() = runBlocking<Unit> {
+        itemsRepo.createExpense(listId, "Dinner", dinner())
+        var recorded: ExpensePrefill? = null
+
+        showBalances(onReimburse = { recorded = it })
+        composeTestRule.onNodeWithText("Reimburse").performClick()
+
+        val prefill = checkNotNull(recorded)
+        // A settlement moves a debt; it is not more spending (T-245).
+        assertEquals(ExpenseType.TRANSFER.wire, prefill.expense.type)
+        assertEquals(mapOf(other to "32.00"), prefill.expense.paidBy)
+        assertEquals(mapOf(me to "32.00"), prefill.expense.paidFor)
+    }
+
+    // ---- the entry form's type control (T-245) ---------------------------------
+
+    /** The form, opened on this list with a real view model, as the date-picker test does. */
+    private fun showForm(itemId: String? = null) {
+        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
+        composeTestRule.setContent {
+            ExpenseDialog(listId = listId, itemId = itemId, onDismiss = {}, viewModel = form)
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `the form offers the three types and opens on Expense`() = runBlocking<Unit> {
+        showForm()
+
+        composeTestRule.onNodeWithText("Type").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Expense").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Income").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Transfer").assertIsDisplayed()
+        // The ordinary case, and the one every entry written before types existed is.
+        composeTestRule.onNodeWithText("Paid by").assertIsDisplayed()
+        composeTestRule.onNodeWithText("For").assertIsDisplayed()
+    }
+
+    @Test
+    fun `choosing Income relabels the two sides rather than changing them`() = runBlocking<Unit> {
+        showForm()
+
+        composeTestRule.onNodeWithText("Income").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Received by").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Credited to").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Paid by").assertDoesNotExist()
+    }
+
+    @Test
+    fun `choosing Transfer replaces the split with two pickers`() = runBlocking<Unit> {
+        showForm()
+
+        composeTestRule.onNodeWithText("Transfer").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("From").assertIsDisplayed()
+        composeTestRule.onNodeWithText("To").assertIsDisplayed()
+        // Me to the first other member, and nothing left to split.
+        composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Paid by").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a transfer's two ends each leave the other's choice out`() = runBlocking<Unit> {
+        setMembers(me, other, "acct-third")
+        showForm()
+        composeTestRule.onNodeWithText("Transfer").performClick()
+        composeTestRule.waitForIdle()
+
+        // From is me, so the To picker offers the other two and not me.
+        composeTestRule.onNodeWithText("$other@example.com").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("acct-third@example.com").assertIsDisplayed()
+        // Nobody pays themselves: the open menu never offers the sender.
+        composeTestRule.onAllNodesWithText("$me@example.com").assertCountEquals(1)
+    }
+
+    @Test
+    fun `a list of one cannot record a transfer, and says why`() = runBlocking<Unit> {
+        setMembers(me)
+        showForm()
+
+        composeTestRule.onNodeWithText("Transfer").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("A transfer needs two different people on this list.")
+            .assertIsDisplayed()
     }
 
     // ---- pull to refresh (T-167) -----------------------------------------------

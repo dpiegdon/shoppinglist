@@ -17,6 +17,7 @@ import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ListMember
@@ -440,15 +441,22 @@ class ExpenseFormViewModelTest {
         )
     }
 
-    // ---- a pre-filled settlement (T-165) ---------------------------------------
+    // ---- a pre-filled settlement (T-165, now a transfer: T-245) -----------------
 
     private fun settlement(amount: String = "22.00") = ExpensePrefill(
         name = "Settlement",
-        expense = Expense(mapOf(other to amount), true, mapOf(me to amount), true, "2026-09-18"),
+        expense = Expense(
+            mapOf(other to amount),
+            true,
+            mapOf(me to amount),
+            true,
+            "2026-09-18",
+            type = ExpenseType.TRANSFER.wire,
+        ),
     )
 
     @Test
-    fun `a prefilled settlement opens with its name, total, payer and payee`() =
+    fun `a prefilled settlement opens as a transfer with its name, total, payer and payee`() =
         runTest(mainDispatcherRule.dispatcher) {
             val viewModel = newViewModel()
             viewModel.startAdd(listId, settlement()).join()
@@ -458,21 +466,22 @@ class ExpenseFormViewModelTest {
             assertEquals("Settlement", state.name)
             assertEquals("22.00", state.totalText)
             assertEquals("2026-09-18", state.date)
-            // Rows follow the roster order (me, other): the other paid, and it was for me.
-            assertEquals(listOf(false, true), state.paidBy.map { it.selected })
-            assertEquals(listOf(true, false), state.paidFor.map { it.selected })
+            assertEquals(ExpenseType.TRANSFER, state.type)
+            assertEquals(other, state.transferFrom)
+            assertEquals(me, state.transferTo)
             assertTrue(state.canSave)
         }
 
     @Test
-    fun `saving a prefilled settlement writes an ordinary expense`() =
+    fun `saving a prefilled settlement writes a transfer`() =
         runTest(mainDispatcherRule.dispatcher) {
             val viewModel = newViewModel()
             viewModel.startAdd(listId, settlement()).join()
-            viewModel.save()!!.join()
+            viewModel.save("Transfer")!!.join()
 
             assertEquals("Settlement", itemsRepo.activeItemsForListOnce(listId).first().name.value)
             val stored = storedExpense()
+            assertEquals(ExpenseType.TRANSFER.wire, stored.type)
             assertEquals(mapOf(other to "22.00"), stored.paidBy)
             assertEquals(mapOf(me to "22.00"), stored.paidFor)
         }
@@ -482,10 +491,251 @@ class ExpenseFormViewModelTest {
         val viewModel = newViewModel()
         viewModel.startAdd(listId, settlement()).join()
         viewModel.onTotalChange("10.00")
-        viewModel.save()!!.join()
+        viewModel.save("Transfer")!!.join()
 
         val stored = storedExpense()
         assertEquals(mapOf(other to "10.00"), stored.paidBy)
         assertEquals(mapOf(me to "10.00"), stored.paidFor)
+    }
+
+    // ---- the three entry types (T-245) -----------------------------------------
+
+    @Test
+    fun `a new entry is an expense, and says so on the wire`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+        assertEquals(ExpenseType.EXPENSE, viewModel.uiState.value.type)
+
+        viewModel.onNameChange("Dinner")
+        viewModel.onTotalChange("60.00")
+        viewModel.save("Expense")?.join()
+
+        assertEquals(ExpenseType.EXPENSE.wire, storedExpense().type)
+    }
+
+    @Test
+    fun `an income keeps the same two maps and only changes what they mean`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Deposit back")
+            viewModel.onTotalChange("30.00")
+
+            viewModel.onTypeChange(ExpenseType.INCOME)
+
+            // Expense and Income are the same form read two ways, so nothing about the split moves.
+            assertEquals(listOf(true, false), viewModel.uiState.value.paidBy.map { it.selected })
+            assertEquals(listOf(true, true), viewModel.uiState.value.paidFor.map { it.selected })
+            viewModel.save("Income")?.join()
+
+            val stored = storedExpense()
+            assertEquals(ExpenseType.INCOME.wire, stored.type)
+            assertEquals(mapOf(me to "30.00"), stored.paidBy)
+            assertEquals(mapOf(me to "15.00", other to "15.00"), stored.paidFor)
+        }
+
+    @Test
+    fun `switching to a transfer keeps the title, date, note and total`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Payback")
+            viewModel.onNoteChange("cash")
+            viewModel.onDateChange("2026-09-18")
+            viewModel.onTotalChange("25.00")
+
+            viewModel.onTypeChange(ExpenseType.TRANSFER)
+
+            val state = viewModel.uiState.value
+            assertEquals("Payback", state.name)
+            assertEquals("cash", state.note)
+            assertEquals("2026-09-18", state.date)
+            assertEquals("25.00", state.totalText)
+        }
+
+    @Test
+    fun `switching to a transfer starts from me and the first other member`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+
+            // The default maps are me paying for everyone, which is not one sender and one
+            // recipient, so the two ends are chosen rather than translated.
+            viewModel.onTypeChange(ExpenseType.TRANSFER)
+
+            assertEquals(me, viewModel.uiState.value.transferFrom)
+            assertEquals(other, viewModel.uiState.value.transferTo)
+        }
+
+    @Test
+    fun `switching to a transfer keeps a split that already named one of each`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Payback")
+            viewModel.onTotalChange("25.00")
+            // The other paid, and it was for me alone: exactly a transfer, said the long way.
+            viewModel.toggleParticipant(Side.PAID_BY, me)
+            viewModel.toggleParticipant(Side.PAID_BY, other)
+            viewModel.toggleParticipant(Side.PAID_FOR, other)
+
+            viewModel.onTypeChange(ExpenseType.TRANSFER)
+
+            assertEquals(other, viewModel.uiState.value.transferFrom)
+            assertEquals(me, viewModel.uiState.value.transferTo)
+        }
+
+    @Test
+    fun `switching away from a transfer makes the sender the payer and the recipient the share`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId, settlement()).join()
+
+            viewModel.onTypeChange(ExpenseType.EXPENSE)
+
+            // The other sent it, so they are the sole payer; it was for me, so I am the sole share.
+            assertEquals(listOf(false, true), viewModel.uiState.value.paidBy.map { it.selected })
+            assertEquals(listOf(true, false), viewModel.uiState.value.paidFor.map { it.selected })
+            viewModel.save("Expense")?.join()
+
+            val stored = storedExpense()
+            assertEquals(ExpenseType.EXPENSE.wire, stored.type)
+            assertEquals(mapOf(other to "22.00"), stored.paidBy)
+            assertEquals(mapOf(me to "22.00"), stored.paidFor)
+            assertTrue(stored.equalBy)
+            assertTrue(stored.equalFor)
+        }
+
+    @Test
+    fun `a transfer writes one sender, one recipient and nothing else`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onNameChange("Payback")
+            viewModel.onTotalChange("25.00")
+            viewModel.onTypeChange(ExpenseType.TRANSFER)
+
+            viewModel.save("Transfer")?.join()
+
+            val stored = storedExpense()
+            assertEquals(ExpenseType.TRANSFER.wire, stored.type)
+            assertEquals(mapOf(me to "25.00"), stored.paidBy)
+            assertEquals(mapOf(other to "25.00"), stored.paidFor)
+            assertTrue(stored.equalBy)
+            assertTrue(stored.equalFor)
+        }
+
+    @Test
+    fun `a transfer cannot point both ends at the same person`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+        viewModel.onNameChange("Payback")
+        viewModel.onTotalChange("25.00")
+        viewModel.onTypeChange(ExpenseType.TRANSFER)
+
+        viewModel.onTransferToChange(me)
+
+        assertTrue(viewModel.uiState.value.sameMemberError)
+        assertFalse(viewModel.uiState.value.canSave)
+        assertNull(viewModel.save("Transfer"))
+    }
+
+    @Test
+    fun `a transfer without a total cannot be saved`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+        viewModel.onTypeChange(ExpenseType.TRANSFER)
+
+        assertFalse(viewModel.uiState.value.canSave)
+        assertNull(viewModel.save("Transfer"))
+    }
+
+    @Test
+    fun `an untitled income or transfer names itself, but an expense still insists`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+            viewModel.onTotalChange("30.00")
+
+            // An expense with no title is still refused, and says so.
+            assertFalse(viewModel.uiState.value.canSave)
+            assertNull(viewModel.save("Expense"))
+            assertTrue(viewModel.uiState.value.nameError)
+
+            viewModel.onTypeChange(ExpenseType.INCOME)
+            assertTrue(viewModel.uiState.value.canSave)
+            viewModel.save("Income")?.join()
+
+            assertEquals("Income", itemsRepo.activeItemsForListOnce(listId).first().name.value)
+        }
+
+    @Test
+    fun `a list of one cannot record a transfer`() = runTest(mainDispatcherRule.dispatcher) {
+        setMembers(me)
+        val viewModel = newViewModel()
+        viewModel.startAdd(listId).join()
+
+        // Nobody to pay, so the segment is off and asking for it changes nothing.
+        assertFalse(viewModel.uiState.value.canTransfer)
+    }
+
+    @Test
+    fun `a transfer may not name someone whose amounts are frozen`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            setCloseVotes(other)
+            val viewModel = newViewModel()
+            viewModel.startAdd(listId).join()
+
+            // Only I can move, and a transfer needs two who can.
+            assertFalse(viewModel.uiState.value.canTransfer)
+        }
+
+    @Test
+    fun `an entry stored before types existed opens as an expense and can become a transfer`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            // No type at all — every entry written before T-245 looks like this.
+            val itemId = itemsRepo.createExpense(
+                listId,
+                "Settlement",
+                Expense(mapOf(other to "20.00"), true, mapOf(me to "20.00"), true, "2026-09-17"),
+            )
+            val viewModel = newViewModel()
+            viewModel.startEdit(itemId).join()
+            assertEquals(ExpenseType.EXPENSE, viewModel.uiState.value.type)
+
+            viewModel.onTypeChange(ExpenseType.TRANSFER)
+            // One payer and one beneficiary already, so the ends are translated, not chosen.
+            assertEquals(other, viewModel.uiState.value.transferFrom)
+            assertEquals(me, viewModel.uiState.value.transferTo)
+            viewModel.save("Transfer")?.join()
+
+            val stored = storedExpense()
+            assertEquals(ExpenseType.TRANSFER.wire, stored.type)
+            assertEquals(mapOf(other to "20.00"), stored.paidBy)
+            assertEquals(mapOf(me to "20.00"), stored.paidFor)
+        }
+
+    @Test
+    fun `reopening a stored transfer shows its two ends`() = runTest(mainDispatcherRule.dispatcher) {
+        val itemId = itemsRepo.createExpense(
+            listId,
+            "Settlement",
+            Expense(
+                mapOf(other to "20.00"),
+                true,
+                mapOf(me to "20.00"),
+                true,
+                "2026-09-17",
+                type = ExpenseType.TRANSFER.wire,
+            ),
+        )
+        val viewModel = newViewModel()
+        viewModel.startEdit(itemId).join()
+
+        val state = viewModel.uiState.value
+        assertEquals(ExpenseType.TRANSFER, state.type)
+        assertEquals(other, state.transferFrom)
+        assertEquals(me, state.transferTo)
+        assertEquals("20.00", state.totalText)
     }
 }

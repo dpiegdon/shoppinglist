@@ -51,6 +51,7 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.AppFormat
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
+import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
@@ -59,7 +60,7 @@ import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
 import java.util.Date
 
 /**
- * An expenses list (T-154): what was spent, by whom, for whom.
+ * A ledger (T-154, T-245): what was spent, taken in and settled — by whom, for whom.
  *
  * None of the shopping apparatus applies — no statuses, categories, backlog, stores or
  * show-checked — so this is a screen of its own rather than a branch inside ListScreen. It still
@@ -119,7 +120,7 @@ fun ExpenseListScreen(
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                         contentPadding = PaddingValues(horizontal = 10.dp),
                         modifier = Modifier.height(32.dp),
-                    ) { Text(stringResource(R.string.list_kind_expenses), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringResource(R.string.expense_entries), style = MaterialTheme.typography.labelMedium) }
                     SegmentedButton(
                         selected = showBalances,
                         onClick = { showBalances = true },
@@ -225,10 +226,12 @@ fun ExpenseListScreen(
                             ExpenseRowView(
                                 row = row,
                                 currency = state.currency,
-                                paidByLabel = row.expense.paidBy.keys
-                                    .map { participantLabel(it, state) }
-                                    .joinToString(", "),
-                                forLabel = forWhomLabel(row.expense, state),
+                                subLine = subLine(row.expense, state),
+                                // What this one entry does to MY balance, the only figure on the
+                                // row that is mine rather than the group's (T-245).
+                                myEffectCents = state.myAccountId
+                                    ?.let { ExpenseMath.entryEffectCents(row.expense, it) }
+                                    ?: 0L,
                                 refusal = refusalOf(row, state),
                                 // Nothing to open on a closed list, nor for someone who has agreed to close (T-193).
                                 onClick = if (state.isClosed || state.iHaveVoted) null else ({ onEditExpense(row.item.id) }),
@@ -271,13 +274,16 @@ internal fun refusalOf(row: ExpenseRow, state: ExpenseListUiState): RowRefusal? 
 private fun ExpenseRowView(
     row: ExpenseRow,
     currency: String,
-    paidByLabel: String,
-    forLabel: String,
+    /** Who the entry moved money between, said the way its type reads it (T-245). */
+    subLine: String,
+    /** What this entry does to the signed-in account's balance; zero shows nothing. */
+    myEffectCents: Long,
     /** Set when the server refused this row's last push and the device parked it (T-200). */
     refusal: RowRefusal?,
     /** Null on a closed list: the row is still there to read, it just cannot be opened. */
     onClick: (() -> Unit)?,
 ) {
+    val type = ExpenseMath.entryType(row.expense)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,11 +293,24 @@ private fun ExpenseRowView(
     ) {
         // No date line: the heading above the group already says it.
         Column(modifier = Modifier.weight(1f)) {
-            Text(row.item.name.value, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(R.string.expense_row_by, paidByLabel, forLabel),
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    row.item.name.value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                // An expense is the ordinary case and says nothing; the other two say what they
+                // are, quietly, beside the title (T-245).
+                if (type != ExpenseType.EXPENSE) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(typeLabelOf(type)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Text(subLine, style = MaterialTheme.typography.bodySmall)
             if (refusal != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // The icon carries the "not saved" half for anyone who cannot see the colour,
@@ -311,10 +330,26 @@ private fun ExpenseRowView(
                 }
             }
         }
-        Text(
-            AppFormat.money(ExpenseMath.expenseTotalCents(row.expense), currency, appLocale()),
-            style = MaterialTheme.typography.bodyLarge,
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            val totalCents = ExpenseMath.expenseTotalCents(row.expense)
+            // Never coloured: what the group laid out or took in is not a position anyone is up or
+            // down. Income is prefixed "+", because money coming in reads the other way (T-245).
+            Text(
+                if (type == ExpenseType.INCOME) {
+                    AppFormat.signedMoney(totalCents, currency, appLocale())
+                } else {
+                    AppFormat.money(totalCents, currency, appLocale())
+                },
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (myEffectCents != 0L) {
+                Text(
+                    AppFormat.signedMoney(myEffectCents, currency, appLocale()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = balanceColor(myEffectCents),
+                )
+            }
+        }
     }
 }
 
@@ -324,6 +359,29 @@ internal fun participantLabel(accountId: String, state: ExpenseListUiState): Str
     val member = state.members.firstOrNull { it.accountId == accountId }
     if (member != null) return member.initials
     return stringResource(R.string.expense_former_member, state.formerMemberNumbers[accountId] ?: 0)
+}
+
+/**
+ * Who an entry moved money between, said the way its type reads it (T-245): an expense was paid by
+ * someone for others, an income was received by someone and credited to others, and a transfer is
+ * simply one person to another.
+ */
+@Composable
+internal fun subLine(expense: Expense, state: ExpenseListUiState): String {
+    // .map before joining: participantLabel is itself a composable, and only an inline lambda is
+    // a composable context.
+    val by = expense.paidBy.keys.map { participantLabel(it, state) }.joinToString(", ")
+    return when (ExpenseMath.entryType(expense)) {
+        ExpenseType.TRANSFER -> stringResource(
+            R.string.expense_row_transfer,
+            by,
+            expense.paidFor.keys.map { participantLabel(it, state) }.joinToString(", "),
+        )
+        ExpenseType.INCOME ->
+            stringResource(R.string.expense_row_received_by, by, forWhomLabel(expense, state))
+        ExpenseType.EXPENSE ->
+            stringResource(R.string.expense_row_by, by, forWhomLabel(expense, state))
+    }
 }
 
 /** "everyone" beats naming every member — the usual case, and the longest string. */
