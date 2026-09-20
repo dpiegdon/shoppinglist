@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-20T13:00:32+00:00", "kind": "created", "ref": "main@d3be38e", "text": "Release 3.0.0"}
 {"actor": "user", "at": "2026-09-20T13:09:12+00:00", "kind": "closed", "ref": "main@8081e8b", "text": ""}
+{"actor": "user", "at": "2026-09-20T13:09:12+00:00", "kind": "note", "ref": "main@8081e8b", "text": "Released as 3.0.0: commit 8081e8b, tag v3.0.0, versionCode 28, APK signed with the release key, protocol 3 (release guard passed), verify-all green inside the run (506 web tests), wheel smoke test 37/37 incl. the protocol gate. Wheel sha256 8431ea5aadb24295bd7320fdb2af36c8e8333e97d64ec3a25eef30b75657126e. Update the server first, then every device."}
