@@ -45,15 +45,27 @@ object AppFormat {
      * is never its only signal, so the sign carries the same meaning for a reader who cannot tell
      * the green from the red.
      *
+     * See [signed] for why the plus is found rather than pasted on.
+     */
+    fun signedMoney(cents: Long, currency: String?, locale: Locale): String =
+        signed(cents) { money(it, currency, locale) }
+
+    /**
+     * [number] with a "+" on a positive: the settled figure on the balances screen (T-245), which
+     * says which way the money went and so is meaningless without its sign.
+     */
+    fun signedNumber(cents: Long, locale: Locale): String = signed(cents) { number(it, locale) }
+
+    /**
      * The plus goes exactly where the language puts its minus, which is why it is found by
-     * formatting the amount both ways rather than pasted onto the front: Arabic writes its sign
+     * rendering the amount both ways rather than pasted onto the front: Arabic writes its sign
      * after a bidi mark, and a "+" glued to the front of an RTL amount lands on the wrong end of
      * the line. java.text has no sign-display option and no plus-sign accessor to ask instead.
      */
-    fun signedMoney(cents: Long, currency: String?, locale: Locale): String {
-        val positive = money(cents, currency, locale)
+    private fun signed(cents: Long, render: (Long) -> String): String {
+        val positive = render(cents)
         if (cents <= 0L) return positive
-        val negative = money(-cents, currency, locale)
+        val negative = render(-cents)
         val prefix = negative.commonPrefixWith(positive).length
         val suffix = negative.commonSuffixWith(positive).length
         // What the negative rendering adds is the sign, mark and all.

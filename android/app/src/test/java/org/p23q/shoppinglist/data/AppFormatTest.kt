@@ -71,6 +71,26 @@ class AppFormatTest {
     }
 
     @Test
+    fun `a settled figure is signed the way the language signs a bare number`() {
+        // The counterpart of signedMoney for the balances screen's "settled" (T-245): no currency,
+        // because it sits inside a line that already names one.
+        assertEquals("+20.00", AppFormat.signedNumber(2000, en))
+        assertEquals("-20.00", AppFormat.signedNumber(-2000, en))
+        assertEquals("0.00", AppFormat.signedNumber(0, en))
+        assertEquals("+20,00", AppFormat.signedNumber(2000, de))
+        assertEquals("+1,500.00", AppFormat.signedNumber(150000, Locale.JAPANESE))
+    }
+
+    @Test
+    fun `a signed number puts Arabic's plus where Arabic's minus goes`() {
+        val ar = Locale.forLanguageTag("ar")
+        val credit = AppFormat.signedNumber(6400, ar)
+        val debt = AppFormat.number(-6400, ar)
+        assertEquals(debt.replace('-', '+'), credit)
+        assertEquals(debt.indexOf('-'), credit.indexOf('+'))
+    }
+
+    @Test
     fun `a calendar date is written as the language does`() {
         assertEquals("Sep 17, 2026", AppFormat.calendarDate("2026-09-17", en))
         assertEquals("17.09.2026", AppFormat.calendarDate("2026-09-17", de))
