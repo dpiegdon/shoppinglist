@@ -1,0 +1,11 @@
+{
+  "body": "Android client of the ledger design (T-239): implement sections 1, 3, 4, 5 and 6 of the design of\nrecord, matching the WEB implementation exactly in layout, wording and behaviour. The web work\nis already on main (T-245) together with the shared case table and ALL new strings (both\nclients' catalogs): use the existing new resource names; do not re-translate. The colours\nticket (T-241) is also on main: use its balanceColor/signedMoney.\n\n* Expense.kt `type`; ExpenseMath.kt type-aware (`balancesFor` with settled, `spentTotals`,\n  `entryEffectCents`, `settle` unchanged) driven by the shared case table; the seeded property\n  test; DTO/serialization (absent type = expense, unknown/absent keys ignored as before).\n* ExpenseFormViewModel + ExpenseDialog (segmented type control, per-type labels, transfer\n  From/To pickers, switching rules, validation, blank-title defaults), ExpenseListScreen rows\n  and header, BalancesScreen, Overview card net total, list-kind naming (Ledger), tab labels,\n  \"Add entry\", \"Net spent\". \"Reimburse\" creates a Transfer.\n* Remove any Android string resource made obsolete by this (the web agent kept them so Android\n  kept compiling), keep lint clean; android/README.md wherever it describes expense lists.\n* Tests: ExpenseMath cases + property test, the view-model for every type (payloads incl.\n  transfer single maps, type switching rules, validation, blank-title defaults, editing an old\n  entry without a type, frozen/voter behaviour), Compose screen tests for the dialog, rows\n  (badge, sub-line, \"+\" on income, my-effect colours), Balances (net line, income line, settled\n  figure), Overview card, Reimburse -> Transfer, one-member list cannot pick Transfer. Follow the\n  Robolectric pitfalls in AGENTS.md. Each new test must fail when its change is reverted.",
+  "created_at": "2026-09-20T01:21:43+00:00",
+  "id": "T-246",
+  "labels": [
+    "android"
+  ],
+  "priority": 2,
+  "title": "Ledger Android: entry types, dialog, rows, balances, Ledger wording",
+  "updated_at": "2026-09-20T01:21:43+00:00"
+}
