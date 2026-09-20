@@ -1,6 +1,6 @@
 [project]
 name = "shoppinglist-server"
-version = "2.2.0"
+version = "3.0.0"
 description = "Flask blueprint + SQLite backend for Tuppu, a shared, offline-first list app."
 readme = "README.md"
 requires-python = ">=3.11"
