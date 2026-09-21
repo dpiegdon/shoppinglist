@@ -1,13 +1,117 @@
-"""App-level hardening from T-45: request size cap and security headers."""
+"""Hardening from T-45 and T-250: request size cap and security headers, both scoped to our own
+routes so a co-mounted blueprint is left alone."""
+
+import pytest
+
+MIB = 1024 * 1024
 
 
-def test_max_content_length_default_is_applied(app):
-    assert app.config["MAX_CONTENT_LENGTH"] == 4 * 1024 * 1024
+def _host_app(tmp_path, *, host_limit=None, name="shoppinglist_server", prefix=None, **kwargs):
+    """A host app serving OUR blueprint plus an unrelated one (T-250).
+
+    The neighbour has three routes: one that reads whatever body it is sent, one that raises the
+    sqlite "locked" error our 503 handler is written for, and one that trips Werkzeug's own body
+    limit — everything our blueprint must leave exactly as the neighbour wrote it.
+    """
+    import sqlite3
+
+    from flask import Blueprint, Flask, request
+
+    from shoppinglist_server import create_blueprint
+    from shoppinglist_server import db as db_module
+
+    db_path = str(tmp_path / f"{name}.db")
+    conn = db_module.connect(db_path)
+    db_module.init_db(conn)
+    conn.close()
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    if host_limit is not None:
+        app.config["MAX_CONTENT_LENGTH"] = host_limit
+    app.register_blueprint(
+        create_blueprint(
+            database_path=db_path,
+            invite_hmac_key=b"k",
+            base_url="http://host.example.com",
+            name=name,
+            url_prefix=prefix,
+            serve_web_client=False,
+            serve_invite_landing_page=False,
+            serve_android_apk=False,
+            **kwargs,
+        )
+    )
+
+    other = Blueprint("other_service", __name__)
+
+    @other.route("/other/read", methods=["POST"])
+    def other_read():
+        return {"bytes": len(request.get_data())}
+
+    @other.route("/other/locked")
+    def other_locked():
+        raise sqlite3.OperationalError("database is locked")
+
+    @other.route("/other/small", methods=["POST"])
+    def other_small():
+        request.max_content_length = 1024  # the neighbour's own, stricter, limit
+        return {"bytes": len(request.get_data())}
+
+    app.register_blueprint(other)
+    return app
 
 
-def test_oversized_request_body_returns_413_json(app, client):
-    # Shrink the cap rather than send megabytes; the enforcement path is the same.
-    app.config["MAX_CONTENT_LENGTH"] = 50
+def test_mounting_the_blueprint_does_not_write_the_hosts_body_limit(tmp_path):
+    # The bug (T-250): _record set app.config["MAX_CONTENT_LENGTH"] to 4 MiB, capping every
+    # other service on the app.
+    app = _host_app(tmp_path)
+
+    assert app.config["MAX_CONTENT_LENGTH"] is None
+
+
+def test_a_hosts_own_body_limit_is_left_exactly_as_it_was(tmp_path):
+    app = _host_app(tmp_path, host_limit=50 * MIB)
+
+    assert app.config["MAX_CONTENT_LENGTH"] == 50 * MIB
+
+
+def test_a_co_mounted_service_still_takes_a_10_mib_upload_while_our_api_refuses_5_mib(tmp_path):
+    client = _host_app(tmp_path).test_client()
+
+    neighbour = client.post("/other/read", data=b"x" * (10 * MIB))
+    ours = client.post("/api/v1/login", data=b"x" * (5 * MIB), content_type="application/json")
+
+    assert neighbour.status_code == 200
+    assert neighbour.get_json() == {"bytes": 10 * MIB}
+    assert ours.status_code == 413
+    assert ours.get_json()["error"] == "payload_too_large"
+
+
+def test_our_api_takes_a_body_just_under_its_limit_and_refuses_one_just_over(tmp_path):
+    client = _host_app(tmp_path).test_client()
+
+    def login(size):
+        # Padded JSON: the body's size is what is under test, not what it says.
+        body = b'{"email": "a@example.com", "password": "x", "pad": "' + b"p" * size + b'"}'
+        return client.post("/api/v1/login", data=body, content_type="application/json")
+
+    assert login(4 * MIB - 200).status_code == 401  # read, parsed, wrong credentials
+    assert login(4 * MIB).status_code == 413
+
+
+def test_a_generous_host_limit_does_not_loosen_ours(tmp_path):
+    # The host raised its own cap for uploads; our API is not thereby unbounded.
+    client = _host_app(tmp_path, host_limit=100 * MIB).test_client()
+
+    resp = client.post("/api/v1/login", data=b"x" * (5 * MIB), content_type="application/json")
+
+    assert resp.status_code == 413
+    assert resp.get_json()["error"] == "payload_too_large"
+
+
+def test_max_content_length_is_ours_to_configure_per_instance(tmp_path):
+    client = _host_app(tmp_path, max_content_length=50).test_client()
 
     resp = client.post(
         "/api/v1/login",
@@ -16,6 +120,65 @@ def test_oversized_request_body_returns_413_json(app, client):
 
     assert resp.status_code == 413
     assert resp.get_json()["error"] == "payload_too_large"
+
+
+def test_two_instances_each_enforce_their_own_limit(tmp_path):
+    from flask import Flask
+
+    from shoppinglist_server import create_blueprint
+    from shoppinglist_server import db as db_module
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    for name, prefix, limit in [("small", "/small/api", 200), ("big", "/big/api", 1 * MIB)]:
+        db_path = str(tmp_path / f"{name}.db")
+        conn = db_module.connect(db_path)
+        db_module.init_db(conn)
+        conn.close()
+        app.register_blueprint(
+            create_blueprint(
+                database_path=db_path,
+                invite_hmac_key=b"k",
+                base_url="http://host.example.com",
+                name=name,
+                url_prefix=prefix,
+                serve_web_client=False,
+                serve_invite_landing_page=False,
+                serve_android_apk=False,
+                max_content_length=limit,
+            )
+        )
+    client = app.test_client()
+    body = {"email": "a@example.com", "password": "x" * 300}
+
+    assert client.post("/small/api/login", json=body).status_code == 413
+    assert client.post("/big/api/login", json=body).status_code == 401
+
+
+@pytest.mark.parametrize("bad", [0, -1, 4.5, "4194304", None, True])
+def test_a_body_limit_that_is_not_a_positive_integer_is_refused_at_mount_time(tmp_path, bad):
+    with pytest.raises((TypeError, ValueError)):
+        _host_app(tmp_path, max_content_length=bad)
+
+
+def test_a_co_mounted_services_database_error_is_not_turned_into_our_503(tmp_path):
+    # Our handler answers "database is locked" with 503 server_busy — for OUR database. Registered
+    # app-wide it also swallowed a neighbour's, which then never saw its own error (T-250).
+    import sqlite3
+
+    client = _host_app(tmp_path).test_client()
+
+    with pytest.raises(sqlite3.OperationalError):
+        client.get("/other/locked")
+
+
+def test_a_co_mounted_services_own_413_is_not_rewritten_into_our_envelope(tmp_path):
+    resp = _host_app(tmp_path).test_client().post("/other/small", data=b"x" * 2048)
+
+    assert resp.status_code == 413
+    # Werkzeug's stock page, not our JSON envelope.
+    assert resp.mimetype != "application/json"
+    assert b"payload_too_large" not in resp.data
 
 
 def test_html_routes_carry_full_security_headers(client):
@@ -253,3 +416,124 @@ def test_a_genuine_operational_error_is_not_disguised_as_congestion(app, client,
     )
 
     assert resp.status_code == 500
+
+
+# ---- nothing else of ours is visible to, or shared with, the host (T-250) ------------------------
+
+
+def _hosted_with_landing(tmp_path, template_dir=None):
+    """A host app with its OWN `invite.html` (a generic name a host may well use) and our landing
+    page switched on, so both templates are in play at once."""
+    from flask import Flask, g, render_template
+
+    from shoppinglist_server import create_blueprint
+    from shoppinglist_server import db as db_module
+
+    db_path = str(tmp_path / "landing.db")
+    conn = db_module.connect(db_path)
+    db_module.init_db(conn)
+    conn.close()
+
+    app = Flask(__name__, template_folder=str(template_dir) if template_dir else None)
+    app.config["TESTING"] = True
+    seen = []
+
+    @app.before_request
+    def host_auth():
+        # The host's own authentication, on the same `flask.g` our request runs against.
+        g.account = "host-user"
+
+    @app.after_request
+    def host_audit(response):
+        seen.append(getattr(g, "account", "<gone>"))
+        return response
+
+    @app.route("/host/invite")
+    def host_invite():
+        return render_template("invite.html")
+
+    app.register_blueprint(
+        create_blueprint(
+            database_path=db_path,
+            invite_hmac_key=b"k",
+            base_url="http://host.example.com",
+            serve_web_client=False,
+            serve_android_apk=False,
+        )
+    )
+    return app, seen
+
+
+def test_our_landing_template_does_not_collide_with_a_hosts_own_invite_html(tmp_path):
+    templates = tmp_path / "host_templates"
+    templates.mkdir()
+    (templates / "invite.html").write_text("HOST INVITE PAGE")
+    app, _ = _hosted_with_landing(tmp_path, templates)
+    client = app.test_client()
+
+    # The host's page is the host's, and our landing page is ours: an unknown token is our
+    # "not found" page, not the host's template.
+    assert client.get("/host/invite").data == b"HOST INVITE PAGE"
+    ours = client.get("/invite/not-a-token")
+    assert ours.status_code == 404
+    assert b"HOST INVITE PAGE" not in ours.data
+    assert b"Invite not found" in ours.data
+
+
+def test_our_template_is_not_reachable_through_a_generic_name(tmp_path):
+    from jinja2 import TemplateNotFound
+
+    app, _ = _hosted_with_landing(tmp_path)  # the host has no invite.html of its own
+
+    # Before the fix a host's `render_template("invite.html")` quietly rendered OUR page.
+    with pytest.raises(TemplateNotFound):
+        app.test_client().get("/host/invite")
+
+
+def test_our_authentication_does_not_overwrite_the_hosts_flask_g(tmp_path):
+    app, seen = _hosted_with_landing(tmp_path)
+    client = app.test_client()
+    from shoppinglist_server.protocol import PROTOCOL_HEADER, PROTOCOL_VERSION
+
+    headers = {PROTOCOL_HEADER: str(PROTOCOL_VERSION)}
+    client.post(
+        "/api/v1/register",
+        json={"email": "a@example.com", "password": "password123"},
+        headers=headers,
+    )
+    token = client.post(
+        "/api/v1/login",
+        json={"email": "a@example.com", "password": "password123", "device_label": "t"},
+        headers=headers,
+    ).get_json()["token"]
+    seen.clear()
+
+    resp = client.get("/api/v1/settings", headers={**headers, "Authorization": f"Bearer {token}"})
+
+    assert resp.status_code == 200
+    # We authenticated the request as ourselves, and the host's `g.account` is still the host's.
+    assert seen == ["host-user"]
+
+
+def test_a_hosts_g_account_cannot_break_our_error_path(tmp_path):
+    app, _ = _hosted_with_landing(tmp_path)
+    from shoppinglist_server.protocol import PROTOCOL_HEADER, PROTOCOL_VERSION
+
+    # Unauthenticated, so our 401 handler runs while the host's `g.account` (a plain string with no
+    # `.id`) is set: it used to read the host's value as ours and crash the error handler into a 500.
+    resp = app.test_client().get(
+        "/api/v1/settings", headers={PROTOCOL_HEADER: str(PROTOCOL_VERSION)}
+    )
+
+    assert resp.status_code == 401
+    assert resp.get_json()["error"] == "missing_token"
+
+
+def test_our_database_teardown_is_scoped_to_our_blueprint(tmp_path):
+    app, _ = _hosted_with_landing(tmp_path)
+
+    app_wide = [f.__name__ for f in app.teardown_request_funcs.get(None, [])]
+    ours = [f.__name__ for f in app.teardown_request_funcs.get("shoppinglist_server", [])]
+
+    assert "_close_db" not in app_wide
+    assert "_close_db" in ours

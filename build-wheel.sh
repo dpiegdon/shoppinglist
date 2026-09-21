@@ -68,7 +68,7 @@ else:
     for missing in sorted(referenced - present):
         problems.append(f"index.html references a missing asset: {missing}")
 
-for required in ("schema.sql", "migrations.py", "templates/invite.html"):
+for required in ("schema.sql", "migrations.py", "templates/shoppinglist_server/invite.html"):
     if not any(n.endswith(required) for n in names):
         problems.append(f"missing {required}")
 

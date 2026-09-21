@@ -18,14 +18,14 @@ def register_routes(bp):
             config["base_url"],
             list_id,
             data.get("invited_email"),
-            g.account.id,
+            g.shoppinglist_account.id,
         )
         conn.commit()
         # invite_id and list_id, never the token (it is a bearer credential) and never the
         # invited address (T-121).
         audit.record(
             "invite.minted",
-            account_id=g.account.id,
+            account_id=g.shoppinglist_account.id,
             invite_id=result["invite_id"],
             list_id=list_id,
         )
@@ -35,9 +35,9 @@ def register_routes(bp):
     @authed
     def revoke_invite_view(invite_id):
         conn = get_db()
-        invites.revoke(conn, g.account.id, invite_id)
+        invites.revoke(conn, g.shoppinglist_account.id, invite_id)
         conn.commit()
-        audit.record("invite.revoked", account_id=g.account.id, invite_id=invite_id)
+        audit.record("invite.revoked", account_id=g.shoppinglist_account.id, invite_id=invite_id)
         return "", 204
 
     @bp.route("/invites/pending", methods=["GET"])
@@ -46,7 +46,7 @@ def register_routes(bp):
         """The invites waiting for the caller, so the overview can offer them (T-233)."""
         conn = get_db()
         config = get_config()
-        pending = invites.pending_for(conn, config["invite_hmac_key"], g.account)
+        pending = invites.pending_for(conn, config["invite_hmac_key"], g.shoppinglist_account)
         return jsonify({"invites": pending}), 200
 
     @bp.route("/invites/redeem", methods=["POST"])
@@ -55,9 +55,11 @@ def register_routes(bp):
         data = json_body()
         conn = get_db()
         config = get_config()
-        list_id = invites.redeem(conn, config["invite_hmac_key"], g.account, data.get("token"))
+        list_id = invites.redeem(
+            conn, config["invite_hmac_key"], g.shoppinglist_account, data.get("token")
+        )
         conn.commit()
         # The membership grant is the security-relevant event: this is how an account gains access
         # to someone else's data, so it is the one an operator needs to be able to reconstruct.
-        audit.record("invite.redeemed", account_id=g.account.id, list_id=list_id)
+        audit.record("invite.redeemed", account_id=g.shoppinglist_account.id, list_id=list_id)
         return jsonify({"list_id": list_id}), 200

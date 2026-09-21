@@ -17,7 +17,7 @@ def register_routes(bp):
             "FROM lists JOIN memberships ON memberships.list_id = lists.id "
             "WHERE memberships.account_id = ? AND lists.deleted = 0 "
             "ORDER BY lists.name",
-            (g.account.id,),
+            (g.shoppinglist_account.id,),
         ).fetchall()
         lists = [
             {
@@ -36,7 +36,7 @@ def register_routes(bp):
         # Uniform 403 regardless of whether list_id exists at all, so a
         # non-member can't distinguish "not found" from "not yours" (no
         # existence-leak).
-        if not invites.is_member(conn, g.account.id, list_id):
+        if not invites.is_member(conn, g.shoppinglist_account.id, list_id):
             raise ApiError(403, "not_a_member", "You are not a member of this list.")
 
         members = [
@@ -82,7 +82,7 @@ def register_routes(bp):
     def _require_member(conn, list_id):
         # Uniform 403 whether or not the list exists, like GET /members above: a non-member must
         # not be able to probe which list ids are in use.
-        if not invites.is_member(conn, g.account.id, list_id):
+        if not invites.is_member(conn, g.shoppinglist_account.id, list_id):
             raise ApiError(403, "not_a_member", "You are not a member of this list.")
 
     @bp.route("/lists/<list_id>/close-votes", methods=["POST"])
@@ -95,12 +95,12 @@ def register_routes(bp):
         """
         conn = get_db()
         _require_member(conn, list_id)
-        closing.cast_vote(conn, g.account.id, list_id)
+        closing.cast_vote(conn, g.shoppinglist_account.id, list_id)
         state = _vote_state(conn, list_id)
         conn.commit()
-        audit.record("list.close_vote_cast", account_id=g.account.id, list_id=list_id)
+        audit.record("list.close_vote_cast", account_id=g.shoppinglist_account.id, list_id=list_id)
         if state["closed_at"] is not None:
-            audit.record("list.closed", account_id=g.account.id, list_id=list_id)
+            audit.record("list.closed", account_id=g.shoppinglist_account.id, list_id=list_id)
         return jsonify(state), 200
 
     @bp.route("/lists/<list_id>/close-votes", methods=["DELETE"])
@@ -108,16 +108,18 @@ def register_routes(bp):
     def withdraw_close_vote_view(list_id):
         conn = get_db()
         _require_member(conn, list_id)
-        closing.withdraw_vote(conn, g.account.id, list_id)
+        closing.withdraw_vote(conn, g.shoppinglist_account.id, list_id)
         state = _vote_state(conn, list_id)
         conn.commit()
-        audit.record("list.close_vote_withdrawn", account_id=g.account.id, list_id=list_id)
+        audit.record(
+            "list.close_vote_withdrawn", account_id=g.shoppinglist_account.id, list_id=list_id
+        )
         return jsonify(state), 200
 
     @bp.route("/lists/<list_id>/leave", methods=["POST"])
     @authed
     def leave_list_view(list_id):
         conn = get_db()
-        invites.leave(conn, g.account.id, list_id)
+        invites.leave(conn, g.shoppinglist_account.id, list_id)
         conn.commit()
         return "", 204

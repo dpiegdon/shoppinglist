@@ -11,6 +11,10 @@ from .protocol import PROTOCOL_HEADER, PROTOCOL_VERSION, client_is_current
 
 EXTENSION_KEY = "shoppinglist_server"
 
+# Everything this package puts on flask.g is prefixed (T-250): `g` is one namespace shared with the
+# host app and every other blueprint, and a bare `g.account` set by a host's own auth would be
+# overwritten by ours — or, worse, read by our error handler as if it were ours.
+
 # Endpoints of the site-root routes we register directly on the host app (outside
 # any blueprint, per Spec §5's root URLs — the invite landing page, the SPA, the
 # APK download). Tracked per-app so _add_security_headers can recognize them as
@@ -21,10 +25,11 @@ _LANDING_ENDPOINTS = frozenset({"invite_landing_view"})
 _APK_ENDPOINTS = frozenset({"android_apk"})
 _WEBAPP_ENDPOINTS = frozenset({"web_index", "web_asset", "web_favicon"})
 
-# App-level request-body cap (T-45): request.get_json() would otherwise buffer an unbounded body —
-# /sync especially. 4 MB sits comfortably above realistic sync batches; operators can override via
-# the standard Flask MAX_CONTENT_LENGTH config (documented in the README). setdefault, so an
-# operator-set value wins.
+# Request-body cap for this blueprint's own routes (T-45): request.get_json() would otherwise
+# buffer an unbounded body — /sync especially. 4 MB sits comfortably above realistic sync batches.
+# It is applied per request to the routes THIS instance owns (T-250), never written into the host
+# app's config, so a host that also serves uploads is not capped by us. Operators change it with
+# create_blueprint(max_content_length=...).
 DEFAULT_MAX_CONTENT_LENGTH = 4 * 1024 * 1024
 
 # CSP for the HTML-serving routes (invite landing, embedded SPA). script-src falls back to the
@@ -49,6 +54,7 @@ def create_blueprint(
     web_dist_dir: str | None = None,
     allow_registration: bool = True,
     admin_emails: list[str] | None = None,
+    max_content_length: int = DEFAULT_MAX_CONTENT_LENGTH,
 ) -> Blueprint:
     """Build a mountable blueprint instance.
 
@@ -79,7 +85,15 @@ def create_blueprint(
     path can set it, so there is no privilege-escalation route. Admins get the
     server-settings tab (registration toggle, reset a user's password, delete a
     user).
+
+    `max_content_length` (T-250) caps the request body, in bytes, of THIS instance's routes only —
+    the host app's `MAX_CONTENT_LENGTH` is neither read nor written, so co-mounted services keep
+    their own limits. Over the cap: `413 payload_too_large`.
     """
+    if isinstance(max_content_length, bool) or not isinstance(max_content_length, int):
+        raise TypeError("max_content_length must be an integer number of bytes")
+    if max_content_length <= 0:
+        raise ValueError("max_content_length must be positive")
     # "https://example.com/shopping/" -> "/shopping"; no path -> "".
     root_path = urlsplit(base_url).path.rstrip("/")
     if url_prefix is None:
@@ -111,16 +125,12 @@ def create_blueprint(
         # (database_path, invite_hmac_key, ...) — a single shared slot here
         # was the original bug this docstring/design replaced.
         app.extensions.setdefault(EXTENSION_KEY, {})[bp.name] = config
-        app.register_error_handler(ApiError, _handle_api_error)
-        app.register_error_handler(RequestEntityTooLarge, _handle_payload_too_large)
-        app.register_error_handler(sqlite3.OperationalError, _handle_db_unavailable)
 
-        # App-wide, not per-instance: cap the body size and attach security headers once. Guarded so
-        # mounting several instances doesn't stack duplicate after_request callbacks (T-45).
-        # Flask seeds MAX_CONTENT_LENGTH as None (unset), so key in `is None` — not setdefault — is
-        # what lets an operator-set value win while still supplying our default.
-        if app.config.get("MAX_CONTENT_LENGTH") is None:
-            app.config["MAX_CONTENT_LENGTH"] = DEFAULT_MAX_CONTENT_LENGTH
+        # Nothing else in here may change how a co-mounted blueprint behaves (T-250): the body cap
+        # and the error handlers are blueprint-scoped below, and the app's own config is not
+        # written. What remains app-wide is only what Flask cannot scope: the after_request hook.
+        # It is attached once, so mounting several instances doesn't stack duplicate callbacks
+        # (T-45).
         # The hook is app-wide (Flask has no way to scope after_request to a
         # subset of app-level routes), but it self-limits to routes THIS
         # extension owns via owned_endpoints below — so a co-mounted blueprint's
@@ -135,7 +145,7 @@ def create_blueprint(
         # §5's share URL is https://<server>/invite/<token>, no /api/v1), so
         # it's registered directly on the app rather than through `bp`. A
         # blueprint's template_folder is searched app-wide regardless of which
-        # blueprint (if any) a view belongs to, so invite.html still resolves.
+        # blueprint (if any) a view belongs to, so shoppinglist_server/invite.html still resolves.
         # invite_hmac_key/base_url are passed directly (closure-captured, not
         # read via the shared get_config()) so this route is correctly scoped
         # to THIS instance's key even when other instances are also mounted.
@@ -200,6 +210,18 @@ def create_blueprint(
                 owned_endpoints |= _WEBAPP_ENDPOINTS
 
     @bp.before_request
+    def _limit_body_size():
+        """Cap this instance's request bodies, and only this instance's (T-250).
+
+        `request.max_content_length` overrides the app's MAX_CONTENT_LENGTH for the one request
+        (Flask >= 3.1), and a blueprint `before_request` runs only for requests routed to this
+        blueprint — so a co-mounted service keeps whatever limit it has, or none. First hook,
+        before anything reads the body. The site-root routes (landing page, web bundle, APK) are
+        registered on the app directly; they are GET-only and take no body.
+        """
+        request.max_content_length = max_content_length
+
+    @bp.before_request
     def _check_client_protocol():
         """Turn away a client older than this server's protocol, before anything else (T-243).
 
@@ -229,6 +251,12 @@ def create_blueprint(
             details={"protocol": PROTOCOL_VERSION},
         )
 
+    # Scoped to this blueprint (T-250): registered on the app they would rewrite a co-mounted
+    # service's own 413s and turn ITS "database is locked" into our 503.
+    bp.register_error_handler(ApiError, _handle_api_error)
+    bp.register_error_handler(RequestEntityTooLarge, _handle_payload_too_large)
+    bp.register_error_handler(sqlite3.OperationalError, _handle_db_unavailable)
+
     @bp.after_request
     def _housekeeping(response):
         """Drive the housekeeping sweep and the retention GC off ordinary traffic (T-218).
@@ -240,7 +268,7 @@ def create_blueprint(
         the site-root HTML/APK routes are untouched — and each mounted instance registers its
         own, so each sweeps its own database.
 
-        `after_request`, not `before_request`: by here `g.account` exists iff the request
+        `after_request`, not `before_request`: by here `g.shoppinglist_account` exists iff the request
         authenticated (`auth.authed` / `auth.admin_required` set it), and the view has already
         committed its own work, so the sweep's commit cannot smuggle a half-finished request
         into the database.
@@ -253,7 +281,7 @@ def create_blueprint(
         and for the same reason. Every failure is logged and swallowed.
         """
         conn = g.get("shoppinglist_db")
-        if conn is None or g.get("account") is None:
+        if conn is None or g.get("shoppinglist_account") is None:
             return response
         try:
             if conn.in_transaction:
@@ -272,7 +300,9 @@ def create_blueprint(
             audit.record("housekeeping.failed", outcome="error", error=type(exc).__name__)
         return response
 
-    @bp.teardown_app_request
+    # Scoped to this blueprint (T-250): the connection is only ever opened by our own routes, so a
+    # co-mounted service's requests have no business running our teardown.
+    @bp.teardown_request
     def _close_db(exception=None):
         conn = g.pop("shoppinglist_db", None)
         if conn is not None:
@@ -305,7 +335,7 @@ def _handle_api_error(err: ApiError):
     if err.status in (401, 403):
         audit.record(
             "authz.denied",
-            account_id=getattr(g, "account", None) and g.account.id,
+            account_id=getattr(g, "shoppinglist_account", None) and g.shoppinglist_account.id,
             outcome="denied",
             code=err.code,
             path=request.path,

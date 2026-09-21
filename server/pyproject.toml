@@ -16,7 +16,7 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
 ]
 dependencies = [
-    "flask>=3.0",
+    "flask>=3.1",  # request.max_content_length is settable per request from 3.1 (T-250)
 ]
 
 [project.urls]
@@ -43,7 +43,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-shoppinglist_server = ["schema.sql", "templates/*.html", "web_dist/*", "web_dist/assets/*", "apk/*.apk"]
+shoppinglist_server = ["schema.sql", "templates/shoppinglist_server/*.html", "web_dist/*", "web_dist/assets/*", "apk/*.apk"]
 
 # ---------------------------------------------------------------------------
 # Lint / format configuration (T-141)

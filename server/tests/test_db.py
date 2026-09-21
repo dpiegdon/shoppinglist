@@ -179,12 +179,15 @@ def test_duplicate_item_name_allowed_when_prior_is_deleted(db_conn):
     _insert_item(db_conn, "item-2", list_id, "milk", 3, deleted=0)
 
 
-def test_api_error_renders_error_envelope(app, client):
-    @app.route("/__test_error__")
+def test_api_error_renders_error_envelope(client, monkeypatch):
+    # Raised from one of OUR routes: the ApiError handler is scoped to this blueprint (T-250), so a
+    # route on the bare app would no longer be rendered by it — and should not be.
     def _raise():
         raise ApiError(418, "teapot", "I am a teapot")
 
-    resp = client.get("/__test_error__")
+    monkeypatch.setattr("shoppinglist_server.routes.app_version.apk_present", _raise)
+
+    resp = client.get("/api/v1/app-version")
     assert resp.status_code == 418
     assert resp.get_json() == {"error": "teapot", "message": "I am a teapot"}
 

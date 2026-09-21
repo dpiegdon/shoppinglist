@@ -74,6 +74,6 @@ def register_routes(bp):
     @authed
     def logout_view():
         conn = get_db()
-        auth_logout(conn, g.token)
-        audit.record("auth.logout", account_id=g.account.id)
+        auth_logout(conn, g.shoppinglist_token)
+        audit.record("auth.logout", account_id=g.shoppinglist_account.id)
         return "", 204

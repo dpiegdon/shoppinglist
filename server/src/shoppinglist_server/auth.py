@@ -299,8 +299,8 @@ def authed(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
         conn = get_db()
-        g.account = require_account(conn, request)
-        g.token = _extract_token(request)
+        g.shoppinglist_account = require_account(conn, request)
+        g.shoppinglist_token = _extract_token(request)
         return view_func(*args, **kwargs)
 
     return wrapper
@@ -319,9 +319,11 @@ def admin_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
         conn = get_db()
-        g.account = require_account(conn, request)
-        g.token = _extract_token(request)
-        if not is_admin_email(g.account.email, get_config().get("admin_emails", frozenset())):
+        g.shoppinglist_account = require_account(conn, request)
+        g.shoppinglist_token = _extract_token(request)
+        if not is_admin_email(
+            g.shoppinglist_account.email, get_config().get("admin_emails", frozenset())
+        ):
             raise ApiError(403, "not_admin", "Admin access is required.")
         return view_func(*args, **kwargs)
 

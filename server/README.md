@@ -46,6 +46,7 @@ bp = create_blueprint(
     allow_registration=True,             # optional; False = invite/operator-only instance — POST
                                          #   /register returns 403 and the web login page says so
     admin_emails=["you@example.com"],    # optional — who gets the Server admin screen; see Configuration
+    max_content_length=4 * 1024 * 1024,  # optional, default — request-body cap of THIS blueprint's routes
 )
 app.register_blueprint(bp)
 app.cli.add_command(shoppinglist_cli)  # enables `flask shoppinglist ...`
@@ -112,6 +113,17 @@ raises a clear `ValueError` rather than Flask's raw endpoint-collision error.
 Every other route (auth, account, lists, invites, sync) has no such
 constraint and scales to as many instances as you mount.
 
+**Sharing the app with other services.** Mounting the blueprint changes nothing
+about how a co-mounted blueprint behaves: the body cap, the error handlers, the
+per-request database teardown and the values kept on `flask.g` are all scoped to
+this blueprint's own routes (and prefixed on `g`), the invite template lives
+under a package-named folder, and the app's config is never written. The
+security-headers hook is the one app-wide callback Flask cannot scope, and it acts
+only on routes this package owns. The exception is the site-root routes above:
+mounted at a bare domain (`base_url` without a path) the web client's catch-all
+answers every unmatched `GET` on the app, so a host that serves its own pages
+passes `serve_web_client=False`, or mounts under a path such as `/shopping`.
+
 The operator CLI needs to know which instance to target once more than one
 is registered — pass `--instance NAME` (matching the `name=` above); with
 exactly one instance mounted (the common case) it's inferred automatically:
@@ -132,7 +144,7 @@ instances, and the CLI's instance-selection behavior).
 | `INVITE_HMAC_KEY` / `invite_hmac_key` | The signing key for invite tokens — see below. |
 | `BASE_URL` / `base_url` | The absolute public URL clients reach this server at (scheme + host, plus any mount path; a trailing `/` is tolerated). Used to build the invite **share URLs** (`<base_url>/invite/<token>`) and the landing page's open-in-app link — get it wrong and invite links point somewhere unreachable. |
 | `admin_emails` | Argument only. The instance's admins, matched case-insensitively against the logged-in account's email on every request — the only way to grant admin, so no API call can escalate privilege. Admins get the Server admin screen on both clients: registration on/off (until restart), reset a user's password, delete a user. |
-| `MAX_CONTENT_LENGTH` | Flask config key (not read from the env by the blueprint). The blueprint sets a **4 MB** default request-body cap so a host app is protected without proxy tuning; set this in the host app's Flask config to raise/lower it. Oversized requests get a `413 payload_too_large` JSON error. |
+| `max_content_length` | Argument only: the request-body cap, in bytes, of **this blueprint's own routes** (default **4 MB**, so a host is protected without proxy tuning). It is applied per request and nothing else: the host app's `MAX_CONTENT_LENGTH` is neither written nor read, so a co-mounted service keeps its own limit (or none) and a host that raises its own limit does not loosen this one. Oversized requests get a `413 payload_too_large` JSON error. Needs Flask 3.1 or newer. |
 | `SECRET_KEY` | Read by the dev `app.py` only, as ordinary Flask hygiene. The blueprint itself never uses Flask sessions or cookies (auth is bearer tokens), so it does not depend on this value. |
 
 The standalone dev `app.py` (below) reads these from the environment; a host
@@ -266,7 +278,7 @@ bearer token; pass it as `Authorization: Bearer <token>` on every other endpoint
 The React app in `../web/` builds straight into
 `src/shoppinglist_server/web_dist/` (see `web/vite.config.ts`'s `outDir`) —
 those built assets are committed to this repo and shipped as package data
-(`pyproject.toml`), the same way `templates/invite.html` is. No Node/npm is
+(`pyproject.toml`), the same way `templates/shoppinglist_server/invite.html` is. No Node/npm is
 needed to *run* the server; it's only needed to *rebuild* the web client:
 
 ```bash
@@ -427,8 +439,8 @@ they are the deploying operator's responsibility:
 What the blueprint *does* handle itself (so you don't have to at the proxy, and
 should avoid double-setting):
 
-- **Request body cap** — a 4 MB `MAX_CONTENT_LENGTH` default (see Configuration
-  to override).
+- **Request body cap** — 4 MB by default, for this blueprint's own routes only
+  (`max_content_length`, see Configuration).
 - **Security headers** — responses for this blueprint's own routes carry
   `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` (the
   latter keeps the secret token in an `/invite/<token>` URL out of the `Referer`
@@ -445,7 +457,7 @@ should avoid double-setting):
   and for clients that don't say what they are. Any request slides the window.
 
 - **Request-body row cap** — a `/sync` push carries at most 250 rows; larger
-  batches get `422 too_many_changes` and clients split them. `MAX_CONTENT_LENGTH`
+  batches get `422 too_many_changes` and clients split them. The byte cap
   bounds bytes, which is the wrong unit: applying a batch holds SQLite's single
   write lock throughout, so an unbounded one stalls every other write.
 - **Write contention** answers `503 server_busy` + `Retry-After`, not an opaque

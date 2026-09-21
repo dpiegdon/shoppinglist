@@ -82,7 +82,7 @@ def register_routes(bp):
 
         # Pushed changes are applied regardless of cursor staleness (Spec §6):
         # a stale cursor only affects what we can tell the client it's missing.
-        sync_engine.apply_changes(conn, g.account.id, device_id, changes)
+        sync_engine.apply_changes(conn, g.shoppinglist_account.id, device_id, changes)
         for list_id in _touched_list_ids(conn, changes):
             sync_engine.name_merge(conn, list_id)
 
@@ -90,6 +90,6 @@ def register_routes(bp):
             conn.commit()
             raise cursor_error
 
-        result = sync_engine.delta(conn, g.account.id, cursor, full_lists)
+        result = sync_engine.delta(conn, g.shoppinglist_account.id, cursor, full_lists)
         conn.commit()
         return jsonify(result), 200

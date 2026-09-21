@@ -38,10 +38,10 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str, root_path: str =
         except ApiError:
             # Blend in with "not found" rather than confirming a token-shaped
             # value was received at all.
-            return render_template("invite.html", state="not_found"), 404
+            return render_template("shoppinglist_server/invite.html", state="not_found"), 404
 
         if now_ms() >= expires_at:
-            return render_template("invite.html", state="expired"), 410
+            return render_template("shoppinglist_server/invite.html", state="expired"), 410
 
         # Offer an in-browser "redeem" link for desktop users, but only when this app actually
         # serves the web client (its SPA catch-all is what handles /redeem) — otherwise the link
@@ -58,7 +58,7 @@ def register_routes(app, invite_hmac_key: bytes, base_url: str, root_path: str =
         )
         return (
             render_template(
-                "invite.html",
+                "shoppinglist_server/invite.html",
                 state="valid",
                 token=token,
                 invited_email=invited_email,

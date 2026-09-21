@@ -553,7 +553,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 409 | `invite_email_mismatch`, `invite_expired`, `invite_revoked`, `invite_used` | Redeeming an invite that is for someone else, too old, withdrawn, or already used. |
 | 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list". |
 | 410 | `full_resync_required` | See "Sync". |
-| 413 | `payload_too_large` | The request body is over the size cap (4 MB by default). |
+| 413 | `payload_too_large` | The request body is over the size cap (4 MB by default, `max_content_length`). |
 | 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers a body that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`) — on any route that takes one. |
 | 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
 | 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |

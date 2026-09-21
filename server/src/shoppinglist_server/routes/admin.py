@@ -41,7 +41,9 @@ def register_routes(bp):
         # Runtime override only — resets to the config default on restart (T-107).
         server_settings.set_registration_override(conn, allow)
         audit.record(
-            "admin.registration_toggled", account_id=g.account.id, allow_registration=allow
+            "admin.registration_toggled",
+            account_id=g.shoppinglist_account.id,
+            allow_registration=allow,
         )
         return jsonify({"allow_registration": allow}), 200
 
@@ -50,11 +52,15 @@ def register_routes(bp):
     def admin_reset_password_view(account_id):
         data = json_body()
         conn = get_db()
-        accounts.require_password(conn, g.account.id, data.get("password"))  # step-up
+        accounts.require_password(conn, g.shoppinglist_account.id, data.get("password"))  # step-up
         new_password = accounts.admin_reset_password(conn, account_id)
         # Both parties recorded: who did it and to whom. The password itself never goes near the
         # log (audit.py redacts the key even if a future edit passes it).
-        audit.record("admin.password_reset", account_id=g.account.id, target_account_id=account_id)
+        audit.record(
+            "admin.password_reset",
+            account_id=g.shoppinglist_account.id,
+            target_account_id=account_id,
+        )
         # Shown once to the admin, relayed out of band — same trust model as invite tokens.
         return jsonify({"password": new_password}), 200
 
@@ -63,8 +69,8 @@ def register_routes(bp):
     def admin_delete_user_view(account_id):
         data = json_body()
         conn = get_db()
-        accounts.require_password(conn, g.account.id, data.get("password"))  # step-up
-        if account_id == g.account.id:
+        accounts.require_password(conn, g.shoppinglist_account.id, data.get("password"))  # step-up
+        if account_id == g.shoppinglist_account.id:
             raise ApiError(
                 403, "cannot_delete_self", "Delete your own account from your settings, not here."
             )
@@ -78,5 +84,7 @@ def register_routes(bp):
                 403, "cannot_delete_admin", "Admins can't be deleted here — edit the server config."
             )
         accounts.admin_delete_account(conn, account_id)
-        audit.record("admin.user_deleted", account_id=g.account.id, target_account_id=account_id)
+        audit.record(
+            "admin.user_deleted", account_id=g.shoppinglist_account.id, target_account_id=account_id
+        )
         return "", 204
