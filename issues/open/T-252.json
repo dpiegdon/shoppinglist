@@ -1,0 +1,12 @@
+{
+  "body": "The 3.0.1 release run failed verification on two ListViewModelTest cases (\"uncheck reverts a checked item back to todo\", \"sync status flows into the list ui state (T-47)\") with \"Dispatchers.Main is used concurrently with setting it\" from MainDispatcherRule.finished, plus Robolectric's \"Main looper has queued unexecuted runnables\". The same suite passed in the gate minutes earlier and in every gate before: a full-suite-only flake. ListViewModelTest never cancels the view models it builds, although AGENTS.md names exactly this pitfall: ListViewModel keeps flow collectors and a roster fetch (OkHttp on its own thread) running on viewModelScope, and a resume arriving from that thread while the rule resets Main trips the guard. Fix: the test tracks every view model it builds and cancels its viewModelScope in tearDown before the rule resets Main; the server shuts down after.",
+  "created_at": "2026-09-21T22:34:09+00:00",
+  "id": "T-252",
+  "labels": [
+    "android",
+    "tests"
+  ],
+  "priority": 2,
+  "title": "Android: ListViewModelTest leaves view models running and flakes on Dispatchers.Main",
+  "updated_at": "2026-09-21T22:34:09+00:00"
+}
