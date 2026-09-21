@@ -1,0 +1,11 @@
+{
+  "body": "Patch release: the blueprint no longer changes how a co-mounted service behaves (body cap, error handlers, teardown, flask.g keys, template name). Server only; the protocol stays at 3, so installed apps keep working. Supersedes 3.0.0.",
+  "created_at": "2026-09-21T22:27:29+00:00",
+  "id": "T-251",
+  "labels": [
+    "ops"
+  ],
+  "priority": 1,
+  "title": "Release 3.0.1",
+  "updated_at": "2026-09-21T22:27:29+00:00"
+}
