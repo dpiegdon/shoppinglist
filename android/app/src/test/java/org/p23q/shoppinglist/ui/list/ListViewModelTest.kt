@@ -2,9 +2,11 @@ package org.p23q.shoppinglist.ui.list
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
@@ -64,6 +66,15 @@ class ListViewModelTest {
     private val syncStatus = SyncStatus()
     private val syncer = RecordingSyncer()
 
+    /**
+     * Every view model a test built, so tearDown can stop it (T-252). ListViewModel keeps flow
+     * collectors and a roster fetch running on viewModelScope, and that fetch resumes from
+     * OkHttp's own thread. Left running, a resume could land while MainDispatcherRule reset
+     * Dispatchers.Main after the test, which kotlinx-coroutines-test reports as "Dispatchers.Main
+     * is used concurrently with setting it" — a full-suite-only flake that failed a release run.
+     */
+    private val viewModels = mutableListOf<ListViewModel>()
+
     private class RecordingSyncer : Syncer {
         var calls = 0
         override suspend fun syncNow(fullLists: List<String>): SyncResult {
@@ -112,6 +123,10 @@ class ListViewModelTest {
 
     @After
     fun tearDown() {
+        // Before the rule resets Dispatchers.Main (a rule's finished() runs after @After), and
+        // before the server goes away under a fetch still in flight.
+        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.clear()
         if (::server.isInitialized) server.shutdown()
     }
 
@@ -125,7 +140,7 @@ class ListViewModelTest {
             defaultCurrencyState,
             showCheckedStore,
             apiProvider,
-        )
+        ).also(viewModels::add)
 
     @Test
     fun `groups follow category_order, then leftover categories alphabetically, uncategorized last`() = runTest(mainDispatcherRule.dispatcher) {
@@ -397,7 +412,7 @@ class ListViewModelTest {
             DefaultCurrencyState(sessionState),
             showCheckedStore,
             offlineApiProvider,
-        )
+        ).also(viewModels::add)
         // Give the failed fetch a chance to run; nothing to await on success, so just confirm the
         // view model is otherwise fully usable (the exception didn't propagate and crash init).
         viewModel.uiState.first { it.listName == "Groceries" }
