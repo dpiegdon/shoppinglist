@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-21T22:27:29+00:00", "kind": "created", "ref": "main@016452c", "text": "Release 3.0.1"}
+{"actor": "user", "at": "2026-09-21T22:37:14+00:00", "kind": "note", "ref": "main@28b9d3b", "text": "First release run aborted in verification (T-252 flake, two ListViewModelTest cases); nothing was committed or tagged, the script's uncommitted version bumps were reversed. Retrying on 28b9d3b."}
