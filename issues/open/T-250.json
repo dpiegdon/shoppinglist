@@ -1,0 +1,12 @@
+{
+  "body": "Bug report from a host app that mounts the blueprint next to an unrelated upload service. `create_blueprint()`'s `_record` hook sets `app.config[\"MAX_CONTENT_LENGTH\"] = 4 MiB` on the HOST app when it is unset, so every other blueprint on the app inherits the cap (the reporter's file uploads got 413 at 4 MiB). The same hook registers three error handlers app-wide: `RequestEntityTooLarge` (rewrites any co-mounted blueprint's 413 into our JSON envelope), `sqlite3.OperationalError` (a co-mounted service's \"database is locked\" would be turned into OUR 503 server_busy) and `ApiError`.\n\nFix: the cap is the blueprint's own business. A new `create_blueprint(max_content_length=...)` argument (default 4 MiB, per instance) is applied per request with `request.max_content_length` in a blueprint `before_request` (settable since Flask 3.1, so pyproject pins flask>=3.1); the host's app config is never written and never read for our routes. The three error handlers become blueprint-scoped. The security-headers `after_request` already self-limits to routes we own (T-106) and stays. The site-root routes are GET-only and need no cap.\n\nTests: after mounting, the host config is untouched; a co-mounted blueprint accepts a 10 MiB POST while our API answers 413 (JSON envelope) to a 5 MiB one; a host-set MAX_CONTENT_LENGTH neither loosens ours nor is altered; two instances with different `max_content_length` each enforce their own; a co-mounted blueprint's OperationalError and RequestEntityTooLarge are NOT rewritten by us. Docs: README configuration table and deployment notes, wire-contract 413 row.",
+  "created_at": "2026-09-21T22:16:16+00:00",
+  "id": "T-250",
+  "labels": [
+    "server",
+    "security"
+  ],
+  "priority": 2,
+  "title": "Blueprint must not change host app config: scope the body cap and error handlers to its own routes",
+  "updated_at": "2026-09-21T22:16:16+00:00"
+}
