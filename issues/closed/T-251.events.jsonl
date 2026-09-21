@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-09-21T22:27:29+00:00", "kind": "created", "ref": "main@016452c", "text": "Release 3.0.1"}
 {"actor": "user", "at": "2026-09-21T22:37:14+00:00", "kind": "note", "ref": "main@28b9d3b", "text": "First release run aborted in verification (T-252 flake, two ListViewModelTest cases); nothing was committed or tagged, the script's uncommitted version bumps were reversed. Retrying on 28b9d3b."}
 {"actor": "user", "at": "2026-09-21T22:43:25+00:00", "kind": "closed", "ref": "main@87587bc", "text": ""}
+{"actor": "user", "at": "2026-09-21T22:43:25+00:00", "kind": "note", "ref": "main@87587bc", "text": "Released as 3.0.1: commit 87587bc, tag v3.0.1, versionCode 29, APK signed with the release key, protocol 3 (unchanged), verify-all green inside the run, wheel smoke test 37/37. Wheel sha256 4d7a7151d02c62bb89b923c4f2ca971a673e7243406d298dd730f2307e20a18e. Supersedes 3.0.0; server-only change, no device update needed."}
