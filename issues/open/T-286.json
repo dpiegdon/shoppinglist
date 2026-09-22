@@ -1,0 +1,12 @@
+{
+  "body": "Follow-ups from a full read of the 38 commits that landed after 3.0.1 (the review fixes). Three small things; everything else read correct.\n\n* Android's new category-merge confirmation (T-270) remembered the category by its ROW INDEX from when the question was asked and applied it when the user confirmed. A sync that reorders or shrinks the category list while the dialog is open makes that index point at a different category, so confirming could rename the wrong one. It now remembers the name, resolves it at confirm time, and drops the rename if the category has meanwhile disappeared.\n* The wire contract named only `server-merge` as a reserved `updated_by` literal, but the server also writes `server-orphan` (a list orphaned by its last member leaving) and, since T-258, `server-list-delete` (the items of a list a client tombstoned). All three are documented now.\n* A KDoc paragraph in AuthRepository that my own T-260 edit had left with a stray line break.",
+  "created_at": "2026-09-22T22:47:16+00:00",
+  "id": "T-286",
+  "labels": [
+    "android",
+    "docs"
+  ],
+  "priority": 3,
+  "title": "Follow-ups from re-reading the post-3.0.1 fixes: merge-confirm race, reserved literals, comment",
+  "updated_at": "2026-09-22T22:47:16+00:00"
+}
