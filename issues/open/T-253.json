@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, server finding 1 of 6. Reproduced with two live connections.\n\nA pull-only `POST /sync` never writes, so Python's sqlite3 opens no transaction (the implicit BEGIN comes only before DML, and the first `_bump` is what normally opens it). `sync.delta` then reads the rows first and `meta.change_seq` LAST, each statement its own snapshot. A write committed by another device in between lands in neither: the reader misses the row and still stores the higher cursor, and `change_seq > cursor` never matches it again. The row is invisible on that device until somebody edits it. Measured: B pulls at cursor 1, reads no rows, A commits item I1 at change_seq 2, B stores cursor 2 and never sees I1.\n\nThe module docstring of sync.py claims this sequence runs \"atomically in a single transaction\", which is true only for a request that happens to write.\n\nFix direction: read `meta.change_seq` before the row queries (over-delivery is harmless, under-delivery is not), or open the request's transaction explicitly. Needs a test with two interleaved connections; there is none today.",
+  "created_at": "2026-09-22T20:00:38+00:00",
+  "id": "T-253",
+  "labels": [
+    "server",
+    "data-loss"
+  ],
+  "priority": 1,
+  "title": "sync: a pull-only request can return a cursor covering rows it did not send",
+  "updated_at": "2026-09-22T20:00:38+00:00"
+}
