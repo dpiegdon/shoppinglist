@@ -19,6 +19,11 @@ resolve_initials = auth.resolve_initials
 
 
 def _require_password(conn: sqlite3.Connection, account_id: str, password: str | None) -> None:
+    # isinstance first (T-116/T-256): check_password_hash calls werkzeug's constant-time compare,
+    # which assumes a string and raises TypeError on anything else (an int, a list, ...) — turning
+    # a wrong-typed field into an unhandled 500 instead of the ordinary wrong-password answer.
+    if not isinstance(password, str):
+        raise ApiError(403, "invalid_credentials", "Password is incorrect.")
     row = conn.execute("SELECT password_hash FROM accounts WHERE id = ?", (account_id,)).fetchone()
     if row is None or not check_password_hash(row["password_hash"], password or ""):
         # 403, not 401 (T-98): this guards a CONFIRMATION password on an already-authed,

@@ -40,6 +40,12 @@ def _encode_token(key: bytes, invite_id: str, list_id: str, email: str, expires_
 
 
 def decode_token(key: bytes, token: str | None):
+    # isinstance first (T-256): a non-string, non-None token (an int, a list, ...) is truthy, so
+    # `token or ""` passes it straight through to .split(), which raises AttributeError — not one
+    # of the ValueError/UnicodeDecodeError this catches — and 500s instead of answering the
+    # ordinary "malformed token" case.
+    if token is not None and not isinstance(token, str):
+        raise ApiError(400, "invalid_token", "Invite token is malformed or invalid.")
     try:
         payload_b64, signature_b64 = (token or "").split(".", 1)
         expected = _sign(key, payload_b64)
@@ -87,8 +93,12 @@ def mint(
         raise ApiError(
             422, "invalid_list_id", "List id must not contain a colon and cannot be invited to."
         )
+    # isinstance first (T-256): len()/`":" in ...`/EMAIL_RE.match() all raise TypeError on a
+    # non-string (an int, a list, ...), turning a mis-typed field into an unhandled 500 instead of
+    # the ordinary invalid_email answer.
     if (
-        not invited_email
+        not isinstance(invited_email, str)
+        or not invited_email
         or len(invited_email) > MAX_INVITED_EMAIL_LENGTH
         or ":" in invited_email
         or not EMAIL_RE.match(invited_email)
