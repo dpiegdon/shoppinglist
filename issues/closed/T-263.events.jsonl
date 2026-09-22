@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-22T20:02:01+00:00", "kind": "created", "ref": "main@87587bc", "text": "Android: an item categorised with an em dash crashes the list screen on a duplicate key"}
 {"actor": "user", "at": "2026-09-22T22:19:06+00:00", "kind": "closed", "ref": "main@6fbaa02", "text": ""}
+{"actor": "user", "at": "2026-09-22T22:19:06+00:00", "kind": "note", "ref": "main@6fbaa02", "text": "Landed in e7e9aab's pick. Header keys now use a distinct sentinel for the uncategorised bucket, so a category literally named with an em dash cannot collide with it; the display text reuses CategoryCanon.UNCATEGORIZED_LABEL instead of a second hard-coded dash. Test reproduces the crash before the fix."}
