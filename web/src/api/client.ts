@@ -20,6 +20,7 @@ import type {
 } from "./contract";
 import { appBasename } from "../lib/appConfig";
 import { PROTOCOL_HEADER, PROTOCOL_VERSION, reportClientOutdated } from "./protocol";
+import { safeLocalStorage } from "../lib/safeStorage";
 
 // Resolved per-request against the server-injected mount root, so an instance
 // served at e.g. /shopping calls /shopping/api/v1 (T-60). "" in dev = /api/v1.
@@ -50,8 +51,11 @@ export class ApiError extends Error {
 // lifetime is now enforced server-side instead (a 7-day sliding inactivity
 // window for web), so the token surviving a browser restart doesn't mean it
 // lives forever, and Settings → Sessions can still revoke it.
-let currentToken: string | null =
-  typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
+// safeLocalStorage (T-269) rather than a typeof guard: a browser with site data blocked (or
+// private-mode Safari) has a `localStorage` that EXISTS but THROWS on use, which a typeof check
+// does not catch — this ran at module load, so it used to crash the whole app before anything
+// could render.
+let currentToken: string | null = safeLocalStorage.getItem(TOKEN_STORAGE_KEY);
 
 export function getToken(): string | null {
   return currentToken;
@@ -59,11 +63,10 @@ export function getToken(): string | null {
 
 export function setToken(token: string | null): void {
   currentToken = token;
-  if (typeof localStorage === "undefined") return;
   if (token) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    safeLocalStorage.setItem(TOKEN_STORAGE_KEY, token);
   } else {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    safeLocalStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 }
 

@@ -3,14 +3,18 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import type { ItemFields, ItemObject, ListFields, ListObject, SyncResponse } from "../api/contract";
 import { MAX_CHANGES_PER_SYNC } from "../api/contract";
+import { safeLocalStorage } from "../lib/safeStorage";
 
 const DEVICE_ID_STORAGE_KEY = "shoppinglist_device_id";
 
+// Runs during render (the useMemo below), so an unguarded localStorage access here white-screened
+// the whole app in a browser with site data blocked (T-269) — the first hook this component calls
+// crashed before anything could render.
 function getDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+  let id = safeLocalStorage.getItem(DEVICE_ID_STORAGE_KEY);
   if (!id) {
     id = crypto.randomUUID();
-    localStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
+    safeLocalStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
   }
   return id;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import * as api from "../api/client";
+import { safeLocalStorage } from "../lib/safeStorage";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
@@ -301,8 +302,8 @@ export default function ListPropsPage() {
   async function handleLeave() {
     if (!confirm(t("listProps.leaveConfirm"))) return;
     await api.leaveList(id);
-    if (localStorage.getItem(LAST_LIST_STORAGE_KEY) === id) {
-      localStorage.removeItem(LAST_LIST_STORAGE_KEY);
+    if (safeLocalStorage.getItem(LAST_LIST_STORAGE_KEY) === id) {
+      safeLocalStorage.removeItem(LAST_LIST_STORAGE_KEY);
     }
     await refresh();
     navigate("/", { replace: true });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Navigate, Link, useNavigate } from "react-router-dom";
 import * as api from "../api/client";
 import AddFab from "../components/AddFab";
+import { safeLocalStorage } from "../lib/safeStorage";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, nowMs } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
@@ -23,7 +24,7 @@ export const IGNORED_INVITES_STORAGE_KEY = "shoppinglist_ignored_invites";
 
 function readIgnoredInvites(): Set<string> {
   try {
-    const raw = localStorage.getItem(IGNORED_INVITES_STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(IGNORED_INVITES_STORAGE_KEY);
     return new Set(raw ? (JSON.parse(raw) as string[]) : []);
   } catch {
     return new Set();
@@ -31,7 +32,7 @@ function readIgnoredInvites(): Set<string> {
 }
 
 function writeIgnoredInvites(ids: Set<string>) {
-  localStorage.setItem(IGNORED_INVITES_STORAGE_KEY, JSON.stringify([...ids]));
+  safeLocalStorage.setItem(IGNORED_INVITES_STORAGE_KEY, JSON.stringify([...ids]));
 }
 
 // Resuming the last-opened list must happen once, on first entry into the
@@ -102,7 +103,7 @@ export default function OverviewPage() {
       // The same path as a pasted link: redeem, pull the list's full state, open it.
       const { list_id } = await api.redeemInvite(invite.token);
       await push({}, [list_id]);
-      localStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
+      safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
       navigate(`/list/${list_id}`);
     } catch (err) {
       setInviteError(errorMessage(t, err, "redeem.error", { invalid_token: "apiError.inviteNotFound" }));
@@ -117,7 +118,7 @@ export default function OverviewPage() {
     if (loading) return;
     if (!didInitialResume) {
       didInitialResume = true;
-      const lastId = localStorage.getItem(LAST_LIST_STORAGE_KEY);
+      const lastId = safeLocalStorage.getItem(LAST_LIST_STORAGE_KEY);
       if (lastId && lists.has(lastId)) {
         setRedirectTo(`/list/${lastId}`);
         return;
@@ -259,7 +260,7 @@ export default function OverviewPage() {
               key={list.id}
               to={`/list/${list.id}`}
               className="card"
-              onClick={() => localStorage.setItem(LAST_LIST_STORAGE_KEY, list.id)}
+              onClick={() => safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list.id)}
               style={{
                 padding: "1rem",
                 textDecoration: "none",

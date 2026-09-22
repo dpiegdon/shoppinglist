@@ -1,3 +1,5 @@
+import { safeSessionStorage } from "../lib/safeStorage";
+
 /**
  * The client/server protocol version (T-240) and what this client does when the server says it is
  * too old.
@@ -26,16 +28,16 @@ export const RELOAD_STORAGE_KEY = "shoppinglist_protocol_reload";
  */
 export const RELOAD_GRACE_MS = 5 * 60 * 1000;
 
+// safeSessionStorage (T-269), not a typeof guard: sessionStorage can exist and still throw (site
+// data blocked, private-mode Safari), which typeof does not catch.
 function readAttempt(): number | null {
-  if (typeof sessionStorage === "undefined") return null;
-  const raw = sessionStorage.getItem(RELOAD_STORAGE_KEY);
+  const raw = safeSessionStorage.getItem(RELOAD_STORAGE_KEY);
   const at = raw === null ? Number.NaN : Number(raw);
   return Number.isFinite(at) ? at : null;
 }
 
 function recordAttempt(now: number): void {
-  if (typeof sessionStorage === "undefined") return;
-  sessionStorage.setItem(RELOAD_STORAGE_KEY, String(now));
+  safeSessionStorage.setItem(RELOAD_STORAGE_KEY, String(now));
 }
 
 /**

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { safeLocalStorage } from "../lib/safeStorage";
 import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "./locales";
 import type { Locale } from "./locales";
 import { ar } from "./messages/ar";
@@ -84,16 +85,16 @@ export function translate(
   return interpolate(template, params);
 }
 
-/** The device's stored choice, if it is still a language we ship. */
+/**
+ * The device's stored choice, if it is still a language we ship.
+ *
+ * Goes through safeLocalStorage (T-269) rather than its own try/catch — this was the original
+ * model for that hazard (localStorage throws in private-mode Safari and when cookies are blocked;
+ * a missing preference is recoverable, a crash at startup is not) — now shared by every caller.
+ */
 function storedLocale(): Locale | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? matchLocale(raw) : null;
-  } catch {
-    // localStorage throws in private-mode Safari and when cookies are blocked. A missing
-    // preference is recoverable; a crash at startup is not.
-    return null;
-  }
+  const raw = safeLocalStorage.getItem(STORAGE_KEY);
+  return raw ? matchLocale(raw) : null;
 }
 
 function detectLocale(): Locale {
@@ -157,12 +158,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // See storedLocale(): an unwritable localStorage costs the preference on the next visit,
-      // which is far better than failing the click that set it.
-    }
+    // See storedLocale(): an unwritable localStorage costs the preference on the next visit,
+    // which is far better than failing the click that set it.
+    safeLocalStorage.setItem(STORAGE_KEY, next);
   }, []);
 
   const value = useMemo<I18nValue>(

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { safeSessionStorage } from "../lib/safeStorage";
 
 const STORAGE_KEY = "shoppinglist_show_checked";
 
@@ -9,12 +10,14 @@ const STORAGE_KEY = "shoppinglist_show_checked";
  * global, remembered show-checked preference.
  */
 export function useShowChecked(): [boolean, () => void] {
-  const [showChecked, setShowChecked] = useState<boolean>(() => sessionStorage.getItem(STORAGE_KEY) === "true");
+  const [showChecked, setShowChecked] = useState<boolean>(
+    () => safeSessionStorage.getItem(STORAGE_KEY) === "true",
+  );
 
   const toggle = useCallback(() => {
     setShowChecked((previous) => {
       const next = !previous;
-      sessionStorage.setItem(STORAGE_KEY, String(next));
+      safeSessionStorage.setItem(STORAGE_KEY, String(next));
       return next;
     });
   }, []);

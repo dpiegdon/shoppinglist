@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as api from "../api/client";
+import { safeLocalStorage } from "../lib/safeStorage";
 
 interface Account {
   id: string;
@@ -26,7 +27,7 @@ const DEVICE_LABEL = "web";
 // match the token's storage in client.ts, or one half would survive a restart
 // without the other (T-104).
 function loadStoredAccount(): Account | null {
-  const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+  const raw = safeLocalStorage.getItem(ACCOUNT_STORAGE_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as Account;
@@ -37,9 +38,9 @@ function loadStoredAccount(): Account | null {
 
 function storeAccount(account: Account | null) {
   if (account) {
-    localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+    safeLocalStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
   } else {
-    localStorage.removeItem(ACCOUNT_STORAGE_KEY);
+    safeLocalStorage.removeItem(ACCOUNT_STORAGE_KEY);
   }
 }
 

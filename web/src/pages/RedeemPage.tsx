@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { extractInviteToken } from "../lib/inviteToken";
+import { safeLocalStorage } from "../lib/safeStorage";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
@@ -25,7 +26,7 @@ export default function RedeemPage() {
       const { list_id } = await api.redeemInvite(extractInviteToken(token));
       // Pull the newly joined list's full state immediately (Spec §6 full_lists).
       await push({}, [list_id]);
-      localStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
+      safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
       navigate(`/list/${list_id}`, { replace: true });
     } catch (err) {
       // A garbled or tampered link is, to its holder, an invite that does not exist.
