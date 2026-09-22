@@ -269,3 +269,122 @@ describe("useSync re-sync triggers (T-90)", () => {
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
 });
+
+describe("useSync overlapping responses (T-272)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("ignores a response whose cursor is not newer than one already applied — its rows AND its cursor", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce(listResponse(1, ["list-1"]));
+    const { result } = renderHook(() => useSync());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    vi.mocked(api.sync).mockClear();
+
+    const pending: Array<(value: ReturnType<typeof listResponse>) => void> = [];
+    vi.mocked(api.sync).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+
+    // Two overlapping pushes, both reading the same starting cursor.
+    let pushA!: Promise<void>;
+    let pushB!: Promise<void>;
+    act(() => {
+      pushA = result.current.push({});
+      pushB = result.current.push({});
+    });
+    expect(pending).toHaveLength(2);
+
+    // The network reorders the responses: B — which the server actually processed SECOND, landing
+    // at the higher cursor — arrives first. A's response, from the server's earlier (lower-cursor)
+    // processing of it, arrives after.
+    await act(async () => {
+      pending[1](listResponse(3, ["list-1", "list-3"]));
+      await pushB;
+    });
+    await act(async () => {
+      pending[0](listResponse(2, ["list-1", "list-2"]));
+      await pushA.catch(() => {});
+    });
+
+    // The stale response's row never applied...
+    expect(result.current.lists.has("list-3")).toBe(true);
+    expect(result.current.lists.has("list-2")).toBe(false);
+
+    // ...and neither did its cursor: the next request still asks from 3, not 2.
+    vi.mocked(api.sync).mockResolvedValueOnce(listResponse(3, ["list-1", "list-3"]));
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(api.sync).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 3 }));
+  });
+
+  it("evicts a list's items once the list itself is tombstoned in the same response, even with no item tombstones", async () => {
+    function withItem() {
+      return {
+        cursor: 1,
+        changes: {
+          lists: [
+            {
+              id: "list-1",
+              created_at: 0,
+              fields: {
+                name: { value: "List 1", updated_at: 1, updated_by: "dev" },
+                category_order: { value: [], updated_at: 1, updated_by: "dev" },
+                deleted: { value: false, updated_at: 1, updated_by: "dev" },
+              },
+            },
+          ],
+          items: [
+            {
+              id: "item-1",
+              list_id: "list-1",
+              created_at: 0,
+              fields: {
+                name: { value: "Milk", updated_at: 1, updated_by: "dev" },
+                status: { value: "todo", updated_at: 1, updated_by: "dev" },
+                deleted: { value: false, updated_at: 1, updated_by: "dev" },
+              },
+            },
+          ],
+        },
+      };
+    }
+
+    vi.mocked(api.sync).mockResolvedValueOnce(withItem());
+    const { result } = renderHook(() => useSync());
+    await waitFor(() => expect(result.current.items.size).toBe(1));
+
+    // The list is tombstoned; the server says nothing at all about the item that belonged to it.
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 2,
+      changes: {
+        lists: [
+          {
+            id: "list-1",
+            created_at: 0,
+            fields: {
+              name: { value: "List 1", updated_at: 2, updated_by: "dev" },
+              category_order: { value: [], updated_at: 2, updated_by: "dev" },
+              deleted: { value: true, updated_at: 2, updated_by: "dev" },
+            },
+          },
+        ],
+        items: [],
+      },
+    });
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.lists.has("list-1")).toBe(false);
+    expect(result.current.items.size).toBe(0);
+  });
+});

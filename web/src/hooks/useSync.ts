@@ -135,18 +135,45 @@ export function useSync(): SyncState {
   const [error, setError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
   const cursorRef = useRef(0);
-  // Tracks whether a runSync() call (push or refresh) is currently
+  // Whether applyResponse has ever actually applied a response yet (T-272) — see its own comment;
+  // kept separate from cursorRef because cursorRef's value of 0 before the first response is a
+  // real, meaningful value (the outgoing request's cursor, requesting a full snapshot), not a
+  // sentinel "nothing yet" the way -1 would be.
+  const hasAppliedRef = useRef(false);
+  // Tracks how many runSync() calls (push or refresh) are currently
   // outstanding, so the re-sync triggers below can skip-if-in-flight instead
   // of queuing a redundant request behind it. push() itself is never gated by
-  // this flag - a user-initiated write must never be silently dropped - only
-  // the background/manual refresh triggers are.
-  const inFlightRef = useRef(false);
+  // this counter - a user-initiated write must never be silently dropped -
+  // only the background/manual refresh triggers are.
+  //
+  // A counter, not a boolean (T-272): a manual refresh can fire while the live-list poll's own
+  // request is still outstanding, and each call's completion must decrement only its own count.
+  // A boolean set by the first and cleared by whichever finishes FIRST would read "idle" while the
+  // other was still in flight, defeating the skip-if-in-flight guard below for the rest of it.
+  const inFlightCountRef = useRef(0);
 
   const applyResponse = useCallback((response: SyncResponse) => {
-    cursorRef.current = response.cursor;
-    // Called on every successfully-applied response (normal and the 410 retry), so it's the single
-    // place to stamp last-synced for the health indicator (T-47).
+    // Stamped on every successfully-answered request, even one skipped as stale below — the round
+    // trip still succeeded, so the health indicator (T-47) should say so.
     setLastSyncAt(nowMs());
+
+    // Two overlapping requests read the same starting cursor and can resolve out of order (T-272):
+    // whichever resolves LAST wins, even when the server actually processed it FIRST and a newer
+    // response has already landed. Applying it anyway would overwrite freshly-applied rows with
+    // stale ones and move the cursor backwards, asking the next pull for changes already held. It
+    // self-heals within one poll regardless — a stale row's own change_seq stays above the
+    // regressed cursor — but skipping it here is free, so there's no reason to let it happen.
+    // Equal cursors still apply: that's an ordinary no-op poll, or a full_lists snapshot fetched at
+    // an unchanged cursor, neither of which should be dropped.
+    if (hasAppliedRef.current && response.cursor < cursorRef.current) {
+      return;
+    }
+    hasAppliedRef.current = true;
+    cursorRef.current = response.cursor;
+
+    const deletedListIds = new Set(
+      response.changes.lists.filter((list) => list.fields.deleted?.value).map((list) => list.id),
+    );
     setLists((prev) => {
       const next = new Map(prev);
       for (const list of response.changes.lists) {
@@ -159,6 +186,7 @@ export function useSync(): SyncState {
       return next;
     });
     setItems((prev) => {
+      let changed = false;
       const next = new Map(prev);
       for (const item of response.changes.items) {
         if (item.fields.deleted?.value) {
@@ -166,8 +194,20 @@ export function useSync(): SyncState {
         } else {
           next.set(item.id, item);
         }
+        changed = true;
       }
-      return next;
+      // A list's own tombstone says nothing about its items (T-272): the server tombstones a row
+      // only for a client with a reason to still hear about it, and a deleted list's former items
+      // are never individually mentioned again. Without this they sat in the map forever.
+      if (deletedListIds.size > 0) {
+        for (const [itemId, item] of next) {
+          if (deletedListIds.has(item.list_id)) {
+            next.delete(itemId);
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : prev;
     });
   }, []);
 
@@ -211,7 +251,7 @@ export function useSync(): SyncState {
 
   const runSync = useCallback(
     async (changes: SyncChanges, fullLists: string[] = []) => {
-      inFlightRef.current = true;
+      inFlightCountRef.current += 1;
       setLoading(true);
       setError(null);
       try {
@@ -225,8 +265,10 @@ export function useSync(): SyncState {
         setError(err instanceof Error ? err.message : "Sync failed.");
         throw err;
       } finally {
-        setLoading(false);
-        inFlightRef.current = false;
+        inFlightCountRef.current -= 1;
+        // Still loading while any OTHER overlapping call is outstanding (T-272) — one call
+        // finishing must not flip the indicator to "idle" out from under a sibling still running.
+        setLoading(inFlightCountRef.current > 0);
       }
     },
     [sendBatch],
@@ -263,7 +305,7 @@ export function useSync(): SyncState {
   // while a sync (push or refresh) is already outstanding is dropped, not
   // queued - the in-flight sync will bring the client current anyway.
   const refresh = useCallback(() => {
-    if (inFlightRef.current) {
+    if (inFlightCountRef.current > 0) {
       return Promise.resolve();
     }
     return runSync({});
