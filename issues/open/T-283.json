@@ -1,5 +1,5 @@
 {
-  "body": "Split out of T-272 during the review fixes: the web's dialogs are plain divs with no `role=\"dialog\"`, no `aria-modal`, no `aria-labelledby`, no focus trap when they open and no focus restore when they close, and Escape does not close them. The one concrete symptom that ticket named \u2014 the overlay click discarding a form when a text-selection drag ended outside the panel \u2014 is fixed (the overlay now closes only when mousedown and mouseup both land on it), as are the other T-272 items.\n\nWhat is left is the focus and semantics work across four dialogs of different shapes (ItemDialog with its name-suggestion dropdown and store-input Enter handling, ExpenseDialog, the overview's create dialog, and the admin delete confirmation). That deserves its own tests and its own review rather than riding along with unrelated fixes; a native `<dialog>` is worth considering instead of hand-rolling the trap.",
+  "body": "The web client's pop-up forms \u2014 the item form, the ledger entry form, the \"New list\" box and the admin's delete confirmation \u2014 are ordinary page elements dressed up to look like dialogs. Three things a real dialog does are missing:\n\n* Keyboard: pressing Escape does not close them, and Tab does not stay inside the box \u2014 it walks off into the page behind, which is still there under the grey overlay.\n* Screen readers: they are not announced as dialogs and have no title attached, so a blind user hears a form appear with no explanation of what it is for.\n* Focus: when the box opens, focus does not move into it, and when it closes, focus does not return to the button that opened it.\n\nFor a mouse user nothing is wrong, which is why it went unnoticed. Fix on the web only: Android's dialogs are real Compose dialogs and already behave correctly.\n\nSimplest route is the browser's native `<dialog>` element, which gives Escape, focus trapping and the announcement for free; the alternative is doing it by hand on the four boxes. Either way the item form needs care, because it already has its own keyboard handling (Enter in the store field adds a chip, the name field has a suggestion list) that must keep working.",
   "created_at": "2026-09-22T21:46:27+00:00",
   "id": "T-283",
   "labels": [
@@ -7,6 +7,6 @@
     "a11y"
   ],
   "priority": 4,
-  "title": "Web dialogs: no role, no labelling, no focus trap or restore, no Escape",
-  "updated_at": "2026-09-22T21:46:27+00:00"
+  "title": "Web pop-up forms: Escape does nothing, Tab escapes them, screen readers are not told what they are",
+  "updated_at": "2026-09-22T22:43:09+00:00"
 }
