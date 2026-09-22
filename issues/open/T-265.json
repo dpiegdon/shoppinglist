@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, smaller Android findings, verified by reading:\n\n* The overview's expense cards go stale. The summary collector is driven by `listsRepo.activeLists()` alone, but recomputes from the items table; adding or editing an entry touches only items and does not move the list row, so the card keeps the old net total and balance until process death or a pull-to-refresh. `ExpenseListViewModel` already combines an items flow \u2014 do the same here.\n* Pending and blocked counts are invisible exactly when they matter. `SyncStatus` is in-memory and only ever written by a sync run, and every scheduled sync requires connectivity, so after a cold start offline the marker shows no pending count and the \"needs attention\" banner for quarantined rows is gone. Seed it from `dirtyRows().size` / `blockedRowCount()` at start-up.\n* `ExpenseListViewModel` numbers former members from `itemsForList` (excludes backlog) while `ExpenseFormViewModel` uses `activeItemsForListOnce` (includes it), so the numbering can disagree between the ledger and the form.\n* `androidx.activity.ComponentActivity` is declared `exported=\"true\"` in the MAIN source set, so it ships in release and any app can launch a blank activity in this task. It is there for release unit tests; a test-only manifest or `exported=\"false\"` would do.\n* `res/xml/file_paths.xml` roots the whole filesDir (which holds the DataStore files) rather than just the crash log. Only granted URIs are readable, so defence in depth only.\n* `AppVersionResponse` omits the `protocol` field the wire contract documents as what a 426'd client reads to learn what it must catch up to; the checker infers it from the version string instead.",
+  "created_at": "2026-09-22T20:02:01+00:00",
+  "id": "T-265",
+  "labels": [
+    "android"
+  ],
+  "priority": 4,
+  "title": "Android: smaller review findings (stale overview cards, invisible counts, manifest, numbering)",
+  "updated_at": "2026-09-22T20:02:01+00:00"
+}
