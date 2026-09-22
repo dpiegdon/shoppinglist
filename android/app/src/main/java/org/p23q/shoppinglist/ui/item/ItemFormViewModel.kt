@@ -400,22 +400,30 @@ internal sealed interface PriceParse {
 // ASCII-only so this is a no-op here — but the server's Python \d is NOT, which is how the three
 // copies of this "identical" pattern came to mean different things.
 // Siblings: server sync.py PRICE_AMOUNT_RE, web src/lib/priceParse.ts PRICE_AMOUNT_RE.
-private val PRICE_AMOUNT_RE = Regex("^[0-9]+(\\.[0-9]{1,2})?$")
+// The whole part is capped at 13 digits (T-262): kept in step with ExpenseMath's AMOUNT_RE, whose
+// comment there explains the bound.
+private val PRICE_AMOUNT_RE = Regex("^[0-9]{1,13}(\\.[0-9]{1,2})?$")
 private val CURRENCY_RE = Regex("^[A-Z]{3}$")
 private const val CURRENCY_SYMBOLS = "€\$£¥"
+private val LEADING_CURRENCY_RE = Regex("^[$CURRENCY_SYMBOLS]")
+private val TRAILING_CURRENCY_RE = Regex("[$CURRENCY_SYMBOLS]$")
 
 /**
  * Normalizes a typed amount to the server's decimal-string format: accepts a comma decimal
- * separator and strips whitespace + a leading/trailing currency symbol ("1,99", "2€", " 1.50 " ->
- * "1.99"/"2"/"1.50"), then requires `\d+(\.\d{1,2})?`. Blank -> [PriceParse.Valid] with null (no
- * price). Anything else (letters, >2 decimals) -> [PriceParse.Invalid].
+ * separator and strips whitespace, then strips a single leading OR trailing currency symbol
+ * ("1,99", "2€", "€1.50", " 1.50 " -> "1.99"/"2"/"1.50"/"1.50"), then requires `\d+(\.\d{1,2})?` —
+ * the same shape the server validates on push (T-275). A symbol is only stripped from the ends,
+ * matching the web's `parsePriceAmount`: an embedded symbol ("1€5") is left in place and correctly
+ * rejected, rather than silently deleted to make "15". Blank -> [PriceParse.Valid] with null (no
+ * price). Anything else (letters, embedded symbols, >2 decimals, too many digits) ->
+ * [PriceParse.Invalid]. Pinned by shared-test-cases/price-parse.json, driven by both suites.
  */
 internal fun parsePriceAmount(raw: String): PriceParse {
-    val cleaned = buildString {
-        for (ch in raw.trim().replace(',', '.')) {
-            if (!ch.isWhitespace() && ch !in CURRENCY_SYMBOLS) append(ch)
-        }
-    }
+    val cleaned = raw.trim()
+        .replace(',', '.')
+        .replace(Regex("\\s"), "")
+        .replace(LEADING_CURRENCY_RE, "")
+        .replace(TRAILING_CURRENCY_RE, "")
     if (cleaned.isBlank()) return PriceParse.Valid(null)
     return if (PRICE_AMOUNT_RE.matches(cleaned)) PriceParse.Valid(cleaned)
     else PriceParse.Invalid(UiText.res(R.string.item_msg_price_invalid))

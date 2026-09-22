@@ -1,0 +1,69 @@
+{
+  "_comment": [
+    "Cross-client price-input parsing (T-275). ONE file, read by BOTH test suites:",
+    "web/src/lib/priceParse.test.ts imports it, and Android's ItemFormViewModelTest reads it from",
+    "the repo root the way ExpenseMathTest reads expense-arithmetic.json.",
+    "",
+    "Grammar: accept a comma decimal separator (normalized to a dot), strip all whitespace, then",
+    "strip AT MOST ONE currency symbol (€$£¥) from the START and AT MOST ONE from the END of what",
+    "remains. A symbol anywhere else in the string is left in place, so it fails the amount shape",
+    "and the whole input is rejected — never silently deleted (\"1€5\" must never become \"15\").",
+    "What is left must match [0-9]{1,13}(\\.[0-9]{1,2})? (the digit cap is T-262's; see",
+    "expense-arithmetic.json's to_cents_invalid group for the crash that motivated it). A blank",
+    "input (after trimming) is valid with a null value, meaning 'no price'.",
+    "",
+    "Android used to strip a currency symbol from ANYWHERE in the string (a character filter), so",
+    "\"1€5\" saved as 15.00 there and was correctly rejected on the web — this table pins the web's",
+    "ends-only grammar, now shared by both.",
+    "",
+    "Each case gives 'valid' and, when valid, the normalized 'value' (null for a blank input).",
+    "An invalid case's exact message is locale text on the web and a string resource on Android, so",
+    "this table does not compare it — each suite's own tests already cover that."
+  ],
+
+  "amount": [
+    { "name": "a plain amount is unchanged", "input": "1.99", "valid": true, "value": "1.99" },
+    { "name": "a comma decimal separator normalizes to a dot", "input": "1,50", "valid": true, "value": "1.50" },
+    { "name": "whitespace and a trailing currency symbol are stripped", "input": " 2€ ", "valid": true, "value": "2" },
+    { "name": "a leading currency symbol is stripped", "input": "€1.50", "valid": true, "value": "1.50" },
+    { "name": "a trailing currency symbol is stripped", "input": "1.50€", "valid": true, "value": "1.50" },
+    { "name": "one symbol at each end are both stripped", "input": "€1.50$", "valid": true, "value": "1.50" },
+    { "name": "a leading symbol and a comma decimal both apply", "input": "€1,50", "valid": true, "value": "1.50" },
+    {
+      "name": "an embedded symbol is left in place and rejected, never deleted (T-275)",
+      "input": "1€5",
+      "valid": false
+    },
+    {
+      "name": "a second leading symbol is not stripped (only one from each end)",
+      "input": "€€1.50",
+      "valid": false
+    },
+    { "name": "a blank value has no price", "input": "   ", "valid": true, "value": null },
+    { "name": "an empty string has no price", "input": "", "valid": true, "value": null },
+    { "name": "trailing garbage after the digits is rejected", "input": "1,50abc", "valid": false },
+    { "name": "more than two decimal places is rejected", "input": "1.999", "valid": false },
+    { "name": "a negative amount is rejected", "input": "-1.50", "valid": false },
+    {
+      "name": "digits beyond the shared bound are rejected (T-262)",
+      "input": "12345678901234",
+      "valid": false
+    },
+    {
+      "name": "the amount that used to crash Android's toCents is rejected here too, up front",
+      "input": "12345678901234567890",
+      "valid": false
+    },
+    {
+      "name": "exactly at the digit bound is accepted (T-262)",
+      "input": "9999999999999.99",
+      "valid": true,
+      "value": "9999999999999.99"
+    },
+    {
+      "name": "non-ASCII digits are rejected, matching the server (T-125)",
+      "input": "٥.٩٩",
+      "valid": false
+    }
+  ]
+}

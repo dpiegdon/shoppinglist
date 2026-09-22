@@ -5,6 +5,13 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -25,6 +32,7 @@ import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class ItemFormViewModelTest {
@@ -409,6 +417,31 @@ class ItemFormViewModelTest {
     fun `parsePriceAmount rejects too many decimals and non-numeric input`() {
         assertTrue(parsePriceAmount("1.999") is PriceParse.Invalid)
         assertTrue(parsePriceAmount("abc") is PriceParse.Invalid)
+    }
+
+    // Driven by the table the web's priceParse.test.ts reads too (T-275): this client used to
+    // strip a currency symbol from anywhere in the string, so "1€5" saved as 15.00 here while the
+    // web (correctly) rejected it. The ends-only grammar is now shared by both.
+    @Test
+    fun `parsePriceAmount matches the shared table`() {
+        val file = File("../../shared-test-cases/price-parse.json")
+        assertTrue("missing shared case table at ${file.absolutePath}", file.exists())
+        val cases: JsonObject = Json.parseToJsonElement(file.readText()).jsonObject
+        val amountCases = cases["amount"]!!.jsonArray.map { it.jsonObject }
+        assertTrue("the case table covers every group this test drives", amountCases.isNotEmpty())
+
+        for (case in amountCases) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val input = case["input"]!!.jsonPrimitive.content
+            val valid = case["valid"]!!.jsonPrimitive.boolean
+            val result = parsePriceAmount(input)
+            if (valid) {
+                val value = case["value"]?.jsonPrimitive?.contentOrNull
+                assertEquals(name, value, (result as? PriceParse.Valid)?.value)
+            } else {
+                assertTrue(name, result is PriceParse.Invalid)
+            }
+        }
     }
 
     @Test

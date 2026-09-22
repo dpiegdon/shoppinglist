@@ -14,18 +14,23 @@ const TRAILING_CURRENCY_RE = /[€$£¥]$/;
 // three copies of this "identical" pattern came to mean different things. Spelling it out removes
 // the trap rather than relying on each language's default.
 // Siblings: server sync.py PRICE_AMOUNT_RE, android ItemFormViewModel.kt PRICE_AMOUNT_RE.
-const PRICE_AMOUNT_RE = /^[0-9]+(\.[0-9]{1,2})?$/;
+// The whole part is capped at 13 digits (T-262): kept in step with expenses.ts's `toCents` regex,
+// whose comment explains the bound.
+const PRICE_AMOUNT_RE = /^[0-9]{1,13}(\.[0-9]{1,2})?$/;
 const CURRENCY_RE = /^[A-Z]{3}$/;
 
 /**
  * Normalizes a typed amount to the server's decimal-string format: accepts a comma decimal
  * separator, strips all whitespace, and strips a single leading or trailing currency symbol
  * ("1,99", "2€", "€1.50", " 1.50 " -> "1.99"/"2"/"1.50"/"1.50"), then requires `\d+(\.\d{1,2})?` —
- * the same shape the server validates on push. A symbol is only stripped from the ends, matching
- * Android's `parsePriceAmount`, so an embedded symbol ("1€5") is left in place and correctly
- * rejected. Blank -> valid with a null value (no price). Anything else (letters, embedded symbols,
- * >2 decimals) -> invalid with a message to show inline, so a bad value is caught before it's
- * pushed and 422'd (which would wedge the queue, T-32).
+ * the same shape the server validates on push. A symbol is only stripped from the ends (T-275): an
+ * embedded symbol ("1€5") is left in place and correctly rejected, rather than silently deleted to
+ * make "15". Android's `parsePriceAmount` used to strip a symbol from anywhere in the string —
+ * fixed to match this, the safer of the two grammars, rather than the other way round. Blank ->
+ * valid with a null value (no price). Anything else (letters, embedded symbols, >2 decimals, too
+ * many digits) -> invalid with a message to show inline, so a bad value is caught before it's
+ * pushed and 422'd (which would wedge the queue, T-32). Pinned by
+ * shared-test-cases/price-parse.json, driven by both suites.
  */
 export function parsePriceAmount(raw: string): PriceParseResult {
   const cleaned = raw

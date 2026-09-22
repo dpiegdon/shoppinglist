@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import cases from "../../../shared-test-cases/price-parse.json";
 import { parseCurrency, parsePriceAmount } from "./priceParse";
 
 describe("parsePriceAmount", () => {
@@ -64,5 +65,21 @@ describe("non-ASCII digits (T-125)", () => {
     for (const amount of ["1.99", "0", "12", "1234.5"]) {
       expect(parsePriceAmount(amount).valid, amount).toBe(true);
     }
+  });
+});
+
+// Driven by the table Android's ItemFormViewModelTest reads too (T-275): Android used to strip a
+// currency symbol from anywhere in the string, so "1€5" saved as 15.00 there while the web
+// (correctly) rejected it. The ends-only grammar below is now shared by both.
+describe("parsePriceAmount (shared table)", () => {
+  it.each(cases.amount)("$name", ({ input, valid, value }) => {
+    const result = parsePriceAmount(input);
+    expect(result.valid, input).toBe(valid);
+    if (valid) expect((result as { value: string | null }).value, input).toBe(value ?? null);
+  });
+
+  it("the case table covers every group this test drives", () => {
+    // A renamed or emptied group would otherwise make this whole block silently iterate nothing.
+    expect(cases.amount.length).toBeGreaterThan(0);
   });
 });
