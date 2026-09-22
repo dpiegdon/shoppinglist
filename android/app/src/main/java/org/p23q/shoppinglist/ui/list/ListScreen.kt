@@ -67,6 +67,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.data.CategoryCanon
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
@@ -184,14 +185,19 @@ fun ListScreen(
                         }
                     }
                     state.groups.forEachIndexed { index, group ->
-                    item(key = "header-${group.category ?: "—"}") {
+                    // A distinct sentinel for "uncategorized" (T-263): group.category is null for
+                    // that bucket and the canonical category text otherwise, but a user can also
+                    // name a category literally "—" (CategoryCanon.UNCATEGORIZED_LABEL, used below
+                    // only for display) — keying both on that same dash gave Compose two groups
+                    // with the identical key and it crashed with "Key ... was already used".
+                    item(key = group.category?.let { "header-cat:$it" } ?: "header-uncategorized") {
                         // A thin divider between categories (not above the first) makes groups easy to
                         // tell apart; the header itself gets a colored accent.
                         if (index > 0) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
                         Text(
-                            text = group.category ?: "—",
+                            text = group.category ?: CategoryCanon.UNCATEGORIZED_LABEL,
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Center,

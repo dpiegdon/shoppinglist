@@ -139,6 +139,47 @@ class ListScreenTest {
     }
 
     @Test
+    fun `an item categorised with the em dash does not collide with the uncategorized group (T-263)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.createList("Groceries")
+        // One item left uncategorized (category null) and one whose category is literally the em
+        // dash CategoryCanon.UNCATEGORIZED_LABEL uses for display — both used to key the group
+        // header on that same dash and crash Compose with a duplicate LazyColumn key.
+        itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val dashItemId = itemsRepo.createItem(listId, "Dashboard", status = Status.TODO)
+        itemsRepo.setCategory(dashItemId, "—")
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            DefaultCurrencyState(FakeSessionState()),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            apiProvider,
+        )
+
+        // Before the fix this setContent throws IllegalArgumentException("Key ... was already
+        // used") because both groups' header keyed on the same "header-—" string.
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        // Both groups render: one item under each of the two now-distinct headers.
+        composeTestRule.onNodeWithText("Milk").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Dashboard").assertIsDisplayed()
+    }
+
+    @Test
     fun `an empty list says so, and its controls line no longer carries the sync dot`() = runBlocking<Unit> {
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
