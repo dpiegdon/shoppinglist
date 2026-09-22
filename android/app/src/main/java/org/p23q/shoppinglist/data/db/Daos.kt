@@ -44,6 +44,16 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
     suspend fun itemsForListByStatusOnce(listId: String, status: String): List<ItemEntity>
 
+    /**
+     * One-shot (non-Flow) variant of [itemsForList] — the SAME rows (not backlog, not deleted), for
+     * a read taken once rather than observed, like the expense form's former-member numbering
+     * (T-265). That numbering must be exactly what the ledger itself shows, in the same order, or
+     * the two can name the same no-longer-a-member person differently; it had drifted onto
+     * [activeItemsForListOnce] instead, which additionally counts backlog.
+     */
+    @Query("SELECT * FROM items WHERE listId = :listId AND status_value != 'backlog' AND deleted_value = 0")
+    suspend fun itemsForListOnce(listId: String): List<ItemEntity>
+
     /** Every non-deleted item regardless of status, for a full-list snapshot like duplicate (T-63). */
     @Query("SELECT * FROM items WHERE listId = :listId AND deleted_value = 0")
     suspend fun activeItemsForListOnce(listId: String): List<ItemEntity>

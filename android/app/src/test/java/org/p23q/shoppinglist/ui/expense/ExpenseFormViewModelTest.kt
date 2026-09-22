@@ -22,6 +22,7 @@ import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -287,6 +288,32 @@ class ExpenseFormViewModelTest {
             viewModel.startEdit(museum).join()
 
             assertEquals(2, viewModel.uiState.value.paidFor.first { it.accountId == goneB }.formerNumber)
+        }
+
+    @Test
+    fun `a backlogged entry is excluded from numbering, matching the ledger (T-265)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val goneNewer = "acct-gone-newer"
+            val goneOlder = "acct-gone-older"
+            // The newer entry is backlog (T-265's finding: the ledger's itemsForList excludes it,
+            // but the form used activeItemsForListOnce, which does not — so the two could number
+            // the same former member differently). Backlogged, its participant must not take
+            // number 1 by sorting first; the surviving, visible entry should.
+            val backlogged = itemsRepo.createExpense(
+                listId,
+                "Refunded taxi",
+                Expense(mapOf(me to "20.00"), true, mapOf(me to "10.00", goneNewer to "10.00"), true, "2026-09-20"),
+            )
+            itemsRepo.setStatus(backlogged, Status.BACKLOG)
+            val museum = itemsRepo.createExpense(
+                listId,
+                "Museum",
+                Expense(mapOf(me to "30.00"), true, mapOf(me to "15.00", goneOlder to "15.00"), true, "2026-09-16"),
+            )
+            val viewModel = newViewModel()
+            viewModel.startEdit(museum).join()
+
+            assertEquals(1, viewModel.uiState.value.paidFor.first { it.accountId == goneOlder }.formerNumber)
         }
 
     @Test

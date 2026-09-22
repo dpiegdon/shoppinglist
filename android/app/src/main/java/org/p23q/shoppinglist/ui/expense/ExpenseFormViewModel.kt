@@ -273,8 +273,11 @@ class ExpenseFormViewModel @Inject constructor(
         // balances screens number them (T-197): numbering only the expense being edited would call
         // the same person something else here. Read once rather than observed: the numbering is
         // fixed when the form opens, as everything else in it is.
+        // itemsForListOnce, not activeItemsForListOnce (T-265): the ledger numbers from itemsForList,
+        // which excludes backlog, so reading a wider set here could number the same former member
+        // differently between the two screens.
         formerNumbers = ExpenseMath.formerMemberNumbers(
-            expenseRowsOf(itemsRepo.activeItemsForListOnce(listId), itemsRepo).map { it.expense },
+            expenseRowsOf(itemsRepo.itemsForListOnce(listId), itemsRepo).map { it.expense },
             members.map { it.accountId }.toSet(),
         )
         _uiState.update { it.copy(currency = list?.currency?.value.orEmpty()) }

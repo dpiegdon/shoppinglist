@@ -61,6 +61,9 @@ class ItemsRepo @Inject constructor(
     /** Encoded stores lists, one JSON array per item — decode with [decodeStores] (T-138). */
     fun storeValues(listId: String): Flow<List<String>> = itemDao.storeValues(listId)
 
+    /** One-shot equivalent of [itemsForList] — see [org.p23q.shoppinglist.data.db.ItemDao.itemsForListOnce] (T-265). */
+    suspend fun itemsForListOnce(listId: String): List<ItemEntity> = itemDao.itemsForListOnce(listId)
+
     /** All non-deleted items in a list (any status), one-shot — for a category recase (T-108). */
     suspend fun activeItemsForListOnce(listId: String): List<ItemEntity> =
         itemDao.activeItemsForListOnce(listId)
