@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, server findings 6 of 6, small ones, all verified by reading:\n\n* `invalid_name` on a create carries no `row_id`, in both `_apply_list` and `_apply_item`, although the row id is in scope and the wire contract promises \"a code for one row carries `row_id` ... whenever the row has a usable id\". Every neighbouring raise passes `details`. A client that ever pushes a nameless create wedges its queue instead of parking the row.\n* A client-pushed `lists.deleted = true` tombstones the list but not its items, so housekeeping's `live_items_on_tombstoned_list` check reports a violated invariant on every sweep afterwards. Latent: neither shipped client writes that field today (Android's `ListsRepo.delete` has no callers), but the field is documented as usable.\n* `GET /lists/{id}/members` and `GET /invites/pending` inner-join `account_settings` while `sync._rosters` left-joins it. The invariant holds today (register inserts both rows), but one of the two is wrong about it and the safe one is the LEFT join.\n* `gc.py`'s comment says \"Six weeks\" twice for `RETENTION_MS = 45 days`. The README says 45 days correctly.\n* `delta`, `_rosters` and `votes_for_lists` expand one bind parameter per list the account belongs to. Past SQLITE_MAX_VARIABLE_NUMBER (32766) that account's own syncs would raise `too many SQL variables`, which is re-raised as a 500. Self-inflicted only, and the threshold is unverified.",
+  "created_at": "2026-09-22T20:00:39+00:00",
+  "id": "T-258",
+  "labels": [
+    "server"
+  ],
+  "priority": 4,
+  "title": "Server: smaller review findings (missing row_id, list tombstones, roster joins, comments)",
+  "updated_at": "2026-09-22T20:00:39+00:00"
+}
