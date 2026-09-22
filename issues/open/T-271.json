@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, joint client gap.\n\n`invalid_expense` and `invalid_field` are missing from BOTH clients' error tables (`web/src/i18n/apiErrors.ts`, `android/.../ui/ErrorText.kt`), although they are in the wire contract's error table. `invalid_expense` is the likeliest 422 on a ledger row, and on Android it is what a parked row's banner shows, so it falls back to a bare \"not saved\" \u2014 the exact hole the quarantine-reason work was meant to close. Parity holds, so no cross-client test catches it.\n\nFix direction: add both codes with text in all nine locales on both clients (identical English so crossClient pairs them), and check the table against the contract for any other code neither client carries.\n\nFull extraction confirms the rest is healthy: the server emits exactly the 49 codes the contract's table lists, nothing in the table is unreachable, and both client tables carry an identical 30-code set with identical English. Of the codes in neither table, the user-reachable ones are `invalid_expense`, `invalid_field`, `invalid_status` (a stale status value) and `invalid_device_label` (a long Build.MODEL). Add those four.",
+  "created_at": "2026-09-22T20:02:11+00:00",
+  "id": "T-271",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 3,
+  "title": "Both clients: four user-reachable error codes are in neither error table",
+  "updated_at": "2026-09-22T20:02:11+00:00"
+}
