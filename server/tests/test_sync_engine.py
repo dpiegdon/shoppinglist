@@ -138,6 +138,28 @@ def test_edit_item_in_non_member_list_is_refused_as_unknown_list(db_conn):
     assert _item_row(db_conn, "item-1")["category"] is None
 
 
+def test_edit_list_not_a_member_of_is_refused_as_unknown_list(db_conn):
+    # T-255: same row-scoped 422 the item path uses, not 403 not_a_member — a 403 here carries no
+    # row_id, so a device that still shows a list it has left cannot quarantine the stale row and
+    # retries the identical batch forever.
+    owner = _register(db_conn, "owner@example.com")
+    intruder = _register(db_conn, "intruder@example.com")
+    _create_list(db_conn, owner, "devOwner")
+    with pytest.raises(ApiError) as excinfo:
+        sync.apply_changes(
+            db_conn,
+            intruder,
+            "devIntruder",
+            {"lists": [_mk_list("list-1", "Hacked", 200, "devIntruder")]},
+        )
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "unknown_list"
+    assert excinfo.value.details == {"row_id": "list-1"}
+    assert _live_items(db_conn, "list-1") == []  # untouched: only asserting no crash/side effect
+    row = db_conn.execute("SELECT name FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert row["name"] == "Groceries"  # the owner's row is unchanged
+
+
 def test_existing_item_authorized_against_its_stored_list_not_payload(db_conn):
     # Attacker is a member of their own list but not the victim's; they must not
     # be able to edit a victim item by mislabelling the payload's list_id.

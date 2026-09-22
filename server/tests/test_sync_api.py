@@ -1152,3 +1152,66 @@ def test_push_survives_a_403_from_the_delta(client):
     body = _sync(client, token_b, cursor=0, device_id="devB").get_json()
     assert [lst["id"] for lst in body["changes"]["lists"]] == ["list-b"]
     assert [itm["id"] for itm in body["changes"]["items"]] == ["item-b"]
+
+
+def test_pushed_list_row_for_a_list_not_a_member_of_is_quarantinable_and_does_not_wedge_the_queue(
+    client,
+):
+    """T-255: a pushed LIST row (not just an item row) for a list the caller is not a member of
+    must answer the same row-scoped 422 unknown_list the item path uses, not an unquarantinable
+    403 not_a_member. A 403 here carries no row_id, so Android's parking logic (which only parks
+    on a 422 naming a row) never quarantines the stale row and retries the identical whole batch
+    forever — losing a brand-new, unrelated list pushed alongside it on every attempt."""
+    token_a = _register_and_login(client, device="devA")
+    token_b = _register_and_login(client, email="bob@example.com", device="devB")
+
+    assert (
+        _sync(
+            client,
+            token_a,
+            cursor=0,
+            device_id="devA",
+            changes={"lists": [_mk_list("list-a", "Alice's list", 100, "devA")]},
+        ).status_code
+        == 200
+    )
+
+    # B pushes an edit to A's list (stale/foreign row) alongside a brand-new list of their own,
+    # in one batch.
+    resp = _sync(
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
+        changes={
+            "lists": [
+                _mk_list("list-a", "Hacked", 200, "devB"),
+                _mk_list("list-b", "Bob's list", 100, "devB"),
+            ]
+        },
+    )
+    assert resp.status_code == 422
+    body = resp.get_json()
+    assert body["error"] == "unknown_list"
+    assert body["row_id"] == "list-a"
+
+    # The whole request's writes (including list-b) were rolled back with the refused row — this
+    # is what makes the row_id essential: it lets the client identify and drop exactly the bad
+    # row and retry without it, rather than retrying the identical batch (and losing list-b)
+    # forever, which is what a bare 403 (no row_id) would force.
+    resp = _sync(
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
+        changes={"lists": [_mk_list("list-b", "Bob's list", 100, "devB")]},
+    )
+    assert resp.status_code == 200
+
+    body = _sync(client, token_b, cursor=0, device_id="devB").get_json()
+    assert [lst["id"] for lst in body["changes"]["lists"]] == ["list-b"]
+
+    # A's list is untouched by B's attempt.
+    delta_a = _sync(client, token_a, cursor=0, device_id="devA", full_lists=["list-a"]).get_json()
+    victim = next(lst for lst in delta_a["changes"]["lists"] if lst["id"] == "list-a")
+    assert victim["fields"]["name"]["value"] == "Alice's list"

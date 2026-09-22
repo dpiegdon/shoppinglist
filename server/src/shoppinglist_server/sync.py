@@ -961,13 +961,27 @@ def _apply_list(conn, account_id, device_id, obj):
         return
 
     # Residual, deliberate (T-120): unlike _apply_item above, this branch cannot be made uniform.
-    # Pushing an unused list id CREATES the list, so "created" vs "403" still distinguishes a free
-    # id from a taken one — and it can't be closed without either refusing legitimate creates or
-    # lying about them. Closing it properly means the server minting list ids instead of accepting
-    # client-minted ones, which the offline-first model rules out. Real clients use UUIDs, so what
-    # leaks is only whether a *guessed* id is in use.
+    # Pushing an unused list id CREATES the list, so "created" vs "refused" still distinguishes a
+    # free id from a taken one — and it can't be closed without either refusing legitimate creates
+    # or lying about them. Closing it properly means the server minting list ids instead of
+    # accepting client-minted ones, which the offline-first model rules out. Real clients use
+    # UUIDs, so what leaks is only whether a *guessed* id is in use.
+    #
+    # The status of that refusal is a separate question from the leak, though, and does not have
+    # to be 403 (T-255): a device that still shows a list the account has since left (or was
+    # removed from) pushes an edit to it, and a 403 here is unquarantinable — it carries no
+    # row_id, so the client can only hard-fail the whole request, retrying the identical batch
+    # forever, and every other row pushed alongside it is rolled back with it. _apply_item answers
+    # the identical "not yours" case with a row-scoped 422 unknown_list for exactly this reason
+    # (T-120); do the same here so a stale list row is parked like any other bad row instead of
+    # wedging the queue.
     if not _is_member(conn, account_id, list_id):
-        raise ApiError(403, "not_a_member", "You are not a member of this list.")
+        raise ApiError(
+            422,
+            "unknown_list",
+            "List refers to a list you are not a member of.",
+            details={"row_id": list_id},
+        )
     if "kind" in fields:
         new_kind = fields["kind"][0]
         # Fixed for life in both directions (T-151), whatever the clock says: an expenses list's

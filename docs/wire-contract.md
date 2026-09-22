@@ -433,7 +433,10 @@ all live rows of any `full_lists`, plus the new cursor.
   `422 unknown_list` + `row_id` — the *same* answer whether the list does not
   exist or exists but belongs to someone else, so a non-member cannot probe which
   list ids are in use. It is a `422` rather than a `403` so clients quarantine
-  just that row (see below) instead of wedging the whole push queue.
+  just that row (see below) instead of wedging the whole push queue. This applies
+  identically to an item row (whose `list_id` names a list the caller is not on)
+  and to a LIST row itself pushed for a list id the caller is not a member of —
+  creating a list at an unused id is unaffected, since that still succeeds.
 - A `422` naming a `row_id` means *that row* is unacceptable: quarantine it,
   keep syncing the rest, and retry it once the user edits it.
 - **Per-field input caps.** Neither client enforces these; a pushed value over
@@ -644,7 +647,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 401 | `invalid_credentials` | Login with a wrong email or password — one answer for both. |
 | 403 | `invalid_credentials` | A re-entered password is wrong (account and admin operations that ask for one). |
 | 403 | `registration_disabled` | `POST /register` on an instance with registration off. |
-| 403 | `not_a_member` | A list the caller is not on, whether or not it exists. |
+| 403 | `not_a_member` | A list the caller is not on, whether or not it exists — on a read (`GET /lists/{id}/members`, `full_lists` in `/sync`) or a vote. Never on a pushed row; see `unknown_list` below. |
 | 403 | `not_admin` | An admin endpoint, called by someone who is not. |
 | 403 | `cannot_delete_self`, `cannot_delete_admin` | See "Admin". |
 | 404 | `account_not_found`, `session_not_found`, `invite_not_found` | The id names nothing. |
@@ -658,7 +661,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
 | 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
-| 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`, or names a list the caller cannot write to. |
+| 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`; or (`unknown_list`, on either an item's `list_id` or a LIST row's own id) names a list the caller cannot write to. |
 | 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. `invalid_expense` covers every rule on a ledger entry: its `type` (one of `expense`, `income`, `transfer`, or absent for `expense`), the transfer's one sender and one different recipient, the positive amounts, the two maps summing alike, the date, the participants, and an entry on a list that is not a ledger. |
 | 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
 | 426 | `client_outdated` | The request declared no `X-Client-Protocol`, a malformed one, or a version below the server's. Carries the server's `protocol`. See "Protocol version". |
