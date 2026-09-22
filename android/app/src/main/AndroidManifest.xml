@@ -54,9 +54,16 @@
 
         <!-- Unused in production; hosts content for Compose UI tests (createComposeRule()'s
              default test host), which otherwise can't resolve an activity to launch. Debug builds
-             already get this from the androidx.compose.ui:ui-test-manifest dependency (exported
-             there), but that's debugImplementation-only, so release unit tests need it too. -->
-        <activity android:name="androidx.activity.ComponentActivity" android:exported="true" />
+             already get this from the androidx.compose.ui:ui-test-manifest dependency, but that's
+             debugImplementation-only, so release unit tests need it too. Robolectric resolves and
+             launches it in-process regardless of `exported` (T-265): declared here only because a
+             release build needs the entry to exist, not because anything outside the app should be
+             able to start it — exported="true" shipped a blank, launchable activity in this app's
+             task to any app on the device in every release build. -->
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="false"
+            tools:replace="android:exported" />
 
         <!-- ShoppingListApp provides its own WorkManager Configuration (HiltWorkerFactory), which
              requires disabling WorkManager's default auto-initialization. -->

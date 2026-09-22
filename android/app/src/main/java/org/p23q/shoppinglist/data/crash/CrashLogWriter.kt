@@ -17,8 +17,13 @@ import javax.inject.Singleton
 object CrashLogModule {
     @Provides
     @Singleton
-    fun provideCrashLogWriter(@ApplicationContext context: Context): CrashLogWriter =
-        CrashLogWriter(File(context.filesDir, "crash_log.txt"))
+    fun provideCrashLogWriter(@ApplicationContext context: Context): CrashLogWriter {
+        // In its own subdirectory (T-265), not filesDir directly: file_paths.xml grants exactly
+        // this folder to the "Share crash logs" intent, rather than the whole of filesDir — which
+        // also holds SessionStore's DataStore files — the way a files-path rooted at "." did.
+        val dir = File(context.filesDir, "crash_logs").apply { mkdirs() }
+        return CrashLogWriter(File(dir, "crash_log.txt"))
+    }
 }
 
 /**

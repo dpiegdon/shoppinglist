@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- CrashLogWriter writes to context.filesDir directly (T-50). -->
-    <files-path name="crash_logs" path="." />
+    <!-- CrashLogWriter writes into this subdirectory of filesDir, not filesDir itself (T-50, T-265)
+         — filesDir also holds SessionStore's DataStore files, which a root of "." would have
+         granted too. Only a URI the app itself constructs and hands out via an explicit share
+         intent is ever readable, so this is defence in depth, not the only thing standing between
+         those files and another app. -->
+    <files-path name="crash_logs" path="crash_logs/" />
 </paths>
