@@ -36,8 +36,11 @@ path and the Android application id keep the project's original name,
 ## Running a release
 
 A release tag already contains the built web bundle and the signed Android APK,
-so building its wheel needs only Python 3.11 or newer: no Node, no Android SDK,
-no signing key.
+so building its wheel needs no Node, no Android SDK and no signing key — only
+Python 3.11 or newer locally, plus network access for pip: `.[dev]` (which
+includes the pinned build backend) and, inside `smoke-wheel.sh`, Flask, both come
+from PyPI. `build-wheel.sh` itself builds with `--no-build-isolation`, so it does
+not reach the network again once `.[dev]` is installed.
 
 ```bash
 git checkout vX.Y.Z
@@ -79,10 +82,12 @@ your own server, see [`android/README.md`](android/README.md).
 ## Testing
 
 `./verify-all.sh` runs every suite (server lint and pytest, web vitest, tsc and
-lint, Android unit tests and lint), fastest first, and stops at the first
-failure. The server lint stage only checks; `cd server && .venv/bin/isort . &&
-.venv/bin/black .` fixes the layout. The Android stage needs a JDK, from
-`JAVA_HOME` or the `PATH`.
+lint, a server wheel build and smoke test, Android debug and release unit tests
+and lint), fastest first, and stops at the first failure. The server lint stage
+only checks; `cd server && .venv/bin/isort . && .venv/bin/black .` fixes the
+layout. The Android stage needs a JDK, from `JAVA_HOME` or the `PATH`, and also
+runs `testReleaseUnitTest`, the only variant that compiles the release source
+set — see [`android/README.md`](android/README.md) for what that proves.
 
 ## Making a release
 

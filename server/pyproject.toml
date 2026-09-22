@@ -28,22 +28,29 @@ Issues = "https://github.com/dpiegdon/shoppinglist/issues"
 dev = [
     "pytest>=8.0",
     "cryptography>=42.0",  # only for the ad-hoc TLS dev server (dev_tls_server.py)
-    # Lint/format stack (T-141), run by ../verify-all.sh.
-    "black>=26.0",
-    "isort>=9.0",
-    "ruff>=0.16",
-    "ty>=0.0.77",
+    # The build backend, pinned exactly (T-281): build-wheel.sh runs `pip wheel
+    # --no-build-isolation` so it uses this installed copy instead of fetching one
+    # from PyPI late, mid-release. Keep this version in step with [build-system]
+    # below when it moves.
+    "setuptools==84.0.0",
+    # Lint/format stack (T-141), run by ../verify-all.sh. Pinned exactly: the lint
+    # stage is the gate's first check, and an unpinned formatter release can fail
+    # every checkout the moment it publishes a new opinion about layout.
+    "black==26.5.1",
+    "isort==9.0.1",
+    "ruff==0.16.8",
+    "ty==0.0.83",
 ]
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-shoppinglist_server = ["schema.sql", "templates/shoppinglist_server/*.html", "web_dist/*", "web_dist/assets/*", "apk/*.apk"]
+shoppinglist_server = ["schema.sql", "templates/shoppinglist_server/*.html", "web_dist/**", "apk/*.apk"]
 
 # ---------------------------------------------------------------------------
 # Lint / format configuration (T-141)

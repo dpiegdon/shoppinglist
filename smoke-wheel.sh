@@ -34,7 +34,18 @@ trap 'rm -rf "$VENV"' EXIT
 
 echo "=== installing $(basename "$WHEEL") into a clean venv ==="
 python3 -m venv "$VENV" || exit 1
-"$VENV/bin/pip" install -q "$WHEEL" || exit 1
+# Flask itself still comes from PyPI — this venv is deliberately not the source
+# tree's — but its version is pinned to whatever server/.venv already resolved,
+# rather than left to float, when that venv is available (T-281).
+FLASK_PIN=""
+if [ -x server/.venv/bin/pip ]; then
+  FLASK_PIN=$(server/.venv/bin/pip show flask 2>/dev/null | sed -n 's/^Version: //p')
+fi
+if [ -n "$FLASK_PIN" ]; then
+  "$VENV/bin/pip" install -q "$WHEEL" "flask==$FLASK_PIN" || exit 1
+else
+  "$VENV/bin/pip" install -q "$WHEEL" || exit 1
+fi
 
 echo
 echo "=== exercising the installed package ==="

@@ -66,9 +66,30 @@ elif [ "$INSTALL_SDK" = 1 ]; then
   echo "installing a minimal Android SDK into $SDK"
   mkdir -p "$SDK/cmdline-tools"
   tmp=$(mktemp -d)
-  curl -sSL -o "$tmp/cmdline.zip" \
-    https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip || exit 1
-  unzip -q -o "$tmp/cmdline.zip" -d "$SDK/cmdline-tools" && rm -rf "$tmp"
+  CMDLINE_ZIP_URL=https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+  # The sha1 Google's own package XML (repository2-3.xml, cmdline-tools;12.0, linux
+  # archive) lists for this exact file — pinned here rather than fetched at install
+  # time, so a compromised or truncated download is caught before anything is
+  # unpacked (T-281). If this ever needs to move to a newer cmdline-tools build,
+  # look the new sha1 up in that XML rather than trusting an unpinned download.
+  CMDLINE_ZIP_SHA1=d313adb7aedccf6cf0cfca51ec180f0059f5f8f8
+  curl -sSL -f -o "$tmp/cmdline.zip" "$CMDLINE_ZIP_URL" || {
+    echo "download of $CMDLINE_ZIP_URL failed" >&2
+    rm -rf "$tmp"
+    exit 1
+  }
+  ACTUAL_SHA1=$(sha1sum "$tmp/cmdline.zip" | cut -d' ' -f1)
+  if [ "$ACTUAL_SHA1" != "$CMDLINE_ZIP_SHA1" ]; then
+    echo "checksum mismatch for $CMDLINE_ZIP_URL: expected $CMDLINE_ZIP_SHA1, got $ACTUAL_SHA1" >&2
+    rm -rf "$tmp"
+    exit 1
+  fi
+  unzip -q -o "$tmp/cmdline.zip" -d "$SDK/cmdline-tools" || {
+    echo "could not unzip $tmp/cmdline.zip into $SDK/cmdline-tools" >&2
+    rm -rf "$tmp"
+    exit 1
+  }
+  rm -rf "$tmp"
   [ -d "$SDK/cmdline-tools/cmdline-tools" ] && mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
   yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
   "$SDK/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0" || exit 1

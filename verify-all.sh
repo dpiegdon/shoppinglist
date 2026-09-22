@@ -79,8 +79,12 @@ web_check() (
       process.exit(1);
     }
   ' &&
-    npx vitest run &&
-    npx tsc --noEmit -p tsconfig.app.json &&
+    # Not `npx vitest`/`npx tsc`: npx fetches from the registry when a binary is
+    # missing locally, which can silently run a version other than the one the
+    # lockfile pins. Both are devDependencies, so node_modules/.bin always has them
+    # once `npm ci` has run.
+    ./node_modules/.bin/vitest run &&
+    ./node_modules/.bin/tsc --noEmit -p tsconfig.app.json &&
     npm run lint
 )
 
@@ -129,9 +133,14 @@ android_check() (
   # --offline keeps the gate deterministic on a warm cache, but on a fresh clone
   # it fails on the first missing dependency (T-227). Try offline, and when that
   # is the reason it failed, run once more online rather than fail the stage.
+  #
+  # testReleaseUnitTest, not just testDebugUnitTest (T-281): it is the only variant
+  # that compiles the src/release source set, which is where the debug-only TLS
+  # bypass is proven absent (see android/README.md). It does not minify or need
+  # signing, so it belongs in the gate rather than release.sh, unlike assembleRelease.
   local log
   log=$(mktemp)
-  if ./gradlew :app:testDebugUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
+  if ./gradlew :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
     rm -f "$log"
     return 0
   fi
@@ -139,12 +148,22 @@ android_check() (
     rm -f "$log"
     echo
     echo "=== android: Gradle cache is cold; rerunning online ==="
-    ./gradlew :app:testDebugUnitTest :app:lintDebug
+    ./gradlew :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug
   else
     rm -f "$log"
     return 1
   fi
 )
+
+# The gate never used to build or smoke-test the wheel, so a packaging regression
+# (T-281) — a broken package-data glob, a schema.sql that stopped being included —
+# surfaced only inside release.sh, after the tree had already been bumped. Both
+# scripts cd to what they need themselves and are run from the repo root, same as
+# release.sh runs them; they write only into server/dist and server/build, which
+# are gitignored, and touch nothing else.
+wheel_check() {
+  ./build-wheel.sh && ./smoke-wheel.sh
+}
 
 # `./verify-all.sh --preflight` runs only the Android environment checks — what
 # bootstrap.sh ends with, and a quick answer to "will the Android stage even start".
@@ -156,6 +175,7 @@ fi
 run_stage "server (isort + black + ruff + ty)" server_lint
 run_stage "server (pytest)" server_check
 run_stage "web (vitest + tsc + lint)" web_check
+run_stage "server (wheel build + smoke test)" wheel_check
 run_stage "android (preflight)" android_preflight
 run_stage "android (test + lint)" android_check
 

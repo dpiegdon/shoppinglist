@@ -29,7 +29,12 @@ echo
 echo "=== building wheel ==="
 # pip wheel rather than `python -m build --wheel`: same result from the same
 # backend, and it needs no extra build-time dependency in the venv.
-"$PY" -m pip wheel . --no-deps -w dist -q || exit 1
+#
+# --no-build-isolation: setuptools is a pinned dev dependency (pyproject.toml), so
+# it is already in .venv. Without this flag, pip builds in a throwaway env and
+# fetches setuptools from PyPI to populate it — network access, late, for a
+# version the tree already pins (T-281).
+"$PY" -m pip wheel . --no-deps --no-build-isolation -w dist -q || exit 1
 WHEEL=$(ls dist/*.whl 2>/dev/null | head -1)
 if [ -z "$WHEEL" ]; then
   echo "no wheel produced" >&2
