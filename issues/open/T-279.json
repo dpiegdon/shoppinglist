@@ -1,0 +1,13 @@
+{
+  "body": "Full-codebase review, shared-test-case gaps. Verified.\n\nThree rules are shared between the clients, each with a comment saying it must match the other client, and none has a shared case table: category canonicalisation, price-input parsing, and money/date formatting. Two of the three have already diverged (see the casing and price tickets) \u2014 good evidence that the table, not the comment, is what keeps a rule honest.\n\nAlso: Android's ExpenseMathTest asserts that every group in the table is non-empty; the web has no equivalent, so a renamed or emptied group would silently make the web's `it.each([])` iterate nothing while Android fails loudly. Add the same guard on the web side.\n\nFix direction: add `category-canon` and `price-parse` groups (and consider a formatting group), drive them from both suites, and mirror the group-coverage guard.",
+  "created_at": "2026-09-22T20:02:23+00:00",
+  "id": "T-279",
+  "labels": [
+    "web",
+    "android",
+    "tests"
+  ],
+  "priority": 3,
+  "title": "shared-test-cases: category canon, price parsing and formatting have no shared table",
+  "updated_at": "2026-09-22T20:02:23+00:00"
+}
