@@ -16,7 +16,7 @@
 #
 # With no arguments it takes the newest wheel in server/dist/.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 WHEEL="${1:-}"
 EXPECTED_VERSION="${2:-}"

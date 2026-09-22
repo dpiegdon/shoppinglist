@@ -11,7 +11,7 @@
 #
 # It does not run the gate; that is verify-all.sh's job.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 INSTALL_SDK=0
 [ "${1:-}" = "--android-sdk" ] && INSTALL_SDK=1

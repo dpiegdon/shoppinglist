@@ -13,7 +13,7 @@
 #   cd web && npm run build
 #   cd android && ./gradlew :app:assembleRelease   # then cp to src/.../apk/
 set -uo pipefail
-cd "$(dirname "$0")/server"
+cd "$(dirname "$0")/server" || exit 1
 
 PY=.venv/bin/python
 if [ ! -x "$PY" ]; then

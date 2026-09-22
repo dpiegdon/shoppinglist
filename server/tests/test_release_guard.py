@@ -91,6 +91,22 @@ def test_refused_because_a_protocol_bump_needs_a_major_release(
     assert f"{prev_major + 1}.0.0" in reason
 
 
+@pytest.mark.parametrize(
+    "tree,new_major,prev_protocol,prev_major",
+    [
+        (2, 3, 3, 3),  # protocol dropped 3 -> 2 in a minor release
+        (2, 4, 3, 3),  # protocol dropped 3 -> 2 even though the release is major
+        (0, 1, 1, 1),  # protocol.py reverted to before it existed
+    ],
+)
+def test_refused_because_the_protocol_decreased(tree, new_major, prev_protocol, prev_major):
+    reason = guard.refusal(tree, new_major, prev_protocol, prev_major)
+
+    assert reason is not None
+    assert "cannot go down" in reason
+    assert f"{prev_protocol} -> {tree}" in reason
+
+
 # ---- the script as release.sh runs it ----------------------------------------
 
 

@@ -5,7 +5,7 @@
 # broken server/web change is caught before burning time on the much slower
 # Android build. Prints a pass/fail summary table at the end either way.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 # Fallback for the Android stage when JAVA_HOME isn't already exported. The sdkman
 # path is this project's original dev machine; anywhere else, either export
@@ -40,7 +40,7 @@ run_stage() {
 }
 
 server_check() (
-  cd server
+  cd server || exit 1
   if [ ! -x .venv/bin/python ]; then
     echo "server/.venv missing — run: cd server && python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'" >&2
     return 1
@@ -53,7 +53,7 @@ server_check() (
 # Order matters: isort first, then black, because black has the final say on layout
 # and isort runs in black's profile precisely so it can never disagree.
 server_lint() (
-  cd server
+  cd server || exit 1
   for tool in isort black ruff ty; do
     if [ ! -x ".venv/bin/$tool" ]; then
       echo "server/.venv missing $tool — run: cd server && .venv/bin/pip install -e '.[dev]'" >&2
@@ -67,7 +67,7 @@ server_lint() (
 )
 
 web_check() (
-  cd web
+  cd web || exit 1
   # package-lock.json's version fields drift silently: nothing rewrites them
   # except a later `npm install`, which does it as a side effect and dirties
   # the tree (T-201). Catch the drift here instead of at that install.
@@ -90,7 +90,7 @@ web_check() (
 # compiler error writing the class file of a test whose name has an em dash), and
 # no SDK location. Say each in one sentence before Gradle starts.
 android_preflight() (
-  cd android
+  cd android || exit 1
   if [ -z "${JAVA_HOME:-}" ] && [ -d "$JAVA_HOME_DEFAULT" ]; then
     export JAVA_HOME="$JAVA_HOME_DEFAULT"
   fi
@@ -120,7 +120,7 @@ android_preflight() (
 )
 
 android_check() (
-  cd android
+  cd android || exit 1
   # Only fall back to JAVA_HOME_DEFAULT if it actually exists; otherwise leave
   # JAVA_HOME unset and let Gradle locate a JDK itself.
   if [ -z "${JAVA_HOME:-}" ] && [ -d "$JAVA_HOME_DEFAULT" ]; then

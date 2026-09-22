@@ -16,22 +16,33 @@
 # What it deliberately does NOT do: anything involving a remote. It stops at the
 # annotated tag.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 VERSION="${1:-}"
 TICKET="${2:-}"
 NOTES_FILE=""
-if [ "${2:-}" = "--notes" ]; then TICKET=""; NOTES_FILE="${3:-}"; fi
-if [ "${3:-}" = "--notes" ]; then NOTES_FILE="${4:-}"; fi
+NOTES_GIVEN=0
+if [ "${2:-}" = "--notes" ]; then TICKET=""; NOTES_GIVEN=1; NOTES_FILE="${3:-}"; fi
+if [ "${3:-}" = "--notes" ]; then NOTES_GIVEN=1; NOTES_FILE="${4:-}"; fi
 
 die() { echo "release: $*" >&2; exit 1; }
 step() { echo; echo "=================== $* ==================="; }
+
+# Pure string comparison, no other side effects — kept as a standalone function so
+# it can be sourced out of this file and unit-tested without running a release.
+# Returns true (0) when $1 is a version strictly greater than $2.
+version_gt() {
+  [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]
+}
 
 [ -n "$VERSION" ] || die "usage: ./release.sh <version> [T-nnn] [--notes FILE]"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "version must be MAJOR.MINOR.PATCH, got '$VERSION'"
 if [ -n "$TICKET" ] && [[ ! "$TICKET" =~ ^T-[0-9]+$ ]]; then
   die "ticket must look like T-147, got '$TICKET'"
 fi
+# NOTES_GIVEN catches `--notes` with the filename left off (a typo, or the file
+# argument forgotten) — that used to fall through silently to generated notes.
+if [ "$NOTES_GIVEN" = 1 ] && [ -z "$NOTES_FILE" ]; then die "--notes requires a filename"; fi
 if [ -n "$NOTES_FILE" ] && [ ! -f "$NOTES_FILE" ]; then die "notes file not found: $NOTES_FILE"; fi
 
 # ---------------------------------------------------------------------------
@@ -50,6 +61,8 @@ CURRENT_CODE=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' android/app/build.gr
 [ -n "$CURRENT_VERSION" ] || die "could not read the current version from server/pyproject.toml"
 [ -n "$CURRENT_CODE" ] || die "could not read versionCode from android/app/build.gradle.kts"
 [ "$CURRENT_VERSION" != "$VERSION" ] || die "server/pyproject.toml is already at $VERSION"
+version_gt "$VERSION" "$CURRENT_VERSION" ||
+  die "version must increase: $VERSION is not newer than the current $CURRENT_VERSION"
 NEXT_CODE=$((CURRENT_CODE + 1))
 
 # The protocol version and the version number have to agree before anything is written (T-243):
@@ -103,10 +116,39 @@ APKSIGNER_BIN=$(find_tool apksigner "${APKSIGNER:-}") ||
 
 EMBEDDED_APK=server/src/shoppinglist_server/apk/shoppinglist.apk
 PREVIOUS_CERT=""
+CERT_WILL_BE_COMPARED=0
+PREVIOUS_CODE=""
 if [ -f "$EMBEDDED_APK" ]; then
-  PREVIOUS_CERT=$("$APKSIGNER_BIN" verify --print-certs "$EMBEDDED_APK" 2>/dev/null |
-    sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+  # versionCode monotonicity is checked against the APK that actually shipped, not just the
+  # number in build.gradle.kts: a merge or hand-edit can lower the constant in the source file
+  # without anyone noticing, and Android refuses an update whose versionCode does not increase.
+  PREVIOUS_BADGING=$("$AAPT2_BIN" dump badging "$EMBEDDED_APK" 2>/dev/null) ||
+    die "aapt2 could not read the previously embedded APK ($EMBEDDED_APK) to check versionCode monotonicity"
+  PREVIOUS_CODE=$(echo "$PREVIOUS_BADGING" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" | head -1)
+  [ -n "$PREVIOUS_CODE" ] ||
+    die "could not read versionCode from the previously embedded APK ($EMBEDDED_APK)"
+
+  if [ "${RELEASE_FIRST_RELEASE:-0}" = 1 ]; then
+    echo "  RELEASE_FIRST_RELEASE=1 set — skipping the previous-signing-key comparison even though $EMBEDDED_APK exists"
+  else
+    # Fatal, not skipped: a build-tools upgrade that rewords apksigner's output, or a truncated
+    # APK from an interrupted run, must not let a differently-signed APK ship silently — after
+    # which no installed user could update, and the tag could not be re-cut (T-280).
+    PREVIOUS_CERT=$("$APKSIGNER_BIN" verify --print-certs "$EMBEDDED_APK" 2>/dev/null |
+      sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
+    [ -n "$PREVIOUS_CERT" ] ||
+      die "could not read the signing certificate of the previously embedded APK ($EMBEDDED_APK).
+  Refusing to proceed rather than ship a possibly re-signed APK with no comparison. If this really
+  is the first real release and $EMBEDDED_APK is a placeholder, rerun with RELEASE_FIRST_RELEASE=1
+  to skip this check."
+    CERT_WILL_BE_COMPARED=1
+  fi
 fi
+[ -z "$PREVIOUS_CODE" ] || [ "$NEXT_CODE" -gt "$PREVIOUS_CODE" ] ||
+  die "versionCode $NEXT_CODE would not be greater than $PREVIOUS_CODE, the versionCode of the
+  previously shipped APK ($EMBEDDED_APK) — Android refuses to install an update whose versionCode
+  does not increase. build.gradle.kts says the current versionCode is $CURRENT_CODE; check it
+  against what was actually shipped."
 
 echo "  version     $CURRENT_VERSION -> $VERSION"
 echo "  versionCode $CURRENT_CODE -> $NEXT_CODE"
@@ -114,6 +156,44 @@ echo "  protocol    ${PREV_PROTOCOL:-0} -> $TREE_PROTOCOL"
 echo "  ticket      ${TICKET:-(none given)}"
 echo "  aapt2       $AAPT2_BIN"
 echo "  apksigner   $APKSIGNER_BIN"
+
+# ---------------------------------------------------------------------------
+# From here on the tree is written to. A failure anywhere below used to leave a
+# half-released tree behind — five bumped version files, a rebuilt web bundle,
+# possibly a new embedded APK — with no trap and no recovery hint, so the natural
+# next step was to hit "working tree is dirty" and commit the bumps (the incident
+# AGENTS.md records as reverted in 52a6223). Every path touched below is a path
+# already committed at HEAD (the precondition above required a clean tree), so on
+# any failure it is restored from HEAD rather than left dirty: `git checkout` and
+# `git clean` undo edits and stray build output respectively, chosen over "print
+# a recovery command" because the whole point of the earlier incident was that the
+# recovery command was not run.
+# ---------------------------------------------------------------------------
+START_HEAD=$(git rev-parse HEAD)
+RELEASE_TOUCHED_PATHS=(
+  server/pyproject.toml
+  android/app/build.gradle.kts
+  web/package.json
+  web/package-lock.json
+  server/src/shoppinglist_server/web_dist
+  "$EMBEDDED_APK"
+)
+release_cleanup_on_failure() {
+  local status=$?
+  if [ "$status" -ne 0 ] && [ "$(git rev-parse HEAD)" = "$START_HEAD" ]; then
+    echo
+    echo "release: failed — restoring the tree (no commit was made)" >&2
+    git reset -q -- "${RELEASE_TOUCHED_PATHS[@]}" 2>/dev/null
+    git checkout -q -- "${RELEASE_TOUCHED_PATHS[@]}" 2>/dev/null
+    git clean -fdq -- server/src/shoppinglist_server/web_dist 2>/dev/null
+    if [ -n "$(git status --porcelain)" ]; then
+      echo "release: could not fully restore the tree — check 'git status' and 'git diff' by hand" >&2
+    else
+      echo "release: tree restored to $START_HEAD; nothing was committed" >&2
+    fi
+  fi
+}
+trap release_cleanup_on_failure EXIT
 
 # ---------------------------------------------------------------------------
 # Version bump. One version across every part, which is what makes the wheel a
@@ -163,7 +243,10 @@ PY
 # skipping either one is how a wheel ends up shipping the previous build.
 # ---------------------------------------------------------------------------
 step "rebuilding the web bundle"
-( cd web && npm run build ) || die "web build failed"
+# npm ci, not npm install: it installs exactly the lockfile and never rewrites it
+# (T-201). Without it here, the bundle this release ships could be built against
+# whatever happens to already be in web/node_modules.
+( cd web && npm ci && npm run build ) || die "web build failed"
 
 step "verifying everything"
 # Before assembleRelease, not after: this is the slow, fail-fast gate, and there
@@ -174,8 +257,28 @@ step "building the signed release APK"
 # Same gradle invocation family as verify-all's, so the daemon it just warmed is
 # reused rather than a second one being started next to it — this machine is
 # memory-tight. The daemon is stopped immediately afterwards.
-( cd android && ./gradlew :app:assembleRelease --offline )
-APK_STATUS=$?
+#
+# --offline first, like the gate: assembleRelease resolves R8 and the shrinker
+# for the first time (verify-all.sh only exercises the debug variant), so a cold
+# Gradle cache fails it here even when the debug build above succeeded. Retry
+# online rather than fail the whole release over a cache that just needs warming,
+# mirroring verify-all.sh's android_check.
+APK_LOG=$(mktemp)
+if ! ( cd android && ./gradlew :app:assembleRelease --offline ) 2>&1 | tee "$APK_LOG"; then
+  if grep -qiE "offline mode|No cached version|available for offline" "$APK_LOG"; then
+    rm -f "$APK_LOG"
+    echo
+    echo "=== assembleRelease: Gradle cache is cold; rerunning online ==="
+    ( cd android && ./gradlew :app:assembleRelease )
+    APK_STATUS=$?
+  else
+    rm -f "$APK_LOG"
+    APK_STATUS=1
+  fi
+else
+  rm -f "$APK_LOG"
+  APK_STATUS=0
+fi
 ( cd android && ./gradlew --stop >/dev/null 2>&1 )
 [ $APK_STATUS -eq 0 ] || die "assembleRelease failed"
 
@@ -200,14 +303,20 @@ echo "  versionName $APK_NAME, versionCode $APK_CODE"
 NEW_CERT=$("$APKSIGNER_BIN" verify --print-certs "$BUILT_APK" 2>/dev/null |
   sed -n 's/.*certificate SHA-256 digest: //p' | head -1)
 [ -n "$NEW_CERT" ] || die "could not read the signing certificate of the built APK"
-if [ -n "$PREVIOUS_CERT" ] && [ "$NEW_CERT" != "$PREVIOUS_CERT" ]; then
-  # Android refuses to update an installed app across a change of signing key, so
-  # this would strand every existing user on the version they already have.
-  die "signing key CHANGED from the previous release
+if [ "$CERT_WILL_BE_COMPARED" = 1 ]; then
+  if [ "$NEW_CERT" != "$PREVIOUS_CERT" ]; then
+    # Android refuses to update an installed app across a change of signing key, so
+    # this would strand every existing user on the version they already have.
+    die "signing key CHANGED from the previous release
   was $PREVIOUS_CERT
   now $NEW_CERT"
+  fi
+  # Only printed once a real comparison happened — this used to print unconditionally,
+  # including when PREVIOUS_CERT was empty because the comparison had been skipped (T-280).
+  echo "  signed, same key as the previous release"
+else
+  echo "  signed (no previous release to compare the signing key against)"
 fi
-echo "  signed, same key as the previous release"
 
 cp "$BUILT_APK" "$EMBEDDED_APK" || die "could not embed the APK"
 echo "  embedded $(du -h "$EMBEDDED_APK" | cut -f1) at $EMBEDDED_APK"
@@ -233,9 +342,15 @@ fi
 SUBJECT="build: release $VERSION — bump to $VERSION, embed signed release APK"
 [ -n "$TICKET" ] && SUBJECT="$SUBJECT ($TICKET)"
 
-git add -A || die "git add failed"
+# The explicit path list, not `git add -A`: only what this script itself touched
+# should ever land in the release commit (the AGENTS.md incident was exactly a
+# broad `add` sweeping in changes nobody meant to commit).
+git add -- "${RELEASE_TOUCHED_PATHS[@]}" || die "git add failed"
 git commit -q -m "$SUBJECT" -m "$NOTES" || die "commit failed"
-git tag -a "v$VERSION" -m "Release $VERSION" -m "$NOTES" || die "tag failed"
+git tag -a "v$VERSION" -m "Release $VERSION" -m "$NOTES" ||
+  die "tag failed — the release commit $(git rev-parse --short HEAD) already exists on $BRANCH.
+  Nothing is restored past this point (never rewriting history): fix the problem and tag it by
+  hand with: git tag -a v$VERSION -m 'Release $VERSION'"
 
 echo
 echo "released $VERSION"

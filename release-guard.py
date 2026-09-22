@@ -6,14 +6,18 @@ checked against: bumping it turns away every app in the field until it has been 
 MAJOR event by definition, so the two numbers have to agree, and the one moment where they can
 still be made to agree cheaply is before the tag exists.
 
-Two rules, both about the release being cut:
+Three rules, all about the release being cut:
 
-1. the protocol version may never exceed the release's MAJOR version; and
+1. the protocol version may never exceed the release's MAJOR version;
 2. a protocol version higher than the previous release's needs a MAJOR higher than the previous
-   release's — a protocol bump ships in a major release or not at all.
+   release's — a protocol bump ships in a major release or not at all; and
+3. the protocol version may never go DOWN from the previous release's. Once a release has shipped
+   requiring protocol N, nothing (an installed client's cached assumptions, another maintainer's
+   half-finished edit to protocol.py) untells it that; a tree that would ship less than the
+   previous release's PROTOCOL_VERSION is almost certainly a revert, not an intentional change.
 
-The reverse is deliberately allowed: a major release without a protocol change (a rebrand, a
-storage rewrite that nothing on the wire notices) leaves the protocol alone.
+A major release without a protocol change (a rebrand, a storage rewrite that nothing on the wire
+notices) is allowed and leaves the protocol alone — the reverse of rule 2.
 
 Called by release.sh with the four numbers it read out of the tree and the previous tag, and by
 server/tests/test_release_guard.py with numbers of its own — which is why the rules live here,
@@ -49,6 +53,13 @@ def refusal(
             f"release, which turns away every client in the field until it is updated. That "
             f"ships as a MAJOR release only: this one's major version is {new_major}, and the "
             f"previous release's was {previous_major}. Cut {previous_major + 1}.0.0 or later."
+        )
+    if tree_protocol < previous_protocol:
+        return (
+            f"PROTOCOL_VERSION went {previous_protocol} -> {tree_protocol} since the previous "
+            f"release. A protocol version cannot go down once shipped — raise it back to at "
+            f"least {previous_protocol}, or this looks like an accidental revert of "
+            f"protocol.py."
         )
     return None
 
