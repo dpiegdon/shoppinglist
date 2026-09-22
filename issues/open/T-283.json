@@ -1,0 +1,12 @@
+{
+  "body": "Split out of T-272 during the review fixes: the web's dialogs are plain divs with no `role=\"dialog\"`, no `aria-modal`, no `aria-labelledby`, no focus trap when they open and no focus restore when they close, and Escape does not close them. The one concrete symptom that ticket named \u2014 the overlay click discarding a form when a text-selection drag ended outside the panel \u2014 is fixed (the overlay now closes only when mousedown and mouseup both land on it), as are the other T-272 items.\n\nWhat is left is the focus and semantics work across four dialogs of different shapes (ItemDialog with its name-suggestion dropdown and store-input Enter handling, ExpenseDialog, the overview's create dialog, and the admin delete confirmation). That deserves its own tests and its own review rather than riding along with unrelated fixes; a native `<dialog>` is worth considering instead of hand-rolling the trap.",
+  "created_at": "2026-09-22T21:46:27+00:00",
+  "id": "T-283",
+  "labels": [
+    "web",
+    "a11y"
+  ],
+  "priority": 4,
+  "title": "Web dialogs: no role, no labelling, no focus trap or restore, no Escape",
+  "updated_at": "2026-09-22T21:46:27+00:00"
+}
