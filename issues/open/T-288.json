@@ -1,0 +1,11 @@
+{
+  "body": "Minor release carrying the 41 commits since 3.0.1: the full-codebase review fixes (T-253..T-282), the follow-ups (T-286, T-287) and the dialog accessibility work (T-283). Protocol stays 3 \u2014 nothing on the wire an installed client misreads; the amount-digit cap is a validation tightening, answered as an ordinary 422. Server, web and Android all change.",
+  "created_at": "2026-09-22T23:32:40+00:00",
+  "id": "T-288",
+  "labels": [
+    "ops"
+  ],
+  "priority": 1,
+  "title": "Release 3.1.0",
+  "updated_at": "2026-09-22T23:32:40+00:00"
+}
