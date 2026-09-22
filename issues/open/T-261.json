@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, Android finding. Verified: `grep -rn \"withTransaction|@Transaction|runInTransaction\"` over the whole module returns nothing.\n\nEvery read-modify-write runs unguarded: the sync merge (`upsert(mergeItem(getById(id), dto))`) and every user edit in ItemsRepo/ListsRepo (`getById` -> `upsert`). They run concurrently, because the list screen syncs every 5 s while it is open. A tap that lands between the merge's read and its write is overwritten by the merge writing back the pre-tap row \u2014 whole-row, so the field clocks never see the edit and nothing is queued.\n\nScenario: a shopper checks an item off exactly while a background sync applies that row; the row flips back to todo and the edit is gone.\n\nFix direction: wrap each row's merge and each repo `updateField` in `appDb.withTransaction { }`.",
+  "created_at": "2026-09-22T20:02:00+00:00",
+  "id": "T-261",
+  "labels": [
+    "android",
+    "data-loss"
+  ],
+  "priority": 2,
+  "title": "Android: no database transactions, so a sync merge can silently overwrite a concurrent edit",
+  "updated_at": "2026-09-22T20:02:00+00:00"
+}
