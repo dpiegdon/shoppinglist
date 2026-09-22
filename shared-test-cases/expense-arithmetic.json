@@ -7,6 +7,12 @@
     "Two copies would drift, which is exactly how the i18n fixture went wrong (T-148).",
     "",
     "Amounts are decimal strings in the wire format, so each client's own parser is exercised too.",
+    "The whole part is capped at 13 digits (T-262): unbounded, a 20-digit price/expense amount —",
+    "legal under the server's old 32-CHARACTER cap — made Android's `whole.toLong()` throw and",
+    "crash every member's list screen on every render. 13 digits is the largest width for which",
+    "the cents value can never exceed JS's Number.MAX_SAFE_INTEGER, so to_cents_invalid's",
+    "too-long cases must be refused by ALL of toCents/ExpenseMath.toCents/the server's",
+    "PRICE_AMOUNT_RE, returning no value rather than throwing.",
     "Rounding rule: auto participants get the floor of an equal share, and the leftover cents go",
     "one each to the first auto participants in the given order. A participant whose share comes",
     "out at zero is absent from the result, never present with a zero amount.",
@@ -48,7 +54,19 @@
     { "amount": "12", "cents": 1200 },
     { "amount": "12.5", "cents": 1250 },
     { "amount": "12.50", "cents": 1250 },
-    { "amount": "1234567.89", "cents": 123456789 }
+    { "amount": "1234567.89", "cents": 123456789 },
+    { "amount": "9999999999999.99", "cents": 999999999999999 }
+  ],
+
+  "to_cents_invalid": [
+    "",
+    "1.234",
+    "1,50",
+    "-1",
+    "abc",
+    "٥",
+    "12345678901234",
+    "12345678901234567890"
   ],
 
   "from_cents": [

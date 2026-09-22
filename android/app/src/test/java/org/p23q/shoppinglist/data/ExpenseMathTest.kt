@@ -60,7 +60,8 @@ class ExpenseMathTest {
 
     @Test
     fun `anything the wire format would reject is not a number`() {
-        for (bad in listOf("", "1.234", "1,50", "-1", "abc", "٥")) {
+        val badAmounts = cases["to_cents_invalid"]!!.jsonArray.map { it.jsonPrimitive.content }
+        for (bad in badAmounts) {
             assertNull(bad, ExpenseMath.toCents(bad))
         }
     }
@@ -237,6 +238,10 @@ class ExpenseMathTest {
         )) {
             assertTrue(name, group(name).isNotEmpty())
         }
+        assertTrue(
+            "to_cents_invalid",
+            cases["to_cents_invalid"]!!.jsonArray.isNotEmpty(),
+        )
     }
 
     // ---- properties and the cases only this client needs ---------------------

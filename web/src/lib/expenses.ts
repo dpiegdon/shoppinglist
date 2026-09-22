@@ -10,9 +10,19 @@ import { itemFieldValue } from "../hooks/useSync";
  * case table, shared-test-cases/expense-arithmetic.json, so they cannot drift.
  */
 
+// The whole part is capped at 13 digits (T-262): Android's twin of this function, ExpenseMath.
+// toCents, used to match an unbounded [0-9]+ here and then call `whole.toLong()`, which threw
+// NumberFormatException around 19-20 digits — reachable from another device's price, since the
+// server's old cap was 32 CHARACTERS, so it crashed every member's list screen on every render.
+// 13 digits is the largest width for which the cents value (whole * 100 + fraction, up to
+// 999999999999999) can never exceed Number.MAX_SAFE_INTEGER (9007199254740991): a price this
+// client cannot represent exactly is now refused by the server up front, rather than shown wrong
+// by one client and crashing the other.
+const AMOUNT_RE = /^[0-9]{1,13}(\.[0-9]{1,2})?$/;
+
 /** Cents of a wire amount ("12" -> 1200, "12.5" -> 1250). NaN for anything unparseable. */
 export function toCents(amount: string): number {
-  if (!/^[0-9]+(\.[0-9]{1,2})?$/.test(amount.trim())) return NaN;
+  if (!AMOUNT_RE.test(amount.trim())) return NaN;
   const [whole, fraction = ""] = amount.trim().split(".");
   return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
 }

@@ -12,7 +12,16 @@ object ExpenseMath {
 
     // [0-9], not \d: the same deliberate choice as the price pattern (T-125). Kotlin's \d is
     // ASCII-only, but writing it explicitly keeps all three clients' patterns visibly identical.
-    private val AMOUNT_RE = Regex("^[0-9]+(\\.[0-9]{1,2})?$")
+    //
+    // The whole part is capped at 13 digits (T-262): unbounded, this matched a 20-digit price the
+    // server's old 32-CHARACTER cap let through, and `whole.toLong()` below threw
+    // NumberFormatException — reachable from another device's price, so it crashed this screen for
+    // every member on every render. 13 digits is the largest width for which the cents value
+    // (whole * 100 + fraction, up to 999999999999999) can NEVER exceed JS's
+    // Number.MAX_SAFE_INTEGER (9007199254740991): the web's `toCents` shares this bound so a price
+    // neither client can represent exactly is refused up front by the server rather than shown
+    // wrong by one of them. It is nowhere near Kotlin's own Long ceiling.
+    private val AMOUNT_RE = Regex("^[0-9]{1,13}(\\.[0-9]{1,2})?$")
 
     /** Cents of a wire amount ("12" -> 1200, "12.5" -> 1250); null for anything unparseable. */
     fun toCents(amount: String): Long? {

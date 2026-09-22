@@ -32,10 +32,8 @@ describe("cents conversion", () => {
     expect(fromCents(cents)).toBe(amount);
   });
 
-  it("rejects anything the wire format would not accept", () => {
-    for (const bad of ["", "1.234", "1,50", "-1", "abc", "٥"]) {
-      expect(toCents(bad)).toBeNaN();
-    }
+  it.each(cases.to_cents_invalid)("%s is not a number", (bad) => {
+    expect(toCents(bad)).toBeNaN();
   });
 
   it("renders a negative balance with its sign", () => {
@@ -356,5 +354,26 @@ describe("settling up", () => {
     expect([...remaining.values()].every((cents) => cents === 0)).toBe(true);
     const withBalance = balances.filter((b) => b.balanceCents !== 0).length;
     expect(transfers.length).toBeLessThanOrEqual(Math.max(withBalance - 1, 0));
+  });
+});
+
+describe("the shared case table", () => {
+  it("covers every group this test drives", () => {
+    // Mirrors Android's ExpenseMathTest (T-279): a renamed or emptied group would otherwise make
+    // a whole `it.each` block silently iterate nothing instead of failing.
+    const groups = [
+      "to_cents",
+      "to_cents_invalid",
+      "from_cents",
+      "equal_split",
+      "distribute",
+      "balances",
+      "spent",
+      "effect",
+      "settle",
+    ] as const;
+    for (const name of groups) {
+      expect(cases[name].length, name).toBeGreaterThan(0);
+    }
   });
 });

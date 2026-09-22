@@ -42,7 +42,15 @@ STATUS_VALUES = {"backlog", "todo", "checked"}
 # The identical constants live in web/src/lib/priceParse.ts and android's ItemFormViewModel.kt.
 # Keep all three in step — the failure mode here was precisely that they LOOK identical and were
 # not.
-PRICE_AMOUNT_RE = re.compile(r"^[0-9]+(\.[0-9]{1,2})?$")
+#
+# The whole part is capped at 13 digits (T-262): unbounded, this let a client push a price/expense
+# amount with so many digits that Android's Kotlin `Long` parse of it threw and crashed that
+# screen for every member, on every render, until the row was fixed from elsewhere — the
+# PRICE_AMOUNT_MAX_LENGTH cap below (32 characters) was far too loose to prevent it. 13 digits is
+# the largest width for which the cents value (whole * 100 + fraction) can never exceed
+# JS Number.MAX_SAFE_INTEGER, so a value refused here is one *neither* client could represent
+# exactly, not just the one with the narrower integer type.
+PRICE_AMOUNT_RE = re.compile(r"^[0-9]{1,13}(\.[0-9]{1,2})?$")
 SERVER_MERGE = "server-merge"
 # deleted_by for an item tombstoned as a side effect of its LIST being tombstoned (T-258), the
 # push-path twin of invites.SERVER_ORPHAN (which does the same for a list orphaned by the last
@@ -109,7 +117,11 @@ QUANTITY_MAX_LENGTH = (
 ITEM_NOTE_MAX_LENGTH = 5000  # freeform per-item annotation; same generosity as list notes.
 UPDATED_BY_MAX_LENGTH = 128  # device/author id string, same scale as a row id.
 PRICE_AMOUNT_MAX_LENGTH = (
-    32  # decimal string; 32 digits is billions-with-cents, far beyond any real price.
+    # A defense-in-depth length pre-check before the regex runs (T-262); PRICE_AMOUNT_RE's own
+    # 13-digit whole-part cap is what actually bounds a valid amount to 16 characters
+    # (13 + '.' + 2 fraction digits) — this stays a little above that on purpose, so it never
+    # becomes the thing that rejects a value the regex would already have refused.
+    20
 )
 PRICE_CURRENCY_MAX_LENGTH = 16  # ISO 4217 codes are 3 chars; 16 leaves room for any sane variant.
 STRING_LIST_MAX_ITEMS = (
