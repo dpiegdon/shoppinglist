@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, cross-client finding. Verified, including the comparison behaviour in both languages.\n\nCategory canonical casing breaks ties differently on the two clients. Web: `count === bestCount && casing.localeCompare(best) < 0`. Android: `count == bestCount && casing < best` (UTF-16 code units). With one item \"Obst\" and one \"obst\" and no category_order entry, `\"obst\".localeCompare(\"Obst\")` is -1 so the web labels the bucket **obst**, while `\"Obst\" < \"obst\"` is true in Kotlin so Android labels it **Obst**. Both clients offer that name for the \"fix casing everywhere\" action, so the two clients write different values to the same shared list. The autocomplete order diverges the same way (`localeCompare` vs `.sorted()`): for \"\u00c4pfel\"/\"Bananen\" web puts \u00c4 first, Android B first.\n\nThe repo already solved this class of problem once: `shared-test-cases/name-order.json` says ordering must never be locale-aware, and `nameOrder.ts` has `byCodeUnits` for exactly this. Both clients' own tests dodge the tie by using unequal counts.\n\nFix direction: use the shared code-unit comparison on both sides, and add a `category-canon` group to shared-test-cases.",
+  "created_at": "2026-09-22T20:02:22+00:00",
+  "id": "T-274",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 3,
+  "title": "Cross-client: category canonical casing and autocomplete order diverge between the clients",
+  "updated_at": "2026-09-22T20:02:22+00:00"
+}
