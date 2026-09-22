@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-22T20:00:39+00:00", "kind": "created", "ref": "main@87587bc", "text": "sync: a 403 from the delta discards the push already applied in the same request"}
+{"actor": "user", "at": "2026-09-22T20:32:04+00:00", "kind": "closed", "ref": "main@e388b3c", "text": ""}
