@@ -11,7 +11,9 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -131,10 +133,113 @@ class AuthRepositoryTest {
     }
 
     @Test
-    fun `logout calls the server, clears the session, and wipes local data`() = runTest {
+    fun `logout calls the server and clears the session`() = runTest {
         pointAtServer()
         sessionState.token = "tok-123"
         sessionState.accountEmail = "milk@example.com"
+        sessionState.accountId = "acc-1"
+        seedUnpushedItem()
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        repository.logout()
+
+        val recorded = server.takeRequest()
+        assertEquals("Bearer tok-123", recorded.getHeader("Authorization"))
+        assertNull(sessionState.token)
+        // The mirror is not the session's to throw away (T-260): logging out is not a reason to
+        // destroy edits that never reached the server. login() decides, once it knows who is back.
+        assertNotNull(db.itemDao().getById("item-1"))
+        assertEquals("acc-1", sessionState.mirrorAccountId)
+    }
+
+    @Test
+    fun `logout still wipes local session even if the server is unreachable`() = runTest {
+        pointAtServer()
+        sessionState.token = "tok-123"
+        server.shutdown()
+
+        repository.logout()
+
+        assertNull(sessionState.token)
+    }
+
+    /**
+     * T-260. clearLocalSession runs on ANY 401 that carried a bearer token — per the Wire Contract
+     * that is also an idle-expired session and a password change on another device, which revokes
+     * every other session by design. It used to wipe the mirror, so: edit the list offline, change
+     * the password on the web, foreground the phone, and the unpushed queue was gone.
+     */
+    @Test
+    fun `a forced logout keeps the unpushed queue (T-260)`() = runTest {
+        sessionState.token = "tok-123"
+        sessionState.accountId = "acc-1"
+        seedUnpushedItem()
+
+        repository.clearLocalSession()
+
+        assertNull(sessionState.token)
+        val kept = db.itemDao().getById("item-1")
+        assertNotNull("the unpushed edit survives a forced logout", kept)
+        assertTrue(kept!!.dirty)
+        // And the mirror's owner outlives the session, so login can tell whose data this is.
+        assertEquals("acc-1", sessionState.mirrorAccountId)
+    }
+
+    /** The whole round trip of the ticket's scenario: forced out, then back in as oneself. */
+    @Test
+    fun `logging back in as the same account keeps the mirror (T-260)`() = runTest {
+        pointAtServer()
+        sessionState.accountId = "acc-1"
+        seedUnpushedItem()
+        repository.clearLocalSession()
+        enqueueLogin(accountId = "acc-1")
+
+        repository.login("milk@example.com", "hunter2")
+
+        val kept = db.itemDao().getById("item-1")
+        assertNotNull("the returning user's own edits are still there", kept)
+        assertTrue("and still queued to go out", kept!!.dirty)
+    }
+
+    /**
+     * The privacy property the wipe existed for, now enforced where it can actually be decided
+     * (T-260): a different account must never see the previous account's lists.
+     */
+    @Test
+    fun `logging in as a different account wipes the mirror (T-260)`() = runTest {
+        pointAtServer()
+        sessionState.mirrorAccountId = "acc-1"
+        seedUnpushedItem()
+        enqueueLogin(accountId = "acc-2")
+
+        repository.login("bread@example.com", "hunter2")
+
+        assertNull("another account must not see the previous one's lists", db.itemDao().getById("item-1"))
+        assertEquals("acc-2", sessionState.mirrorAccountId)
+    }
+
+    @Test
+    fun `an unrecorded mirror owner counts as a different account (T-260)`() = runTest {
+        pointAtServer()
+        // No owner recorded — a pre-T-65 session, say, which cannot prove the mirror is this user's.
+        assertNull(sessionState.mirrorAccountId)
+        seedUnpushedItem()
+        enqueueLogin(accountId = "acc-1")
+
+        repository.login("milk@example.com", "hunter2")
+
+        assertNull("privacy wins the tie when whose data it is cannot be established", db.itemDao().getById("item-1"))
+    }
+
+    private fun enqueueLogin(accountId: String) {
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-123", "account_id": "$accountId", "email": "milk@example.com"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+    }
+
+    private suspend fun seedUnpushedItem() {
         val now = System.currentTimeMillis()
         db.itemDao().upsert(
             ItemEntity(
@@ -152,24 +257,5 @@ class AuthRepositoryTest {
                 dirty = true,
             ),
         )
-        server.enqueue(MockResponse().setResponseCode(204))
-
-        repository.logout()
-
-        val recorded = server.takeRequest()
-        assertEquals("Bearer tok-123", recorded.getHeader("Authorization"))
-        assertNull(sessionState.token)
-        assertNull(db.itemDao().getById("item-1"))
-    }
-
-    @Test
-    fun `logout still wipes local session even if the server is unreachable`() = runTest {
-        pointAtServer()
-        sessionState.token = "tok-123"
-        server.shutdown()
-
-        repository.logout()
-
-        assertNull(sessionState.token)
     }
 }

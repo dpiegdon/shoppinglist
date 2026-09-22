@@ -35,6 +35,14 @@ interface SessionState {
     var accountEmail: String?
     /** The logged-in account's server id (T-65) — the basis for "changed by someone else" checks. */
     var accountId: String?
+    /**
+     * Which account the local mirror holds the lists of (T-260). Unlike [accountId] it outlives the
+     * session: a forced logout leaves the mirror in place, unpushed edits and all, and this is what
+     * the next login compares itself against to decide whether that mirror is the returning user's
+     * own data or somebody else's to be wiped. Null means "not known", which is treated as
+     * somebody else's.
+     */
+    var mirrorAccountId: String?
     /** Whether this account is a configured admin (T-107); from the login response. */
     var isAdmin: Boolean
     var defaultCurrency: String?
@@ -76,6 +84,10 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         get() = prefs.getString(KEY_ACCOUNT_ID, null)
         set(value) = prefs.edit().putString(KEY_ACCOUNT_ID, value).apply()
 
+    override var mirrorAccountId: String?
+        get() = prefs.getString(KEY_MIRROR_ACCOUNT_ID, null)
+        set(value) = prefs.edit().putString(KEY_MIRROR_ACCOUNT_ID, value).apply()
+
     override var isAdmin: Boolean
         get() = prefs.getBoolean(KEY_IS_ADMIN, false)
         set(value) = prefs.edit().putBoolean(KEY_IS_ADMIN, value).apply()
@@ -112,6 +124,7 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
         const val KEY_TOKEN = "token"
         const val KEY_ACCOUNT_EMAIL = "account_email"
         const val KEY_ACCOUNT_ID = "account_id"
+        const val KEY_MIRROR_ACCOUNT_ID = "mirror_account_id"
         const val KEY_IS_ADMIN = "is_admin"
         const val KEY_DEFAULT_CURRENCY = "default_currency"
         const val KEY_LAST_OPENED_LIST_ID = "last_opened_list_id"
