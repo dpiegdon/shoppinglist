@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-22T20:02:00+00:00", "kind": "created", "ref": "main@87587bc", "text": "Android: a long amount overflows toCents and crashes the list screen for every member"}
+{"actor": "user", "at": "2026-09-22T21:51:18+00:00", "kind": "closed", "ref": "main@d772473", "text": ""}
