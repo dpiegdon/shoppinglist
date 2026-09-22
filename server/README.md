@@ -240,7 +240,10 @@ policy and the changelog live in
 
 To upgrade, install the new wheel and restart. An existing database migrates
 itself the first time the new version opens it; take a backup first (see
-Backups), since migrations only run forward. A **major** upgrade also raises the
+Backups), since migrations only run forward. Each migration is one transaction,
+so a failed one leaves the database exactly as it was and the next connection
+retries it, and several workers starting together cannot run the same migration
+twice. A **major** upgrade also raises the
 protocol version (see above), so every installed app has to be updated with it;
 until it is, it is answered `426 client_outdated` and pointed at the download.
 

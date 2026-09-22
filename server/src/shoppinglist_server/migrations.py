@@ -14,9 +14,11 @@ too) — the two must produce the same end state. Never edit or remove an
 already-released migration's SQL; add a new one instead.
 """
 
-# (version, [sql statements]) — statements run individually via conn.execute(),
-# in order, in one transaction per migration (all-or-nothing: a failure rolls
-# back that migration's statements and PRAGMA user_version is not advanced).
+# (version, [sql statements]) — statements run individually via conn.execute(), in order,
+# inside one explicit BEGIN IMMEDIATE per migration (all-or-nothing: a failure rolls back
+# that migration's statements, DDL included, and PRAGMA user_version is not advanced, so
+# the next connection retries the migration from a clean schema). The write lock also
+# means two workers upgrading the same file at once cannot both run these statements.
 MIGRATIONS: list[tuple[int, list[str]]] = [
     (
         1,

@@ -22,15 +22,29 @@ def _migrate(conn: sqlite3.Connection) -> None:
     first; init_db()/connect() below do this so a brand-new file skips straight
     to schema.sql's full-latest-structure creation instead of replaying
     migrations against tables that don't exist yet.
+
+    Each migration runs inside an explicit BEGIN IMMEDIATE (T-254). SQLite's DDL
+    is transactional, but sqlite3 issues its implicit BEGIN only ahead of DML, so
+    without this every ALTER committed on its own: a statement that failed partway
+    through left the earlier ones applied with user_version unadvanced, and since
+    connect() migrates on EVERY connection, the next request replayed them and
+    died on "duplicate column name" — every request from then on, until an
+    operator hand-stamped the version.
+
+    The write lock BEGIN IMMEDIATE takes also serialises workers upgrading the
+    same file at once. The version is therefore re-read inside the transaction:
+    the worker that waited for the lock must not replay a migration the winner
+    has meanwhile committed.
     """
-    current = conn.execute("PRAGMA user_version").fetchone()[0]
     for version, statements in migrations_module.MIGRATIONS:
-        if version <= current:
+        if version <= conn.execute("PRAGMA user_version").fetchone()[0]:
             continue
+        conn.execute("BEGIN IMMEDIATE")
         try:
-            for stmt in statements:
-                conn.execute(stmt)
-            conn.execute(f"PRAGMA user_version = {version}")
+            if version > conn.execute("PRAGMA user_version").fetchone()[0]:
+                for stmt in statements:
+                    conn.execute(stmt)
+                conn.execute(f"PRAGMA user_version = {version}")
         except Exception:
             conn.rollback()
             raise

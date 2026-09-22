@@ -157,6 +157,107 @@ def test_a_failing_migration_does_not_advance_user_version(tmp_path, monkeypatch
     conn.close()
 
 
+def test_a_failing_migration_rolls_back_the_statements_that_already_ran(tmp_path, monkeypatch):
+    """A migration is all-or-nothing, DDL included (T-254).
+
+    sqlite3 opens no implicit transaction ahead of DDL, so each ALTER used to commit by
+    itself: a migration whose second statement failed left the first one applied with
+    user_version unadvanced, and connect() migrates on every connection, so every later
+    request replayed the migration and died on "duplicate column name"."""
+    path = tmp_path / "half_applied.db"
+    conn = db_module.connect(str(path))
+    db_module.init_db(conn)
+    conn.close()
+    base_version = migrations_module.CURRENT_VERSION
+    next_version = base_version + 1
+
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [
+            (
+                next_version,
+                [
+                    "ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''",
+                    "UPDATE lists SET no_such_column = 1",  # fails: the migration must undo
+                ],
+            )
+        ],
+    )
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", next_version)
+    with pytest.raises(sqlite3.OperationalError):
+        db_module.connect(str(path))
+
+    probe = sqlite3.connect(str(path))
+    assert probe.execute("PRAGMA user_version").fetchone()[0] == base_version
+    cols = {row[1] for row in probe.execute("PRAGMA table_info(lists)")}
+    assert "motto" not in cols
+    probe.close()
+
+    # The schema and the version agree, so the corrected migration applies cleanly and the
+    # instance recovers on its own — no operator hand-stamping the version.
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [
+            (
+                next_version,
+                [
+                    "ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''",
+                    "UPDATE lists SET motto = 'ok'",
+                ],
+            )
+        ],
+    )
+    conn = db_module.connect(str(path))
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == next_version
+    assert "motto" in {row[1] for row in conn.execute("PRAGMA table_info(lists)")}
+    conn.close()
+
+
+def test_a_worker_that_loses_the_migration_race_does_not_replay_it(tmp_path, monkeypatch):
+    """Two workers reaching an out-of-date database together (T-254).
+
+    Both read the same pre-migration user_version; the one that loses the write lock must
+    notice, inside that lock, that the migration has already been applied. Replaying it
+    raises "duplicate column name", which connect() surfaces on every request.
+
+    The race is made deterministic with a trace callback rather than threads: the winner's
+    migration runs from the loser's first statement after its version probe, which is the
+    ALTER itself if migrations are not serialised."""
+    path = tmp_path / "raced.db"
+    conn = db_module.connect(str(path))
+    db_module.init_db(conn)
+    conn.close()
+    next_version = migrations_module.CURRENT_VERSION + 1
+    monkeypatch.setattr(
+        migrations_module,
+        "MIGRATIONS",
+        [(next_version, ["ALTER TABLE lists ADD COLUMN motto TEXT DEFAULT ''"])],
+    )
+    monkeypatch.setattr(migrations_module, "CURRENT_VERSION", next_version)
+
+    winner = sqlite3.connect(str(path))
+    loser = sqlite3.connect(str(path))
+    raced = []
+
+    def _winner_migrates_first(statement):
+        if raced or statement.strip().upper().startswith("PRAGMA USER_VERSION"):
+            return
+        raced.append(statement)
+        db_module._migrate(winner)
+
+    loser.set_trace_callback(_winner_migrates_first)
+    db_module._migrate(loser)  # must not raise
+    loser.set_trace_callback(None)
+
+    assert raced, "the winner never got to migrate — the interleaving did not happen"
+    assert loser.execute("PRAGMA user_version").fetchone()[0] == next_version
+    assert "motto" in {row[1] for row in loser.execute("PRAGMA table_info(lists)")}
+    winner.close()
+    loser.close()
+
+
 def test_next_change_seq_increments(db_conn):
     assert db_module.next_change_seq(db_conn) == 1
     assert db_module.next_change_seq(db_conn) == 2
