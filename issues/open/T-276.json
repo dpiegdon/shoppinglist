@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, cross-client finding. Verified.\n\nThe web client asks `GET /registration-status` on the login page and, on a closed instance, disables the register toggle and says \"Registration is disabled on this server.\" (translated in all nine locales). The Android client has no such call \u2014 the endpoint is absent from its Api interface \u2014 and always offers the register toggle, with no `login_registration_disabled` string anywhere in res/values. An Android user on a closed instance fills in the whole form and only then gets `403 registration_disabled`.\n\nFix direction: add the call and the up-front message to Android, with the string in all nine locales paired to the web's English.",
+  "created_at": "2026-09-22T20:02:23+00:00",
+  "id": "T-276",
+  "labels": [
+    "android"
+  ],
+  "priority": 3,
+  "title": "Android never asks whether registration is open",
+  "updated_at": "2026-09-22T20:02:23+00:00"
+}
