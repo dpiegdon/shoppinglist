@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, web finding. Verified by reading both clients and the server.\n\nAfter `POST /lists/{id}/leave` the web client only calls `refresh()`. The server deletes the membership (no tombstone, since other members remain), and the pull is scoped to memberships, so the delta says nothing about that list and `applyResponse` \u2014 which removes a row only on a `deleted` tombstone \u2014 keeps it in the in-memory map. The list therefore stays on the overview until a full page reload. Opening it and ticking an item pushes to a list the account is no longer on, which the server refuses; see the server finding about that refusal being an unquarantinable 403 that also rolls the rest of the batch back.\n\nAndroid hard-deletes the row locally (`ListsRepo.removeLocally`, \"only for leaving a shared list, never synced\").\n\nFix direction: give the sync store a \"forget this list and its items\" action and call it from `handleLeave` before navigating.",
+  "created_at": "2026-09-22T20:02:11+00:00",
+  "id": "T-268",
+  "labels": [
+    "web"
+  ],
+  "priority": 3,
+  "title": "Web: a list you have left stays on the overview until a reload",
+  "updated_at": "2026-09-22T20:02:11+00:00"
+}
