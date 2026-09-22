@@ -53,6 +53,7 @@
     <string name="login_register">Cadastrar</string>
     <string name="login_to_register">Não tem conta? Cadastre-se</string>
     <string name="login_to_login">Já tem conta? Entrar</string>
+    <string name="login_registration_disabled">O cadastro está desativado neste servidor.</string>
     <string name="login_trust_self_signed">Confiar em certificados autoassinados</string>
     <string name="login_trust_self_signed_help">Opção de desenvolvimento para um servidor de teste autoassinado. Inseguro; apenas em builds de depuração.</string>
     <string name="status_backlog">Mais tarde</string>

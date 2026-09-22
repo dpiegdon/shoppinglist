@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui.login
 
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -20,11 +21,12 @@ class LoginScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private class NoopAuthRepository : AuthRepository {
+    private class NoopAuthRepository(private val registrationAllowed: Boolean = true) : AuthRepository {
         override suspend fun register(email: String, password: String) {}
         override suspend fun login(email: String, password: String) {}
         override suspend fun logout() {}
         override suspend fun clearLocalSession() {}
+        override suspend fun registrationAllowed(): Boolean = registrationAllowed
         override fun lastOpenedListId(): String? = null
     }
 
@@ -62,5 +64,27 @@ class LoginScreenTest {
             .assertContentDescriptionEquals("ṭuppu")
         // No caption here — the reading is spelled out on About, not on the way in.
         composeTestRule.onNodeWithText("ṭuppu").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a server that has registration off says so up front and disables the toggle (T-276)`() {
+        val tempFile = File.createTempFile("login_screen_registration_test", ".preferences_pb")
+        tempFile.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
+        val viewModel = LoginViewModel(
+            NoopAuthRepository(registrationAllowed = false),
+            serverConfig,
+            FakeSessionState(),
+            org.p23q.shoppinglist.data.PendingInviteHolder(),
+            org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
+        )
+
+        composeTestRule.setContent {
+            LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Registration is disabled on this server.").assertExists()
+        composeTestRule.onNodeWithText("New here? Register").assertIsNotEnabled()
     }
 }

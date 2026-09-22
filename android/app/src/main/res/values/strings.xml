@@ -60,6 +60,9 @@
     <string name="login_register">Register</string>
     <string name="login_to_register">New here? Register</string>
     <string name="login_to_login">Already have an account? Log in</string>
+    <!-- Fetched up front from GET /registration-status (T-276), matching the web login page: a
+         closed instance says so before the user fills in the whole form. -->
+    <string name="login_registration_disabled">Registration is disabled on this server.</string>
     <string name="login_trust_self_signed">Trust self-signed certificates</string>
     <string name="login_trust_self_signed_help">Developer option for a self-signed dev server. Insecure; debug builds only.</string>
 

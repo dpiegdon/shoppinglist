@@ -41,6 +41,13 @@ interface Api {
     @POST("api/v1/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
+    /**
+     * Whether this server currently accepts new accounts (T-276). Unauthenticated, same shape as
+     * the admin server-settings endpoint ({"allow_registration"}), so it reuses [ServerSettingsDto].
+     */
+    @GET("api/v1/registration-status")
+    suspend fun registrationStatus(): ServerSettingsDto
+
     /** Agree to close an expenses list (T-157); it closes when the last current member agrees. */
     @POST("api/v1/lists/{listId}/close-votes")
     suspend fun castCloseVote(@Path("listId") listId: String): CloseVoteStateDto

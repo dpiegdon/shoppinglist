@@ -53,6 +53,7 @@
     <string name="login_register">Registrieren</string>
     <string name="login_to_register">Noch kein Konto? Registrieren</string>
     <string name="login_to_login">Schon ein Konto? Anmelden</string>
+    <string name="login_registration_disabled">Registrierung ist auf diesem Server deaktiviert.</string>
     <string name="login_trust_self_signed">Selbstsignierten Zertifikaten vertrauen</string>
     <string name="login_trust_self_signed_help">Entwickleroption für einen selbstsignierten Testserver. Unsicher; nur in Debug-Builds.</string>
     <string name="status_backlog">Backlog</string>

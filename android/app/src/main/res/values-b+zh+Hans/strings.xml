@@ -53,6 +53,7 @@
     <string name="login_register">注册</string>
     <string name="login_to_register">还没有账户？立即注册</string>
     <string name="login_to_login">已有账户？立即登录</string>
+    <string name="login_registration_disabled">此服务器已停用注册功能。</string>
     <string name="login_trust_self_signed">信任自签名证书</string>
     <string name="login_trust_self_signed_help">用于自签名测试服务器的开发者选项。不安全；仅限调试版本。</string>
     <string name="status_backlog">稍后</string>

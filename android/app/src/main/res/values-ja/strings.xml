@@ -53,6 +53,7 @@
     <string name="login_register">新規登録</string>
     <string name="login_to_register">アカウントがありませんか？ 新規登録</string>
     <string name="login_to_login">アカウントをお持ちですか？ ログイン</string>
+    <string name="login_registration_disabled">このサーバーでは新規登録が無効になっています。</string>
     <string name="login_trust_self_signed">自己署名証明書を信頼する</string>
     <string name="login_trust_self_signed_help">自己署名の開発用サーバー向けの開発者オプションです。安全ではありません。デバッグビルドのみ。</string>
     <string name="status_backlog">あとで</string>

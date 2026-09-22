@@ -53,6 +53,7 @@
     <string name="login_register">Registrarse</string>
     <string name="login_to_register">¿No tienes cuenta? Regístrate</string>
     <string name="login_to_login">¿Ya tienes cuenta? Inicia sesión</string>
+    <string name="login_registration_disabled">El registro está desactivado en este servidor.</string>
     <string name="login_trust_self_signed">Confiar en certificados autofirmados</string>
     <string name="login_trust_self_signed_help">Opción de desarrollo para un servidor de pruebas autofirmado. Inseguro; solo en compilaciones de depuración.</string>
     <string name="status_backlog">Más tarde</string>

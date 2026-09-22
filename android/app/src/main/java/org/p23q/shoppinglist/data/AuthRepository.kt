@@ -50,6 +50,14 @@ interface AuthRepository {
      */
     suspend fun clearLocalSession()
 
+    /**
+     * Whether this server currently accepts new accounts (T-276), checked up front on the login
+     * screen — mirroring the web client, which asks before the user fills in the whole form.
+     * Best-effort: a network failure or a server too old to answer must not block someone who can
+     * register, so callers should treat a thrown exception the same as `true`.
+     */
+    suspend fun registrationAllowed(): Boolean
+
     fun lastOpenedListId(): String?
 }
 
@@ -99,6 +107,9 @@ class AuthRepositoryImpl @Inject constructor(
         runCatching { apiProvider.get().logout() }
         clearLocalSession()
     }
+
+    override suspend fun registrationAllowed(): Boolean =
+        apiProvider.get().registrationStatus().allowRegistration
 
     override suspend fun clearLocalSession() {
         // Who the surviving mirror belongs to has to outlive the session it came from, so carry it

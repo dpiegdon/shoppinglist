@@ -38,6 +38,9 @@ data class LoginUiState(
     /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
      *  reach it before they've managed to log in — otherwise it's a bootstrap deadlock (T-38/T-46). */
     val allowSelfSignedCerts: Boolean = false,
+    /** Whether the configured server currently accepts new accounts (T-276); true until the
+     *  up-front check says otherwise, so a slow or failed check never blocks registering. */
+    val registrationAllowed: Boolean = true,
 )
 
 @HiltViewModel
@@ -62,19 +65,32 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             val savedUrl = serverConfig.serverUrl.first()
             val allowSelfSigned = serverConfig.allowSelfSignedCerts.first()
+            val resolvedUrl = savedUrl?.takeIf { it.isNotBlank() } ?: DEFAULT_SERVER_URL
+            // Persisted here (not only on submit) so the registration-status check below — and any
+            // other pre-login request — has a server to ask on a first run, exactly like the field
+            // it prefills.
+            if (savedUrl.isNullOrBlank()) serverConfig.setServerUrl(resolvedUrl)
             _uiState.update {
                 it.copy(
                     // Prefill the saved URL, or the canonical instance for a first run — and only
                     // while the field is untouched, so we never clobber what the user types.
                     serverUrl = when {
                         it.serverUrl.isNotBlank() -> it.serverUrl
-                        !savedUrl.isNullOrBlank() -> savedUrl
-                        else -> DEFAULT_SERVER_URL
+                        else -> resolvedUrl
                     },
                     allowSelfSignedCerts = allowSelfSigned,
                 )
             }
+            refreshRegistrationStatus()
         }
+    }
+
+    /** Asks the configured server up front whether it is accepting new accounts (T-276), matching
+     *  the web login page. Best-effort — see [AuthRepository.registrationAllowed] — so any failure
+     *  just leaves the toggle enabled rather than surfacing an error nobody asked about. */
+    fun refreshRegistrationStatus(): Job = viewModelScope.launch {
+        val allowed = runCatching { authRepository.registrationAllowed() }.getOrDefault(true)
+        _uiState.update { it.copy(registrationAllowed = allowed) }
     }
 
     private companion object {

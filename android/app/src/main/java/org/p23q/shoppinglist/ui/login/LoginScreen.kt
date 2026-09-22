@@ -150,7 +150,9 @@ fun LoginScreen(
             Text(if (state.isRegisterMode) stringResource(R.string.login_register) else stringResource(R.string.login_log_in))
         }
 
-        TextButton(onClick = viewModel::onToggleRegisterMode) {
+        // Disabled while the configured server is refusing new accounts (T-276), matching the web
+        // login page — asked up front rather than after the user fills in the whole form.
+        TextButton(onClick = viewModel::onToggleRegisterMode, enabled = state.registrationAllowed) {
             Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
         }
 
@@ -158,6 +160,15 @@ fun LoginScreen(
         // Before login, deliberately: the chooser must be reachable without an account (T-127),
         // which is also why the preference is device-local.
         LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
+
+        if (!state.registrationAllowed) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.login_registration_disabled),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+        }
 
         // Debug-only self-signed-cert opt-in, mirrored from Settings so it's reachable before login —
         // Settings is post-auth, which would otherwise be a bootstrap deadlock for a self-signed

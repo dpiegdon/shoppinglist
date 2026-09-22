@@ -27,6 +27,7 @@ class RootViewModelTest {
         override suspend fun login(email: String, password: String) {}
         override suspend fun logout() {}
         override suspend fun clearLocalSession() { clearLocalSessionCalled = true }
+        override suspend fun registrationAllowed(): Boolean = true
         override fun lastOpenedListId(): String? = null
     }
 

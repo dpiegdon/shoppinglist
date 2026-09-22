@@ -53,6 +53,7 @@
     <string name="login_register">Зареєструватися</string>
     <string name="login_to_register">Немає облікового запису? Зареєструйся</string>
     <string name="login_to_login">Уже маєш обліковий запис? Увійди</string>
+    <string name="login_registration_disabled">Реєстрація вимкнена на цьому сервері.</string>
     <string name="login_trust_self_signed">Довіряти самопідписаним сертифікатам</string>
     <string name="login_trust_self_signed_help">Опція для розробників, для тестового сервера із самопідписаним сертифікатом. Небезпечно; лише в debug-збірках.</string>
     <string name="status_backlog">Пізніше</string>

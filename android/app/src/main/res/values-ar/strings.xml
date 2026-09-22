@@ -53,6 +53,7 @@
     <string name="login_register">إنشاء حساب</string>
     <string name="login_to_register">لا تملك حسابًا؟ سجّل الآن</string>
     <string name="login_to_login">لديك حساب؟ سجّل الدخول</string>
+    <string name="login_registration_disabled">التسجيل معطّل على هذا الخادم.</string>
     <string name="login_trust_self_signed">الوثوق بالشهادات الموقّعة ذاتيًا</string>
     <string name="login_trust_self_signed_help">خيار للمطوّرين لخادم تطوير بشهادة موقّعة ذاتيًا. غير آمن؛ في نسخ التصحيح فقط.</string>
     <string name="status_backlog">قائمة الانتظار</string>

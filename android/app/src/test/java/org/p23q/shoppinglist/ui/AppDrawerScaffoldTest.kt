@@ -35,6 +35,7 @@ class AppDrawerScaffoldTest {
         override suspend fun login(email: String, password: String) {}
         override suspend fun logout() { loggedOut = true }
         override suspend fun clearLocalSession() {}
+        override suspend fun registrationAllowed(): Boolean = true
         override fun lastOpenedListId(): String? = null
     }
 

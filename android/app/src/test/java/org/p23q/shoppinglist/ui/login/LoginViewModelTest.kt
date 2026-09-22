@@ -31,6 +31,7 @@ class LoginViewModelTest {
     private class FakeAuthRepository(
         private val onLogin: suspend (String, String) -> Unit = { _, _ -> },
         private val lastOpened: String? = null,
+        private val registrationAllowed: Boolean = true,
     ) : AuthRepository {
         var registerCalled = false
         var loginCalled = false
@@ -50,6 +51,8 @@ class LoginViewModelTest {
         }
 
         override suspend fun clearLocalSession() {}
+
+        override suspend fun registrationAllowed(): Boolean = registrationAllowed
 
         override fun lastOpenedListId(): String? = lastOpened
     }
@@ -193,6 +196,28 @@ class LoginViewModelTest {
         val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         assertEquals("shopper@example.com", viewModel.loggedInEmail)
+    }
+
+    @Test
+    fun `registration status is fetched up front and disables registering when the server has it off (T-276)`() = runTest(mainDispatcherRule.dispatcher) {
+        val serverConfig = newServerConfig()
+        val repo = FakeAuthRepository(registrationAllowed = false)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+        // Await the init coroutine's check rather than racing it, exactly like the prefill tests.
+        val state = viewModel.uiState.first { !it.registrationAllowed }
+
+        assertFalse(state.registrationAllowed)
+    }
+
+    @Test
+    fun `registration stays allowed by default, and after a server that cannot answer`() = runTest(mainDispatcherRule.dispatcher) {
+        val serverConfig = newServerConfig()
+        val viewModel = LoginViewModel(FakeAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+        viewModel.refreshRegistrationStatus().join()
+
+        assertTrue(viewModel.uiState.value.registrationAllowed)
     }
 
     @Test
