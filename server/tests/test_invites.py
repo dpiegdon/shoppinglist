@@ -474,6 +474,55 @@ def test_members_response_includes_account_id_and_initials(client):
     assert member["account_id"]  # present and non-empty; exact value not asserted
 
 
+def test_members_endpoint_does_not_drop_a_member_missing_account_settings(client, app):
+    """T-258: GET /lists/{id}/members must LEFT JOIN account_settings, like sync._rosters does
+    for the same roster data — an INNER join silently drops a member whose settings row is
+    missing for any reason, rather than listing them with the derived-default initials."""
+    from shoppinglist_server import db as db_module
+    from shoppinglist_server import get_config_by_name
+
+    owner_token = _register_and_login_http(client, "settingsgap-owner@example.com")
+    other_token = _register_and_login_http(client, "settingsgap-other@example.com")
+    _sync_http(
+        client,
+        owner_token,
+        {
+            "lists": [
+                {
+                    "id": "list-settingsgap",
+                    "fields": {
+                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                    },
+                }
+            ]
+        },
+    )
+    resp = client.post(
+        "/api/v1/lists/list-settingsgap/invites",
+        json={"invited_email": "settingsgap-other@example.com"},
+        headers=_auth(owner_token),
+    )
+    token = resp.get_json()["token"]
+    client.post("/api/v1/invites/redeem", json={"token": token}, headers=_auth(other_token))
+
+    config = get_config_by_name(app)
+    conn = db_module.connect(config["database_path"])
+    other_id = conn.execute(
+        "SELECT id FROM accounts WHERE email = ?", ("settingsgap-other@example.com",)
+    ).fetchone()["id"]
+    conn.execute("DELETE FROM account_settings WHERE account_id = ?", (other_id,))
+    conn.commit()
+    conn.close()
+
+    resp = client.get("/api/v1/lists/list-settingsgap/members", headers=_auth(owner_token))
+    assert resp.status_code == 200
+    members = {m["email"]: m for m in resp.get_json()["members"]}
+    assert set(members) == {"settingsgap-owner@example.com", "settingsgap-other@example.com"}
+    assert members["settingsgap-other@example.com"]["initials"] == accounts.resolve_initials(
+        "settingsgap-other@example.com", None
+    )
+
+
 def test_revoke_invite_http(client):
     owner_token = _register_and_login_http(client, "owner4@example.com")
     invitee_token = _register_and_login_http(client, "invitee4@example.com")
@@ -606,6 +655,24 @@ def test_pending_lists_the_live_invites_addressed_to_my_email_and_nothing_else(d
     assert entry["expires_at"] == live["expires_at"]
     # The token is the one the share URL carries, so Join from the overview is a plain redeem.
     assert entry["token"] == live["token"]
+
+
+def test_pending_does_not_drop_an_invite_whose_inviter_is_missing_account_settings(db_conn):
+    """T-258: pending_for must LEFT JOIN account_settings for the inviter, like sync._rosters
+    does for the same kind of lookup — an INNER join would silently drop the invite (not just
+    show a wrong initial) if the inviter's settings row is ever missing."""
+    owner = _register(db_conn, "settingsgap-owner@example.com")
+    me = _register(db_conn, "me@example.com")
+    _create_list(db_conn, owner, "dev", list_id="list-settingsgap", name="Groceries")
+    live = invites.mint(db_conn, KEY, BASE_URL, "list-settingsgap", "me@example.com", owner)
+    db_conn.execute("DELETE FROM account_settings WHERE account_id = ?", (owner,))
+
+    pending = _pending(db_conn, me, "me@example.com")
+
+    assert [entry["id"] for entry in pending] == [live["invite_id"]]
+    assert pending[0]["invited_by_initials"] == accounts.resolve_initials(
+        "settingsgap-owner@example.com", None
+    )
 
 
 def test_pending_hides_an_invite_to_a_closed_or_deleted_list(db_conn):

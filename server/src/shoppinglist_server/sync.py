@@ -44,6 +44,10 @@ STATUS_VALUES = {"backlog", "todo", "checked"}
 # not.
 PRICE_AMOUNT_RE = re.compile(r"^[0-9]+(\.[0-9]{1,2})?$")
 SERVER_MERGE = "server-merge"
+# deleted_by for an item tombstoned as a side effect of its LIST being tombstoned (T-258), the
+# push-path twin of invites.SERVER_ORPHAN (which does the same for a list orphaned by the last
+# member leaving). Distinct from SERVER_MERGE, which is a name-collision cause, not a cascade one.
+SERVER_LIST_DELETE = "server-list-delete"
 
 # (wire key, timestamp column, author column). Order matters for INSERT building.
 ITEM_FIELD_META = [
@@ -931,6 +935,32 @@ def _merge_group(conn, list_id, item_ids):
     _update(conn, "items", survivor["id"], merged)
 
 
+def _tombstone_live_items_of_list(conn, list_id) -> None:
+    """Tombstone every live item of `list_id` (T-258): the item-side twin of what
+    invites.clear_and_tombstone does for a list orphaned by its last member leaving.
+
+    A client is allowed to push `lists.deleted = true` directly (the field is documented as
+    usable, T-193/T-198's list-delete flow), and until this a winning push tombstoned the list row
+    alone. Its items stayed live, which is exactly what housekeeping's
+    live_items_on_tombstoned_list invariant flags on every sweep afterwards.
+    """
+    now = _now_ms()
+    for row in conn.execute(
+        "SELECT id FROM items WHERE list_id = ? AND deleted = 0", (list_id,)
+    ).fetchall():
+        _update(
+            conn,
+            "items",
+            row["id"],
+            {
+                "deleted": 1,
+                "deleted_ts": now,
+                "deleted_by": SERVER_LIST_DELETE,
+                "change_seq": _bump(conn),
+            },
+        )
+
+
 # ---- apply -----------------------------------------------------------------
 
 
@@ -942,7 +972,12 @@ def _apply_list(conn, account_id, device_id, obj):
 
     if existing is None:
         if "name" not in fields:
-            raise ApiError(422, "invalid_name", "Creating a list requires a name.")
+            raise ApiError(
+                422,
+                "invalid_name",
+                "Creating a list requires a name.",
+                details={"row_id": list_id},
+            )
         kind = fields["kind"][0] if "kind" in fields else DEFAULT_LIST_KIND
         if kind == EXPENSES_KIND and not _is_nonblank(fields.get("currency", (None,))[0]):
             raise ApiError(
@@ -1045,6 +1080,12 @@ def _apply_list(conn, account_id, device_id, obj):
     if set_cols:
         set_cols["change_seq"] = _bump(conn)
         _update(conn, "lists", list_id, set_cols)
+        # A winning `deleted = true` tombstones the list's items too (T-258), whether it just
+        # transitioned or was already tombstoned and something else in this same push won
+        # alongside it — cheap and idempotent (nothing to tombstone the second time) either way,
+        # and simpler than tracking the pre-write value just to skip it.
+        if set_cols.get("deleted") == 1:
+            _tombstone_live_items_of_list(conn, list_id)
 
 
 def _apply_item(conn, account_id, device_id, obj):
@@ -1117,7 +1158,12 @@ def _apply_item(conn, account_id, device_id, obj):
 
     if existing is None:
         if "name" not in fields:
-            raise ApiError(422, "invalid_name", "Creating an item requires a name.")
+            raise ApiError(
+                422,
+                "invalid_name",
+                "Creating an item requires a name.",
+                details={"row_id": item_id},
+            )
         cols = _new_item_columns(item_id, list_id, created_at, fields, account_id)
         cols["change_seq"] = _bump(conn)
         try:

@@ -197,7 +197,11 @@ def pending_for(conn, key: bytes, account) -> list[dict]:
         "FROM invites JOIN lists ON lists.id = invites.list_id "
         "JOIN accounts AS me ON me.id = ? "
         "JOIN accounts AS inviter ON inviter.id = invites.created_by "
-        "JOIN account_settings AS inviter_settings ON inviter_settings.account_id = inviter.id "
+        # LEFT, not JOIN (T-258): sync._rosters uses LEFT for the same lookup, and it is the safe
+        # one — an inviter whose settings row is missing for any reason must still have their
+        # invite listed, not silently disappear from the invitee's inbox. resolve_initials
+        # already handles a null initials value.
+        "LEFT JOIN account_settings AS inviter_settings ON inviter_settings.account_id = inviter.id "
         "WHERE lower(invites.invited_email) = lower(?) "
         # The address has to predate the invite, or the invite is not this account's (T-234).
         "AND me.email_set_at < invites.created_at "

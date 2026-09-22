@@ -67,6 +67,24 @@ def test_create_list_via_sync_makes_creator_a_member(db_conn):
     assert member is not None
 
 
+def test_create_list_without_name_names_the_row(db_conn):
+    """T-258: invalid_name on a create carries row_id, like every neighbouring raise in this
+    function — the row id is in scope, and the wire contract promises row_id whenever a 422
+    names a usable row id, so a client can quarantine just this row instead of wedging its
+    push queue on a nameless create."""
+    account_id = _register(db_conn, "a@example.com")
+    with pytest.raises(ApiError) as excinfo:
+        sync.apply_changes(
+            db_conn,
+            account_id,
+            "devA",
+            {"lists": [{"id": "list-noname", "created_at": 1000, "fields": {}}]},
+        )
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_name"
+    assert excinfo.value.details == {"row_id": "list-noname"}
+
+
 def test_create_item_stores_all_fields(db_conn):
     account_id = _register(db_conn, "a@example.com")
     _create_list(db_conn, account_id, "devA")
@@ -110,6 +128,26 @@ def test_create_item_unknown_list_raises_422(db_conn):
             {"items": [_mk_item("item-1", "nonexistent", name=("Milk", 100, "devA"))]},
         )
     assert excinfo.value.status == 422
+
+
+def test_create_item_without_name_names_the_row(db_conn):
+    """T-258: same row_id promise as the list-create case above."""
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA")
+    with pytest.raises(ApiError) as excinfo:
+        sync.apply_changes(
+            db_conn,
+            account_id,
+            "devA",
+            {
+                "items": [
+                    {"id": "item-noname", "list_id": "list-1", "created_at": 1000, "fields": {}}
+                ]
+            },
+        )
+    assert excinfo.value.status == 422
+    assert excinfo.value.code == "invalid_name"
+    assert excinfo.value.details == {"row_id": "item-noname"}
 
 
 def test_edit_item_in_non_member_list_is_refused_as_unknown_list(db_conn):
@@ -761,6 +799,86 @@ def test_delta_returns_tombstones_incrementally(db_conn):
     tomb = [i for i in result["changes"]["items"] if i["id"] == "item-1"]
     assert len(tomb) == 1
     assert tomb[0]["fields"]["deleted"]["value"] is True
+
+
+def test_pushed_list_delete_tombstones_its_live_items_too(db_conn):
+    """T-258: a client-pushed `lists.deleted = true` must tombstone the list's items along with
+    it, or housekeeping's live_items_on_tombstoned_list invariant fires on every sweep
+    afterwards. Mirrors invites.clear_and_tombstone's item half, which the /leave path already
+    gets right — this is the same rule for the push path."""
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {
+            "items": [
+                _mk_item("item-1", "list-1", name=("Milk", 200, "devA")),
+                _mk_item("item-2", "list-1", name=("Bread", 200, "devA")),
+            ]
+        },
+    )
+    assert len(_live_items(db_conn, "list-1")) == 2
+
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"lists": [_mk_list("list-1", "Groceries", 300, "devA")]},
+    )
+    # Sanity: an ordinary field write (not touching `deleted`) leaves both items live.
+    assert len(_live_items(db_conn, "list-1")) == 2
+
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"lists": [{"id": "list-1", "fields": {"deleted": _clock(True, 400, "devA")}}]},
+    )
+
+    list_row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert bool(list_row["deleted"]) is True
+    assert _live_items(db_conn, "list-1") == []
+    item_rows = db_conn.execute(
+        "SELECT deleted, deleted_by FROM items WHERE list_id = ? ORDER BY id", ("list-1",)
+    ).fetchall()
+    assert [bool(r["deleted"]) for r in item_rows] == [True, True]
+    assert all(r["deleted_by"] == sync.SERVER_LIST_DELETE for r in item_rows)
+
+
+def test_stale_list_delete_does_not_tombstone_items(db_conn):
+    """The cascade only fires when `deleted` actually WINS last-write-wins on this push — a
+    stale delete that loses must leave the list's items exactly as any other discarded write
+    would (AGENTS.md: "A stale write that loses is discarded silently, never refused")."""
+    account_id = _register(db_conn, "a@example.com")
+    _create_list(db_conn, account_id, "devA", "list-1", "Groceries", ts=100)
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"items": [_mk_item("item-1", "list-1", name=("Milk", 500, "devA"))]},
+    )
+    # Establishes a high clock on the `deleted` field specifically (each field has its own,
+    # independent of `name`'s), without changing its value.
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"lists": [{"id": "list-1", "fields": {"deleted": _clock(False, 500, "devA")}}]},
+    )
+
+    # A delete stamped well before that: loses LWW on the `deleted` field.
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {"lists": [{"id": "list-1", "fields": {"deleted": _clock(True, 100, "devA")}}]},
+    )
+
+    list_row = db_conn.execute("SELECT * FROM lists WHERE id = ?", ("list-1",)).fetchone()
+    assert bool(list_row["deleted"]) is False
+    assert len(_live_items(db_conn, "list-1")) == 1
 
 
 # ---- check_cursor ----------------------------------------------------------

@@ -53,7 +53,11 @@ def register_routes(bp):
                 "account_settings.initials AS initials, memberships.joined_at AS joined_at "
                 "FROM memberships "
                 "JOIN accounts ON accounts.id = memberships.account_id "
-                "JOIN account_settings ON account_settings.account_id = accounts.id "
+                # LEFT, not JOIN (T-258): sync._rosters uses LEFT here for the same roster data,
+                # and the LEFT is the safe one of the two — a member whose settings row is
+                # missing for any reason is still a member and belongs in this list, not silently
+                # dropped from it. resolve_initials already handles a null initials value.
+                "LEFT JOIN account_settings ON account_settings.account_id = accounts.id "
                 "WHERE memberships.list_id = ? ORDER BY memberships.joined_at",
                 (list_id,),
             )

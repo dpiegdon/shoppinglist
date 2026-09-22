@@ -2,7 +2,7 @@
 
 from .auth import now_ms as _current_now_ms
 
-# Fixed tombstone retention (Spec §6). Six weeks, down from the original 90 days
+# Fixed tombstone retention (Spec §6). 45 days, down from the original 90 days
 # (T-219).
 #
 # The window exists so a device that has been offline can still catch up
@@ -14,7 +14,7 @@ from .auth import now_ms as _current_now_ms
 #
 # What it buys down is resurrection: a device that comes back after the window
 # holding a pending edit to a row that was deleted meanwhile pushes that edit,
-# and the tombstone it would have lost to is gone. Six weeks is judged long
+# and the tombstone it would have lost to is gone. 45 days is judged long
 # enough for a phone left in a drawer over a holiday, and short enough that the
 # resurrection window is not a season.
 RETENTION_MS = 45 * 24 * 60 * 60 * 1000

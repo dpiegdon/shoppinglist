@@ -304,6 +304,12 @@ nulling it later, is refused too.
 - `close_votes` is the account ids that have agreed to close this expenses list,
   and `closed_at` is when it closed, or `null` while it is open. See "Closing an
   expenses list" below.
+- A write that wins LWW on a list's `deleted` also tombstones every live item on
+  it, server-side, in the same push — a client never has to (and cannot) tombstone
+  a list's items itself before or after deleting the list. This matches what
+  leaving a list's last membership already did (Spec §3); no shipped client
+  writes `lists.deleted` directly today, but the field is usable and answers the
+  same way if one does.
 
 ## Endpoints
 
