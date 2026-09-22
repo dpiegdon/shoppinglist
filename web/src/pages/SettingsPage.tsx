@@ -106,8 +106,13 @@ export default function SettingsPage() {
       // An explicit save from this form is always a real, user-confirmed value (even if the
       // preload hadn't resolved and the field was still showing blank) — length is validated
       // server-side (422 invalid_initials), same as currency's format check above.
+      //
+      // Never send default_currency from this form (T-272), for the same reason the currency
+      // form never sends initials: the server treats an absent key as "leave unchanged". Sending
+      // whatever sits in the currency box meant typing an unsaved currency and then saving
+      // initials either failed on the currency's format, or silently persisted a currency the
+      // cached value still didn't show as saved.
       const result = await api.updateSettings({
-        default_currency: currency.toUpperCase(),
         initials: (initials ?? "").trim().toUpperCase(),
       });
       setInitials(result.initials);

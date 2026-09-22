@@ -130,7 +130,7 @@ describe("SettingsPage currency save must never write initials (T-101, T-103)", 
     expect(vi.mocked(api.updateSettings).mock.calls[0][0]).not.toHaveProperty("initials");
   });
 
-  it("still sends initials on an explicit initials edit+save", async () => {
+  it("still sends initials on an explicit initials edit+save, and never default_currency (T-272)", async () => {
     vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "AB" });
     vi.mocked(api.updateSettings).mockResolvedValue({ default_currency: "EUR", initials: "ZZ" });
 
@@ -145,7 +145,31 @@ describe("SettingsPage currency save must never write initials (T-101, T-103)", 
     await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
     const body = vi.mocked(api.updateSettings).mock.calls[0][0];
     expect(body.initials).toBe("ZZ");
-    expect(body.default_currency).toBe("EUR");
+    // Omitted, not merely equal to the resolved value (T-272): the server treats an absent key as
+    // "leave unchanged", the same convention the currency form already relies on for `initials`.
+    expect(body).not.toHaveProperty("default_currency");
+  });
+
+  it("does not submit an unsaved edit sitting in the currency box when saving initials (T-272)", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "AB" });
+    vi.mocked(api.updateSettings).mockResolvedValue({ default_currency: "EUR", initials: "ZZ" });
+
+    renderSettingsPage();
+
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("AB"));
+
+    // Typed into the currency box but never saved there.
+    const currencyInput = within(currencySection()).getByRole("textbox");
+    await userEvent.clear(currencyInput);
+    await userEvent.type(currencyInput, "pizza slices");
+
+    await userEvent.clear(getInitialsInput());
+    await userEvent.type(getInitialsInput(), "zz");
+    await userEvent.click(getInitialsSaveButton());
+
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
+    const body = vi.mocked(api.updateSettings).mock.calls[0][0];
+    expect(body).not.toHaveProperty("default_currency");
   });
 });
 
