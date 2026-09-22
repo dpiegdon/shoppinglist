@@ -37,6 +37,16 @@ export default function ListPropsPage() {
   const [membersError, setMembersError] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  // Inline errors for the actions on this page that don't go through a dialog (T-266): a rejected
+  // push used to be an unhandled rejection everywhere below, so the button just did nothing and
+  // said nothing.
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [kindError, setKindError] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [clearCheckedError, setClearCheckedError] = useState<string | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
   // The most recently minted invite link (T-83) — mint returns it once; the members roster doesn't
   // carry tokens for older pending invites, so this only reflects an invite created this session.
   const [inviteLink, setInviteLink] = useState<{ url: string; email: string } | null>(null);
@@ -111,8 +121,11 @@ export default function ListPropsPage() {
     const trimmed = name.trim();
     if (!trimmed) return;
     setSavingName(true);
+    setNameError(null);
     try {
       await push({ lists: [{ id, fields: fieldPatch(deviceId, "name", trimmed) }] });
+    } catch (err) {
+      setNameError(errorMessage(t, err, "item.saveFailed"));
     } finally {
       setSavingName(false);
     }
@@ -121,8 +134,11 @@ export default function ListPropsPage() {
   async function saveNotes(e: FormEvent) {
     e.preventDefault();
     setSavingNotes(true);
+    setNotesError(null);
     try {
       await push({ lists: [{ id, fields: fieldPatch(deviceId, "notes", notes.trim() || null) }] });
+    } catch (err) {
+      setNotesError(errorMessage(t, err, "item.saveFailed"));
     } finally {
       setSavingNotes(false);
     }
@@ -134,13 +150,28 @@ export default function ListPropsPage() {
    * survive a conversion and reappear if you switch back.
    */
   async function setKind(kind: ListKind) {
-    await push({ lists: [{ id, fields: fieldPatch(deviceId, "kind", kind) }] });
+    setKindError(null);
+    try {
+      await push({ lists: [{ id, fields: fieldPatch(deviceId, "kind", kind) }] });
+    } catch (err) {
+      setKindError(errorMessage(t, err, "item.saveFailed"));
+    }
   }
 
   async function saveCategoryOrder(next: string[]) {
     const clean = normalizeCategoryOrder(next);
+    const previous = categoryOrder;
     setCategoryOrder(clean);
-    await push({ lists: [{ id, fields: fieldPatch(deviceId, "category_order", clean) }] });
+    setCategoryError(null);
+    try {
+      await push({ lists: [{ id, fields: fieldPatch(deviceId, "category_order", clean) }] });
+    } catch (err) {
+      // The push failed, so the server never got this order (T-266): undo the optimistic update
+      // rather than leave the page showing an order it was never told to save. The seeding ref
+      // above only re-seeds on the list's FIRST arrival, so nothing else would ever correct this.
+      setCategoryOrder(previous);
+      setCategoryError(errorMessage(t, err, "item.saveFailed"));
+    }
   }
 
   /** Swap with the neighbouring ROW: indices are into `order`, never the stored array (T-212). */
@@ -185,17 +216,26 @@ export default function ListPropsPage() {
       fromKey,
       to,
     );
+    const previousOrder = categoryOrder;
     if (plan.orderChanged) setCategoryOrder(plan.nextCategoryOrder);
-    await push({
-      lists: plan.orderChanged
-        ? [{ id, fields: fieldPatch(deviceId, "category_order", plan.nextCategoryOrder) }]
-        : [],
-      items: plan.itemIds.map((itemId) => ({
-        id: itemId,
-        list_id: id,
-        fields: fieldPatch(deviceId, "category", to),
-      })),
-    });
+    setCategoryError(null);
+    try {
+      await push({
+        lists: plan.orderChanged
+          ? [{ id, fields: fieldPatch(deviceId, "category_order", plan.nextCategoryOrder) }]
+          : [],
+        items: plan.itemIds.map((itemId) => ({
+          id: itemId,
+          list_id: id,
+          fields: fieldPatch(deviceId, "category", to),
+        })),
+      });
+    } catch (err) {
+      // Same data-loss shape as saveCategoryOrder (T-266): the optimistic order update must be
+      // undone on a failed push, not left showing what the server never received.
+      if (plan.orderChanged) setCategoryOrder(previousOrder);
+      setCategoryError(errorMessage(t, err, "item.saveFailed"));
+    }
   }
 
   function startRename(key: string) {
@@ -233,8 +273,14 @@ export default function ListPropsPage() {
   }
 
   async function handleRevoke(inviteId: string) {
-    await api.revokeInvite(inviteId);
-    setMembers(await api.getMembers(id));
+    try {
+      await api.revokeInvite(inviteId);
+      setMembers(await api.getMembers(id));
+    } catch (err) {
+      // Reuses membersError (T-266): this section already has a place to show it, and revoking is
+      // one more thing that can fail about the same roster.
+      setMembersError(errorMessage(t, err, "item.saveFailed"));
+    }
   }
 
   /**
@@ -249,38 +295,46 @@ export default function ListPropsPage() {
     const sourceItems = Array.from(items.values()).filter(
       (item) => item.list_id === id && !itemFieldValue(item, "deleted"),
     );
-    await push({
-      lists: [
-        {
-          id: newListId,
+    setDuplicateError(null);
+    try {
+      await push({
+        lists: [
+          {
+            id: newListId,
+            created_at: nowMs(),
+            fields: {
+              ...fieldPatch(deviceId, "name", `${listFieldValue(list, "name")} (Copy)`),
+              ...fieldPatch(deviceId, "category_order", listFieldValue(list, "category_order") ?? []),
+              ...fieldPatch(deviceId, "notes", listFieldValue(list, "notes") ?? null),
+              // The duplicate must keep the source's kind (T-267): omitting it left the server to
+              // apply its default (shopping), so a duplicated checklist came back showing the
+              // stores/price/quantity fields the original hid. Not offered for expenses (see the
+              // guard below), so this never needs to carry a currency along with it.
+              ...fieldPatch(deviceId, "kind", listKind(list)),
+            },
+          },
+        ],
+        items: sourceItems.map((item) => ({
+          id: crypto.randomUUID(),
+          list_id: newListId,
           created_at: nowMs(),
           fields: {
-            ...fieldPatch(deviceId, "name", `${listFieldValue(list, "name")} (Copy)`),
-            ...fieldPatch(deviceId, "category_order", listFieldValue(list, "category_order") ?? []),
-            ...fieldPatch(deviceId, "notes", listFieldValue(list, "notes") ?? null),
-            // The duplicate must keep the source's kind (T-267): omitting it left the server to
-            // apply its default (shopping), so a duplicated checklist came back showing the
-            // stores/price/quantity fields the original hid. Not offered for expenses (see the
-            // guard below), so this never needs to carry a currency along with it.
-            ...fieldPatch(deviceId, "kind", listKind(list)),
+            ...fieldPatch(deviceId, "name", itemFieldValue(item, "name") ?? ""),
+            ...fieldPatch(deviceId, "category", itemFieldValue(item, "category") ?? null),
+            ...fieldPatch(deviceId, "stores", itemFieldValue(item, "stores") ?? []),
+            ...fieldPatch(deviceId, "quantity", itemFieldValue(item, "quantity") ?? null),
+            ...fieldPatch(deviceId, "price", itemFieldValue(item, "price") ?? null),
+            ...fieldPatch(deviceId, "note", itemFieldValue(item, "note") ?? null),
+            ...fieldPatch(deviceId, "status", itemFieldValue(item, "status") ?? "todo"),
           },
-        },
-      ],
-      items: sourceItems.map((item) => ({
-        id: crypto.randomUUID(),
-        list_id: newListId,
-        created_at: nowMs(),
-        fields: {
-          ...fieldPatch(deviceId, "name", itemFieldValue(item, "name") ?? ""),
-          ...fieldPatch(deviceId, "category", itemFieldValue(item, "category") ?? null),
-          ...fieldPatch(deviceId, "stores", itemFieldValue(item, "stores") ?? []),
-          ...fieldPatch(deviceId, "quantity", itemFieldValue(item, "quantity") ?? null),
-          ...fieldPatch(deviceId, "price", itemFieldValue(item, "price") ?? null),
-          ...fieldPatch(deviceId, "note", itemFieldValue(item, "note") ?? null),
-          ...fieldPatch(deviceId, "status", itemFieldValue(item, "status") ?? "todo"),
-        },
-      })),
-    });
+        })),
+      });
+    } catch (err) {
+      // T-266: a rejected push here used to be an unhandled rejection — the button did nothing,
+      // said nothing, and never navigated (which, at least, meant no half-made copy was shown).
+      setDuplicateError(errorMessage(t, err, "item.saveFailed"));
+      return;
+    }
     navigate(`/list/${newListId}`);
   }
 
@@ -290,18 +344,29 @@ export default function ListPropsPage() {
    */
   async function handleClearChecked() {
     if (allChecked.length === 0) return;
-    await push({
-      items: allChecked.map((item) => ({
-        id: item.id,
-        list_id: id,
-        fields: fieldPatch(deviceId, "status", "backlog" as ItemStatus),
-      })),
-    });
+    setClearCheckedError(null);
+    try {
+      await push({
+        items: allChecked.map((item) => ({
+          id: item.id,
+          list_id: id,
+          fields: fieldPatch(deviceId, "status", "backlog" as ItemStatus),
+        })),
+      });
+    } catch (err) {
+      setClearCheckedError(errorMessage(t, err, "item.saveFailed"));
+    }
   }
 
   async function handleLeave() {
     if (!confirm(t("listProps.leaveConfirm"))) return;
-    await api.leaveList(id);
+    setLeaveError(null);
+    try {
+      await api.leaveList(id);
+    } catch (err) {
+      setLeaveError(errorMessage(t, err, "item.saveFailed"));
+      return;
+    }
     if (safeLocalStorage.getItem(LAST_LIST_STORAGE_KEY) === id) {
       safeLocalStorage.removeItem(LAST_LIST_STORAGE_KEY);
     }
@@ -334,6 +399,11 @@ export default function ListPropsPage() {
             {t("action.save")}
           </button>
         </form>
+        {nameError && (
+          <p className="error-text" role="alert">
+            {nameError}
+          </p>
+        )}
       </section>
 
       <section style={{ marginBottom: "1.5rem" }}>
@@ -369,6 +439,11 @@ export default function ListPropsPage() {
             {t("expense.currency")}: <strong>{listFieldValue(list, "currency")}</strong>
           </p>
         )}
+        {kindError && (
+          <p className="error-text" role="alert">
+            {kindError}
+          </p>
+        )}
       </section>
 
       {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
@@ -382,6 +457,11 @@ export default function ListPropsPage() {
           <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
             {t("listProps.clearCheckedCount", { count: allChecked.length })}
           </button>
+          {clearCheckedError && (
+            <p className="error-text" role="alert">
+              {clearCheckedError}
+            </p>
+          )}
         </section>
       )}
 
@@ -390,6 +470,11 @@ export default function ListPropsPage() {
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
           {t("listProps.categoriesHelp")}
         </p>
+        {categoryError && (
+          <p className="error-text" role="alert">
+            {categoryError}
+          </p>
+        )}
         {categoryKeys.length === 0 && <p className="muted">{t("listProps.noCategories")}</p>}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
           {categoryKeys.map((key) => {
@@ -492,6 +577,11 @@ export default function ListPropsPage() {
             {t("listProps.saveNotes")}
           </button>
         </form>
+        {notesError && (
+          <p className="error-text" role="alert">
+            {notesError}
+          </p>
+        )}
       </section>
 
       <section style={{ marginBottom: "1.5rem" }}>
@@ -601,6 +691,16 @@ export default function ListPropsPage() {
       {isExpenses(listKind(list)) && (list.closed_at ?? null) === null && (
         <p className="muted" style={{ fontSize: "0.8rem", marginTop: "0.4rem" }}>
           {t("listProps.leaveBlocked")}
+        </p>
+      )}
+      {duplicateError && (
+        <p className="error-text" role="alert">
+          {duplicateError}
+        </p>
+      )}
+      {leaveError && (
+        <p className="error-text" role="alert">
+          {leaveError}
         </p>
       )}
     </main>

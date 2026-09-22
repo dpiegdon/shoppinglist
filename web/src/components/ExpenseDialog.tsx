@@ -213,6 +213,7 @@ export default function ExpenseDialog({
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   /** Who a transfer may name: nobody whose amounts are frozen can be moved onto or off one. */
   const transferCandidates = participantIds.filter((id) => !frozen.has(id));
@@ -436,6 +437,25 @@ export default function ExpenseDialog({
     return errorMessage(t, err, "item.saveFailed");
   }
 
+  /**
+   * Deletes and closes, mirroring handleSubmit's own catch (T-266): `onDelete(id).then(onClose)`
+   * used to run with no catch at all, so a rejected push left this as an unhandled rejection — the
+   * dialog stayed open with nothing said and the delete silently never happened.
+   */
+  async function handleDeleteClick() {
+    if (!onDelete || !editingItem) return;
+    setDeleting(true);
+    setSaveError(null);
+    try {
+      await onDelete(editingItem.id);
+      onClose();
+    } catch (err) {
+      setSaveError(saveErrorText(err));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const canSave = titleOk && sharesOk && !saving;
 
   /** One side of a transfer. The other side's choice is not on offer: nobody pays themselves. */
@@ -584,8 +604,8 @@ export default function ExpenseDialog({
                 className="btn btn-danger"
                 // Deleting takes everyone on it to zero, which the freeze forbids for anyone whose
                 // amounts are fixed (T-157) — so say so here rather than let the server refuse it.
-                disabled={deleteBlocked}
-                onClick={() => onDelete(editingItem.id).then(onClose)}
+                disabled={deleteBlocked || deleting}
+                onClick={handleDeleteClick}
               >
                 {t("action.delete")}
               </button>

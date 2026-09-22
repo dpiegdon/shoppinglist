@@ -250,6 +250,33 @@ describe("OverviewPage with expenses lists", () => {
   });
 });
 
+describe("OverviewPage create-list error (T-266)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("keeps the dialog open with what was typed and shows the error when creating fails, instead of failing silently", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce(syncResponse("list-1"));
+    renderOverview();
+    await screen.findByText("My List");
+
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    await userEvent.click(screen.getByRole("button", { name: "New list" }));
+    await userEvent.type(screen.getByLabelText("Name"), "Ski trip");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    // Still open, with what was typed still there — not silently discarded.
+    expect(screen.getByLabelText("Name")).toHaveValue("Ski trip");
+  });
+});
+
 // ---- invites waiting for this account (T-233) ---------------------------------
 
 const NOW = Date.now();

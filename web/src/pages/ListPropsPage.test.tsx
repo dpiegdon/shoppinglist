@@ -236,6 +236,24 @@ describe("ListPropsPage duplicate list (T-63)", () => {
 
     await screen.findByText("Groceries (Copy)");
   });
+
+  it("shows an inline error and does not navigate when the push fails, instead of failing silently (T-266)", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [itemObj("item-1", "Milk")] },
+    });
+
+    await renderListPropsPageViaListPage();
+    await screen.findByRole("button", { name: "Duplicate" });
+
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    await userEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    // Still on the source list's properties page — it never navigated to a half-made copy.
+    expect(screen.getByRole("heading", { name: "List properties" })).toBeInTheDocument();
+    expect(screen.queryByText("Groceries (Copy)")).not.toBeInTheDocument();
+  });
 });
 
 describe("ListPropsPage clear-checked (T-75)", () => {
@@ -434,6 +452,37 @@ describe("ListPropsPage leave list (T-268)", () => {
     // since other members keep the list, so a next sync's delta would say nothing about it either.
     expect(vi.mocked(api.sync).mock.calls).toHaveLength(1);
   });
+
+  it("shows an inline error and stays on the list when the leave itself is refused, instead of forgetting it anyway (T-266)", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [] },
+    });
+    vi.mocked(api.leaveList).mockRejectedValue(new Error("network down"));
+
+    render(
+      <MemoryRouter initialEntries={["/list/list-1"]}>
+        <AuthProvider>
+          <SyncProvider>
+            <Routes>
+              <Route path="/list/:listId" element={<ListPage />} />
+              <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+              <Route path="/" element={<SyncStoreDebug />} />
+            </Routes>
+          </SyncProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Groceries");
+    await userEvent.click(screen.getByRole("link", { name: "List properties" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Leave list" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    // Still on the properties page for this list — it did not navigate away or forget it.
+    expect(screen.getByRole("heading", { name: "List properties" })).toBeInTheDocument();
+  });
 });
 
 // ---- reordering categories (T-212) -----------------------------------------------------------
@@ -512,5 +561,23 @@ describe("reordering categories in list properties (T-212)", () => {
     await userEvent.click(downs[0]);
 
     await waitFor(() => expect(pushedOrder()).toEqual(["Bread", "Dairy", "Fruit"]));
+  });
+
+  it("reverts the optimistic reorder and shows an error when the push fails, instead of leaving the page showing an order the server never received (T-266)", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "Bread"])], items: [] },
+    });
+    await renderListPropsPageViaListPage();
+    await screen.findAllByRole("button", { name: "Move down" });
+
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    const downs = screen.getAllByRole("button", { name: "Move down" });
+    await userEvent.click(downs[0]);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    // Reverted: Dairy is still shown before Bread, not swapped.
+    const labels = screen.getAllByText(/^(Dairy|Bread)$/).map((el) => el.textContent);
+    expect(labels).toEqual(["Dairy", "Bread"]);
   });
 });

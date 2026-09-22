@@ -295,6 +295,18 @@ describe("expense list screen", () => {
 
     expect(pushedItem()?.fields.deleted?.value).toBe(true);
   });
+
+  it("keeps the dialog open and shows the error when delete fails, instead of closing silently (T-266)", async () => {
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    // Still open — its own field, not the list underneath, is what this reaches.
+    expect(screen.getByLabelText("Total (EUR)")).toBeInTheDocument();
+  });
 });
 
 describe("expense list screen, on a list of one", () => {

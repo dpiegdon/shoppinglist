@@ -177,6 +177,7 @@ export default function ItemDialog({
   const [priceError, setPriceError] = useState<string | null>(null);
   const [currencyError, setCurrencyError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const suggestions = useMemo(() => {
     if (isEdit || !values.name.trim()) return [];
@@ -387,6 +388,25 @@ export default function ItemDialog({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     performSave();
+  }
+
+  /**
+   * Deletes and closes, mirroring performSave's own catch (T-266): `onDelete(id).then(onClose)`
+   * used to run with no catch at all, so a rejected push left this as an unhandled rejection — the
+   * dialog stayed open with nothing said and the delete silently never happened.
+   */
+  async function handleDeleteClick() {
+    if (!onDelete || !editingItem) return;
+    setDeleting(true);
+    setSaveError(null);
+    try {
+      await onDelete(editingItem.id);
+      onClose();
+    } catch (err) {
+      setSaveError(errorMessage(t, err, "item.saveFailed"));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -601,7 +621,8 @@ export default function ItemDialog({
               <button
                 type="button"
                 className="btn btn-danger"
-                onClick={() => onDelete(editingItem.id).then(onClose)}
+                disabled={deleting}
+                onClick={handleDeleteClick}
               >
                 {t("action.delete")}
               </button>

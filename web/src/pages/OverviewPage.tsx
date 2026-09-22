@@ -67,6 +67,7 @@ export default function OverviewPage() {
   const [ignoredInvites, setIgnoredInvites] = useState<Set<string>>(readIgnoredInvites);
   const [joiningInviteId, setJoiningInviteId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const loadInvites = useCallback(async () => {
     try {
@@ -140,18 +141,27 @@ export default function OverviewPage() {
     const currency = (newCurrency.trim() || defaultCurrency).trim();
     if (isExpenses(newKind) && !currency) return;
     const id = crypto.randomUUID();
-    await push({
-      lists: [
-        {
-          id,
-          fields: {
-            ...fieldPatch(deviceId, "name", name),
-            ...fieldPatch(deviceId, "kind", newKind),
-            ...(isExpenses(newKind) ? fieldPatch(deviceId, "currency", currency) : {}),
+    setCreateError(null);
+    try {
+      await push({
+        lists: [
+          {
+            id,
+            fields: {
+              ...fieldPatch(deviceId, "name", name),
+              ...fieldPatch(deviceId, "kind", newKind),
+              ...(isExpenses(newKind) ? fieldPatch(deviceId, "currency", currency) : {}),
+            },
           },
-        },
-      ],
-    });
+        ],
+      });
+    } catch (err) {
+      // Keep the dialog open with what was typed, same as the item/expense dialogs (T-266): a
+      // rejected push used to be an unhandled rejection here, so the dialog just sat there with
+      // nothing said and the new list never created.
+      setCreateError(errorMessage(t, err, "item.saveFailed"));
+      return;
+    }
     setNewName("");
     setNewKind(DEFAULT_LIST_KIND);
     setNewCurrency("");
@@ -325,12 +335,29 @@ export default function OverviewPage() {
 
       <div className="fab-spacer" aria-hidden="true" />
       {/* Bottom right, like Add on every list and like the app's overview (T-174). */}
-      <AddFab label={t("overview.newList")} onClick={() => setCreating(true)} />
+      <AddFab
+        label={t("overview.newList")}
+        onClick={() => {
+          setCreateError(null);
+          setCreating(true);
+        }}
+      />
 
       {creating && (
-        <div className="dialog-overlay" onClick={() => setCreating(false)}>
+        <div
+          className="dialog-overlay"
+          onClick={() => {
+            setCreateError(null);
+            setCreating(false);
+          }}
+        >
           <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleCreate}>
             <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("overview.newList")}</h2>
+            {createError && (
+              <p className="error-text" role="alert">
+                {createError}
+              </p>
+            )}
             <div className="form-field">
               <label htmlFor="new-list-name">{t("overview.name")}</label>
               <input
@@ -399,7 +426,14 @@ export default function OverviewPage() {
               </div>
             )}
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setCreating(false)}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setCreateError(null);
+                  setCreating(false);
+                }}
+              >
                 {t("action.cancel")}
               </button>
               <button type="submit" className="btn">

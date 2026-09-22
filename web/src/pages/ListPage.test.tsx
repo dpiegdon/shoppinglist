@@ -132,6 +132,51 @@ describe("ListPage checked items", () => {
   });
 });
 
+describe("ListPage toggle/undo errors (T-266)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [itemObj("item-1", "Milk", "todo")] },
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("shows an inline error and leaves the item unchanged when a toggle's push fails, instead of failing silently", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    await userEvent.click(screen.getByText("Milk"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    // No undo toast either: since nothing was actually applied, there is nothing to undo.
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  });
+
+  it("shows an inline error when undo's push fails", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 2,
+      changes: { lists: [], items: [itemObj("item-1", "Milk", "checked")] },
+    });
+    await userEvent.click(screen.getByText("Milk"));
+    const undoButton = await screen.findByRole("button", { name: "Undo" });
+
+    vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
+    await userEvent.click(undoButton);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+  });
+});
+
 describe("ListPage item-save pushes only changed fields (T-88)", () => {
   beforeEach(() => {
     vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });

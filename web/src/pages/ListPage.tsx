@@ -20,6 +20,7 @@ import { useLiveListSync } from "../hooks/useLiveListSync";
 import { useExitingItems } from "../hooks/useExitingItems";
 import type { ItemObject, ItemStatus, Member } from "../api/contract";
 import { useT } from "../i18n";
+import { errorMessage } from "../i18n/apiErrors";
 
 export default function ListPage() {
   const t = useT();
@@ -31,6 +32,9 @@ export default function ListPage() {
   const [undo, setUndo] = useState<{ itemId: string; previousStatus: ItemStatus } | null>(null);
   // Transient confirmation for a category recase-all (T-108), since one item edit rewrites many.
   const [categoryToast, setCategoryToast] = useState<string | null>(null);
+  // A failed toggle/undo (T-266): neither goes through a dialog, so without this a rejected push
+  // was an unhandled rejection that left the row un-struck-through and said nothing at all.
+  const [actionError, setActionError] = useState<string | null>(null);
   // Fetched once per list open, best-effort (T-64) — an empty roster on error/offline correctly
   // hides the last-touched-by indicator (fewer members shown is a safe default) rather than
   // erroring the whole page. Mirrors the Android ListViewModel's equivalent fetch.
@@ -111,7 +115,15 @@ export default function ListPage() {
   async function handleToggle(item: ItemObject) {
     const current = itemFieldValue(item, "status") ?? "todo";
     const next: ItemStatus = current === "checked" ? "todo" : "checked";
-    await setItemStatus(item.id, next);
+    try {
+      await setItemStatus(item.id, next);
+    } catch (err) {
+      // Nothing was applied — items only ever change via a successfully-applied sync response —
+      // so there's nothing to revert, only something to say (T-266).
+      setActionError(errorMessage(t, err, "item.saveFailed"));
+      return;
+    }
+    setActionError(null);
     if (next === "checked") {
       setUndo({ itemId: item.id, previousStatus: current });
       setTimeout(() => setUndo((u) => (u?.itemId === item.id ? null : u)), 5000);
@@ -120,7 +132,13 @@ export default function ListPage() {
 
   async function handleUndo() {
     if (!undo) return;
-    await setItemStatus(undo.itemId, undo.previousStatus);
+    try {
+      await setItemStatus(undo.itemId, undo.previousStatus);
+    } catch (err) {
+      setActionError(errorMessage(t, err, "item.saveFailed"));
+      return;
+    }
+    setActionError(null);
     setUndo(null);
   }
 
@@ -288,6 +306,12 @@ export default function ListPage() {
           </Link>
         </div>
       </div>
+
+      {actionError && (
+        <p className="error-text" role="alert">
+          {actionError}
+        </p>
+      )}
 
       {groups.length === 0 && (
         <p className="muted">{t("list.empty")}</p>

@@ -304,6 +304,29 @@ describe("ItemDialog (edit mode)", () => {
     expect(onDelete).toHaveBeenCalledWith("1");
   });
 
+  it("keeps the dialog open and shows the error when delete fails, instead of closing silently (T-266)", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    const onDelete = vi.fn().mockRejectedValue(new Error("network down"));
+    const onClose = vi.fn();
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={onClose}
+        onSave={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Delete"));
+
+    expect(onDelete).toHaveBeenCalledWith("1");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+  });
+
   it("does not show suggestions while editing", async () => {
     const item = registryItem("1", "Milk");
     const other = registryItem("2", "Mineral water");
