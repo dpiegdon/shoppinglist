@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, web finding. Verified by reading.\n\nAlmost every localStorage access is unguarded, including `getDeviceId()` in `useSync`, which runs during render. In a browser with site data blocked (or private-mode Safari) the accessor throws and the app white-screens with no message. The i18n module already wraps its access in try/catch with a comment naming this exact hazard; `api/client.ts` and `api/protocol.ts` guard with `typeof !== \"undefined\"`, which does not survive a throwing accessor.\n\nFix direction: one `safeStorage` helper used everywhere, as i18n already does.",
+  "created_at": "2026-09-22T20:02:11+00:00",
+  "id": "T-269",
+  "labels": [
+    "web"
+  ],
+  "priority": 3,
+  "title": "Web: unguarded storage access white-screens a browser with site data blocked",
+  "updated_at": "2026-09-22T20:02:11+00:00"
+}
