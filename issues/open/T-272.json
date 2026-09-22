@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, smaller web findings, verified by reading:\n\n* Dialogs are plain divs: no `role=\"dialog\"`, no `aria-modal`, no labelling, no focus trap or restore, no Escape. Worse in practice, the overlay's onClick closes on any click whose target is the overlay, so dragging to select text inside a field and releasing outside the panel discards everything typed. Close only when mousedown AND mouseup land on the overlay.\n* Overlapping sync responses can apply out of order: `push` is deliberately not gated by the in-flight flag, both requests read the same cursor, and whichever resolves last wins both the rows and the cursor \u2014 which can move backwards. It self-heals within one poll (a stale row's change_seq is above the regressed cursor), so this is staleness and wasted traffic rather than loss. Ignore a response whose cursor is not newer, and make the in-flight flag a counter.\n* `apiFetch` sets no timeout or abort signal. A request that never settles leaves the in-flight flag true for the life of the page: every later refresh is dropped and the indicator sits on \"Syncing\u2026\".\n* The sync indicator is an `aria-live=\"polite\"` region whose label flips on every run, and a list screen refreshes every 5 s, so a screen-reader user is told about syncing every five seconds.\n* The Settings initials form also submits whatever is in the currency box, so typing an unsaved currency and then saving initials either fails on the currency or persists it unintentionally while the cached value still shows the old one. The server treats an absent key as \"leave unchanged\".\n* Items of a deleted or left list are never evicted from the items map; logout leaves the cached currency, last-list and ignored-invites keys for the next account on that browser.\n* `OverviewPage`'s comment says a list's kind can be changed later, which is false for a ledger.",
+  "created_at": "2026-09-22T20:02:11+00:00",
+  "id": "T-272",
+  "labels": [
+    "web"
+  ],
+  "priority": 4,
+  "title": "Web: smaller review findings (dialogs, overlapping syncs, no timeout, live region, settings)",
+  "updated_at": "2026-09-22T20:02:11+00:00"
+}
