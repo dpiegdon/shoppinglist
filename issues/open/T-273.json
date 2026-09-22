@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, cross-client finding. Verified on both sides.\n\nThe same action has two outcomes. Android refuses to save an item whose name already exists on the list, case-insensitively (`ItemFormViewModel` + the DAO's `lower(name_value) = lower(:name)` query, message `item_msg_duplicate_name`). The web client has no such check: it pushes a new row, and the server's same-name merge then silently folds the two together \u2014 the new category or price can overwrite the old item's, and one row disappears as a tombstone the user never asked for.\n\nFix direction: pick one behaviour for both. Either the web gains the same pre-save check (the registry is already loaded there), or Android drops its check and both rely on the documented merge. Whichever way, the merge rule itself needs to be in the wire contract (separate ticket).",
+  "created_at": "2026-09-22T20:02:22+00:00",
+  "id": "T-273",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Cross-client: duplicate item names are refused on Android and silently merged on web",
+  "updated_at": "2026-09-22T20:02:22+00:00"
+}
