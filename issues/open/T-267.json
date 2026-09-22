@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, web finding. Verified by reading both clients.\n\n`ListPropsPage.handleDuplicate` pushes only `name`, `category_order` and `notes`, so the server applies the default kind and a duplicated checklist comes back as a shopping list, showing the stores/price/quantity fields the original hid. Android's `ListsRepo.duplicate` copies `kind`.\n\nFix direction: include the kind in the pushed fields. Duplicate is not offered for a ledger, so the fixed-kind rule is not at risk. Test gap: the existing duplicate test never asserts the kind, and its fixture list has none.",
+  "created_at": "2026-09-22T20:02:10+00:00",
+  "id": "T-267",
+  "labels": [
+    "web"
+  ],
+  "priority": 3,
+  "title": "Web: duplicating a list drops its kind",
+  "updated_at": "2026-09-22T20:02:10+00:00"
+}
