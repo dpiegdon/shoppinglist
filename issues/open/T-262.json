@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, Android finding. Verified, including the cross-client reachability.\n\n`ExpenseMath.toCents` matches `[0-9]+` with no length cap and then calls `whole.toLong()`, which throws `NumberFormatException` at 20 digits (and silently overflows before that). Two unguarded call sites: the ledger dialog's total field (typed or pasted, `KeyboardType.Decimal`, no cap) and `ListViewModel.formatPrice`, which runs in composition on the list screen.\n\nThe second one is reachable from another device: the server's price cap is 32 CHARACTERS, so a 20-digit price is a legitimate value that any client or curl can push. Every Android member of that list then crashes on every render of the screen until the price is fixed from elsewhere. The web client returns NaN instead, so this is a divergence, not shared behaviour.\n\nFix direction: bound the digits in the Kotlin pattern (and mirror the bound on the web and in the server's validation), return null over it, and add a case to shared-test-cases/expense-arithmetic.json, which today tops out at 1234567.89.",
+  "created_at": "2026-09-22T20:02:00+00:00",
+  "id": "T-262",
+  "labels": [
+    "android"
+  ],
+  "priority": 3,
+  "title": "Android: a long amount overflows toCents and crashes the list screen for every member",
+  "updated_at": "2026-09-22T20:02:00+00:00"
+}
