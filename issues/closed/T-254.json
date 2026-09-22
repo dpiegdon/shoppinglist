@@ -8,5 +8,5 @@
   ],
   "priority": 1,
   "title": "Migrations are not atomic: a failed or raced migration bricks the database",
-  "updated_at": "2026-09-22T20:00:38+00:00"
+  "updated_at": "2026-09-22T20:32:04+00:00"
 }
