@@ -24,8 +24,13 @@ export default function SyncIndicator() {
   return (
     <span style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: "0.35rem" }}>
       <span
-        role="status"
-        aria-live="polite"
+        data-testid="sync-status"
+        // Only a live region while there's something worth interrupting for (T-272): role="status"
+        // carries an implicit aria-live="polite", so leaving it on unconditionally meant a
+        // screen-reader user was told "Syncing…" / "Synced just now" every time a list screen's 5s
+        // poll ran — sync health announced every five seconds. A failure is still worth announcing.
+        role={error ? "status" : undefined}
+        aria-live={error ? "polite" : "off"}
         style={{
           fontSize: "0.8rem",
           color: error ? "var(--color-danger)" : "var(--color-text-muted)",

@@ -34,13 +34,13 @@ describe("SyncIndicator recency tick (T-54)", () => {
     });
 
     render(<SyncIndicator />);
-    expect(screen.getByRole("status")).toHaveTextContent("Synced just now");
+    expect(screen.getByTestId("sync-status")).toHaveTextContent("Synced just now");
 
     act(() => {
       vi.advanceTimersByTime(5 * 60_000);
     });
 
-    expect(screen.getByRole("status")).toHaveTextContent("Synced 5 min ago");
+    expect(screen.getByTestId("sync-status")).toHaveTextContent("Synced 5 min ago");
   });
 
   it("does not tick faster than the interval (no per-second re-render churn)", () => {
@@ -63,7 +63,50 @@ describe("SyncIndicator recency tick (T-54)", () => {
       vi.advanceTimersByTime(59_000);
     });
 
-    expect(screen.getByRole("status")).toHaveTextContent("Synced just now");
+    expect(screen.getByTestId("sync-status")).toHaveTextContent("Synced just now");
+  });
+});
+
+describe("SyncIndicator announcement scope (T-272)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("is not a live region during ordinary syncing, so a background poll isn't announced every time", () => {
+    vi.mocked(SyncContextModule.useSyncContext).mockReturnValue({
+      lists: new Map(),
+      items: new Map(),
+      loading: false,
+      error: null,
+      lastSyncAt: Date.now(),
+      deviceId: "dev-1",
+      push: vi.fn(),
+      refresh: vi.fn(),
+      forgetList: vi.fn(),
+    });
+
+    render(<SyncIndicator />);
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByTestId("sync-status")).toHaveAttribute("aria-live", "off");
+  });
+
+  it("becomes a live region once there is a failure worth announcing", () => {
+    vi.mocked(SyncContextModule.useSyncContext).mockReturnValue({
+      lists: new Map(),
+      items: new Map(),
+      loading: false,
+      error: "network down",
+      lastSyncAt: Date.now(),
+      deviceId: "dev-1",
+      push: vi.fn(),
+      refresh: vi.fn(),
+      forgetList: vi.fn(),
+    });
+
+    render(<SyncIndicator />);
+
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
   });
 });
 
