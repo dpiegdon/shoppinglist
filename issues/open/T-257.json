@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, server finding 5 of 6. Reproduced.\n\n`routes/sync.py` applies the push, then builds the delta, then commits. `delta` raises `403 not_a_member` when `full_lists` names a list the caller is not on \u2014 after the push has been applied and before the commit \u2014 so teardown rolls the push back. Measured: a brand-new list pushed in the same request as a stale `full_lists` entry is gone afterwards. The client retries the same request with the same `full_lists`, so the push is lost indefinitely rather than delayed. Android reaches this on its `syncNow(fullLists + listId)` retry path when that list is one the account has left.\n\nThe route already handles the analogous case correctly for a stale cursor: it commits before re-raising the 410.\n\nFix direction: validate `full_lists` membership before `apply_changes`, or commit the push before raising, as the cursor path does.",
+  "created_at": "2026-09-22T20:00:39+00:00",
+  "id": "T-257",
+  "labels": [
+    "server"
+  ],
+  "priority": 3,
+  "title": "sync: a 403 from the delta discards the push already applied in the same request",
+  "updated_at": "2026-09-22T20:00:39+00:00"
+}
