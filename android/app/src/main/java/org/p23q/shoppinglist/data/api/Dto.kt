@@ -265,9 +265,17 @@ data class SyncResponse(
     val changes: SyncChanges,
 )
 
-/** Response of GET /api/v1/app-version (T-135): the app package this server offers. */
+/**
+ * Response of GET /api/v1/app-version (T-135): the app package this server offers.
+ *
+ * [protocol] (T-243, T-265) is this server's PROTOCOL_VERSION — the one endpoint a client refused
+ * with `426 client_outdated` can still reach, so it is where such a client reads what it must
+ * catch up to. Nullable: a server running between T-135 and T-243 answers this endpoint without
+ * it.
+ */
 @Serializable
 data class AppVersionResponse(
     val version: String,
     @SerialName("download_url") val downloadUrl: String,
+    val protocol: Int? = null,
 )

@@ -184,6 +184,29 @@ class DtoTest {
         assertEquals("android", json.decodeFromString<LoginRequest>(encoded).platform)
     }
 
+    // T-265: the wire contract documents `GET /app-version` as `200 {"version", "download_url",
+    // "protocol"}` — this is the one endpoint a 426'd client can still reach, and where it reads
+    // the server's protocol to catch up to.
+    @Test
+    fun `AppVersionResponse decodes the protocol field the wire contract documents`() {
+        val response = json.decodeFromString<AppVersionResponse>(
+            """{"version": "3.0.1", "download_url": "https://host/shoppinglist.apk", "protocol": 3}""",
+        )
+
+        assertEquals("3.0.1", response.version)
+        assertEquals("https://host/shoppinglist.apk", response.downloadUrl)
+        assertEquals(3, response.protocol)
+    }
+
+    @Test
+    fun `AppVersionResponse tolerates a server from before the protocol field existed`() {
+        val response = json.decodeFromString<AppVersionResponse>(
+            """{"version": "2.4.0", "download_url": "https://host/shoppinglist.apk"}""",
+        )
+
+        assertEquals(null, response.protocol)
+    }
+
     @Test
     fun `ErrorEnvelope decodes error and message`() {
         val envelope = json.decodeFromString<ErrorEnvelope>(
