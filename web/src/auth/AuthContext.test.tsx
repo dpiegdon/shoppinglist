@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "./AuthContext";
 import * as api from "../api/client";
+import { IGNORED_INVITES_STORAGE_KEY, LAST_LIST_STORAGE_KEY } from "../lib/storageKeys";
+import { getCachedDefaultCurrency, setCachedDefaultCurrency } from "../hooks/useDefaultCurrency";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
@@ -128,6 +130,34 @@ describe("AuthProvider", () => {
 
     await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("none"));
     expect(api.setToken).toHaveBeenCalledWith(null);
+  });
+
+  it("clears the cached currency, last-opened list and ignored invites on logout, so the next account on this browser starts clean (T-272)", async () => {
+    vi.mocked(api.login).mockResolvedValue({
+      token: "tok",
+      account_id: "acc-1",
+      email: "a@example.com",
+      is_admin: false,
+    });
+    vi.mocked(api.logout).mockResolvedValue(undefined);
+    setCachedDefaultCurrency("CHF");
+    localStorage.setItem(LAST_LIST_STORAGE_KEY, "list-1");
+    localStorage.setItem(IGNORED_INVITES_STORAGE_KEY, JSON.stringify(["inv-1"]));
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    );
+    await userEvent.click(screen.getByText("login"));
+    await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("a@example.com"));
+
+    await userEvent.click(screen.getByText("logout"));
+    await waitFor(() => expect(screen.getByTestId("account")).toHaveTextContent("none"));
+
+    expect(getCachedDefaultCurrency()).toBe("EUR"); // the hook's own fallback, not the stale "CHF"
+    expect(localStorage.getItem(LAST_LIST_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(IGNORED_INVITES_STORAGE_KEY)).toBeNull();
   });
 
   it("clears the stored account when the client reports a forced logout (T-89)", async () => {

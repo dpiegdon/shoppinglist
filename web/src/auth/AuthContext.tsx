@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as api from "../api/client";
+import { clearCachedDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { safeLocalStorage } from "../lib/safeStorage";
+import { IGNORED_INVITES_STORAGE_KEY, LAST_LIST_STORAGE_KEY } from "../lib/storageKeys";
 
 interface Account {
   id: string;
@@ -42,6 +44,20 @@ function storeAccount(account: Account | null) {
   } else {
     safeLocalStorage.removeItem(ACCOUNT_STORAGE_KEY);
   }
+}
+
+/**
+ * Everything about the signed-out account that must not leak to whoever signs in next on the same
+ * browser (T-272): the cached default currency, the last-opened list (which the next account has
+ * no business resuming), and which invites this browser chose to ignore (meaningless — worse,
+ * wrong — for a different account). Shared by an explicit logout and a forced one (a revoked
+ * session): both end this account's session on this browser exactly the same way.
+ */
+function clearAccountLocalState() {
+  storeAccount(null);
+  clearCachedDefaultCurrency();
+  safeLocalStorage.removeItem(LAST_LIST_STORAGE_KEY);
+  safeLocalStorage.removeItem(IGNORED_INVITES_STORAGE_KEY);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -86,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // fails (e.g. offline, token already invalid).
     } finally {
       api.setToken(null);
-      storeAccount(null);
+      clearAccountLocalState();
       setAccount(null);
     }
   }, []);
@@ -98,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // /login (preserving location state) whenever account is null.
   useEffect(() => {
     api.onForcedLogout(() => {
-      storeAccount(null);
+      clearAccountLocalState();
       setAccount(null);
     });
     return () => api.onForcedLogout(null);

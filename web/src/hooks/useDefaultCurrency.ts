@@ -14,6 +14,15 @@ export function setCachedDefaultCurrency(currency: string): void {
   safeLocalStorage.setItem(STORAGE_KEY, currency);
 }
 
+/**
+ * Drops the cached currency (T-272): called on logout, so the next account signed in on this
+ * browser doesn't briefly see the previous account's currency before its own /settings resolves.
+ */
+export function clearCachedDefaultCurrency(): void {
+  cached = null;
+  safeLocalStorage.removeItem(STORAGE_KEY);
+}
+
 /** Fetches and caches the account's default currency (Spec: fetched at login, re-read after PATCH /settings). */
 export function useDefaultCurrency(): string {
   const [currency, setCurrency] = useState(getCachedDefaultCurrency());

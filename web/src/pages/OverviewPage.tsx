@@ -11,6 +11,7 @@ import { errorMessage } from "../i18n/apiErrors";
 import { formatExpiresIn } from "../lib/relativeTime";
 import { DEFAULT_LIST_KIND, isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
 import { balancesFor, spentTotals } from "../lib/expenses";
+import { IGNORED_INVITES_STORAGE_KEY, LAST_LIST_STORAGE_KEY } from "../lib/storageKeys";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useAuth } from "../auth/AuthContext";
 import type { Expense, InviteForMe } from "../api/contract";
@@ -19,9 +20,10 @@ import { useT } from "../i18n";
 import { byName } from "../lib/nameOrder";
 import { balanceColor, useFormat } from "../lib/format";
 
-export const LAST_LIST_STORAGE_KEY = "shoppinglist_last_list_id";
-/** Invite ids this browser chose to ignore (T-233): a JSON array. A device-local choice, as on Android. */
-export const IGNORED_INVITES_STORAGE_KEY = "shoppinglist_ignored_invites";
+// Re-exported for existing importers (ListPropsPage, RedeemPage) — the canonical definitions now
+// live in lib/storageKeys.ts (T-272), so AuthContext can clear them on logout without importing a
+// page component (and its own useAuth() call, which would cycle back here).
+export { IGNORED_INVITES_STORAGE_KEY, LAST_LIST_STORAGE_KEY };
 
 function readIgnoredInvites(): Set<string> {
   try {
