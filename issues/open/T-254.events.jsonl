@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-22T20:00:38+00:00", "kind": "created", "ref": "main@87587bc", "text": "Migrations are not atomic: a failed or raced migration bricks the database"}

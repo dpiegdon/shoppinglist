@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, server finding 2 of 6. Reproduced.\n\n`db._migrate` promises \"one transaction per migration (all-or-nothing)\" and calls `conn.rollback()` on failure, but Python's sqlite3 issues no implicit BEGIN before DDL, so every ALTER commits by itself and the rollback undoes nothing. Measured on migration 9's shape: after a failing follow-up statement the new column is present, `PRAGMA user_version` is still 8, and the next connection's replay dies with `duplicate column name`. Because `connect()` migrates on EVERY connection, that is every request from then on, and `_handle_db_unavailable` re-raises it (the message says neither \"locked\" nor \"busy\"), so the instance answers 500 to everything until an operator hand-stamps the version or restores a backup.\n\nTwo ways in, neither exotic: the migration's DML hits the 5 s busy timeout because another worker holds the write lock, or the process dies mid-migration. A milder variant needs no failure at all \u2014 two workers reaching an out-of-date database together both run the ALTERs and the loser gets `duplicate column name`.\n\nFix direction: explicit `BEGIN IMMEDIATE`/`COMMIT` around each migration (SQLite's DDL is transactional; only the driver's autocommit is in the way), which also serialises concurrent workers. Test: a migration whose second statement fails leaves the schema and user_version consistent and the next connection recovers.",
+  "created_at": "2026-09-22T20:00:38+00:00",
+  "id": "T-254",
+  "labels": [
+    "server",
+    "data-loss"
+  ],
+  "priority": 1,
+  "title": "Migrations are not atomic: a failed or raced migration bricks the database",
+  "updated_at": "2026-09-22T20:00:38+00:00"
+}
