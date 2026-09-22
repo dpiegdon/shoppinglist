@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, operator-documentation gaps in server/README.md, all verified as absent:\n\n* \"Deployment requirements\" covers TLS, rate-limiting, HSTS and ProxyFix but never names a WSGI server or a worker model, and never says that WAL allows a single writer \u2014 while `503 server_busy` is documented as a normal answer. It should say what to run it under and what concurrency to expect.\n* It does not say the database file must be on a local filesystem. WAL over NFS or SMB corrupts.\n* \"install the new wheel and restart\" is the documented upgrade, which under a rolling multi-worker restart is exactly the migration race in the migrations ticket. Say to stop the workers, or make migrations safe under concurrency (preferably both).\n* The audit-log example uses a plain FileHandler with no rotation, and every 401/403 writes a record.\n* `sqlite3`, the CLI the backup recipe depends on, is an undeclared prerequisite.",
+  "created_at": "2026-09-22T20:02:24+00:00",
+  "id": "T-282",
+  "labels": [
+    "docs"
+  ],
+  "priority": 4,
+  "title": "Operator docs: worker model, WAL single writer, local filesystem, rolling upgrades, log rotation",
+  "updated_at": "2026-09-22T20:02:24+00:00"
+}
