@@ -18,7 +18,7 @@ import { errorMessage } from "../i18n/apiErrors";
 export default function ListPropsPage() {
   const t = useT();
   const { listId } = useParams<{ listId: string }>();
-  const { lists, items, push, deviceId, refresh, loading } = useSyncContext();
+  const { lists, items, push, deviceId, forgetList, loading } = useSyncContext();
   const { account } = useAuth();
   const navigate = useNavigate();
   const list = listId ? lists.get(listId) : undefined;
@@ -305,7 +305,10 @@ export default function ListPropsPage() {
     if (safeLocalStorage.getItem(LAST_LIST_STORAGE_KEY) === id) {
       safeLocalStorage.removeItem(LAST_LIST_STORAGE_KEY);
     }
-    await refresh();
+    // The server just deletes the membership row — a list other members still share gets no
+    // tombstone — so a pull's delta says nothing about it and would leave the stale copy sitting
+    // in the sync store until a reload (T-268). Forget it locally instead of pulling.
+    forgetList(id);
     navigate("/", { replace: true });
   }
 

@@ -88,6 +88,16 @@ export interface SyncState {
   push: (changes: { lists?: ListObject[]; items?: ItemObject[] }, fullLists?: string[]) => Promise<void>;
   /** Pull-only sync (e.g. periodic refresh or manual reload). */
   refresh: () => Promise<void>;
+  /**
+   * Drops a list and its items from local state, with no push and no cursor change (T-268).
+   *
+   * After leaving a shared list the server just deletes the membership row — a still-shared list
+   * gets no tombstone, since the other members must keep seeing it — so the next pull's delta says
+   * nothing about it at all, and applyResponse (which only ever removes a row on a `deleted`
+   * tombstone) leaves the stale copy sitting in the map. Call this once the leave itself has
+   * succeeded, so the list disappears from the overview immediately instead of on the next reload.
+   */
+  forgetList: (listId: string) => void;
 }
 
 /**
@@ -228,6 +238,26 @@ export function useSync(): SyncState {
     [runSync],
   );
 
+  const forgetList = useCallback((listId: string) => {
+    setLists((prev) => {
+      if (!prev.has(listId)) return prev;
+      const next = new Map(prev);
+      next.delete(listId);
+      return next;
+    });
+    setItems((prev) => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const [id, item] of prev) {
+        if (item.list_id === listId) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   // Pull-only sync used by the mount effect, the re-sync triggers below, and
   // manual refresh (SyncIndicator). Skip-if-in-flight: a trigger that fires
   // while a sync (push or refresh) is already outstanding is dropped, not
@@ -290,7 +320,7 @@ export function useSync(): SyncState {
     return () => clearInterval(id);
   }, [refresh]);
 
-  return { lists, items, loading, error, lastSyncAt, deviceId, push, refresh };
+  return { lists, items, loading, error, lastSyncAt, deviceId, push, refresh, forgetList };
 }
 
 export function itemFieldValue<K extends keyof ItemFields>(

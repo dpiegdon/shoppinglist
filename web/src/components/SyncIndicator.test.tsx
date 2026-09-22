@@ -30,6 +30,7 @@ describe("SyncIndicator recency tick (T-54)", () => {
       deviceId: "dev-1",
       push: vi.fn(),
       refresh: vi.fn(),
+      forgetList: vi.fn(),
     });
 
     render(<SyncIndicator />);
@@ -53,6 +54,7 @@ describe("SyncIndicator recency tick (T-54)", () => {
       deviceId: "dev-1",
       push: vi.fn(),
       refresh: vi.fn(),
+      forgetList: vi.fn(),
     });
 
     render(<SyncIndicator />);
@@ -81,6 +83,7 @@ describe("SyncIndicator manual refresh (T-90)", () => {
       deviceId: "dev-1",
       push: vi.fn(),
       refresh,
+      forgetList: vi.fn(),
     });
 
     render(<SyncIndicator />);

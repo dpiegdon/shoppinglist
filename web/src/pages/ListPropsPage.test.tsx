@@ -4,14 +4,21 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ListPage from "./ListPage";
 import ListPropsPage from "./ListPropsPage";
-import { SyncProvider } from "../hooks/SyncContext";
+import { SyncProvider, useSyncContext } from "../hooks/SyncContext";
 import { AuthProvider } from "../auth/AuthContext";
 import * as api from "../api/client";
 import type { ItemStatus } from "../api/contract";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
-  return { ...actual, sync: vi.fn(), getSettings: vi.fn(), getMembers: vi.fn(), mintInvite: vi.fn() };
+  return {
+    ...actual,
+    sync: vi.fn(),
+    getSettings: vi.fn(),
+    getMembers: vi.fn(),
+    mintInvite: vi.fn(),
+    leaveList: vi.fn(),
+  };
 });
 
 function clock<T>(value: T) {
@@ -349,6 +356,83 @@ describe("ListPropsPage invite link (T-83)", () => {
     expect(screen.getByText(/friend@example\.com/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
     expect(vi.mocked(api.mintInvite)).toHaveBeenCalledWith("list-1", "friend@example.com");
+  });
+});
+
+describe("ListPropsPage leave list (T-268)", () => {
+  // A tiny consumer that renders straight from the sync store, so a test can see what leaving
+  // actually did to it — not just that navigation happened, which would pass even if the list
+  // were still sitting in state waiting for a reload.
+  function SyncStoreDebug() {
+    const { lists, items } = useSyncContext();
+    return (
+      <div>
+        Lists: {lists.size} Items: {items.size}
+      </div>
+    );
+  }
+
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("forgets the list and its items locally once the server confirms the leave, before any next pull could", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listObj()],
+        items: [
+          {
+            id: "item-1",
+            list_id: "list-1",
+            created_at: 0,
+            fields: {
+              name: clock("Milk"),
+              category: clock(null),
+              stores: clock([]),
+              quantity: clock(null),
+              price: clock(null),
+              note: clock(null),
+              status: clock<ItemStatus>("todo"),
+              deleted: clock(false),
+            },
+          },
+        ],
+      },
+    });
+    vi.mocked(api.leaveList).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={["/list/list-1"]}>
+        <AuthProvider>
+          <SyncProvider>
+            <Routes>
+              <Route path="/list/:listId" element={<ListPage />} />
+              <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+              <Route path="/" element={<SyncStoreDebug />} />
+            </Routes>
+          </SyncProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Groceries");
+    await userEvent.click(screen.getByRole("link", { name: "List properties" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: "Leave list" }));
+
+    expect(await screen.findByText("Lists: 0 Items: 0")).toBeInTheDocument();
+    expect(api.leaveList).toHaveBeenCalledWith("list-1");
+    // No pull was needed to make the list disappear — the server sends no tombstone for a leave,
+    // since other members keep the list, so a next sync's delta would say nothing about it either.
+    expect(vi.mocked(api.sync).mock.calls).toHaveLength(1);
   });
 });
 
