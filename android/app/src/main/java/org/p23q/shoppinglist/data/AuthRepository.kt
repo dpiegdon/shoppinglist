@@ -36,8 +36,8 @@ interface AuthRepository {
      * has already rejected our token (401): the token is dead, so a server call is pointless.
      *
      * Keeps whatever is still unpushed, and drops the rest (T-260). It used to wipe everything, so
-     * that a subsequent login as a
-     * different account could not see the previous account's lists — but this runs on ANY 401
+     * that a subsequent login as a different account could not see the previous account's lists —
+     * but this runs on ANY 401
      * carrying a bearer token, which per the Wire Contract includes an idle-expired session and a
      * password change on another device (that one revokes every other session by design). Edit the
      * list offline, change the password on the web, foreground the phone, and the whole unpushed

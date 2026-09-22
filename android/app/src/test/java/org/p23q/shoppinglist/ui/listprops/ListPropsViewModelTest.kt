@@ -2,9 +2,11 @@ package org.p23q.shoppinglist.ui.listprops
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -94,14 +96,26 @@ class ListPropsViewModelTest {
         notificationPrefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { notifPrefsFile })
     }
 
+    /**
+     * Every view model a test built, so tearDown can stop it (T-286, the pitfall AGENTS.md lists
+     * and T-252 fixed in ListViewModelTest). ListPropsViewModel keeps three collectors running on
+     * viewModelScope — the list row, the mute preference's DataStore flow, the sync status — and
+     * one left running past its test can touch Dispatchers.Main while MainDispatcherRule resets it
+     * for the next, which surfaced as a full-suite-only "did not run to completion" timeout on the
+     * notification-toggle test.
+     */
+    private val viewModels = mutableListOf<ListPropsViewModel>()
+
     @After
     fun tearDown() {
+        // Before the rule resets Dispatchers.Main (a rule's finished() runs after @After).
+        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.clear()
         if (::server.isInitialized) server.shutdown()
         if (::db.isInitialized) db.close()
     }
 
-    private fun newViewModel(): ListPropsViewModel =
-        ListPropsViewModel(
+    private fun newViewModel(): ListPropsViewModel = ListPropsViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             listsRepo,
             itemsRepo,
@@ -109,7 +123,7 @@ class ListPropsViewModelTest {
             notificationPrefs,
             FakeSessionState(),
             Syncer { SyncResult.Success(0, 0, 0, 0) },
-        )
+        ).also(viewModels::add)
 
     @Test
     fun `initial state loads the name and merges category_order with distinct categories, without a network call`() = runTest(mainDispatcherRule.dispatcher) {
@@ -164,6 +178,28 @@ class ListPropsViewModelTest {
         assertEquals(listOf("Dairy"), viewModel.uiState.value.categoryOrder)
         assertEquals("Dairy", itemsRepo.getById(carrot)!!.category.value)
         assertEquals("Dairy", itemsRepo.getById(milk)!!.category.value)
+    }
+
+    @Test
+    fun `a confirmed merge renames the category it asked about, not whatever sits at its old index`() = runTest(mainDispatcherRule.dispatcher) {
+        listsRepo.setCategoryOrder(listId, listOf("Dairy", "Produce", "Bakery"))
+        val carrot = itemsRepo.createItem(listId, "Carrot").also { itemsRepo.setCategory(it, "Produce") }
+        val bread = itemsRepo.createItem(listId, "Bread").also { itemsRepo.setCategory(it, "Bakery") }
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.categoryOrder.size == 3 }
+        viewModel.renameCategory(1, "Dairy") // "Produce" is at index 1 when the question is put
+        assertNotNull(viewModel.uiState.value.pendingCategoryMerge)
+
+        // The order moves before the answer comes: Bakery is now at index 1 and Produce at index 2.
+        // A rename remembered by index would merge Bakery into Dairy; it must merge Produce.
+        viewModel.moveCategoryUp(2)
+        assertEquals(listOf("Dairy", "Bakery", "Produce"), viewModel.uiState.value.categoryOrder)
+
+        viewModel.confirmCategoryMerge()!!.join()
+
+        assertEquals("Dairy", itemsRepo.getById(carrot)!!.category.value)
+        assertEquals("Bakery", itemsRepo.getById(bread)!!.category.value)
+        assertEquals(listOf("Dairy", "Bakery"), viewModel.uiState.value.categoryOrder)
     }
 
     @Test

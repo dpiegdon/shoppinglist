@@ -90,11 +90,13 @@ field, so one row can end up with a locally-newer `name` and a remote-newer
 ```
 
 `updated_by` is a **device** UUID. It is not an account id — see `last_touched_by`
-on items for the account-scoped equivalent. The one exception is the reserved
-literal `"server-merge"`, which the server itself writes as `updated_by` on the
-`deleted` field of a tombstone it created by the same-name merge (see "Same-name
-merge" below) — a client never sees its own device id there, and must not send
-this literal itself.
+on items for the account-scoped equivalent. The exceptions are three reserved
+literals the server itself writes as `updated_by` on the `deleted` field of a
+tombstone it created: `"server-merge"` for a loser of the same-name merge (see
+"Same-name merge" below), `"server-orphan"` for a list and its items tombstoned
+because the last member left, and `"server-list-delete"` for the items of a list
+a client tombstoned (see "List object"). A client never sees its own device id
+there, and must not send these literals itself.
 
 ## Clock clamping
 

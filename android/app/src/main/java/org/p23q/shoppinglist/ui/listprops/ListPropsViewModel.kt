@@ -65,9 +65,16 @@ data class ListPropsUiState(
     val errorMessage: UiText? = null,
 )
 
-/** [index]/[newName] as given to [ListPropsViewModel.renameCategory]; [targetName] is the existing
- *  category's own casing, for the confirmation to name — not necessarily [newName]'s casing. */
-data class PendingCategoryMerge(val index: Int, val newName: String, val targetName: String)
+/**
+ * A rename held for confirmation. [fromName] is the category being renamed and [newName] what it
+ * was renamed to, as given to [ListPropsViewModel.renameCategory]; [targetName] is the existing
+ * category's own casing, for the dialog to name — not necessarily [newName]'s casing.
+ *
+ * The category is remembered by NAME, not by its row index: a sync can reorder or shrink the
+ * category list while the dialog is open, and an index resolved then could point at a different
+ * category than the one the user was asked about.
+ */
+data class PendingCategoryMerge(val fromName: String, val newName: String, val targetName: String)
 
 /** Notes: rename, category order, members/invites, share, unsubscribe — all "list properties." */
 @HiltViewModel
@@ -198,25 +205,35 @@ class ListPropsViewModel @Inject constructor(
         if (toKey != fromKey) {
             val target = current.firstOrNull { CategoryCanon.key(it) == toKey }
             if (target != null) {
-                _uiState.update { it.copy(pendingCategoryMerge = PendingCategoryMerge(index, newName, target)) }
+                _uiState.update {
+                    it.copy(pendingCategoryMerge = PendingCategoryMerge(current[index], newName, target))
+                }
                 return null
             }
         }
-        return performRenameCategory(index, newName)
+        return performRenameCategory(current[index], newName)
     }
 
-    /** The pending merge goes ahead, exactly as [renameCategory] would have without the guard. */
+    /**
+     * The pending merge goes ahead, exactly as [renameCategory] would have without the guard —
+     * unless the category it named has meanwhile disappeared (a sync removed or merged it while
+     * the dialog was open), in which case there is nothing left to rename and it is dropped.
+     */
     fun confirmCategoryMerge(): Job? {
         val pending = _uiState.value.pendingCategoryMerge ?: return null
         _uiState.update { it.copy(pendingCategoryMerge = null) }
-        return performRenameCategory(pending.index, pending.newName)
+        val fromKey = CategoryCanon.key(pending.fromName)
+        if (_uiState.value.categoryOrder.none { CategoryCanon.key(it) == fromKey }) return null
+        return performRenameCategory(pending.fromName, pending.newName)
     }
 
     fun cancelCategoryMerge() = _uiState.update { it.copy(pendingCategoryMerge = null) }
 
-    private fun performRenameCategory(index: Int, newName: String): Job {
+    private fun performRenameCategory(fromName: String, newName: String): Job {
+        // Resolved NOW, by name, not carried over as an index from when the rename was requested:
+        // the order can have changed underneath a confirmation dialog.
         val current = _uiState.value.categoryOrder
-        val fromKey = CategoryCanon.key(current[index])
+        val fromKey = CategoryCanon.key(fromName)
         return viewModelScope.launch {
             val items = itemsRepo.activeItemsForListOnce(listId)
             val plan = CategoryCanon.planRename(
