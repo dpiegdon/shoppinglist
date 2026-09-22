@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, cross-client finding. Verified.\n\nDeleting an item is guarded on Android and not on the web. Android shows a confirmation dialog from the item dialog (`item_delete_title`/`item_delete_body`) and deletes from the registry with an undo snackbar. The web deletes on the first press from both the list and the registry, with no confirmation and no undo \u2014 although the web does offer undo for checking an item off, so the pattern exists there.\n\nConsequence: a mis-tap destroys a shared item for everyone on the web and is recoverable on Android.\n\nFix direction: give the web the same confirmation (and undo where Android has it), with the strings paired across the clients.",
+  "created_at": "2026-09-22T20:02:23+00:00",
+  "id": "T-277",
+  "labels": [
+    "web"
+  ],
+  "priority": 3,
+  "title": "Cross-client: deleting an item is confirmed and undoable on Android, immediate on web",
+  "updated_at": "2026-09-22T20:02:23+00:00"
+}
