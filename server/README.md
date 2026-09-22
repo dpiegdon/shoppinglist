@@ -241,11 +241,21 @@ policy and the changelog live in
 To upgrade, install the new wheel and restart. An existing database migrates
 itself the first time the new version opens it; take a backup first (see
 Backups), since migrations only run forward. Each migration is one transaction,
-so a failed one leaves the database exactly as it was and the next connection
-retries it, and several workers starting together cannot run the same migration
-twice. A **major** upgrade also raises the
-protocol version (see above), so every installed app has to be updated with it;
-until it is, it is answered `426 client_outdated` and pointed at the download.
+so a failed one — a crash, or the busy timeout while another worker holds the
+write lock — leaves the database exactly as it was and the next connection
+retries it rather than the process dying in a state that needs an operator's
+hand. The same write lock also serializes several workers that start together
+and race to migrate the same file: the one that waits re-checks the schema
+version once it has the lock, so it skips work the winner already committed
+instead of replaying it. That closes the failure mode where a half-applied
+migration bricked the database until someone hand-stamped `PRAGMA user_version`
+— it does **not** by itself make a *rolling* restart safe, since a worker still
+running the previous wheel's code is not guaranteed to work against a schema the
+new wheel has already migrated. Stop every worker, install, and start them
+again, rather than replacing them one at a time. A **major** upgrade also raises
+the protocol version (see above), so every installed app has to be updated with
+it; until it is, it is answered `426 client_outdated` and pointed at the
+download.
 
 ## Running the dev server
 
@@ -403,7 +413,10 @@ badly formatted tree fails the build without anything being rewritten under you.
 The database is a single SQLite file (`DATABASE_PATH`), running in WAL mode
 (`PRAGMA journal_mode = WAL`) — a raw file copy taken while the server is
 running can catch it mid-write. Use SQLite's own online backup instead,
-which is safe to run against a live database with no downtime:
+which is safe to run against a live database with no downtime. This needs the
+**`sqlite3` command-line tool** on the host — it is not one of this package's
+Python dependencies and is not installed by `pip install`, so add it separately
+(`apt install sqlite3`, `brew install sqlite3`, or your distro's equivalent):
 
 ```bash
 sqlite3 /var/lib/shoppinglist/shoppinglist.db ".backup /backups/shoppinglist-$(date +%F).db"
@@ -425,6 +438,21 @@ they are the deploying operator's responsibility:
 
 - **A TLS-terminating reverse proxy is mandatory.** Bearer tokens must never
   travel in plaintext.
+- **Run it under a real WSGI server** — gunicorn, uWSGI, waitress, or similar —
+  with one or more worker processes; `server/app.py`'s `flask run` and
+  `dev_tls_server.py` are single-process development servers only. Worker
+  processes add concurrency for **reading and for request handling**, not for
+  writing: SQLite's WAL journal mode (which this package always turns on)
+  allows any number of concurrent readers but only **one writer at a time**
+  across every worker process touching a given database file. A
+  write that arrives while another is in progress waits out SQLite's busy
+  timeout and then answers `503 server_busy` with `Retry-After: 2` — an
+  expected outcome under concurrent load, not a fault, and always safe to
+  retry (see "What the blueprint does handle itself" below).
+- **The database file must live on a local filesystem.** WAL mode relies on
+  shared-memory locking between the processes that open it, which network
+  filesystems (NFS, SMB, and similar) do not implement correctly — writing
+  `DATABASE_PATH` there risks silent corruption, not just poor performance.
 - **Login rate-limiting** should be added at the proxy; the blueprint does not
   rate-limit `/login` itself. Note each attempt against an existing account costs
   a full scrypt verify (~32 MB, ~200 ms), so this is a resource lever as well as
@@ -498,6 +526,13 @@ handler = logging.FileHandler("/var/log/shoppinglist/audit.log")
 handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
 logging.getLogger("shoppinglist_server.audit").addHandler(handler)
 ```
+
+A plain `FileHandler` never rotates: every `401`/`403` writes an `authz.denied`
+record (see below), so an instance exposed to the open internet accumulates one
+line per credential-stuffing or scanner request indefinitely. Use
+`logging.handlers.RotatingFileHandler` or `TimedRotatingFileHandler` in place of
+`FileHandler` above (same `addHandler` call) — this package only emits to the
+logger, so rotation policy is entirely the host app's choice.
 
 Recorded: `account.registered`, `auth.login`, `auth.logout`,
 `auth.session_revoked`, `account.password_changed`, `account.email_changed`,
