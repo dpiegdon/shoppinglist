@@ -93,6 +93,13 @@ interface RequestOptions {
   skipAuth?: boolean;
 }
 
+// A request with no timeout at all (T-272): a stalled connection or a proxy that swallows the
+// response left it in flight forever, and useSync's in-flight counter never came back down — every
+// later refresh was dropped by the skip-if-in-flight guard and the sync indicator sat on
+// "Syncing…" for the rest of the page's life. 20s is generous for a mobile network without letting
+// a truly dead connection hang around indefinitely.
+const REQUEST_TIMEOUT_MS = 20_000;
+
 export async function apiFetch<T>(path: string, options: RequestOptions): Promise<T> {
   // On EVERY request, login and register included (T-240): the server checks the protocol before
   // it authenticates, so a request without the header is refused whoever sends it.
@@ -105,11 +112,27 @@ export async function apiFetch<T>(path: string, options: RequestOptions): Promis
     headers["Authorization"] = `Bearer ${currentToken}`;
   }
 
-  const response = await fetch(`${apiBase()}${path}`, {
-    method: options.method,
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase()}${path}`, {
+      method: options.method,
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    // A caller sees this exactly like any other network failure (e.g. fetch's own "Failed to
+    // fetch" on a dropped connection) — a plain Error, not an ApiError, since no response was ever
+    // received to carry a code.
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Request timed out.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (response.status === 204) {
     return undefined as T;

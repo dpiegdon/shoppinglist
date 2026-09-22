@@ -55,6 +55,35 @@ describe("apiFetch", () => {
     expect(init.body).toBe(JSON.stringify({ email: "a@example.com" }));
   });
 
+  it("sends an abort signal with every request, so a stalled one can be cancelled (T-272)", async () => {
+    mockFetchOnce(200, { ok: true });
+
+    await apiFetch("/lists", { method: "GET" });
+
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("times out a request that never settles, instead of leaving it in flight forever (T-272)", async () => {
+    vi.useFakeTimers();
+    globalThis.fetch = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted.", "AbortError"));
+          });
+        }),
+    ) as unknown as typeof fetch;
+
+    const promise = apiFetch("/lists", { method: "GET" });
+    const assertion = expect(promise).rejects.toThrow("Request timed out.");
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await assertion;
+
+    vi.useRealTimers();
+  });
+
   it("returns undefined for a 204 response", async () => {
     mockFetchOnce(204);
 
