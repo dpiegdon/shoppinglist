@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import org.junit.Rule
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.AuthRepository
@@ -71,6 +72,8 @@ class LoginScreenTest {
         val tempFile = File.createTempFile("login_screen_registration_test", ".preferences_pb")
         tempFile.deleteOnExit()
         val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
+        // A saved server, as after an earlier login: on a fresh install nothing is asked (T-287).
+        runBlocking { serverConfig.setServerUrl("https://lists.example.com/") }
         val viewModel = LoginViewModel(
             NoopAuthRepository(registrationAllowed = false),
             serverConfig,

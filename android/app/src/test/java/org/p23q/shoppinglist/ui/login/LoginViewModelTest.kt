@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,6 +37,8 @@ class LoginViewModelTest {
         var registerCalled = false
         var loginCalled = false
         var loggedOut = false
+        /** How often the up-front registration check asked (T-287): must be zero on a fresh install. */
+        var registrationChecks = 0
 
         override suspend fun register(email: String, password: String) {
             registerCalled = true
@@ -52,7 +55,10 @@ class LoginViewModelTest {
 
         override suspend fun clearLocalSession() {}
 
-        override suspend fun registrationAllowed(): Boolean = registrationAllowed
+        override suspend fun registrationAllowed(): Boolean {
+            registrationChecks++
+            return registrationAllowed
+        }
 
         override fun lastOpenedListId(): String? = lastOpened
     }
@@ -201,6 +207,8 @@ class LoginViewModelTest {
     @Test
     fun `registration status is fetched up front and disables registering when the server has it off (T-276)`() = runTest(mainDispatcherRule.dispatcher) {
         val serverConfig = newServerConfig()
+        // A returning user: a server was saved by an earlier login, so asking it is fine (T-287).
+        serverConfig.setServerUrl("https://lists.example.com/")
         val repo = FakeAuthRepository(registrationAllowed = false)
         val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -208,6 +216,24 @@ class LoginViewModelTest {
         val state = viewModel.uiState.first { !it.registrationAllowed }
 
         assertFalse(state.registrationAllowed)
+    }
+
+    @Test
+    fun `a fresh install contacts no server before the first login (T-287)`() = runTest(mainDispatcherRule.dispatcher) {
+        val serverConfig = newServerConfig() // nothing saved: first run
+        val repo = FakeAuthRepository(registrationAllowed = false)
+        val viewModel = LoginViewModel(repo, serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+        // Await the prefill, then drain the scheduler: a check launched from init would run only
+        // now, so asserting before this would pass whether or not one was made.
+        viewModel.uiState.first { it.serverUrl.isNotBlank() }
+        advanceUntilIdle()
+
+        // Not asked, so still allowed — the register attempt failing is how a closed server says so —
+        // and the prefilled default was not written anywhere either.
+        assertEquals(0, repo.registrationChecks)
+        assertTrue(viewModel.uiState.value.registrationAllowed)
+        assertNull(serverConfig.serverUrl.first())
     }
 
     @Test

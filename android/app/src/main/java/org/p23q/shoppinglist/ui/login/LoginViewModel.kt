@@ -66,10 +66,6 @@ class LoginViewModel @Inject constructor(
             val savedUrl = serverConfig.serverUrl.first()
             val allowSelfSigned = serverConfig.allowSelfSignedCerts.first()
             val resolvedUrl = savedUrl?.takeIf { it.isNotBlank() } ?: DEFAULT_SERVER_URL
-            // Persisted here (not only on submit) so the registration-status check below — and any
-            // other pre-login request — has a server to ask on a first run, exactly like the field
-            // it prefills.
-            if (savedUrl.isNullOrBlank()) serverConfig.setServerUrl(resolvedUrl)
             _uiState.update {
                 it.copy(
                     // Prefill the saved URL, or the canonical instance for a first run — and only
@@ -81,13 +77,19 @@ class LoginViewModel @Inject constructor(
                     allowSelfSignedCerts = allowSelfSigned,
                 )
             }
-            refreshRegistrationStatus()
+            // Only once a server has been saved, i.e. after the first login or register attempt
+            // (T-287). On a fresh install the prefilled default is a suggestion nobody has confirmed,
+            // and the app must not contact any server before the user has chosen one: if that
+            // server turns out to refuse registration, the attempt failing with 403 is how they
+            // find out — the same answer this check would have given, one screen later.
+            if (!savedUrl.isNullOrBlank()) refreshRegistrationStatus()
         }
     }
 
-    /** Asks the configured server up front whether it is accepting new accounts (T-276), matching
-     *  the web login page. Best-effort — see [AuthRepository.registrationAllowed] — so any failure
-     *  just leaves the toggle enabled rather than surfacing an error nobody asked about. */
+    /** Asks the saved server up front whether it is accepting new accounts (T-276), matching the
+     *  web login page. Best-effort — see [AuthRepository.registrationAllowed] — so any failure just
+     *  leaves the toggle enabled rather than surfacing an error nobody asked about. Never called on
+     *  a fresh install (T-287): see the init block. */
     fun refreshRegistrationStatus(): Job = viewModelScope.launch {
         val allowed = runCatching { authRepository.registrationAllowed() }.getOrDefault(true)
         _uiState.update { it.copy(registrationAllowed = allowed) }
