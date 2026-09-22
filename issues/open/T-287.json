@@ -1,0 +1,11 @@
+{
+  "body": "T-276 made the Android login screen ask the server whether registration is open as soon as it appears \u2014 including on a fresh install, where \"the server\" is the prefilled default URL nobody has confirmed yet. The maintainer does not want the app to touch the network before the first login: a first-run user who intends another server should not have the default one contacted on their behalf, and if registration is closed the attempt failing with 403 is an acceptable way to find out.\n\nRule: the up-front check runs only when a server URL was previously saved (which happens on a login or register attempt), never on first run. The init-time persisting of the default URL, added only so the check had something to ask, goes too \u2014 the URL is saved on submit, as before T-276. Tests: a fresh install makes no request at all; a saved URL still gets the up-front check and the disabled toggle.",
+  "created_at": "2026-09-22T23:12:11+00:00",
+  "id": "T-287",
+  "labels": [
+    "android"
+  ],
+  "priority": 2,
+  "title": "Android: no network before the first login \u2014 the registration check must not run on a fresh install",
+  "updated_at": "2026-09-22T23:12:11+00:00"
+}
