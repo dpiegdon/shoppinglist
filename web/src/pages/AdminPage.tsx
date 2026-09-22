@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import * as api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useOverlayClose } from "../hooks/useOverlayClose";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
@@ -78,6 +79,8 @@ export default function AdminPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const closeDeleteDialog = useCallback(() => setDeleteTarget(null), []);
+  const deleteOverlay = useOverlayClose(closeDeleteDialog);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   /** True (and complains inline) when the step-up password is missing. */
@@ -288,14 +291,14 @@ export default function AdminPage() {
       </section>
 
       {deleteTarget && (
-        <div className="dialog-overlay" onClick={() => setDeleteTarget(null)}>
+        <div className="dialog-overlay" onMouseDown={deleteOverlay.onMouseDown} onMouseUp={deleteOverlay.onMouseUp}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
             <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.deleteUserTitle")}</h2>
             <p>
               {t("admin.deleteUserBody", { email: deleteTarget.email })}
             </p>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>
+              <button type="button" className="btn btn-secondary" onClick={closeDeleteDialog}>
                 {t("action.cancel")}
               </button>
               <button type="button" className="btn btn-danger" onClick={confirmDelete}>

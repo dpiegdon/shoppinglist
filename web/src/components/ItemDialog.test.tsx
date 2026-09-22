@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ItemDialog from "./ItemDialog";
@@ -654,5 +654,38 @@ describe("ItemDialog price/currency validation (T-91)", () => {
     expect(await screen.findByText("That price isn't valid")).toBeInTheDocument();
     expect(screen.queryByText("Price amount is invalid")).not.toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("ItemDialog overlay close (T-272)", () => {
+  it("does not close when a drag starts inside the panel and is only released on the overlay", () => {
+    const onClose = vi.fn();
+    const { container } = render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={vi.fn()} />,
+    );
+
+    const overlay = container.querySelector(".dialog-overlay")!;
+    const nameInput = screen.getByLabelText("Name");
+
+    // Simulates selecting text in the field and dragging the release past the panel's edge — the
+    // click event this produces targets the overlay, which a plain onClick={onClose} used to
+    // treat as "clicked outside" and discard the whole form.
+    fireEvent.mouseDown(nameInput);
+    fireEvent.mouseUp(overlay);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes when both mousedown and mouseup land on the overlay itself", () => {
+    const onClose = vi.fn();
+    const { container } = render(
+      <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={vi.fn()} />,
+    );
+
+    const overlay = container.querySelector(".dialog-overlay")!;
+    fireEvent.mouseDown(overlay);
+    fireEvent.mouseUp(overlay);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

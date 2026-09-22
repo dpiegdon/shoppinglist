@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
+import { useOverlayClose } from "../hooks/useOverlayClose";
 import { parseCurrency, parsePriceAmount } from "../lib/priceParse";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
@@ -160,6 +161,7 @@ export default function ItemDialog({
   onDelete,
 }: ItemDialogProps) {
   const t = useT();
+  const overlay = useOverlayClose(onClose);
   const isEdit = Boolean(editingItem);
   const [matchedExisting, setMatchedExisting] = useState<ItemObject | null>(editingItem ?? null);
   const [values, setValues] = useState(() =>
@@ -410,7 +412,7 @@ export default function ItemDialog({
   }
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
+    <div className="dialog-overlay" onMouseDown={overlay.onMouseDown} onMouseUp={overlay.onMouseUp}>
       <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{isEdit ? t("item.edit") : t("item.add")}</h2>
         {saveError && (

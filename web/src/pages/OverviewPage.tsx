@@ -4,6 +4,7 @@ import * as api from "../api/client";
 import AddFab from "../components/AddFab";
 import { safeLocalStorage } from "../lib/safeStorage";
 import { useSyncContext } from "../hooks/SyncContext";
+import { useOverlayClose } from "../hooks/useOverlayClose";
 import { fieldPatch, nowMs } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { errorMessage } from "../i18n/apiErrors";
@@ -68,6 +69,11 @@ export default function OverviewPage() {
   const [joiningInviteId, setJoiningInviteId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const closeCreateDialog = useCallback(() => {
+    setCreateError(null);
+    setCreating(false);
+  }, []);
+  const createOverlay = useOverlayClose(closeCreateDialog);
 
   const loadInvites = useCallback(async () => {
     try {
@@ -344,13 +350,7 @@ export default function OverviewPage() {
       />
 
       {creating && (
-        <div
-          className="dialog-overlay"
-          onClick={() => {
-            setCreateError(null);
-            setCreating(false);
-          }}
-        >
+        <div className="dialog-overlay" onMouseDown={createOverlay.onMouseDown} onMouseUp={createOverlay.onMouseUp}>
           <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleCreate}>
             <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("overview.newList")}</h2>
             {createError && (
@@ -368,8 +368,9 @@ export default function OverviewPage() {
                 onChange={(e) => setNewName(e.target.value)}
               />
             </div>
-            {/* Kind is chosen up front (T-110) but isn't permanent — it can be changed later in
-                list properties, and converting never touches item data. */}
+            {/* Kind is chosen up front (T-110) but isn't permanent for shopping/checklist — it can
+                be changed later in list properties, and converting never touches item data. An
+                expenses list is the one exception: its kind is fixed for its whole life (T-151). */}
             <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
               <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
                 {t("overview.type")}
@@ -426,14 +427,7 @@ export default function OverviewPage() {
               </div>
             )}
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setCreateError(null);
-                  setCreating(false);
-                }}
-              >
+              <button type="button" className="btn btn-secondary" onClick={closeCreateDialog}>
                 {t("action.cancel")}
               </button>
               <button type="submit" className="btn">

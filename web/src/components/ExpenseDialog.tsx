@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "../api/client";
 import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
+import { useOverlayClose } from "../hooks/useOverlayClose";
 import {
   distribute,
   entryType,
@@ -138,6 +139,7 @@ export default function ExpenseDialog({
   onDelete,
 }: ExpenseDialogProps) {
   const t = useT();
+  const overlay = useOverlayClose(onClose);
   const isEdit = Boolean(editingItem);
   const stored = editingItem ? itemFieldValue(editingItem, "expense") ?? null : null;
   // What the distributions start from: the expense being edited, else a prefill, else nothing.
@@ -489,7 +491,7 @@ export default function ExpenseDialog({
   }
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
+    <div className="dialog-overlay" onMouseDown={overlay.onMouseDown} onMouseUp={overlay.onMouseUp}>
       <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>
           {isEdit ? t("expense.edit") : t("expense.new")}
