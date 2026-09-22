@@ -37,8 +37,8 @@ class RegistryScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "Someday item", status = Status.BACKLOG)

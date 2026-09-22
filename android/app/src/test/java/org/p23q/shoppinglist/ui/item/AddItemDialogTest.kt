@@ -41,8 +41,8 @@ class AddItemDialogTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
         val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
@@ -86,8 +86,8 @@ class AddItemDialogTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
 

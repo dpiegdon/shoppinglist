@@ -3,9 +3,15 @@ package org.p23q.shoppinglist.data.repo
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -19,6 +25,7 @@ import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 
@@ -40,7 +47,7 @@ class ItemsRepoTest {
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
         syncTrigger = FakeSyncTrigger()
-        repo = ItemsRepo(db.itemDao(), deviceId, syncTrigger)
+        repo = ItemsRepo(db, deviceId, syncTrigger)
     }
 
     @Test
@@ -329,5 +336,45 @@ class ItemsRepoTest {
         // And the reason goes with it: it described a value this row no longer holds (T-200).
         assertNull(repo.getById(itemId)!!.syncBlockedCode)
         assertNull(repo.getById(itemId)!!.syncBlockedAccountId)
+    }
+
+    /**
+     * T-261. Every edit is read-row / stamp-field / write-whole-row-back; two of those interleaving
+     * lose the earlier one completely, clocks included, so the row isn't even left dirty and there
+     * is nothing queued to recover it. Real, not theoretical: the list screen syncs every 5 s while
+     * it is open, and each merged row is exactly the same shape (see SyncEngineTest).
+     *
+     * [ItemsRepo.updateField] is `internal` so this test can run code inside the window between the
+     * read and the write — from outside, a transaction is invisible by construction.
+     *
+     * runBlocking, not runTest: the point is what two coroutines on real threads do to each other,
+     * and runTest's virtual clock would skip the wait below without ever letting the other one run.
+     */
+    @Test
+    fun `an edit landing inside another edit's read-modify-write window is not lost (T-261)`() = runBlocking<Unit> {
+        val itemId = repo.createItem(listId = "list-1", name = "Milk")
+        val shopper = CoroutineScope(Dispatchers.IO)
+        var tap: Job? = null
+        var committedInsideTheWindow = true
+
+        repo.updateField(itemId) { current ->
+            tap = shopper.launch { repo.setCategory(itemId, "Dairy") }
+            // Nothing may commit while we hold this row. Under the fix the second edit is parked on
+            // the write transaction and this wait runs out; without it, the second edit reads the
+            // stale row, commits here, and is overwritten by the write two lines below.
+            committedInsideTheWindow = withTimeoutOrNull(2_000) { tap!!.join() } != null
+            current.copy(name = "Milk 2%".toLww("device-1"))
+        }
+        tap!!.join()
+
+        assertFalse(
+            "another writer committed between this edit's read and its write",
+            committedInsideTheWindow,
+        )
+        val row = repo.getById(itemId)!!
+        assertEquals("Milk 2%", row.name.value)
+        assertEquals("Dairy", row.category.value)
+        assertTrue(row.dirty)
+        shopper.cancel()
     }
 }

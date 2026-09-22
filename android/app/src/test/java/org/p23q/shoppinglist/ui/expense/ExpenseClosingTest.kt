@@ -72,8 +72,8 @@ class ExpenseClosingTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
         setListState()
         dinnerId = itemsRepo.createExpense(

@@ -69,8 +69,8 @@ class ListPropsViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         listId = listsRepo.createList("Groceries")
 
         val serverConfigFile = File.createTempFile("listprops_vm_server_config", ".preferences_pb")

@@ -35,8 +35,8 @@ class EditItemDialogTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setCategory(itemId, "dairy")
@@ -71,8 +71,8 @@ class EditItemDialogTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         // What SyncEngine leaves on a row the server refused with a 422 (T-32, T-200).

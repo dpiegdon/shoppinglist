@@ -67,8 +67,8 @@ class ListPropsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         listsRepo.setCategoryOrder(listId, listOf("dairy"))
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
@@ -124,8 +124,8 @@ class ListPropsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
 
         val serverConfigFile = File.createTempFile("listprops_screen_notes_server_config", ".preferences_pb")
@@ -180,8 +180,8 @@ class ListPropsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         itemsRepo.createItem(listId, "Milk")
 
@@ -237,8 +237,8 @@ class ListPropsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
         db.listDao().upsert(listsRepo.getById(listId)!!.copy(closeVotesJson = Json.encodeToString(closeVotes)))
 

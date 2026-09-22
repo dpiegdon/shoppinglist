@@ -28,6 +28,7 @@ import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.db.LwwBoolean
 import org.p23q.shoppinglist.data.db.LwwOptionalString
 import org.p23q.shoppinglist.data.db.LwwString
+import org.p23q.shoppinglist.data.db.inTransaction
 import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
 import java.io.IOException
@@ -189,11 +190,20 @@ class SyncEngine @Inject constructor(
             return SyncResult.Failed(message)
         }
 
+        // Each row's read-merge-write is one transaction (T-261). It has to be: the merge reads the
+        // local row, folds the remote clocks into it and writes the WHOLE row back, so a user edit
+        // landing in that window is overwritten — and overwritten with the pre-edit clocks, so the
+        // row isn't even left dirty and nothing is queued to recover it. The list screen syncs
+        // every 5 s while it is open, so the window is hit in ordinary use: check an item off at
+        // the wrong moment and it flips back to todo, silently. One transaction per row rather than
+        // one for the whole pull: the merge holds SQLite's single write lock for its duration, and
+        // a several-hundred-row pull would stall every edit on the device until it finished. The
+        // network round trip is already over by here — no transaction ever spans a request.
         for (dto in response.changes.lists) {
-            listDao.upsert(mergeList(listDao.getById(dto.id), dto))
+            appDb.inTransaction { listDao.upsert(mergeList(listDao.getById(dto.id), dto)) }
         }
         for (dto in response.changes.items) {
-            itemDao.upsert(mergeItem(itemDao.getById(dto.id), dto))
+            appDb.inTransaction { itemDao.upsert(mergeItem(itemDao.getById(dto.id), dto)) }
         }
 
         sessionState.syncCursor = response.cursor

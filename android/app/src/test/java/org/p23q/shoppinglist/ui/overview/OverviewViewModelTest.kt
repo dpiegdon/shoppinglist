@@ -87,8 +87,8 @@ class OverviewViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
-        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
+        listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         sessionState = FakeSessionState().apply { token = "tok-123" }
         syncStatus = SyncStatus()
         val json = Json { ignoreUnknownKeys = true }

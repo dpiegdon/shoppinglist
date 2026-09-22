@@ -34,7 +34,7 @@ class ListTitleViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
-        listsRepo = ListsRepo(db.listDao(), DeviceIdProvider { "device-1" }, FakeSyncTrigger())
+        listsRepo = ListsRepo(db, DeviceIdProvider { "device-1" }, FakeSyncTrigger())
     }
 
     @After

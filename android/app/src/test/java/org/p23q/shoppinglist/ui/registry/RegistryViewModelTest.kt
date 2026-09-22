@@ -39,8 +39,8 @@ class RegistryViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         listId = listsRepo.createList("Groceries")
     }
 

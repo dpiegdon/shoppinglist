@@ -104,8 +104,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         itemsRepo.createItem(listId, "Milk", status = Status.CHECKED)
         itemsRepo.createItem(listId, "Bread", status = Status.TODO)
@@ -145,8 +145,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val viewModel = ListViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
@@ -180,8 +180,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         val viewModel = ListViewModel(
@@ -220,8 +220,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         val viewModel = ListViewModel(
@@ -268,8 +268,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         // Simulate what a real sync merge would have set (T-64) — never locally writable.
@@ -311,8 +311,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         db.itemDao().upsert(itemsRepo.getById(itemId)!!.copy(lastTouchedByAccountId = "acc-a"))
@@ -344,8 +344,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val viewModel = ListViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
@@ -381,8 +381,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         // What SyncEngine leaves on a row the server refused with a 422 (T-32, T-200).
@@ -418,8 +418,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         itemsRepo.createItem(listId, "Bread", status = Status.TODO)
         val viewModel = ListViewModel(
@@ -453,8 +453,8 @@ class ListScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        val itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        val listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.createList("Groceries")
         val viewModel = ListViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),

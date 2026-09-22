@@ -8,9 +8,10 @@ import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.api.AppJson
-import org.p23q.shoppinglist.data.db.ItemDao
+import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.data.db.inTransaction
 import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
 import org.p23q.shoppinglist.data.db.unblocked
@@ -21,11 +22,21 @@ import javax.inject.Inject
 @Serializable
 data class Price(val amount: String, val currency: String?)
 
+/**
+ * Every edit here is a read-modify-write — read the row, stamp one field's LWW clock, write the
+ * whole row back — so it must run inside a database transaction (T-261). Without one, a sync merge
+ * (which is the same shape) or a second edit landing in the window between the read and the write
+ * is overwritten whole-row, and because the overwrite carries the pre-edit clocks the row is not
+ * even left dirty: the edit is lost with nothing queued to recover it. The list screen syncs every
+ * 5 s while it is open, so the window is hit in normal use. Hence [db] rather than a bare DAO.
+ */
 class ItemsRepo @Inject constructor(
-    private val itemDao: ItemDao,
+    private val db: AppDb,
     private val deviceId: DeviceIdProvider,
     private val syncTrigger: SyncTrigger,
 ) {
+    private val itemDao = db.itemDao()
+
     fun itemsForListByStatus(listId: String, status: Status): Flow<List<ItemEntity>> =
         itemDao.itemsForListByStatus(listId, status.wireValue)
 
@@ -146,13 +157,16 @@ class ItemsRepo @Inject constructor(
      * to checked).
      */
     suspend fun clearChecked(listId: String): List<String> {
-        val checked = itemDao.itemsForListByStatusOnce(listId, Status.CHECKED.wireValue)
-        if (checked.isEmpty()) return emptyList()
-        val by = deviceId.get()
-        val now = System.currentTimeMillis()
-        checked.forEach { item ->
-            itemDao.upsert(item.copy(status = Status.BACKLOG.wireValue.toLww(by, now), dirty = true).unblocked())
+        val checked = db.inTransaction {
+            val checked = itemDao.itemsForListByStatusOnce(listId, Status.CHECKED.wireValue)
+            val by = deviceId.get()
+            val now = System.currentTimeMillis()
+            checked.forEach { item ->
+                itemDao.upsert(item.copy(status = Status.BACKLOG.wireValue.toLww(by, now), dirty = true).unblocked())
+            }
+            checked
         }
+        if (checked.isEmpty()) return emptyList()
         syncTrigger.scheduleAfterEdit()
         return checked.map { it.id }
     }
@@ -160,13 +174,16 @@ class ItemsRepo @Inject constructor(
     /** Batched [setStatus] over several ids — one dirty batch, one sync push. Backs clear-checked's undo (T-35). */
     suspend fun setStatusBulk(itemIds: List<String>, status: Status) {
         if (itemIds.isEmpty()) return
-        val by = deviceId.get()
-        val now = System.currentTimeMillis()
-        var changed = false
-        itemIds.forEach { id ->
-            val current = itemDao.getById(id) ?: return@forEach
-            itemDao.upsert(current.copy(status = status.wireValue.toLww(by, now), dirty = true).unblocked())
-            changed = true
+        val changed = db.inTransaction {
+            val by = deviceId.get()
+            val now = System.currentTimeMillis()
+            var changed = false
+            itemIds.forEach { id ->
+                val current = itemDao.getById(id) ?: return@forEach
+                itemDao.upsert(current.copy(status = status.wireValue.toLww(by, now), dirty = true).unblocked())
+                changed = true
+            }
+            changed
         }
         if (changed) syncTrigger.scheduleAfterEdit()
     }
@@ -177,13 +194,16 @@ class ItemsRepo @Inject constructor(
     /** Stamp the same category on many items at once (T-108 recase/rename); one shared clock. */
     suspend fun setCategoryBulk(itemIds: List<String>, category: String?) {
         if (itemIds.isEmpty()) return
-        val by = deviceId.get()
-        val now = System.currentTimeMillis()
-        var changed = false
-        itemIds.forEach { id ->
-            val current = itemDao.getById(id) ?: return@forEach
-            itemDao.upsert(current.copy(category = category.toLwwOptional(by, now), dirty = true).unblocked())
-            changed = true
+        val changed = db.inTransaction {
+            val by = deviceId.get()
+            val now = System.currentTimeMillis()
+            var changed = false
+            itemIds.forEach { id ->
+                val current = itemDao.getById(id) ?: return@forEach
+                itemDao.upsert(current.copy(category = category.toLwwOptional(by, now), dirty = true).unblocked())
+                changed = true
+            }
+            changed
         }
         if (changed) syncTrigger.scheduleAfterEdit()
     }
@@ -213,30 +233,32 @@ class ItemsRepo @Inject constructor(
      * action (T-63). Returns the number of items copied.
      */
     suspend fun duplicateForList(sourceListId: String, targetListId: String): Int {
-        val items = itemDao.activeItemsForListOnce(sourceListId)
-        if (items.isEmpty()) return 0
-        val by = deviceId.get()
-        val now = System.currentTimeMillis()
-        items.forEach { source ->
-            itemDao.upsert(
-                ItemEntity(
-                    id = UUID.randomUUID().toString(),
-                    listId = targetListId,
-                    createdAt = now,
-                    name = source.name.value.toLww(by, now),
-                    category = source.category.value.toLwwOptional(by, now),
-                    stores = source.stores.value.toLww(by, now),
-                    quantity = source.quantity.value.toLwwOptional(by, now),
-                    price = source.price.value.toLwwOptional(by, now),
-                    note = source.note.value.toLwwOptional(by, now),
-                    status = source.status.value.toLww(by, now),
-                    deleted = false.toLww(by, now),
-                    dirty = true,
-                ),
-            )
+        val copied = db.inTransaction {
+            val items = itemDao.activeItemsForListOnce(sourceListId)
+            val by = deviceId.get()
+            val now = System.currentTimeMillis()
+            items.forEach { source ->
+                itemDao.upsert(
+                    ItemEntity(
+                        id = UUID.randomUUID().toString(),
+                        listId = targetListId,
+                        createdAt = now,
+                        name = source.name.value.toLww(by, now),
+                        category = source.category.value.toLwwOptional(by, now),
+                        stores = source.stores.value.toLww(by, now),
+                        quantity = source.quantity.value.toLwwOptional(by, now),
+                        price = source.price.value.toLwwOptional(by, now),
+                        note = source.note.value.toLwwOptional(by, now),
+                        status = source.status.value.toLww(by, now),
+                        deleted = false.toLww(by, now),
+                        dirty = true,
+                    ),
+                )
+            }
+            items.size
         }
-        syncTrigger.scheduleAfterEdit()
-        return items.size
+        if (copied > 0) syncTrigger.scheduleAfterEdit()
+        return copied
     }
 
     /** Reverses [delete] (Notes: registry delete offers a snackbar undo). */
@@ -257,10 +279,20 @@ class ItemsRepo @Inject constructor(
     /** One quarantined row (or null), so a "needs attention" surface can open the list holding it (T-47). */
     suspend fun firstBlockedItem(): ItemEntity? = itemDao.firstBlockedItem()
 
-    private suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
-        val current = itemDao.getById(itemId) ?: return
-        // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.
-        itemDao.upsert(mutate(current).copy(dirty = true).unblocked())
-        syncTrigger.scheduleAfterEdit()
+    /**
+     * The one read-modify-write every single-field edit goes through, wrapped in a transaction so
+     * the row cannot change between the read and the write (T-261).
+     *
+     * `internal`, not private, only so [org.p23q.shoppinglist.data.repo.ItemsRepoTest] can run code
+     * inside that window: the transaction is invisible from outside it.
+     */
+    internal suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
+        val changed = db.inTransaction {
+            val current = itemDao.getById(itemId) ?: return@inTransaction false
+            // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.
+            itemDao.upsert(mutate(current).copy(dirty = true).unblocked())
+            true
+        }
+        if (changed) syncTrigger.scheduleAfterEdit()
     }
 }

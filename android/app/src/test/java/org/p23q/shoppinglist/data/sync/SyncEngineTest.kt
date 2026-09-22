@@ -4,8 +4,14 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -26,9 +32,13 @@ import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.ProtocolState
 import org.p23q.shoppinglist.data.api.SyncRequest
 import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.db.ItemDao
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.ListEntity
+import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.db.toLww
 import org.p23q.shoppinglist.data.db.toLwwOptional
 import org.robolectric.RobolectricTestRunner
@@ -44,6 +54,22 @@ class SyncEngineTest {
         }
     }
 
+    /**
+     * An [ItemDao] that lets the test run code inside the sync merge's read-modify-write window
+     * (T-261) — between the merge reading the local row and writing the merged one back. Nothing
+     * else can reach in there, which is the whole point of the transaction under test.
+     */
+    private class MergeWindowItemDao(
+        private val delegate: ItemDao,
+        private val insideTheWindow: suspend () -> Unit,
+    ) : ItemDao by delegate {
+        override suspend fun getById(id: String): ItemEntity? {
+            val row = delegate.getById(id)
+            insideTheWindow()
+            return row
+        }
+    }
+
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
     private lateinit var serverConfig: ServerConfig
@@ -51,6 +77,7 @@ class SyncEngineTest {
     private lateinit var syncStatus: SyncStatus
     private lateinit var syncEngine: SyncEngine
     private lateinit var protocolState: ProtocolState
+    private lateinit var apiProvider: ApiProvider
     private val notifier = RecordingNotifier()
 
     @Before
@@ -73,7 +100,7 @@ class SyncEngineTest {
         // One ProtocolState for both, as Hilt hands out: the interceptor raises it, the engine
         // reads it (T-244).
         protocolState = ProtocolState()
-        val apiProvider = ApiProvider(
+        apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
             errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents(), protocolState),
@@ -712,5 +739,74 @@ class SyncEngineTest {
         assertTrue(result is SyncResult.Success)
         assertEquals(1, server.requestCount)
         assertEquals(total, db.itemDao().dirtyRows().size)
+    }
+
+    /**
+     * T-261, the ticket's own scenario: a shopper checks an item off at the exact moment a
+     * background sync applies that row. The merge reads the local row, folds the remote clocks into
+     * it and writes the WHOLE row back — so an edit landing in between is overwritten with the
+     * pre-tap row, and since the pre-tap clocks go back with it the row isn't even left dirty: the
+     * tap is gone with nothing queued to recover it. The list screen syncs every 5 s while it is
+     * open, so this window is hit in ordinary use.
+     *
+     * runBlocking, not runTest: this is about two coroutines on real threads, and runTest's virtual
+     * clock would skip the wait below without ever letting the other one run.
+     */
+    @Test
+    fun `a tap landing inside the merge's window survives it (T-261)`() = runBlocking<Unit> {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = false, at = 1_000L))
+        sessionState.syncCursor = 5L
+
+        val itemsRepo = ItemsRepo(db, DeviceIdProvider { "this-device" }, FakeSyncTrigger())
+        val shopper = CoroutineScope(Dispatchers.IO)
+        var tap: Job? = null
+        var committedInsideTheWindow = true
+
+        val probedEngine = SyncEngine(
+            MergeWindowItemDao(db.itemDao()) {
+                if (tap == null) {
+                    tap = shopper.launch { itemsRepo.setStatus("item-1", Status.CHECKED) }
+                    committedInsideTheWindow = withTimeoutOrNull(2_000) { tap!!.join() } != null
+                }
+            },
+            db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus, notifier, protocolState,
+        )
+
+        // The server's copy of the row is newer than the local one, so the merge takes every field
+        // from it — including status "todo", which is exactly what would clobber the tap.
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {"cursor": 6, "changes": {"lists": [], "items": [
+                  {"id": "item-1", "list_id": "list-1", "created_at": 1000, "fields": {
+                    "name": {"value": "Milk", "updated_at": 2000, "updated_by": "other-device"},
+                    "category": {"value": "Dairy", "updated_at": 2000, "updated_by": "other-device"},
+                    "stores": {"value": [], "updated_at": 2000, "updated_by": "other-device"},
+                    "quantity": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+                    "price": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+                    "note": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
+                    "status": {"value": "todo", "updated_at": 2000, "updated_by": "other-device"},
+                    "deleted": {"value": false, "updated_at": 2000, "updated_by": "other-device"}
+                  }}
+                ]}}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = probedEngine.syncNow()
+        tap!!.join()
+
+        assertTrue(result is SyncResult.Success)
+        val stored = db.itemDao().getById("item-1")!!
+        assertEquals("the tap was overwritten by the merge writing back the pre-tap row", "checked", stored.status.value)
+        assertTrue("and, overwritten with the pre-tap clocks, it wasn't even left queued", stored.dirty)
+        // The rest of the pull still landed — the tap only claims the field it touched.
+        assertEquals("Dairy", stored.category.value)
+        assertFalse(
+            "an edit committed between the merge's read and its write",
+            committedInsideTheWindow,
+        )
+        shopper.cancel()
     }
 }

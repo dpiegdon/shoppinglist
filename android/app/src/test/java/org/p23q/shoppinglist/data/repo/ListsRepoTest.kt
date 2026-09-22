@@ -35,7 +35,7 @@ class ListsRepoTest {
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
         syncTrigger = FakeSyncTrigger()
-        repo = ListsRepo(db.listDao(), deviceId, syncTrigger)
+        repo = ListsRepo(db, deviceId, syncTrigger)
     }
 
     @Test

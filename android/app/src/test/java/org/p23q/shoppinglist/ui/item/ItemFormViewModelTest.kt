@@ -45,8 +45,8 @@ class ItemFormViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
         val deviceId = DeviceIdProvider { "device-1" }
-        itemsRepo = ItemsRepo(db.itemDao(), deviceId, FakeSyncTrigger())
-        listsRepo = ListsRepo(db.listDao(), deviceId, FakeSyncTrigger())
+        itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         sessionState = FakeSessionState().apply { defaultCurrency = "USD" }
         listId = listsRepo.createList("Groceries")
     }
@@ -457,7 +457,7 @@ class ItemFormViewModelTest {
      * so per-field [org.p23q.shoppinglist.data.db.LwwString.updatedBy] tells us exactly which setters ran.
      */
     private fun seedRepo(device: String): ItemsRepo =
-        ItemsRepo(db.itemDao(), DeviceIdProvider { device }, FakeSyncTrigger())
+        ItemsRepo(db, DeviceIdProvider { device }, FakeSyncTrigger())
 
     @Test
     fun `edit changing only the note re-stamps only the note field (T-88)`() = runTest(mainDispatcherRule.dispatcher) {
