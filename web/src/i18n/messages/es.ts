@@ -76,6 +76,7 @@ export const es: Catalog = {
   "item.status.backlog": "Más tarde",
   "item.status.backlogHint": "Todavía no está en la lista",
   "item.saveFailed": "No se ha podido guardar. Inténtalo de nuevo.",
+  "item.duplicateName": "Ya existe un artículo llamado \"{name}\"",
 
   "listProps.title": "Propiedades de la lista",
   "listProps.name": "Nombre",

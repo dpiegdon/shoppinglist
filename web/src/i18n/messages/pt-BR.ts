@@ -79,6 +79,7 @@ export const ptBR: Catalog = {
   "item.status.backlog": "Mais tarde",
   "item.status.backlogHint": "Ainda não está na lista",
   "item.saveFailed": "Não foi possível salvar. Tente novamente.",
+  "item.duplicateName": "Já existe um item chamado \"{name}\"",
 
   "listProps.title": "Propriedades da lista",
   "listProps.name": "Nome",

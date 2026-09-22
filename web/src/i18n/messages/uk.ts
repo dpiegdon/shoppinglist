@@ -80,6 +80,7 @@ export const uk: Catalog = {
   "item.status.backlog": "Пізніше",
   "item.status.backlogHint": "Ще не в списку",
   "item.saveFailed": "Не вдалося зберегти. Спробуй ще раз.",
+  "item.duplicateName": "Товар із назвою \"{name}\" уже існує",
 
   "listProps.title": "Властивості списку",
   "listProps.name": "Назва",

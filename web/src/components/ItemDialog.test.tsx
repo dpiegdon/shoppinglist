@@ -689,3 +689,88 @@ describe("ItemDialog overlay close (T-272)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("ItemDialog duplicate-name validation (T-273)", () => {
+  it("refuses to add an item whose name already exists on the list, case-insensitively", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const registry = [registryItem("1", "Milk")];
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={registry}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    // Typed differently-cased so this is genuinely the case-insensitive check, not an exact match.
+    await userEvent.type(screen.getByLabelText("Name"), "MILK");
+    await userEvent.click(screen.getByText("Add"));
+
+    expect(await screen.findByText('An item named "MILK" already exists')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("clears the duplicate-name error once the name is edited", async () => {
+    const registry = [registryItem("1", "Milk")];
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={registry}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.click(screen.getByText("Add"));
+    expect(await screen.findByText('An item named "Milk" already exists')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Name"), "s");
+    expect(screen.queryByText('An item named "Milk" already exists')).not.toBeInTheDocument();
+  });
+
+  it("does not refuse an edit that keeps the item's own name", async () => {
+    const item = registryItem("1", "Milk");
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(onSave).toHaveBeenCalled();
+  });
+
+  it("refuses renaming an item to another item's name", async () => {
+    const item = registryItem("1", "Milk");
+    const other = registryItem("2", "Bread");
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item, other]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    await userEvent.clear(screen.getByLabelText("Name"));
+    await userEvent.type(screen.getByLabelText("Name"), "Bread");
+    await userEvent.click(screen.getByText("Save"));
+
+    expect(await screen.findByText('An item named "Bread" already exists')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});

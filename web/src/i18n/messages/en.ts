@@ -103,6 +103,9 @@ export const en = {
   // rather than being welded into the label and dragged onto space-constrained surfaces.
   "item.status.backlogHint": "Not on the list yet",
   "item.saveFailed": "Failed to save. Please try again.",
+  // Refused before the row is ever pushed (T-273): item names are unique per list, case-
+  // insensitively, on both clients — this is the web's twin of Android's item_msg_duplicate_name.
+  "item.duplicateName": "An item named \"{name}\" already exists",
 
   // ---- list properties ----
   "listProps.title": "List properties",

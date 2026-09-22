@@ -176,6 +176,7 @@ export default function ItemDialog({
   // value. values.stores itself is the string[] compared element-wise by storesEqual (T-88), so
   // seeding chips from the snapshot and leaving them untouched keeps that diff invariant intact.
   const [storeInput, setStoreInput] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [currencyError, setCurrencyError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -294,9 +295,24 @@ export default function ItemDialog({
 
   function handleNameChange(name: string) {
     setValues((v) => ({ ...v, name }));
+    setNameError(null);
     if (matchedExisting && itemFieldValue(matchedExisting, "name") !== name) {
       setMatchedExisting(null);
     }
+  }
+
+  /**
+   * Whether another live item on this list already has this name, case-insensitively (T-273).
+   * Mirrors Android's ItemDao.findByExactName pre-save check: without it, the web pushed a new row
+   * and the server's same-name merge silently folded the two together, letting the new save
+   * overwrite the old item's category/price and leaving a tombstone the user never asked for.
+   * [excludingId] lets a rename or a no-op edit find nothing against itself.
+   */
+  function findDuplicateName(name: string, excludingId: string): boolean {
+    const key = name.toLowerCase();
+    return registryItems.some(
+      (it) => it.id !== excludingId && (itemFieldValue(it, "name") ?? "").toLowerCase() === key,
+    );
   }
 
   /**
@@ -308,6 +324,7 @@ export default function ItemDialog({
     const name = values.name.trim();
     if (!name) return;
 
+    setNameError(null);
     setPriceError(null);
     setCurrencyError(null);
     setSaveError(null);
@@ -330,9 +347,16 @@ export default function ItemDialog({
     const normalizedAmount = amountParse.value;
     const normalizedCurrency = normalizedAmount ? currencyParse.value : null;
 
+    const itemId = matchedExisting?.id ?? editingItem?.id ?? crypto.randomUUID();
+    // Refuse a duplicate name BEFORE pushing (T-273), same as the price/currency checks above:
+    // caught here with an inline error rather than silently merged by the server.
+    if (findDuplicateName(name, itemId)) {
+      setNameError(t("item.duplicateName", { name }));
+      return;
+    }
+
     setSaving(true);
     try {
-      const itemId = matchedExisting?.id ?? editingItem?.id ?? crypto.randomUUID();
       const category = values.category.trim();
       // Fold any text still sitting in the add-store box (typed but not yet committed via
       // Enter/Add) into the pushed array, so clicking Save doesn't silently drop it (T-99 review).
@@ -431,6 +455,7 @@ export default function ItemDialog({
             value={values.name}
             onChange={(e) => handleNameChange(e.target.value)}
           />
+          {nameError && <p className="error-text">{nameError}</p>}
           {suggestions.length > 0 && (
             <ul
               className="card"

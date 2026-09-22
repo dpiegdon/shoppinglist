@@ -82,6 +82,7 @@ export const ar: Catalog = {
   "item.status.backlog": "قائمة الانتظار",
   "item.status.backlogHint": "ليس على القائمة بعد",
   "item.saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
+  "item.duplicateName": "يوجد بالفعل عنصر باسم \"{name}\"",
 
   "listProps.title": "خصائص القائمة",
   "listProps.name": "الاسم",

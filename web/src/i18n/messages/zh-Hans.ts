@@ -80,6 +80,7 @@ export const zhHans: Catalog = {
   "item.status.backlog": "稍后",
   "item.status.backlogHint": "尚未加入清单",
   "item.saveFailed": "保存失败，请重试。",
+  "item.duplicateName": "已存在名为「{name}」的物品",
 
   "listProps.title": "清单属性",
   "listProps.name": "名称",

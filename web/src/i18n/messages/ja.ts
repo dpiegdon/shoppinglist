@@ -81,6 +81,7 @@ export const ja: Catalog = {
   "item.status.backlog": "あとで",
   "item.status.backlogHint": "まだリストに入っていません",
   "item.saveFailed": "保存できませんでした。もう一度お試しください。",
+  "item.duplicateName": "「{name}」という名前のアイテムはすでに存在します",
 
   "listProps.title": "リストのプロパティ",
   "listProps.name": "名前",
