@@ -18,7 +18,7 @@ function clock<T>(value: T) {
   return { value, updated_at: 1, updated_by: "dev" };
 }
 
-function listObj(notes: string | null = null) {
+function listObj(notes: string | null = null, kind: "shopping" | "checklist" | "expenses" | null = null) {
   return {
     id: "list-1",
     created_at: 0,
@@ -27,6 +27,7 @@ function listObj(notes: string | null = null) {
       category_order: clock([]),
       notes: clock(notes),
       deleted: clock(false),
+      ...(kind ? { kind: clock(kind) } : {}),
     },
   };
 }
@@ -190,7 +191,9 @@ describe("ListPropsPage duplicate list (T-63)", () => {
     vi.mocked(api.sync).mockResolvedValueOnce({
       cursor: 1,
       changes: {
-        lists: [listObj("Gate code: 4471")],
+        // A non-default kind (T-267): duplicating it must carry the kind along, not fall back to
+        // the server's default (shopping) by omitting the field.
+        lists: [listObj("Gate code: 4471", "checklist")],
         items: [itemObj("item-1", "Milk"), itemObj("item-2", "Old", true)],
       },
     });
@@ -215,6 +218,7 @@ describe("ListPropsPage duplicate list (T-63)", () => {
       expect(pushedLists[0].id).not.toBe("list-1");
       expect(pushedLists[0].fields.name?.value).toBe("Groceries (Copy)");
       expect(pushedLists[0].fields.notes?.value).toBe("Gate code: 4471");
+      expect(pushedLists[0].fields.kind?.value).toBe("checklist");
       // Only the non-deleted item was copied, as a fresh id, with its status preserved.
       expect(pushedItems).toHaveLength(1);
       expect(pushedItems[0].id).not.toBe("item-1");

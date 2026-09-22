@@ -257,6 +257,11 @@ export default function ListPropsPage() {
             ...fieldPatch(deviceId, "name", `${listFieldValue(list, "name")} (Copy)`),
             ...fieldPatch(deviceId, "category_order", listFieldValue(list, "category_order") ?? []),
             ...fieldPatch(deviceId, "notes", listFieldValue(list, "notes") ?? null),
+            // The duplicate must keep the source's kind (T-267): omitting it left the server to
+            // apply its default (shopping), so a duplicated checklist came back showing the
+            // stores/price/quantity fields the original hid. Not offered for expenses (see the
+            // guard below), so this never needs to carry a currency along with it.
+            ...fieldPatch(deviceId, "kind", listKind(list)),
           },
         },
       ],
