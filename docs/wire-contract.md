@@ -90,7 +90,29 @@ field, so one row can end up with a locally-newer `name` and a remote-newer
 ```
 
 `updated_by` is a **device** UUID. It is not an account id — see `last_touched_by`
-on items for the account-scoped equivalent.
+on items for the account-scoped equivalent. The one exception is the reserved
+literal `"server-merge"`, which the server itself writes as `updated_by` on the
+`deleted` field of a tombstone it created by the same-name merge (see "Same-name
+merge" below) — a client never sees its own device id there, and must not send
+this literal itself.
+
+## Clock clamping
+
+A client-supplied `updated_at` (per field) or `created_at` (per row) is capped at
+**server-now + 1 hour** before it is stored or compared — silently, not rejected.
+Real clock skew is on the order of minutes; anything further ahead is a broken or
+malicious clock, and clamping it (rather than answering `422`) avoids quarantining
+an innocent device for merely having the wrong time. A value at or before
+server-now passes through untouched, so an offline edit pushed late keeps its
+true timestamp.
+
+One consequence: a device with a fast clock can push a write that it believes
+carries, say, tomorrow's timestamp, get back a `updated_at` clamped to roughly
+now, and see a rival's edit beat it on the next sync even though its own clock
+says it was later. `created_at` plays no role in per-field LWW — only in the
+same-name merge's survivor tiebreak (below) — so clamping it cannot be gamed by
+setting a *future* `created_at`; a small or past one is the way to game
+survivorship, and clamping does not address that.
 
 ## Item object
 
@@ -129,6 +151,39 @@ Appears in `POST /sync` payloads; the server always returns full row state.
 
 Optional fields may be **absent from a request** (send clocks only for fields you
 changed); **responses always carry all 9 fields**.
+
+`created_at` may be **omitted or null** on a pushed item; the server stamps the
+request time instead. It never changes once stored. It plays no role in
+per-field LWW — only in the same-name merge's survivor tiebreak, below.
+
+### Same-name merge
+
+On a **shopping or checklist** list (never on a ledger — see "Expenses" below),
+the server keeps at most one **live** item per case-insensitive name. Whenever a
+push would leave two live items in the same list whose names match
+case-insensitively — a create colliding with an existing name, or a rename
+landing on one — the server merges them into a single survivor instead of
+storing both:
+
+- **Survivor**: the item with the earliest `created_at`; ties broken by the
+  lexically smaller `id`.
+- **Per-field LWW across the whole group**: the survivor ends up with, for each
+  field independently, the value carrying the greatest `(updated_at,
+  updated_by)` among every merged row — exactly the same comparison an ordinary
+  two-way sync would make, just run across more than two candidates at once.
+- **Losers are tombstoned** (`deleted: true`) with a server-authored clock:
+  `updated_at` is the merge's own timestamp and `updated_by` is the reserved
+  literal `"server-merge"` (see "Field clock" above). The survivor's own
+  `deleted` field is rewritten the same way (`false`, same server clock) so the
+  merge itself is a normal, syncable change every device converges on.
+- A client can therefore see, in an ordinary delta, **a tombstone for a row it
+  never deleted** (another device's rename collided with it) and **its own
+  item's other fields change** to a rival's more-recently-written values — both
+  are the merge, not a bug, and both carry `updated_by: "server-merge"` on
+  `deleted` as the signal.
+- The merge runs inline whenever a push creates that condition, and again as an
+  idempotent pass over every list touched by the request, so it also cleans up
+  any duplicates arrived at some other way.
 
 ### Expenses
 
@@ -210,6 +265,8 @@ nulling it later, is refused too.
 }
 ```
 
+- `created_at` is optional on a push, exactly as on an item (see "Item object")
+  — omit or null it and the server stamps the request time.
 - `category_order` is an array of strings (whole array = one LWW field).
 - `notes` is string-or-null, max 5000 characters.
 - `kind` is `"shopping"`, `"checklist"` or `"expenses"`, default `"shopping"`.
@@ -256,12 +313,14 @@ nulling it later, is refused too.
 |---|---|---|
 | `POST /register` | `{"email", "password"}` | `201 {"account_id"}` |
 | `GET /registration-status` | — | `200 {"allow_registration"}` |
-| `POST /login` | `{"email", "password", "device_label", "platform"?}` | `200 {"token", "account_id", "email", "is_admin"}` |
+| `POST /login` | `{"email", "password", "device_label"?, "platform"?}` | `200 {"token", "account_id", "email", "is_admin"}` |
 | `POST /logout` | — | `204` |
 
-`platform` is optional and selects the session's inactivity window; absent for
-older clients, which fall back to the long default. `is_admin` is derived from
-the instance's static `admin_emails` config and is never stored.
+`device_label` is optional; an absent or null one is stored as `null` and shown
+blank wherever a session lists it (`GET /account/sessions`). `platform` is
+optional and selects the session's inactivity window; absent for older clients,
+which fall back to the long default. `is_admin` is derived from the instance's
+static `admin_emails` config and is never stored.
 
 `POST /register` returns `403 registration_disabled` when registration is
 disabled for the instance.
@@ -304,8 +363,14 @@ the one that made the change.
 | `POST /invites/redeem` | `{"token"}` | `200 {"list_id"}` |
 | `GET /invites/pending` | — | `200 {"invites": [{"id", "list_id", "list_name", "list_kind", "invited_by_initials", "expires_at", "token"}]}` |
 
-`GET /lists` is a convenience summary; the full list state (including `notes` and
-`kind`) comes through `POST /sync`.
+`GET /lists` is **legacy and unused**: it predates `POST /sync` carrying full
+list state (including `notes` and `kind`), which is how both clients actually
+learn what lists exist today. Neither client calls it in the running app — the
+web client keeps an unused wrapper (`getLists()` in `web/src/api/client.ts`,
+exercised only by its own test) and Android keeps an unused Retrofit method
+(`lists()` in `Api.kt`) — but the server still serves it and it is not
+scheduled for removal; treat it as available but not part of either client's
+real sync path.
 
 `GET /lists/{id}/members` returns a uniform `403 not_a_member` whether or not the
 list exists, so a non-member cannot probe for existence. `initials` is resolved
@@ -371,6 +436,27 @@ all live rows of any `full_lists`, plus the new cursor.
   just that row (see below) instead of wedging the whole push queue.
 - A `422` naming a `row_id` means *that row* is unacceptable: quarantine it,
   keep syncing the rest, and retry it once the user edits it.
+- **Per-field input caps.** Neither client enforces these; a pushed value over
+  its cap is refused (`422`, naming the `row_id` and `field`) rather than
+  silently truncated. Caps are on the raw value, in characters/bytes as
+  applicable:
+
+  | Field(s) | Cap |
+  |---|---|
+  | `id` (item or list) | 128 characters |
+  | `updated_by` (any field clock) | 128 characters |
+  | `name` (item or list) | 500 characters |
+  | `category` | 200 characters |
+  | `quantity` | 200 characters |
+  | `note` (item) | 5000 characters |
+  | `price.amount`, and each amount in an expense's `paid_by`/`paid_for` | 32 characters |
+  | `price.currency` | 16 characters |
+  | `stores`, `category_order` | 200 entries, each 200 characters or fewer |
+
+  List `notes` (5000 characters) and `currency` (32 characters) are covered
+  separately, in "List object" above, since each has its own error code
+  (`invalid_notes`, `invalid_list_currency`) rather than the generic
+  `invalid_field`.
 
 ### Admin
 
@@ -405,8 +491,9 @@ returns `403 cannot_delete_admin` (remove them from the config instead).
 
 Unauthenticated, like `/registration-status`: checking for an update is not an
 account operation, and the download it points at is public anyway. The Android
-client polls it on foreground (rate-limited) and whenever its settings screen
-opens, and offers an update when `version` is newer than its own build.
+client polls it on foreground (rate-limited, at most twice a day) and whenever
+its **About** screen opens, and offers an update when `version` is newer than
+its own build.
 
 `version` is the **server package's** version, not a value parsed out of the
 APK. One built wheel is a single deployable artifact whose parts share one
@@ -417,9 +504,14 @@ survives a prefix mount and can be handed straight to an Android intent. It
 points at the site-root `GET /shoppinglist.apk` below.
 
 `protocol` is the server's `PROTOCOL_VERSION`. This endpoint is the one an
-outdated client can still reach (see "Protocol version"), so it is where a client
-refused with `426` reads what it has to catch up to. It is also unauthenticated
-and ungated for exactly that reason.
+outdated client can still reach (see "Protocol version") — it is exempt from the
+protocol gate for exactly that reason — but **no client currently reads
+`protocol` from this response**: Android's `AppVersionResponse` DTO does not
+even declare the field, and the web client never calls this endpoint at all (it
+gets its own version from a server-injected `<meta>` tag, and reads nothing from
+a `426`'s body but `error`). The field is served for a future client to use;
+today, a refused client learns nothing from it beyond "an update exists," from
+the same `version`/`download_url` every caller gets.
 
 `404 no_app_package` when this instance serves no APK — because
 `serve_android_apk` is off, no APK is packaged, or the server is running from a
