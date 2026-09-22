@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import cases from "../../../shared-test-cases/category-canon.json";
 import {
   canonicalCategoryNames,
   categoryKey,
@@ -38,6 +39,30 @@ describe("distinctCanonicalCategories", () => {
       "Bakery",
       "Dairy",
     ]);
+  });
+});
+
+// Driven by the table Android's CategoryCanonTest reads too (T-274): a tie-break or a sort order
+// that used a locale-aware compare instead of byCodeUnits showed up only here, never in the cases
+// above, where counts are never tied.
+describe("category canon (shared table)", () => {
+  it.each(cases.canonical_names)("canonical_names: $name", ({ raw_categories, category_order, expect: expected }) => {
+    const names = canonicalCategoryNames(raw_categories, category_order);
+    expect(Object.fromEntries(names)).toEqual(expected);
+  });
+
+  it.each(cases.autocomplete_order)(
+    "autocomplete_order: $name",
+    ({ raw_categories, category_order, expect: expected }) => {
+      expect(distinctCanonicalCategories(raw_categories, category_order)).toEqual(expected);
+    },
+  );
+
+  it("the case table covers every group this test drives", () => {
+    // A renamed or emptied group would otherwise make a whole block silently iterate nothing.
+    for (const name of ["canonical_names", "autocomplete_order"] as const) {
+      expect(cases[name].length, name).toBeGreaterThan(0);
+    }
   });
 });
 

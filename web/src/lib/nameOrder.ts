@@ -24,8 +24,12 @@ export function nameSortKey(name: string): string {
   return key.replace(/^[^\p{L}\p{Nd}]+/u, "");
 }
 
-/** By UTF-16 code unit, which is how Kotlin compares strings too. */
-function byCodeUnits(a: string, b: string): number {
+/**
+ * By UTF-16 code unit, which is how Kotlin compares strings too (`String.compareTo`/`<`). Never
+ * `localeCompare`: that is locale-aware and disagrees with Kotlin's default order in detail, which
+ * is exactly how name order (T-176) and category casing (T-274) drifted between the clients.
+ */
+export function byCodeUnits(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 

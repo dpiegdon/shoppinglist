@@ -1,16 +1,32 @@
 package org.p23q.shoppinglist.data
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * T-108 category identity/casing rules. These MUST stay in lockstep with the web client's
  * categories.test.ts — the two clients share the rule (client-ui-notes.md) so they group the same
- * synced data identically.
+ * synced data identically. The tie-break and autocomplete-order cases (T-274) are driven by the
+ * shared table this shares with the web suite: shared-test-cases/category-canon.json.
  */
 class CategoryCanonTest {
+
+    private val cases: JsonObject = run {
+        // Unit tests run from android/app, so the repo root is two levels up (as ExpenseMathTest).
+        val file = File("../../shared-test-cases/category-canon.json")
+        assertTrue("missing shared case table at ${file.absolutePath}", file.exists())
+        Json.parseToJsonElement(file.readText()).jsonObject
+    }
+
+    private fun group(name: String) = cases[name]!!.jsonArray.map { it.jsonObject }
 
     @Test
     fun `key is case-insensitive and trimmed`() {
@@ -76,5 +92,36 @@ class CategoryCanonTest {
             listOf("Dairy", "Bread"),
             CategoryCanon.normalizeOrder(listOf("Dairy", " ", "dairy", "Bread", "bread ")),
         )
+    }
+
+    // ---- shared table (T-274) -------------------------------------------------
+
+    @Test
+    fun `canonical names match the shared table, tie-break included`() {
+        for (case in group("canonical_names")) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val raw = case["raw_categories"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val order = case["category_order"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val expected = case["expect"]!!.jsonObject.mapValues { (_, v) -> v.jsonPrimitive.content }
+            assertEquals(name, expected, CategoryCanon.canonicalNames(raw, order))
+        }
+    }
+
+    @Test
+    fun `autocomplete order matches the shared table`() {
+        for (case in group("autocomplete_order")) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val raw = case["raw_categories"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val order = case["category_order"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val expected = case["expect"]!!.jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(name, expected, CategoryCanon.distinctCanonical(raw, order))
+        }
+    }
+
+    @Test
+    fun `the case table covers every group this test drives`() {
+        for (name in listOf("canonical_names", "autocomplete_order")) {
+            assertTrue(name, group(name).isNotEmpty())
+        }
     }
 }

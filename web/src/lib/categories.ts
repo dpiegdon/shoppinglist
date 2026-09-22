@@ -1,7 +1,15 @@
+import { byCodeUnits } from "./nameOrder";
+
 // Category identity is case-insensitive (T-108): "Group" and "group" are one category. Grouping,
 // the settings registry, and the item-dialog autocomplete all key on this. The rule here MUST match
 // the Android client (see docs/archive/specs/client-ui-notes.md) or the two would show
 // different canonical casings for the same data.
+//
+// Tie-breaks and the autocomplete order use byCodeUnits (T-274), never localeCompare: Android
+// breaks ties with plain `<`/`sorted()`, which compare by UTF-16 code unit, not locale. The two
+// looked equivalent for "unequal-count" cases and disagreed only on a genuine tie — "Obst" vs.
+// "obst" canonicalised to "obst" here and "Obst" on Android. Pinned by
+// shared-test-cases/category-canon.json, driven by both suites.
 
 export const UNCATEGORIZED_LABEL = "—";
 
@@ -38,7 +46,7 @@ export function canonicalCategoryNames(
     let best = "";
     let bestCount = -1;
     for (const [casing, count] of byCasing) {
-      if (count > bestCount || (count === bestCount && casing.localeCompare(best) < 0)) {
+      if (count > bestCount || (count === bestCount && byCodeUnits(casing, best) < 0)) {
         best = casing;
         bestCount = count;
       }
@@ -55,9 +63,7 @@ export function canonicalCategoryNames(
 
 /** The distinct categories in use (canonical casing), sorted — for the item-dialog autocomplete. */
 export function distinctCanonicalCategories(rawCategories: string[], categoryOrder: string[]): string[] {
-  return Array.from(canonicalCategoryNames(rawCategories, categoryOrder).values()).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  return Array.from(canonicalCategoryNames(rawCategories, categoryOrder).values()).sort(byCodeUnits);
 }
 
 /**

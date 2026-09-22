@@ -1,0 +1,70 @@
+{
+  "_comment": [
+    "Cross-client category canonicalisation (T-108, T-274). ONE file, read by BOTH test suites:",
+    "web/src/lib/categories.test.ts imports it, Android's CategoryCanonTest reads it from the repo",
+    "root the way ExpenseMathTest reads expense-arithmetic.json.",
+    "",
+    "canonicalisation: among the casings seen for one case-insensitive category key, the",
+    "most-frequent one wins; a tie breaks by UTF-16 code unit (Kotlin's default String order,",
+    "NEVER a locale-aware compare) — the smaller string wins. A category_order entry's casing is",
+    "authoritative over both and always overrides the vote for its key.",
+    "",
+    "autocomplete_order: distinctCanonical/distinctCanonicalCategories sorts the canonical casings",
+    "the same way name order does (shared-test-cases/name-order.json) — by UTF-16 code unit, not a",
+    "locale collation. This is a plain code-unit sort of the canonical names, NOT the accent/case",
+    "folding name-order.json pins; the two are deliberately different rules for different screens.",
+    "",
+    "The web client used to break both of these with String.localeCompare, which agrees with the",
+    "code-unit order whenever counts differ or names share a first letter's case, and disagrees",
+    "exactly on a genuine tie or a mixed-case comparison ('Obst' vs. 'obst', 'Äpfel' vs. 'Bananen') —",
+    "which is exactly why it went unnoticed until now."
+  ],
+
+  "canonical_names": [
+    {
+      "name": "a two-way tie breaks by code unit: uppercase sorts before lowercase",
+      "raw_categories": ["Obst", "obst"],
+      "category_order": [],
+      "expect": { "obst": "Obst" }
+    },
+    {
+      "name": "frequency still wins over the tie-break",
+      "raw_categories": ["Obst", "obst", "obst"],
+      "category_order": [],
+      "expect": { "obst": "obst" }
+    },
+    {
+      "name": "a category_order entry overrides the vote even when it would lose a tie",
+      "raw_categories": ["Obst", "obst"],
+      "category_order": ["OBST"],
+      "expect": { "obst": "OBST" }
+    },
+    {
+      "name": "an outright majority needs no tie-break",
+      "raw_categories": ["Dairy", "Dairy", "dairy", "Bakery"],
+      "category_order": [],
+      "expect": { "dairy": "Dairy", "bakery": "Bakery" }
+    }
+  ],
+
+  "autocomplete_order": [
+    {
+      "name": "an uppercase-accented name sorts by its raw code unit, not after plain ASCII (T-274)",
+      "raw_categories": ["Bananen", "Äpfel"],
+      "category_order": [],
+      "expect": ["Bananen", "Äpfel"]
+    },
+    {
+      "name": "a tied casing's winner (uppercase, by code unit) still sorts case-sensitively",
+      "raw_categories": ["dairy", "Dairy", "Bakery"],
+      "category_order": [],
+      "expect": ["Bakery", "Dairy"]
+    },
+    {
+      "name": "three distinct categories, plain ASCII order",
+      "raw_categories": ["Snacks", "Bakery", "Dairy"],
+      "category_order": [],
+      "expect": ["Bakery", "Dairy", "Snacks"]
+    }
+  ]
+}

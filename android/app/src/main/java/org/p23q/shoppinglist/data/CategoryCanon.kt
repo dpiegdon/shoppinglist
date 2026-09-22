@@ -4,6 +4,12 @@ package org.p23q.shoppinglist.data
  * Case-insensitive category identity + canonical casing (T-108). Mirror of the web client's
  * `lib/categories.ts` and the rule in docs/archive/specs/client-ui-notes.md — the two clients
  * MUST key categories the same way or they'd show different groupings for the same synced data.
+ *
+ * Tie-breaks below (`<`) and `distinctCanonical`'s `.sorted()` are natural `String` order, i.e. by
+ * UTF-16 code unit — never a `Locale`-aware compare (T-274). The web client had used
+ * `localeCompare` here, which agreed with this only when counts were unequal and picked a
+ * different winner on a genuine tie ("Obst" vs. "obst"). Pinned by
+ * shared-test-cases/category-canon.json, driven by both suites.
  */
 object CategoryCanon {
     const val UNCATEGORIZED_LABEL = "—"
