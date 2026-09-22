@@ -4,7 +4,9 @@ import json
 
 import pytest
 
-from shoppinglist_server import auth, sync
+from shoppinglist_server import auth
+from shoppinglist_server import db as db_module
+from shoppinglist_server import sync
 from shoppinglist_server.errors import ApiError
 
 PW = "password123"
@@ -1003,3 +1005,57 @@ def test_converting_a_list_to_checklist_preserves_item_fields(db_conn):
     assert row["quantity"] == "2l"
     assert row["price_amount"] == "1.99"
     assert json.loads(row["stores"]) == ["Rewe"]
+
+
+# ---- cursor / concurrency (T-253) ------------------------------------------
+
+
+def test_pull_only_cursor_never_covers_a_row_it_did_not_send(tmp_path, monkeypatch):
+    """A pull-only request writes nothing, so sqlite3 opens no transaction for it and every
+    statement reads its own snapshot. A row committed by another device after the row queries
+    must not be covered by the cursor the response returns — `change_seq > cursor` would never
+    match it again and it would stay invisible on that device forever (T-253)."""
+    path = str(tmp_path / "interleaved.db")
+    writer = db_module.connect(path)
+    db_module.init_db(writer)
+    account_id = _register(writer, "a@example.com")
+    _create_list(writer, account_id, "devA", "list-1", "Groceries", ts=100)
+    writer.commit()
+
+    reader = db_module.connect(path)
+    cursor = sync.delta(reader, account_id, 0)["cursor"]
+
+    # The interleave. `_rosters` is the first thing delta does after its row queries, so
+    # hooking it commits the other device's write exactly in the window between the rows
+    # being read and the cursor being taken — the window the defect lived in.
+    committed = {}
+    real_rosters = sync._rosters
+
+    def _commit_elsewhere_then_roster(conn, list_rows):
+        if not committed:
+            sync.apply_changes(
+                writer,
+                account_id,
+                "devA",
+                {"items": [_mk_item("item-1", "list-1", name=("Milk", 200, "devA"))]},
+            )
+            writer.commit()
+            committed["change_seq"] = writer.execute(
+                "SELECT change_seq FROM meta WHERE id = 1"
+            ).fetchone()["change_seq"]
+        return real_rosters(conn, list_rows)
+
+    monkeypatch.setattr(sync, "_rosters", _commit_elsewhere_then_roster)
+    result = sync.delta(reader, account_id, cursor)
+
+    assert [row["id"] for row in result["changes"]["items"]] == []
+    assert result["cursor"] < committed["change_seq"]
+
+    # And the row is still there to be pulled on the next round.
+    next_ids = [
+        row["id"] for row in sync.delta(reader, account_id, result["cursor"])["changes"]["items"]
+    ]
+    assert next_ids == ["item-1"]
+
+    reader.close()
+    writer.close()

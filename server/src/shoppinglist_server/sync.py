@@ -1,8 +1,14 @@
 """Field-level last-write-wins sync engine (Spec §6).
 
-Pure service layer — no HTTP, no commits. Callers own the transaction boundary
-so that S5 can run ``check_cursor`` → ``apply_changes`` → ``name_merge`` →
-``delta`` atomically in a single transaction.
+Pure service layer — no HTTP, no commits. Callers own the transaction boundary:
+S5 runs ``check_cursor`` → ``apply_changes`` → ``name_merge`` → ``delta`` and
+commits once at the end.
+
+That sequence is a single transaction only when the request actually writes —
+sqlite3 opens one just before the first DML statement, which is the first
+``change_seq`` bump. A pull-only request never reaches DML, so it runs in
+autocommit and each of its reads takes its own snapshot; ``delta`` is written to
+stay correct under that (see the note on the cursor there).
 
 LWW resolution: every syncable field carries ``(updated_at, updated_by)``. The
 field value with the greatest ``(updated_at, updated_by)`` tuple wins; edits to
@@ -1217,6 +1223,26 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
     cursor-independent snapshot of every live row in ``full_lists`` (used when
     joining a list). Returns the new cursor (the global change_seq high-water)."""
     full_lists = full_lists or []
+    # The cursor is taken BEFORE the row queries, deliberately (T-253). A pull-only
+    # request pushes nothing, so sqlite3 issues no implicit BEGIN for it (it does that
+    # only ahead of DML) and every statement below reads its own snapshot. Reading the
+    # high-water mark last meant a row another device committed mid-request landed in
+    # neither the rows nor the cursor: the response omitted it and still told the client
+    # it was up to date, so `change_seq > cursor` never matched it again and the row was
+    # invisible on that device until somebody edited it.
+    #
+    # Taken first, the cursor can only ever lag the rows: such a row is either delivered
+    # anyway (a later snapshot sees it) or arrives on the next pull, because the cursor
+    # stays below it. Over-delivery is idempotent under LWW; under-delivery loses data.
+    #
+    # The alternative — wrapping the whole request in an explicit transaction — was
+    # rejected: a DEFERRED transaction that reads first and writes later gets
+    # SQLITE_BUSY_SNAPSHOT (which the busy timeout does not retry) as soon as another
+    # connection commits in between, turning a concurrent push into a hard failure, and
+    # BEGIN IMMEDIATE would make every pull-only request queue for the single write lock.
+    new_cursor = conn.execute("SELECT change_seq FROM meta WHERE id = 1").fetchone()["change_seq"]
+    # A request that DOES write is still exact: its own bumps are already in change_seq
+    # here, and its rows are read inside the transaction those bumps opened.
     member_ids = {
         r["list_id"]
         for r in conn.execute("SELECT list_id FROM memberships WHERE account_id = ?", (account_id,))
@@ -1257,7 +1283,6 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
         _list_to_wire(row, rosters[list_id], vote_state[list_id])
         for list_id, row in list_rows.items()
     ]
-    new_cursor = conn.execute("SELECT change_seq FROM meta WHERE id = 1").fetchone()["change_seq"]
     return {
         "cursor": new_cursor,
         "changes": {"lists": lists_out, "items": list(items_out.values())},

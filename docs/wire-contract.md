@@ -342,6 +342,12 @@ accepts unchanged.
 all live rows of any `full_lists`, plus the new cursor.
 
 - Cursor `0` means initial full sync.
+- The returned cursor never covers a row the response left out, but it may lag a
+  row the response carried: a write committed elsewhere while the request was
+  being served can be delivered and still be above the new cursor, in which case
+  the next pull delivers it again. Applying a row twice is a no-op under
+  last-write-wins, so clients must tolerate that rather than assume each row
+  arrives exactly once.
 - A cursor below the server's `gc_horizon` returns `410 full_resync_required`.
   Pushed changes in that same request are still applied first.
 - **A push carries at most 250 rows** (`lists` + `items` counted together).
