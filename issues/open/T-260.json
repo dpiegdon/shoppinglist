@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, Android finding. Verified by reading.\n\n`AuthRepository.clearLocalSession()` calls `appDb.clearAllTables()`, and it runs on ANY 401 that carried a bearer token (ErrorInterceptor -> SessionEvents -> RootViewModel). Per the wire contract a 401 is also what an idle-expired session and a password change on another device produce \u2014 the latter revokes every other session by design. So: edit the list offline on the phone, change the password on the web, foreground the phone -> the whole mirror including the unpushed queue is deleted.\n\nThe justification in the comment is that a different account must not see the previous account's lists, but the wipe happens at logout time, before anyone knows which account will log back in.\n\nFix direction: defer the wipe to login and only wipe when the returning account_id differs, or preserve dirty rows across the clear.",
+  "created_at": "2026-09-22T20:02:00+00:00",
+  "id": "T-260",
+  "labels": [
+    "android",
+    "data-loss"
+  ],
+  "priority": 2,
+  "title": "Android: a forced logout wipes the local mirror including unpushed edits",
+  "updated_at": "2026-09-22T20:02:00+00:00"
+}
