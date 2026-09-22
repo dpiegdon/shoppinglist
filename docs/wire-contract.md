@@ -514,13 +514,15 @@ points at the site-root `GET /shoppinglist.apk` below.
 
 `protocol` is the server's `PROTOCOL_VERSION`. This endpoint is the one an
 outdated client can still reach (see "Protocol version") — it is exempt from the
-protocol gate for exactly that reason — but **no client currently reads
-`protocol` from this response**: Android's `AppVersionResponse` DTO does not
-even declare the field, and the web client never calls this endpoint at all (it
-gets its own version from a server-injected `<meta>` tag, and reads nothing from
-a `426`'s body but `error`). The field is served for a future client to use;
-today, a refused client learns nothing from it beyond "an update exists," from
-the same `version`/`download_url` every caller gets.
+protocol gate for exactly that reason — but **no client currently acts on
+`protocol`**: Android decodes it (`AppVersionResponse` carries it, nullable for
+a server older than the field) and then ignores it, deciding whether an update
+is needed from `version` alone, and the web client never calls this endpoint at
+all — it gets its own version from a server-injected `<meta>` tag and reads
+nothing from a `426`'s body but `error`. Comparing versions is enough because a
+protocol bump always ships in a major release (see "Protocol version"), so today
+a refused client learns nothing from `protocol` beyond "an update exists", which
+`version` and `download_url` already tell it.
 
 `404 no_app_package` when this instance serves no APK — because
 `serve_android_apk` is off, no APK is packaged, or the server is running from a
