@@ -93,6 +93,31 @@ describe("AdminPage (T-107)", () => {
     await waitFor(() => expect(screen.queryByText("u@example.com")).not.toBeInTheDocument());
   });
 
+  it("the delete confirmation is a modal dialog that Escape cancels, focus going back to Delete (T-283)", async () => {
+    renderAdmin();
+
+    await showUsers();
+    await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
+    const deleteButton = screen.getByRole("button", { name: "Delete" });
+    await userEvent.click(deleteButton);
+
+    const dialog = screen.getByRole("dialog", { name: "Delete user?" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    // Tab from the dialog itself lands on its first button and stays inside from there.
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(deleteButton).toHaveFocus();
+    expect(api.adminDeleteUser).not.toHaveBeenCalled();
+  });
+
   it("says the password is required instead of silently doing nothing (T-113)", async () => {
     renderAdmin();
     await showUsers();

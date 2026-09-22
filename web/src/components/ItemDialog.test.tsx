@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { StrictMode, useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ItemDialog from "./ItemDialog";
@@ -800,6 +801,92 @@ describe("ItemDialog duplicate-name validation (T-273)", () => {
     await userEvent.click(screen.getByText("Save"));
 
     expect(await screen.findByText('An item named "Bread" already exists')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe("ItemDialog as a modal dialog (T-283)", () => {
+  it("is announced as a dialog named by its heading, with focus inside it", () => {
+    render(<ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={vi.fn()} />);
+
+    const dialog = screen.getByRole("dialog", { name: "Add item" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+  });
+
+  it("closes on Escape through onClose, saving nothing", async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    render(<ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={onSave} />);
+
+    await userEvent.type(screen.getByLabelText("Name"), "Milk");
+    await userEvent.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("keeps Tab inside the dialog, wrapping at both ends", async () => {
+    render(
+      <>
+        <button type="button">Outside</button>
+        <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={vi.fn()} />
+      </>,
+    );
+    const dialog = screen.getByRole("dialog");
+    const name = screen.getByLabelText("Name");
+
+    await userEvent.tab({ shift: true });
+    const last = document.activeElement as HTMLElement;
+    expect(dialog).toContainElement(last);
+    expect(last).not.toBe(name);
+
+    await userEvent.tab();
+    expect(name).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Outside" })).not.toHaveFocus();
+  });
+
+  it("gives focus back to the button that opened it when it closes", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open
+          </button>
+          {open && (
+            <ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={() => setOpen(false)} onSave={vi.fn()} />
+          )}
+        </>
+      );
+    }
+    // StrictMode, as the app runs: its development double-run of effects must not move focus.
+    render(
+      <StrictMode>
+        <Harness />
+      </StrictMode>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open" })).toHaveFocus();
+  });
+
+  it("still adds a store chip on Enter in the store field, without closing or saving", async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    render(<ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={onClose} onSave={onSave} />);
+
+    const dialog = screen.getByRole("dialog");
+    const storeInput = within(dialog).getByLabelText("Stores");
+    await userEvent.type(storeInput, "Aldi{Enter}");
+
+    expect(within(dialog).getByText("Aldi")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
   });
 });

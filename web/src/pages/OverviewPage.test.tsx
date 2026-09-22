@@ -275,6 +275,24 @@ describe("OverviewPage create-list error (T-266)", () => {
     // Still open, with what was typed still there — not silently discarded.
     expect(screen.getByLabelText("Name")).toHaveValue("Ski trip");
   });
+
+  it("is a modal dialog: named by its heading, focused on open, closed by Escape with focus back on New list (T-283)", async () => {
+    vi.mocked(api.sync).mockResolvedValue(syncResponse("list-1"));
+    renderOverview();
+    await screen.findByText("My List");
+
+    await userEvent.click(screen.getByRole("button", { name: "New list" }));
+    const dialog = screen.getByRole("dialog", { name: "New list" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+
+    await userEvent.type(screen.getByLabelText("Name"), "Ski trip");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New list" })).toHaveFocus();
+    // Closed the way Cancel closes: no list was created.
+    expect(vi.mocked(api.sync).mock.calls.flatMap((call) => call[0].changes.lists ?? [])).toHaveLength(0);
+  });
 });
 
 // ---- invites waiting for this account (T-233) ---------------------------------

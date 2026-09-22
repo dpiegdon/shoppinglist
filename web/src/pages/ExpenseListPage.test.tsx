@@ -952,6 +952,20 @@ describe("the entry dialog knows three types", () => {
     expect(screen.getByText("For")).toBeInTheDocument();
   });
 
+  it("is a modal dialog: named by its heading, focused on open, closed by Escape with focus back on Add entry (T-283)", async () => {
+    await openAddForm();
+
+    const dialog = screen.getByRole("dialog", { name: "New entry" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add entry" })).toHaveFocus();
+    // Closed the way Cancel closes: nothing was pushed.
+    expect(vi.mocked(api.sync).mock.calls.flatMap((call) => call[0].changes.items ?? [])).toHaveLength(0);
+  });
+
   it("reads an income's two sides as received and credited", async () => {
     await openAddForm();
     await userEvent.click(screen.getByRole("radio", { name: "Income" }));

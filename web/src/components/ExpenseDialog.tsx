@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "../api/client";
 import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
-import { useOverlayClose } from "../hooks/useOverlayClose";
+import { ModalDialog } from "./ModalDialog";
 import {
   distribute,
   entryType,
@@ -139,7 +139,6 @@ export default function ExpenseDialog({
   onDelete,
 }: ExpenseDialogProps) {
   const t = useT();
-  const overlay = useOverlayClose(onClose);
   const isEdit = Boolean(editingItem);
   const stored = editingItem ? itemFieldValue(editingItem, "expense") ?? null : null;
   // What the distributions start from: the expense being edited, else a prefill, else nothing.
@@ -491,143 +490,141 @@ export default function ExpenseDialog({
   }
 
   return (
-    <div className="dialog-overlay" onMouseDown={overlay.onMouseDown} onMouseUp={overlay.onMouseUp}>
-      <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>
-          {isEdit ? t("expense.edit") : t("expense.new")}
-        </h2>
-        {saveError && (
-          <p className="error-text" role="alert">
-            {saveError}
+    <ModalDialog as="form" onClose={onClose} labelledBy="expense-dialog-title" onSubmit={handleSubmit}>
+      <h2 id="expense-dialog-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>
+        {isEdit ? t("expense.edit") : t("expense.new")}
+      </h2>
+      {saveError && (
+        <p className="error-text" role="alert">
+          {saveError}
+        </p>
+      )}
+
+      {/* What kind of entry this is, before anything else: it decides what the rest of the
+          form means (T-245). */}
+      <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
+        <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
+          {t("expense.type")}
+        </legend>
+        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          {TYPES.map((option) => (
+            <label key={option} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <input
+                type="radio"
+                name="expense-type"
+                value={option}
+                checked={type === option}
+                disabled={option === "transfer" && !canTransfer}
+                onChange={() => changeType(option)}
+              />
+              <span>{t(typeLabelKey(option))}</span>
+            </label>
+          ))}
+        </div>
+        {!canTransfer && (
+          <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
+            {t("expense.error.needTwoMembers")}
           </p>
         )}
+      </fieldset>
 
-        {/* What kind of entry this is, before anything else: it decides what the rest of the
-            form means (T-245). */}
-        <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
-          <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
-            {t("expense.type")}
-          </legend>
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-            {TYPES.map((option) => (
-              <label key={option} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <input
-                  type="radio"
-                  name="expense-type"
-                  value={option}
-                  checked={type === option}
-                  disabled={option === "transfer" && !canTransfer}
-                  onChange={() => changeType(option)}
-                />
-                <span>{t(typeLabelKey(option))}</span>
-              </label>
-            ))}
-          </div>
-          {!canTransfer && (
-            <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
-              {t("expense.error.needTwoMembers")}
-            </p>
-          )}
-        </fieldset>
+      <div className="form-field">
+        <label htmlFor="expense-what">{t("expense.what")}</label>
+        <input
+          id="expense-what"
+          autoFocus
+          // An income or a transfer names itself when left blank, so only an expense insists.
+          required={type === "expense"}
+          autoComplete="off"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
-        <div className="form-field">
-          <label htmlFor="expense-what">{t("expense.what")}</label>
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
+          <label htmlFor="expense-total">
+            {t("expense.total")} ({currency})
+          </label>
           <input
-            id="expense-what"
-            autoFocus
-            // An income or a transfer names itself when left blank, so only an expense insists.
-            required={type === "expense"}
-            autoComplete="off"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            id="expense-total"
+            inputMode="decimal"
+            placeholder="0.00"
+            required
+            value={totalText}
+            onChange={(e) => setTotalText(e.target.value)}
           />
         </div>
-
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
-            <label htmlFor="expense-total">
-              {t("expense.total")} ({currency})
-            </label>
-            <input
-              id="expense-total"
-              inputMode="decimal"
-              placeholder="0.00"
-              required
-              value={totalText}
-              onChange={(e) => setTotalText(e.target.value)}
-            />
-          </div>
-          <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
-            <label htmlFor="expense-date">{t("expense.date")}</label>
-            <input
-              id="expense-date"
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
+        <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
+          <label htmlFor="expense-date">{t("expense.date")}</label>
+          <input
+            id="expense-date"
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
+      </div>
 
-        {/* A transfer has nothing to split: it is one person handing money to another. */}
-        {type === "transfer" && (
-          <>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              {renderTransferPicker("from", transferFrom, transferTo, setTransferFrom)}
-              {renderTransferPicker("to", transferTo, transferFrom, setTransferTo)}
-            </div>
-            {transferFrom !== "" && transferFrom === transferTo && (
-              <p className="error-text" role="alert" style={{ margin: "0 0 0.75rem" }}>
-                {t("expense.error.sameMember")}
-              </p>
-            )}
-          </>
-        )}
-
-        {/* Nothing to choose on a list of one: they paid, and it was for them. */}
-        {type !== "transfer" && !soloList && renderShares("by", paidBy, setPaidBy, byResult)}
-        {type !== "transfer" && !soloList && renderShares("for", paidFor, setPaidFor, forResult)}
-        {type !== "transfer" && soloList && (
-          <p className="muted" style={{ fontSize: "0.85rem" }}>
-            {t("expense.soloHint")}
-          </p>
-        )}
-
-        <div className="form-field">
-          <label htmlFor="expense-note">{t("item.note")}</label>
-          <input id="expense-note" value={note} onChange={(e) => setNote(e.target.value)} />
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
-          <div>
-            {isEdit && onDelete && editingItem && (
-              <button
-                type="button"
-                className="btn btn-danger"
-                // Deleting takes everyone on it to zero, which the freeze forbids for anyone whose
-                // amounts are fixed (T-157) — so say so here rather than let the server refuse it.
-                disabled={deleteBlocked || deleting}
-                onClick={handleDeleteClick}
-              >
-                {t("action.delete")}
-              </button>
-            )}
-            {isEdit && deleteBlocked && (
-              <p className="muted" style={{ fontSize: "0.8rem", margin: "0.3rem 0 0" }}>
-                {t("expense.deleteBlocked")}
-              </p>
-            )}
-          </div>
+      {/* A transfer has nothing to split: it is one person handing money to another. */}
+      {type === "transfer" && (
+        <>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              {t("action.cancel")}
-            </button>
-            <button type="submit" className="btn" disabled={!canSave}>
-              {isEdit ? t("action.save") : t("action.add")}
-            </button>
+            {renderTransferPicker("from", transferFrom, transferTo, setTransferFrom)}
+            {renderTransferPicker("to", transferTo, transferFrom, setTransferTo)}
           </div>
+          {transferFrom !== "" && transferFrom === transferTo && (
+            <p className="error-text" role="alert" style={{ margin: "0 0 0.75rem" }}>
+              {t("expense.error.sameMember")}
+            </p>
+          )}
+        </>
+      )}
+
+      {/* Nothing to choose on a list of one: they paid, and it was for them. */}
+      {type !== "transfer" && !soloList && renderShares("by", paidBy, setPaidBy, byResult)}
+      {type !== "transfer" && !soloList && renderShares("for", paidFor, setPaidFor, forResult)}
+      {type !== "transfer" && soloList && (
+        <p className="muted" style={{ fontSize: "0.85rem" }}>
+          {t("expense.soloHint")}
+        </p>
+      )}
+
+      <div className="form-field">
+        <label htmlFor="expense-note">{t("item.note")}</label>
+        <input id="expense-note" value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
+        <div>
+          {isEdit && onDelete && editingItem && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              // Deleting takes everyone on it to zero, which the freeze forbids for anyone whose
+              // amounts are fixed (T-157) — so say so here rather than let the server refuse it.
+              disabled={deleteBlocked || deleting}
+              onClick={handleDeleteClick}
+            >
+              {t("action.delete")}
+            </button>
+          )}
+          {isEdit && deleteBlocked && (
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0.3rem 0 0" }}>
+              {t("expense.deleteBlocked")}
+            </p>
+          )}
         </div>
-      </form>
-    </div>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            {t("action.cancel")}
+          </button>
+          <button type="submit" className="btn" disabled={!canSave}>
+            {isEdit ? t("action.save") : t("action.add")}
+          </button>
+        </div>
+      </div>
+    </ModalDialog>
   );
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
-import { useOverlayClose } from "../hooks/useOverlayClose";
+import { ModalDialog } from "./ModalDialog";
 import { parseCurrency, parsePriceAmount } from "../lib/priceParse";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
@@ -161,7 +161,6 @@ export default function ItemDialog({
   onDelete,
 }: ItemDialogProps) {
   const t = useT();
-  const overlay = useOverlayClose(onClose);
   const isEdit = Boolean(editingItem);
   const [matchedExisting, setMatchedExisting] = useState<ItemObject | null>(editingItem ?? null);
   const [values, setValues] = useState(() =>
@@ -441,237 +440,235 @@ export default function ItemDialog({
     }
   }
   return (
-    <div className="dialog-overlay" onMouseDown={overlay.onMouseDown} onMouseUp={overlay.onMouseUp}>
-      <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{isEdit ? t("item.edit") : t("item.add")}</h2>
-        {saveError && (
-          <p className="error-text" role="alert">
-            {saveError}
-          </p>
-        )}
+    <ModalDialog as="form" onClose={onClose} labelledBy="item-dialog-title" onSubmit={handleSubmit}>
+      <h2 id="item-dialog-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>{isEdit ? t("item.edit") : t("item.add")}</h2>
+      {saveError && (
+        <p className="error-text" role="alert">
+          {saveError}
+        </p>
+      )}
 
-        <div className="form-field" style={{ position: "relative" }}>
-          <label htmlFor="item-name">{t("item.name")}</label>
-          <input
-            id="item-name"
-            autoFocus
-            required
-            autoComplete="off"
-            value={values.name}
-            onChange={(e) => handleNameChange(e.target.value)}
-          />
-          {nameError && <p className="error-text">{nameError}</p>}
-          {suggestions.length > 0 && (
-            <ul
-              className="card"
-              style={{
-                listStyle: "none",
-                margin: 0,
-                padding: "0.25rem",
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                zIndex: 10,
-                boxShadow: "var(--shadow)",
-              }}
-            >
-              {suggestions.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => pickSuggestion(item)}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      textAlign: "start",
-                      background: "transparent",
-                      border: "none",
-                      padding: "0.4rem 0.5rem",
-                      color: "var(--color-text)",
-                    }}
-                  >
-                    {itemFieldValue(item, "name")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="form-field">
-          <label htmlFor="item-category">{t("item.category")}</label>
-          <input
-            id="item-category"
-            value={values.category}
-            onChange={(e) => setValues((v) => ({ ...v, category: e.target.value }))}
-          />
-          {categoryChips.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
-              {categoryChips.map((category) => (
+      <div className="form-field" style={{ position: "relative" }}>
+        <label htmlFor="item-name">{t("item.name")}</label>
+        <input
+          id="item-name"
+          autoFocus
+          required
+          autoComplete="off"
+          value={values.name}
+          onChange={(e) => handleNameChange(e.target.value)}
+        />
+        {nameError && <p className="error-text">{nameError}</p>}
+        {suggestions.length > 0 && (
+          <ul
+            className="card"
+            style={{
+              listStyle: "none",
+              margin: 0,
+              padding: "0.25rem",
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              boxShadow: "var(--shadow)",
+            }}
+          >
+            {suggestions.map((item) => (
+              <li key={item.id}>
                 <button
-                  key={category}
                   type="button"
-                  className="chip-button"
-                  onClick={() => setValues((v) => ({ ...v, category }))}
+                  onClick={() => pickSuggestion(item)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "start",
+                    background: "transparent",
+                    border: "none",
+                    padding: "0.4rem 0.5rem",
+                    color: "var(--color-text)",
+                  }}
                 >
-                  {category}
+                  {itemFieldValue(item, "name")}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Shopping-only fields (T-110): a checklist shows just name / category / note / status.
-            Existing values are preserved, merely not rendered, so converting a list is reversible. */}
-        {showShoppingFields && (
-        <>
-        <div className="form-field">
-          <label htmlFor="item-stores">{t("item.stores")}</label>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <input
-              id="item-stores"
-              value={storeInput}
-              onChange={(e) => setStoreInput(e.target.value)}
-              onKeyDown={handleStoreInputKeyDown}
-              placeholder={t("item.addStore")}
-            />
-            {/* Named, not a bare "Add" (T-144): the confirm button below now says Add in add
-                mode, and two buttons reading "Add" in one dialog is worse than the inconsistency
-                this change set out to fix. The app names this control the same way. */}
-            <button type="button" className="btn btn-secondary" onClick={addStore}>
-              {t("item.addStore")}
-            </button>
-          </div>
-          {storeChips.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
-              {storeChips.map((store) => (
-                <button
-                  key={store}
-                  type="button"
-                  className="chip-button"
-                  onClick={() => pickStore(store)}
-                >
-                  {store}
-                </button>
-              ))}
-            </div>
-          )}
-          {values.stores.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
-              {values.stores.map((store) => (
-                <span key={store} className="chip">
-                  {store}
-                  <button
-                    type="button"
-                    className="chip-remove"
-                    aria-label={t("item.removeStore", { store })}
-                    onClick={() => removeStore(store)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="form-field">
-          <label htmlFor="item-quantity">{t("item.quantity")}</label>
-          <input
-            id="item-quantity"
-            value={values.quantity}
-            onChange={(e) => setValues((v) => ({ ...v, quantity: e.target.value }))}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
-            <label htmlFor="item-price">{t("item.price")}</label>
-            <input
-              id="item-price"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={values.priceAmount}
-              onChange={(e) => {
-                setValues((v) => ({ ...v, priceAmount: e.target.value }));
-                setPriceError(null);
-              }}
-            />
-            {priceError && <p className="error-text">{priceError}</p>}
-          </div>
-          <div className="form-field" style={{ flex: "0 0 6rem", minWidth: 0 }}>
-            <label htmlFor="item-currency">{t("item.currency")}</label>
-            <input
-              id="item-currency"
-              placeholder={defaultCurrency}
-              maxLength={3}
-              value={values.priceCurrency}
-              onChange={(e) => {
-                setValues((v) => ({ ...v, priceCurrency: e.target.value }));
-                setCurrencyError(null);
-              }}
-            />
-            {currencyError && <p className="error-text">{currencyError}</p>}
-          </div>
-        </div>
-        </>
+              </li>
+            ))}
+          </ul>
         )}
+      </div>
 
-        <div className="form-field">
-          <label htmlFor="item-note">{t("item.note")}</label>
-          <textarea
-            id="item-note"
-            rows={2}
-            value={values.note}
-            onChange={(e) => setValues((v) => ({ ...v, note: e.target.value }))}
-          />
-        </div>
-
-        {isEdit && (
-          <div className="form-field">
-            <label htmlFor="item-status">{t("item.statusLabel")}</label>
-            <select id="item-status" value={status} onChange={(e) => setStatus(e.target.value as ItemStatus)}>
-              <option value="todo">{t("item.status.todo")}</option>
-              <option value="checked">{t("item.status.checked")}</option>
-              <option value="backlog">{t("item.status.backlog")}</option>
-            </select>
-            {/* The gloss lives beside the control rather than inside the option label (T-124):
-                "Backlog" alone does not survive translation, but welding the explanation into the
-                label would drag it onto the Registry chips too, where there is no room. */}
-            {status === "backlog" && (
-              <p className="muted" style={{ fontSize: "0.8rem", margin: "0.25rem 0 0" }}>
-                {t("item.status.backlogHint")}
-              </p>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "space-between", marginTop: "0.5rem" }}>
-          <div>
-            {isEdit && onDelete && editingItem && (
+      <div className="form-field">
+        <label htmlFor="item-category">{t("item.category")}</label>
+        <input
+          id="item-category"
+          value={values.category}
+          onChange={(e) => setValues((v) => ({ ...v, category: e.target.value }))}
+        />
+        {categoryChips.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
+            {categoryChips.map((category) => (
               <button
+                key={category}
                 type="button"
-                className="btn btn-danger"
-                disabled={deleting}
-                onClick={handleDeleteClick}
+                className="chip-button"
+                onClick={() => setValues((v) => ({ ...v, category }))}
               >
-                {t("action.delete")}
+                {category}
               </button>
-            )}
+            ))}
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              {t("action.cancel")}
-            </button>
-            {/* Add / Save, following the app (T-144): the dialog is titled "Add item", so
-                labelling its confirm button "Save" there read as saving an edit. */}
-            <button type="submit" className="btn" disabled={saving}>
-              {isEdit ? t("action.save") : t("action.add")}
-            </button>
-          </div>
+        )}
+      </div>
+
+      {/* Shopping-only fields (T-110): a checklist shows just name / category / note / status.
+          Existing values are preserved, merely not rendered, so converting a list is reversible. */}
+      {showShoppingFields && (
+      <>
+      <div className="form-field">
+        <label htmlFor="item-stores">{t("item.stores")}</label>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <input
+            id="item-stores"
+            value={storeInput}
+            onChange={(e) => setStoreInput(e.target.value)}
+            onKeyDown={handleStoreInputKeyDown}
+            placeholder={t("item.addStore")}
+          />
+          {/* Named, not a bare "Add" (T-144): the confirm button below now says Add in add
+              mode, and two buttons reading "Add" in one dialog is worse than the inconsistency
+              this change set out to fix. The app names this control the same way. */}
+          <button type="button" className="btn btn-secondary" onClick={addStore}>
+            {t("item.addStore")}
+          </button>
         </div>
-      </form>
-    </div>
+        {storeChips.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
+            {storeChips.map((store) => (
+              <button
+                key={store}
+                type="button"
+                className="chip-button"
+                onClick={() => pickStore(store)}
+              >
+                {store}
+              </button>
+            ))}
+          </div>
+        )}
+        {values.stores.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.4rem" }}>
+            {values.stores.map((store) => (
+              <span key={store} className="chip">
+                {store}
+                <button
+                  type="button"
+                  className="chip-remove"
+                  aria-label={t("item.removeStore", { store })}
+                  onClick={() => removeStore(store)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="form-field">
+        <label htmlFor="item-quantity">{t("item.quantity")}</label>
+        <input
+          id="item-quantity"
+          value={values.quantity}
+          onChange={(e) => setValues((v) => ({ ...v, quantity: e.target.value }))}
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="form-field" style={{ flex: 1, minWidth: 0 }}>
+          <label htmlFor="item-price">{t("item.price")}</label>
+          <input
+            id="item-price"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={values.priceAmount}
+            onChange={(e) => {
+              setValues((v) => ({ ...v, priceAmount: e.target.value }));
+              setPriceError(null);
+            }}
+          />
+          {priceError && <p className="error-text">{priceError}</p>}
+        </div>
+        <div className="form-field" style={{ flex: "0 0 6rem", minWidth: 0 }}>
+          <label htmlFor="item-currency">{t("item.currency")}</label>
+          <input
+            id="item-currency"
+            placeholder={defaultCurrency}
+            maxLength={3}
+            value={values.priceCurrency}
+            onChange={(e) => {
+              setValues((v) => ({ ...v, priceCurrency: e.target.value }));
+              setCurrencyError(null);
+            }}
+          />
+          {currencyError && <p className="error-text">{currencyError}</p>}
+        </div>
+      </div>
+      </>
+      )}
+
+      <div className="form-field">
+        <label htmlFor="item-note">{t("item.note")}</label>
+        <textarea
+          id="item-note"
+          rows={2}
+          value={values.note}
+          onChange={(e) => setValues((v) => ({ ...v, note: e.target.value }))}
+        />
+      </div>
+
+      {isEdit && (
+        <div className="form-field">
+          <label htmlFor="item-status">{t("item.statusLabel")}</label>
+          <select id="item-status" value={status} onChange={(e) => setStatus(e.target.value as ItemStatus)}>
+            <option value="todo">{t("item.status.todo")}</option>
+            <option value="checked">{t("item.status.checked")}</option>
+            <option value="backlog">{t("item.status.backlog")}</option>
+          </select>
+          {/* The gloss lives beside the control rather than inside the option label (T-124):
+              "Backlog" alone does not survive translation, but welding the explanation into the
+              label would drag it onto the Registry chips too, where there is no room. */}
+          {status === "backlog" && (
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0.25rem 0 0" }}>
+              {t("item.status.backlogHint")}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "space-between", marginTop: "0.5rem" }}>
+        <div>
+          {isEdit && onDelete && editingItem && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              disabled={deleting}
+              onClick={handleDeleteClick}
+            >
+              {t("action.delete")}
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            {t("action.cancel")}
+          </button>
+          {/* Add / Save, following the app (T-144): the dialog is titled "Add item", so
+              labelling its confirm button "Save" there read as saving an edit. */}
+          <button type="submit" className="btn" disabled={saving}>
+            {isEdit ? t("action.save") : t("action.add")}
+          </button>
+        </div>
+      </div>
+    </ModalDialog>
   );
 }

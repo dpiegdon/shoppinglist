@@ -370,6 +370,12 @@ textarea:focus {
   overflow-y: auto;
 }
 
+/* The panel takes focus itself when nothing inside it asks for it (T-283), so a screen reader
+   announces the dialog; it is not a control, so it draws no focus ring. */
+.dialog:focus {
+  outline: none;
+}
+
 /* Check-off exit animation (T-128).
    The row is struck through the moment its status changes, holds still briefly so the strike is
    readable, then slides away and collapses. Deliberately short — this confirms a tap landed, it is

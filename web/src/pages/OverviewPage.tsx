@@ -4,7 +4,7 @@ import * as api from "../api/client";
 import AddFab from "../components/AddFab";
 import { safeLocalStorage } from "../lib/safeStorage";
 import { useSyncContext } from "../hooks/SyncContext";
-import { useOverlayClose } from "../hooks/useOverlayClose";
+import { ModalDialog } from "../components/ModalDialog";
 import { fieldPatch, nowMs } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { errorMessage } from "../i18n/apiErrors";
@@ -75,7 +75,6 @@ export default function OverviewPage() {
     setCreateError(null);
     setCreating(false);
   }, []);
-  const createOverlay = useOverlayClose(closeCreateDialog);
 
   const loadInvites = useCallback(async () => {
     try {
@@ -352,92 +351,90 @@ export default function OverviewPage() {
       />
 
       {creating && (
-        <div className="dialog-overlay" onMouseDown={createOverlay.onMouseDown} onMouseUp={createOverlay.onMouseUp}>
-          <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleCreate}>
-            <h2 style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("overview.newList")}</h2>
-            {createError && (
-              <p className="error-text" role="alert">
-                {createError}
-              </p>
-            )}
-            <div className="form-field">
-              <label htmlFor="new-list-name">{t("overview.name")}</label>
-              <input
-                id="new-list-name"
-                autoFocus
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
-            </div>
-            {/* Kind is chosen up front (T-110) but isn't permanent for shopping/checklist — it can
-                be changed later in list properties, and converting never touches item data. An
-                expenses list is the one exception: its kind is fixed for its whole life (T-151). */}
-            <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
-              <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
-                {t("overview.type")}
-              </legend>
-              {(["shopping", "checklist", "expenses"] as const).map((kind) => (
-                <label key={kind} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.15rem 0" }}>
-                  <input
-                    type="radio"
-                    name="new-list-kind"
-                    value={kind}
-                    checked={newKind === kind}
-                    onChange={() => {
-                      setNewKind(kind);
-                      // Prefilled rather than placeheld: the field is required, and the account's
-                      // own currency is the answer nearly every time.
-                      if (kind === "expenses") setNewCurrency((current) => current || defaultCurrency);
-                    }}
-                  />
-                  <span>
-                    {listKindIcon(kind)} {t(listKindLabelKey(kind))}
-                  </span>
-                </label>
-              ))}
-              <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
-                {isExpenses(newKind)
-                  ? t("overview.kind.expenses")
-                  : newKind === "checklist"
-                    ? t("overview.kind.checklist")
-                    : t("overview.kind.shopping")}
-              </p>
-            </fieldset>
-            {isExpenses(newKind) && (
-              <div className="form-field">
-                <label htmlFor="new-list-currency">{t("expense.currency")}</label>
+        <ModalDialog as="form" onClose={closeCreateDialog} labelledBy="new-list-title" onSubmit={handleCreate}>
+          <h2 id="new-list-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("overview.newList")}</h2>
+          {createError && (
+            <p className="error-text" role="alert">
+              {createError}
+            </p>
+          )}
+          <div className="form-field">
+            <label htmlFor="new-list-name">{t("overview.name")}</label>
+            <input
+              id="new-list-name"
+              autoFocus
+              required
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </div>
+          {/* Kind is chosen up front (T-110) but isn't permanent for shopping/checklist — it can
+              be changed later in list properties, and converting never touches item data. An
+              expenses list is the one exception: its kind is fixed for its whole life (T-151). */}
+          <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
+            <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
+              {t("overview.type")}
+            </legend>
+            {(["shopping", "checklist", "expenses"] as const).map((kind) => (
+              <label key={kind} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.15rem 0" }}>
                 <input
-                  id="new-list-currency"
-                  required
-                  list="currency-suggestions"
-                  value={newCurrency}
-                  onChange={(e) => setNewCurrency(e.target.value)}
+                  type="radio"
+                  name="new-list-kind"
+                  value={kind}
+                  checked={newKind === kind}
+                  onChange={() => {
+                    setNewKind(kind);
+                    // Prefilled rather than placeheld: the field is required, and the account's
+                    // own currency is the answer nearly every time.
+                    if (kind === "expenses") setNewCurrency((current) => current || defaultCurrency);
+                  }}
                 />
-                {/* Suggestions, not a constraint: the server takes free text, so a list can be
-                    kept in pizza slices if that is what the group settles in. */}
-                <datalist id="currency-suggestions">
-                  {[defaultCurrency, "EUR", "USD", "GBP", "CHF", "JPY"]
-                    .filter((code, index, all) => code && all.indexOf(code) === index)
-                    .map((code) => (
-                      <option key={code} value={code} />
-                    ))}
-                </datalist>
-                <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
-                  {t("overview.currencyHelp")}
-                </p>
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-              <button type="button" className="btn btn-secondary" onClick={closeCreateDialog}>
-                {t("action.cancel")}
-              </button>
-              <button type="submit" className="btn">
-                {t("action.create")}
-              </button>
+                <span>
+                  {listKindIcon(kind)} {t(listKindLabelKey(kind))}
+                </span>
+              </label>
+            ))}
+            <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
+              {isExpenses(newKind)
+                ? t("overview.kind.expenses")
+                : newKind === "checklist"
+                  ? t("overview.kind.checklist")
+                  : t("overview.kind.shopping")}
+            </p>
+          </fieldset>
+          {isExpenses(newKind) && (
+            <div className="form-field">
+              <label htmlFor="new-list-currency">{t("expense.currency")}</label>
+              <input
+                id="new-list-currency"
+                required
+                list="currency-suggestions"
+                value={newCurrency}
+                onChange={(e) => setNewCurrency(e.target.value)}
+              />
+              {/* Suggestions, not a constraint: the server takes free text, so a list can be
+                  kept in pizza slices if that is what the group settles in. */}
+              <datalist id="currency-suggestions">
+                {[defaultCurrency, "EUR", "USD", "GBP", "CHF", "JPY"]
+                  .filter((code, index, all) => code && all.indexOf(code) === index)
+                  .map((code) => (
+                    <option key={code} value={code} />
+                  ))}
+              </datalist>
+              <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.8rem" }}>
+                {t("overview.currencyHelp")}
+              </p>
             </div>
-          </form>
-        </div>
+          )}
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <button type="button" className="btn btn-secondary" onClick={closeCreateDialog}>
+              {t("action.cancel")}
+            </button>
+            <button type="submit" className="btn">
+              {t("action.create")}
+            </button>
+          </div>
+        </ModalDialog>
       )}
     </main>
   );
