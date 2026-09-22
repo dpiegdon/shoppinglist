@@ -7,8 +7,13 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.crash.CrashHandler
+import org.p23q.shoppinglist.data.sync.SyncEngine
 import org.p23q.shoppinglist.data.sync.SyncScheduler
 import javax.inject.Inject
 
@@ -23,12 +28,21 @@ class ShoppingListApp : Application(), Configuration.Provider {
 
     @Inject lateinit var appForegroundState: AppForegroundState
 
+    @Inject lateinit var syncEngine: SyncEngine
+
+    /** Outlives every screen, for the one-shot start-up seed below — never used for per-screen work. */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     override fun onCreate() {
         super.onCreate()
         crashHandler.install()
+        // Every scheduled sync below needs connectivity, so a cold start offline would otherwise
+        // leave SyncStatus at its initial zeros — no pending count, no attention banner — until one
+        // finally runs (T-265). This reads the database only, no network.
+        appScope.launch { syncEngine.seedStatus() }
         syncScheduler.schedulePeriodic()
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {

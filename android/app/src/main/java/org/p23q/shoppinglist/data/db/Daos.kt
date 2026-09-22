@@ -104,6 +104,15 @@ interface ItemDao {
     )
     fun openItemCounts(): Flow<List<ListOpenCount>>
 
+    /**
+     * Every non-deleted expense entry, across every list, for the Overview's ledger cards (T-265).
+     * Recording or editing an entry touches only this table, not the list row, so a summary driven
+     * by the lists flow alone goes stale until something else changes it — a rename, a pull, process
+     * death. Live here instead, and joined to the list roster by listId in the view model.
+     */
+    @Query("SELECT * FROM items WHERE deleted_value = 0 AND expense_value IS NOT NULL")
+    fun expenseItems(): Flow<List<ItemEntity>>
+
     /** A quarantined row, so the sync-health surface can send the user to the list that holds it (T-47). */
     @Query("SELECT * FROM items WHERE syncBlocked = 1 LIMIT 1")
     suspend fun firstBlockedItem(): ItemEntity?

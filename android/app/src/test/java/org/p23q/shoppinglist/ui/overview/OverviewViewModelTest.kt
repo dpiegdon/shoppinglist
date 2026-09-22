@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.Dispatcher
@@ -259,6 +260,27 @@ class OverviewViewModelTest {
                 .expenseSummaries.getValue(id)
 
             assertEquals(4000L, summary.totalCents)
+        }
+
+    @Test
+    fun `a card already on screen updates when an entry is recorded, not just at start-up (T-265)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+            val lunch = org.p23q.shoppinglist.data.Expense(
+                mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18",
+            )
+            itemsRepo.createExpense(id, "Lunch", lunch)
+
+            // Let the card's first total land — recording the second entry below must be what moves
+            // it, not this same one-shot read happening to already see both entries.
+            viewModel.uiState.first { it.expenseSummaries[id]?.totalCents == 1000L }
+
+            // Recording an entry touches only the items table, never the list row: a summary
+            // collector driven by the lists flow alone (the bug, T-265) never sees this.
+            itemsRepo.createExpense(id, "Dinner", lunch.copy(paidBy = mapOf("me" to "20.00"), paidFor = mapOf("me" to "20.00")))
+            advanceUntilIdle()
+
+            assertEquals(3000L, viewModel.uiState.value.expenseSummaries.getValue(id).totalCents)
         }
 
     @Test

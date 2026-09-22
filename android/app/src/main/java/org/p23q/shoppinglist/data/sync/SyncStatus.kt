@@ -35,6 +35,17 @@ class SyncStatus @Inject constructor() {
         it.copy(inProgress = true, pendingCount = pending, blockedCount = blocked)
     }
 
+    /**
+     * Sets the pending/blocked counts straight from the database, without a sync having run
+     * (T-265). Every scheduled sync requires connectivity (SyncScheduler's network constraint), so
+     * a cold start offline would otherwise show this Singleton's initial zeros — no pending count,
+     * no "needs attention" banner — until one finally runs. Leaves [SyncState.inProgress] and
+     * [SyncState.lastError] untouched: this is not a sync attempt, so it has no verdict to report.
+     */
+    fun seed(pending: Int, blocked: Int) = _state.update {
+        it.copy(pendingCount = pending, blockedCount = blocked)
+    }
+
     fun succeeded(at: Long, pending: Int, blocked: Int) = _state.update {
         it.copy(inProgress = false, lastSyncAt = at, lastError = null, pendingCount = pending, blockedCount = blocked)
     }

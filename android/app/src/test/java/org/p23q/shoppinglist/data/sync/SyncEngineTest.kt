@@ -497,6 +497,27 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `seedStatus reports the database's counts with no network call, and no verdict (T-265)`() = runTest {
+        db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
+        db.itemDao().upsert(dummyItem("item-2", "Bread", dirty = true))
+        db.itemDao().upsert(dummyItem("parked", "Dinner", dirty = false))
+        db.itemDao().blockRow("parked", "participant_frozen", "acct-other")
+        db.listDao().upsert(dummyList("list-2", "Trip", dirty = true))
+
+        syncEngine.seedStatus()
+
+        // Every scheduled sync trigger requires connectivity; this must not need it, or a cold
+        // start offline would still show nothing. No request was ever enqueued on `server`, so a
+        // real attempt would throw trying to connect it — reaching the assertions proves that.
+        val health = syncStatus.state.value
+        assertEquals(3, health.pendingCount)
+        assertEquals(1, health.blockedCount)
+        // Not a sync attempt: no verdict, no spinner.
+        assertFalse(health.inProgress)
+        assertNull(health.lastError)
+    }
+
+    @Test
     fun `401 surfaces as Unauthorized without touching local state`() = runTest {
         pointAtServer()
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))

@@ -75,6 +75,17 @@ class SyncEngine @Inject constructor(
         const val MAX_CHANGES_PER_SYNC = 250
     }
 
+    /**
+     * Seeds [syncStatus]'s pending/blocked counts straight from the database (T-265) — no network,
+     * no server round trip. Called once at process start so a cold start offline still shows what
+     * a sync would report, instead of [SyncStatus]'s initial zeros sitting there until a sync
+     * (which every scheduled trigger requires connectivity for) finally runs and writes real ones.
+     */
+    suspend fun seedStatus() {
+        val pending = itemDao.dirtyRows().size + listDao.dirtyRows().size
+        syncStatus.seed(pending = pending, blocked = blockedCount())
+    }
+
     suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
         // Too old for this server (T-240): stop before reading, sending or reporting anything. The
         // dirty rows stay dirty and stay pushable — the app being outdated says nothing about

@@ -88,9 +88,16 @@ class OverviewViewModel @Inject constructor(
         viewModelScope.launch {
             // Separate from the counts above because it needs each expenses list's items, not a
             // per-list count. Shopping lists never enter this map.
-            listsRepo.activeLists().collect { lists ->
+            //
+            // Driven by BOTH the lists flow AND a live items flow (T-265, the pattern
+            // ExpenseListViewModel's own init already uses): recording or editing an entry touches
+            // only the items table, not the list row, so a summary that only re-derives when
+            // activeLists() emits kept showing the old total and balance until something else
+            // changed the list (a rename, a pull, process death).
+            combine(listsRepo.activeLists(), itemsRepo.expenseItems(), ::Pair).collect { (lists, allExpenseItems) ->
+                val itemsByList = allExpenseItems.groupBy { it.listId }
                 val summaries = lists.filter { ListKind.isExpenses(it.kind.value) }.associate { list ->
-                    val expenses = itemsRepo.activeItemsForListOnce(list.id)
+                    val expenses = (itemsByList[list.id] ?: emptyList())
                         .mapNotNull { itemsRepo.decodeExpense(it.expense.value) }
                     val members = listsRepo.decodeMembers(list.membersJson)
                     val balance = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
