@@ -315,6 +315,10 @@
     <string name="api_error_invalid_currency">Digite um código de moeda de três letras, como EUR</string>
     <string name="api_error_invalid_list_currency">Digite uma moeda para esta lista, com até 32 caracteres</string>
     <string name="api_error_invalid_price">Esse preço não é válido</string>
+    <string name="api_error_invalid_expense">Esse lançamento não é válido</string>
+    <string name="api_error_invalid_field">Esse valor não é válido</string>
+    <string name="api_error_invalid_status">Esse status não é válido</string>
+    <string name="api_error_invalid_device_label">O nome do dispositivo é longo demais</string>
     <string name="api_error_invite_expired">Este convite expirou</string>
     <string name="api_error_invite_revoked">Este convite foi cancelado</string>
     <string name="api_error_invite_used">Este convite já foi usado</string>

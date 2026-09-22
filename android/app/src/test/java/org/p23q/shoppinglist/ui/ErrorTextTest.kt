@@ -53,6 +53,26 @@ class ErrorTextTest {
     }
 
     @Test
+    fun `the four codes the wire contract listed but neither client mapped get a translated message (T-271)`() {
+        assertEquals(
+            UiText.res(R.string.api_error_invalid_expense),
+            ErrorText.of(apiError("invalid_expense"), R.string.redeem_msg_failed),
+        )
+        assertEquals(
+            UiText.res(R.string.api_error_invalid_field),
+            ErrorText.of(apiError("invalid_field"), R.string.redeem_msg_failed),
+        )
+        assertEquals(
+            UiText.res(R.string.api_error_invalid_status),
+            ErrorText.of(apiError("invalid_status"), R.string.redeem_msg_failed),
+        )
+        assertEquals(
+            UiText.res(R.string.api_error_invalid_device_label),
+            ErrorText.of(apiError("invalid_device_label"), R.string.redeem_msg_failed),
+        )
+    }
+
+    @Test
     fun `an unknown code falls back to the screen's own message`() {
         assertEquals(UiText.res(R.string.redeem_msg_failed), ErrorText.of(apiError("invalid_cursor"), R.string.redeem_msg_failed))
     }
@@ -63,6 +83,11 @@ class ErrorTextTest {
             UiText.res(R.string.api_error_client_outdated),
             ErrorText.of(ApiException("client_outdated", "too old", 426), R.string.redeem_msg_failed),
         )
+    }
+
+    @Test
+    fun `a parked ledger row names why it was refused instead of a bare not-saved (T-271)`() {
+        assertEquals(UiText.res(R.string.api_error_invalid_expense), ErrorText.refusal("invalid_expense", who = null))
     }
 
     @Test

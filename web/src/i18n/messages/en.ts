@@ -324,6 +324,12 @@ export const en = {
   "apiError.invalidCurrency": "Enter a three-letter currency code, such as EUR",
   "apiError.invalidListCurrency": "Enter a currency for this list, up to 32 characters",
   "apiError.invalidPrice": "That price isn't valid",
+  // Four codes the wire contract always listed but neither client mapped (T-271): a pushed row
+  // could 422 with one of these and fall back to the generic "not saved" with no reason at all.
+  "apiError.invalidExpense": "That entry isn't valid",
+  "apiError.invalidField": "That value isn't valid",
+  "apiError.invalidStatus": "That status isn't valid",
+  "apiError.invalidDeviceLabel": "That device name is too long",
   "apiError.inviteExpired": "This invite has expired",
   "apiError.inviteRevoked": "This invite was withdrawn",
   "apiError.inviteUsed": "This invite has already been used",

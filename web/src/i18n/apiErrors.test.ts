@@ -24,6 +24,21 @@ describe("server errors in the app's language", () => {
     );
   });
 
+  it("maps the four codes the wire contract listed but neither client mapped (T-271)", () => {
+    expect(errorMessage(t, apiError("invalid_expense"), "apiError.serverBusy")).toBe(
+      en["apiError.invalidExpense"],
+    );
+    expect(errorMessage(t, apiError("invalid_field"), "apiError.serverBusy")).toBe(
+      en["apiError.invalidField"],
+    );
+    expect(errorMessage(t, apiError("invalid_status"), "apiError.serverBusy")).toBe(
+      en["apiError.invalidStatus"],
+    );
+    expect(errorMessage(t, apiError("invalid_device_label"), "apiError.serverBusy")).toBe(
+      en["apiError.invalidDeviceLabel"],
+    );
+  });
+
   it("falls back to the screen's own message for a code no person can cause", () => {
     expect(errorMessage(t, apiError("invalid_cursor"), "apiError.serverBusy")).toBe(
       en["apiError.serverBusy"],

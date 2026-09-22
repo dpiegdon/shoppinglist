@@ -368,6 +368,11 @@
     <string name="api_error_invalid_currency">Enter a three-letter currency code, such as EUR</string>
     <string name="api_error_invalid_list_currency">Enter a currency for this list, up to 32 characters</string>
     <string name="api_error_invalid_price">That price isn\'t valid</string>
+    <!-- Four codes the wire contract always listed but neither client mapped (T-271). -->
+    <string name="api_error_invalid_expense">That entry isn\'t valid</string>
+    <string name="api_error_invalid_field">That value isn\'t valid</string>
+    <string name="api_error_invalid_status">That status isn\'t valid</string>
+    <string name="api_error_invalid_device_label">That device name is too long</string>
     <string name="api_error_invite_expired">This invite has expired</string>
     <string name="api_error_invite_revoked">This invite was withdrawn</string>
     <string name="api_error_invite_used">This invite has already been used</string>

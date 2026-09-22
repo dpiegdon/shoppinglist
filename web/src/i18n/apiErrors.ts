@@ -26,6 +26,11 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   // default_currency is an ISO code, an expenses list's currency is a free-text label.
   invalid_list_currency: "apiError.invalidListCurrency",
   invalid_price: "apiError.invalidPrice",
+  // Four codes the wire contract always listed but neither client mapped (T-271).
+  invalid_expense: "apiError.invalidExpense",
+  invalid_field: "apiError.invalidField",
+  invalid_status: "apiError.invalidStatus",
+  invalid_device_label: "apiError.invalidDeviceLabel",
   invite_expired: "apiError.inviteExpired",
   invite_revoked: "apiError.inviteRevoked",
   invite_used: "apiError.inviteUsed",

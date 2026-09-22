@@ -315,6 +315,10 @@
     <string name="api_error_invalid_currency">Gib einen dreistelligen Währungscode ein, z. B. EUR</string>
     <string name="api_error_invalid_list_currency">Gib eine Währung für diese Liste ein, höchstens 32 Zeichen</string>
     <string name="api_error_invalid_price">Dieser Preis ist ungültig</string>
+    <string name="api_error_invalid_expense">Dieser Eintrag ist ungültig</string>
+    <string name="api_error_invalid_field">Dieser Wert ist ungültig</string>
+    <string name="api_error_invalid_status">Dieser Status ist ungültig</string>
+    <string name="api_error_invalid_device_label">Der Gerätename ist zu lang</string>
     <string name="api_error_invite_expired">Diese Einladung ist abgelaufen</string>
     <string name="api_error_invite_revoked">Diese Einladung wurde zurückgezogen</string>
     <string name="api_error_invite_used">Diese Einladung wurde bereits verwendet</string>

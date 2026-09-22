@@ -315,6 +315,10 @@
     <string name="api_error_invalid_currency">请输入三位字母的货币代码，例如 EUR</string>
     <string name="api_error_invalid_list_currency">请输入此清单的货币，最多 32 个字符</string>
     <string name="api_error_invalid_price">价格无效</string>
+    <string name="api_error_invalid_expense">该记录无效</string>
+    <string name="api_error_invalid_field">该值无效</string>
+    <string name="api_error_invalid_status">该状态无效</string>
+    <string name="api_error_invalid_device_label">设备名称太长了</string>
     <string name="api_error_invite_expired">此邀请已过期</string>
     <string name="api_error_invite_revoked">此邀请已被撤回</string>
     <string name="api_error_invite_used">此邀请已被使用</string>

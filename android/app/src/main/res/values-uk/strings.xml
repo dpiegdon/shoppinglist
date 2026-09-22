@@ -315,6 +315,10 @@
     <string name="api_error_invalid_currency">Введіть трилітерний код валюти, наприклад EUR</string>
     <string name="api_error_invalid_list_currency">Введіть валюту для цього списку, не більше ніж 32 символи</string>
     <string name="api_error_invalid_price">Ця ціна недійсна</string>
+    <string name="api_error_invalid_expense">Цей запис недійсний</string>
+    <string name="api_error_invalid_field">Це значення недійсне</string>
+    <string name="api_error_invalid_status">Цей статус недійсний</string>
+    <string name="api_error_invalid_device_label">Назва пристрою задовга</string>
     <string name="api_error_invite_expired">Термін дії цього запрошення минув</string>
     <string name="api_error_invite_revoked">Це запрошення відкликано</string>
     <string name="api_error_invite_used">Це запрошення вже використано</string>

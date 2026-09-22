@@ -315,6 +315,10 @@
     <string name="api_error_invalid_currency">أدخل رمز عملة من ثلاثة أحرف، مثل EUR</string>
     <string name="api_error_invalid_list_currency">أدخل عملة لهذه القائمة، بحد أقصى 32 حرفًا</string>
     <string name="api_error_invalid_price">هذا السعر غير صالح</string>
+    <string name="api_error_invalid_expense">هذا القيد غير صالح</string>
+    <string name="api_error_invalid_field">هذه القيمة غير صالحة</string>
+    <string name="api_error_invalid_status">هذه الحالة غير صالحة</string>
+    <string name="api_error_invalid_device_label">اسم الجهاز طويل جدًا</string>
     <string name="api_error_invite_expired">انتهت صلاحية هذه الدعوة</string>
     <string name="api_error_invite_revoked">تم سحب هذه الدعوة</string>
     <string name="api_error_invite_used">تم استخدام هذه الدعوة بالفعل</string>
