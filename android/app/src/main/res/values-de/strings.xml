@@ -331,6 +331,7 @@
     <string name="api_error_server_busy">Der Server ist ausgelastet. Versuch es gleich noch einmal.</string>
     <string name="api_error_payload_too_large">Das ist zu viel auf einmal</string>
     <string name="api_error_voted_to_close">Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.</string>
+    <string name="api_error_not_an_expenses_list">Nur ein Kassenbuch kann zum Abschluss abgestimmt werden.</string>
     <string name="expense_delete_blocked">Dieser Eintrag kann nicht gelöscht werden: Er betrifft jemanden, dessen Beträge festgeschrieben sind.</string>
     <string name="expense_error_frozen">Die Beträge von %1$s sind festgeschrieben: Die Person hat dem Abschluss zugestimmt oder die Liste verlassen.</string>
     <string name="expense_not_saved">Nicht in der Liste gespeichert</string>

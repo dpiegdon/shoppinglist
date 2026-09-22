@@ -21,6 +21,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
@@ -37,6 +38,7 @@ import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.data.sync.SyncResult
 import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -304,6 +306,32 @@ class ListPropsViewModelTest {
         assertTrue(viewModel.uiState.value.hasLeft)
         assertNull(listsRepo.getById(listId))
         assertNull(itemsRepo.getById(itemId))
+    }
+
+    @Test
+    fun `toggleCloseVote surfaces a server refusal by code, not the offline message (T-264)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        // A collaborator's vote closed the list while this screen was open — the server, not the
+        // network, is why the request failed. ApiException extends IOException, so a catch-order
+        // mistake here reported every one of these as "couldn't reach the server".
+        server.enqueue(MockResponse().setResponseCode(409).setBody("""{"error": "list_closed", "message": "closed"}"""))
+
+        viewModel.toggleCloseVote().join()
+
+        assertEquals(UiText.res(R.string.api_error_list_closed), viewModel.uiState.value.errorMessage)
+        assertFalse(viewModel.uiState.value.isVoting)
+    }
+
+    @Test
+    fun `toggleCloseVote offline still says offline`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        server.shutdown()
+
+        viewModel.toggleCloseVote().join()
+
+        assertEquals(UiText.res(R.string.error_offline_retry), viewModel.uiState.value.errorMessage)
     }
 
     @Test

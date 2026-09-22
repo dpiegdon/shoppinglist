@@ -300,5 +300,6 @@ export const ptBR: Catalog = {
   "apiError.serverBusy": "O servidor está ocupado. Tente de novo em instantes.",
   "apiError.payloadTooLarge": "É coisa demais para enviar de uma vez",
   "apiError.votedToClose": "Você concordou em encerrar esta lista, então não pode mais alterá-la. Retire seu voto para fazer alterações.",
+  "apiError.notAnExpensesList": "Só é possível votar para encerrar um livro-caixa.",
   "expense.deleteBlocked": "Este lançamento não pode ser excluído: ele envolve alguém cujos valores estão fixados.",
 };

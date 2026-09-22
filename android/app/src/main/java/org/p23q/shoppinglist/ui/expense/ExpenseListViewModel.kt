@@ -12,16 +12,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.Expense
 import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.Syncer
+import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.list.LIVE_SYNC_INTERVAL_MS
 import java.io.IOException
 import javax.inject.Inject
@@ -59,7 +63,8 @@ data class ExpenseListUiState(
     val closeVotes: List<String> = emptyList(),
     val closedAt: Long? = null,
     val isVoting: Boolean = false,
-    val voteError: Boolean = false,
+    /** Why the last vote attempt failed, by server code (T-264) — null while it hasn't, or hasn't failed. */
+    val voteError: UiText? = null,
     /** Pull-to-refresh in progress (T-167), as on the other lists. */
     val isRefreshing: Boolean = false,
     /** Who pays whom to zero the balances (T-165), in the order the shared algorithm fixes. */
@@ -115,16 +120,21 @@ class ExpenseListViewModel @Inject constructor(
      * new state arrives through the ordinary sync that follows.
      */
     fun toggleCloseVote(): Job = viewModelScope.launch {
-        _uiState.update { it.copy(isVoting = true, voteError = false) }
+        _uiState.update { it.copy(isVoting = true, voteError = null) }
         val voted = _uiState.value.iHaveVoted
         try {
             val api = apiProvider.get()
             if (voted) api.withdrawCloseVote(listId) else api.castCloseVote(listId)
             syncer.syncNow(emptyList())
+        } catch (e: ApiException) {
+            // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has
+            // a specific reason (T-264); ApiException must be caught before IOException, which it
+            // extends, or every one of these shows as "couldn't reach the server" instead.
+            _uiState.update { it.copy(voteError = ErrorText.of(e, R.string.expense_vote_failed)) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(voteError = true) }
+            _uiState.update { it.copy(voteError = UiText.res(R.string.error_offline_retry)) }
         } catch (e: IllegalStateException) {
-            _uiState.update { it.copy(voteError = true) }
+            _uiState.update { it.copy(voteError = UiText.res(R.string.expense_vote_failed)) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
         }

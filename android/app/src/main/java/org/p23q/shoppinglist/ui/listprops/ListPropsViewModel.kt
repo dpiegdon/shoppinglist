@@ -267,6 +267,11 @@ class ListPropsViewModel @Inject constructor(
             val api = apiProvider.get()
             if (voted) api.withdrawCloseVote(listId) else api.castCloseVote(listId)
             syncer.syncNow(emptyList())
+        } catch (e: ApiException) {
+            // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has
+            // a specific reason (T-264); ApiException must be caught before IOException, which it
+            // extends, or every one of these shows as "couldn't reach the server" instead.
+            _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.expense_vote_failed)) }
         } catch (e: IOException) {
             _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline_retry)) }
         } catch (e: IllegalStateException) {

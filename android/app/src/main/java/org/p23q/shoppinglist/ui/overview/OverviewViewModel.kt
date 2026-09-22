@@ -190,10 +190,12 @@ class OverviewViewModel @Inject constructor(
             val live = sessionState.ignoredInviteIds.filterTo(mutableSetOf()) { id -> invites.any { it.id == id } }
             if (live != sessionState.ignoredInviteIds) sessionState.ignoredInviteIds = live
             _uiState.update { it.copy(invites = invites, ignoredInviteIds = live) }
+        } catch (e: ApiException) {
+            // A server without the endpoint, or a session that just ended: the same as offline —
+            // nothing to show, nothing to say. ApiException must be caught before IOException,
+            // which it extends (T-264), or this branch is unreachable dead code.
         } catch (e: IOException) {
             // Offline: nothing to show, nothing to say.
-        } catch (e: ApiException) {
-            // A server without the endpoint, or a session that just ended: the same.
         }
     }
 

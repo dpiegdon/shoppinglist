@@ -331,6 +331,7 @@
     <string name="api_error_server_busy">Сервер зайнятий. Спробуйте ще раз за мить.</string>
     <string name="api_error_payload_too_large">Забагато даних для одного надсилання</string>
     <string name="api_error_voted_to_close">Ви погодилися закрити цей список, тому більше не можете його змінювати. Відкличте свою згоду, щоб вносити зміни.</string>
+    <string name="api_error_not_an_expenses_list">Проголосувати за закриття можна лише для книги обліку.</string>
     <string name="expense_delete_blocked">Цей запис не можна видалити: він стосується когось, чиї суми зафіксовано.</string>
     <string name="expense_error_frozen">Суми %1$s зафіксовано: ця людина погодилася закрити список або залишила його.</string>
     <string name="expense_not_saved">Не збережено до списку</string>

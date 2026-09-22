@@ -331,6 +331,7 @@
     <string name="api_error_server_busy">El servidor está ocupado. Inténtalo de nuevo en un momento.</string>
     <string name="api_error_payload_too_large">Es demasiado para enviar de una vez</string>
     <string name="api_error_voted_to_close">Aceptaste cerrar esta lista, así que ya no puedes cambiarla. Retira tu voto para hacer cambios.</string>
+    <string name="api_error_not_an_expenses_list">Solo se puede votar el cierre de un libro de cuentas.</string>
     <string name="expense_delete_blocked">Este movimiento no se puede eliminar: incluye a alguien cuyos importes están fijados.</string>
     <string name="expense_error_frozen">Los importes de %1$s están fijados: esa persona aceptó cerrar la lista o la abandonó.</string>
     <string name="expense_not_saved">No se guardó en la lista</string>

@@ -302,5 +302,6 @@ export const ja: Catalog = {
   "apiError.serverBusy": "サーバーが混み合っています。しばらくしてからもう一度お試しください。",
   "apiError.payloadTooLarge": "一度に送信できる量を超えています",
   "apiError.votedToClose": "このリストの締めに同意しているため、変更できません。変更するには同意を取り消してください。",
+  "apiError.notAnExpensesList": "帳簿のみ、締めの投票ができます。",
   "expense.deleteBlocked": "この記録は削除できません：金額が確定している人が関わっています。",
 };

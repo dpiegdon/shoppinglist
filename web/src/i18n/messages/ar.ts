@@ -303,5 +303,6 @@ export const ar: Catalog = {
   "apiError.serverBusy": "الخادم مشغول. حاول مرة أخرى بعد لحظة.",
   "apiError.payloadTooLarge": "هذا أكثر مما يمكن إرساله دفعة واحدة",
   "apiError.votedToClose": "لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.",
+  "apiError.notAnExpensesList": "يمكن التصويت على الإغلاق فقط لدفتر الحسابات.",
   "expense.deleteBlocked": "لا يمكن حذف هذا القيد: فهو يخص شخصًا مبالغه ثابتة.",
 };

@@ -331,6 +331,7 @@
     <string name="api_error_server_busy">الخادم مشغول. حاول مرة أخرى بعد لحظة.</string>
     <string name="api_error_payload_too_large">هذا أكثر مما يمكن إرساله دفعة واحدة</string>
     <string name="api_error_voted_to_close">لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.</string>
+    <string name="api_error_not_an_expenses_list">يمكن التصويت على الإغلاق فقط لدفتر الحسابات.</string>
     <string name="expense_delete_blocked">لا يمكن حذف هذا القيد: فهو يخص شخصًا مبالغه ثابتة.</string>
     <string name="expense_error_frozen">مبالغ %1$s ثابتة: فقد وافق على إغلاق القائمة أو غادرها.</string>
     <string name="expense_not_saved">لم يُحفظ في القائمة</string>

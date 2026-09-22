@@ -340,6 +340,7 @@ export const en = {
   "apiError.serverBusy": "The server is busy. Try again in a moment.",
   "apiError.payloadTooLarge": "That's too much to send at once",
   "apiError.votedToClose": "You've agreed to close this list, so you can't change it any more. Withdraw your vote to make changes.",
+  "apiError.notAnExpensesList": "Only a ledger can be voted closed.",
   "expense.deleteBlocked": "This entry can't be deleted: it involves someone whose amounts are fixed.",
 } as const;
 

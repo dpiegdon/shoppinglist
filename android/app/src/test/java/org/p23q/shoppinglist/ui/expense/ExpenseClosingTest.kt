@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -16,6 +17,10 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -115,14 +120,29 @@ class ExpenseClosingTest {
         )
     }
 
-    private fun listViewModel() = ExpenseListViewModel(
+    private fun listViewModel(apiProvider: ApiProvider = offlineApiProvider()) = ExpenseListViewModel(
         SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
         itemsRepo,
         listsRepo,
-        offlineApiProvider(),
+        apiProvider,
         Syncer { SyncResult.Success(0, 0, 0, 0) },
         FakeSessionState().apply { accountId = me },
     )
+
+    /** A real (mock) server backing, for the one test below that exercises the vote request itself. */
+    private fun apiProviderFor(server: MockWebServer): ApiProvider {
+        val file = File.createTempFile("expense_closing_vote_server_config", ".preferences_pb")
+        file.deleteOnExit()
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { file })
+        runBlocking { serverConfig.setServerUrl(server.url("/").toString()) }
+        val json = Json { ignoreUnknownKeys = true }
+        return ApiProvider(
+            serverConfig = serverConfig,
+            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
+            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
+            json = json,
+        )
+    }
 
     private fun formViewModel() =
         ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
@@ -275,5 +295,53 @@ class ExpenseClosingTest {
         // it was there (T-168 found this).
         composeTestRule.onNodeWithContentDescription("Add entry").assertDoesNotExist()
         composeTestRule.onNodeWithText("Votes to close: 1 of 2").assertDoesNotExist()
+    }
+
+    // ---- a vote request the server refused (T-264) -----------------------------
+
+    @Test
+    fun `agreeing to close shows the server's reason, not offline, when it refuses`() = runBlocking<Unit> {
+        // The scenario T-264 named: a collaborator's vote closes the list while this screen is
+        // open, and pressing "Agree to close" hits the server's 409 rather than the network.
+        // ApiException extends IOException, so a catch-order mistake here reported it as offline.
+        setListState(closeVotes = listOf(other))
+        val server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) =
+                MockResponse().setResponseCode(409).setBody("""{"error": "list_closed", "message": "closed"}""")
+        }
+        server.start()
+        try {
+            composeTestRule.setContent {
+                ExpenseListScreen(
+                    onAddExpense = {},
+                    onEditExpense = {},
+                    onOpenListProps = {},
+                    viewModel = listViewModel(apiProviderFor(server)),
+                )
+            }
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithText("Agree to close").performClick()
+            // The vote is a real HTTP round trip via MockWebServer; a single waitForIdle() doesn't
+            // reliably span the background IO completing, as RedeemDialogTest found before this.
+            var attempts = 0
+            while (attempts < 50) {
+                composeTestRule.waitForIdle()
+                if (composeTestRule.onAllNodesWithText("Could not record your vote.").fetchSemanticsNodes().isEmpty() &&
+                    composeTestRule.onAllNodesWithText("This list has been closed and can no longer be changed.")
+                        .fetchSemanticsNodes().isNotEmpty()
+                ) {
+                    break
+                }
+                Thread.sleep(100)
+                attempts++
+            }
+
+            composeTestRule.onNodeWithText("This list has been closed and can no longer be changed.").assertIsDisplayed()
+            composeTestRule.onNodeWithText("Could not record your vote.").assertDoesNotExist()
+        } finally {
+            server.shutdown()
+        }
     }
 }

@@ -301,5 +301,6 @@ export const zhHans: Catalog = {
   "apiError.serverBusy": "服务器繁忙，请稍后再试。",
   "apiError.payloadTooLarge": "一次发送的内容太多",
   "apiError.votedToClose": "你已同意结算此清单，因此不能再更改它。撤回同意后即可更改。",
+  "apiError.notAnExpensesList": "只有账本才能投票结算。",
   "expense.deleteBlocked": "此记录无法删除：它涉及金额已锁定的成员。",
 };

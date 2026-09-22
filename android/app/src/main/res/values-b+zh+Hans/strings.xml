@@ -331,6 +331,7 @@
     <string name="api_error_server_busy">服务器繁忙，请稍后再试。</string>
     <string name="api_error_payload_too_large">一次发送的内容太多</string>
     <string name="api_error_voted_to_close">你已同意结算此清单，因此不能再更改它。撤回同意后即可更改。</string>
+    <string name="api_error_not_an_expenses_list">只有账本才能投票结算。</string>
     <string name="expense_delete_blocked">此记录无法删除：它涉及金额已锁定的成员。</string>
     <string name="expense_error_frozen">%1$s 的金额已锁定：该成员已同意结算，或已退出清单。</string>
     <string name="expense_not_saved">未保存到清单</string>

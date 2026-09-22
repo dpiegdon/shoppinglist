@@ -299,5 +299,6 @@ export const fr: Catalog = {
   "apiError.serverBusy": "Le serveur est occupé. Réessayez dans un instant.",
   "apiError.payloadTooLarge": "C'est trop à envoyer en une fois",
   "apiError.votedToClose": "Vous avez accepté de clôturer cette liste : vous ne pouvez plus la modifier. Retirez votre accord pour faire des changements.",
+  "apiError.notAnExpensesList": "Seul un livre de comptes peut faire l'objet d'un vote de clôture.",
   "expense.deleteBlocked": "Cette entrée ne peut pas être supprimée : elle concerne quelqu'un dont les montants sont figés.",
 };

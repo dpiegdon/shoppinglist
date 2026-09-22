@@ -438,9 +438,9 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
                 stringResource(R.string.expense_agree_count, state.closeVotes.size, state.members.size),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            if (state.voteError) {
+            state.voteError?.let {
                 Text(
-                    stringResource(R.string.expense_vote_failed),
+                    it.asString(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

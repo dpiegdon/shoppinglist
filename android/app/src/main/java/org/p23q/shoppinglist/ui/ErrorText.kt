@@ -38,6 +38,8 @@ object ErrorText {
         "list_closed" to UiText.res(R.string.api_error_list_closed),
         "list_open" to UiText.res(R.string.listprops_leave_blocked),
         "voted_to_close" to UiText.res(R.string.api_error_voted_to_close),
+        // The close-vote endpoints answer this for any list that isn't an expenses list (T-264).
+        "not_an_expenses_list" to UiText.res(R.string.api_error_not_an_expenses_list),
         "cannot_delete_expense_list" to UiText.res(R.string.api_error_cannot_delete_expense_list),
         "not_a_member" to UiText.res(R.string.api_error_not_a_member),
         // A pushed item names a list this account can no longer write to — deleted, or left while

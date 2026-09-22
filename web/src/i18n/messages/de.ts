@@ -302,5 +302,6 @@ export const de: Catalog = {
   "apiError.serverBusy": "Der Server ist ausgelastet. Versuch es gleich noch einmal.",
   "apiError.payloadTooLarge": "Das ist zu viel auf einmal",
   "apiError.votedToClose": "Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.",
+  "apiError.notAnExpensesList": "Nur ein Kassenbuch kann zum Abschluss abgestimmt werden.",
   "expense.deleteBlocked": "Dieser Eintrag kann nicht gelöscht werden: Er betrifft jemanden, dessen Beträge festgeschrieben sind.",
 };

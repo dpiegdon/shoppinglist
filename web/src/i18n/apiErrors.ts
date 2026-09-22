@@ -36,6 +36,8 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   voted_to_close: "apiError.votedToClose",
   cannot_delete_expense_list: "apiError.cannotDeleteExpenseList",
   not_a_member: "apiError.notAMember",
+  // The close-vote endpoints answer this for any list that isn't an expenses list (T-264).
+  not_an_expenses_list: "apiError.notAnExpensesList",
   // A pushed item names a list the caller can no longer write to — deleted, or left while offline
   // (T-214). The Android row that gets parked for it shows this rather than the bare "not saved".
   unknown_list: "apiError.unknownList",
