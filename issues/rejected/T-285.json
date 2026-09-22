@@ -7,5 +7,5 @@
   ],
   "priority": 4,
   "title": "build-wheel.sh: an out-of-date venv fails with a raw traceback instead of what to do",
-  "updated_at": "2026-09-22T22:36:22+00:00"
+  "updated_at": "2026-09-22T22:43:09+00:00"
 }
