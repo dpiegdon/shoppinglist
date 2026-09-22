@@ -1,0 +1,11 @@
+{
+  "body": "Found while running the gate after the packaging work landed. The new wheel-build stage uses `pip wheel --no-build-isolation`, which needs setuptools inside `server/.venv`. It is now a pinned dev dependency, so a fresh `bootstrap.sh` checkout has it \u2014 but an EXISTING checkout whose venv predates that pin does not, and the stage fails with a raw `BackendUnavailable: Cannot import 'setuptools.build_meta'` traceback that says nothing about what to do. I hit exactly this on the main checkout.\n\nFix: have build-wheel.sh check for an importable setuptools first and fail with the actual instruction (`cd server && .venv/bin/pip install -e \".[dev]\"`), the way verify-all.sh's android_preflight explains its own missing pieces. Worth checking the same for anything else the gate's newer stages assume is installed.",
+  "created_at": "2026-09-22T22:36:22+00:00",
+  "id": "T-285",
+  "labels": [
+    "ops"
+  ],
+  "priority": 4,
+  "title": "build-wheel.sh: an out-of-date venv fails with a raw traceback instead of what to do",
+  "updated_at": "2026-09-22T22:36:22+00:00"
+}

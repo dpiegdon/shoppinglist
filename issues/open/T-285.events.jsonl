@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-22T22:36:22+00:00", "kind": "created", "ref": "main@f63d38f", "text": "build-wheel.sh: an out-of-date venv fails with a raw traceback instead of what to do"}
