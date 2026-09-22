@@ -361,7 +361,9 @@ all live rows of any `full_lists`, plus the new cursor.
   applied — a repeated id is collapsed, and the response carries one snapshot of
   each list either way. Over the cap the request is refused with
   `422 invalid_full_lists`. Each entry costs the server a full snapshot of that
-  list, so the pull side is bounded just as a push is.
+  list, so the pull side is bounded just as a push is. An entry naming a list the
+  caller is not a member of returns `403 not_a_member`; pushed changes in that
+  same request are still applied first, as with the stale cursor above.
 - **A row naming a list the caller cannot write to** gets
   `422 unknown_list` + `row_id` — the *same* answer whether the list does not
   exist or exists but belongs to someone else, so a non-member cannot probe which

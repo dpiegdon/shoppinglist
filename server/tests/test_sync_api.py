@@ -1111,3 +1111,44 @@ def test_the_price_pattern_is_ascii_by_construction_not_by_flag(db_conn):
     assert "\\d" not in sync.PRICE_AMOUNT_RE.pattern
     assert sync.PRICE_AMOUNT_RE.match("٥") is None
     assert sync.PRICE_AMOUNT_RE.match("5") is not None
+
+
+def test_push_survives_a_403_from_the_delta(client):
+    """A 403 for a stale full_lists entry must not take the push down with it (T-257).
+
+    The client keeps that entry across retries — Android's syncNow(fullLists + listId) for a
+    list the account has left — so a push rolled back here is not delayed, it is lost on every
+    attempt. The stale-cursor 410 already commits before it raises; this is the same case."""
+    token_a = _register_and_login(client, device="devA")
+    token_b = _register_and_login(client, email="bob@example.com", device="devB")
+
+    # A's list, which B is not a member of — B's stale full_lists entry.
+    assert (
+        _sync(
+            client,
+            token_a,
+            cursor=0,
+            device_id="devA",
+            changes={"lists": [_mk_list("list-a", "Groceries", 100, "devA")]},
+        ).status_code
+        == 200
+    )
+
+    resp = _sync(
+        client,
+        token_b,
+        cursor=0,
+        device_id="devB",
+        changes={
+            "lists": [_mk_list("list-b", "Bobs list", 100, "devB")],
+            "items": [_mk_item("item-b", "list-b", name=("Milk", 100, "devB"))],
+        },
+        full_lists=["list-a"],
+    )
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "not_a_member"
+
+    # B's push is durable: the retry that finally drops the stale entry finds it already there.
+    body = _sync(client, token_b, cursor=0, device_id="devB").get_json()
+    assert [lst["id"] for lst in body["changes"]["lists"]] == ["list-b"]
+    assert [itm["id"] for itm in body["changes"]["items"]] == ["item-b"]

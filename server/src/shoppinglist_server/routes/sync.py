@@ -90,6 +90,17 @@ def register_routes(bp):
             conn.commit()
             raise cursor_error
 
-        result = sync_engine.delta(conn, g.shoppinglist_account.id, cursor, full_lists)
+        try:
+            result = sync_engine.delta(conn, g.shoppinglist_account.id, cursor, full_lists)
+        except ApiError:
+            # Same rule as the stale cursor above, for the same reason (T-257): the push is
+            # already applied, and letting the error unwind would leave teardown to roll it
+            # back. `delta` raises 403 not_a_member for a full_lists entry the caller is not
+            # on — an entry a client keeps sending across retries, so the push would not be
+            # delayed but lost, retry after retry. What the caller may READ is refused; what
+            # they already wrote stands.
+            conn.commit()
+            raise
+
         conn.commit()
         return jsonify(result), 200
