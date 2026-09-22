@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-22T20:02:11+00:00", "kind": "created", "ref": "main@87587bc", "text": "Web: unguarded storage access white-screens a browser with site data blocked"}
 {"actor": "user", "at": "2026-09-22T21:46:27+00:00", "kind": "closed", "ref": "main@fcad03c", "text": ""}
+{"actor": "user", "at": "2026-09-22T21:46:28+00:00", "kind": "note", "ref": "main@fcad03c", "text": "Landed. New safeStorage wrapper used by every storage access, including getDeviceId which runs during render and was the white-screen path."}
