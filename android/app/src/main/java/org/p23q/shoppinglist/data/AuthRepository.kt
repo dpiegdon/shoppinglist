@@ -11,6 +11,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.LoginRequest
 import org.p23q.shoppinglist.data.api.RegisterRequest
 import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.data.db.inTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +26,7 @@ interface AuthRepository {
 
     /**
      * Best-effort server-side token revoke, then always clears the local session regardless.
-     * The mirror stays put for [login] to judge, exactly as on a forced logout — see
+     * Unpushed edits survive for [login] to judge, exactly as on a forced logout — see
      * [clearLocalSession]; logging out is not a reason to throw away edits that never went out.
      */
     suspend fun logout()
@@ -34,13 +35,18 @@ interface AuthRepository {
      * Clears the local session WITHOUT contacting the server. For a forced logout after the server
      * has already rejected our token (401): the token is dead, so a server call is pointless.
      *
-     * Leaves the local mirror alone (T-260). It used to wipe it, so that a subsequent login as a
+     * Keeps whatever is still unpushed, and drops the rest (T-260). It used to wipe everything, so
+     * that a subsequent login as a
      * different account could not see the previous account's lists — but this runs on ANY 401
      * carrying a bearer token, which per the Wire Contract includes an idle-expired session and a
      * password change on another device (that one revokes every other session by design). Edit the
      * list offline, change the password on the web, foreground the phone, and the whole unpushed
      * queue was gone. And the wipe could not have been right anyway: it happened before anyone
      * knew which account would log back in. [login] wipes instead, once it does know.
+     *
+     * What is dropped here is only what the server can send again: clearing the session resets the
+     * sync cursor, so the next login re-pulls from 0 regardless, and keeping a synced copy on disk
+     * until then would buy nothing and leave a logged-out device holding more than it needs to.
      */
     suspend fun clearLocalSession()
 
@@ -102,6 +108,11 @@ class AuthRepositoryImpl @Inject constructor(
         val mirrorOwner = sessionState.accountId ?: sessionState.mirrorAccountId
         sessionState.clear()
         sessionState.mirrorAccountId = mirrorOwner
+        // Unpushed work is the only thing worth keeping across a logout; see the KDoc above.
+        appDb.inTransaction {
+            appDb.listDao().deleteSyncedRows()
+            appDb.itemDao().deleteSyncedRows()
+        }
     }
 
     override fun lastOpenedListId(): String? = sessionState.lastOpenedListId

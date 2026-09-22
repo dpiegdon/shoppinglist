@@ -174,6 +174,7 @@ class AuthRepositoryTest {
         sessionState.token = "tok-123"
         sessionState.accountId = "acc-1"
         seedUnpushedItem()
+        seedSyncedItem()
 
         repository.clearLocalSession()
 
@@ -181,6 +182,9 @@ class AuthRepositoryTest {
         val kept = db.itemDao().getById("item-1")
         assertNotNull("the unpushed edit survives a forced logout", kept)
         assertTrue(kept!!.dirty)
+        // ...and nothing else does: clearing the session reset the cursor, so the next login
+        // re-pulls everything the server still has anyway (T-260).
+        assertNull("a synced row is not kept on disk after logout", db.itemDao().getById("item-synced"))
         // And the mirror's owner outlives the session, so login can tell whose data this is.
         assertEquals("acc-1", sessionState.mirrorAccountId)
     }
@@ -237,6 +241,27 @@ class AuthRepositoryTest {
                 .setBody("""{"token": "tok-123", "account_id": "$accountId", "email": "milk@example.com"}"""),
         )
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+    }
+
+    /** A row the server can send again: dropped on logout, unlike the unpushed one. */
+    private suspend fun seedSyncedItem() {
+        val now = System.currentTimeMillis()
+        db.itemDao().upsert(
+            ItemEntity(
+                id = "item-synced",
+                listId = "list-1",
+                createdAt = now,
+                name = "Bread".toLww("dev", now),
+                category = null.toLwwOptional("dev", now),
+                stores = "[]".toLww("dev", now),
+                quantity = null.toLwwOptional("dev", now),
+                price = null.toLwwOptional("dev", now),
+                note = null.toLwwOptional("dev", now),
+                status = "todo".toLww("dev", now),
+                deleted = false.toLww("dev", now),
+                dirty = false,
+            ),
+        )
     }
 
     private suspend fun seedUnpushedItem() {
