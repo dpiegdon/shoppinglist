@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-22T20:02:10+00:00", "kind": "created", "ref": "main@87587bc", "text": "Web: a failed push is silently swallowed outside the two dialogs, so the edit is lost"}

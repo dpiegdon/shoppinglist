@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, web finding. Verified by reading.\n\nThe web client has no push queue, so a rejected `push()` means the edit never happened \u2014 but only the item and ledger dialogs catch and show the failure. Everywhere else the rejection is an unhandled promise rejection and the user is told nothing: toggling an item's status, undo, deleting from a dialog (`onDelete(id).then(onClose)` with no catch leaves the dialog open and silent), creating a list, and the list-properties actions including rename, category order, duplicate and revoke.\n\nScenario: tick an item off with the network down \u2014 the row does not strike through, nothing is said, and the edit is gone.\n\nSeparately, `saveCategoryOrder` applies the new order to local state before the push and the seeding ref never re-seeds, so after a failed push the page keeps showing an order the server never received.\n\nFix direction: route these through the same inline error treatment the dialogs use, or a shared toast.",
+  "created_at": "2026-09-22T20:02:10+00:00",
+  "id": "T-266",
+  "labels": [
+    "web",
+    "data-loss"
+  ],
+  "priority": 2,
+  "title": "Web: a failed push is silently swallowed outside the two dialogs, so the edit is lost",
+  "updated_at": "2026-09-22T20:02:10+00:00"
+}
