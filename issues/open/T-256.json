@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, server finding 4 of 6. Reproduced with production error handling (TESTING off).\n\nThree call sites use a JSON field without checking its type, so a non-string value is an unhandled HTML 500 instead of the documented JSON envelope:\n\n* `invites.decode_token` \u2014 `(token or \"\").split(...)`: `POST /invites/redeem {\"token\": 12345}` -> 500 text/html.\n* `accounts._require_password` \u2014 passes the value to werkzeug: `POST /account/change-password {\"current_password\": 5}`, `POST /account/change-email`, `DELETE /account {\"password\": 5}` and both admin step-up routes -> 500 text/html.\n* `invites.mint` \u2014 `len()`/`EMAIL_RE.match()`: `POST /lists/{id}/invites {\"invited_email\": 5}` (as a member) -> 500 text/html.\n\nT-116 added exactly this guard to register/login; these were missed. T-236 covers the body SHAPE, not field types, which is why the suite is green. Any authenticated caller can produce a 500 and a stack trace in the log.\n\nFix direction: type-check before use at the three sites (`invalid_token`, `invalid_credentials`, `invalid_email`), and extend the parametrised request-body tests from body shapes to field types on every route that reads one.",
+  "created_at": "2026-09-22T20:00:38+00:00",
+  "id": "T-256",
+  "labels": [
+    "server",
+    "security"
+  ],
+  "priority": 2,
+  "title": "A non-string JSON field value is an HTML 500 on five authenticated routes",
+  "updated_at": "2026-09-22T20:00:38+00:00"
+}
