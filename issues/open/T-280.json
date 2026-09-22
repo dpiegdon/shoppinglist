@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, release-tooling findings. The first one bit this session on 2026-09-21.\n\n* A failure anywhere after the version bump leaves a half-released tree: five bumped version files, a rebuilt web bundle, and \u2014 if it got that far \u2014 the new APK embedded. There is no trap and no rollback, and the failure message says nothing about recovery, so the natural next step after fixing the cause is to hit \"working tree is dirty\" and commit the bumps, which is exactly the incident AGENTS.md records as reverted in 52a6223. (This run: the gate failed on a flaky test and left the 3.0.1 bumps behind.) Restore the touched paths on failure, or at minimum print the recovery command.\n* The signing-key guard fails open and then says it passed. `PREVIOUS_CERT` is only set when the embedded APK exists and apksigner's output matches the expected line; on any failure the comparison is skipped and the script still prints \"signed, same key as the previous release\". A build-tools upgrade that rewords the output, or a truncated APK from an interrupted run, would let a differently-signed APK ship \u2014 after which no installed user can update, and the tag cannot be re-cut. Make an unreadable previous certificate fatal and only print the reassurance when a comparison happened.\n* `versionCode` monotonicity is never checked against the APK that actually shipped. It is derived from build.gradle.kts and only compared to the newly built APK, so a merge or hand-edit that lowers it releases cleanly and Android then refuses the update on every device. The script already has the previous APK and a working aapt2 in hand.\n* Smaller: the version bump is not all-or-nothing (a later file failing to match leaves the earlier ones bumped); `--notes` with a missing filename is silently ignored and falls back to generated notes; only an EQUAL version is refused, so 3.1.0 -> 3.0.5 is accepted; `release-guard.py` never refuses a protocol DECREASE; `cd` without `|| exit` in every script (build-wheel.sh's next statement is `rm -rf build dist`).",
+  "created_at": "2026-09-22T20:02:23+00:00",
+  "id": "T-280",
+  "labels": [
+    "ops"
+  ],
+  "priority": 2,
+  "title": "release.sh: half-released tree on failure, a signing guard that fails open, no versionCode check",
+  "updated_at": "2026-09-22T20:02:23+00:00"
+}
