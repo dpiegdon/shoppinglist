@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, Android finding. Verified by reading SyncEngine.kt.\n\nOn `410 full_resync_required` the engine calls `appDb.clearAllTables()`, justified by \"nothing pushed is lost\". That holds only for the rows in THIS batch: the push is capped at 250 rows (`take(MAX_CHANGES_PER_SYNC)`), and quarantined rows are excluded from `dirtyRows()` entirely. Everything beyond the cap, and every row the user has not yet fixed after a refusal, is destroyed without a word.\n\nScenario: a week offline, 400 edits, the account's cursor has fallen below the server's gc_horizon. The first sync pushes 250, gets 410, wipes the database \u2014 the other 150 edits are gone.\n\nFix direction: drain the whole backlog before honouring the 410, or snapshot dirty and blocked rows and re-insert them after the cursor-0 pull. Test gap: the existing 410 test uses exactly one dirty row, i.e. the case where nothing can be lost.",
+  "created_at": "2026-09-22T20:02:00+00:00",
+  "id": "T-259",
+  "labels": [
+    "android",
+    "data-loss"
+  ],
+  "priority": 2,
+  "title": "Android: a full resync wipes offline edits beyond the pushed batch and every quarantined row",
+  "updated_at": "2026-09-22T20:02:00+00:00"
+}
