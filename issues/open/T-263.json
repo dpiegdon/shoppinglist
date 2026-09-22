@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, Android finding. Verified by reading.\n\n`ListScreen`'s group header key is `\"header-${group.category ?: \"\u2014\"}\"`, and `CategoryCanon.UNCATEGORIZED_LABEL` is the same em dash, which a user can also type as a category name. A list holding one item categorised \"\u2014\" and one uncategorised produces two groups with the same key, and Compose throws `IllegalArgumentException: Key \"header-\u2014\" was already used` \u2014 the screen crashes and stays crashed until the data changes.\n\nFix direction: key on the canonical category with a distinct sentinel for uncategorised.",
+  "created_at": "2026-09-22T20:02:01+00:00",
+  "id": "T-263",
+  "labels": [
+    "android"
+  ],
+  "priority": 3,
+  "title": "Android: an item categorised with an em dash crashes the list screen on a duplicate key",
+  "updated_at": "2026-09-22T20:02:01+00:00"
+}
