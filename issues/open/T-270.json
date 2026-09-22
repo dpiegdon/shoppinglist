@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, web finding, and a violation of the repo's own rule that every user-visible string exists in all nine locales on both clients.\n\n* `ListPropsPage` line 179 confirms a category merge with a hard-coded English `confirm(\"Merge into ...? Both categories will become one.\")` \u2014 the only user-facing string in the client that does not go through `t`. Android does not confirm this at all, so it is also a parity difference: decide whether the confirmation exists on both.\n* `priceParse.ts` returns English validation messages (\"Enter an amount like 1.99\", \"Use a 3-letter code like EUR\") which the item dialog renders inline. Android translates both in all nine locales (`item_msg_price_invalid`, `item_msg_currency_invalid`). An existing web test asserts the English text, pinning the defect.\n\n`crossClient.test.ts` cannot catch either: it pairs by identical English, and a string that never enters the web catalog has nothing to pair with. Its one-sided-string check is deliberately limited to the `expense.*` and `apiError.*` families.\n\nFix direction: catalog keys in all nine locales for the confirm; have the price/currency parsers return a message key and translate at the call site; widen the one-sided check to the `item.*` family.\n\nMirror-image case on the other client, found in the same pass: `SettingsScreen.kt` concatenates a hard-coded `\" (this device)\"` onto the session label. It is not in strings.xml at all, so eight locales read English; the web translates it (`settings.thisDevice`, present in all nine catalogs). Fix it in the same pass.",
+  "created_at": "2026-09-22T20:02:11+00:00",
+  "id": "T-270",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 3,
+  "title": "i18n: hard-coded English on both clients (merge confirm, price messages, this device)",
+  "updated_at": "2026-09-22T20:02:11+00:00"
+}
