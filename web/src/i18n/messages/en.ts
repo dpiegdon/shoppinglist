@@ -106,6 +106,13 @@ export const en = {
   // Refused before the row is ever pushed (T-273): item names are unique per list, case-
   // insensitively, on both clients — this is the web's twin of Android's item_msg_duplicate_name.
   "item.duplicateName": "An item named \"{name}\" already exists",
+  // Reuses Android's item_delete_title/item_delete_body word for word (T-277): the web used to
+  // delete on the first press, with no confirmation and no undo. confirm() shows both lines at
+  // once, so the two keys stay separate strings — matching Android's — rather than one sentence.
+  "item.deleteTitle": "Delete item?",
+  "item.deleteBody": "“{name}” will be removed from this list.",
+  "item.priceInvalid": "Enter an amount like 1.99",
+  "item.currencyInvalid": "Use a 3-letter code like EUR",
 
   // ---- list properties ----
   "listProps.title": "List properties",
@@ -123,6 +130,10 @@ export const en = {
   "listProps.removeFromOrder": "Remove from order",
   "listProps.addToOrder": "Add to order",
   "listProps.addCategory": "Add category…",
+  // Renaming a category onto another existing one merges them irreversibly (T-270): every item in
+  // both categories ends up in one. Was a hard-coded English confirm() call, the only user-facing
+  // string in the client that bypassed the catalog.
+  "listProps.mergeCategoryConfirm": "Merge into \"{category}\"? Both categories will become one.",
   "listProps.clearChecked": "Clear checked",
   // Separate from the heading above: the BUTTON carries the count, the section title must not.
   "listProps.clearCheckedCount": "Clear checked ({count})",

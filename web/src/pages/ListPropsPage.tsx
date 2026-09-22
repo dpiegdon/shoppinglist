@@ -208,7 +208,7 @@ export default function ListPropsPage() {
     if (categoryKey(to) === fromKey && to === canonicalNames.get(fromKey)) return; // unchanged
     const toKey = categoryKey(to);
     if (toKey !== fromKey && canonicalNames.has(toKey)) {
-      if (!confirm(`Merge into "${canonicalNames.get(toKey)}"? Both categories will become one.`)) return;
+      if (!confirm(t("listProps.mergeCategoryConfirm", { category: canonicalNames.get(toKey)! }))) return;
     }
     const plan = planCategoryRename(
       liveItems.map((i) => ({ id: i.id, category: itemFieldValue(i, "category") ?? "" })),

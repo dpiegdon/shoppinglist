@@ -169,6 +169,10 @@
     <string name="listprops_leave_list">Leave list</string>
     <string name="listprops_leave_confirm_title">Leave this list?</string>
     <string name="listprops_leave_confirm_body">You\'ll stop receiving updates for \"%1$s\" on this device.</string>
+    <!-- Renaming a category onto another existing one merges them irreversibly (T-270): the
+         web already confirms this; Android did not, silently merging on the first Save. -->
+    <string name="listprops_merge_confirm_title">Merge into \"%1$s\"?</string>
+    <string name="listprops_merge_confirm_body">Both categories will become one.</string>
 
     <!-- about: the mark, what Tuppu means, the version, the licence, and
          the app-update block that moved off the settings screen (T-224) -->
@@ -210,6 +214,10 @@
     <string name="settings_password">Password</string>
     <string name="settings_sessions">Sessions</string>
     <string name="settings_unknown_device">Unknown device</string>
+    <!-- Appended to the session label for the one this request is (T-270); matches the web
+         client's settings.thisDevice word for word. Was a hard-coded literal, untranslated in
+         every locale but English. -->
+    <string name="settings_this_device">(this device)</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Collaborator changes</string>
     <string name="settings_collaborator_changes_help">Notify when someone else edits a shared list. Mute individual lists in their list properties.</string>

@@ -33,9 +33,11 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.data.AppLocale
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.ui.LocalizedContent
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -387,6 +389,69 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText("App updates").assertDoesNotExist()
         composeTestRule.onNodeWithText("Check for updates automatically").assertDoesNotExist()
         composeTestRule.onAllNodesWithText("Version", substring = true).assertCountEquals(0)
+
+        viewModel.viewModelScope.cancel()
+        db.close()
+    }
+
+    @Test
+    fun `the current session's device label is translated, not hard-coded English (T-270)`() = runBlocking {
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path?.endsWith("/account/sessions") == true ->
+                    MockResponse().setResponseCode(200).setBody(
+                        """{"sessions": [{"id": "s1", "device_label": "Pixel", "created_at": 0, "last_seen_at": 0, "current": true}]}""",
+                    )
+                request.path?.endsWith("/settings") == true ->
+                    MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}""")
+                else -> MockResponse().setResponseCode(404)
+            }
+        }
+        server.start()
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
+        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_device_server_config") })
+        serverConfig.setServerUrl(server.url("/").toString())
+        val sessionState = FakeSessionState().apply {
+            token = "tok-123"
+            accountEmail = "milk@example.com"
+            defaultCurrency = "EUR"
+        }
+        val json = Json { ignoreUnknownKeys = true }
+        val viewModel = SettingsViewModel(
+            ApiProvider(
+                serverConfig = serverConfig,
+                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                json = json,
+            ),
+            sessionState,
+            serverConfig,
+            ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_device_theme") }),
+            db,
+            CrashLogWriter(File.createTempFile("settings_device_crashlog", ".txt").apply { deleteOnExit() }),
+            DefaultCurrencyState(sessionState),
+            NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_device_notif") }),
+        )
+
+        // Renders under German (T-111's LocalizedContent) rather than relying on the device
+        // locale: a hard-coded literal reads as English regardless, which is exactly the defect.
+        composeTestRule.setContent {
+            LocalizedContent(AppLocale.GERMAN) {
+                SettingsScreen(onAccountDeleted = {}, viewModel = viewModel)
+            }
+        }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.sessions.isNotEmpty()
+        }
+
+        composeTestRule.onNodeWithText("Pixel (dieses Gerät)").assertExists()
 
         viewModel.viewModelScope.cancel()
         db.close()

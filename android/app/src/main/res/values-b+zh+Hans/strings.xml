@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">退出清单</string>
     <string name="listprops_leave_confirm_title">要退出此清单吗？</string>
     <string name="listprops_leave_confirm_body">此设备将不再接收「%1$s」的更新。</string>
+    <string name="listprops_merge_confirm_title">合并到「%1$s」？</string>
+    <string name="listprops_merge_confirm_body">两个分类将合并为一个。</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">阿卡德语中表示泥板的词 — 清单就压印在那样的板子上。</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">密码</string>
     <string name="settings_sessions">会话</string>
     <string name="settings_unknown_device">未知设备</string>
+    <string name="settings_this_device">（本设备）</string>
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">其他成员的变动</string>
     <string name="settings_collaborator_changes_help">当其他人编辑共享列表时通知你。可在各列表的属性中单独关闭通知。</string>

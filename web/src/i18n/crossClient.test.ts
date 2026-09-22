@@ -88,8 +88,13 @@ const ONE_SIDED: Record<string, string> = {
   "expense.error.total": "the web says 'Enter a total.' under the shares; Android leaves TOTAL_NOT_POSITIVE silent and keeps the Save button off",
   expense_total_spent_value: "one line on Android's balances screen, two stacked labels on the web's",
   expense_currency_value: "list properties reads the currency out on Android, where the web has a labelled field",
-  expense_delete_title: "Android confirms a delete in a dialog; the web's delete button acts at once",
+  expense_delete_title: "Android confirms deleting an EXPENSE ENTRY in a dialog; the web's delete button acts at once (unlike an item, T-277)",
   expense_delete_body: "the body of that same Android-only confirmation",
+  // T-270 widened this check to the item.* family too. These three stay one-sided rather than
+  // paired or removed:
+  "item.saveFailed": "the web shows this after an optimistic push to the server fails inline; Android writes to its local mirror and syncs in the background, so there is no synchronous save failure to report here",
+  item_msg_name_required: "Android blocks an empty name inline as you type; the web relies on the input's own required attribute and shows no message",
+  item_msg_duplicate_name: "Android warns before saving over an existing item name; the web has no such guard",
 };
 
 describe("the two clients say the same thing (T-148)", () => {
@@ -106,9 +111,13 @@ describe("the two clients say the same thing (T-148)", () => {
   }
 
   it("no expense or error string lives on one client only (T-203)", () => {
+    // T-270: widened to item.*/item_* after the price/currency messages and the delete
+    // confirmation moved into the catalog on both sides — that family had the same silent-drift
+    // risk (a string added to one client's item form with nothing to pair it on the other).
     const inFamily = (key: string) =>
       key.startsWith("expense.") || key.startsWith("apiError.") ||
-      key.startsWith("expense_") || key.startsWith("api_error_");
+      key.startsWith("expense_") || key.startsWith("api_error_") ||
+      key.startsWith("item.") || key.startsWith("item_");
     const pairedWeb = new Set(pairs.map(([webKey]) => webKey));
     const pairedAndroid = new Set(pairs.map(([, name]) => name));
     const lonely = [

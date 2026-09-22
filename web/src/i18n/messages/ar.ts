@@ -83,6 +83,10 @@ export const ar: Catalog = {
   "item.status.backlogHint": "ليس على القائمة بعد",
   "item.saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
   "item.duplicateName": "يوجد بالفعل عنصر باسم \"{name}\"",
+  "item.deleteTitle": "حذف العنصر؟",
+  "item.deleteBody": "«{name}» ستتم إزالته من هذه القائمة.",
+  "item.priceInvalid": "أدخل مبلغًا مثل 1.99",
+  "item.currencyInvalid": "استخدم رمزًا من 3 أحرف مثل EUR",
 
   "listProps.title": "خصائص القائمة",
   "listProps.name": "الاسم",
@@ -99,6 +103,7 @@ export const ar: Catalog = {
   "listProps.removeFromOrder": "إزالة من الترتيب",
   "listProps.addToOrder": "إضافة إلى الترتيب",
   "listProps.addCategory": "إضافة فئة…",
+  "listProps.mergeCategoryConfirm": "الدمج في \"{category}\"؟ ستصبح الفئتان واحدة.",
   "listProps.clearChecked": "إعادة المكتملة",
   "listProps.clearCheckedCount": "إعادة المكتملة ({count})",
   "listProps.kindSwitchHelp": "التبديل يغيّر الحقول المعروضة فقط — لا يُحذف أي شيء، ويمكنك التبديل مرة أخرى.",

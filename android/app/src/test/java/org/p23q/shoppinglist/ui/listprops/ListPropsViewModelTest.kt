@@ -125,6 +125,65 @@ class ListPropsViewModelTest {
     }
 
     @Test
+    fun `renaming a category onto a different casing of itself just recases, no confirmation needed (T-270)`() = runTest(mainDispatcherRule.dispatcher) {
+        listsRepo.setCategoryOrder(listId, listOf("dairy"))
+        val milk = itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.categoryOrder.isNotEmpty() }
+
+        viewModel.renameCategory(0, "Dairy")?.join()
+
+        assertNull(viewModel.uiState.value.pendingCategoryMerge)
+        assertEquals(listOf("Dairy"), viewModel.uiState.value.categoryOrder)
+        assertEquals("Dairy", itemsRepo.getById(milk)!!.category.value)
+    }
+
+    @Test
+    fun `renaming onto another existing category asks for confirmation instead of merging right away (T-270)`() = runTest(mainDispatcherRule.dispatcher) {
+        listsRepo.setCategoryOrder(listId, listOf("Dairy", "Produce"))
+        val milk = itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "Dairy") }
+        val carrot = itemsRepo.createItem(listId, "Carrot").also { itemsRepo.setCategory(it, "Produce") }
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.categoryOrder.isNotEmpty() }
+
+        // Renaming "Produce" to "Dairy" merges the two — held for confirmation rather than
+        // applied immediately (the defect this ticket fixes: it used to merge silently here).
+        val job = viewModel.renameCategory(1, "Dairy")
+
+        assertNull(job)
+        val pending = viewModel.uiState.value.pendingCategoryMerge
+        assertNotNull(pending)
+        assertEquals("Dairy", pending!!.targetName)
+        // Nothing moved yet: the order and the items are untouched until confirmed.
+        assertEquals(listOf("Dairy", "Produce"), viewModel.uiState.value.categoryOrder)
+        assertEquals("Produce", itemsRepo.getById(carrot)!!.category.value)
+
+        viewModel.confirmCategoryMerge()!!.join()
+
+        assertNull(viewModel.uiState.value.pendingCategoryMerge)
+        assertEquals(listOf("Dairy"), viewModel.uiState.value.categoryOrder)
+        assertEquals("Dairy", itemsRepo.getById(carrot)!!.category.value)
+        assertEquals("Dairy", itemsRepo.getById(milk)!!.category.value)
+    }
+
+    @Test
+    fun `cancelling a pending category merge leaves both categories untouched (T-270)`() = runTest(mainDispatcherRule.dispatcher) {
+        listsRepo.setCategoryOrder(listId, listOf("Dairy", "Produce"))
+        val carrot = itemsRepo.createItem(listId, "Carrot").also { itemsRepo.setCategory(it, "Produce") }
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.categoryOrder.isNotEmpty() }
+
+        viewModel.renameCategory(1, "Dairy")
+        assertNotNull(viewModel.uiState.value.pendingCategoryMerge)
+
+        viewModel.cancelCategoryMerge()
+
+        assertNull(viewModel.uiState.value.pendingCategoryMerge)
+        assertEquals(listOf("Dairy", "Produce"), viewModel.uiState.value.categoryOrder)
+        assertEquals("Produce", itemsRepo.getById(carrot)!!.category.value)
+    }
+
+    @Test
     fun `saveName persists a rename as an LWW edit`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }

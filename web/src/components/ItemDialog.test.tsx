@@ -284,9 +284,10 @@ describe("ItemDialog (add mode)", () => {
 });
 
 describe("ItemDialog (edit mode)", () => {
-  it("prefills existing values and offers delete", async () => {
+  it("prefills existing values and offers delete, guarded by a confirmation (T-277)", async () => {
     const item = registryItem("1", "Milk", "dairy");
     const onDelete = vi.fn().mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(
       <ItemDialog
         listId="list-1"
@@ -301,13 +302,40 @@ describe("ItemDialog (edit mode)", () => {
 
     expect(screen.getByLabelText("Name")).toHaveValue("Milk");
     await userEvent.click(screen.getByText("Delete"));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("Delete item?"));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("“Milk” will be removed from this list."));
     expect(onDelete).toHaveBeenCalledWith("1");
+    confirmSpy.mockRestore();
+  });
+
+  it("does not delete when the confirmation is cancelled (T-277)", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Delete"));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
   it("keeps the dialog open and shows the error when delete fails, instead of closing silently (T-266)", async () => {
     const item = registryItem("1", "Milk", "dairy");
     const onDelete = vi.fn().mockRejectedValue(new Error("network down"));
     const onClose = vi.fn();
+    // Past the confirmation (T-277); what this test is about is what happens after it.
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(
       <ItemDialog
         listId="list-1"
@@ -325,6 +353,7 @@ describe("ItemDialog (edit mode)", () => {
     expect(onDelete).toHaveBeenCalledWith("1");
     expect(onClose).not.toHaveBeenCalled();
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    confirmSpy.mockRestore();
   });
 
   it("does not show suggestions while editing", async () => {

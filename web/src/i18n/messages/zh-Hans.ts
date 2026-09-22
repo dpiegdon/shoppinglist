@@ -81,6 +81,10 @@ export const zhHans: Catalog = {
   "item.status.backlogHint": "尚未加入清单",
   "item.saveFailed": "保存失败，请重试。",
   "item.duplicateName": "已存在名为「{name}」的物品",
+  "item.deleteTitle": "删除物品？",
+  "item.deleteBody": "“{name}”将从此清单中移除。",
+  "item.priceInvalid": "请输入类似 1.99 的金额",
+  "item.currencyInvalid": "请使用类似 EUR 的 3 位代码",
 
   "listProps.title": "清单属性",
   "listProps.name": "名称",
@@ -97,6 +101,7 @@ export const zhHans: Catalog = {
   "listProps.removeFromOrder": "从排序中移除",
   "listProps.addToOrder": "加入排序",
   "listProps.addCategory": "添加分类…",
+  "listProps.mergeCategoryConfirm": "合并到「{category}」？两个分类将合并为一个。",
   "listProps.clearChecked": "重置已完成",
   "listProps.clearCheckedCount": "重置已完成（{count}）",
   "listProps.kindSwitchHelp": "切换只改变显示哪些字段 — 不会删除任何内容，你可以随时切换回来。",

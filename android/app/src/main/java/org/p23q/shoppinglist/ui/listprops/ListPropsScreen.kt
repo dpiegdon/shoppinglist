@@ -325,6 +325,18 @@ fun ListPropsScreen(
             dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
+
+    // Renaming a category onto another existing one merges them irreversibly (T-270): the web
+    // already confirms this; Android used to do it silently on Save.
+    state.pendingCategoryMerge?.let { pending ->
+        LocalizedAlertDialog(
+            onDismissRequest = viewModel::cancelCategoryMerge,
+            title = { Text(UiText.res(R.string.listprops_merge_confirm_title, pending.targetName).asString()) },
+            text = { Text(stringResource(R.string.listprops_merge_confirm_body)) },
+            confirmButton = { TextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
+            dismissButton = { TextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
 }
 
 /**

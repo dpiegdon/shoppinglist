@@ -82,6 +82,10 @@ export const ja: Catalog = {
   "item.status.backlogHint": "まだリストに入っていません",
   "item.saveFailed": "保存できませんでした。もう一度お試しください。",
   "item.duplicateName": "「{name}」という名前のアイテムはすでに存在します",
+  "item.deleteTitle": "アイテムを削除しますか？",
+  "item.deleteBody": "「{name}」をこのリストから削除します。",
+  "item.priceInvalid": "1.99 のような金額を入力してください",
+  "item.currencyInvalid": "EUR のような 3 文字のコードを使用してください",
 
   "listProps.title": "リストのプロパティ",
   "listProps.name": "名前",
@@ -98,6 +102,7 @@ export const ja: Catalog = {
   "listProps.removeFromOrder": "並び順から削除",
   "listProps.addToOrder": "並び順に追加",
   "listProps.addCategory": "カテゴリを追加…",
+  "listProps.mergeCategoryConfirm": "「{category}」に統合しますか？ 両方のカテゴリーが1つになります。",
   "listProps.clearChecked": "完了済みをリセット",
   "listProps.clearCheckedCount": "完了済みをリセット（{count}）",
   "listProps.kindSwitchHelp": "切り替えても表示される項目が変わるだけで、削除はされません。元に戻すこともできます。",

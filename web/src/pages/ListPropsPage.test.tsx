@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,8 @@ import ListPage from "./ListPage";
 import ListPropsPage from "./ListPropsPage";
 import { SyncProvider, useSyncContext } from "../hooks/SyncContext";
 import { AuthProvider } from "../auth/AuthContext";
+import { I18nProvider } from "../i18n";
+import { de } from "../i18n/messages/de";
 import * as api from "../api/client";
 import type { ItemStatus } from "../api/contract";
 
@@ -579,5 +581,70 @@ describe("reordering categories in list properties (T-212)", () => {
     // Reverted: Dairy is still shown before Bread, not swapped.
     const labels = screen.getAllByText(/^(Dairy|Bread)$/).map((el) => el.textContent);
     expect(labels).toEqual(["Dairy", "Bread"]);
+  });
+});
+
+describe("category merge confirmation goes through the catalog (T-270)", () => {
+  function listWithOrder(order: string[]) {
+    const base = listObj();
+    return { ...base, fields: { ...base.fields, category_order: clock(order) } };
+  }
+
+  beforeEach(() => {
+    api.setToken("test-token");
+    localStorage.setItem("shoppinglist_locale", "de");
+    localStorage.setItem(
+      "shoppinglist_account",
+      JSON.stringify({ id: "acct-me", email: "me@example.com", isAdmin: false }),
+    );
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    api.setToken(null);
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("shows the merge confirmation in the active language, not hard-coded English", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "Produce"])], items: [] },
+    });
+    // Declines the merge — this test only cares what text confirm() was shown, not the push.
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(
+      <MemoryRouter initialEntries={["/list/list-1"]}>
+        <I18nProvider>
+          <AuthProvider>
+            <SyncProvider>
+              <Routes>
+                <Route path="/list/:listId" element={<ListPage />} />
+                <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+              </Routes>
+            </SyncProvider>
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Groceries");
+    await userEvent.click(screen.getByRole("link", { name: de["listProps.title"] }));
+    await userEvent.click(
+      screen.getByRole("button", { name: de["listProps.renameCategory"]!.replace("{category}", "Produce") }),
+    );
+    const input = screen.getByRole("textbox", {
+      name: de["listProps.renameCategory"]!.replace("{category}", "Produce"),
+    });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Dairy");
+    const renameForm = input.closest("form")!;
+    await userEvent.click(within(renameForm).getByRole("button", { name: de["action.save"] }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(de["listProps.mergeCategoryConfirm"]!.replace("{category}", "Dairy"));
+    confirmSpy.mockRestore();
   });
 });

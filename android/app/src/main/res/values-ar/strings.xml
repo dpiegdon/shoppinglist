@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">مغادرة القائمة</string>
     <string name="listprops_leave_confirm_title">مغادرة هذه القائمة؟</string>
     <string name="listprops_leave_confirm_body">لن تتلقى تحديثات \"%1$s\" على هذا الجهاز بعد الآن.</string>
+    <string name="listprops_merge_confirm_title">الدمج في \"%1$s\"؟</string>
+    <string name="listprops_merge_confirm_body">ستصبح الفئتان واحدة.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">كلمة المرور</string>
     <string name="settings_sessions">الجلسات</string>
     <string name="settings_unknown_device">جهاز غير معروف</string>
+    <string name="settings_this_device">(هذا الجهاز)</string>
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_collaborator_changes">تغييرات الأعضاء</string>
     <string name="settings_collaborator_changes_help">التنبيه عندما يعدّل شخص آخر قائمة مشتركة. يمكنك كتم قوائم بعينها من خصائصها.</string>

@@ -1,10 +1,15 @@
+import type { MessageKey } from "../i18n/messages/en";
+
 /**
  * Result of parsing a user-typed price amount/currency field. Mirrors Android's
  * `PriceParse` sealed interface (ItemFormViewModel.kt): `value` is `null` when the field was blank
  * (no price/currency at all), a non-null string when a value was recognized, or `Invalid` with a
  * message to show inline when the value can't be interpreted at all.
+ *
+ * `message` is a catalog KEY, not English text (T-270) — this module has no access to the current
+ * locale, so it names which message applies and leaves translating it to the call site (`t(...)`).
  */
-export type PriceParseResult = { valid: true; value: string | null } | { valid: false; message: string };
+export type PriceParseResult = { valid: true; value: string | null } | { valid: false; message: MessageKey };
 
 const WHITESPACE_RE = /\s/g;
 const LEADING_CURRENCY_RE = /^[€$£¥]/;
@@ -41,7 +46,7 @@ export function parsePriceAmount(raw: string): PriceParseResult {
   if (!cleaned) return { valid: true, value: null };
   return PRICE_AMOUNT_RE.test(cleaned)
     ? { valid: true, value: cleaned }
-    : { valid: false, message: "Enter an amount like 1.99" };
+    : { valid: false, message: "item.priceInvalid" };
 }
 
 /**
@@ -53,5 +58,5 @@ export function parseCurrency(raw: string): PriceParseResult {
   if (!code) return { valid: true, value: null };
   return CURRENCY_RE.test(code)
     ? { valid: true, value: code }
-    : { valid: false, message: "Use a 3-letter code like EUR" };
+    : { valid: false, message: "item.currencyInvalid" };
 }

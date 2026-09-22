@@ -54,6 +54,9 @@ data class ListPropsUiState(
     val inviteShareUrl: String? = null,
     val isLeaveConfirmOpen: Boolean = false,
     val hasLeft: Boolean = false,
+    /** A rename that would merge onto an existing category, awaiting confirmation (T-270): the
+     *  web already confirms this destructive merge; Android used to do it silently on Save. */
+    val pendingCategoryMerge: PendingCategoryMerge? = null,
     val duplicatedListId: String? = null,
     /** Per-list collaborator-change notifications (T-65); false = this list is muted. */
     val notificationsEnabledForList: Boolean = true,
@@ -61,6 +64,10 @@ data class ListPropsUiState(
     val checkedCount: Int = 0,
     val errorMessage: UiText? = null,
 )
+
+/** [index]/[newName] as given to [ListPropsViewModel.renameCategory]; [targetName] is the existing
+ *  category's own casing, for the confirmation to name — not necessarily [newName]'s casing. */
+data class PendingCategoryMerge(val index: Int, val newName: String, val targetName: String)
 
 /** Notes: rename, category order, members/invites, share, unsubscribe — all "list properties." */
 @HiltViewModel
@@ -176,7 +183,10 @@ class ListPropsViewModel @Inject constructor(
     /**
      * Rename / recase a category (T-108): rewrite every item in it to [newNameRaw] and update the
      * category_order entry. A different word is a full rename; a case-only change fixes the casing.
-     * Renaming onto another existing category merges them (planRename de-dups the order).
+     *
+     * Renaming onto another existing category merges them (planRename de-dups the order) — every
+     * item in both ends up in one, irreversibly. That is confirmed first (T-270), matching the web
+     * client: this used to merge silently on Save.
      */
     fun renameCategory(index: Int, newNameRaw: String): Job? {
         val newName = newNameRaw.trim()
@@ -184,6 +194,29 @@ class ListPropsViewModel @Inject constructor(
         if (index !in current.indices || newName.isBlank()) return null
         val fromKey = CategoryCanon.key(current[index])
         if (CategoryCanon.key(newName) == fromKey && newName == current[index]) return null // unchanged
+        val toKey = CategoryCanon.key(newName)
+        if (toKey != fromKey) {
+            val target = current.firstOrNull { CategoryCanon.key(it) == toKey }
+            if (target != null) {
+                _uiState.update { it.copy(pendingCategoryMerge = PendingCategoryMerge(index, newName, target)) }
+                return null
+            }
+        }
+        return performRenameCategory(index, newName)
+    }
+
+    /** The pending merge goes ahead, exactly as [renameCategory] would have without the guard. */
+    fun confirmCategoryMerge(): Job? {
+        val pending = _uiState.value.pendingCategoryMerge ?: return null
+        _uiState.update { it.copy(pendingCategoryMerge = null) }
+        return performRenameCategory(pending.index, pending.newName)
+    }
+
+    fun cancelCategoryMerge() = _uiState.update { it.copy(pendingCategoryMerge = null) }
+
+    private fun performRenameCategory(index: Int, newName: String): Job {
+        val current = _uiState.value.categoryOrder
+        val fromKey = CategoryCanon.key(current[index])
         return viewModelScope.launch {
             val items = itemsRepo.activeItemsForListOnce(listId)
             val plan = CategoryCanon.planRename(

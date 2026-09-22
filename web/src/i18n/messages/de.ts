@@ -82,6 +82,10 @@ export const de: Catalog = {
   "item.status.backlogHint": "Noch nicht auf der Liste",
   "item.saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
   "item.duplicateName": "Ein Artikel namens \"{name}\" existiert bereits",
+  "item.deleteTitle": "Artikel löschen?",
+  "item.deleteBody": "„{name}“ wird von dieser Liste entfernt.",
+  "item.priceInvalid": "Gib einen Betrag wie 1.99 ein",
+  "item.currencyInvalid": "Verwende einen 3-Buchstaben-Code wie EUR",
 
   "listProps.title": "Listeneigenschaften",
   "listProps.name": "Name",
@@ -98,6 +102,7 @@ export const de: Catalog = {
   "listProps.removeFromOrder": "Aus der Reihenfolge entfernen",
   "listProps.addToOrder": "Zur Reihenfolge hinzufügen",
   "listProps.addCategory": "Kategorie hinzufügen…",
+  "listProps.mergeCategoryConfirm": "In \"{category}\" zusammenführen? Beide Kategorien werden zu einer.",
   "listProps.clearChecked": "Erledigte zurücksetzen",
   "listProps.clearCheckedCount": "Erledigte zurücksetzen ({count})",
   "listProps.kindSwitchHelp": "Das Umschalten ändert nur, welche Felder angezeigt werden — es wird nichts gelöscht, du kannst also zurückwechseln.",

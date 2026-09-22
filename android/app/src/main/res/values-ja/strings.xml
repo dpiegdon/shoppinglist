@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">リストから退出</string>
     <string name="listprops_leave_confirm_title">このリストから退出しますか？</string>
     <string name="listprops_leave_confirm_body">この端末では「%1$s」の更新を受け取らなくなります。</string>
+    <string name="listprops_merge_confirm_title">「%1$s」に統合しますか？</string>
+    <string name="listprops_merge_confirm_body">両方のカテゴリーが1つになります。</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">アッカド語で粘土板を意味する言葉 — リストを押し刻んだ、あの板のことです。</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">パスワード</string>
     <string name="settings_sessions">セッション</string>
     <string name="settings_unknown_device">不明な端末</string>
+    <string name="settings_this_device">（この端末）</string>
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">メンバーによる変更</string>
     <string name="settings_collaborator_changes_help">共有リストが他の人に編集されたときに通知します。リストごとの通知はリストのプロパティでオフにできます。</string>

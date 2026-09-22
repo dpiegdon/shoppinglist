@@ -226,7 +226,12 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text((session.deviceLabel ?: stringResource(R.string.settings_unknown_device)) + if (session.current) " (this device)" else "")
+                    val label = session.deviceLabel ?: stringResource(R.string.settings_unknown_device)
+                    Text(
+                        // Was a hard-coded English literal (T-270); untranslated in every other
+                        // locale. Matches the web client's settings.thisDevice word for word.
+                        if (session.current) "$label ${stringResource(R.string.settings_this_device)}" else label,
+                    )
                     // The current session is active by definition — this request is it. Showing
                     // its stored lastSeenAt instead would read as up to 15 minutes stale, since
                     // the server throttles that write (auth.LAST_SEEN_REFRESH_MS).

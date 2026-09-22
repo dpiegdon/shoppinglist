@@ -19,7 +19,7 @@ describe("parsePriceAmount", () => {
     expect(parsePriceAmount("€1.50")).toEqual({ valid: true, value: "1.50" });
     expect(parsePriceAmount("1.50€")).toEqual({ valid: true, value: "1.50" });
     // Embedded symbol is left in place, so it fails the amount regex rather than becoming "15".
-    expect(parsePriceAmount("1€5")).toEqual({ valid: false, message: "Enter an amount like 1.99" });
+    expect(parsePriceAmount("1€5")).toEqual({ valid: false, message: "item.priceInvalid" });
   });
 
   it("treats a blank value as valid with no price", () => {
@@ -28,11 +28,11 @@ describe("parsePriceAmount", () => {
   });
 
   it("rejects trailing garbage with an inline message", () => {
-    expect(parsePriceAmount("1,50abc")).toEqual({ valid: false, message: "Enter an amount like 1.99" });
+    expect(parsePriceAmount("1,50abc")).toEqual({ valid: false, message: "item.priceInvalid" });
   });
 
   it("rejects more than two decimal places", () => {
-    expect(parsePriceAmount("1.999")).toEqual({ valid: false, message: "Enter an amount like 1.99" });
+    expect(parsePriceAmount("1.999")).toEqual({ valid: false, message: "item.priceInvalid" });
   });
 });
 
@@ -46,8 +46,8 @@ describe("parseCurrency", () => {
   });
 
   it("rejects a code that isn't 3 letters", () => {
-    expect(parseCurrency("US")).toEqual({ valid: false, message: "Use a 3-letter code like EUR" });
-    expect(parseCurrency("USDD")).toEqual({ valid: false, message: "Use a 3-letter code like EUR" });
+    expect(parseCurrency("US")).toEqual({ valid: false, message: "item.currencyInvalid" });
+    expect(parseCurrency("USDD")).toEqual({ valid: false, message: "item.currencyInvalid" });
   });
 });
 

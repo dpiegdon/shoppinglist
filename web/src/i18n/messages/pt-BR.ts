@@ -80,6 +80,10 @@ export const ptBR: Catalog = {
   "item.status.backlogHint": "Ainda não está na lista",
   "item.saveFailed": "Não foi possível salvar. Tente novamente.",
   "item.duplicateName": "Já existe um item chamado \"{name}\"",
+  "item.deleteTitle": "Excluir item?",
+  "item.deleteBody": "“{name}” será removido desta lista.",
+  "item.priceInvalid": "Digite um valor como 1.99",
+  "item.currencyInvalid": "Use um código de 3 letras como EUR",
 
   "listProps.title": "Propriedades da lista",
   "listProps.name": "Nome",
@@ -96,6 +100,7 @@ export const ptBR: Catalog = {
   "listProps.removeFromOrder": "Remover da ordem",
   "listProps.addToOrder": "Adicionar à ordem",
   "listProps.addCategory": "Adicionar categoria…",
+  "listProps.mergeCategoryConfirm": "Mesclar com \"{category}\"? As duas categorias vão virar uma só.",
   "listProps.clearChecked": "Redefinir concluídos",
   "listProps.clearCheckedCount": "Redefinir concluídos ({count})",
   "listProps.kindSwitchHelp": "Trocar só muda quais campos aparecem — nada é excluído, então você pode voltar.",

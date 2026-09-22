@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">Liste verlassen</string>
     <string name="listprops_leave_confirm_title">Diese Liste verlassen?</string>
     <string name="listprops_leave_confirm_body">Du erhältst auf diesem Gerät keine Updates mehr für \"%1$s\".</string>
+    <string name="listprops_merge_confirm_title">In \"%1$s\" zusammenführen?</string>
+    <string name="listprops_merge_confirm_body">Beide Kategorien werden zu einer.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">Passwort</string>
     <string name="settings_sessions">Sitzungen</string>
     <string name="settings_unknown_device">Unbekanntes Gerät</string>
+    <string name="settings_this_device">(dieses Gerät)</string>
     <string name="settings_notifications">Benachrichtigungen</string>
     <string name="settings_collaborator_changes">Änderungen von Mitgliedern</string>
     <string name="settings_collaborator_changes_help">Benachrichtigen, wenn jemand anderes eine geteilte Liste bearbeitet. Einzelne Listen lassen sich in ihren Listeneigenschaften stummschalten.</string>

@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">Salir de la lista</string>
     <string name="listprops_leave_confirm_title">¿Salir de esta lista?</string>
     <string name="listprops_leave_confirm_body">Dejarás de recibir novedades de \"%1$s\" en este dispositivo.</string>
+    <string name="listprops_merge_confirm_title">¿Combinar con \"%1$s\"?</string>
+    <string name="listprops_merge_confirm_body">Ambas categorías se convertirán en una sola.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">La palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">Contraseña</string>
     <string name="settings_sessions">Sesiones</string>
     <string name="settings_unknown_device">Dispositivo desconocido</string>
+    <string name="settings_this_device">(este dispositivo)</string>
     <string name="settings_notifications">Notificaciones</string>
     <string name="settings_collaborator_changes">Cambios de otros miembros</string>
     <string name="settings_collaborator_changes_help">Avisar cuando otra persona edite una lista compartida. Puedes silenciar listas concretas en sus propiedades.</string>

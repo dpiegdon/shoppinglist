@@ -79,6 +79,10 @@ export const fr: Catalog = {
   "item.status.backlogHint": "Pas encore sur la liste",
   "item.saveFailed": "Échec de l'enregistrement. Réessaie.",
   "item.duplicateName": "Un article nommé \"{name}\" existe déjà",
+  "item.deleteTitle": "Supprimer l'article ?",
+  "item.deleteBody": "« {name} » sera retiré de cette liste.",
+  "item.priceInvalid": "Saisis un montant comme 1.99",
+  "item.currencyInvalid": "Utilise un code à 3 lettres comme EUR",
 
   "listProps.title": "Propriétés de la liste",
   "listProps.name": "Nom",
@@ -95,6 +99,7 @@ export const fr: Catalog = {
   "listProps.removeFromOrder": "Retirer de l'ordre",
   "listProps.addToOrder": "Ajouter à l'ordre",
   "listProps.addCategory": "Ajouter une catégorie…",
+  "listProps.mergeCategoryConfirm": "Fusionner avec \"{category}\" ? Les deux catégories n'en feront plus qu'une.",
   "listProps.clearChecked": "Réinitialiser les articles faits",
   "listProps.clearCheckedCount": "Réinitialiser les articles faits ({count})",
   "listProps.kindSwitchHelp": "Le changement n'affecte que les champs affichés — rien n'est supprimé, tu peux donc revenir en arrière.",

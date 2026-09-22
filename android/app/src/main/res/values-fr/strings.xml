@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">Quitter la liste</string>
     <string name="listprops_leave_confirm_title">Quitter cette liste ?</string>
     <string name="listprops_leave_confirm_body">Tu ne recevras plus les mises à jour de \"%1$s\" sur cet appareil.</string>
+    <string name="listprops_merge_confirm_title">Fusionner avec \"%1$s\" ?</string>
+    <string name="listprops_merge_confirm_body">Les deux catégories n\'en feront plus qu\'une.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Le mot akkadien pour une tablette d\'argile — ce dans quoi on pressait une liste.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">Mot de passe</string>
     <string name="settings_sessions">Sessions</string>
     <string name="settings_unknown_device">Appareil inconnu</string>
+    <string name="settings_this_device">(cet appareil)</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Changements des autres membres</string>
     <string name="settings_collaborator_changes_help">Prévenir quand quelqu\'un d\'autre modifie une liste partagée. Chaque liste peut être mise en sourdine dans ses propriétés.</string>

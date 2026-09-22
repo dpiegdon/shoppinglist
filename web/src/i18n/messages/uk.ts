@@ -81,6 +81,10 @@ export const uk: Catalog = {
   "item.status.backlogHint": "Ще не в списку",
   "item.saveFailed": "Не вдалося зберегти. Спробуй ще раз.",
   "item.duplicateName": "Товар із назвою \"{name}\" уже існує",
+  "item.deleteTitle": "Видалити товар?",
+  "item.deleteBody": "«{name}» буде вилучено з цього списку.",
+  "item.priceInvalid": "Введи суму на кшталт 1.99",
+  "item.currencyInvalid": "Використай 3-літерний код, наприклад EUR",
 
   "listProps.title": "Властивості списку",
   "listProps.name": "Назва",
@@ -97,6 +101,7 @@ export const uk: Catalog = {
   "listProps.removeFromOrder": "Прибрати з порядку",
   "listProps.addToOrder": "Додати до порядку",
   "listProps.addCategory": "Додати категорію…",
+  "listProps.mergeCategoryConfirm": "Об'єднати з \"{category}\"? Обидві категорії стануть однією.",
   "listProps.clearChecked": "Скинути виконані",
   "listProps.clearCheckedCount": "Скинути виконані ({count})",
   "listProps.kindSwitchHelp": "Перемикання лише змінює, які поля показано — нічого не видаляється, тож ти можеш перемкнутися назад.",

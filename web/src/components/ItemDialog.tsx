@@ -336,12 +336,12 @@ export default function ItemDialog({
     // with Android) but is only meaningful — and only kept — alongside one.
     const amountParse = parsePriceAmount(values.priceAmount);
     if (!amountParse.valid) {
-      setPriceError(amountParse.message);
+      setPriceError(t(amountParse.message));
       return;
     }
     const currencyParse = parseCurrency(values.priceCurrency);
     if (!currencyParse.valid) {
-      setCurrencyError(currencyParse.message);
+      setCurrencyError(t(currencyParse.message));
       return;
     }
     const normalizedAmount = amountParse.value;
@@ -417,12 +417,18 @@ export default function ItemDialog({
   }
 
   /**
-   * Deletes and closes, mirroring performSave's own catch (T-266): `onDelete(id).then(onClose)`
-   * used to run with no catch at all, so a rejected push left this as an unhandled rejection — the
-   * dialog stayed open with nothing said and the delete silently never happened.
+   * Confirms, then deletes and closes (T-277 over T-266). The web used to delete on the first
+   * press, from both the list and the registry (this dialog is shared by both), and with no catch
+   * at all — so a rejected push left an unhandled rejection, the dialog open and nothing said.
+   * Android confirms from its own item dialog and has no separate undo there, the confirmation
+   * being the safety net; this mirrors that. window.confirm() takes one string, so the title and
+   * body are joined with a blank line while staying two catalog keys, pairing word for word with
+   * Android's item_delete_title/item_delete_body.
    */
   async function handleDeleteClick() {
     if (!onDelete || !editingItem) return;
+    const name = itemFieldValue(editingItem, "name") ?? "";
+    if (!confirm(`${t("item.deleteTitle")}\n\n${t("item.deleteBody", { name })}`)) return;
     setDeleting(true);
     setSaveError(null);
     try {
@@ -434,7 +440,6 @@ export default function ItemDialog({
       setDeleting(false);
     }
   }
-
   return (
     <div className="dialog-overlay" onMouseDown={overlay.onMouseDown} onMouseUp={overlay.onMouseUp}>
       <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>

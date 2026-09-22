@@ -137,6 +137,8 @@
     <string name="listprops_leave_list">Покинути список</string>
     <string name="listprops_leave_confirm_title">Покинути цей список?</string>
     <string name="listprops_leave_confirm_body">На цьому пристрої ти більше не отримуватимеш оновлення для \"%1$s\".</string>
+    <string name="listprops_merge_confirm_title">Об\'єднати з \"%1$s\"?</string>
+    <string name="listprops_merge_confirm_body">Обидві категорії стануть однією.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
@@ -171,6 +173,7 @@
     <string name="settings_password">Пароль</string>
     <string name="settings_sessions">Сеанси</string>
     <string name="settings_unknown_device">Невідомий пристрій</string>
+    <string name="settings_this_device">(цей пристрій)</string>
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_collaborator_changes">Зміни інших учасників</string>
     <string name="settings_collaborator_changes_help">Сповіщати, коли хтось інший редагує спільний список. Окремі списки можна вимкнути в їхніх властивостях.</string>
