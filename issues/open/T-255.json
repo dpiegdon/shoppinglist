@@ -1,0 +1,11 @@
+{
+  "body": "Full-codebase review, server finding 3 of 6. Reproduced end to end.\n\nA pushed LIST row for a list the account is not a member of is `403 not_a_member` with no `row_id` (sync.py `_apply_list`). The item path was deliberately changed for exactly this reason (T-120) and answers `422 unknown_list` with `row_id`. Consequences, both measured: the Android client parks a row only on a 422 carrying `row_id`, so a 403 leaves it retrying the identical batch forever; and because the refusal aborts the request, every other row in the batch is rolled back \u2014 a brand-new list pushed alongside the stale one was lost.\n\nReachable without anything exotic: a device that still shows a list the account has left (the web client keeps showing it, see the web findings) pushes an edit to it.\n\nFix direction: answer the row-scoped 422 the item path uses, keeping create-on-unused-id as it is. The existence-leak argument in the comment there is about create-vs-403 and does not require an unquarantinable status.",
+  "created_at": "2026-09-22T20:00:38+00:00",
+  "id": "T-255",
+  "labels": [
+    "server"
+  ],
+  "priority": 2,
+  "title": "sync: a pushed list row for a list you are not on is an unquarantinable 403 that rolls back the batch",
+  "updated_at": "2026-09-22T20:00:38+00:00"
+}
