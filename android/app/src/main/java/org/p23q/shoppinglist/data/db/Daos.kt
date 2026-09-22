@@ -113,6 +113,20 @@ interface ItemDao {
     suspend fun hardDeleteByListId(listId: String)
 
     /**
+     * Drops every row the server can reproduce, keeping the ones it cannot (T-259). The complement
+     * of the push queue: a dirty row is an edit the server has not acknowledged, and a quarantined
+     * row is one it refused and the user has not corrected yet — [dirtyRows] does not even offer
+     * that one, so no amount of pushing would save it.
+     *
+     * This is what a `410 full_resync_required` runs instead of clearing the table: the account's
+     * cursor is too old for an incremental pull, so the mirror has to be re-based on a cursor-0
+     * pull, but "re-base" must not mean "delete the week of offline edits that has not gone out
+     * yet". What is kept is then reconciled by the ordinary field-level LWW merge of that pull.
+     */
+    @Query("DELETE FROM items WHERE dirty = 0 AND syncBlocked = 0")
+    suspend fun deleteSyncedRows()
+
+    /**
      * Drop one row outright. Used when the server refuses a write for good (a closed expenses
      * list, T-157): the local row can never be pushed and can never be overwritten by a pull,
      * since its clocks are newer, so the only way back to the truth is to fetch it again.
@@ -159,6 +173,10 @@ interface ListDao {
 
     @Query("UPDATE lists SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
+
+    /** The list twin of [ItemDao.deleteSyncedRows] (T-259) — keeps whatever is still unpushed. */
+    @Query("DELETE FROM lists WHERE dirty = 0 AND syncBlocked = 0")
+    suspend fun deleteSyncedRows()
 
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
     @Query("DELETE FROM lists WHERE id = :id")

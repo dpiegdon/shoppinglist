@@ -1,7 +1,5 @@
 package org.p23q.shoppinglist.data.sync
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.data.Expense
@@ -121,10 +119,31 @@ class SyncEngine @Inject constructor(
                 return SyncResult.UpdateRequired
             }
             if (e.code == "full_resync_required") {
-                // The server still applied our pushed changes before rejecting the cursor (Wire
-                // Contract), so it's safe to wipe: nothing pushed is lost, a fresh cursor-0 pull
-                // brings it all back. dirtyRows() will be empty post-wipe, so the retry is a pure pull.
-                withContext(Dispatchers.IO) { appDb.clearAllTables() }
+                // Our cursor has fallen below the server's gc_horizon, so there is no incremental
+                // delta to be had and the mirror has to be re-based on a cursor-0 pull.
+                //
+                // Re-based, NOT wiped (T-259). This used to call clearAllTables(), on the grounds
+                // that the server applies a request's pushed changes before rejecting its cursor,
+                // so nothing pushed could be lost. True — but only of the rows in THAT request. A
+                // push carries at most MAX_CHANGES_PER_SYNC rows, and dirtyRows() excludes
+                // quarantined rows outright, so a week of offline edits past the cap and every row
+                // the server refused and the user has not corrected yet were destroyed without a
+                // word. So drop exactly the rows the server can reproduce and keep the ones it
+                // cannot; deleteSyncedRows() is that complement, and one transaction over both
+                // tables leaves no window in which the mirror is half-rebased.
+                //
+                // What is kept is NOT special-cased afterwards: the cursor-0 pull that follows
+                // merges it field by field on the ordinary LWW clocks, exactly like any other pull.
+                // A row the server has changed in the meantime therefore wins the fields it
+                // touched more recently and loses the ones the local edit touched more recently —
+                // including a tombstone, which wins if it is newer. A row the server no longer has
+                // at all is simply not mentioned by the pull and stays local, dirty, and pushed on
+                // the retry, like any other edit made offline. The retry is not a pure pull any
+                // more, which is the point: the backlog goes out with it.
+                appDb.inTransaction {
+                    listDao.deleteSyncedRows()
+                    itemDao.deleteSyncedRows()
+                }
                 sessionState.syncCursor = 0
                 return syncNow(fullLists)
             }

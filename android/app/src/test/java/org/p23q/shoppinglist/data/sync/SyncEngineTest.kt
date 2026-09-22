@@ -273,8 +273,10 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `410 full_resync_required wipes the mirror and resyncs at cursor 0`() = runTest {
+    fun `410 full_resync_required re-bases the mirror and resyncs at cursor 0`() = runTest {
         pointAtServer()
+        // A row the server can reproduce, and one it cannot: only the first is dropped (T-259).
+        db.itemDao().upsert(dummyItem("item-synced", "Bread", dirty = false))
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
         sessionState.syncCursor = 999L
 
@@ -287,12 +289,73 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        assertNull("local mirror should have been wiped", db.itemDao().getById("item-1"))
+        assertNull("a synced row is dropped for the cursor-0 pull to bring back", db.itemDao().getById("item-synced"))
+        assertNotNull("an unpushed edit is not", db.itemDao().getById("item-1"))
         assertEquals(1L, sessionState.syncCursor)
         val firstRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         val retryRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         assertEquals(999L, firstRequest.cursor)
         assertEquals(0L, retryRequest.cursor)
+    }
+
+    /**
+     * T-259. The old justification for wiping — "the server applied our pushed changes before it
+     * rejected the cursor, so nothing pushed is lost" — held only for the rows in THAT request. A
+     * push carries at most 250, so a week offline is several batches, and the first of them is the
+     * one that gets the 410. Everything past the cap used to be deleted without a word.
+     */
+    @Test
+    fun `410 full_resync_required keeps a backlog larger than one push (T-259)`() = runTest {
+        pointAtServer()
+        val total = SyncEngine.MAX_CHANGES_PER_SYNC + 50
+        repeat(total) { i -> db.itemDao().upsert(dummyItem("item-$i", "Item $i", dirty = true)) }
+        sessionState.syncCursor = 999L
+
+        server.enqueue(
+            MockResponse().setResponseCode(410)
+                .setBody("""{"error": "full_resync_required", "message": "cursor too old"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        assertEquals("every unpushed edit survives the re-base", total, db.itemDao().dirtyRows().size)
+        // And the retry carries the backlog rather than being a pure pull — one batch of it here,
+        // the rest over the following passes.
+        server.takeRequest()
+        val retryRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(0L, retryRequest.cursor)
+        assertEquals(SyncEngine.MAX_CHANGES_PER_SYNC, retryRequest.changes.items.size)
+    }
+
+    /**
+     * T-259. A quarantined row is worse off than a merely-dirty one: dirtyRows() excludes it
+     * entirely, so no amount of draining the queue first would have saved it, and it is exactly a
+     * row the server does not have — it refused it. The user is still meant to correct it.
+     */
+    @Test
+    fun `410 full_resync_required keeps a quarantined row and its reason (T-259)`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("parked", "Dinner", dirty = true))
+        db.itemDao().blockRow("parked", "participant_frozen", "acct-other")
+        sessionState.syncCursor = 999L
+
+        server.enqueue(
+            MockResponse().setResponseCode(410)
+                .setBody("""{"error": "full_resync_required", "message": "cursor too old"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Success)
+        val parked = db.itemDao().getById("parked")
+        assertNotNull("a refused row the user has not corrected yet is not the server's to reproduce", parked)
+        assertTrue(parked!!.syncBlocked)
+        assertEquals("participant_frozen", parked.syncBlockedCode)
+        assertEquals("acct-other", parked.syncBlockedAccountId)
+        assertEquals(1, syncStatus.state.value.blockedCount)
     }
 
     @Test
