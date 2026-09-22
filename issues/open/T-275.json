@@ -1,0 +1,12 @@
+{
+  "body": "Full-codebase review, cross-client finding. Verified by reading both implementations.\n\nPrice input parsing diverges. Android strips every currency symbol anywhere in the string (a character loop over `\u20ac$\u00a3\u00a5`); the web strips only one leading and one trailing symbol. So \"1\u20ac5\" is saved as 15.00 on Android and rejected on the web, and \"\u20ac1.50\u20ac\" or \"\u20ac\u20ac1.50\" likewise. The web file's comment asserts the opposite \u2014 \"A symbol is only stripped from the ends, matching Android's parsePriceAmount, so an embedded symbol (\"1\u20ac5\") is left in place and correctly rejected\" \u2014 so the comment is wrong, not just the code.\n\nFix direction: pick one grammar (stripping only the ends is the safer one), fix the comment, and add a `price-parse` group to shared-test-cases so it cannot drift again.",
+  "created_at": "2026-09-22T20:02:22+00:00",
+  "id": "T-275",
+  "labels": [
+    "web",
+    "android"
+  ],
+  "priority": 3,
+  "title": "Cross-client: price input parsing diverges, and the web comment claims it does not",
+  "updated_at": "2026-09-22T20:02:22+00:00"
+}
