@@ -50,11 +50,22 @@
                     android:host="*"
                     android:pathPrefix="/invite/" />
                 <!-- The same under a mount path, as a server set up under /shopping shares them
-                     (T-292); the app matches the link's server to an account by that prefix. -->
+                     (T-292); the app matches the link's server to an account by that prefix.
+                     One pattern per depth, up to three segments as INVITE_LINK_PATTERNS in Nav.kt:
+                     a pathPattern's ".*" does not backtrack, so "/.*/invite/.*" stops at the
+                     first "/" and matches a one-segment mount path only. -->
                 <data
                     android:scheme="https"
                     android:host="*"
                     android:pathPattern="/.*/invite/.*" />
+                <data
+                    android:scheme="https"
+                    android:host="*"
+                    android:pathPattern="/.*/.*/invite/.*" />
+                <data
+                    android:scheme="https"
+                    android:host="*"
+                    android:pathPattern="/.*/.*/.*/invite/.*" />
             </intent-filter>
         </activity>
 
