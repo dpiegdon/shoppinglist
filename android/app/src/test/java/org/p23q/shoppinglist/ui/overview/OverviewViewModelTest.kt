@@ -1,7 +1,12 @@
 package org.p23q.shoppinglist.ui.overview
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
-import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.TestAccounts
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
@@ -35,10 +40,6 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
@@ -53,13 +54,15 @@ class OverviewViewModelTest {
     private lateinit var db: AppDb
     private lateinit var listsRepo: ListsRepo
     private lateinit var itemsRepo: ItemsRepo
-    private lateinit var sessionState: FakeCurrentAccount
+    private lateinit var accounts: TestAccounts
+    private val viewModels = mutableListOf<OverviewViewModel>()
+    /** The account each joined list was asked of, as the app's Syncer passes it on. */
+    private val joinedFor = mutableListOf<String>()
     private lateinit var syncStatus: SyncStatus
     private var syncCalls = 0
     private val syncedFullLists = mutableListOf<List<String>>()
     private lateinit var viewModel: OverviewViewModel
     private lateinit var server: MockWebServer
-    private lateinit var apiProvider: ApiSource
 
     /** What the fake server answers to the inbox and redeem requests (T-233); tests reassign these. */
     private var inboxJson = """{"invites": []}"""
@@ -80,22 +83,16 @@ class OverviewViewModelTest {
             }
         }
         server.start()
-        val serverConfigFile = File.createTempFile("overview_vm_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        kotlinx.coroutines.runBlocking { serverConfig.setServerUrl(server.url("/").toString()) }
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
-        runTest(mainDispatcherRule.dispatcher) { db.insertTestAccount() }
+        accounts = TestAccounts(db)
+        runTest(mainDispatcherRule.dispatcher) { accounts.add(server.url("/").toString()) }
         val deviceId = DeviceIdProvider { "device-1" }
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
-        sessionState = FakeCurrentAccount().apply { token = "tok-123" }
         syncStatus = SyncStatus()
-        val json = Json { ignoreUnknownKeys = true }
-        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
         viewModel = newViewModel()
     }
 
@@ -103,22 +100,37 @@ class OverviewViewModelTest {
     private var pullBringsFullLists = true
 
     private fun newViewModel(): OverviewViewModel {
-        val syncer = Syncer { fullLists ->
-            syncCalls++
-            syncedFullLists += fullLists
-            if (pullBringsFullLists) {
-                fullLists.forEach { serverId ->
-                    val localId = listsRepo.create(TEST_ACCOUNT_ID, "Joined")
-                    db.listDao().upsert(db.listDao().get(localId)!!.copy(serverId = serverId, dirty = false))
-                }
+        val syncer = object : Syncer {
+            override suspend fun syncNow(fullLists: List<String>): SyncResult {
+                syncCalls++
+                syncedFullLists += fullLists
+                return SyncResult.Success(0, 0, 0, 0)
             }
-            SyncResult.Success(0, 0, 0, 0)
+
+            override suspend fun syncJoined(accountId: String, serverListId: String): SyncResult {
+                joinedFor += accountId
+                if (pullBringsFullLists) {
+                    val localId = listsRepo.create(accountId, "Joined")
+                    db.listDao().upsert(db.listDao().get(localId)!!.copy(serverId = serverListId, dirty = false))
+                }
+                return syncNow(listOf(serverListId))
+            }
         }
-        return OverviewViewModel(listsRepo, itemsRepo, sessionState, syncer, syncStatus, apiProvider)
+        return OverviewViewModel(listsRepo, itemsRepo, accounts.registry, accounts.sessions, accounts.secrets, syncer, syncStatus)
+            .also(viewModels::add)
     }
+
+    private suspend fun setIgnored(ids: Set<String>, accountId: String = TEST_ACCOUNT_ID) {
+        accounts.registry.update(accountId) { it.copy(ignoredInviteIdsJson = AccountRegistry.encodeIds(ids)) }
+    }
+
+    private fun storedIgnored(accountId: String = TEST_ACCOUNT_ID): Set<String> =
+        AccountRegistry.decodeIds(accounts.registry.get(accountId)!!.ignoredInviteIdsJson)
 
     @After
     fun tearDown() {
+        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.clear()
         if (::server.isInitialized) server.shutdown()
         if (::db.isInitialized) db.close()
     }
@@ -178,7 +190,7 @@ class OverviewViewModelTest {
 
         viewModel.openList(listId)
 
-        assertEquals(listId, sessionState.lastOpenedListId)
+        assertEquals(listId, accounts.secrets.lastOpenedListId)
     }
 
     @Test
@@ -307,13 +319,13 @@ class OverviewViewModelTest {
     @Test
     fun `pending invites load into the state, those ignored before already shelved`() = runTest(mainDispatcherRule.dispatcher) {
         inboxJson = """{"invites": [${inviteJson("a", "Camping")}, ${inviteJson("b", "Chores")}]}"""
-        sessionState.ignoredInviteIds = setOf("b")
+        setIgnored(setOf("b"))
 
         val state = newViewModel().uiState.first { it.invites.isNotEmpty() }
 
         assertEquals(listOf("Camping", "Chores"), state.invites.map { it.listName })
         assertEquals("AL", state.invites.first().invitedByInitials)
-        assertEquals(setOf("b"), state.ignoredInviteIds)
+        assertEquals(setOf("b"), state.ignoredInviteIds[TEST_ACCOUNT_ID])
     }
 
     @Test
@@ -322,21 +334,21 @@ class OverviewViewModelTest {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.invites.isNotEmpty() }
 
-        viewModel.ignoreInvite("a")
+        viewModel.ignoreInvite(TEST_ACCOUNT_ID, "a")
 
-        assertEquals(setOf("a"), viewModel.uiState.value.ignoredInviteIds)
-        assertEquals(setOf("a"), sessionState.ignoredInviteIds)
+        assertEquals(setOf("a"), viewModel.uiState.value.ignoredInviteIds[TEST_ACCOUNT_ID])
+        assertEquals(setOf("a"), storedIgnored())
     }
 
     @Test
     fun `an ignored id the server no longer offers is forgotten`() = runTest(mainDispatcherRule.dispatcher) {
         inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
-        sessionState.ignoredInviteIds = setOf("a", "long-gone")
+        setIgnored(setOf("a", "long-gone"))
 
         val state = newViewModel().uiState.first { it.invites.isNotEmpty() }
 
-        assertEquals(setOf("a"), state.ignoredInviteIds)
-        assertEquals(setOf("a"), sessionState.ignoredInviteIds)
+        assertEquals(setOf("a"), state.ignoredInviteIds[TEST_ACCOUNT_ID])
+        assertEquals(setOf("a"), storedIgnored())
     }
 
     @Test
@@ -345,13 +357,13 @@ class OverviewViewModelTest {
         val viewModel = newViewModel()
         val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
 
-        viewModel.joinInvite(invite).join()
+        viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
 
         // What opens is this phone's row of the joined list, found by the server's id for it (T-299).
         val localId = db.listDao().getByServerId(TEST_ACCOUNT_ID, "list-a")!!.localId
         assertNotEquals("list-a", localId)
         assertEquals(localId, viewModel.uiState.value.joinedListId)
-        assertEquals(localId, sessionState.lastOpenedListId)
+        assertEquals(localId, accounts.secrets.lastOpenedListId)
         assertTrue(syncedFullLists.contains(listOf("list-a")))
         assertNull(viewModel.uiState.value.inviteError)
         val redeem = (0 until server.requestCount).map { server.takeRequest() }.single { it.path == "/api/v1/invites/redeem" }
@@ -368,10 +380,10 @@ class OverviewViewModelTest {
         val viewModel = newViewModel()
         val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
 
-        viewModel.joinInvite(invite).join()
+        viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
 
         assertNull(viewModel.uiState.value.joinedListId)
-        assertNull(sessionState.lastOpenedListId)
+        assertNull(accounts.secrets.lastOpenedListId)
         assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.inviteError)
         assertNull(viewModel.uiState.value.joiningInviteId)
     }
@@ -384,7 +396,7 @@ class OverviewViewModelTest {
         val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
         inboxJson = """{"invites": []}"""
 
-        viewModel.joinInvite(invite).join()
+        viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
 
         assertEquals(UiText.res(R.string.api_error_invite_revoked), viewModel.uiState.value.inviteError)
         assertNull(viewModel.uiState.value.joinedListId)
@@ -401,4 +413,148 @@ class OverviewViewModelTest {
         assertTrue(viewModel.uiState.value.invites.isEmpty())
         assertNull(viewModel.uiState.value.inviteError)
     }
+
+    // ---- several accounts (T-292) ---------------------------------------------------------------
+
+    /** A second account on its own server, answering the inbox with [inbox] and any redeem with "list-w". */
+    private suspend fun secondAccount(inbox: String = """{"invites": []}""", token: String? = "tok-work"): MockWebServer {
+        val other = MockWebServer()
+        other.dispatcher = object : Dispatcher() {
+            // Mounted under /work/, as a second instance on a shared host would be.
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/work/api/v1/invites/pending" -> MockResponse().setBody(inbox)
+                "/work/api/v1/invites/redeem" -> MockResponse().setBody("""{"list_id": "list-w"}""")
+                else -> MockResponse().setResponseCode(404).setBody("""{"error": "not_found"}""")
+            }
+        }
+        other.start()
+        extraServers += other
+        accounts.add(other.url("/work/").toString(), id = "work", token = token, accountId = "acct-work", email = "me@work.example")
+        return other
+    }
+
+    private val extraServers = mutableListOf<MockWebServer>()
+
+    @After
+    fun shutDownExtraServers() {
+        extraServers.forEach { it.shutdown() }
+    }
+
+    @Test
+    fun `with two accounts there is a section per account, in the user's order, each with its own lists`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            secondAccount()
+            listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+            listsRepo.create("work", "Office supplies")
+            // The user moved the work account up (the Accounts screen writes sortOrder).
+            accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(sortOrder = 5) }
+
+            val state = newViewModel().uiState.first { s -> s.accounts.size == 2 && s.lists.size == 2 && s.accounts.first().id == "work" }
+
+            assertTrue(state.several)
+            assertEquals(listOf("work", TEST_ACCOUNT_ID), state.sections.map { it.account.id })
+            assertEquals(listOf("Office supplies"), state.sections[0].lists.map { it.name.value })
+            assertEquals(listOf("Groceries"), state.sections[1].lists.map { it.name.value })
+        }
+
+    @Test
+    fun `with one account there is one section and it is not several`() = runTest(mainDispatcherRule.dispatcher) {
+        listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+
+        val state = viewModel.uiState.first { it.accounts.isNotEmpty() && it.lists.isNotEmpty() }
+
+        assertFalse(state.several)
+        assertEquals(listOf(TEST_ACCOUNT_ID), state.sections.map { it.account.id })
+    }
+
+    @Test
+    fun `a phone-only account's section comes after every server account's`() {
+        val server = testAccount(id = "s").copy(sortOrder = 3)
+        val local = testAccount(id = "l").copy(kind = AccountEntity.KIND_LOCAL, serverUrl = null, sortOrder = 0)
+        val first = testAccount(id = "f").copy(sortOrder = 1)
+
+        assertEquals(listOf("f", "s", "l"), overviewOrder(listOf(server, local, first)).map { it.id })
+    }
+
+    @Test
+    fun `each account's invites are asked of its own server and joined through it`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        val work = secondAccount(inbox = """{"invites": [${inviteJson("w", "Desk plants")}]}""")
+
+        val viewModel = newViewModel()
+        val state = viewModel.uiState.first { it.invitesByAccount.size == 2 }
+        assertEquals(listOf("Camping"), state.invitesByAccount[TEST_ACCOUNT_ID]!!.map { it.listName })
+        assertEquals(listOf("Desk plants"), state.invitesByAccount["work"]!!.map { it.listName })
+        assertEquals(listOf("Desk plants"), state.sections.single { it.account.id == "work" }.invites.map { it.listName })
+
+        viewModel.joinInvite("work", state.invitesByAccount["work"]!!.single()).join()
+
+        val redeem = (0 until work.requestCount).map { work.takeRequest() }.single { it.path == "/work/api/v1/invites/redeem" }
+        assertEquals("Bearer tok-work", redeem.getHeader("Authorization"))
+        assertTrue(redeem.body.readUtf8().contains(""""token":"token-w""""))
+        assertEquals(listOf("work"), joinedFor)
+        val localId = db.listDao().getByServerId("work", "list-w")!!.localId
+        assertEquals(localId, viewModel.uiState.value.joinedListId)
+    }
+
+    @Test
+    fun `an ignored invite is kept on its own account`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        secondAccount(inbox = """{"invites": [${inviteJson("w", "Desk plants")}]}""")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.invitesByAccount.size == 2 }
+
+        viewModel.ignoreInvite("work", "w")
+
+        assertEquals(setOf("w"), storedIgnored("work"))
+        assertEquals(emptySet<String>(), storedIgnored())
+        val sections = viewModel.uiState.value.sections
+        assertEquals(listOf("Desk plants"), sections.single { it.account.id == "work" }.ignoredInvites.map { it.listName })
+        assertEquals(listOf("Camping"), sections.single { it.account.id == TEST_ACCOUNT_ID }.invites.map { it.listName })
+    }
+
+    @Test
+    fun `a signed-out account's inbox is not asked`() = runTest(mainDispatcherRule.dispatcher) {
+        val work = secondAccount(inbox = """{"invites": [${inviteJson("w", "Desk plants")}]}""", token = null)
+
+        val viewModel = newViewModel()
+        viewModel.refresh().join()
+
+        assertEquals(0, work.requestCount)
+        assertNull(viewModel.uiState.value.invitesByAccount["work"])
+    }
+
+    @Test
+    fun `the new-list dialog defaults to the account of the last opened list, and creates the list there`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            secondAccount()
+            accounts.registry.update("work") { it.copy(defaultCurrency = "GBP") }
+            accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(defaultCurrency = "EUR") }
+            val office = listsRepo.create("work", "Office supplies")
+            val viewModel = newViewModel()
+            viewModel.uiState.first { it.lists.isNotEmpty() && it.accounts.size == 2 }
+
+            // Nothing opened yet: the first account.
+            viewModel.openCreateDialog()
+            assertEquals(TEST_ACCOUNT_ID, viewModel.uiState.value.newListAccountId)
+            assertEquals("EUR", viewModel.uiState.value.newListCurrency)
+            viewModel.dismissCreateDialog()
+
+            viewModel.openList(office)
+            viewModel.openCreateDialog()
+            assertEquals("work", viewModel.uiState.value.newListAccountId)
+            assertEquals("GBP", viewModel.uiState.value.newListCurrency)
+
+            // Choosing another account brings its currency, as nothing was typed over the default.
+            viewModel.onNewListAccountChange(TEST_ACCOUNT_ID)
+            assertEquals("EUR", viewModel.uiState.value.newListCurrency)
+            viewModel.onNewListAccountChange("work")
+
+            viewModel.onNewListNameChange("Printer paper")
+            viewModel.createList()?.join()
+
+            val created = viewModel.uiState.first { s -> s.lists.any { it.name.value == "Printer paper" } }
+                .lists.single { it.name.value == "Printer paper" }
+            assertEquals("work", created.accountId)
+        }
 }

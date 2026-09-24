@@ -9,6 +9,11 @@
   has to agree with a number.
 -->
 <resources>
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Ви вийшли. Торкніться, щоб увійти.</string>
+    <string name="overview_account_outdated">Цьому серверу потрібна новіша версія застосунку.</string>
+    <string name="overview_new_list_account">Обліковий запис</string>
+    <string name="redeem_choose_account">Приєднатися з яким обліковим записом?</string>
 
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Скасувати</string>

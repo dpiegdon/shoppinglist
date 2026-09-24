@@ -330,7 +330,13 @@ fun ShoppingListNavHost(
                     )
                 },
             ) {
-                OverviewScreen(onOpenList = { listId -> navController.navigate(Routes.list(listId)) })
+                OverviewScreen(
+                    onOpenList = { listId -> navController.navigate(Routes.list(listId)) },
+                    // A signed-out account's banner: sign that account in again (T-292).
+                    onSignIn = { accountId ->
+                        navController.navigate(Routes.login(LoginArgs.MODE_RESIGNIN, accountId = accountId))
+                    },
+                )
             }
         }
         composable(Routes.LIST_PATTERN) { backStackEntry ->

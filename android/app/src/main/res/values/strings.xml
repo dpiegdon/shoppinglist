@@ -9,6 +9,11 @@
   nothing extra beyond translation.
 -->
 <resources>
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Signed out. Tap to sign in.</string>
+    <string name="overview_account_outdated">This server needs a newer app.</string>
+    <string name="overview_new_list_account">Account</string>
+    <string name="redeem_choose_account">Join with which account?</string>
     <string name="app_name">Tuppu</string>
 
     <!-- generic actions, reused across screens -->

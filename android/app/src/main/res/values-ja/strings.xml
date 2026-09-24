@@ -9,6 +9,11 @@
   has to agree with a number.
 -->
 <resources>
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">ログアウトしています。タップしてログイン。</string>
+    <string name="overview_account_outdated">このサーバーには新しいバージョンのアプリが必要です。</string>
+    <string name="overview_new_list_account">アカウント</string>
+    <string name="redeem_choose_account">どのアカウントで参加しますか？</string>
 
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">キャンセル</string>

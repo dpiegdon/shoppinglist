@@ -9,6 +9,11 @@
   has to agree with a number.
 -->
 <resources>
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Sesión cerrada. Toca para iniciar sesión.</string>
+    <string name="overview_account_outdated">Este servidor necesita una versión más reciente de la aplicación.</string>
+    <string name="overview_new_list_account">Cuenta</string>
+    <string name="redeem_choose_account">¿Unirse con qué cuenta?</string>
 
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Cancelar</string>

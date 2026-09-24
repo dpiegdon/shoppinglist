@@ -9,6 +9,11 @@
   has to agree with a number.
 -->
 <resources>
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Déconnecté. Touchez pour vous connecter.</string>
+    <string name="overview_account_outdated">Ce serveur demande une application plus récente.</string>
+    <string name="overview_new_list_account">Compte</string>
+    <string name="redeem_choose_account">Rejoindre avec quel compte ?</string>
 
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Annuler</string>

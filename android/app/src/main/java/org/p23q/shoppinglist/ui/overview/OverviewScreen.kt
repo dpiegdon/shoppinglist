@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -33,6 +34,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,6 +44,8 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.InviteForMeDto
+import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
@@ -54,6 +59,8 @@ import org.p23q.shoppinglist.ui.rememberTickingNowMs
 @Composable
 fun OverviewScreen(
     onOpenList: (listId: String) -> Unit,
+    /** A signed-out account's banner was tapped: sign that account in again (T-292). */
+    onSignIn: (accountId: String) -> Unit = {},
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,9 +95,9 @@ fun OverviewScreen(
                 onRefresh = { viewModel.refresh() },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                val openInvites = state.invites.filter { it.id !in state.ignoredInviteIds }
-                val shelvedInvites = state.invites.filter { it.id in state.ignoredInviteIds }
-                if (state.lists.isEmpty() && state.invites.isEmpty()) {
+                val sections = state.sections
+                val hasBanner = sections.any { accountBanner(it.account) != null }
+                if (state.lists.isEmpty() && state.invites.isEmpty() && !hasBanner) {
                     // Scrollable so the pull gesture still fires with no lists to scroll.
                     Box(
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -103,119 +110,93 @@ fun OverviewScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                     ) {
-                        if (state.lists.isEmpty()) {
-                            // Only invites to show: say the lists are empty where they would be.
-                            item(key = "no-lists") {
-                                Text(
-                                    stringResource(R.string.overview_no_lists),
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        // One section per account (T-292). With a single account it has no header
+                        // and its cards no marker: the screen is the one-account overview it was.
+                        sections.forEachIndexed { index, section ->
+                            val account = section.account
+                            if (state.several) {
+                                item(key = "account-" + account.id) {
+                                    AccountHeader(account, first = index == 0)
+                                }
                             }
-                        }
-                        items(state.lists, key = { it.localId }) { list ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clickable {
+                            accountBanner(account)?.let { banner ->
+                                item(key = "banner-" + account.id) {
+                                    AccountBanner(
+                                        text = stringResource(banner),
+                                        onClick = if (banner == R.string.overview_account_signed_out) {
+                                            { onSignIn(account.id) }
+                                        } else {
+                                            null
+                                        },
+                                    )
+                                }
+                            }
+                            if (section.lists.isEmpty() && (state.several || state.invites.isNotEmpty() || hasBanner)) {
+                                // Only invites (or nothing) to show: say the lists are empty where they would be.
+                                item(key = "no-lists-" + account.id) {
+                                    Text(
+                                        stringResource(R.string.overview_no_lists),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            items(section.lists, key = { it.localId }) { list ->
+                                ListCard(
+                                    list = list,
+                                    accountMarker = account.email?.takeIf { state.several },
+                                    summary = state.expenseSummaries[list.localId],
+                                    openCount = state.openCounts[list.localId] ?: 0,
+                                    onClick = {
                                         viewModel.openList(list.localId)
                                         onOpenList(list.localId)
                                     },
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = ListKind.icon(list.kind.value),
-                                        modifier = Modifier.padding(end = 8.dp),
+                                )
+                            }
+                            // Invites waiting for this account (T-233), below its lists so what you
+                            // have comes first. Ignoring is this device's choice alone: the card moves
+                            // to the greyed part at the bottom of the section, where Join is still offered.
+                            if (section.invites.isNotEmpty()) {
+                                item(key = "invites-heading-" + account.id) {
+                                    SectionHeading(stringResource(R.string.overview_invites))
+                                }
+                                items(section.invites, key = { "invite-" + account.id + "-" + it.id }) { invite ->
+                                    InviteCard(
+                                        invite = invite,
+                                        nowMs = nowMs,
+                                        ignored = false,
+                                        busy = state.joiningInviteId != null,
+                                        onJoin = { viewModel.joinInvite(account.id, invite) },
+                                        onIgnore = { viewModel.ignoreInvite(account.id, invite.id) },
                                     )
-                                    Text(text = list.name.value, modifier = Modifier.weight(1f))
-                                    val summary = state.expenseSummaries[list.localId]
-                                    if (summary != null) {
-                                        // What has been spent, and where this account stands —
-                                        // an expenses list has no open items to count (T-154).
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            val locale = appLocale()
-                                            val total = AppFormat.money(summary.totalCents, summary.currency, locale)
-                                            Text(
-                                                // "Closed · total", as the web writes it (T-181).
-                                                text = if (summary.closed) {
-                                                    "${stringResource(R.string.expense_closed)} · $total"
-                                                } else {
-                                                    total
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            summary.myBalanceCents?.let { balance ->
-                                                Text(
-                                                    text = AppFormat.signedMoney(balance, summary.currency, locale),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    // Square is grey, as everywhere else (T-182).
-                                                    color = balanceColor(balance),
-                                                )
-                                            }
-                                        }
-                                    }
-                                    val openCount = state.openCounts[list.localId] ?: 0
-                                    if (openCount > 0) {
-                                        // Room between an expense list's total/balance and its count
-                                        // (T-191), which otherwise sat right against them.
-                                        if (summary != null) Spacer(Modifier.width(12.dp))
-                                        // At-a-glance "is a trip pending" count of open items (T-42);
-                                        // on an expense list, its number of expenses.
+                                }
+                            }
+                            if (state.inviteErrorAccountId == account.id) {
+                                state.inviteError?.let { error ->
+                                    item(key = "invite-error-" + account.id) {
                                         Text(
-                                            text = openCount.toString(),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            error.asString(),
+                                            modifier = Modifier.padding(vertical = 8.dp),
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodyMedium,
                                         )
                                     }
                                 }
                             }
-                        }
-                        // Invites waiting for this account (T-233), below the lists so what you have
-                        // comes first. Ignoring is this device's choice alone: the card moves to the
-                        // greyed section at the very bottom, where Join is still offered.
-                        if (openInvites.isNotEmpty()) {
-                            item(key = "invites-heading") {
-                                SectionHeading(stringResource(R.string.overview_invites))
-                            }
-                            items(openInvites, key = { "invite-" + it.id }) { invite ->
-                                InviteCard(
-                                    invite = invite,
-                                    nowMs = nowMs,
-                                    ignored = false,
-                                    busy = state.joiningInviteId != null,
-                                    onJoin = { viewModel.joinInvite(invite) },
-                                    onIgnore = { viewModel.ignoreInvite(invite.id) },
-                                )
-                            }
-                        }
-                        state.inviteError?.let { error ->
-                            item(key = "invite-error") {
-                                Text(
-                                    error.asString(),
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
-                        }
-                        if (shelvedInvites.isNotEmpty()) {
-                            item(key = "ignored-heading") {
-                                SectionHeading(stringResource(R.string.overview_invites_ignored), muted = true)
-                            }
-                            items(shelvedInvites, key = { "ignored-" + it.id }) { invite ->
-                                InviteCard(
-                                    invite = invite,
-                                    nowMs = nowMs,
-                                    ignored = true,
-                                    busy = state.joiningInviteId != null,
-                                    onJoin = { viewModel.joinInvite(invite) },
-                                    onIgnore = {},
-                                )
+                            if (section.ignoredInvites.isNotEmpty()) {
+                                item(key = "ignored-heading-" + account.id) {
+                                    SectionHeading(stringResource(R.string.overview_invites_ignored), muted = true)
+                                }
+                                items(section.ignoredInvites, key = { "ignored-" + account.id + "-" + it.id }) { invite ->
+                                    InviteCard(
+                                        invite = invite,
+                                        nowMs = nowMs,
+                                        ignored = true,
+                                        busy = state.joiningInviteId != null,
+                                        onJoin = { viewModel.joinInvite(account.id, invite) },
+                                        onIgnore = {},
+                                    )
+                                }
                             }
                         }
                     }
@@ -225,73 +206,260 @@ fun OverviewScreen(
     }
 
     if (state.isCreateDialogOpen) {
-        LocalizedAlertDialog(
-            onDismissRequest = viewModel::dismissCreateDialog,
-            title = { Text(stringResource(R.string.overview_new_list)) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = state.newListName,
-                        onValueChange = viewModel::onNewListNameChange,
-                        label = { Text(stringResource(R.string.overview_list_name)) },
-                        singleLine = true,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    // Kind is chosen up front (T-110) but isn't permanent — list properties can
-                    // convert it later, and converting never touches item data.
-                    Text(stringResource(R.string.overview_type), style = MaterialTheme.typography.labelMedium)
-                    listOf(ListKind.SHOPPING, ListKind.CHECKLIST, ListKind.EXPENSES).forEach { kind ->
+        NewListDialog(
+            state = state,
+            onNameChange = viewModel::onNewListNameChange,
+            onKindChange = viewModel::onNewListKindChange,
+            onCurrencyChange = viewModel::onNewListCurrencyChange,
+            onAccountChange = viewModel::onNewListAccountChange,
+            onCreate = { viewModel.createList() },
+            onDismiss = viewModel::dismissCreateDialog,
+        )
+    }
+}
+
+/** The New-list dialog: name, kind, an expenses list's currency and, with several accounts, whose list it is. */
+@Composable
+internal fun NewListDialog(
+    state: OverviewUiState,
+    onNameChange: (String) -> Unit,
+    onKindChange: (String) -> Unit,
+    onCurrencyChange: (String) -> Unit,
+    onAccountChange: (String) -> Unit,
+    onCreate: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    LocalizedAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.overview_new_list)) },
+        text = {
+            Column {
+                // Which account the list goes to (T-292), only when there is a choice. Fixed for
+                // the list's life: a list never moves between accounts.
+                if (state.several) {
+                    Text(stringResource(R.string.overview_new_list_account), style = MaterialTheme.typography.labelMedium)
+                    state.accounts.forEach { account ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .selectable(
-                                    selected = state.newListKind == kind,
-                                    onClick = { viewModel.onNewListKindChange(kind) },
+                                    selected = state.newListAccountId == account.id,
+                                    onClick = { onAccountChange(account.id) },
                                 )
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .testTag("new-list-account-" + account.id),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(
-                                selected = state.newListKind == kind,
-                                onClick = { viewModel.onNewListKindChange(kind) },
+                                selected = state.newListAccountId == account.id,
+                                onClick = { onAccountChange(account.id) },
                             )
-                            Text("${ListKind.icon(kind)}  ${stringResource(ListKind.label(kind))}")
+                            AccountLines(account)
                         }
                     }
+                    Spacer(Modifier.height(12.dp))
+                }
+                OutlinedTextField(
+                    value = state.newListName,
+                    onValueChange = onNameChange,
+                    label = { Text(stringResource(R.string.overview_list_name)) },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(12.dp))
+                // Kind is chosen up front (T-110) but isn't permanent — list properties can
+                // convert it later, and converting never touches item data.
+                Text(stringResource(R.string.overview_type), style = MaterialTheme.typography.labelMedium)
+                listOf(ListKind.SHOPPING, ListKind.CHECKLIST, ListKind.EXPENSES).forEach { kind ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = state.newListKind == kind,
+                                onClick = { onKindChange(kind) },
+                            )
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = state.newListKind == kind,
+                            onClick = { onKindChange(kind) },
+                        )
+                        Text("${ListKind.icon(kind)}  ${stringResource(ListKind.label(kind))}")
+                    }
+                }
+                Text(
+                    when (state.newListKind) {
+                        ListKind.CHECKLIST -> stringResource(R.string.overview_kind_checklist)
+                        ListKind.EXPENSES -> stringResource(R.string.overview_kind_expenses)
+                        else -> stringResource(R.string.overview_kind_shopping)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Free text, not a picker: the server takes any label, so a group that settles
+                // in pizza slices can say so. Fixed once the list exists.
+                if (ListKind.isExpenses(state.newListKind)) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = state.newListCurrency,
+                        onValueChange = onCurrencyChange,
+                        label = { Text(stringResource(R.string.expense_currency)) },
+                        singleLine = true,
+                    )
                     Text(
-                        when (state.newListKind) {
-                            ListKind.CHECKLIST -> stringResource(R.string.overview_kind_checklist)
-                            ListKind.EXPENSES -> stringResource(R.string.overview_kind_expenses)
-                            else -> stringResource(R.string.overview_kind_shopping)
+                        stringResource(R.string.overview_currency_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCreate) { Text(stringResource(R.string.action_create)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/** What an account's section says above its lists, if anything (T-292): signed out, or app too old. */
+private fun accountBanner(account: AccountEntity): Int? = when {
+    !account.isServer -> null
+    account.outdated -> R.string.overview_account_outdated
+    !account.signedIn -> R.string.overview_account_signed_out
+    else -> null
+}
+
+/** An account as two lines: email, then the server's URL, muted (T-292). */
+@Composable
+private fun AccountLines(account: AccountEntity, emailStyle: TextStyle = MaterialTheme.typography.bodyMedium) {
+    Column {
+        Text(account.email ?: account.label, style = emailStyle)
+        account.serverUrl?.let { url ->
+            Text(url, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** The small header over an account's section, with several accounts (T-292). */
+@Composable
+private fun AccountHeader(account: AccountEntity, first: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = if (first) 0.dp else 20.dp, bottom = 4.dp)
+            .testTag("account-header-" + account.id),
+    ) {
+        AccountLines(account, emailStyle = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/** A one-line notice at the top of an account's section; tappable when it offers something. */
+@Composable
+private fun AccountBanner(text: String, onClick: (() -> Unit)?) {
+    val content: @Composable () -> Unit = {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        )
+    }
+    val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            color = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            shape = MaterialTheme.shapes.small,
+            modifier = modifier,
+            content = content,
+        )
+    } else {
+        Surface(
+            color = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            shape = MaterialTheme.shapes.small,
+            modifier = modifier,
+            content = content,
+        )
+    }
+}
+
+/** One list on the overview: kind, name (and, with several accounts, its account), then its figures. */
+@Composable
+private fun ListCard(
+    list: ListEntity,
+    accountMarker: String?,
+    summary: ExpenseSummary?,
+    openCount: Int,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = ListKind.icon(list.kind.value),
+                modifier = Modifier.padding(end = 8.dp),
+            )
+            if (accountMarker == null) {
+                Text(text = list.name.value, modifier = Modifier.weight(1f))
+            } else {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = list.name.value)
+                    Text(
+                        text = accountMarker,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (summary != null) {
+                // What has been spent, and where this account stands —
+                // an expenses list has no open items to count (T-154).
+                Column(horizontalAlignment = Alignment.End) {
+                    val locale = appLocale()
+                    val total = AppFormat.money(summary.totalCents, summary.currency, locale)
+                    Text(
+                        // "Closed · total", as the web writes it (T-181).
+                        text = if (summary.closed) {
+                            "${stringResource(R.string.expense_closed)} · $total"
+                        } else {
+                            total
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    // Free text, not a picker: the server takes any label, so a group that settles
-                    // in pizza slices can say so. Fixed once the list exists.
-                    if (ListKind.isExpenses(state.newListKind)) {
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = state.newListCurrency,
-                            onValueChange = viewModel::onNewListCurrencyChange,
-                            label = { Text(stringResource(R.string.expense_currency)) },
-                            singleLine = true,
-                        )
+                    summary.myBalanceCents?.let { balance ->
                         Text(
-                            stringResource(R.string.overview_currency_help),
+                            text = AppFormat.signedMoney(balance, summary.currency, locale),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            // Square is grey, as everywhere else (T-182).
+                            color = balanceColor(balance),
                         )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = viewModel::createList) { Text(stringResource(R.string.action_create)) }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismissCreateDialog) { Text(stringResource(R.string.action_cancel)) }
-            },
-        )
+            }
+            if (openCount > 0) {
+                // Room between an expense list's total/balance and its count
+                // (T-191), which otherwise sat right against them.
+                if (summary != null) Spacer(Modifier.width(12.dp))
+                // At-a-glance "is a trip pending" count of open items (T-42);
+                // on an expense list, its number of expenses.
+                Text(
+                    text = openCount.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 
