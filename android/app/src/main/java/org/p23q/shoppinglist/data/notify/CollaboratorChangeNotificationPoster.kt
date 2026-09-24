@@ -20,6 +20,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.AppForegroundState
@@ -48,6 +49,7 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
     private val prefs: NotificationPrefsStore,
     private val foregroundState: AppForegroundState,
     private val localePreferences: LocalePreferenceStore,
+    private val registry: AccountRegistry,
 ) : CollaboratorChangeNotifier {
 
     // canPost() already checks POST_NOTIFICATIONS before any notify(); lint's flow analysis can't
@@ -76,6 +78,17 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
             // needed plural agreement twice over.
             strings.getString(R.string.notif_changed_items_lists, totalItems, audible.size)
         }
+        // Whose lists these are, with several accounts on the phone (T-292): the notification's sub
+        // text, beside the app name. With one account there is nobody else they could be.
+        val accounts = registry.load()
+        val accountLabel = if (accounts.size > 1) {
+            audible.map { it.accountId }.distinct()
+                .mapNotNull { id -> accounts.firstOrNull { it.id == id }?.email }
+                .joinToString(", ")
+                .ifEmpty { null }
+        } else {
+            null
+        }
         val tapIntent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             singleList?.let { putExtra(MainActivity.EXTRA_OPEN_LIST_ID, it.listId) }
@@ -89,6 +102,7 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
+            .setSubText(accountLabel)
             .setContentIntent(pending)
             .setAutoCancel(true)
             .build()

@@ -8,6 +8,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -144,6 +146,14 @@ private fun liveListTitle(fallback: String): String {
     val viewModel: ListTitleViewModel = hiltViewModel()
     val name by viewModel.name.collectAsStateWithLifecycle()
     return name.ifBlank { fallback }
+}
+
+/** The list's account under its name, with several accounts (T-292); null with one. */
+@Composable
+private fun liveListSubtitle(): String? {
+    val viewModel: ListTitleViewModel = hiltViewModel()
+    val subtitle by viewModel.subtitle.collectAsStateWithLifecycle()
+    return subtitle
 }
 
 /**
@@ -328,6 +338,7 @@ fun ShoppingListNavHost(
             AppDrawerScaffold(
                 navController = navController,
                 title = liveListTitle(stringResource(R.string.nav_list)),
+                subtitle = liveListSubtitle(),
                 // Tapping the open list's title jumps back to the overview to pick another list.
                 onTitleClick = {
                     navController.navigate(Routes.OVERVIEW) {
@@ -541,6 +552,8 @@ internal fun AppDrawerScaffold(
     navController: NavHostController,
     title: String,
     drawerViewModel: DrawerViewModel = hiltViewModel(),
+    // A second, smaller line under the title (T-292): the list's account, with several accounts.
+    subtitle: String? = null,
     // When set, the top-bar title becomes tappable (the list screen uses it to jump to Overview).
     onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
@@ -635,7 +648,19 @@ internal fun AppDrawerScaffold(
                 TopAppBar(
                     title = {
                         val titleModifier = if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier
-                        Text(title, modifier = titleModifier)
+                        if (subtitle == null) {
+                            Text(title, modifier = titleModifier)
+                        } else {
+                            Column(modifier = titleModifier) {
+                                Text(title)
+                                Text(
+                                    subtitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag(APP_BAR_SUBTITLE_TAG),
+                                )
+                            }
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
@@ -698,6 +723,9 @@ private fun BackScaffold(title: String, onBack: () -> Unit, content: @Composable
         Box(modifier = Modifier.padding(innerPadding)) { content() }
     }
 }
+
+/** The app bar's subtitle line, for tests. */
+internal const val APP_BAR_SUBTITLE_TAG = "app_bar_subtitle"
 
 @Composable
 private fun PlaceholderScreen(title: String) {

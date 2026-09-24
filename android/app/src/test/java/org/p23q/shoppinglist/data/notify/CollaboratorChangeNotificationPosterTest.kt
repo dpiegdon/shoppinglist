@@ -7,16 +7,24 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.robolectric.RobolectricTestRunner
@@ -31,6 +39,7 @@ class CollaboratorChangeNotificationPosterTest {
     private lateinit var foreground: AppForegroundState
     private lateinit var poster: CollaboratorChangeNotificationPoster
     private lateinit var notificationManager: NotificationManager
+    private lateinit var db: AppDb
 
     @Before
     fun setUp() {
@@ -47,12 +56,39 @@ class CollaboratorChangeNotificationPosterTest {
         // No stored choice, so it follows the device — which under Robolectric is English, i.e.
         // exactly the strings these assertions expect.
         val locales = LocalePreferenceStore(PreferenceDataStoreFactory.create { localeFile })
-        poster = CollaboratorChangeNotificationPoster(context, prefs, foreground, locales)
+        db = Room.inMemoryDatabaseBuilder(context, AppDb::class.java).setDriver(BundledSQLiteDriver()).build()
+        runBlocking { db.insertTestAccount() }
+        poster = CollaboratorChangeNotificationPoster(context, prefs, foreground, locales, AccountRegistry(db))
         notificationManager = context.getSystemService(NotificationManager::class.java)
     }
 
     private fun Notification.title(): String? = extras.getString(Notification.EXTRA_TITLE)
     private fun Notification.text(): String? = extras.getString(Notification.EXTRA_TEXT)
+    private fun Notification.subText(): String? = extras.getString(Notification.EXTRA_SUB_TEXT)
+
+    @After
+    fun tearDown() {
+        if (::db.isInitialized) db.close()
+    }
+
+    @Test
+    fun `with one account the notification names no account (T-292)`() = runTest {
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 3)))
+
+        assertNull(shadowOf(notificationManager).allNotifications.single().subText())
+    }
+
+    @Test
+    fun `with several accounts the notification names the account whose list changed (T-292)`() = runTest {
+        db.insertTestAccount(testAccount(id = "second", accountId = "acct-2", email = "work@example.com", serverUrl = "https://work.example.test/"))
+        // Before the poster's registry first reads the table, as a second sign-in would be.
+
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange("second", "list-9", "Office", 1)))
+
+        val n = shadowOf(notificationManager).allNotifications.single()
+        assertEquals("Office", n.title())
+        assertEquals("work@example.com", n.subText())
+    }
 
     @Test
     fun `a single changed list posts one notification naming the list, tapping opens it`() = runTest {

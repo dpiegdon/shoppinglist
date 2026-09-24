@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.p23q.shoppinglist.core.repo.ListsRepo
+import org.p23q.shoppinglist.data.ListAccounts
 import javax.inject.Inject
 
 /**
@@ -21,12 +23,21 @@ import javax.inject.Inject
 class ListTitleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     listsRepo: ListsRepo,
+    listAccounts: ListAccounts,
 ) : ViewModel() {
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
 
     val name: StateFlow<String> = listsRepo.observeById(listId)
         .map { it?.name?.value ?: "" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    /**
+     * The app-bar subtitle (T-292): the email of the list's account, when the phone holds more than
+     * one account; null (no subtitle, the screen as it always was) with one.
+     */
+    val subtitle: StateFlow<String?> = combine(listAccounts.observeAccount(listId), listAccounts.several) { account, several ->
+        account?.email?.takeIf { several }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /**
      * The list's kind, for the nav host to pick the right screen (T-154). Null until the row is

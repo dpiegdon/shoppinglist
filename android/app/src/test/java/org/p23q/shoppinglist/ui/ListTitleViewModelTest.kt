@@ -2,12 +2,16 @@ package org.p23q.shoppinglist.ui
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import kotlinx.coroutines.runBlocking
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -46,10 +50,38 @@ class ListTitleViewModelTest {
         if (::db.isInitialized) db.close()
     }
 
+    private fun newViewModel(listId: String) =
+        ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, testListAccounts(db, listsRepo))
+
+    @Test
+    fun `no subtitle with one account (T-292)`() = runTest(mainDispatcherRule.dispatcher) {
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val viewModel = newViewModel(listId)
+        viewModel.name.first { it == "Groceries" }
+
+        // Collected, so the flow has run: it stays null rather than never having been computed.
+        val seen = mutableListOf<String?>()
+        val job = launch { viewModel.subtitle.collect { seen += it } }
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(listOf<String?>(null), seen)
+    }
+
+    @Test
+    fun `with two accounts the subtitle is the list's own account's email (T-292)`() = runTest(mainDispatcherRule.dispatcher) {
+        db.insertTestAccount(testAccount(id = "second", accountId = "acct-2", email = "work@example.com", serverUrl = "https://work.example.test/"))
+        val mine = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val theirs = listsRepo.create("second", "Office")
+
+        assertEquals("me@example.com", newViewModel(mine).subtitle.first { it != null })
+        assertEquals("work@example.com", newViewModel(theirs).subtitle.first { it != null })
+    }
+
     @Test
     fun `name exposes the list name and updates live on rename`() = runTest(mainDispatcherRule.dispatcher) {
         val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
-        val viewModel = ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo)
+        val viewModel = newViewModel(listId)
 
         assertEquals("Groceries", viewModel.name.first { it == "Groceries" })
 
