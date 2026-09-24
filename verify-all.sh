@@ -138,17 +138,18 @@ android_check() (
   # that compiles the src/release source set, which is where the debug-only TLS
   # bypass is proven absent (see android/README.md). It does not minify or need
   # signing, so it belongs in the gate rather than release.sh, unlike assembleRelease.
+  # :core:test runs the data layer's plain-JVM suite (android/core).
   local log
   log=$(mktemp)
-  if ./gradlew :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
+  if ./gradlew :core:test :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
     rm -f "$log"
     return 0
   fi
-  if grep -qiE "offline mode|No cached version|available for offline" "$log"; then
+  if grep -qiE "offline mode|No cached version|available for offline|could not resolve plugin artifact" "$log"; then
     rm -f "$log"
     echo
     echo "=== android: Gradle cache is cold; rerunning online ==="
-    ./gradlew :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug
+    ./gradlew :core:test :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug
   else
     rm -f "$log"
     return 1

@@ -62,6 +62,11 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   behaviour only, without history or ticket anecdotes. Files in `docs/archive/`
   are not maintained.
 
+## Android modules
+
+- **`:core` has no Android on its classpath; put platform code behind an
+  interface in `:app`.** See `android/core/README.md` for what `:core` may import.
+
 ## Server rules
 
 - Sync rules apply only to a write that would win field-level last-write-wins. A

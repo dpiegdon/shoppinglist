@@ -12,8 +12,6 @@ import dagger.hilt.components.SingletonComponent
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemDao
 import org.p23q.shoppinglist.core.db.ListDao
-import org.p23q.shoppinglist.core.db.LwwOptionalString
-import org.p23q.shoppinglist.core.db.LwwString
 import javax.inject.Singleton
 
 /** Adds items.syncBlocked (T-32 row quarantine). Non-destructive: existing rows keep their data. */

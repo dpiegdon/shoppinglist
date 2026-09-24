@@ -57,6 +57,25 @@ proof that the debug-only TLS bypass is absent from release.
 `../release.sh` builds the release APK and embeds it in the server package,
 which serves it at `/shoppinglist.apk`.
 
+## Modules
+
+The build has two Gradle modules:
+
+- **`core/`** is the data layer: the API client (`Api`, the DTOs, the
+  interceptors, the protocol version), the Room database (entities, DAOs, the
+  `@Database` class and its exported schemas in `core/schemas/`), the
+  repositories and the sync engine. It is a plain Kotlin/JVM module with no
+  Android SDK on its classpath, so none of it can use Android. Its tests are
+  plain JUnit (`./gradlew :core:test`). [`core/README.md`](core/README.md) lists
+  what it may import.
+- **`app/`** is the Android app: the Compose UI, the Hilt wiring, and everything
+  that needs the platform, such as DataStore preferences, the Keystore-backed
+  session store, WorkManager scheduling, notifications, and building the Room
+  database from a `Context` together with its migrations. Where `core` needs one
+  of these it declares an interface and `app` implements it. Tests that need
+  Robolectric (screens, Room opened through a `Context`, the migration test)
+  live here.
+
 ## Installing on a phone
 
 minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
