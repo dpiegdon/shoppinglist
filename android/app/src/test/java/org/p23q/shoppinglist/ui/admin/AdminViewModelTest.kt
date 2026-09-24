@@ -18,10 +18,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
+import org.p23q.shoppinglist.core.api.Api
+import org.p23q.shoppinglist.data.testApi
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -35,8 +34,7 @@ class AdminViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var server: MockWebServer
-    private lateinit var apiProvider: ApiSource
-    private lateinit var sessionState: FakeCurrentAccount
+    private lateinit var api: suspend () -> Api
 
     private val usersJson = """
         {"users":[
@@ -53,13 +51,8 @@ class AdminViewModelTest {
         configFile.deleteOnExit()
         val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
-        sessionState = FakeCurrentAccount().apply {
-            token = "tok"
-            accountId = "admin-1"
-            isAdmin = true
-        }
         val json = Json { ignoreUnknownKeys = true }
-        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
+        api = testApi(json, token = { "tok" }) { serverConfig.url }
     }
 
     @After
@@ -89,7 +82,7 @@ class AdminViewModelTest {
         }
     }
 
-    private fun newViewModel() = AdminViewModel(apiProvider::get, sessionState.accountId)
+    private fun newViewModel() = AdminViewModel(api, serverAccountId = "admin-1")
 
     @Test
     fun `opening the console loads the registration flag and no users (T-221)`() = runTest(mainDispatcherRule.dispatcher) {

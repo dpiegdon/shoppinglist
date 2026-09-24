@@ -5,11 +5,9 @@ import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
-import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
-import org.p23q.shoppinglist.core.account.RegistryCurrentAccount
 import org.p23q.shoppinglist.core.account.SecretStore
-import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.ProtocolInterceptor
@@ -42,29 +40,6 @@ const val TEST_ACCOUNT_ID = "local-account-1"
 
 /** The server URL of a test account that never gets a request. */
 const val TEST_SERVER_URL = "https://lists.example.test/"
-
-/**
- * A [CurrentAccount] whose every field a test sets directly. [localId] defaults to
- * [TEST_ACCOUNT_ID], which is what [insertTestAccount] inserts, so lists a screen creates have an
- * owner.
- */
-class FakeCurrentAccount(override var localId: String? = TEST_ACCOUNT_ID) : CurrentAccount {
-    override var serverUrl: String? = null
-    override var token: String? = null
-    override var accountId: String? = null
-    override var accountEmail: String? = null
-    override var isAdmin: Boolean = false
-    private val currency = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    override var defaultCurrency: String?
-        get() = currency.value
-        set(value) {
-            currency.value = value
-        }
-    override val defaultCurrencyChanges: kotlinx.coroutines.flow.Flow<String?> = currency
-    override var ignoredInviteIds: Set<String> = emptySet()
-    override var allowSelfSignedCerts: Boolean = false
-    override var lastOpenedListId: String? = null
-}
 
 /** An in-memory [SecretStore] and [LastOpenedListStore]. */
 class FakeSecretStore : SecretStore, LastOpenedListStore {
@@ -113,12 +88,12 @@ fun syncResponseWithList(serverId: String, name: String = "Shared", cursor: Long
     }}], "items": []}}
 """.trimIndent()
 
-/** An [ApiSource] against whatever URL [baseUrl] says at the time of the call, like the app's. */
-fun testApiSource(
+/** An API client against whatever URL [baseUrl] says at the time of each call, like the app's. */
+fun testApi(
     json: Json = Json { ignoreUnknownKeys = true },
     token: () -> String? = { null },
     baseUrl: () -> String?,
-): ApiSource = ApiSource {
+): suspend () -> Api = {
     RetrofitApiFactory(json).create(
         baseUrl() ?: error("No account is signed in"),
         false,
@@ -127,15 +102,14 @@ fun testApiSource(
 }
 
 /**
- * The account wiring the app builds in Hilt, over a test database: registry, secrets, sessions,
- * the single-account shim and the sync status.
+ * The account wiring the app builds in Hilt, over a test database: registry, secrets, sessions
+ * and the sync status.
  */
 class TestAccounts(val db: AppDb, val json: Json = Json { ignoreUnknownKeys = true }) {
     val secrets = FakeSecretStore()
     val registry = AccountRegistry(db)
     val syncStatus = SyncStatus()
     val sessions = AccountSessions(registry, secrets, RetrofitApiFactory(json), json, syncStatus)
-    val currentAccount: CurrentAccount = RegistryCurrentAccount(registry, secrets, secrets)
 
     /** Adds a signed-in account on [serverUrl] with [token]. */
     suspend fun add(
@@ -167,7 +141,7 @@ class TestAccounts(val db: AppDb, val json: Json = Json { ignoreUnknownKeys = tr
 }
 
 /**
- * The server address a view-model test points its [testApiSource] at, set the way the
+ * The server address a view-model test points its [testApi] at, set the way the
  * single-session app's ServerConfig was: normalised to end in '/'.
  */
 class TestServerAddress {

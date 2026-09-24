@@ -16,10 +16,8 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
+import org.p23q.shoppinglist.data.testApi
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -62,15 +60,10 @@ class AdminScreenTest {
         val configFile = File.createTempFile("admin_screen_config", ".preferences_pb").apply { deleteOnExit() }
         val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeCurrentAccount().apply {
-            token = "tok"
-            accountId = "admin-1"
-            isAdmin = true
-        }
         val json = Json { ignoreUnknownKeys = true }
         val viewModel = AdminViewModel(
-            testApiSource(json, token = { sessionState.token }) { serverConfig.url }::get,
-            sessionState.accountId,
+            testApi(json, token = { "tok" }) { serverConfig.url },
+            serverAccountId = "admin-1",
         )
 
         composeTestRule.setContent { AdminScreen(viewModel = viewModel) }

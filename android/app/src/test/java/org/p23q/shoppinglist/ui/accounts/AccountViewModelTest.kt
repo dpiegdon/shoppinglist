@@ -133,7 +133,7 @@ class AccountViewModelTest {
         viewModel.updateCurrency("usd")?.join()
 
         assertEquals("USD", viewModel.uiState.value.defaultCurrency)
-        // An open list of this account follows the row (DefaultCurrencyState reads it, T-55).
+        // An open list of this account follows the row (the list screen reads it, T-55).
         assertEquals("USD", accounts.registry.get(TEST_ACCOUNT_ID)!!.defaultCurrency)
         assertNull(accounts.registry.get("stage")!!.defaultCurrency)
         assertNull(viewModel.uiState.value.errorMessage)

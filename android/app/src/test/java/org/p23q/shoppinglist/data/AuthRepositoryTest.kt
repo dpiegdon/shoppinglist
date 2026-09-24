@@ -4,7 +4,6 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -21,7 +20,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.AppTooOldException
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
@@ -41,7 +39,6 @@ class AuthRepositoryTest {
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
     private lateinit var accounts: TestAccounts
-    private lateinit var defaultCurrencyState: DefaultCurrencyState
     private lateinit var repository: AuthRepository
     private lateinit var url: String
 
@@ -58,7 +55,6 @@ class AuthRepositoryTest {
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
         accounts = TestAccounts(db)
-        defaultCurrencyState = DefaultCurrencyState(accounts.currentAccount)
         repository = AuthRepositoryImpl(
             accounts.sessions,
             accounts.registry,
@@ -107,32 +103,6 @@ class AuthRepositoryTest {
         assertEquals("tok-acc-1", accounts.secrets.token(id))
         // Written through, not only held in memory.
         assertEquals(account, db.accountDao().all().single())
-        // And the one account is what the single-account screens see.
-        assertEquals("tok-acc-1", accounts.currentAccount.token)
-        assertEquals("acc-1", accounts.currentAccount.accountId)
-    }
-
-    @Test
-    fun `login also writes the default currency through the in-memory mirror (T-55)`() = runTest {
-        enqueueLogin(accountId = "acc-1")
-
-        repository.login(url, "milk@example.com", "hunter2")
-
-        assertEquals("EUR", defaultCurrencyState.value)
-    }
-
-    /** T-298: derived from the current account's row, not read once when it was built. */
-    @Test
-    fun `the default currency follows the current account, and goes with it`() = runTest {
-        accounts.add(url, accountId = "acc-1")
-        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(defaultCurrency = "CHF") }
-        assertEquals("CHF", defaultCurrencyState.value)
-        assertEquals("CHF", defaultCurrencyState.currency.first())
-
-        repository.removeAccount(TEST_ACCOUNT_ID)
-
-        assertNull(defaultCurrencyState.value)
-        assertNull(defaultCurrencyState.currency.first())
     }
 
     @Test
@@ -311,7 +281,6 @@ class AuthRepositoryTest {
         // The row stays and still says whose lists these are, for the next login to judge (T-260).
         assertEquals("acc-1", account.accountId)
         assertNotNull(db.itemDao().get("item-1"))
-        assertNull(accounts.currentAccount.token)
     }
 
     @Test
