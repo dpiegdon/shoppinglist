@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -28,6 +29,7 @@ import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -83,6 +85,37 @@ class ItemsRepoTest {
         assertEquals("device-1", item.name.updatedBy)
         assertEquals(Status.TODO.wireValue, item.status.value)
         assertTrue(item.dirty)
+    }
+
+    @Test
+    fun `a new item takes its list's account and a server id of its own (T-299)`() = runTest {
+        db.insertTestAccount(testAccount(id = "other-account", serverUrl = "https://other.example.test/", accountId = "acct-9"))
+        db.listDao().upsert(testList("their-list", accountId = "other-account"))
+
+        val mine = repo.getById(repo.createItem(listId = "list-1", name = "Milk"))!!
+        val theirs = repo.getById(repo.createExpense(
+            "their-list",
+            "Dinner",
+            Expense(paidBy = mapOf("acc-1" to "10.00"), equalBy = true, paidFor = mapOf("acc-1" to "10.00"), equalFor = true, date = "2026-09-18"),
+        ))!!
+        val copies = repo.duplicateForList(sourceListId = "list-1", targetListId = "their-list")
+
+        assertEquals(TEST_ACCOUNT_ID, mine.accountId)
+        assertEquals("other-account", theirs.accountId)
+        assertEquals(1, copies)
+        val copy = repo.activeItemsForListOnce("their-list").single { it.name.value == "Milk" }
+        assertEquals("a copy is of its target list's account", "other-account", copy.accountId)
+        assertNotEquals("a local id is not sent, so it is not the server id", mine.localId, mine.serverId)
+        assertNotEquals(mine.serverId, copy.serverId)
+    }
+
+    @Test
+    fun `an item for a list this phone does not hold is refused and nothing is written (T-299)`() = runTest {
+        val failure = runCatching { repo.createItem(listId = "no-such-list", name = "Milk") }.exceptionOrNull()
+
+        assertTrue(failure is IllegalArgumentException)
+        assertTrue(repo.dirtyRows().isEmpty())
+        assertEquals(0, syncTrigger.scheduleCount)
     }
 
     @Test

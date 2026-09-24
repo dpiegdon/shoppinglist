@@ -18,6 +18,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -297,6 +298,33 @@ class ListPropsViewModelTest {
 
         assertEquals(listOf("a@example.com"), viewModel.uiState.value.members.map { it.email })
         assertEquals(listOf("b@example.com"), viewModel.uiState.value.pendingInvites.map { it.invitedEmail })
+    }
+
+    /** T-299: the screen holds the list's local id; the server knows the list by its server id. */
+    @Test
+    fun `every call that names the list names it by its server id`() = runTest(mainDispatcherRule.dispatcher) {
+        val serverId = listsRepo.getById(listId)!!.serverId
+        assertNotEquals(listId, serverId)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"invite_id": "i", "token": "t", "url": "u", "expires_at": 1}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"close_votes": [], "closed_at": null}"""))
+        server.enqueue(MockResponse().setResponseCode(204))
+
+        viewModel.loadMembers().join()
+        viewModel.onInviteEmailChange("friend@example.com")
+        viewModel.sendInvite()?.join()
+        viewModel.toggleCloseVote().join()
+        viewModel.requestLeave()
+        viewModel.confirmLeave().join()
+
+        val paths = (0 until server.requestCount).map { server.takeRequest().path }
+        assertEquals(
+            listOf("members", "invites", "members", "close-votes", "leave").map { "/api/v1/lists/$serverId/$it" },
+            paths,
+        )
     }
 
     @Test

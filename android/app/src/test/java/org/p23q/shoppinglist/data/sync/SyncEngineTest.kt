@@ -26,6 +26,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -1124,6 +1125,204 @@ class SyncEngineTest {
 
         assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
         assertEquals(0, server.requestCount)
+    }
+
+    // ---- a list two accounts share (T-299) ------------------------------------------------
+
+    /** A second account on the same server as the first, as a second login there makes it. */
+    private suspend fun mateOnTheSameServer() {
+        accounts.add(server.url("/").toString(), id = "mate", token = "tok-mate", accountId = "acc-mate")
+    }
+
+    /** Both accounts pull the list "shared" with its item "shared-item": the first, then the mate. */
+    private suspend fun pullSharedListIntoBoth() {
+        val pull = { cursor: Long ->
+            syncResponseJson(
+                cursor = cursor,
+                lists = listOf(listJson(id = "shared", name = "Trip")),
+                items = listOf(itemJson(id = "shared-item", listId = "shared", name = "Tent", lastTouchedBy = null)),
+            )
+        }
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pull(6)))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pull(9)))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        repeat(2) { server.takeRequest() }
+    }
+
+    @Test
+    fun `two accounts that share a list pull it into a row each, under their own account`() = runTest {
+        pointAtServer()
+        mateOnTheSameServer()
+
+        pullSharedListIntoBoth()
+
+        val mine = list("shared")!!
+        val theirs = list("shared", "mate")!!
+        assertNotEquals("a row each", mine.localId, theirs.localId)
+        assertEquals(TEST_ACCOUNT_ID, mine.accountId)
+        assertEquals("mate", theirs.accountId)
+        val myItem = item("shared-item")!!
+        val theirItem = item("shared-item", "mate")!!
+        assertNotEquals(myItem.localId, theirItem.localId)
+        assertEquals("each item is on its own account's row of the list", mine.localId, myItem.listLocalId)
+        assertEquals(theirs.localId, theirItem.listLocalId)
+        assertEquals("an item's account is its list's", TEST_ACCOUNT_ID, myItem.accountId)
+        assertEquals("mate", theirItem.accountId)
+        assertEquals(6L, cursor())
+        assertEquals(9L, accounts.registry.get("mate")!!.syncCursor)
+    }
+
+    @Test
+    fun `a pull merges into the syncing account's row and leaves the other's alone`() = runTest {
+        pointAtServer()
+        mateOnTheSameServer()
+        pullSharedListIntoBoth()
+        val renamed = listJson(id = "shared", name = "Trip 2").replace("\"updated_at\": 1000", "\"updated_at\": 3000")
+        server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseJson(cursor = 12, lists = listOf(renamed), items = emptyList())))
+
+        assertTrue(syncEngine.syncAccount("mate") is SyncResult.Success)
+
+        assertEquals("Trip 2", list("shared", "mate")!!.name.value)
+        assertEquals("Trip", list("shared")!!.name.value)
+        assertEquals(1000L, list("shared")!!.name.updatedAt)
+    }
+
+    @Test
+    fun `an edit to one account's row goes out with that account alone, and its refusal parks that row only`() = runTest {
+        pointAtServer()
+        mateOnTheSameServer()
+        pullSharedListIntoBoth()
+        val itemsRepo = ItemsRepo(db, DeviceIdProvider { "this-device" }, FakeSyncTrigger())
+        itemsRepo.setStatus(item("shared-item")!!.localId, Status.CHECKED)
+        assertTrue(item("shared-item")!!.dirty)
+        assertFalse("the other account's row is not edited with it", item("shared-item", "mate")!!.dirty)
+
+        // Mine: refused, then the retry without it. The mate's: nothing to push.
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody(
+                """{"error": "invalid_status", "message": "no", "row_id": "shared-item", "field": "status"}""",
+            ),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val first = server.takeRequest()
+        assertEquals("Bearer tok-123", first.getHeader("Authorization"))
+        val pushed = Json.decodeFromString<SyncRequest>(first.body.readUtf8()).changes.items.single()
+        assertEquals("the server's ids go out, not this phone's", "shared-item", pushed.id)
+        assertEquals("shared", pushed.listId)
+        server.takeRequest()
+        val mates = server.takeRequest()
+        assertEquals("Bearer tok-mate", mates.getHeader("Authorization"))
+        assertTrue(Json.decodeFromString<SyncRequest>(mates.body.readUtf8()).changes.items.isEmpty())
+
+        assertTrue("my row is parked", item("shared-item")!!.syncBlocked)
+        val theirs = item("shared-item", "mate")!!
+        assertFalse("the mate's row of the same item is not", theirs.syncBlocked)
+        assertEquals("todo", theirs.status.value)
+        assertEquals(0, syncStatus.accounts.value.getValue("mate").blockedCount)
+    }
+
+    @Test
+    fun `removing one account leaves the other's row of a shared list, and its cursor, alone`() = runTest {
+        pointAtServer()
+        mateOnTheSameServer()
+        pullSharedListIntoBoth()
+        val auth = AuthRepositoryImpl(
+            accounts.sessions, accounts.registry, accounts.secrets, accounts.secrets, db,
+            deviceName = "Test device",
+        )
+
+        auth.removeAccount(TEST_ACCOUNT_ID)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertNull(db.listDao().getByServerId(TEST_ACCOUNT_ID, "shared"))
+        assertNotNull(list("shared", "mate"))
+        assertNotNull(item("shared-item", "mate"))
+        val next = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals("the mate's cursor still describes what it holds", 9L, next.cursor)
+    }
+
+    @Test
+    fun `an item pulled for a list this account does not hold gets a hidden stub of that account`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 3,
+                    lists = emptyList(),
+                    items = listOf(itemJson(id = "stray", listId = "unseen", name = "Rope", lastTouchedBy = null)),
+                ),
+            ),
+        )
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val stub = list("unseen")!!
+        assertEquals(TEST_ACCOUNT_ID, stub.accountId)
+        assertTrue("hidden", stub.deleted.value)
+        assertFalse("nothing to push", stub.dirty)
+        assertEquals("every clock 0, so the real list wins every field", 0L, stub.name.updatedAt + stub.deleted.updatedAt)
+        assertEquals(stub.localId, item("stray")!!.listLocalId)
+        assertEquals(TEST_ACCOUNT_ID, item("stray")!!.accountId)
+
+        // The list itself arrives later and fills the stub in: the same row, not a second one.
+        server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseJson(cursor = 4, lists = listOf(listJson("unseen", "Climbing")), items = emptyList())))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        val filled = list("unseen")!!
+        assertEquals(stub.localId, filled.localId)
+        assertEquals("Climbing", filled.name.value)
+        assertFalse(filled.deleted.value)
+    }
+
+    @Test
+    fun `a write to a closed list drops the item and asks for the list again, by its server id`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("late", "Taxi", dirty = true))
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody("""{"error": "list_closed", "message": "closed", "row_id": "late"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertNull(item("late"))
+        server.takeRequest()
+        val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(listOf("list-1"), retry.fullLists)
+    }
+
+    @Test
+    fun `a refused tombstone on an expenses list keeps the row and its items, and the snapshot wins`() = runTest {
+        pointAtServer()
+        db.listDao().upsert(dummyList("trip", "Trip", dirty = true, at = 2_000L).copy(deleted = true.toLww("this-device", 2_000L)))
+        db.itemDao().upsert(dummyItem("dinner", "Dinner", dirty = false, list = "trip"))
+        server.enqueue(
+            MockResponse().setResponseCode(422).setBody(
+                """{"error": "cannot_delete_expense_list", "message": "no", "row_id": "trip"}""",
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(cursor = 2, lists = listOf(expensesListJson("trip", "Trip (server)", at = 1_500L, closeVotes = "[]")), items = emptyList()),
+            ),
+        )
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        server.takeRequest()
+        val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(listOf("trip"), retry.fullLists)
+        assertTrue("nothing of the refused tombstone goes out again", retry.changes.lists.isEmpty())
+        val trip = list("trip")!!
+        assertEquals("the same row: its items and the screens still find it", localId("trip"), trip.localId)
+        assertFalse(trip.deleted.value)
+        assertEquals("the snapshot wins even with clocks older than the local edit", "Trip (server)", trip.name.value)
+        assertFalse(trip.dirty)
+        assertEquals(trip.localId, item("dinner")!!.listLocalId)
     }
 
     // ---- guards and the account lock (T-298) -------------------------------------------

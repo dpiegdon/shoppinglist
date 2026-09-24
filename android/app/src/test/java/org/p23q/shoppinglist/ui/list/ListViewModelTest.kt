@@ -367,8 +367,12 @@ class ListViewModelTest {
 
     @Test
     fun `the member roster loads into state on init (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
+        // Asked by the list's server id, not the local one the screen holds (T-299).
+        val rosterPath = "/api/v1/lists/${listsRepo.getById(listId)!!.serverId}/members"
         server.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest) = MockResponse().setResponseCode(200).setBody(
+            override fun dispatch(request: RecordedRequest) = if (request.path != rosterPath) {
+                MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "no"}""")
+            } else MockResponse().setResponseCode(200).setBody(
                 """{"members": [""" +
                     """{"account_id": "acc-a", "email": "a@example.com", "initials": "A", "joined_at": 1},""" +
                     """{"account_id": "acc-b", "email": "b@example.com", "initials": "B", "joined_at": 2}""" +

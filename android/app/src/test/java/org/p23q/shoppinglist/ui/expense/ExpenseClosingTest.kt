@@ -295,10 +295,15 @@ class ExpenseClosingTest {
         // open, and pressing "Agree to close" hits the server's 409 rather than the network.
         // ApiException extends IOException, so a catch-order mistake here reported it as offline.
         setListState(closeVotes = listOf(other))
+        // The vote names the list by its server id, not the local one the screen holds (T-299).
+        val votePath = "/api/v1/lists/${listsRepo.getById(listId)!!.serverId}/close-votes"
         val server = MockWebServer()
         server.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest) =
+            override fun dispatch(request: RecordedRequest) = if (request.path == votePath) {
                 MockResponse().setResponseCode(409).setBody("""{"error": "list_closed", "message": "closed"}""")
+            } else {
+                MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "no"}""")
+            }
         }
         server.start()
         try {
