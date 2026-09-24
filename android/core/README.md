@@ -29,8 +29,8 @@ Tolerated for now, until the module goes multiplatform:
 |---|---|
 | `retrofit2.http.*` annotations | `api/Api.kt` |
 | `okhttp3.Interceptor`, `okhttp3.Response` | `api/AuthInterceptor.kt`, `api/ErrorInterceptor.kt`, `api/Protocol.kt`, `account/AccountSessions.kt` |
-| `javax.inject.Inject` on constructors | `DefaultCurrencyState.kt`, `repo/ItemsRepo.kt`, `repo/ListsRepo.kt`, `sync/SyncEngine.kt`, `sync/SyncStatus.kt` |
-| `javax.inject.Singleton` | `DefaultCurrencyState.kt`, `sync/SyncStatus.kt` |
+| `javax.inject.Inject` on constructors | `repo/ItemsRepo.kt`, `repo/ListsRepo.kt`, `sync/SyncEngine.kt`, `sync/SyncStatus.kt` |
+| `javax.inject.Singleton` | `sync/SyncStatus.kt` |
 
 The classes in `account/` and `AuthRepositoryImpl` carry no annotations; `:app`
 builds them in its Hilt modules.
@@ -47,9 +47,6 @@ interface and `:app` implements it and binds it in Hilt:
 | `DeviceIdProvider` | `DeviceIdModule`, from `ServerConfig` (DataStore) |
 | `sync/SyncTrigger` | `SyncScheduler` (WorkManager) |
 | `sync/CollaboratorChangeNotifier` | `CollaboratorChangeNotificationPoster` (notifications) |
-
-`api/ApiSource` is the single-account screens' API client; `:app` binds it to
-`account/CurrentAccountApi`, the current account's session.
 
 ## Accounts
 
@@ -81,8 +78,6 @@ interface and `:app` implements it and binds it in Hilt:
   `updateRequired` is true when every server account is outdated.
   `unbound()` is a token-less client that reports to no account, for what is
   asked before an account exists and for `/app-version`.
-- `account/CurrentAccount` is the first server account, for the screens that
-  still show one. It goes once they take an account id of their own.
 - `AuthRepository` creates or re-activates an account on login and, unless asked
   to keep them, removes every other server account in the same step. Before
   that it asks `/app-version` for the server's protocol whenever it holds none

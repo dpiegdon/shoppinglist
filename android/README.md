@@ -108,9 +108,9 @@ list's account under its name, and a collaborator notification names it, only
 when the phone holds more than one account. A screen showing one list takes
 its account, API client and default currency from the list's row.
 
-The screens still show one account: the first in the table. Logging in again as
-the same account on the same server keeps its lists, unpushed edits included;
-logging in as anyone else removes the other account and its lists.
+A login keeps every account already on the phone. Logging in again as an
+account it holds, on the same server, keeps that account's lists, unpushed edits
+included; logging in as anyone else adds a new account beside the others.
 
 ## Installing on a phone
 
