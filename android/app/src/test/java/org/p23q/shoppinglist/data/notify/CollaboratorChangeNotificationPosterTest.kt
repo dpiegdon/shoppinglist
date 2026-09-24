@@ -87,7 +87,8 @@ class CollaboratorChangeNotificationPosterTest {
 
         val n = shadowOf(notificationManager).allNotifications.single()
         assertEquals("Office", n.title())
-        assertEquals("work@example.com", n.subText())
+        // Email and server (T-300): the same email may be signed in on two instances.
+        assertEquals("work@example.com · work.example.test", n.subText())
     }
 
     @Test

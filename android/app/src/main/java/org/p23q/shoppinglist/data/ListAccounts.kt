@@ -59,3 +59,13 @@ class ListAccounts @Inject constructor(
         emitAll(registry.accounts)
     }
 }
+
+/**
+ * An account in one line, for a list's app-bar subtitle and a notification's sub text (T-300):
+ * "email · host/path". The email alone is not enough, as one person's accounts on two instances
+ * (prod and stage) share it; the server URL is shown without its scheme and trailing slash.
+ */
+fun accountLine(account: AccountEntity): String {
+    val server = account.serverUrl?.substringAfter("://")?.trimEnd('/')?.takeIf { it.isNotEmpty() }
+    return listOfNotNull(account.email ?: account.label, server).joinToString(" · ")
+}

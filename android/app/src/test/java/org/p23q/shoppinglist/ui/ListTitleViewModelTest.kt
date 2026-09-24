@@ -69,13 +69,15 @@ class ListTitleViewModelTest {
     }
 
     @Test
-    fun `with two accounts the subtitle is the list's own account's email (T-292)`() = runTest(mainDispatcherRule.dispatcher) {
-        db.insertTestAccount(testAccount(id = "second", accountId = "acct-2", email = "work@example.com", serverUrl = "https://work.example.test/"))
+    fun `with two accounts the subtitle is the list's own account, email and server (T-292, T-300)`() = runTest(mainDispatcherRule.dispatcher) {
+        // The same person on a second instance under a path of another host: the email alone
+        // would not tell the two apart.
+        db.insertTestAccount(testAccount(id = "second", accountId = "acct-2", email = "me@example.com", serverUrl = "https://work.example.test/stage/"))
         val mine = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val theirs = listsRepo.create("second", "Office")
 
-        assertEquals("me@example.com", newViewModel(mine).subtitle.first { it != null })
-        assertEquals("work@example.com", newViewModel(theirs).subtitle.first { it != null })
+        assertEquals("me@example.com · lists.example.test", newViewModel(mine).subtitle.first { it != null })
+        assertEquals("me@example.com · work.example.test/stage", newViewModel(theirs).subtitle.first { it != null })
     }
 
     @Test

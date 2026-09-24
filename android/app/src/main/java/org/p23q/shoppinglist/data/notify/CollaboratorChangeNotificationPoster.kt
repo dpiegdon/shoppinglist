@@ -25,6 +25,7 @@ import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
+import org.p23q.shoppinglist.data.accountLine
 import org.p23q.shoppinglist.ui.localizedContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -79,11 +80,12 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
             strings.getString(R.string.notif_changed_items_lists, totalItems, audible.size)
         }
         // Whose lists these are, with several accounts on the phone (T-292): the notification's sub
-        // text, beside the app name. With one account there is nobody else they could be.
+        // text, beside the app name, email and server (T-300). With one account there is nobody
+        // else they could be.
         val accounts = registry.load()
         val accountLabel = if (accounts.size > 1) {
             audible.map { it.accountId }.distinct()
-                .mapNotNull { id -> accounts.firstOrNull { it.id == id }?.email }
+                .mapNotNull { id -> accounts.firstOrNull { it.id == id }?.let(::accountLine) }
                 .joinToString(", ")
                 .ifEmpty { null }
         } else {
