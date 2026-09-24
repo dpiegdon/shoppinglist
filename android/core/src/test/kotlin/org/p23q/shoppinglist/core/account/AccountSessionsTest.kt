@@ -20,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.p23q.shoppinglist.core.api.Api
+import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.LoginRequest
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import retrofit2.Retrofit
@@ -118,12 +119,16 @@ class AccountSessionsTest {
     }
 
     @Test
-    fun `a 426 on a sign-in attempt blocks the app though no account is outdated`() = runBlocking {
+    fun `a 426 on a sign-in attempt is the login screen's error and does not block the app (T-298)`() = runBlocking {
         a.enqueue(MockResponse().setResponseCode(426).setBody("""{"error": "client_outdated", "message": "old"}"""))
 
-        runCatching { sessions.unbound(a.url("/").toString(), false).login(LoginRequest("x@example.com", "pw", "dev", "android")) }
+        val error = runCatching {
+            sessions.unbound(a.url("/").toString(), false).login(LoginRequest("x@example.com", "pw", "dev", "android"))
+        }.exceptionOrNull()
 
-        assertTrue(sessions.isUpdateRequired())
+        assertEquals("client_outdated", (error as ApiException).code)
+        assertFalse(sessions.isUpdateRequired())
+        assertFalse(sessions.updateRequired.first())
         assertTrue(registry.snapshot().none { it.outdated })
     }
 

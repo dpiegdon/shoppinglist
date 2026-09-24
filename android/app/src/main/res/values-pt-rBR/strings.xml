@@ -215,6 +215,8 @@
     <string name="login_msg_incorrect_credentials">E-mail ou senha incorretos</string>
     <string name="login_msg_untrusted_cert">O certificado do servidor não é confiável. Use um certificado de uma autoridade reconhecida. Para um servidor de teste autoassinado, ative \"Confiar em certificados autoassinados\" nas Configurações (apenas builds de depuração).</string>
     <string name="login_msg_server_too_old">Este servidor é antigo demais para este app.</string>
+    <string name="login_msg_app_too_old">Este app é antigo demais para este servidor.</string>
+    <string name="login_msg_not_a_server">Nenhum servidor Tuppu respondeu neste endereço.</string>
     <string name="redeem_msg_code_required">Digite um código de convite</string>
     <string name="redeem_msg_failed">Não foi possível usar o convite</string>
     <string name="item_msg_name_required">O nome é obrigatório</string>

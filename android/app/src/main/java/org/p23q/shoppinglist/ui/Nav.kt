@@ -207,9 +207,11 @@ fun ShoppingListNavHost(
         popExitTransition = { ExitTransition.None },
     ) {
         composable(Routes.LOGIN) {
+            val context = LocalContext.current
             LoginScreen(
                 selectedLocale = selectedLocale,
                 onSelectLocale = localeViewModel::setLocale,
+                onDownload = { url -> openDownload(context, url) },
                 onLoginSuccess = { destination ->
                     navController.navigate(destination) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
@@ -434,8 +436,8 @@ fun ShoppingListNavHost(
 }
 
 /**
- * Opens the app package the server is offering (T-135), for the ordinary prompt and for the
- * blocking "update required" screen alike (T-240).
+ * Opens the app package the server is offering (T-135), for the ordinary prompt, the blocking
+ * "update required" screen (T-240) and the login screen's "app too old" message (T-298) alike.
  *
  * Handed to the system rather than downloaded in-app: no extra permission, no installer session to
  * babysit, and the user gets the standard install flow they already know. NEW_TASK because this

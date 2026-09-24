@@ -3,11 +3,10 @@ package org.p23q.shoppinglist.core.account
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import org.p23q.shoppinglist.core.api.Api
@@ -72,26 +71,19 @@ class AccountSessions(
     val forcedLogout: SharedFlow<String> = _forcedLogout.asSharedFlow()
 
     /**
-     * Set by a 426 from a server this device holds no account for yet — a login or registration
-     * attempt. Nothing is stored for it, so it lasts for the process, as the per-account flag does
-     * across a restart (see [AccountRegistry.load]).
+     * Whether the app is too old for every server it has an account on — the state in which the
+     * UI can do nothing but offer the update (T-240). A server this device holds no account for
+     * does not count: the login screen reports that one itself, and offers its update there
+     * (T-298).
      */
-    private val unboundOutdated = MutableStateFlow(false)
-
-    /**
-     * Whether the app is too old for every server it has an account on, or for the one it just
-     * tried to sign in to — the state in which the UI can do nothing but offer the update (T-240).
-     */
-    val updateRequired: Flow<Boolean> =
-        combine(registry.accounts, unboundOutdated) { accounts, unbound -> updateRequired(accounts, unbound) }
-            .distinctUntilChanged()
+    val updateRequired: Flow<Boolean> = registry.accounts.map(::updateRequired).distinctUntilChanged()
 
     /** The current value of [updateRequired]. */
-    fun isUpdateRequired(): Boolean = updateRequired(registry.snapshot(), unboundOutdated.value)
+    fun isUpdateRequired(): Boolean = updateRequired(registry.snapshot())
 
-    private fun updateRequired(accounts: List<AccountEntity>, unbound: Boolean): Boolean {
+    private fun updateRequired(accounts: List<AccountEntity>): Boolean {
         val servers = accounts.filter { it.isServer }
-        return unbound || (servers.isNotEmpty() && servers.all { it.outdated })
+        return servers.isNotEmpty() && servers.all { it.outdated }
     }
 
     /** The session for a server account; throws [IllegalStateException] for any other id. */
@@ -134,23 +126,14 @@ class AccountSessions(
     }
 
     /**
-     * An API client for a server with no account behind it: for what is asked before one exists —
-     * `/app-version`, `/registration-status`, `/login`, `/register`. It carries no token.
+     * An API client that carries no token and reports to no account: for what is asked before an
+     * account exists — `/app-version`, `/registration-status`, `/login`, `/register` — and for
+     * `/app-version` afterwards, which needs none. A 426 here is an ordinary error for the caller.
      */
     fun unbound(serverUrl: String, allowSelfSignedCerts: Boolean): Api = apiFactory.create(
         serverUrl,
         allowSelfSignedCerts,
-        listOf(
-            ProtocolInterceptor(),
-            ErrorInterceptor(
-                json,
-                object : ApiEvents {
-                    override fun onOutdated() {
-                        unboundOutdated.value = true
-                    }
-                },
-            ),
-        ),
+        listOf(ProtocolInterceptor(), ErrorInterceptor(json)),
     )
 
     /** Forgets a removed account's session. */

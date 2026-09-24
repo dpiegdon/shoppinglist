@@ -64,14 +64,19 @@ interface and `:app` implements it and binds it in Hilt:
   first use: an `Api` whose interceptors carry that account's token and report to
   that account (`401` sets `signedIn = false` and emits on `forcedLogout`, `426`
   sets `outdated`, an accepted request clears it), and the account's share of
-  `SyncStatus`. `updateRequired` is true when every server account is outdated,
-  or a sign-in attempt was refused with `426`. `unbound()` is a token-less client
-  for what is asked before an account exists.
+  `SyncStatus`. `updateRequired` is true when every server account is outdated.
+  `unbound()` is a token-less client that reports to no account, for what is
+  asked before an account exists and for `/app-version`.
 - `account/CurrentAccount` is the first server account, for the screens that
   still show one. It goes once they take an account id of their own.
-- `AuthRepository` creates or re-activates an account on login, after checking
-  the server against `MIN_SERVER_PROTOCOL` (`api/Protocol.kt`) the first time; a
-  logout signs one account out and keeps its unpushed rows.
+- `AuthRepository` creates or re-activates an account on login and, unless asked
+  to keep them, removes every other server account in the same step. Before
+  that it asks `/app-version` for the server's protocol whenever it holds none
+  between `MIN_SERVER_PROTOCOL` and `PROTOCOL_VERSION` (`api/Protocol.kt`): the
+  server says it in the `200` and in the `no_app_package` `404`. A server below
+  the floor, one above this build and an answer that is not a Tuppu server's are
+  each their own exception, for the login screen to name. A logout signs one
+  account out and keeps its unpushed rows.
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account;
   `syncAccount()` is one. `SyncStatus.state` is the worst of the accounts,
   `SyncStatus.accounts` each one.

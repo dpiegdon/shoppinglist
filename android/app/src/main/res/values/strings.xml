@@ -265,6 +265,8 @@
     <string name="login_msg_incorrect_credentials">Incorrect email or password</string>
     <string name="login_msg_untrusted_cert">The server\'s certificate isn\'t trusted. Use a certificate from a recognized authority. For a self-signed dev server, enable \"Trust self-signed certificates\" in Settings (debug builds only).</string>
     <string name="login_msg_server_too_old">This server is too old for this app.</string>
+    <string name="login_msg_app_too_old">This app is too old for this server.</string>
+    <string name="login_msg_not_a_server">No Tuppu server answered at this address.</string>
 
     <!-- redeem messages -->
     <string name="redeem_msg_code_required">Enter an invite code</string>

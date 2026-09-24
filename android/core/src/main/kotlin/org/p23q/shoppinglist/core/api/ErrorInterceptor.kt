@@ -74,6 +74,7 @@ class ErrorInterceptor(
             rowId = envelope?.rowId,
             field = envelope?.field,
             accountId = envelope?.accountId,
+            protocol = envelope?.protocol,
         )
     }
 

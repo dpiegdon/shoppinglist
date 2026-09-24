@@ -215,6 +215,8 @@
     <string name="login_msg_incorrect_credentials">E-Mail oder Passwort ist falsch</string>
     <string name="login_msg_untrusted_cert">Dem Zertifikat des Servers wird nicht vertraut. Verwende ein Zertifikat einer anerkannten Zertifizierungsstelle. Für einen selbstsignierten Testserver aktiviere \"Selbstsignierten Zertifikaten vertrauen\" in den Einstellungen (nur Debug-Builds).</string>
     <string name="login_msg_server_too_old">Dieser Server ist zu alt für diese App.</string>
+    <string name="login_msg_app_too_old">Diese App ist zu alt für diesen Server.</string>
+    <string name="login_msg_not_a_server">Unter dieser Adresse hat kein Tuppu-Server geantwortet.</string>
     <string name="redeem_msg_code_required">Gib einen Einladungscode ein</string>
     <string name="redeem_msg_failed">Einladung konnte nicht eingelöst werden</string>
     <string name="item_msg_name_required">Name ist erforderlich</string>

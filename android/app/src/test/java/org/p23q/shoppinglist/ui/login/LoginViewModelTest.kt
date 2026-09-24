@@ -14,6 +14,8 @@ import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
 import org.p23q.shoppinglist.core.account.normalizeServerUrl
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
@@ -327,6 +329,45 @@ class LoginViewModelTest {
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
         assertEquals(UiText.res(R.string.login_msg_server_too_old), viewModel.uiState.value.errorMessage)
+    }
+
+    private suspend fun kotlinx.coroutines.test.TestScope.submitWith(error: Throwable): LoginViewModel {
+        val repo = FakeAuthRepository(onLogin = { _, _ -> throw error })
+        val viewModel = LoginViewModel(repo, newServerConfig(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        viewModel.onServerUrlChange("https://new.example.com")
+        viewModel.onEmailChange("milk@example.com")
+        viewModel.onPasswordChange("hunter2")
+        viewModel.submit()?.join()
+        return viewModel
+    }
+
+    @Test
+    fun `an app too old for the server gets its own message and the server's package (T-298)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = submitWith(AppTooOldException(4, "https://new.example.com/app.apk"))
+
+        assertFalse(viewModel.uiState.value.loginSucceeded)
+        assertEquals(UiText.res(R.string.login_msg_app_too_old), viewModel.uiState.value.errorMessage)
+        assertEquals("https://new.example.com/app.apk", viewModel.uiState.value.downloadUrl)
+
+        viewModel.onServerUrlChange("https://other.example.com")
+        assertNull("another address is another question", viewModel.uiState.value.downloadUrl)
+    }
+
+    @Test
+    fun `no Tuppu server at the address gets its own message (T-298)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = submitWith(NotATuppuServerException())
+
+        assertEquals(UiText.res(R.string.login_msg_not_a_server), viewModel.uiState.value.errorMessage)
+        assertNull(viewModel.uiState.value.downloadUrl)
+    }
+
+    /** T-298: this used to escape both catches and crash the login screen. */
+    @Test
+    fun `an answer that is not the API's JSON is no Tuppu server, not a crash (T-298)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = submitWith(kotlinx.serialization.SerializationException("Unexpected JSON token"))
+
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals(UiText.res(R.string.login_msg_not_a_server), viewModel.uiState.value.errorMessage)
     }
 
     @Test

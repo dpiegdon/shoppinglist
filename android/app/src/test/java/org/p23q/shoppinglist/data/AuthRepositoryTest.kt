@@ -21,8 +21,11 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
 import org.p23q.shoppinglist.core.DefaultCurrencyState
+import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
 import org.p23q.shoppinglist.core.api.MIN_SERVER_PROTOCOL
+import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemEntity
@@ -159,12 +162,78 @@ class AuthRepositoryTest {
         assertEquals(1, server.requestCount)
     }
 
+    private fun noAppPackage(protocol: Int?) = MockResponse().setResponseCode(404).setBody(
+        """{"error": "no_app_package", "message": "none"${protocol?.let { ", \"protocol\": $it" } ?: ""}}""",
+    )
+
+    /** T-297: a current server without an APK answers 404, and says its protocol there. */
     @Test
-    fun `a server from before app-version existed is refused`() = runTest {
+    fun `a server without an app package that names its protocol is accepted, and it is stored`() = runTest {
+        server.enqueue(noAppPackage(MIN_SERVER_PROTOCOL))
+        enqueueLogin(accountId = "acc-1", askFloor = false)
+
+        val id = repository.login(url, "milk@example.com", "hunter2")
+
+        assertEquals(MIN_SERVER_PROTOCOL, accounts.registry.get(id)!!.serverProtocol)
+        assertTrue(accounts.registry.get(id)!!.signedIn)
+    }
+
+    @Test
+    fun `a server without an app package below the floor is refused`() = runTest {
+        server.enqueue(noAppPackage(MIN_SERVER_PROTOCOL - 1))
+
+        assertTooOld { repository.login(url, "milk@example.com", "hunter2") }
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `a 404 that names no protocol is no Tuppu server, and nothing more is sent`() = runTest {
         server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
 
-        assertTooOld { repository.register(url, "milk@example.com", "hunter2") }
+        assertThrows<NotATuppuServerException> { repository.register(url, "milk@example.com", "hunter2") }
         assertEquals("no registration was attempted", 1, server.requestCount)
+    }
+
+    /** T-298: a captive portal or a host that answers every path with a page. */
+    @Test
+    fun `a 200 that is not the endpoint's JSON is no Tuppu server`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("<html><body>Sign in to the Wi-Fi</body></html>"))
+
+        assertThrows<NotATuppuServerException> { repository.login(url, "milk@example.com", "hunter2") }
+        assertEquals(1, server.requestCount)
+        assertTrue(accounts.registry.snapshot().isEmpty())
+    }
+
+    /** T-298: /login would be refused with 426; say so before, with the server's package if any. */
+    @Test
+    fun `a server above this build's protocol is refused with its download link`() = runTest {
+        server.enqueue(appVersion(PROTOCOL_VERSION + 1))
+
+        val e = assertThrows<AppTooOldException> { repository.login(url, "milk@example.com", "hunter2") }
+
+        assertEquals(PROTOCOL_VERSION + 1, e.serverProtocol)
+        assertEquals("https://example.com/a.apk", e.downloadUrl)
+        assertEquals("no login was attempted", 1, server.requestCount)
+        assertTrue(accounts.registry.snapshot().isEmpty())
+    }
+
+    @Test
+    fun `a server above this build's protocol without an app package is refused with no link`() = runTest {
+        server.enqueue(noAppPackage(PROTOCOL_VERSION + 1))
+
+        val e = assertThrows<AppTooOldException> { repository.login(url, "milk@example.com", "hunter2") }
+
+        assertNull(e.downloadUrl)
+    }
+
+    @Test
+    fun `a stored protocol above this build's is asked again`() = runTest {
+        accounts.add(url, accountId = "acc-1", token = null)
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = PROTOCOL_VERSION + 1) }
+        server.enqueue(appVersion(PROTOCOL_VERSION + 1))
+
+        assertThrows<AppTooOldException> { repository.login(url, "milk@example.com", "hunter2") }
+        assertEquals("/api/v1/app-version", server.takeRequest().path)
     }
 
     @Test
@@ -193,12 +262,18 @@ class AuthRepositoryTest {
     }
 
     private suspend fun assertTooOld(block: suspend () -> Unit) {
+        assertThrows<ServerTooOldException>(block)
+    }
+
+    private suspend inline fun <reified T : Throwable> assertThrows(crossinline block: suspend () -> Unit): T {
         try {
             block()
-            fail("expected ServerTooOldException")
-        } catch (_: ServerTooOldException) {
-            // expected
+        } catch (e: Throwable) {
+            if (e is T) return e
+            throw AssertionError("expected ${T::class.simpleName}, got $e", e)
         }
+        fail("expected ${T::class.simpleName}")
+        throw IllegalStateException()
     }
 
     // ---- logout and the mirror (T-257, T-260) --------------------------------------

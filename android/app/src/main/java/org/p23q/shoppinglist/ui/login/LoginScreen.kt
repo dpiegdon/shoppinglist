@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -57,6 +58,8 @@ fun LoginScreen(
     // defaults keep those tests needing no new wiring; Nav supplies the real values.
     selectedLocale: AppLocale = deviceLocale(),
     onSelectLocale: (AppLocale) -> Unit = {},
+    /** Opens the app package a server newer than this build offers (T-298). */
+    onDownload: (downloadUrl: String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var passwordVisible by remember { mutableStateOf(false) }
@@ -139,6 +142,15 @@ fun LoginScreen(
         state.errorMessage?.let { message ->
             Spacer(Modifier.height(8.dp))
             Text(text = message.asString(), color = MaterialTheme.colorScheme.error)
+        }
+        state.downloadUrl?.let { url ->
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { onDownload(url) },
+                modifier = Modifier.fillMaxWidth().testTag("login-download"),
+            ) {
+                Text(stringResource(R.string.action_update))
+            }
         }
 
         Spacer(Modifier.height(16.dp))

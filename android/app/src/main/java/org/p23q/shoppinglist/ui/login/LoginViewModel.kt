@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AuthRepository
+import kotlinx.serialization.SerializationException
+import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
 import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
@@ -40,6 +43,11 @@ data class LoginUiState(
     /** Whether the configured server currently accepts new accounts (T-276); true until the
      *  up-front check says otherwise, so a slow or failed check never blocks registering. */
     val registrationAllowed: Boolean = true,
+    /**
+     * The app package the server offers, set with the "app too old" message (T-298): the server
+     * speaks a newer protocol than this build, so an update is the only way in.
+     */
+    val downloadUrl: String? = null,
 )
 
 @HiltViewModel
@@ -97,19 +105,19 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onServerUrlChange(value: String) {
-        _uiState.update { it.copy(serverUrl = value, errorMessage = null) }
+        _uiState.update { it.copy(serverUrl = value, errorMessage = null, downloadUrl = null) }
     }
 
     fun onEmailChange(value: String) {
-        _uiState.update { it.copy(email = value, errorMessage = null) }
+        _uiState.update { it.copy(email = value, errorMessage = null, downloadUrl = null) }
     }
 
     fun onPasswordChange(value: String) {
-        _uiState.update { it.copy(password = value, errorMessage = null) }
+        _uiState.update { it.copy(password = value, errorMessage = null, downloadUrl = null) }
     }
 
     fun onToggleRegisterMode() {
-        _uiState.update { it.copy(isRegisterMode = !it.isRegisterMode, errorMessage = null) }
+        _uiState.update { it.copy(isRegisterMode = !it.isRegisterMode, errorMessage = null, downloadUrl = null) }
     }
 
     /** Returns the launched Job (or null if validation failed synchronously) so tests can await it. */
@@ -125,7 +133,7 @@ class LoginViewModel @Inject constructor(
         }
 
         return viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, downloadUrl = null) }
             try {
                 if (state.isRegisterMode) {
                     authRepository.register(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
@@ -141,6 +149,21 @@ class LoginViewModel @Inject constructor(
             } catch (e: ServerTooOldException) {
                 // Asked before anything else went to a server this device did not know (T-291).
                 _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_server_too_old)) }
+            } catch (e: AppTooOldException) {
+                // The same question, the other way round (T-298): the sign-in would be refused
+                // with 426, so offer the server's package, if it has one, right here.
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = UiText.res(R.string.login_msg_app_too_old),
+                        downloadUrl = e.downloadUrl,
+                    )
+                }
+            } catch (e: NotATuppuServerException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_not_a_server)) }
+            } catch (e: SerializationException) {
+                // Any other answer that is not the API's JSON: the address is not a Tuppu server.
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_not_a_server)) }
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_incorrect_credentials)) }
             } catch (e: ApiException) {

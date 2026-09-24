@@ -24,6 +24,11 @@ open class ApiException(
     val field: String? = null,
     /** The account a 422 named, where its code carries one — participant_frozen does (T-200). */
     val accountId: String? = null,
+    /**
+     * The server's protocol version, where the error envelope carries one: the `no_app_package`
+     * 404 from `/app-version` does (T-297).
+     */
+    val protocol: Int? = null,
 ) : IOException(message)
 
 /** 401 responses always mean the caller must re-authenticate. */
