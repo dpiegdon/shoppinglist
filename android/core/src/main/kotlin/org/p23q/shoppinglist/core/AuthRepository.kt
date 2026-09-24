@@ -137,7 +137,6 @@ class AuthRepositoryImpl(
     private val secrets: SecretStore,
     private val lastOpened: LastOpenedListStore,
     private val appDb: AppDb,
-    private val defaultCurrencyState: DefaultCurrencyState,
     private val deviceName: String,
 ) : AuthRepository {
 
@@ -202,7 +201,6 @@ class AuthRepositoryImpl(
             return id
         }
         registry.update(id) { it.copy(defaultCurrency = currency) }
-        defaultCurrencyState.set(currency)
         return id
     }
 

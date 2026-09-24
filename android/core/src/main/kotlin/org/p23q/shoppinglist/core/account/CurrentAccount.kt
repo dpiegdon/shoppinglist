@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.core.account
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.core.db.AccountEntity
@@ -28,6 +31,9 @@ interface CurrentAccount {
     /** Whether this account is a configured admin (T-107); from the login response. */
     val isAdmin: Boolean
     var defaultCurrency: String?
+
+    /** [defaultCurrency] now and at every change of it, whichever account is the current one. */
+    val defaultCurrencyChanges: Flow<String?>
 
     /**
      * Invites this device chose to ignore on the overview (T-233). A device-local choice, as in the
@@ -67,6 +73,9 @@ class RegistryCurrentAccount(
     override var defaultCurrency: String?
         get() = account?.defaultCurrency
         set(value) = change { it.copy(defaultCurrency = value) }
+
+    override val defaultCurrencyChanges: Flow<String?> =
+        registry.accounts.map { accounts -> accounts.firstOrNull { it.isServer }?.defaultCurrency }.distinctUntilChanged()
 
     override var ignoredInviteIds: Set<String>
         get() = account?.let { AccountRegistry.decodeIds(it.ignoredInviteIdsJson) }.orEmpty()

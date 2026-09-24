@@ -53,7 +53,13 @@ class FakeCurrentAccount(override var localId: String? = TEST_ACCOUNT_ID) : Curr
     override var accountId: String? = null
     override var accountEmail: String? = null
     override var isAdmin: Boolean = false
-    override var defaultCurrency: String? = null
+    private val currency = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    override var defaultCurrency: String?
+        get() = currency.value
+        set(value) {
+            currency.value = value
+        }
+    override val defaultCurrencyChanges: kotlinx.coroutines.flow.Flow<String?> = currency
     override var ignoredInviteIds: Set<String> = emptySet()
     override var allowSelfSignedCerts: Boolean = false
     override var lastOpenedListId: String? = null

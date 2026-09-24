@@ -25,7 +25,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.ThemePreferenceStore
@@ -100,7 +99,6 @@ class SettingsScreenTest {
             themePreferenceStore,
             org.p23q.shoppinglist.data.RecordingAuthRepository(),
             crashLogWriter,
-            DefaultCurrencyState(sessionState),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
@@ -167,7 +165,6 @@ class SettingsScreenTest {
             themePreferenceStore,
             org.p23q.shoppinglist.data.RecordingAuthRepository(),
             crashLogWriter,
-            DefaultCurrencyState(sessionState),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
@@ -240,7 +237,6 @@ class SettingsScreenTest {
             themePreferenceStore,
             org.p23q.shoppinglist.data.RecordingAuthRepository(),
             crashLogWriter,
-            DefaultCurrencyState(sessionState),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("settings_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
@@ -293,7 +289,6 @@ class SettingsScreenTest {
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_theme") }),
             org.p23q.shoppinglist.data.RecordingAuthRepository(),
             CrashLogWriter(File.createTempFile("settings_admin_crashlog", ".txt").apply { deleteOnExit() }),
-            DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_notif") }),
         )
 
@@ -344,7 +339,6 @@ class SettingsScreenTest {
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_about_theme") }),
             org.p23q.shoppinglist.data.RecordingAuthRepository(),
             CrashLogWriter(File.createTempFile("settings_about_crashlog", ".txt").apply { deleteOnExit() }),
-            DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_about_notif") }),
         )
 
@@ -400,7 +394,6 @@ class SettingsScreenTest {
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_device_theme") }),
             org.p23q.shoppinglist.data.RecordingAuthRepository(),
             CrashLogWriter(File.createTempFile("settings_device_crashlog", ".txt").apply { deleteOnExit() }),
-            DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_device_notif") }),
         )
 

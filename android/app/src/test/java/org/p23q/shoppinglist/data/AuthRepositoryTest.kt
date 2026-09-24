@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -64,7 +65,6 @@ class AuthRepositoryTest {
             accounts.secrets,
             accounts.secrets,
             db,
-            defaultCurrencyState,
             deviceName = "Test device",
         )
     }
@@ -116,7 +116,21 @@ class AuthRepositoryTest {
 
         repository.login(url, "milk@example.com", "hunter2")
 
-        assertEquals("EUR", defaultCurrencyState.currency.value)
+        assertEquals("EUR", defaultCurrencyState.value)
+    }
+
+    /** T-298: derived from the current account's row, not read once when it was built. */
+    @Test
+    fun `the default currency follows the current account, and goes with it`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(defaultCurrency = "CHF") }
+        assertEquals("CHF", defaultCurrencyState.value)
+        assertEquals("CHF", defaultCurrencyState.currency.first())
+
+        repository.removeAccount(TEST_ACCOUNT_ID)
+
+        assertNull(defaultCurrencyState.value)
+        assertNull(defaultCurrencyState.currency.first())
     }
 
     @Test

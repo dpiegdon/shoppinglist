@@ -325,9 +325,9 @@ class ListViewModelTest {
         viewModel.uiState.first { it.groups.isNotEmpty() }
         assertEquals("USD", viewModel.uiState.value.defaultCurrency)
 
-        // Simulates SettingsViewModel.updateCurrency()'s effect on the SAME app-wide singleton this
-        // already-open ListViewModel is observing - no need to recreate the screen (T-55).
-        defaultCurrencyState.set("EUR")
+        // What SettingsViewModel.updateCurrency() does: store it on the account, which the
+        // already-open ListViewModel follows through DefaultCurrencyState (T-55).
+        sessionState.defaultCurrency = "EUR"
 
         val updated = viewModel.uiState.first { it.defaultCurrency == "EUR" }
         val item = updated.groups.flatMap { it.items }.single { it.id == itemId }

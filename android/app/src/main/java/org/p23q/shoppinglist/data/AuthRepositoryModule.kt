@@ -7,7 +7,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
@@ -26,14 +25,12 @@ object AuthRepositoryModule {
         secrets: SecretStore,
         lastOpened: LastOpenedListStore,
         appDb: AppDb,
-        defaultCurrencyState: DefaultCurrencyState,
     ): AuthRepository = AuthRepositoryImpl(
         sessions,
         registry,
         secrets,
         lastOpened,
         appDb,
-        defaultCurrencyState,
         deviceName = "${Build.MANUFACTURER} ${Build.MODEL}",
     )
 }

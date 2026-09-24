@@ -13,7 +13,6 @@ import kotlinx.coroutines.delay
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.RecordedRequest
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.db.AccountEntity
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -1159,7 +1158,7 @@ class SyncEngineTest {
         }
         val auth = AuthRepositoryImpl(
             accounts.sessions, accounts.registry, accounts.secrets, accounts.secrets, db,
-            DefaultCurrencyState(accounts.currentAccount), deviceName = "Test device",
+            deviceName = "Test device",
         )
 
         val sync = async(Dispatchers.IO) { syncEngine.syncNow() }

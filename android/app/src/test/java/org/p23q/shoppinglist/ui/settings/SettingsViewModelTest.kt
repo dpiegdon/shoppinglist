@@ -104,7 +104,7 @@ class SettingsViewModelTest {
     private fun newViewModel(): SettingsViewModel =
         SettingsViewModel(
             apiProvider, sessionState, themePreferenceStore, authRepository,
-            crashLogWriter, defaultCurrencyState, notificationPrefs,
+            crashLogWriter, notificationPrefs,
         )
 
     @Test
@@ -148,7 +148,7 @@ class SettingsViewModelTest {
 
         viewModel.updateCurrency("usd")?.join()
 
-        assertEquals("USD", defaultCurrencyState.currency.value)
+        assertEquals("USD", defaultCurrencyState.value)
     }
 
     @Test

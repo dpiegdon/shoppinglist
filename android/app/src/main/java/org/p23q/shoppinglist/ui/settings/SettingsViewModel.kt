@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AuthRepository
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.ChangeEmailRequest
@@ -74,7 +73,6 @@ class SettingsViewModel @Inject constructor(
     private val themePreferenceStore: ThemePreferenceStore,
     private val authRepository: AuthRepository,
     private val crashLogWriter: CrashLogWriter,
-    private val defaultCurrencyState: DefaultCurrencyState,
     private val notificationPrefs: NotificationPrefsStore,
 ) : ViewModel() {
 
@@ -169,10 +167,8 @@ class SettingsViewModel @Inject constructor(
                 val response = apiProvider.get().updateSettings(
                     UpdateSettingsRequest(normalized, initials = null),
                 )
+                // An already-open list screen follows it through DefaultCurrencyState (T-55).
                 currentAccount.defaultCurrency = response.defaultCurrency
-                // Also updates the in-memory mirror (T-55) so an already-open list screen picks up
-                // the change immediately instead of only the next time it's opened.
-                defaultCurrencyState.set(response.defaultCurrency)
                 _uiState.update {
                     it.copy(
                         defaultCurrency = response.defaultCurrency,

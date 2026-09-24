@@ -1,24 +1,21 @@
 package org.p23q.shoppinglist.core
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
 import org.p23q.shoppinglist.core.account.CurrentAccount
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * In-memory mirror of the account's default currency (T-55), so a currency change made in Settings
- * reaches an already-open list screen: every writer (login, Settings) calls [set] alongside
- * storing it on the account, and readers that need live updates (e.g. ListViewModel) collect
- * [currency] instead of reading [CurrentAccount.defaultCurrency] once.
+ * The current account's default currency (T-55), live: a currency change made in Settings reaches
+ * an already-open list screen. Derived from the account itself ([CurrentAccount.defaultCurrencyChanges],
+ * the account's row in the registry), so a writer just stores it on the account, and a login, a
+ * removed account or a different current account shows up here with no one to forget to tell.
  */
 @Singleton
-class DefaultCurrencyState @Inject constructor(currentAccount: CurrentAccount) {
-    private val _currency = MutableStateFlow(currentAccount.defaultCurrency)
-    val currency: StateFlow<String?> = _currency.asStateFlow()
+class DefaultCurrencyState @Inject constructor(private val currentAccount: CurrentAccount) {
+    /** The currency now. */
+    val value: String? get() = currentAccount.defaultCurrency
 
-    fun set(value: String?) {
-        _currency.value = value
-    }
+    /** The currency now and at every change; for readers that need live updates (ListViewModel). */
+    val currency: Flow<String?> get() = currentAccount.defaultCurrencyChanges
 }

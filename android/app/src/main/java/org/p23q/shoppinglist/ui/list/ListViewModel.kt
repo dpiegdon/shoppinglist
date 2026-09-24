@@ -80,7 +80,7 @@ class ListViewModel @Inject constructor(
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
 
-    private val _uiState = MutableStateFlow(ListUiState(defaultCurrency = defaultCurrencyState.currency.value))
+    private val _uiState = MutableStateFlow(ListUiState(defaultCurrency = defaultCurrencyState.value))
     val uiState: StateFlow<ListUiState> = _uiState.asStateFlow()
 
     private var categoryOrder: List<String> = emptyList()
