@@ -682,6 +682,59 @@ class AppDbMigrationTest {
         }
     }
 
+    /** A version-9 account row of [kind]; a local one has no server. */
+    private fun insertV9Account(connection: SQLiteConnection, id: String, kind: String, sortOrder: Int) {
+        val server = if (kind == "server") "'https://$id.example.com/', 'acc-$id'" else "NULL, NULL"
+        connection.execSQL(
+            "INSERT INTO accounts (id, kind, serverUrl, accountId, email, isAdmin, label, signedIn, outdated, " +
+                "serverProtocol, syncCursor, defaultCurrency, ignoredInviteIdsJson, allowSelfSignedCerts, sortOrder) " +
+                "VALUES ('$id', '$kind', $server, NULL, 0, '$id', ${if (kind == "server") 1 else 0}, 0, NULL, 0, NULL, " +
+                "'[]', 0, $sortOrder)",
+        )
+    }
+
+    /** A version-9 database with no account and no list, as a fresh install has it. */
+    private fun emptyV9(connection: SQLiteConnection) {
+        connection.execSQL(v1Lists)
+        connection.execSQL(v1Items)
+        runMigrations(connection, from = 1, to = 9)
+    }
+
+    @Test
+    fun `migrating 9 to 10 gives an item whose list is gone a stub of the local account when there is no server account`() {
+        val connection = openFresh("v9-local-only")
+        try {
+            emptyV9(connection)
+            insertV9Account(connection, "phone", kind = "local", sortOrder = 0)
+            insertItem(connection, "orphan-1", listId = "gone", dirty = true)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            assertEquals("phone", readText(connection, "SELECT accountId FROM lists WHERE localId = 'gone'"))
+            assertEquals("phone", readText(connection, "SELECT accountId FROM items WHERE localId = 'orphan-1'"))
+            connection.prepare("PRAGMA foreign_key_check").use { assertTrue(!it.step()) }
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 9 to 10 prefers a server account for the stub over a local one ahead of it`() {
+        val connection = openFresh("v9-local-and-server")
+        try {
+            emptyV9(connection)
+            // First in both the user's order and the table: only the kind puts the server first.
+            insertV9Account(connection, "phone", kind = "local", sortOrder = 0)
+            insertV9Account(connection, "prod", kind = "server", sortOrder = 1)
+            insertItem(connection, "orphan-1", listId = "gone", dirty = true)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            assertEquals("prod", readText(connection, "SELECT accountId FROM lists WHERE localId = 'gone'"))
+            assertEquals("prod", readText(connection, "SELECT accountId FROM items WHERE localId = 'orphan-1'"))
+        } finally {
+            connection.close()
+        }
+    }
+
     @Test
     fun `migrating 9 to 10 drops an item that neither a list nor any account holds`() {
         val connection = openFresh("v9-nobody")

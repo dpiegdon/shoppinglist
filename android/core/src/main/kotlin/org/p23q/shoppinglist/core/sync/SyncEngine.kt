@@ -159,9 +159,9 @@ class SyncEngine @Inject constructor(
     /**
      * One account's sync: its dirty rows, its cursor, its server. Holds the account's lock
      * ([AccountRegistry.withAccountLock]) throughout, so the account cannot be signed out locally
-     * or removed between the request and the merge of its answer.
+     * or removed between the request and the merge of its answer. [fullLists] as for [syncNow]:
+     * server ids.
      */
-    /** [fullLists] as for [syncNow]: server ids. */
     suspend fun syncAccount(accountId: String, fullLists: List<String> = emptyList()): SyncResult =
         registry.withAccountLock(accountId) { syncAccountLocked(accountId, fullLists) }
 
@@ -232,7 +232,7 @@ class SyncEngine @Inject constructor(
                 // Re-based, NOT wiped (T-259). This used to call clearAllTables(), on the grounds
                 // that the server applies a request's pushed changes before rejecting its cursor,
                 // so nothing pushed could be lost. True — but only of the rows in THAT request. A
-                // push carries at most MAX_CHANGES_PER_SYNC rows, and dirtyRows() excludes
+                // push carries at most MAX_CHANGES_PER_SYNC rows, and dirtyRowsForAccount() excludes
                 // quarantined rows outright, so a week of offline edits past the cap and every row
                 // the server refused and the user has not corrected yet were destroyed without a
                 // word. So drop exactly the rows the server can reproduce and keep the ones it

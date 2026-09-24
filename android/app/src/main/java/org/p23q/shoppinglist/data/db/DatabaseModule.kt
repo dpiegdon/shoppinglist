@@ -214,8 +214,9 @@ class Migration8To9(private val legacy: LegacySessionSource) : Migration(8, 9) {
  * a muted list, a notification's deep link) still names the same row.
  *
  * An item whose list row is missing gets a stub list first, as [Migration8To9] gives one, owned by
- * the first server account (the one the screens show). Without any account such an item reaches
- * nobody and could never be pushed, so it is not kept.
+ * a server account when the phone holds one (the first in the user's order), else by the phone's
+ * local account. Without any account such an item reaches nobody and could never be pushed, so it
+ * is not kept.
  */
 val MIGRATION_9_10 = object : Migration(9, 10) {
     override fun migrate(db: SupportSQLiteDatabase) {
