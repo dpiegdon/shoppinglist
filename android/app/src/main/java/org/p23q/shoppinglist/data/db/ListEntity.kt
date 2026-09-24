@@ -16,7 +16,7 @@ data class ListEntity(
     @Embedded(prefix = "categoryOrder_") val categoryOrder: LwwString,
     @Embedded(prefix = "notes_") val notes: LwwOptionalString,
     /**
-     * "shopping" | "checklist" (T-110) — see [org.p23q.shoppinglist.data.ListKind]. Purely a
+     * "shopping" | "checklist" (T-110) — see [org.p23q.shoppinglist.core.ListKind]. Purely a
      * display toggle: the item schema is identical for both, so a list can be converted at any
      * time and the hidden fields (stores/price/quantity) survive untouched.
      */

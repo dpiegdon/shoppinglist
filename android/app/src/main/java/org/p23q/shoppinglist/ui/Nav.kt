@@ -61,7 +61,7 @@ import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.ListKind
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.ui.about.AboutScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.expense.ExpenseDialog

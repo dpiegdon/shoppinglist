@@ -226,7 +226,7 @@ class OverviewViewModelTest {
 
     @Test
     fun `a closed expense list is marked as closed (T-181)`() = runTest(mainDispatcherRule.dispatcher) {
-        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
         val list = listsRepo.getById(id)!!
         db.listDao().upsert(list.copy(closedAt = 1_758_000_000_000))
 
@@ -238,7 +238,7 @@ class OverviewViewModelTest {
     @Test
     fun `a ledger's card shows net spent, not everything that ever moved (T-245)`() =
         runTest(mainDispatcherRule.dispatcher) {
-            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
             val dinner = org.p23q.shoppinglist.core.Expense(
                 mapOf("me" to "60.00"), true, mapOf("me" to "60.00"), true, "2026-09-18",
             )
@@ -265,7 +265,7 @@ class OverviewViewModelTest {
     @Test
     fun `a card already on screen updates when an entry is recorded, not just at start-up (T-265)`() =
         runTest(mainDispatcherRule.dispatcher) {
-            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
             val lunch = org.p23q.shoppinglist.core.Expense(
                 mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18",
             )
@@ -285,7 +285,7 @@ class OverviewViewModelTest {
 
     @Test
     fun `an expense list's count is its number of expenses (T-191)`() = runTest(mainDispatcherRule.dispatcher) {
-        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
+        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
         val expense = org.p23q.shoppinglist.core.Expense(mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18")
         itemsRepo.createExpense(id, "Dinner", expense)
         itemsRepo.createExpense(id, "Taxi", expense)

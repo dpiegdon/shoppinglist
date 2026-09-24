@@ -52,7 +52,7 @@ data class ListFieldsDto(
      * sends no `kind` at all — without the default, kotlinx would throw on every list and break
      * sync entirely. A missing kind means "shopping", with clock 0 so any real write wins.
      */
-    val kind: FieldClock<String> = FieldClock(org.p23q.shoppinglist.data.ListKind.DEFAULT, 0, ""),
+    val kind: FieldClock<String> = FieldClock(org.p23q.shoppinglist.core.ListKind.DEFAULT, 0, ""),
     /** Free-text currency label of an expenses list (T-151); defaulted for older servers. */
     val currency: FieldClock<String?> = FieldClock(null, 0, ""),
     val deleted: FieldClock<Boolean>,

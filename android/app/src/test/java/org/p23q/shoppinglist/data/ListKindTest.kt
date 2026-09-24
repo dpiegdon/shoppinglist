@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.ListKind
 
 /**
  * T-110 list-kind rules. Must stay in lockstep with the web client's listKind.test.ts — the two
