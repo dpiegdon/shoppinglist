@@ -89,6 +89,14 @@ that account and a `426` marks only that account outdated. A sync runs every
 signed-in, up-to-date account in turn; one failing does not stop the others, and
 the status bar shows the worst of them.
 
+A list and an item each have a local id, the phone's own key for the row, beside
+the id the server gives them, which is unique only within one account. Screens,
+navigation, notifications and the remembered last-opened list pass the local id;
+only the sync engine maps server ids to rows, always within the syncing account,
+and what it sends carries the server ids. Two accounts on the phone that can both
+see a list therefore hold a row each, with their own unpushed edits and
+quarantined rows, and removing one account leaves the other's rows alone.
+
 The screens still show one account: the first in the table. Logging in again as
 the same account on the same server keeps its lists, unpushed edits included;
 logging in as anyone else removes the other account and its lists.

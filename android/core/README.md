@@ -54,7 +54,15 @@ interface and `:app` implements it and binds it in Hilt:
 ## Accounts
 
 - `db/AccountEntity` is one account; every `ListEntity` has an `accountId` (a
-  foreign key), and items reach their account through their list.
+  foreign key), and every `ItemEntity` carries its list's.
+- Lists and items are keyed by `localId`, this phone's own id; `serverId` is the
+  wire's `id`, unique per account (`(accountId, serverId)` is a unique index),
+  and an item names its list by `listLocalId`. The repositories and everything
+  above them take local ids. `SyncEngine` is the only code that looks rows up by
+  server id (`getByServerId(accountId, serverId)`): a pull merges into the
+  syncing account's row, creating it when absent, so a list two accounts share
+  is a row of each. An item pulled for a list the account does not hold gets a
+  hidden stub list with every clock at 0, which the list's own pull fills in.
 - `account/AccountRegistry` is the only writer of the `accounts` table. It keeps
   the table in memory after `load()`, so reads are synchronous; a change applies
   to that copy at once and is written through. `load()` clears every `outdated`
