@@ -112,6 +112,11 @@ sessions. The READMEs describe the code; this file describes how to work on it.
     test with "uncaught exceptions before the test started" (T-209). A `tearDown`
     closing a `lateinit` field guards it with `::field.isInitialized`, so an
     aborted `setUp` reports its real cause.
+  - After a cherry-pick that deletes a Hilt-injected class, the main checkout's
+    `app/build/generated/hilt` still holds that class's factory and
+    `hiltJavaCompile` fails with "Could not find class file for …". A fresh
+    worktree never sees it. Run `cd android && ./gradlew clean` and rerun the
+    gate.
 
 ## Releases
 
