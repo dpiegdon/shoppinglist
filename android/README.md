@@ -102,10 +102,10 @@ section per account, in the user's order, headed by the account's email and
 server URL, and each card names its account. A signed-out account's section
 offers to sign it in again; an outdated one says its server needs a newer app.
 Each account's pending invites are fetched from its own server and shown in its
-section, and a new list goes to the account picked in the New-list dialog
+section, as soon as the account is signed in, and a new list goes to the account picked in the New-list dialog
 (by default the account of the list opened last). The list screen shows the
-list's account under its name, and a collaborator notification names it, only
-when the phone holds more than one account. A screen showing one list takes
+list's account under its name, and a collaborator notification names it, as
+"email · host/path", only when the phone holds more than one account. A screen showing one list takes
 its account, API client and default currency from the list's row.
 
 A login keeps every account already on the phone. Logging in again as an
@@ -220,17 +220,20 @@ options, in order of preference:
 ## Invite links / App Links
 
 Invites are shared as `https://<your-server>/invite/<token>` links, where
-`<your-server>` may include a mount path. The app declares an intent-filter for
-`https://*/invite/*` and `https://*/…/invite/*` (see `AndroidManifest.xml`) so
-tapping such a link opens straight into the redeem flow when this is the only
-app installed that claims it.
+`<your-server>` may include a mount path of up to three segments. The app
+declares an intent-filter for `https://*/invite/*` and one pattern per mount-path
+depth (see `AndroidManifest.xml`; a `pathPattern` does not backtrack, so one
+`/.*/invite/.*` covers one segment only), so tapping such a link opens straight
+into the redeem flow when this is the only app installed that claims it.
 
 The link names its server: everything before `/invite/`. The accounts whose
 server URL is exactly that prefix can take the invite; the host alone is not
 enough, since two instances can share one host under different paths. One such
 account redeems it; several ask "Join with which account?"; none opens the
 sign-in form prefilled with that server and redeems once the new account is
-signed in. A signed-out account is signed in again first. A pasted bare token
+signed in. A signed-out account is signed in again first. The invite waits for that one
+sign-in only: backing out of the form drops it. Pasted text is searched for its
+first https link, so a whole "Join my list: …" message works. A pasted bare token
 names no server: it goes to the only account, or the user picks one.
 
 This is **not** a verified [Android App
