@@ -1,11 +1,12 @@
 """The app-version endpoint the Android client checks for updates (T-135)."""
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
 from flask import Flask
 
 from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
+from shoppinglist_server.protocol import PROTOCOL_VERSION
 
 
 def _app(tmp_path, name="noapk", **kwargs):
@@ -65,10 +66,40 @@ def test_404_when_this_instance_serves_no_apk(tmp_path):
 
     resp = client.get("/api/v1/app-version")
 
-    # The same answer a server predating this endpoint gives, deliberately: it lets the
-    # client treat "no update information" as one case instead of two.
     assert resp.status_code == 404
     assert resp.get_json()["error"] == "no_app_package"
+
+
+def test_the_no_apk_404_still_answers_the_protocol(tmp_path):
+    client = _app(tmp_path, serve_android_apk=False).test_client()
+
+    body = client.get("/api/v1/app-version").get_json()
+
+    # The client asks for the protocol before signing in. Without it here, a server that
+    # simply carries no APK would look like one from before this endpoint and be refused
+    # (T-297). The canonical keys come first; protocol is additive.
+    assert body["protocol"] == PROTOCOL_VERSION
+    assert list(body)[:2] == ["error", "message"]
+
+
+def test_the_source_checkout_404_still_answers_the_protocol(client, monkeypatch):
+    from shoppinglist_server.routes import app_version as app_version_module
+
+    def _not_installed(_name):
+        raise PackageNotFoundError(_name)
+
+    monkeypatch.setattr(app_version_module, "version", _not_installed)
+
+    resp = client.get("/api/v1/app-version")
+
+    assert resp.status_code == 404
+    body = resp.get_json()
+    assert body["error"] == "no_app_package"
+    assert body["protocol"] == PROTOCOL_VERSION
+
+
+def test_the_200_answers_the_protocol_too(client):
+    assert client.get("/api/v1/app-version").get_json()["protocol"] == PROTOCOL_VERSION
 
 
 def test_absolute_url_follows_a_subpath_mount(tmp_path):

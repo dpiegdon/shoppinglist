@@ -15,9 +15,11 @@ the one route exempt from the protocol gate (T-243): a client refused with `426
 client_outdated` everywhere else finds its update here, and reads this server's
 `protocol` from the same answer.
 
-404 when this instance serves no APK. That is the same answer every server
-released before this endpoint existed gives, which is what lets the client treat
-"no update information" as one case instead of two.
+404 `no_app_package` when this instance serves no APK (`serve_android_apk=False`,
+no APK packaged, or a source checkout). That 404 still carries `protocol` (T-297):
+the protocol is a property of the server, not of the app package, and a client
+asks for it before it signs in. A 404 without `protocol` is what a server from
+before this endpoint answers, so that is how a client tells the two apart.
 """
 
 from importlib.metadata import PackageNotFoundError, version
@@ -28,6 +30,10 @@ from .. import get_config
 from ..errors import ApiError
 from ..protocol import PROTOCOL_VERSION
 from .apk import APK_FILENAME, apk_present
+
+# Answered even when there is no app package: a client reads the server's protocol here
+# before signing in, and a 404 without it is a server from before this endpoint (T-297).
+_PROTOCOL = {"protocol": PROTOCOL_VERSION}
 
 
 def register_routes(bp):
@@ -42,6 +48,7 @@ def register_routes(bp):
                 404,
                 "no_app_package",
                 "This server does not carry an Android app package.",
+                details=_PROTOCOL,
             )
         try:
             pkg_version = version("shoppinglist-server")
@@ -53,6 +60,7 @@ def register_routes(bp):
                 404,
                 "no_app_package",
                 "This server cannot determine its app package version.",
+                details=_PROTOCOL,
             ) from None
         return (
             jsonify(
