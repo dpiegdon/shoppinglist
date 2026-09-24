@@ -1,0 +1,13 @@
+{
+  "body": "Found reviewing B1 (T-291) before release. Unreleased, so no installed client is affected yet.\n\n## Defect\n\n`AuthRepositoryImpl.checkServerProtocol` (android/core/\u2026/AuthRepository.kt) treats every 404 from\n`GET /app-version` as a server from before the endpoint, i.e. below the floor, and refuses to sign in.\nBut a current server answers that same `404 no_app_package` whenever it carries no APK:\n`serve_android_apk=False` (the README's recommended setting for every mounted tenant but one), no APK\npackaged, or a source checkout (routes/app_version.py). Against such a server:\n\n* a fresh install cannot log in or register (\"This server is too old for this app\");\n* an upgraded install has `serverProtocol = NULL` from the migration, `UpdateChecker` refreshes it only on a\n  200, so the first re-login (after a 401, a password change or a logout) asks again, gets the 404 and is\n  refused, and the unpushed rows kept under T-257/T-260 can never go out.\n\nThe existing test \"a server from before app-version existed is refused\" passes for any 404 and so locks\nthe defect in. docs/wire-contract.md contradicts itself: \"The client's floor\" says a 404 is a pre-endpoint\nserver, \"App package\" says a current server without an APK answers 404.\n\n## Fix (additive, compatible with installed 3.1.0 clients, which ignore error bodies)\n\n* Server: the `no_app_package` 404 carries `\"protocol\": PROTOCOL_VERSION` in its error envelope (extra keys\n  are allowed there). Test it. The protocol is a property of the server, not of the app package, so it is\n  answered in both cases.\n* Android: on a 404 read `protocol` from the body; only a 404 **without** it is a pre-endpoint server and\n  refused. Tests: 404 with protocol 3 is accepted (and stored), 404 with protocol 2 refused, 404 without\n  refused, plus the existing 200 cases.\n* Docs: wire-contract \"/app-version\" and \"The client's floor\" say the same thing; error table row for\n  `no_app_package` mentions the key.",
+  "created_at": "2026-09-24T19:55:30+00:00",
+  "id": "T-297",
+  "labels": [
+    "android",
+    "server",
+    "bug"
+  ],
+  "priority": 1,
+  "title": "Android refuses every server that serves no APK: the protocol floor reads 404 no_app_package as too old",
+  "updated_at": "2026-09-24T19:55:30+00:00"
+}
