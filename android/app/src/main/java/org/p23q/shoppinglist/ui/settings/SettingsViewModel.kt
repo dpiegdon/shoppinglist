@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.ChangeEmailRequest
 import org.p23q.shoppinglist.core.api.ChangePasswordRequest
@@ -24,7 +25,6 @@ import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.clearAll
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.api.ApiProvider

@@ -16,9 +16,9 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListMember
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.db.ItemEntity
-import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo

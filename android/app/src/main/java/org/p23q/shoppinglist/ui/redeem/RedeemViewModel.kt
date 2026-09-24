@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.data.PendingInviteHolder
-import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.sync.SyncEngine
 import org.p23q.shoppinglist.ui.ErrorText

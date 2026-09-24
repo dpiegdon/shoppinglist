@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.sync.SyncTrigger
 import org.p23q.shoppinglist.data.AuthRepository
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText

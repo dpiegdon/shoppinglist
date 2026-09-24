@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.data
 
+import org.p23q.shoppinglist.core.SessionState
+
 class FakeSessionState : SessionState {
     override var token: String? = null
     override var accountEmail: String? = null

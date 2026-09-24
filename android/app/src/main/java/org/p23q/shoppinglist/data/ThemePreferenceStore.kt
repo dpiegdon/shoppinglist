@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import org.p23q.shoppinglist.core.SessionState
 
 /** Notes: theme preference is client-only, not server-synced — so it must survive logout, unlike
  * [SessionState] (cleared on logout) or [ServerConfig] (one server per install, not per account).

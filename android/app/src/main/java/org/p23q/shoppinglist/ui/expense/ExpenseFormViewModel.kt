@@ -14,7 +14,7 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.data.SessionState
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import java.time.LocalDate

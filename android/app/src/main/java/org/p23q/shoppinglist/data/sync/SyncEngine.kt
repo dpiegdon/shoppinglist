@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.data.sync
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.AppJson
 import org.p23q.shoppinglist.core.api.FieldClock
@@ -29,7 +30,6 @@ import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiProvider
 import java.io.IOException
 import javax.inject.Inject

@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.LoginRequest
 import org.p23q.shoppinglist.core.api.RegisterRequest
 import org.p23q.shoppinglist.core.db.AppDb
