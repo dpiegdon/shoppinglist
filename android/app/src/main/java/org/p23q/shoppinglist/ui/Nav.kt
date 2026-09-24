@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.ui.about.AboutScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.expense.ExpenseDialog
@@ -125,6 +126,19 @@ fun authedStartDestination(lastOpenedListId: String?): String =
     lastOpenedListId?.let { Routes.list(it) } ?: Routes.OVERVIEW
 
 /**
+ * Where a cold start lands. The start screen only while this phone holds no server account at all:
+ * an account the server has signed out keeps its lists, which stay usable, and the overview offers
+ * the sign-in. Otherwise the list a notification tap names ([notifiedListId]), else as
+ * [authedStartDestination].
+ */
+fun coldStartDestination(accounts: List<AccountEntity>, notifiedListId: String?, lastOpenedListId: String?): String =
+    when {
+        accounts.none { it.isServer } -> Routes.LOGIN
+        notifiedListId != null -> Routes.list(notifiedListId)
+        else -> authedStartDestination(lastOpenedListId)
+    }
+
+/**
  * Go back to [listId] from one of its sub-screens — properties or the registry.
  *
  * Both of those show the list's own name in the top bar (see [liveListTitle]), so tapping that
@@ -149,19 +163,6 @@ fun ShoppingListNavHost(
     startDestination: String = Routes.LOGIN,
     rootViewModel: RootViewModel = hiltViewModel(),
 ) {
-    // A token that the server rejects mid-session (revoked/expired) surfaces once, at the
-    // interceptor, as a forced-logout signal; clear the dead session and return to Login rather
-    // than leaving the user on a silently-stale screen whose every request 401s.
-    LaunchedEffect(Unit) {
-        rootViewModel.forcedLogout.collect {
-            rootViewModel.onForcedLogout().join()
-            navController.navigate(Routes.LOGIN) {
-                popUpTo(navController.graph.id) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
-
     // Obtained here, not inside each screen: Nav is already inside the Hilt graph, and keeping
     // the screens Hilt-free is what lets them be rendered directly in unit tests (T-127).
     val localeViewModel: LocaleViewModel = hiltViewModel()

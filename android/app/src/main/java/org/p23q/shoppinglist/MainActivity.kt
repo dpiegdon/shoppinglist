@@ -24,15 +24,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.core.account.AccountRegistry
-import org.p23q.shoppinglist.core.account.CurrentAccount
+import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.data.deviceLocale
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.LocalizedContent
-import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ShoppingListNavHost
-import org.p23q.shoppinglist.ui.authedStartDestination
+import org.p23q.shoppinglist.ui.coldStartDestination
 import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
 import javax.inject.Inject
 
@@ -43,7 +42,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var localePreferenceStore: LocalePreferenceStore
 
-    @Inject lateinit var session: CurrentAccount
+    @Inject lateinit var lastOpened: LastOpenedListStore
 
     @Inject lateinit var accountRegistry: AccountRegistry
 
@@ -57,22 +56,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Resume the session on cold start instead of always dumping the user on a blank Login
-        // form. The decision is resolved here, before setContent, and passed as the nav start
-        // destination, so the accounts are loaded first: one read of a small table (and, once, the
-        // schema-9 migration), after which every account read below and in the view models is
-        // synchronous. (A revoked token still surfaces later via the forced-logout path in
-        // ShoppingListNavHost.)
-        runBlocking(Dispatchers.IO) { accountRegistry.load() }
-        val notifiedListId = intent.getStringExtra(EXTRA_OPEN_LIST_ID)
-        val startDestination = when {
-            session.token == null -> Routes.LOGIN
+        // Resume on cold start instead of always showing the start screen. The decision is
+        // resolved here, before setContent, and passed as the nav start destination, so the
+        // accounts are loaded first: one read of a small table (and, once, the schema-9
+        // migration), after which every account read below and in the view models is synchronous.
+        // An account the server has signed out still opens the app on its lists: only a phone
+        // with no server account at all starts on the start screen.
+        val accounts = runBlocking(Dispatchers.IO) { accountRegistry.load() }
+        val startDestination = coldStartDestination(
+            accounts = accounts,
             // A collaborator-change notification tap deep-links straight to the affected list (T-65).
-            notifiedListId != null -> Routes.list(notifiedListId)
-            else -> authedStartDestination(session.lastOpenedListId)
-        }
+            notifiedListId = intent.getStringExtra(EXTRA_OPEN_LIST_ID),
+            lastOpenedListId = lastOpened.lastOpenedListId,
+        )
 
-        if (session.token != null) maybeRequestNotificationPermission()
+        if (accounts.any { it.isServer && it.signedIn }) maybeRequestNotificationPermission()
 
         setContent {
             val themePreference by themePreferenceStore.theme.collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)

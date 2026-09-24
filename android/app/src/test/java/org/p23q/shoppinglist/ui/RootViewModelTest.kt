@@ -23,7 +23,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
@@ -35,18 +34,6 @@ class RootViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
-
-    private class FakeAuthRepository : AuthRepository {
-        var clearedLocalSession: String? = null
-        override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean) = ""
-        override suspend fun logout(accountId: String) {}
-        override suspend fun clearLocalSession(accountId: String) { clearedLocalSession = accountId }
-        override suspend fun removeAccount(accountId: String) {}
-        override suspend fun removeOtherAccounts(keep: String) {}
-        override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = true
-        override fun lastOpenedListId(): String? = null
-    }
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
@@ -76,39 +63,7 @@ class RootViewModelTest {
         if (::db.isInitialized) db.close()
     }
 
-    private fun viewModel(repo: AuthRepository = FakeAuthRepository()) =
-        RootViewModel(accounts.sessions, accounts.currentAccount, repo).also { viewModels += it }
-
-    @Test
-    fun `forcedLogout fires when the current account's token is rejected`() = runTest(mainDispatcherRule.dispatcher) {
-        val viewModel = viewModel()
-        val received = mutableListOf<Unit>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.forcedLogout.collect { received.add(Unit) }
-        }
-        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "revoked"}"""))
-
-        runCatching { accounts.sessions.get(TEST_ACCOUNT_ID).api.lists() }
-        advanceUntilIdle()
-
-        assertEquals(1, received.size)
-    }
-
-    @Test
-    fun `forcedLogout ignores another account's rejected token`() = runTest(mainDispatcherRule.dispatcher) {
-        accounts.add(server.url("/other/").toString(), id = "other-account", accountId = "acct-other")
-        val viewModel = viewModel()
-        val received = mutableListOf<Unit>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.forcedLogout.collect { received.add(Unit) }
-        }
-        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "revoked"}"""))
-
-        runCatching { accounts.sessions.get("other-account").api.lists() }
-        advanceUntilIdle()
-
-        assertEquals(0, received.size)
-    }
+    private fun viewModel() = RootViewModel(accounts.sessions).also { viewModels += it }
 
     @Test
     fun `updateRequired follows the account the server refused as outdated (T-244)`() =
@@ -127,12 +82,23 @@ class RootViewModelTest {
         }
 
     @Test
-    fun `onForcedLogout signs the current account out locally`() = runTest(mainDispatcherRule.dispatcher) {
-        val repo = FakeAuthRepository()
-        val viewModel = viewModel(repo)
+    fun `one outdated account of two does not block the app, both do (T-292)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            accounts.add(server.url("/stage/").toString(), id = "stage-account", accountId = "acct-stage")
+            val viewModel = viewModel()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.updateRequired.collect {} }
+            val outdated = """{"error": "client_outdated", "message": "update"}"""
 
-        viewModel.onForcedLogout().join()
+            server.enqueue(MockResponse().setResponseCode(426).setBody(outdated))
+            runCatching { accounts.sessions.get(TEST_ACCOUNT_ID).api.lists() }
+            advanceUntilIdle()
+            // The other server still accepts this build: its lists keep syncing, and the outdated
+            // account says so on the Accounts screen instead of the whole app going dark.
+            assertFalse(viewModel.updateRequired.value)
 
-        assertEquals(TEST_ACCOUNT_ID, repo.clearedLocalSession)
-    }
+            server.enqueue(MockResponse().setResponseCode(426).setBody(outdated))
+            runCatching { accounts.sessions.get("stage-account").api.lists() }
+            advanceUntilIdle()
+            assertTrue(viewModel.updateRequired.value)
+        }
 }

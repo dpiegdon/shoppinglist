@@ -48,7 +48,9 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 
 - Every user-facing change goes to **web and Android together**, with the same
   layout, wording and behaviour. The maintainer checks parity; when unsure, look
-  at how the other client does it.
+  at how the other client does it. One exception: account management (the start
+  screen, the Accounts and Account screens) is Android-only, because the web
+  client is always one account on one server.
 - Every user-visible string exists in **all nine locales** (en, de, fr, es,
   pt-BR, uk, ar, ja, zh-Hans) on both clients: `web/src/i18n/messages/*.ts` and
   `android/app/src/main/res/values*/strings.xml`. `web/src/i18n/crossClient.test.ts`
