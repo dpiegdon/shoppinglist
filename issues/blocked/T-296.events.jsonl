@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-24T17:19:41+00:00", "kind": "created", "ref": "main@73f3a48", "text": "F-Droid publishing: app download link, server-embedded APK and update path (design, decide later)"}
 {"actor": "user", "at": "2026-09-24T17:19:41+00:00", "kind": "updated", "ref": "main@73f3a48", "text": "fields updated"}
+{"actor": "user", "at": "2026-09-24T17:19:41+00:00", "kind": "note", "ref": "main@73f3a48", "text": "Blocked by decision (maintainer, 2026-09-24): discuss when publishing on F-Droid comes up. Thought so far: once on F-Droid the server need not publish the APK; the download link can point at the F-Droid store."}
