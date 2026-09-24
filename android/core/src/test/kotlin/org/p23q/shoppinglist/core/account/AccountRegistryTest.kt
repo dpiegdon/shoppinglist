@@ -40,6 +40,21 @@ class AccountRegistryTest {
     }
 
     @Test
+    fun `reordering sets the order in the copy and the table (T-292)`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.add(account("a"))
+        registry.add(account("b"))
+        registry.add(account("c"))
+
+        registry.reorder(listOf("c", "a"))
+
+        assertEquals(listOf("c", "a", "b"), registry.snapshot().map { it.id })
+        assertEquals(listOf(0, 1, 2), registry.snapshot().map { it.sortOrder })
+        assertEquals(listOf("c", "a", "b"), db.accountDao().all().map { it.id })
+        assertEquals(listOf("c", "a", "b"), AccountRegistry(db).load().map { it.id })
+    }
+
+    @Test
     fun `an update is written through`() = runBlocking {
         val registry = AccountRegistry(db)
         registry.add(account("a"))

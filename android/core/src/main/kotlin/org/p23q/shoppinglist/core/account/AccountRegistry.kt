@@ -120,6 +120,22 @@ class AccountRegistry(
     }
 
     /**
+     * Puts the accounts in the order of [ids], the user's order everywhere accounts are listed:
+     * each gets its position as [AccountEntity.sortOrder]. Accounts [ids] leaves out keep their
+     * relative order after the named ones; unknown ids are ignored.
+     */
+    suspend fun reorder(ids: List<String>) {
+        load()
+        state.update { current ->
+            val list = current ?: return@update current
+            val byId = list.associateBy { it.id }
+            val named = ids.distinct().mapNotNull { byId[it] }
+            (named + list.filterNot { it in named }).mapIndexed { index, account -> account.copy(sortOrder = index) }
+        }
+        snapshot().forEach { persistOrRevert(it.id) }
+    }
+
+    /**
      * Removes the account together with its lists and their items, in one transaction. The token
      * and the account's API client are the caller's to drop.
      */
