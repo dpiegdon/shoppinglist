@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-24T17:19:40+00:00", "kind": "created", "ref": "main@73f3a48", "text": "Android: copy a list into another account or the local area (B4)"}
 {"actor": "user", "at": "2026-09-24T17:19:40+00:00", "kind": "dependency", "ref": "main@73f3a48", "text": "T-293"}
+{"actor": "user", "at": "2026-09-24T23:29:22+00:00", "kind": "note", "ref": "main@42a3d11", "text": "From the B2 review: the removal dialog already says lists to keep can be copied to another account first; B4 makes that true and, with B3 present, the wording must name the local area. Also: OverviewViewModel.joinInvite/RedeemViewModel get a shared invite helper in the B2 follow-ups; copy should not add a third copy of that shape."}
