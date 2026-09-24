@@ -84,6 +84,10 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   lives in three files that must agree (`server/…/protocol.py`,
   `web/src/api/protocol.ts`, Android's `Protocol.kt`), and every bump adds a row
   to the changelog in the "Protocol version" section of `docs/wire-contract.md`.
+  The client must keep working against servers down to `MIN_SERVER_PROTOCOL`; a
+  feature that needs a newer server is gated per account by `serverProtocol`,
+  never assumed. Raise the floor only in a major release and record it in the
+  wire-contract changelog.
 
 ## Tests
 

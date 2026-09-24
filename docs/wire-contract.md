@@ -66,6 +66,18 @@ with no protocol to declare.
 A client **newer** than the server is deliberately not refused: an older server
 cannot know what a newer client needs. Upgrade the server before its clients.
 
+**The client's floor.** The other direction is the client's to police. A client
+holds a `MIN_SERVER_PROTOCOL` beside its own `PROTOCOL_VERSION` — the oldest
+server protocol it still works against (Android: `Protocol.kt`, currently **3**).
+Before its first `/login` or `/register` to a server it asks `GET /app-version`
+— the first request that server gets from it — and signs in nowhere whose answer
+has no `protocol`, or one below the floor; a `404` there is a server from before
+the endpoint, and too old as well. A client must keep working against every
+server from its floor up: a feature that needs a newer server is gated per
+server on the `protocol` that server reported, never assumed. The floor is raised
+only in a major release, and each raise is recorded in the table below. The
+server needs nothing for this — it is the same `/app-version` it always serves.
+
 **When the number changes.** A change to this contract that an already-installed
 client of the previous protocol cannot handle correctly bumps `PROTOCOL_VERSION`,
 and the release that ships it is a new **MAJOR** version. Additive changes an old
@@ -77,6 +89,10 @@ refuses a release that breaks either rule.
 | Protocol | Introduced in | What an older client cannot handle |
 |---|---|---|
 | 3 | 3.0.0 | Ledger entry types. |
+
+| Client floor | Since | Why |
+|---|---|---|
+| 3 | Android, protocol 3 | Clients are written against protocol 3 and nothing older. |
 
 ## Field clock
 
@@ -516,15 +532,16 @@ points at the site-root `GET /shoppinglist.apk` below.
 
 `protocol` is the server's `PROTOCOL_VERSION`. This endpoint is the one an
 outdated client can still reach (see "Protocol version") — it is exempt from the
-protocol gate for exactly that reason — but **no client currently acts on
-`protocol`**: Android decodes it (`AppVersionResponse` carries it, nullable for
-a server older than the field) and then ignores it, deciding whether an update
-is needed from `version` alone, and the web client never calls this endpoint at
-all — it gets its own version from a server-injected `<meta>` tag and reads
-nothing from a `426`'s body but `error`. Comparing versions is enough because a
-protocol bump always ships in a major release (see "Protocol version"), so today
-a refused client learns nothing from `protocol` beyond "an update exists", which
-`version` and `download_url` already tell it.
+protocol gate for exactly that reason. Android reads `protocol` for its client
+floor (see "Protocol version": it asks before the first sign-in to a server and
+refuses one below the floor or without the field) and stores it per account on
+every update check; whether an update is needed it still decides from `version`
+alone. The web client never calls this endpoint — it gets its own version from a
+server-injected `<meta>` tag and reads nothing from a `426`'s body but `error`.
+Comparing versions is enough because a protocol bump always ships in a major
+release (see "Protocol version"), so a refused client learns nothing from
+`protocol` beyond "an update exists", which `version` and `download_url` already
+tell it.
 
 `404 no_app_package` when this instance serves no APK — because
 `serve_android_apk` is off, no APK is packaged, or the server is running from a

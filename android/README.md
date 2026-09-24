@@ -62,19 +62,35 @@ which serves it at `/shoppinglist.apk`.
 The build has two Gradle modules:
 
 - **`core/`** is the data layer: the API client (`Api`, the DTOs, the
-  interceptors, the protocol version), the Room database (entities, DAOs, the
-  `@Database` class and its exported schemas in `core/schemas/`), the
-  repositories and the sync engine. It is a plain Kotlin/JVM module with no
+  interceptors, the protocol version and floor), the accounts (the registry, one
+  API session per account), the Room database (entities, DAOs, the `@Database`
+  class and its exported schemas in `core/schemas/`), the repositories and the
+  sync engine. It is a plain Kotlin/JVM module with no
   Android SDK on its classpath, so none of it can use Android. Its tests are
   plain JUnit (`./gradlew :core:test`). [`core/README.md`](core/README.md) lists
   what it may import.
 - **`app/`** is the Android app: the Compose UI, the Hilt wiring, and everything
   that needs the platform, such as DataStore preferences, the Keystore-backed
-  session store, WorkManager scheduling, notifications, and building the Room
+  store of account tokens, WorkManager scheduling, notifications, and building the Room
   database from a `Context` together with its migrations. Where `core` needs one
   of these it declares an interface and `app` implements it. Tests that need
   Robolectric (screens, Room opened through a `Context`, the migration test)
   live here.
+
+### Accounts
+
+Every list belongs to an account: a row in the `accounts` table with the server
+URL, the server's id for the account, the sync cursor, the default currency and
+the account's other per-session state. The bearer token is not in the database;
+it sits in the Keystore-backed encrypted preferences, keyed by the account's
+local id. Each server account has its own API client, so a `401` signs out only
+that account and a `426` marks only that account outdated. A sync runs every
+signed-in, up-to-date account in turn; one failing does not stop the others, and
+the status bar shows the worst of them.
+
+The screens still show one account: the first in the table. Logging in again as
+the same account on the same server keeps its lists, unpushed edits included;
+logging in as anyone else removes the other account and its lists.
 
 ## Installing on a phone
 
@@ -92,8 +108,8 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
   the first time.
 
 Once installed, the app keeps itself current: on foreground (at most twice a
-day) it asks the server via `GET /api/v1/app-version` whether a newer version
-exists, and offers each new version once. Opening About checks right away,
+day) it asks each server it has an account on, via `GET /api/v1/app-version`,
+whether a newer version exists (the newest any of them offers wins), and offers each new version once. Opening About checks right away,
 says what it found, and offers a version you declined again. Accepting hands the
 APK URL to the system, which installs it the same way a sideload does — the app
 downloads and installs nothing itself and asks for no extra permissions. The
@@ -107,7 +123,10 @@ blueprint is mounted, e.g. `https://shopping.example.com/` or
 `https://example.com/apps/shopping/`, and **must be `https`** (the login
 screen rejects plain `http`), so the server needs TLS in front of it — see
 [`../server/README.md`](../server/README.md) for the deployment requirements.
-Confirm it, then register a new account or log in. On later launches the app
+Confirm it, then register a new account or log in. The first request the app
+makes to a server it has not signed in to before asks its protocol version; a
+server older than the app supports (`MIN_SERVER_PROTOCOL` in `Protocol.kt`) is
+refused with *"This server is too old for this app."* On later launches the app
 resumes your session and reopens the list you last had open.
 
 ### Changing the prefilled URL for your own build
