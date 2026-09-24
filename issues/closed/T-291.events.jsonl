@@ -4,3 +4,4 @@
 {"actor": "user", "at": "2026-09-24T19:31:28+00:00", "kind": "closed", "ref": "main@5c4d293", "text": ""}
 {"actor": "user", "at": "2026-09-24T19:31:40+00:00", "kind": "updated", "ref": "main@5c4d293", "text": "fields updated"}
 {"actor": "user", "at": "2026-09-24T19:39:39+00:00", "kind": "note", "ref": "main@d6bfc81", "text": "Gate: first run failed in hiltJavaCompileDebug on stale generated factories for the deleted SessionEvents/ProtocolState in the main checkout's build dir; ./gradlew clean and a rerun were green in every stage. Pitfall recorded in AGENTS.md (d6bfc81)."}
+{"actor": "user", "at": "2026-09-24T19:39:39+00:00", "kind": "closed", "ref": "main@d6bfc81", "text": ""}
