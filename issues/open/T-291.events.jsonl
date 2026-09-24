@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-24T17:19:40+00:00", "kind": "created", "ref": "main@73f3a48", "text": "Android: multi-account data layer, accounts table, per-account sessions, server protocol floor (B1)"}
+{"actor": "user", "at": "2026-09-24T17:19:40+00:00", "kind": "dependency", "ref": "main@73f3a48", "text": "T-290"}
