@@ -21,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -50,8 +51,21 @@ class ListTitleViewModelTest {
         if (::db.isInitialized) db.close()
     }
 
+    private val lastOpened = object : LastOpenedListStore {
+        override var lastOpenedListId: String? = null
+    }
+
     private fun newViewModel(listId: String) =
-        ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, testListAccounts(db, listsRepo))
+        ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, testListAccounts(db, listsRepo), lastOpened)
+
+    @Test
+    fun `opening the list screen makes it the last opened list (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+
+        newViewModel(listId).opened()
+
+        assertEquals(listId, lastOpened.lastOpenedListId)
+    }
 
     @Test
     fun `no subtitle with one account (T-292)`() = runTest(mainDispatcherRule.dispatcher) {

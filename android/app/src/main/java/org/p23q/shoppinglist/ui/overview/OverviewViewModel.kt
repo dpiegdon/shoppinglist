@@ -260,11 +260,6 @@ class OverviewViewModel @Inject constructor(
         }
     }
 
-    /** Notes: tapping a list card persists it as the one to reopen on next login/launch. */
-    fun openList(listId: String) {
-        lastOpened.lastOpenedListId = listId
-    }
-
     /** Manual pull-to-refresh: an immediate foreground sync of every account, with a visible spinner (T-36). */
     fun refresh(): Job = viewModelScope.launch {
         _uiState.update { it.copy(isRefreshing = true) }
@@ -324,10 +319,7 @@ class OverviewViewModel @Inject constructor(
     fun joinInvite(accountId: String, invite: InviteForMeDto): Job = viewModelScope.launch {
         _uiState.update { it.copy(joiningInviteId = invite.id, inviteError = null, inviteErrorAccountId = accountId) }
         when (val result = joiner.join(accountId, invite.token)) {
-            is InviteJoin.Joined -> {
-                lastOpened.lastOpenedListId = result.listId
-                _uiState.update { it.copy(joiningInviteId = null, joinedListId = result.listId) }
-            }
+            is InviteJoin.Joined -> _uiState.update { it.copy(joiningInviteId = null, joinedListId = result.listId) }
             is InviteJoin.Failed -> {
                 _uiState.update { it.copy(joiningInviteId = null, inviteError = result.message) }
                 if (result.refused) loadInvites() // a used, withdrawn or expired invite drops out of the section

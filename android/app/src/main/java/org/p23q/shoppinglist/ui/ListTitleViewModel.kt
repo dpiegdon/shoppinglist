@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.data.accountLine
@@ -25,8 +26,19 @@ class ListTitleViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     listsRepo: ListsRepo,
     listAccounts: ListAccounts,
+    private val lastOpened: LastOpenedListStore,
 ) : ViewModel() {
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
+
+    /**
+     * The list screen is showing this list: it is the one to reopen on the next launch (Notes), and
+     * the New-list dialog's account follows it (T-292). Called by the list destination, the one
+     * place every way of opening a list passes through (T-300): a card, a redeem, a notification, a
+     * duplicate.
+     */
+    fun opened() {
+        lastOpened.lastOpenedListId = listId
+    }
 
     val name: StateFlow<String> = listsRepo.observeById(listId)
         .map { it?.name?.value ?: "" }

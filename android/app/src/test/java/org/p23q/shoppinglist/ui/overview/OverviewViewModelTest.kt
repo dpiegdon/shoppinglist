@@ -183,17 +183,6 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `openList persists lastOpenedListId in session state`() = runTest(mainDispatcherRule.dispatcher) {
-        viewModel.onNewListNameChange("Groceries")
-        viewModel.createList()?.join()
-        val listId = viewModel.uiState.first { it.lists.isNotEmpty() }.lists.first().localId
-
-        viewModel.openList(listId)
-
-        assertEquals(listId, accounts.secrets.lastOpenedListId)
-    }
-
-    @Test
     fun `openCreateDialog and dismissCreateDialog toggle dialog visibility`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.openCreateDialog()
         assertTrue(viewModel.uiState.value.isCreateDialogOpen)
@@ -363,7 +352,6 @@ class OverviewViewModelTest {
         val localId = db.listDao().getByServerId(TEST_ACCOUNT_ID, "list-a")!!.localId
         assertNotEquals("list-a", localId)
         assertEquals(localId, viewModel.uiState.value.joinedListId)
-        assertEquals(localId, accounts.secrets.lastOpenedListId)
         assertTrue(syncedFullLists.contains(listOf("list-a")))
         assertNull(viewModel.uiState.value.inviteError)
         val redeem = (0 until server.requestCount).map { server.takeRequest() }.single { it.path == "/api/v1/invites/redeem" }
@@ -383,7 +371,6 @@ class OverviewViewModelTest {
         viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
 
         assertNull(viewModel.uiState.value.joinedListId)
-        assertNull(accounts.secrets.lastOpenedListId)
         assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.inviteError)
         assertNull(viewModel.uiState.value.joiningInviteId)
     }
@@ -569,7 +556,8 @@ class OverviewViewModelTest {
             assertEquals("EUR", viewModel.uiState.value.newListCurrency)
             viewModel.dismissCreateDialog()
 
-            viewModel.openList(office)
+            // The list screen records it (ListTitleViewModel.opened).
+            accounts.secrets.lastOpenedListId = office
             viewModel.openCreateDialog()
             assertEquals("work", viewModel.uiState.value.newListAccountId)
             assertEquals("GBP", viewModel.uiState.value.newListCurrency)

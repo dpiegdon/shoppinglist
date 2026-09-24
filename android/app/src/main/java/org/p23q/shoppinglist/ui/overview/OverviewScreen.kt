@@ -147,10 +147,7 @@ fun OverviewScreen(
                                     accountMarker = account.email?.takeIf { state.several },
                                     summary = state.expenseSummaries[list.localId],
                                     openCount = state.openCounts[list.localId] ?: 0,
-                                    onClick = {
-                                        viewModel.openList(list.localId)
-                                        onOpenList(list.localId)
-                                    },
+                                    onClick = { onOpenList(list.localId) },
                                 )
                             }
                             // Invites waiting for this account (T-233), below its lists so what you

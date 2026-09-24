@@ -37,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -384,6 +385,8 @@ fun ShoppingListNavHost(
                 // rendered until the kind is known: guessing would flash the wrong screen.
                 val listKindViewModel: ListTitleViewModel = hiltViewModel()
                 val kind by listKindViewModel.kind.collectAsStateWithLifecycle()
+                // However the list was reached, it is the last one opened (T-300).
+                LaunchedEffect(listId) { listKindViewModel.opened() }
 
                 when {
                     kind == null -> Unit
