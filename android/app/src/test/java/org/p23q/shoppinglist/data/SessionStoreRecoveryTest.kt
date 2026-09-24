@@ -9,7 +9,7 @@ import java.io.IOException
 import java.security.GeneralSecurityException
 
 /**
- * Exercises [openWithRecovery]'s control flow directly — the real SessionStore path needs a Keystore
+ * Exercises [openWithRecovery]'s control flow directly — the real KeystoreSecretStore path needs a Keystore
  * that Robolectric can't provide, which is exactly why the recovery logic was extracted (T-37).
  */
 class SessionStoreRecoveryTest {

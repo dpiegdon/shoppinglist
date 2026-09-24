@@ -16,13 +16,13 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -104,14 +104,14 @@ class ExpenseListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
-    private val apiProvider: ApiProvider,
+    private val apiProvider: ApiSource,
     private val syncer: Syncer,
-    sessionState: SessionState,
+    currentAccount: CurrentAccount,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
 
-    private val _uiState = MutableStateFlow(ExpenseListUiState(myAccountId = sessionState.accountId))
+    private val _uiState = MutableStateFlow(ExpenseListUiState(myAccountId = currentAccount.accountId))
     val uiState: StateFlow<ExpenseListUiState> = _uiState.asStateFlow()
 
     /**

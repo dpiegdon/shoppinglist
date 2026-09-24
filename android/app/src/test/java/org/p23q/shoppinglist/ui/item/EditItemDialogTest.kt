@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.item
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -18,7 +20,7 @@ import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
-import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 
@@ -34,13 +36,14 @@ class EditItemDialogTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
+        runBlocking { db.insertTestAccount() }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        val listId = listsRepo.createList("Groceries")
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         itemsRepo.setCategory(itemId, "dairy")
-        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount())
         var dismissed = false
 
         composeTestRule.setContent {
@@ -70,14 +73,15 @@ class EditItemDialogTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
+        runBlocking { db.insertTestAccount() }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        val listId = listsRepo.createList("Groceries")
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         // What SyncEngine leaves on a row the server refused with a 422 (T-32, T-200).
         db.itemDao().blockRow(itemId, "invalid_price", null)
-        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeSessionState())
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount())
 
         composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()

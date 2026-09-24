@@ -18,14 +18,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.SyncEngine
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.TestAccounts
+import org.p23q.shoppinglist.data.TestServerAddress
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -53,19 +52,15 @@ class RedeemDialogTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        val serverConfigFile = File.createTempFile("redeem_dialog_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeSessionState().apply { token = "tok-123" }
+        val sessionState = FakeCurrentAccount().apply { token = "tok-123" }
         val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
-        )
-        val syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, org.p23q.shoppinglist.core.sync.SyncStatus(), org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier { })
+        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
+        val syncEngine = TestAccounts(db).run {
+            add(server.url("/").toString())
+            syncEngine()
+        }
         val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
         var redeemedListId: String? = null
 

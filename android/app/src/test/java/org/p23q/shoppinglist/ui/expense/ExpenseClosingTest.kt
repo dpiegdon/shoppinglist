@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.expense
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -31,18 +33,15 @@ import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.TestServerAddress
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
@@ -76,10 +75,11 @@ class ExpenseClosingTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
+        runBlocking { db.insertTestAccount() }
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
+        listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip", ListKind.EXPENSES, currency = "EUR")
         setListState()
         dinnerId = itemsRepo.createExpense(
             listId,
@@ -107,45 +107,35 @@ class ExpenseClosingTest {
      * A provider pointed at nothing: these tests cover what the screen shows, never the vote
      * request itself, so an API call here would be a test that lied about what it exercised.
      */
-    private fun offlineApiProvider(): ApiProvider {
+    private fun offlineApiProvider(): ApiSource {
         val file = File.createTempFile("expense_closing_server_config", ".preferences_pb")
         file.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { file })
+        val serverConfig = TestServerAddress()
         val json = Json { ignoreUnknownKeys = true }
-        return ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { null }),
-            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-            json = json,
-        )
+        return testApiSource(json, token = { null }) { serverConfig.url }
     }
 
-    private fun listViewModel(apiProvider: ApiProvider = offlineApiProvider()) = ExpenseListViewModel(
+    private fun listViewModel(apiProvider: ApiSource = offlineApiProvider()) = ExpenseListViewModel(
         SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
         itemsRepo,
         listsRepo,
         apiProvider,
         Syncer { SyncResult.Success(0, 0, 0, 0) },
-        FakeSessionState().apply { accountId = me },
+        FakeCurrentAccount().apply { accountId = me },
     )
 
     /** A real (mock) server backing, for the one test below that exercises the vote request itself. */
-    private fun apiProviderFor(server: MockWebServer): ApiProvider {
+    private fun apiProviderFor(server: MockWebServer): ApiSource {
         val file = File.createTempFile("expense_closing_vote_server_config", ".preferences_pb")
         file.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { file })
+        val serverConfig = TestServerAddress()
         runBlocking { serverConfig.setServerUrl(server.url("/").toString()) }
         val json = Json { ignoreUnknownKeys = true }
-        return ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
-            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-            json = json,
-        )
+        return testApiSource(json, token = { "tok-123" }) { serverConfig.url }
     }
 
     private fun formViewModel() =
-        ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
+        ExpenseFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount().apply { accountId = me })
 
     private fun showList(onEditExpense: (String) -> Unit = {}) {
         composeTestRule.setContent {

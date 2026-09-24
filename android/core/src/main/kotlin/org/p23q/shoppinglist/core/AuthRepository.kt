@@ -1,56 +1,91 @@
 package org.p23q.shoppinglist.core
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.AccountSessions
+import org.p23q.shoppinglist.core.account.LastOpenedListStore
+import org.p23q.shoppinglist.core.account.SecretStore
+import org.p23q.shoppinglist.core.account.normalizeServerUrl
+import org.p23q.shoppinglist.core.account.serverLabel
+import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.LoginRequest
+import org.p23q.shoppinglist.core.api.MIN_SERVER_PROTOCOL
 import org.p23q.shoppinglist.core.api.RegisterRequest
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.core.db.clearAll
 import org.p23q.shoppinglist.core.db.inTransaction
+import java.util.UUID
 
 /**
- * Coordinates login/register/logout across the API, session state, and local mirror. An interface
- * (not just [AuthRepositoryImpl] directly) so [org.p23q.shoppinglist.ui.login.LoginViewModel] and
- * future ViewModels (A6's logout menu entry) can be tested with a fake, no network/DB required.
+ * The server is older than [MIN_SERVER_PROTOCOL], or too old to say which protocol it speaks: this
+ * build will not sign in there. [serverProtocol] is what it said, null for nothing.
+ */
+class ServerTooOldException(val serverProtocol: Int?) :
+    Exception("server protocol ${serverProtocol ?: "unknown"} is below $MIN_SERVER_PROTOCOL")
+
+/**
+ * Coordinates login/register/logout across the API, the accounts and the local mirror. An interface
+ * (not just [AuthRepositoryImpl] directly) so the view models that use it can be tested with a
+ * fake, no network/DB required.
  */
 interface AuthRepository {
-    suspend fun register(email: String, password: String)
-    suspend fun login(email: String, password: String)
+    /**
+     * Creates an account on the server at [serverUrl]. Asks the server's protocol first, as
+     * [login] does; throws [ServerTooOldException] if it is below the floor.
+     */
+    suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean = false)
+
+    /**
+     * Signs in at [serverUrl] and returns the local id of the account: the existing row for that
+     * server and server-side account, signed in again with its lists as they are, or a new row.
+     *
+     * Before the first sign-in to a server whose protocol this device does not know yet, asks
+     * `/app-version` — the first request that server gets — and throws [ServerTooOldException]
+     * if it has no `protocol` or one below [MIN_SERVER_PROTOCOL]. Nothing is stored then.
+     */
+    suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean = false): String
 
     /**
      * Best-effort server-side token revoke, then always clears the local session regardless.
      * Unpushed edits survive for [login] to judge, exactly as on a forced logout — see
      * [clearLocalSession]; logging out is not a reason to throw away edits that never went out.
      */
-    suspend fun logout()
+    suspend fun logout(accountId: String)
 
     /**
-     * Clears the local session WITHOUT contacting the server. For a forced logout after the server
+     * Signs one account out WITHOUT contacting the server. For a forced logout after the server
      * has already rejected our token (401): the token is dead, so a server call is pointless.
      *
-     * Keeps whatever is still unpushed, and drops the rest (T-260). It used to wipe everything, so
-     * that a subsequent login as a different account could not see the previous account's lists —
-     * but this runs on ANY 401
-     * carrying a bearer token, which per the Wire Contract includes an idle-expired session and a
-     * password change on another device (that one revokes every other session by design). Edit the
-     * list offline, change the password on the web, foreground the phone, and the whole unpushed
-     * queue was gone. And the wipe could not have been right anyway: it happened before anyone
-     * knew which account would log back in. [login] wipes instead, once it does know.
+     * Keeps whatever of the account's lists is still unpushed, and drops the rest (T-260), along
+     * with the token; the row stays, `signedIn = false`, and says whose rows those are. This runs
+     * on ANY 401 carrying a bearer token, which per the Wire Contract includes an idle-expired
+     * session and a password change on another device (that one revokes every other session by
+     * design): edit the list offline, change the password on the web, foreground the phone, and
+     * the unpushed queue must still be there when the same account signs in again.
      *
-     * What is dropped here is only what the server can send again: clearing the session resets the
-     * sync cursor, so the next login re-pulls from 0 regardless, and keeping a synced copy on disk
-     * until then would buy nothing and leave a logged-out device holding more than it needs to.
+     * What is dropped is only what the server can send again: the cursor is reset, so the next
+     * login re-pulls from 0 regardless, and keeping a synced copy on disk until then would buy
+     * nothing and leave a signed-out account holding more than it needs to. Other accounts are
+     * not touched.
      */
-    suspend fun clearLocalSession()
+    suspend fun clearLocalSession(accountId: String)
+
+    /** Removes the account from this device: its lists, their items, its token and its row. */
+    suspend fun removeAccount(accountId: String)
 
     /**
-     * Whether this server currently accepts new accounts (T-276), checked up front on the login
-     * screen — mirroring the web client, which asks before the user fills in the whole form.
-     * Best-effort: a network failure or a server too old to answer must not block someone who can
-     * register, so callers should treat a thrown exception the same as `true`.
+     * Removes every account but [keep]. The single-account login screen calls this right after
+     * signing in: an account other than the one that just signed in is somebody else's mirror,
+     * and privacy wins (T-260). Goes once the app can hold several accounts on purpose.
      */
-    suspend fun registrationAllowed(): Boolean
+    suspend fun removeOtherAccounts(keep: String)
+
+    /**
+     * Whether the server at [serverUrl] currently accepts new accounts (T-276), checked up front on
+     * the login screen — mirroring the web client, which asks before the user fills in the whole
+     * form. Best-effort: a network failure or a server too old to answer must not block someone
+     * who can register, so callers should treat a thrown exception the same as `true`.
+     */
+    suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean = false): Boolean
 
     fun lastOpenedListId(): String?
 }
@@ -60,63 +95,127 @@ interface AuthRepository {
  * the account's session list) from the platform.
  */
 class AuthRepositoryImpl(
-    private val apiProvider: ApiSource,
-    private val sessionState: SessionState,
+    private val sessions: AccountSessions,
+    private val registry: AccountRegistry,
+    private val secrets: SecretStore,
+    private val lastOpened: LastOpenedListStore,
     private val appDb: AppDb,
     private val defaultCurrencyState: DefaultCurrencyState,
     private val deviceName: String,
 ) : AuthRepository {
 
-    override suspend fun register(email: String, password: String) {
-        apiProvider.get().register(RegisterRequest(email, password))
+    override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {
+        val url = normalizeServerUrl(serverUrl)
+        checkServerProtocol(url, allowSelfSignedCerts)
+        sessions.unbound(url, allowSelfSignedCerts).register(RegisterRequest(email, password))
     }
 
-    override suspend fun login(email: String, password: String) {
-        val api = apiProvider.get()
-        val response = api.login(LoginRequest(email, password, deviceName, PLATFORM))
-        // Now — and only now — we know whose data the mirror may be shown to (T-260). A mirror left
-        // behind by a different account is wiped before anything of this session is stored; the
-        // returning account's own mirror is kept, unpushed edits and all, and reconciled by the
-        // cursor-0 pull that follows (sessionState.clear() reset the cursor). "Not known" counts as
-        // a different account: a session old enough to have no account_id (pre-T-65) can't prove
-        // the mirror is this user's, and privacy wins that tie.
-        if (response.accountId != sessionState.mirrorAccountId) {
-            withContext(Dispatchers.IO) { appDb.clearAll() }
+    override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean): String {
+        val url = normalizeServerUrl(serverUrl)
+        val protocol = checkServerProtocol(url, allowSelfSignedCerts)
+        val response = sessions.unbound(url, allowSelfSignedCerts)
+            .login(LoginRequest(email, password, deviceName, PLATFORM))
+
+        // The same server and the same account: the lists this device already holds for it are its
+        // own, unpushed edits and all, and the cursor-0 pull that follows reconciles them (T-260).
+        registry.load()
+        val existing = registry.find(url, response.accountId)
+        val id = existing?.id ?: UUID.randomUUID().toString()
+        secrets.setToken(id, response.token)
+        if (existing != null) {
+            registry.update(id) {
+                it.copy(
+                    email = response.email,
+                    isAdmin = response.isAdmin,
+                    signedIn = true,
+                    syncCursor = 0,
+                    serverProtocol = protocol ?: it.serverProtocol,
+                    allowSelfSignedCerts = allowSelfSignedCerts,
+                )
+            }
+        } else {
+            registry.add(
+                AccountEntity(
+                    id = id,
+                    serverUrl = url,
+                    accountId = response.accountId,
+                    email = response.email,
+                    isAdmin = response.isAdmin,
+                    label = serverLabel(url),
+                    signedIn = true,
+                    serverProtocol = protocol,
+                    allowSelfSignedCerts = allowSelfSignedCerts,
+                ),
+            )
         }
-        sessionState.mirrorAccountId = response.accountId
-        sessionState.token = response.token
-        sessionState.accountEmail = response.email
-        sessionState.accountId = response.accountId
-        sessionState.isAdmin = response.isAdmin
-        val currency = api.getSettings().defaultCurrency
-        sessionState.defaultCurrency = currency
+        val currency = sessions.get(id).api.getSettings().defaultCurrency
+        registry.update(id) { it.copy(defaultCurrency = currency) }
         defaultCurrencyState.set(currency)
+        return id
     }
 
-    override suspend fun logout() {
-        runCatching { apiProvider.get().logout() }
-        clearLocalSession()
-    }
-
-    override suspend fun registrationAllowed(): Boolean =
-        apiProvider.get().registrationStatus().allowRegistration
-
-    override suspend fun clearLocalSession() {
-        // Who the surviving mirror belongs to has to outlive the session it came from, so carry it
-        // across the clear (T-260). Taken from the live session when there is one, so an install
-        // that logs out for the first time after this change keeps its data rather than losing it
-        // to a mirror owner nobody ever recorded.
-        val mirrorOwner = sessionState.accountId ?: sessionState.mirrorAccountId
-        sessionState.clear()
-        sessionState.mirrorAccountId = mirrorOwner
-        // Unpushed work is the only thing worth keeping across a logout; see the KDoc above.
-        appDb.inTransaction {
-            appDb.listDao().deleteSyncedRows()
-            appDb.itemDao().deleteSyncedRows()
+    /**
+     * The protocol floor (T-291). Asked only while this device knows no protocol for the server —
+     * so before the first login or registration there, and the request is the first that server
+     * gets — and answered from the stored value afterwards. Returns what the server said, or null
+     * when it was not asked.
+     *
+     * A 404 is a server from before `/app-version` existed, and so from before any protocol: too
+     * old. Any other failure is not an answer and propagates as it is (offline, a bad
+     * certificate, a server error), for the login screen to report as it reports every other.
+     */
+    private suspend fun checkServerProtocol(url: String, allowSelfSignedCerts: Boolean): Int? {
+        val known = registry.load().filter { it.serverUrl == url }.mapNotNull { it.serverProtocol }.maxOrNull()
+        if (known != null && known >= MIN_SERVER_PROTOCOL) return null
+        val protocol = try {
+            sessions.unbound(url, allowSelfSignedCerts).appVersion().protocol
+        } catch (e: ApiException) {
+            if (e.httpStatus == 404) throw ServerTooOldException(null)
+            throw e
         }
+        if (protocol == null || protocol < MIN_SERVER_PROTOCOL) throw ServerTooOldException(protocol)
+        return protocol
     }
 
-    override fun lastOpenedListId(): String? = sessionState.lastOpenedListId
+    override suspend fun logout(accountId: String) {
+        runCatching { sessions.get(accountId).api.logout() }
+        clearLocalSession(accountId)
+    }
+
+    override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean =
+        sessions.unbound(normalizeServerUrl(serverUrl), allowSelfSignedCerts).registrationStatus().allowRegistration
+
+    override suspend fun clearLocalSession(accountId: String) {
+        secrets.setToken(accountId, null)
+        registry.update(accountId) { it.copy(signedIn = false, isAdmin = false, syncCursor = 0) } ?: return
+        // Unpushed work is the only thing worth keeping across a logout; see the KDoc above. Items
+        // first, so a clean list that still holds an unpushed item stays with it.
+        appDb.inTransaction {
+            appDb.itemDao().deleteSyncedRowsForAccount(accountId)
+            appDb.listDao().deleteSyncedRowsForAccount(accountId)
+        }
+        forgetLastOpenedListOf(accountId)
+    }
+
+    override suspend fun removeAccount(accountId: String) {
+        secrets.setToken(accountId, null)
+        registry.remove(accountId)
+        sessions.drop(accountId)
+        forgetLastOpenedListOf(accountId)
+    }
+
+    override suspend fun removeOtherAccounts(keep: String) {
+        registry.load().filter { it.id != keep }.forEach { removeAccount(it.id) }
+    }
+
+    /** A cold start must not reopen a list this account no longer shows; another account's is kept. */
+    private suspend fun forgetLastOpenedListOf(accountId: String) {
+        val listId = lastOpened.lastOpenedListId ?: return
+        val owner = appDb.listDao().getById(listId)?.accountId
+        if (owner == null || owner == accountId) lastOpened.lastOpenedListId = null
+    }
+
+    override fun lastOpenedListId(): String? = lastOpened.lastOpenedListId
 
     private companion object {
         // Selects the server's long (62-day) inactivity window for this session —

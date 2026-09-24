@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.overview
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
+import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -24,10 +27,6 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.DeviceIdProvider
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -35,9 +34,10 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.TestServerAddress
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
@@ -52,13 +52,13 @@ class OverviewViewModelTest {
     private lateinit var db: AppDb
     private lateinit var listsRepo: ListsRepo
     private lateinit var itemsRepo: ItemsRepo
-    private lateinit var sessionState: FakeSessionState
+    private lateinit var sessionState: FakeCurrentAccount
     private lateinit var syncStatus: SyncStatus
     private var syncCalls = 0
     private val syncedFullLists = mutableListOf<List<String>>()
     private lateinit var viewModel: OverviewViewModel
     private lateinit var server: MockWebServer
-    private lateinit var apiProvider: ApiProvider
+    private lateinit var apiProvider: ApiSource
 
     /** What the fake server answers to the inbox and redeem requests (T-233); tests reassign these. */
     private var inboxJson = """{"invites": []}"""
@@ -81,24 +81,20 @@ class OverviewViewModelTest {
         server.start()
         val serverConfigFile = File.createTempFile("overview_vm_server_config", ".preferences_pb")
         serverConfigFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        val serverConfig = TestServerAddress()
         kotlinx.coroutines.runBlocking { serverConfig.setServerUrl(server.url("/").toString()) }
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
+        runTest(mainDispatcherRule.dispatcher) { db.insertTestAccount() }
         val deviceId = DeviceIdProvider { "device-1" }
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
-        sessionState = FakeSessionState().apply { token = "tok-123" }
+        sessionState = FakeCurrentAccount().apply { token = "tok-123" }
         syncStatus = SyncStatus()
         val json = Json { ignoreUnknownKeys = true }
-        apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-            json = json,
-        )
+        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
         viewModel = newViewModel()
     }
 
@@ -133,7 +129,7 @@ class OverviewViewModelTest {
 
     @Test
     fun `open item counts reflect todo items per list, excluding checked (T-42)`() = runTest(mainDispatcherRule.dispatcher) {
-        val listId = listsRepo.createList("Groceries")
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         itemsRepo.createItem(listId, "Milk", status = Status.TODO)
         itemsRepo.createItem(listId, "Bread", status = Status.TODO)
         itemsRepo.createItem(listId, "Eggs", status = Status.CHECKED)
@@ -145,9 +141,9 @@ class OverviewViewModelTest {
 
     @Test
     fun `lists are sorted case-insensitively by name (T-40)`() = runTest(mainDispatcherRule.dispatcher) {
-        listsRepo.createList("Zebra")
-        listsRepo.createList("apple")
-        listsRepo.createList("Mango")
+        listsRepo.create(TEST_ACCOUNT_ID, "Zebra")
+        listsRepo.create(TEST_ACCOUNT_ID, "apple")
+        listsRepo.create(TEST_ACCOUNT_ID, "Mango")
 
         val names = viewModel.uiState.first { it.lists.size == 3 }.lists.map { it.name.value }
 
@@ -186,7 +182,7 @@ class OverviewViewModelTest {
 
     @Test
     fun `sync status flows into the ui state (T-47)`() = runTest(mainDispatcherRule.dispatcher) {
-        syncStatus.succeeded(at = 1_000L, pending = 2, blocked = 0)
+        syncStatus.account(TEST_ACCOUNT_ID).succeeded(at = 1_000L, pending = 2, blocked = 0)
 
         val state = viewModel.uiState.first { it.sync.lastSyncAt == 1_000L }
         assertEquals(2, state.sync.pendingCount)
@@ -203,11 +199,11 @@ class OverviewViewModelTest {
 
     @Test
     fun `a quarantined row surfaces its list for the attention banner (T-47)`() = runTest(mainDispatcherRule.dispatcher) {
-        val listId = listsRepo.createList("Groceries")
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val itemId = itemsRepo.createItem(listId, "Milk")
         db.itemDao().blockRow(itemId, "invalid_price", null)
 
-        syncStatus.failed("bad row", pending = 0, blocked = 1)
+        syncStatus.account(TEST_ACCOUNT_ID).failed("bad row", pending = 0, blocked = 1)
 
         val state = viewModel.uiState.first { it.sync.blockedCount == 1 }
         assertEquals(listId, state.attentionListId)
@@ -215,10 +211,10 @@ class OverviewViewModelTest {
 
     @Test
     fun `a quarantined list surfaces itself for the attention banner (T-198)`() = runTest(mainDispatcherRule.dispatcher) {
-        val listId = listsRepo.createList("Trip")
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip")
         db.listDao().blockRow(listId)
 
-        syncStatus.failed("refused list row", pending = 0, blocked = 1)
+        syncStatus.account(TEST_ACCOUNT_ID).failed("refused list row", pending = 0, blocked = 1)
 
         val state = viewModel.uiState.first { it.sync.blockedCount == 1 }
         assertEquals(listId, state.attentionListId)
@@ -226,7 +222,7 @@ class OverviewViewModelTest {
 
     @Test
     fun `a closed expense list is marked as closed (T-181)`() = runTest(mainDispatcherRule.dispatcher) {
-        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
+        val id = listsRepo.create(TEST_ACCOUNT_ID, "Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
         val list = listsRepo.getById(id)!!
         db.listDao().upsert(list.copy(closedAt = 1_758_000_000_000))
 
@@ -238,7 +234,7 @@ class OverviewViewModelTest {
     @Test
     fun `a ledger's card shows net spent, not everything that ever moved (T-245)`() =
         runTest(mainDispatcherRule.dispatcher) {
-            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
+            val id = listsRepo.create(TEST_ACCOUNT_ID, "Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
             val dinner = org.p23q.shoppinglist.core.Expense(
                 mapOf("me" to "60.00"), true, mapOf("me" to "60.00"), true, "2026-09-18",
             )
@@ -265,7 +261,7 @@ class OverviewViewModelTest {
     @Test
     fun `a card already on screen updates when an entry is recorded, not just at start-up (T-265)`() =
         runTest(mainDispatcherRule.dispatcher) {
-            val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
+            val id = listsRepo.create(TEST_ACCOUNT_ID, "Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
             val lunch = org.p23q.shoppinglist.core.Expense(
                 mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18",
             )
@@ -285,7 +281,7 @@ class OverviewViewModelTest {
 
     @Test
     fun `an expense list's count is its number of expenses (T-191)`() = runTest(mainDispatcherRule.dispatcher) {
-        val id = listsRepo.createList("Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
+        val id = listsRepo.create(TEST_ACCOUNT_ID, "Trip", org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
         val expense = org.p23q.shoppinglist.core.Expense(mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18")
         itemsRepo.createExpense(id, "Dinner", expense)
         itemsRepo.createExpense(id, "Taxi", expense)

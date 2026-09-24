@@ -43,10 +43,12 @@ class ListsRepo @Inject constructor(
     suspend fun clearDirty(ids: List<String>) = listDao.clearDirty(ids)
 
     /**
+     * @param accountId the local id of the account the list is created in; it never moves.
      * @param currency free-text label, required for an expenses list and meaningless elsewhere
      *   (T-151). The kind is fixed for the list's whole life, so both are decided here or never.
      */
-    suspend fun createList(
+    suspend fun create(
+        accountId: String,
         name: String,
         kind: String = ListKind.DEFAULT,
         currency: String? = null,
@@ -57,6 +59,7 @@ class ListsRepo @Inject constructor(
         listDao.upsert(
             ListEntity(
                 id = id,
+                accountId = accountId,
                 createdAt = now,
                 name = name.toLww(by, now),
                 categoryOrder = encodeCategoryOrder(emptyList()).toLww(by, now),
@@ -107,6 +110,8 @@ class ListsRepo @Inject constructor(
             listDao.upsert(
                 ListEntity(
                     id = id,
+                    // A copy lives where its source does.
+                    accountId = source.accountId,
                     createdAt = now,
                     name = "${source.name.value} (Copy)".toLww(by, now),
                     categoryOrder = source.categoryOrder.value.toLww(by, now),

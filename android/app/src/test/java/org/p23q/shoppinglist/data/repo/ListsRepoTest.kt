@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.data.repo
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
+import kotlinx.coroutines.runBlocking
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -35,13 +38,14 @@ class ListsRepoTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
+        runBlocking { db.insertTestAccount() }
         syncTrigger = FakeSyncTrigger()
         repo = ListsRepo(db, deviceId, syncTrigger)
     }
 
     @Test
     fun `createList stamps fields dirty with the device id`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
         val list = repo.getById(listId)!!
         assertEquals("Groceries", list.name.value)
@@ -52,7 +56,7 @@ class ListsRepoTest {
 
     @Test
     fun `rename stamps only the name field clock`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         val created = repo.getById(listId)!!
         val categoryOrderClockBefore = created.categoryOrder.updatedAt
 
@@ -67,7 +71,7 @@ class ListsRepoTest {
 
     @Test
     fun `setCategoryOrder round-trips a list of categories through the JSON column`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
         repo.setCategoryOrder(listId, listOf("dairy", "bakery"))
 
@@ -77,14 +81,14 @@ class ListsRepoTest {
 
     @Test
     fun `a new list has no notes until set`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
         assertEquals(null, repo.getById(listId)!!.notes.value)
     }
 
     @Test
     fun `setNotes stamps only the notes field clock`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         val created = repo.getById(listId)!!
         val nameClockBefore = created.name.updatedAt
 
@@ -100,7 +104,7 @@ class ListsRepoTest {
 
     @Test
     fun `setNotes to null clears an existing note`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         repo.setNotes(listId, "temporary")
 
         repo.setNotes(listId, null)
@@ -110,7 +114,7 @@ class ListsRepoTest {
 
     @Test
     fun `delete tombstones the list but retains the row`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
         repo.delete(listId)
 
@@ -121,8 +125,8 @@ class ListsRepoTest {
 
     @Test
     fun `activeLists excludes deleted lists`() = runTest {
-        val keepId = repo.createList("Groceries")
-        val deletedId = repo.createList("Old list")
+        val keepId = repo.create(TEST_ACCOUNT_ID, "Groceries")
+        val deletedId = repo.create(TEST_ACCOUNT_ID, "Old list")
         repo.delete(deletedId)
 
         val active = repo.activeLists().first()
@@ -132,7 +136,7 @@ class ListsRepoTest {
 
     @Test
     fun `every mutation schedules a sync`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         assertEquals(1, syncTrigger.scheduleCount)
 
         repo.rename(listId, "Weekly Groceries")
@@ -147,7 +151,7 @@ class ListsRepoTest {
 
     @Test
     fun `dirtyRows returns only dirty rows and clearDirty clears them`() = runTest {
-        val listId = repo.createList("Groceries")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
         assertTrue(repo.dirtyRows().any { it.id == listId })
 
@@ -158,7 +162,7 @@ class ListsRepoTest {
 
     @Test
     fun `duplicate creates a solo-owned copy with the source's name, category order, and notes (T-63)`() = runTest {
-        val sourceId = repo.createList("Groceries")
+        val sourceId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         repo.setCategoryOrder(sourceId, listOf("dairy", "bakery"))
         repo.setNotes(sourceId, "Gate code: 4471")
 
@@ -183,7 +187,7 @@ class ListsRepoTest {
 
     @Test
     fun `duplicate schedules a sync`() = runTest {
-        val sourceId = repo.createList("Groceries")
+        val sourceId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         val before = syncTrigger.scheduleCount
 
         repo.duplicate(sourceId)
@@ -193,7 +197,7 @@ class ListsRepoTest {
 
     @Test
     fun `a quarantined list is skipped by dirtyRows but re-editing it clears the block (T-198)`() = runTest {
-        val listId = repo.createList("Trip")
+        val listId = repo.create(TEST_ACCOUNT_ID, "Trip")
         db.listDao().blockRow(listId)
 
         // Quarantined: still in the mirror and on screen, but not offered for push.

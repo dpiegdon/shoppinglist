@@ -9,8 +9,8 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.p23q.shoppinglist.core.SessionState
-import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.core.account.LastOpenedListStore
+import org.p23q.shoppinglist.core.account.SecretStore
 import java.io.IOException
 import java.security.GeneralSecurityException
 import javax.inject.Inject
@@ -18,65 +18,46 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class SessionModule {
+abstract class SecretStoreModule {
     @Binds
-    abstract fun bindTokenProvider(sessionStore: SessionStore): TokenProvider
+    abstract fun bindSecretStore(store: KeystoreSecretStore): SecretStore
 
     @Binds
-    abstract fun bindSessionState(sessionStore: SessionStore): SessionState
+    abstract fun bindLastOpenedListStore(store: KeystoreSecretStore): LastOpenedListStore
+
+    @Binds
+    abstract fun bindLegacySessionSource(source: StoredLegacySession): LegacySessionSource
 }
 
-/** Per-device session state. The bearer token lives in the Keystore-backed EncryptedSharedPreferences (Notes). */
+/**
+ * The bearer tokens, one per local account id, in the Keystore-backed EncryptedSharedPreferences
+ * (Notes); and the device's last-opened list, which has always lived in the same file.
+ *
+ * The file also still holds, on an install upgraded from the single-session app, that app's keys;
+ * [StoredLegacySession] reads them once for the database migration and then deletes them.
+ */
 @Singleton
-class SessionStore @Inject constructor(@ApplicationContext context: Context) : TokenProvider, SessionState {
+class KeystoreSecretStore @Inject constructor(@ApplicationContext context: Context) : SecretStore, LastOpenedListStore {
     // Built with one-shot recovery: if the encrypted keyset can't be decrypted with this device's
     // Keystore master key (a restored/transferred store on a new device), drop the file and rebuild
     // fresh so the app starts logged-out instead of crash-looping (T-37). Backup is also off (see the
     // manifest), so this only fires on device-to-device transfer or a Keystore key invalidation.
-    private val prefs: SharedPreferences = openWithRecovery(
+    internal val prefs: SharedPreferences = openWithRecovery(
         build = { createEncryptedPrefs(context) },
         onCorrupt = { context.deleteSharedPreferences(PREFS_FILE) },
     )
 
-    override var token: String?
-        get() = prefs.getString(KEY_TOKEN, null)
-        set(value) = prefs.edit().putString(KEY_TOKEN, value).apply()
+    override fun token(accountId: String): String? = prefs.getString(tokenKey(accountId), null)
 
-    override fun currentToken(): String? = token
-
-    override var accountEmail: String?
-        get() = prefs.getString(KEY_ACCOUNT_EMAIL, null)
-        set(value) = prefs.edit().putString(KEY_ACCOUNT_EMAIL, value).apply()
-
-    override var accountId: String?
-        get() = prefs.getString(KEY_ACCOUNT_ID, null)
-        set(value) = prefs.edit().putString(KEY_ACCOUNT_ID, value).apply()
-
-    override var mirrorAccountId: String?
-        get() = prefs.getString(KEY_MIRROR_ACCOUNT_ID, null)
-        set(value) = prefs.edit().putString(KEY_MIRROR_ACCOUNT_ID, value).apply()
-
-    override var isAdmin: Boolean
-        get() = prefs.getBoolean(KEY_IS_ADMIN, false)
-        set(value) = prefs.edit().putBoolean(KEY_IS_ADMIN, value).apply()
-
-    override var defaultCurrency: String?
-        get() = prefs.getString(KEY_DEFAULT_CURRENCY, null)
-        set(value) = prefs.edit().putString(KEY_DEFAULT_CURRENCY, value).apply()
+    override fun setToken(accountId: String, token: String?) {
+        val editor = prefs.edit()
+        if (token == null) editor.remove(tokenKey(accountId)) else editor.putString(tokenKey(accountId), token)
+        editor.apply()
+    }
 
     override var lastOpenedListId: String?
         get() = prefs.getString(KEY_LAST_OPENED_LIST_ID, null)
         set(value) = prefs.edit().putString(KEY_LAST_OPENED_LIST_ID, value).apply()
-
-    override var syncCursor: Long
-        get() = prefs.getLong(KEY_SYNC_CURSOR, 0L)
-        set(value) = prefs.edit().putLong(KEY_SYNC_CURSOR, value).apply()
-
-    override var ignoredInviteIds: Set<String>
-        get() = prefs.getStringSet(KEY_IGNORED_INVITE_IDS, emptySet()).orEmpty().toSet()
-        set(value) = prefs.edit().putStringSet(KEY_IGNORED_INVITE_IDS, value).apply()
-
-    override fun clear() = prefs.edit().clear().apply()
 
     private fun createEncryptedPrefs(context: Context): SharedPreferences =
         EncryptedSharedPreferences.create(
@@ -87,17 +68,11 @@ class SessionStore @Inject constructor(@ApplicationContext context: Context) : T
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
 
-    private companion object {
+    internal companion object {
         const val PREFS_FILE = "session"
-        const val KEY_TOKEN = "token"
-        const val KEY_ACCOUNT_EMAIL = "account_email"
-        const val KEY_ACCOUNT_ID = "account_id"
-        const val KEY_MIRROR_ACCOUNT_ID = "mirror_account_id"
-        const val KEY_IS_ADMIN = "is_admin"
-        const val KEY_DEFAULT_CURRENCY = "default_currency"
         const val KEY_LAST_OPENED_LIST_ID = "last_opened_list_id"
-        const val KEY_SYNC_CURSOR = "sync_cursor"
-        const val KEY_IGNORED_INVITE_IDS = "ignored_invite_ids"
+
+        fun tokenKey(accountId: String) = "token:$accountId"
     }
 }
 

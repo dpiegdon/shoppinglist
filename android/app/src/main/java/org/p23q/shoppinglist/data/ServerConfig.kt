@@ -13,9 +13,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,34 +29,12 @@ object ServerConfigModule {
 }
 
 /**
- * Self-hosted server address (user-configurable, no fixed public URL — Notes) plus this device's
- * id. The server runs as a Flask blueprint and may be mounted under an arbitrary path (e.g.
- * https://host/my/stuff/shoppinglist/), so [serverUrl] is the full prefix the user enters,
- * normalized to always end in '/'; [Api] paths are relative and resolve underneath it.
+ * This device's id, minted once per install. The server address used to live here too; it is per
+ * account now ([org.p23q.shoppinglist.core.db.AccountEntity.serverUrl]), and the old keys are read
+ * once by the schema-9 migration and then deleted ([discardLegacy]).
  */
 @Singleton
 class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferences>) : DeviceIdProvider {
-    val serverUrl: Flow<String?> = dataStore.data.map { it[SERVER_URL_KEY] }
-
-    suspend fun setServerUrl(url: String) {
-        val normalized = if (url.endsWith("/")) url else "$url/"
-        dataStore.edit { it[SERVER_URL_KEY] = normalized }
-    }
-
-    /**
-     * Developer-only opt-in to skip TLS certificate validation (for testing against a server with a
-     * self-signed cert, e.g. the bundled dev server). Persisted, default false. This flag is only
-     * ever HONORED in debug builds: the code that acts on it lives in the debug source set, and the
-     * release source set's counterpart is a no-op that ignores it entirely (see DevCertTrust.kt), so
-     * a value carried into a release build via backup/restore can never weaken its TLS. The Settings
-     * toggle that writes it is likewise gated to debug builds.
-     */
-    val allowSelfSignedCerts: Flow<Boolean> = dataStore.data.map { it[ALLOW_SELF_SIGNED_KEY] ?: false }
-
-    suspend fun setAllowSelfSignedCerts(allow: Boolean) {
-        dataStore.edit { it[ALLOW_SELF_SIGNED_KEY] = allow }
-    }
-
     /** Minted once per install and persisted; stamped as `updated_by` on every field this device writes. */
     suspend fun deviceId(): String {
         dataStore.data.first()[DEVICE_ID_KEY]?.let { return it }
@@ -72,7 +48,19 @@ class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferen
 
     override suspend fun get(): String = deviceId()
 
-    private companion object {
+    /** The single-session app's server URL, for the schema-9 migration. */
+    internal suspend fun legacyServerUrl(): String? = dataStore.data.first()[SERVER_URL_KEY]
+
+    internal suspend fun legacyAllowSelfSignedCerts(): Boolean = dataStore.data.first()[ALLOW_SELF_SIGNED_KEY] ?: false
+
+    internal suspend fun discardLegacy() {
+        dataStore.edit {
+            it.remove(SERVER_URL_KEY)
+            it.remove(ALLOW_SELF_SIGNED_KEY)
+        }
+    }
+
+    internal companion object {
         val SERVER_URL_KEY = stringPreferencesKey("server_url")
         val DEVICE_ID_KEY = stringPreferencesKey("device_id")
         val ALLOW_SELF_SIGNED_KEY = booleanPreferencesKey("allow_self_signed_certs")

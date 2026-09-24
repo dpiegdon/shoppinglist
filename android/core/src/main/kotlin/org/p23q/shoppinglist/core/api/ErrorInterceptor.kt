@@ -3,19 +3,44 @@ package org.p23q.shoppinglist.core.api
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import okhttp3.Response
-import javax.inject.Inject
+
+/**
+ * What one account's API client reports about its requests, beyond the exception each call throws.
+ * Implemented per account by [org.p23q.shoppinglist.core.account.AccountSessions], so a 401 or a
+ * 426 from one server marks that account and no other.
+ *
+ * Called on OkHttp's thread: implementations must not block for long and must not suspend.
+ */
+interface ApiEvents {
+    /** A request that carried a bearer token was refused with 401: the token is dead. */
+    fun onUnauthorized() {}
+
+    /** The server refused this build's protocol version (426, T-240). */
+    fun onOutdated() {}
+
+    /**
+     * A protocol-checked request succeeded, so the server accepts this build. Not called for
+     * `/app-version`, which the server answers whatever the protocol.
+     */
+    fun onAccepted() {}
+
+    companion object {
+        val NONE: ApiEvents = object : ApiEvents {}
+    }
+}
 
 /** Parses the Wire Contract's error envelope on non-2xx responses and throws a typed exception. */
-class ErrorInterceptor @Inject constructor(
+class ErrorInterceptor(
     private val json: Json,
-    private val sessionEvents: SessionEvents,
-    // Defaulted only so the many tests that build an interceptor by hand and care about neither
-    // the protocol nor the state do not all have to name it; Hilt always injects the singleton.
-    private val protocolState: ProtocolState = ProtocolState(),
+    private val events: ApiEvents = ApiEvents.NONE,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val response = chain.proceed(chain.request())
-        if (response.isSuccessful) return response
+        if (response.isSuccessful) {
+            val path = chain.request().url.encodedPath
+            if (UNCHECKED_PATH_SUFFIXES.none { path.endsWith(it) }) events.onAccepted()
+            return response
+        }
 
         val body = response.body?.string().orEmpty()
         val envelope = runCatching { json.decodeFromString<ErrorEnvelope>(body) }.getOrNull()
@@ -30,17 +55,17 @@ class ErrorInterceptor @Inject constructor(
             // login/register credential failure (no session to invalidate), so it must NOT trigger
             // a forced logout — it's surfaced to the caller as UnauthorizedException as usual.
             if (chain.request().header("Authorization") != null) {
-                sessionEvents.notifyForcedLogout()
+                events.onUnauthorized()
             }
             throw UnauthorizedException(message)
         }
         // 426: this build's protocol is older than the server's (T-240). It says nothing about the
-        // session and nothing about the row that happened to be in flight, so it raises the
-        // app-wide state and otherwise goes on to be an ordinary ApiException — no forced logout,
-        // no quarantine. One choke point here covers foreground screens and the background worker
-        // alike, exactly as the 401 rule above does.
+        // session and nothing about the row that happened to be in flight, so it marks the account
+        // and otherwise goes on to be an ordinary ApiException — no forced logout, no quarantine.
+        // One choke point here covers foreground screens and the background worker alike, exactly
+        // as the 401 rule above does.
         if (httpCode == 426) {
-            protocolState.notifyClientOutdated()
+            events.onOutdated()
         }
         throw ApiException(
             code,
@@ -50,5 +75,10 @@ class ErrorInterceptor @Inject constructor(
             field = envelope?.field,
             accountId = envelope?.accountId,
         )
+    }
+
+    private companion object {
+        /** Exempt from the protocol check, so a 2xx there says nothing about this build. */
+        val UNCHECKED_PATH_SUFFIXES = setOf("/app-version")
     }
 }

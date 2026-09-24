@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.expense
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -31,18 +33,15 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.TestServerAddress
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
@@ -81,10 +80,11 @@ class ExpenseScreensTest {
             // Runs DAO calls inline so the screen has its data by waitForIdle (T-29).
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
+        runBlocking { db.insertTestAccount() }
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
+        listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip", ListKind.EXPENSES, currency = "EUR")
         setMembers(me, other)
     }
 
@@ -102,19 +102,9 @@ class ExpenseScreensTest {
         itemsRepo,
         listsRepo,
         // Voting is not what these tests are about; the provider is never asked for an Api.
-        ApiProvider(
-            serverConfig = ServerConfig(
-                PreferenceDataStoreFactory.create {
-                    File.createTempFile("expense_screens_server_config", ".preferences_pb")
-                        .apply { deleteOnExit() }
-                },
-            ),
-            authInterceptor = AuthInterceptor(TokenProvider { null }),
-            errorInterceptor = ErrorInterceptor(Json { ignoreUnknownKeys = true }, SessionEvents()),
-            json = Json { ignoreUnknownKeys = true },
-        ),
+        testApiSource(Json { ignoreUnknownKeys = true }, token = { null }) { null },
         syncer,
-        FakeSessionState().apply { accountId = me },
+        FakeCurrentAccount().apply { accountId = me },
     )
 
     private fun dinner(paidBy: String = me) = Expense(
@@ -533,7 +523,7 @@ class ExpenseScreensTest {
 
     /** The form, opened on this list with a real view model, as the date-picker test does. */
     private fun showForm(itemId: String? = null) {
-        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
+        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount().apply { accountId = me })
         composeTestRule.setContent {
             ExpenseDialog(listId = listId, itemId = itemId, onDismiss = {}, viewModel = form)
         }
@@ -675,7 +665,7 @@ class ExpenseScreensTest {
 
     @Test
     fun `the expense date is picked from a calendar, not typed`() = runBlocking<Unit> {
-        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeSessionState().apply { accountId = me })
+        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount().apply { accountId = me })
         composeTestRule.setContent { ExpenseDialog(listId = listId, itemId = null, onDismiss = {}, viewModel = form) }
         composeTestRule.waitForIdle()
         val today = form.uiState.value.date

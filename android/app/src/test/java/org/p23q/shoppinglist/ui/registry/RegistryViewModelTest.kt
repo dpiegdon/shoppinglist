@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.registry
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
+import kotlinx.coroutines.runBlocking
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -38,10 +41,11 @@ class RegistryViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
+        db.insertTestAccount()
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        listId = listsRepo.createList("Groceries")
+        listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
     }
 
     private fun newViewModel(): RegistryViewModel =

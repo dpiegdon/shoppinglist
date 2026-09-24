@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">L\'e-mail et le mot de passe sont requis</string>
     <string name="login_msg_incorrect_credentials">E-mail ou mot de passe incorrect</string>
     <string name="login_msg_untrusted_cert">Le certificat du serveur n\'est pas approuvé. Utilise un certificat d\'une autorité reconnue. Pour un serveur de test auto-signé, active \"Faire confiance aux certificats auto-signés\" dans les Paramètres (builds de débogage uniquement).</string>
+    <string name="login_msg_server_too_old">Ce serveur est trop ancien pour cette application.</string>
     <string name="redeem_msg_code_required">Saisis un code d\'invitation</string>
     <string name="redeem_msg_failed">Impossible d\'utiliser l\'invitation</string>
     <string name="item_msg_name_required">Le nom est requis</string>

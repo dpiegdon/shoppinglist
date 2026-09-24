@@ -18,13 +18,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.PendingInviteHolder
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.data.TestAccounts
+import org.p23q.shoppinglist.data.TestServerAddress
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
@@ -40,8 +39,8 @@ class RedeemViewModelTest {
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
-    private lateinit var sessionState: FakeSessionState
-    private lateinit var apiProvider: ApiProvider
+    private lateinit var sessionState: FakeCurrentAccount
+    private lateinit var apiProvider: ApiSource
     private lateinit var syncEngine: SyncEngine
 
     @Before
@@ -54,20 +53,16 @@ class RedeemViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
 
-        val serverConfigFile = File.createTempFile("redeem_vm_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
 
-        sessionState = FakeSessionState().apply { token = "tok-123" }
+        sessionState = FakeCurrentAccount().apply { token = "tok-123" }
         val json = Json { ignoreUnknownKeys = true }
-        apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
-        )
-        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, org.p23q.shoppinglist.core.sync.SyncStatus(), org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier { })
+        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
+        syncEngine = TestAccounts(db).run {
+            add(server.url("/").toString())
+            syncEngine()
+        }
     }
 
     @After
@@ -164,7 +159,7 @@ class RedeemViewModelTest {
     @Test
     fun `redeeming while logged out stashes the token and signals needsLogin without calling the API`() = runTest(mainDispatcherRule.dispatcher) {
         val holder = PendingInviteHolder()
-        val loggedOut = FakeSessionState() // token == null
+        val loggedOut = FakeCurrentAccount() // token == null
         val viewModel = RedeemViewModel(apiProvider, syncEngine, loggedOut, holder)
         viewModel.onTokenChange("invite-xyz")
 
@@ -172,7 +167,7 @@ class RedeemViewModelTest {
 
         assertNull("short-circuits before launching any request", job)
         assertTrue(viewModel.uiState.value.needsLogin)
-        assertEquals("invite-xyz", holder.consume())
+        assertEquals("invite-xyz", holder.consume()?.token)
         assertEquals("no request should have reached the server", 0, server.requestCount)
     }
 }

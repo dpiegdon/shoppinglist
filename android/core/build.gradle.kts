@@ -30,7 +30,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.javax.inject)
     // Tolerated until the module goes multiplatform: the retrofit2.http annotations on Api and
-    // okhttp3.Interceptor in the three interceptors (README.md).
+    // okhttp3.Interceptor in the interceptors and the account sessions (README.md).
     implementation(libs.retrofit)
     implementation(libs.okhttp)
 

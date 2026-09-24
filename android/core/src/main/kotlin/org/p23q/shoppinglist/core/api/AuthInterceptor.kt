@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.core.api
 
 import okhttp3.Interceptor
 import okhttp3.Response
-import javax.inject.Inject
 
 /** Synchronous token lookup — OkHttp interceptors run on a blocking call chain, not as suspend. */
 fun interface TokenProvider {
@@ -16,7 +15,7 @@ fun interface TokenProvider {
  * revoked session and trip ErrorInterceptor's forced-logout path. /logout deliberately keeps its
  * token — the server needs it to know which session to revoke.
  */
-class AuthInterceptor @Inject constructor(private val tokenProvider: TokenProvider) : Interceptor {
+class AuthInterceptor(private val tokenProvider: TokenProvider) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val token = tokenProvider.currentToken()

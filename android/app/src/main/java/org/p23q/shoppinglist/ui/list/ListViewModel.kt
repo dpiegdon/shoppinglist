@@ -30,7 +30,7 @@ import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.ShowCheckedStore
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.ui.Routes
 import java.io.IOException
 import java.util.Locale
@@ -75,7 +75,7 @@ class ListViewModel @Inject constructor(
     syncStatus: SyncStatus,
     defaultCurrencyState: DefaultCurrencyState,
     private val showCheckedStore: ShowCheckedStore,
-    private val apiProvider: ApiProvider,
+    private val apiProvider: ApiSource,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
@@ -124,9 +124,9 @@ class ListViewModel @Inject constructor(
         viewModelScope.launch {
             syncStatus.state.collect { sync -> _uiState.update { it.copy(sync = sync) } }
         }
-        // Live, not one-shot (T-55): SessionState's EncryptedSharedPreferences backing isn't
-        // observable, so without this an already-open list wouldn't see a Settings currency change
-        // until the screen was recreated.
+        // Live, not one-shot (T-55): CurrentAccount.defaultCurrency is read once, so without this
+        // an already-open list wouldn't see a Settings currency change until the screen was
+        // recreated.
         viewModelScope.launch {
             defaultCurrencyState.currency.collect { currency -> _uiState.update { it.copy(defaultCurrency = currency) } }
         }

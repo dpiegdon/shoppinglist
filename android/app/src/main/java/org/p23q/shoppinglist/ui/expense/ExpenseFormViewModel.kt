@@ -14,7 +14,7 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import java.time.LocalDate
@@ -138,7 +138,7 @@ data class ExpensePrefill(val name: String, val expense: Expense)
 class ExpenseFormViewModel @Inject constructor(
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
-    private val sessionState: SessionState,
+    private val currentAccount: CurrentAccount,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseFormUiState())
@@ -188,7 +188,7 @@ class ExpenseFormViewModel @Inject constructor(
                 )
             }
         } else {
-            val me = sessionState.accountId
+            val me = currentAccount.accountId
             selected = mapOf(
                 // Whoever is adding it paid, unless they are not on the list at all (they always are).
                 Side.PAID_BY to setOfNotNull(me?.takeIf { it in participantIds && !isFrozen(it) }),
@@ -323,7 +323,7 @@ class ExpenseFormViewModel @Inject constructor(
                 from = payers[0]
                 to = beneficiaries[0]
             } else {
-                val me = sessionState.accountId
+                val me = currentAccount.accountId
                 from = if (me != null && me in candidates) {
                     me
                 } else {

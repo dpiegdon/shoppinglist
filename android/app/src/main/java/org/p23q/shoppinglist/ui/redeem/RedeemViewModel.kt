@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.data.PendingInviteHolder
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
@@ -33,9 +33,9 @@ data class RedeemUiState(
 /** Notes: App Link / pasted token -> POST /invites/redeem -> syncNow(fullLists=[listId]) -> open list. */
 @HiltViewModel
 class RedeemViewModel @Inject constructor(
-    private val apiProvider: ApiProvider,
+    private val apiProvider: ApiSource,
     private val syncEngine: SyncEngine,
-    private val sessionState: SessionState,
+    private val currentAccount: CurrentAccount,
     private val pendingInviteHolder: PendingInviteHolder,
 ) : ViewModel() {
 
@@ -53,8 +53,8 @@ class RedeemViewModel @Inject constructor(
         // Redeem needs a session. Logged out (e.g. tapped an invite link with no account signed in):
         // stash the token and signal the caller to send the user through Login, which resumes the
         // redeem afterwards — instead of a bare 401 that drops the invite (T-28).
-        if (sessionState.token == null) {
-            pendingInviteHolder.stash(token)
+        if (currentAccount.token == null) {
+            pendingInviteHolder.stash(token, currentAccount.localId)
             _uiState.update { it.copy(needsLogin = true) }
             return null
         }
@@ -62,7 +62,7 @@ class RedeemViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val listId = apiProvider.get().redeemInvite(RedeemInviteRequest(token)).listId
-                syncEngine.syncNow(fullLists = listOf(listId))
+                syncEngine.syncNow(fullLists = listOf(listId), fullListsAccountId = currentAccount.localId)
                 _uiState.update { it.copy(isLoading = false, redeemedListId = listId) }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))) }

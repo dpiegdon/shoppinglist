@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ListKind
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -73,7 +73,7 @@ data class ItemFormUiState(
 class ItemFormViewModel @Inject constructor(
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
-    private val sessionState: SessionState,
+    private val currentAccount: CurrentAccount,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemFormUiState())
@@ -109,7 +109,7 @@ class ItemFormViewModel @Inject constructor(
         this.listId = listId
         // isEditMode must land in _uiState BEFORE listIdFlow's new value can trigger the
         // suggestions flow, or it could briefly re-read a stale isEditMode from before this call.
-        _uiState.value = ItemFormUiState(isEditMode = false, priceCurrency = sessionState.defaultCurrency ?: "")
+        _uiState.value = ItemFormUiState(isEditMode = false, priceCurrency = currentAccount.defaultCurrency ?: "")
         loadedSnapshot = null
         listIdFlow.value = listId
         loadCategorySuggestions()
@@ -129,7 +129,7 @@ class ItemFormViewModel @Inject constructor(
             stores = itemsRepo.decodeStores(item.stores.value),
             quantity = item.quantity.value ?: "",
             priceAmount = price?.amount ?: "",
-            priceCurrency = price?.currency ?: sessionState.defaultCurrency ?: "",
+            priceCurrency = price?.currency ?: currentAccount.defaultCurrency ?: "",
             note = item.note.value ?: "",
             status = Status.fromWireValue(item.status.value),
             isBlocked = item.syncBlocked,

@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">Електронна пошта та пароль обов\'язкові</string>
     <string name="login_msg_incorrect_credentials">Неправильна електронна пошта або пароль</string>
     <string name="login_msg_untrusted_cert">Сертифікат сервера не є довіреним. Використай сертифікат від визнаного центру сертифікації. Для тестового сервера із самопідписаним сертифікатом увімкни «Довіряти самопідписаним сертифікатам» у налаштуваннях (лише debug-збірки).</string>
+    <string name="login_msg_server_too_old">Цей сервер застарий для цього застосунку.</string>
     <string name="redeem_msg_code_required">Введи код запрошення</string>
     <string name="redeem_msg_failed">Не вдалося скористатися запрошенням</string>
     <string name="item_msg_name_required">Назва обов\'язкова</string>

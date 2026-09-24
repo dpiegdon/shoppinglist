@@ -3,18 +3,16 @@ package org.p23q.shoppinglist.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.DefaultCurrencyState
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.ChangeEmailRequest
 import org.p23q.shoppinglist.core.api.ChangePasswordRequest
@@ -22,12 +20,9 @@ import org.p23q.shoppinglist.core.api.DeleteAccountRequest
 import org.p23q.shoppinglist.core.api.SessionDto
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.api.UpdateSettingsRequest
-import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.core.db.clearAll
-import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
@@ -74,11 +69,10 @@ data class SettingsUiState(
 /** Notes: "the usual stuff" — currency, password/email, sessions, delete account, theme, server URL. */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val apiProvider: ApiProvider,
-    private val sessionState: SessionState,
-    private val serverConfig: ServerConfig,
+    private val apiProvider: ApiSource,
+    private val currentAccount: CurrentAccount,
     private val themePreferenceStore: ThemePreferenceStore,
-    private val appDb: AppDb,
+    private val authRepository: AuthRepository,
     private val crashLogWriter: CrashLogWriter,
     private val defaultCurrencyState: DefaultCurrencyState,
     private val notificationPrefs: NotificationPrefsStore,
@@ -93,10 +87,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    serverUrl = serverConfig.serverUrl.first() ?: "",
-                    accountEmail = sessionState.accountEmail,
-                    defaultCurrency = sessionState.defaultCurrency ?: "",
-                    allowSelfSignedCerts = serverConfig.allowSelfSignedCerts.first(),
+                    serverUrl = currentAccount.serverUrl ?: "",
+                    accountEmail = currentAccount.accountEmail,
+                    defaultCurrency = currentAccount.defaultCurrency ?: "",
+                    allowSelfSignedCerts = currentAccount.allowSelfSignedCerts,
                 )
             }
         }
@@ -130,7 +124,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Not cached anywhere locally (unlike currency, via sessionState) — a real fetch, opt-in like
+     * Not cached anywhere locally (unlike currency, via currentAccount) — a real fetch, opt-in like
      * [loadSessions] rather than in init (this screen's init is local/cached-only by design). The
      * screen calls this once on open. Best-effort: until it resolves the field just renders blank.
      * Nothing else depends on it having resolved — the currency save never sends initials at all
@@ -175,7 +169,7 @@ class SettingsViewModel @Inject constructor(
                 val response = apiProvider.get().updateSettings(
                     UpdateSettingsRequest(normalized, initials = null),
                 )
-                sessionState.defaultCurrency = response.defaultCurrency
+                currentAccount.defaultCurrency = response.defaultCurrency
                 // Also updates the in-memory mirror (T-55) so an already-open list screen picks up
                 // the change immediately instead of only the next time it's opened.
                 defaultCurrencyState.set(response.defaultCurrency)
@@ -253,7 +247,7 @@ class SettingsViewModel @Inject constructor(
         return viewModelScope.launch {
             try {
                 apiProvider.get().changeEmail(ChangeEmailRequest(state.changeEmailPassword, state.newEmail))
-                sessionState.accountEmail = state.newEmail
+                currentAccount.accountEmail = state.newEmail
                 _uiState.update {
                     it.copy(
                         accountEmail = state.newEmail,
@@ -295,8 +289,8 @@ class SettingsViewModel @Inject constructor(
         return viewModelScope.launch {
             try {
                 apiProvider.get().deleteAccount(DeleteAccountRequest(password))
-                sessionState.clear()
-                withContext(Dispatchers.IO) { appDb.clearAll() }
+                // Gone on the server, so gone here too: its lists, its token, its row.
+                currentAccount.localId?.let { authRepository.removeAccount(it) }
                 _uiState.update { it.copy(isAccountDeleted = true, isDeleteConfirmOpen = false) }
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
@@ -327,7 +321,7 @@ class SettingsViewModel @Inject constructor(
      * it only actually affects TLS in debug builds — release ignores it (see DevCertTrust.kt).
      */
     fun setAllowSelfSignedCerts(allow: Boolean): Job = viewModelScope.launch {
-        serverConfig.setAllowSelfSignedCerts(allow)
+        currentAccount.allowSelfSignedCerts = allow
         _uiState.update { it.copy(allowSelfSignedCerts = allow) }
     }
 

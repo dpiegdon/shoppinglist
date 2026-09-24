@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">E-Mail und Passwort sind erforderlich</string>
     <string name="login_msg_incorrect_credentials">E-Mail oder Passwort ist falsch</string>
     <string name="login_msg_untrusted_cert">Dem Zertifikat des Servers wird nicht vertraut. Verwende ein Zertifikat einer anerkannten Zertifizierungsstelle. Für einen selbstsignierten Testserver aktiviere \"Selbstsignierten Zertifikaten vertrauen\" in den Einstellungen (nur Debug-Builds).</string>
+    <string name="login_msg_server_too_old">Dieser Server ist zu alt für diese App.</string>
     <string name="redeem_msg_code_required">Gib einen Einladungscode ein</string>
     <string name="redeem_msg_failed">Einladung konnte nicht eingelöst werden</string>
     <string name="item_msg_name_required">Name ist erforderlich</string>

@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.AdminPasswordRequest
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.ServerSettingsDto
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
@@ -43,11 +43,11 @@ data class AdminUiState(
 /** Admin-only server console (T-107): registration toggle + reset/delete users, all with step-up. */
 @HiltViewModel
 class AdminViewModel @Inject constructor(
-    private val apiProvider: ApiProvider,
-    sessionState: SessionState,
+    private val apiProvider: ApiSource,
+    currentAccount: CurrentAccount,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AdminUiState(currentAccountId = sessionState.accountId))
+    private val _uiState = MutableStateFlow(AdminUiState(currentAccountId = currentAccount.accountId))
     val uiState: StateFlow<AdminUiState> = _uiState.asStateFlow()
 
     init {

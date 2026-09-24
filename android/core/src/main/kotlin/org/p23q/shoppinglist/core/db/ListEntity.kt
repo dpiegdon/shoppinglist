@@ -2,12 +2,23 @@ package org.p23q.shoppinglist.core.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /** Local mirror of the Wire Contract's list object; [categoryOrder] holds JSON-encoded array text. */
-@Entity(tableName = "lists")
+@Entity(
+    tableName = "lists",
+    foreignKeys = [ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"])],
+    indices = [Index("accountId")],
+)
 data class ListEntity(
     @PrimaryKey val id: String,
+    /**
+     * The local id of the [AccountEntity] this list belongs to. Not a synced field: it says which
+     * server the list lives on, and a list never moves.
+     */
+    val accountId: String,
     val createdAt: Long,
     @Embedded(prefix = "name_") val name: LwwString,
     @Embedded(prefix = "categoryOrder_") val categoryOrder: LwwString,

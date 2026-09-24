@@ -17,8 +17,9 @@ import androidx.room.useWriterConnection
 suspend fun AppDb.clearAll() {
     useWriterConnection { transactor ->
         transactor.immediateTransaction {
-            execSQL("DELETE FROM `lists`")
             execSQL("DELETE FROM `items`")
+            execSQL("DELETE FROM `lists`")
+            execSQL("DELETE FROM `accounts`")
         }
         transactor.execSQL("PRAGMA wal_checkpoint(FULL)")
         transactor.execSQL("VACUUM")

@@ -1,12 +1,7 @@
 package org.p23q.shoppinglist.core.api
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import okhttp3.Interceptor
 import okhttp3.Response
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The client/server protocol version (T-240).
@@ -20,6 +15,17 @@ import javax.inject.Singleton
  */
 const val PROTOCOL_VERSION = 3
 
+/**
+ * The oldest server protocol this build still works against. A server is asked for its protocol
+ * (`GET /app-version`) before the first login or registration there, and refused below this; a
+ * server whose answer has no `protocol` at all predates T-240 and is refused too.
+ *
+ * A feature that needs a newer server is gated per account by its stored `serverProtocol`, never
+ * assumed. Raise this only in a major release, and record it in the changelog in the "Protocol
+ * version" section of docs/wire-contract.md.
+ */
+const val MIN_SERVER_PROTOCOL = 3
+
 const val PROTOCOL_HEADER = "X-Client-Protocol"
 
 /**
@@ -30,32 +36,8 @@ const val PROTOCOL_HEADER = "X-Client-Protocol"
  * cannot be forgotten when an endpoint is added, and it covers the app-version request too (that
  * one endpoint stays reachable while outdated, but sending the header there costs nothing).
  */
-class ProtocolInterceptor @Inject constructor() : Interceptor {
+class ProtocolInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response = chain.proceed(
         chain.request().newBuilder().header(PROTOCOL_HEADER, PROTOCOL_VERSION.toString()).build(),
     )
-}
-
-/**
- * App-wide "this app is too old for its server" state (T-240).
- *
- * Deliberately a state and not an event like [SessionEvents.forcedLogout]: it does not go away by
- * itself — every request will keep being refused until the app is updated — so both the UI (which
- * blocks the whole screen on it) and [org.p23q.shoppinglist.core.sync.SyncEngine] (which stops
- * rather than hammer a server that will never accept it) read the current value rather than having
- * to have been listening at the right moment.
- *
- * Being outdated is NOT being logged out and NOT a bad row: nothing is cleared, quarantined or
- * dropped anywhere on this path. A successful install restarts the app, which clears the state;
- * if it is ever cleared without an update, the next 426 raises it again.
- */
-@Singleton
-class ProtocolState @Inject constructor() {
-    private val _updateRequired = MutableStateFlow(false)
-    val updateRequired: StateFlow<Boolean> = _updateRequired.asStateFlow()
-
-    /** Non-suspending — safe to call from any thread, including an OkHttp interceptor. */
-    fun notifyClientOutdated() {
-        _updateRequired.value = true
-    }
 }

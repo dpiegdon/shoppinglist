@@ -26,10 +26,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DefaultCurrencyState
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.ThemePreferenceStore
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
@@ -78,32 +79,26 @@ class SettingsScreenTest {
             .build()
         val serverConfigFile = File.createTempFile("settings_screen_server_config", ".preferences_pb")
         serverConfigFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
         val themeFile = File.createTempFile("settings_screen_theme", ".preferences_pb")
         themeFile.deleteOnExit()
         val themePreferenceStore = ThemePreferenceStore(PreferenceDataStoreFactory.create { themeFile })
-        val sessionState = FakeSessionState().apply {
+        val sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "milk@example.com"
             defaultCurrency = "EUR"
         }
         val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
-        )
+        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
         val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
         crashLogFile.deleteOnExit()
         val crashLogWriter = CrashLogWriter(crashLogFile)
         val viewModel = SettingsViewModel(
             apiProvider,
             sessionState,
-            serverConfig,
             themePreferenceStore,
-            db,
+            org.p23q.shoppinglist.data.RecordingAuthRepository(),
             crashLogWriter,
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(
@@ -151,32 +146,26 @@ class SettingsScreenTest {
             .build()
         val serverConfigFile = File.createTempFile("settings_screen_initials_server_config", ".preferences_pb")
         serverConfigFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
         val themeFile = File.createTempFile("settings_screen_initials_theme", ".preferences_pb")
         themeFile.deleteOnExit()
         val themePreferenceStore = ThemePreferenceStore(PreferenceDataStoreFactory.create { themeFile })
-        val sessionState = FakeSessionState().apply {
+        val sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "milk@example.com"
             defaultCurrency = "EUR"
         }
         val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
-        )
+        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
         val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
         crashLogFile.deleteOnExit()
         val crashLogWriter = CrashLogWriter(crashLogFile)
         val viewModel = SettingsViewModel(
             apiProvider,
             sessionState,
-            serverConfig,
             themePreferenceStore,
-            db,
+            org.p23q.shoppinglist.data.RecordingAuthRepository(),
             crashLogWriter,
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(
@@ -230,32 +219,26 @@ class SettingsScreenTest {
             .build()
         val serverConfigFile = File.createTempFile("settings_screen_crashlog_server_config", ".preferences_pb")
         serverConfigFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
         val themeFile = File.createTempFile("settings_screen_crashlog_theme", ".preferences_pb")
         themeFile.deleteOnExit()
         val themePreferenceStore = ThemePreferenceStore(PreferenceDataStoreFactory.create { themeFile })
-        val sessionState = FakeSessionState().apply {
+        val sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "milk@example.com"
             defaultCurrency = "EUR"
         }
         val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
-        )
+        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
         val crashLogFile = File.createTempFile("settings_screen_crashlog_empty", ".txt")
         crashLogFile.deleteOnExit()
         val crashLogWriter = CrashLogWriter(crashLogFile)
         val viewModel = SettingsViewModel(
             apiProvider,
             sessionState,
-            serverConfig,
             themePreferenceStore,
-            db,
+            org.p23q.shoppinglist.data.RecordingAuthRepository(),
             crashLogWriter,
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(
@@ -294,10 +277,10 @@ class SettingsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_admin_server_config") })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
         // An admin account: before T-220 this is exactly who got the button on this screen.
-        val sessionState = FakeSessionState().apply {
+        val sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "boss@example.com"
             defaultCurrency = "EUR"
@@ -305,16 +288,10 @@ class SettingsScreenTest {
         }
         val json = Json { ignoreUnknownKeys = true }
         val viewModel = SettingsViewModel(
-            ApiProvider(
-                serverConfig = serverConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-                json = json,
-            ),
+            testApiSource(json, token = { sessionState.token }) { serverConfig.url },
             sessionState,
-            serverConfig,
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_theme") }),
-            db,
+            org.p23q.shoppinglist.data.RecordingAuthRepository(),
             CrashLogWriter(File.createTempFile("settings_admin_crashlog", ".txt").apply { deleteOnExit() }),
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_admin_notif") }),
@@ -353,25 +330,19 @@ class SettingsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_about_server_config") })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeSessionState().apply {
+        val sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "milk@example.com"
             defaultCurrency = "EUR"
         }
         val json = Json { ignoreUnknownKeys = true }
         val viewModel = SettingsViewModel(
-            ApiProvider(
-                serverConfig = serverConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-                json = json,
-            ),
+            testApiSource(json, token = { sessionState.token }) { serverConfig.url },
             sessionState,
-            serverConfig,
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_about_theme") }),
-            db,
+            org.p23q.shoppinglist.data.RecordingAuthRepository(),
             CrashLogWriter(File.createTempFile("settings_about_crashlog", ".txt").apply { deleteOnExit() }),
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_about_notif") }),
@@ -415,25 +386,19 @@ class SettingsScreenTest {
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
         fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("settings_device_server_config") })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeSessionState().apply {
+        val sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "milk@example.com"
             defaultCurrency = "EUR"
         }
         val json = Json { ignoreUnknownKeys = true }
         val viewModel = SettingsViewModel(
-            ApiProvider(
-                serverConfig = serverConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-                json = json,
-            ),
+            testApiSource(json, token = { sessionState.token }) { serverConfig.url },
             sessionState,
-            serverConfig,
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_device_theme") }),
-            db,
+            org.p23q.shoppinglist.data.RecordingAuthRepository(),
             CrashLogWriter(File.createTempFile("settings_device_crashlog", ".txt").apply { deleteOnExit() }),
             DefaultCurrencyState(sessionState),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_device_notif") }),

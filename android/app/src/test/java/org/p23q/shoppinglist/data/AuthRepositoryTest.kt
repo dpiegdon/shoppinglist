@@ -1,74 +1,68 @@
 package org.p23q.shoppinglist.data
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
 import org.p23q.shoppinglist.core.DefaultCurrencyState
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.core.ServerTooOldException
+import org.p23q.shoppinglist.core.api.MIN_SERVER_PROTOCOL
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
-import org.p23q.shoppinglist.data.api.ApiProvider
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class AuthRepositoryTest {
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
-    private lateinit var serverConfig: ServerConfig
-    private lateinit var sessionState: FakeSessionState
+    private lateinit var accounts: TestAccounts
     private lateinit var defaultCurrencyState: DefaultCurrencyState
     private lateinit var repository: AuthRepository
+    private lateinit var url: String
 
     @Before
     fun setUp() {
         server = MockWebServer()
         server.start()
+        url = server.url("/").toString()
 
-        // Real ARM64-native SQLite via Room's KMP driver, not a Robolectric shadow (see A2's
-        // notes in app/build.gradle.kts); Robolectric here only supplies a working Context.
+        // Real native SQLite via Room's KMP driver, not a Robolectric shadow (see A2's notes in
+        // app/build.gradle.kts); Robolectric here only supplies a working Context.
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
             .build()
-
-        val tempFile = File.createTempFile("server_config_test", ".preferences_pb")
-        tempFile.deleteOnExit()
-        serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
-
-        sessionState = FakeSessionState()
-
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
+        accounts = TestAccounts(db)
+        defaultCurrencyState = DefaultCurrencyState(accounts.currentAccount)
+        repository = AuthRepositoryImpl(
+            accounts.sessions,
+            accounts.registry,
+            accounts.secrets,
+            accounts.secrets,
+            db,
+            defaultCurrencyState,
+            deviceName = "Test device",
         )
-
-        defaultCurrencyState = DefaultCurrencyState(sessionState)
-        repository = AuthRepositoryImpl(apiProvider, sessionState, db, defaultCurrencyState, deviceName = "Test device")
     }
 
     @After
@@ -77,93 +71,166 @@ class AuthRepositoryTest {
         if (::db.isInitialized) db.close()
     }
 
-    private suspend fun pointAtServer() {
-        serverConfig.setServerUrl(server.url("/").toString())
+    private fun appVersion(protocol: Int?) = MockResponse().setResponseCode(200).setBody(
+        """{"version": "1.0.0", "download_url": "https://example.com/a.apk"${protocol?.let { ", \"protocol\": $it" } ?: ""}}""",
+    )
+
+    /** The floor check (unless the server's protocol is already known), the login and the settings read. */
+    private fun enqueueLogin(accountId: String, email: String = "milk@example.com", askFloor: Boolean = true) {
+        if (askFloor) server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-$accountId", "account_id": "$accountId", "email": "$email"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
     }
 
     @Test
-    fun `login stores token, email, and default currency`() = runTest {
-        pointAtServer()
-        server.enqueue(
-            MockResponse().setResponseCode(200)
-                .setBody("""{"token": "tok-123", "account_id": "acc-1", "email": "milk@example.com"}"""),
-        )
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+    fun `login creates a signed-in account with its token, email, server id and currency`() = runTest {
+        enqueueLogin(accountId = "acc-1")
 
-        repository.login("milk@example.com", "hunter2")
+        val id = repository.login(url, "milk@example.com", "hunter2")
 
-        assertEquals("tok-123", sessionState.token)
-        assertEquals("milk@example.com", sessionState.accountEmail)
-        assertEquals("EUR", sessionState.defaultCurrency)
+        val account = accounts.registry.get(id)!!
+        assertEquals(url, account.serverUrl)
+        assertEquals("acc-1", account.accountId)
+        assertEquals("milk@example.com", account.email)
+        assertEquals("EUR", account.defaultCurrency)
+        assertTrue(account.signedIn)
+        assertEquals(MIN_SERVER_PROTOCOL, account.serverProtocol)
+        assertEquals("tok-acc-1", accounts.secrets.token(id))
+        // Written through, not only held in memory.
+        assertEquals(account, db.accountDao().all().single())
+        // And the one account is what the single-account screens see.
+        assertEquals("tok-acc-1", accounts.currentAccount.token)
+        assertEquals("acc-1", accounts.currentAccount.accountId)
     }
 
     @Test
     fun `login also writes the default currency through the in-memory mirror (T-55)`() = runTest {
-        pointAtServer()
-        server.enqueue(
-            MockResponse().setResponseCode(200)
-                .setBody("""{"token": "tok-123", "account_id": "acc-1", "email": "milk@example.com"}"""),
-        )
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+        enqueueLogin(accountId = "acc-1")
 
-        repository.login("milk@example.com", "hunter2")
+        repository.login(url, "milk@example.com", "hunter2")
 
         assertEquals("EUR", defaultCurrencyState.currency.value)
     }
 
     @Test
-    fun `login stores the account id for collaborator-change detection (T-65)`() = runTest {
-        pointAtServer()
-        server.enqueue(
-            MockResponse().setResponseCode(200)
-                .setBody("""{"token": "tok-123", "account_id": "acc-1", "email": "milk@example.com"}"""),
-        )
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+    fun `the settings read after login carries the new account's token`() = runTest {
+        enqueueLogin(accountId = "acc-1")
 
-        repository.login("milk@example.com", "hunter2")
+        repository.login(url, "milk@example.com", "hunter2")
 
-        assertEquals("acc-1", sessionState.accountId)
+        server.takeRequest() // app-version
+        assertNull("login itself carries no token", server.takeRequest().getHeader("Authorization"))
+        assertEquals("Bearer tok-acc-1", server.takeRequest().getHeader("Authorization"))
     }
 
     @Test
-    fun `register does not itself store a token`() = runTest {
-        pointAtServer()
+    fun `register does not itself store a token or an account`() = runTest {
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
         server.enqueue(MockResponse().setResponseCode(201).setBody("""{"account_id": "acc-1"}"""))
 
-        repository.register("milk@example.com", "hunter2")
+        repository.register(url, "milk@example.com", "hunter2")
 
-        assertNull(sessionState.token)
+        assertTrue(accounts.registry.snapshot().isEmpty())
+        assertTrue(accounts.secrets.tokens.isEmpty())
+    }
+
+    // ---- the protocol floor (T-291) -----------------------------------------------
+
+    @Test
+    fun `a server that names no protocol is refused before anything else is sent to it`() = runTest {
+        server.enqueue(appVersion(protocol = null))
+
+        assertTooOld { repository.login(url, "milk@example.com", "hunter2") }
+
+        assertEquals("/api/v1/app-version", server.takeRequest().path)
+        assertEquals("nothing but the question went out", 1, server.requestCount)
+        assertTrue("and nothing was stored", accounts.registry.snapshot().isEmpty())
     }
 
     @Test
-    fun `logout calls the server and clears the session`() = runTest {
-        pointAtServer()
-        sessionState.token = "tok-123"
-        sessionState.accountEmail = "milk@example.com"
-        sessionState.accountId = "acc-1"
-        seedUnpushedItem()
+    fun `a server below the floor is refused`() = runTest {
+        server.enqueue(appVersion(protocol = MIN_SERVER_PROTOCOL - 1))
+
+        assertTooOld { repository.login(url, "milk@example.com", "hunter2") }
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `a server from before app-version existed is refused`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
+
+        assertTooOld { repository.register(url, "milk@example.com", "hunter2") }
+        assertEquals("no registration was attempted", 1, server.requestCount)
+    }
+
+    @Test
+    fun `a server at the floor is accepted`() = runTest {
+        enqueueLogin(accountId = "acc-1")
+
+        repository.login(url, "milk@example.com", "hunter2")
+
+        assertEquals("/api/v1/app-version", server.takeRequest().path)
+        assertEquals("/api/v1/login", server.takeRequest().path)
+    }
+
+    @Test
+    fun `a server whose protocol is known is not asked again`() = runTest {
+        enqueueLogin(accountId = "acc-1")
+        val id = repository.login(url, "milk@example.com", "hunter2")
+        repository.clearLocalSession(id)
+        val before = server.requestCount
+
+        enqueueLogin(accountId = "acc-1", askFloor = false)
+        repository.login(url, "milk@example.com", "hunter2")
+
+        assertEquals(before + 2, server.requestCount)
+        repeat(before) { server.takeRequest() }
+        assertEquals("/api/v1/login", server.takeRequest().path)
+    }
+
+    private suspend fun assertTooOld(block: suspend () -> Unit) {
+        try {
+            block()
+            fail("expected ServerTooOldException")
+        } catch (_: ServerTooOldException) {
+            // expected
+        }
+    }
+
+    // ---- logout and the mirror (T-257, T-260) --------------------------------------
+
+    @Test
+    fun `logout calls the server with the account's token and signs it out, keeping unpushed rows`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
         server.enqueue(MockResponse().setResponseCode(204))
 
-        repository.logout()
+        repository.logout(TEST_ACCOUNT_ID)
 
         val recorded = server.takeRequest()
         assertEquals("Bearer tok-123", recorded.getHeader("Authorization"))
-        assertNull(sessionState.token)
-        // The mirror is not the session's to throw away (T-260): logging out is not a reason to
-        // destroy edits that never reached the server. login() decides, once it knows who is back.
+        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
+        val account = accounts.registry.get(TEST_ACCOUNT_ID)!!
+        assertFalse(account.signedIn)
+        // The row stays and still says whose lists these are, for the next login to judge (T-260).
+        assertEquals("acc-1", account.accountId)
         assertNotNull(db.itemDao().getById("item-1"))
-        assertEquals("acc-1", sessionState.mirrorAccountId)
+        assertNull(accounts.currentAccount.token)
     }
 
     @Test
-    fun `logout still wipes local session even if the server is unreachable`() = runTest {
-        pointAtServer()
-        sessionState.token = "tok-123"
+    fun `logout still signs out if the server is unreachable`() = runTest {
+        accounts.add(url)
         server.shutdown()
 
-        repository.logout()
+        repository.logout(TEST_ACCOUNT_ID)
 
-        assertNull(sessionState.token)
+        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
     }
 
     /**
@@ -173,108 +240,140 @@ class AuthRepositoryTest {
      * the password on the web, foreground the phone, and the unpushed queue was gone.
      */
     @Test
-    fun `a forced logout keeps the unpushed queue (T-260)`() = runTest {
-        sessionState.token = "tok-123"
-        sessionState.accountId = "acc-1"
-        seedUnpushedItem()
-        seedSyncedItem()
+    fun `a forced logout keeps the unpushed queue and drops what the server can resend (T-260)`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        seedList("list-1")
+        seedList("list-clean")
+        seedItem("item-1", "list-1", dirty = true)
+        seedItem("item-synced", "list-1", dirty = false)
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(syncCursor = 42) }
 
-        repository.clearLocalSession()
+        repository.clearLocalSession(TEST_ACCOUNT_ID)
 
-        assertNull(sessionState.token)
         val kept = db.itemDao().getById("item-1")
         assertNotNull("the unpushed edit survives a forced logout", kept)
         assertTrue(kept!!.dirty)
-        // ...and nothing else does: clearing the session reset the cursor, so the next login
-        // re-pulls everything the server still has anyway (T-260).
         assertNull("a synced row is not kept on disk after logout", db.itemDao().getById("item-synced"))
-        // And the mirror's owner outlives the session, so login can tell whose data this is.
-        assertEquals("acc-1", sessionState.mirrorAccountId)
+        assertNull("nor a synced list with nothing unpushed in it", db.listDao().getById("list-clean"))
+        assertNotNull("but the list the unpushed item is on stays with it", db.listDao().getById("list-1"))
+        assertEquals("the next login re-pulls from 0", 0L, accounts.registry.get(TEST_ACCOUNT_ID)!!.syncCursor)
+    }
+
+    @Test
+    fun `a forced logout of one account leaves every other account's lists alone`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        accounts.add(server.url("/other/").toString(), id = "other", accountId = "acc-9")
+        seedList("mine", owner = TEST_ACCOUNT_ID)
+        seedList("theirs", owner = "other")
+        seedItem("their-synced-item", "theirs", dirty = false)
+
+        repository.clearLocalSession(TEST_ACCOUNT_ID)
+
+        assertNull(db.listDao().getById("mine"))
+        assertNotNull(db.listDao().getById("theirs"))
+        assertNotNull(db.itemDao().getById("their-synced-item"))
+        assertTrue(accounts.registry.get("other")!!.signedIn)
+        assertEquals("tok-123", accounts.secrets.token("other"))
     }
 
     /** The whole round trip of the ticket's scenario: forced out, then back in as oneself. */
     @Test
-    fun `logging back in as the same account keeps the mirror (T-260)`() = runTest {
-        pointAtServer()
-        sessionState.accountId = "acc-1"
-        seedUnpushedItem()
-        repository.clearLocalSession()
+    fun `logging back in as the same account re-activates its row and keeps the mirror (T-260)`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
+        repository.clearLocalSession(TEST_ACCOUNT_ID)
         enqueueLogin(accountId = "acc-1")
 
-        repository.login("milk@example.com", "hunter2")
+        val id = repository.login(url, "milk@example.com", "hunter2")
+        repository.removeOtherAccounts(keep = id)
 
+        assertEquals("the same row, not a new one", TEST_ACCOUNT_ID, id)
+        assertTrue(accounts.registry.get(id)!!.signedIn)
+        assertEquals("tok-acc-1", accounts.secrets.token(id))
         val kept = db.itemDao().getById("item-1")
         assertNotNull("the returning user's own edits are still there", kept)
         assertTrue("and still queued to go out", kept!!.dirty)
     }
 
     /**
-     * The privacy property the wipe existed for, now enforced where it can actually be decided
-     * (T-260): a different account must never see the previous account's lists.
+     * The privacy property the wipe existed for, enforced where it can actually be decided (T-260):
+     * a different account must never see the previous account's lists. The single-account login
+     * screen removes every other account once one has signed in.
      */
     @Test
-    fun `logging in as a different account wipes the mirror (T-260)`() = runTest {
-        pointAtServer()
-        sessionState.mirrorAccountId = "acc-1"
-        seedUnpushedItem()
-        enqueueLogin(accountId = "acc-2")
+    fun `signing in as a different account and keeping only it wipes the other mirror (T-260)`() = runTest {
+        accounts.add(url, accountId = "acc-1", token = null)
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
+        enqueueLogin(accountId = "acc-2", email = "bread@example.com")
 
-        repository.login("bread@example.com", "hunter2")
+        val id = repository.login(url, "bread@example.com", "hunter2")
+        repository.removeOtherAccounts(keep = id)
 
+        assertNotEquals(TEST_ACCOUNT_ID, id)
         assertNull("another account must not see the previous one's lists", db.itemDao().getById("item-1"))
-        assertEquals("acc-2", sessionState.mirrorAccountId)
+        assertNull(db.listDao().getById("list-1"))
+        assertEquals(listOf(id), accounts.registry.snapshot().map { it.id })
+        assertEquals(listOf(id), db.accountDao().all().map { it.id })
     }
 
     @Test
     fun `an unrecorded mirror owner counts as a different account (T-260)`() = runTest {
-        pointAtServer()
         // No owner recorded — a pre-T-65 session, say, which cannot prove the mirror is this user's.
-        assertNull(sessionState.mirrorAccountId)
-        seedUnpushedItem()
+        accounts.add(url, accountId = null, token = null)
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
         enqueueLogin(accountId = "acc-1")
 
-        repository.login("milk@example.com", "hunter2")
+        val id = repository.login(url, "milk@example.com", "hunter2")
+        repository.removeOtherAccounts(keep = id)
 
         assertNull("privacy wins the tie when whose data it is cannot be established", db.itemDao().getById("item-1"))
     }
 
-    private fun enqueueLogin(accountId: String) {
-        server.enqueue(
-            MockResponse().setResponseCode(200)
-                .setBody("""{"token": "tok-123", "account_id": "$accountId", "email": "milk@example.com"}"""),
-        )
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
+    @Test
+    fun `removing an account deletes its lists, their items, its token and its row`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
+        accounts.secrets.lastOpenedListId = "list-1"
+
+        repository.removeAccount(TEST_ACCOUNT_ID)
+
+        assertNull(db.itemDao().getById("item-1"))
+        assertNull(db.listDao().getById("list-1"))
+        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
+        assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
+        assertTrue(db.accountDao().all().isEmpty())
+        assertNull("a cold start must not reopen a list that is gone", accounts.secrets.lastOpenedListId)
     }
 
-    /** A row the server can send again: dropped on logout, unlike the unpushed one. */
-    private suspend fun seedSyncedItem() {
+    private suspend fun seedList(id: String, owner: String = TEST_ACCOUNT_ID) {
         val now = System.currentTimeMillis()
-        db.itemDao().upsert(
-            ItemEntity(
-                id = "item-synced",
-                listId = "list-1",
+        db.listDao().upsert(
+            ListEntity(
+                id = id,
+                accountId = owner,
                 createdAt = now,
-                name = "Bread".toLww("dev", now),
-                category = null.toLwwOptional("dev", now),
-                stores = "[]".toLww("dev", now),
-                quantity = null.toLwwOptional("dev", now),
-                price = null.toLwwOptional("dev", now),
-                note = null.toLwwOptional("dev", now),
-                status = "todo".toLww("dev", now),
+                name = id.toLww("dev", now),
+                categoryOrder = "[]".toLww("dev", now),
+                notes = null.toLwwOptional("dev", now),
+                kind = "shopping".toLww("dev", now),
                 deleted = false.toLww("dev", now),
                 dirty = false,
             ),
         )
     }
 
-    private suspend fun seedUnpushedItem() {
+    private suspend fun seedItem(id: String, listId: String, dirty: Boolean) {
         val now = System.currentTimeMillis()
         db.itemDao().upsert(
             ItemEntity(
-                id = "item-1",
-                listId = "list-1",
+                id = id,
+                listId = listId,
                 createdAt = now,
-                name = "Milk".toLww("dev", now),
+                name = id.toLww("dev", now),
                 category = null.toLwwOptional("dev", now),
                 stores = "[]".toLww("dev", now),
                 quantity = null.toLwwOptional("dev", now),
@@ -282,7 +381,7 @@ class AuthRepositoryTest {
                 note = null.toLwwOptional("dev", now),
                 status = "todo".toLww("dev", now),
                 deleted = false.toLww("dev", now),
-                dirty = true,
+                dirty = dirty,
             ),
         )
     }

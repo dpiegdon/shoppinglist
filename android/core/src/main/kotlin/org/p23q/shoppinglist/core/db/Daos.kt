@@ -91,6 +91,13 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ItemEntity>
 
+    /** [dirtyRows] for one account's lists: what a sync with that account's server pushes. */
+    @Query(
+        "SELECT items.* FROM items INNER JOIN lists ON lists.id = items.listId " +
+            "WHERE lists.accountId = :accountId AND items.dirty = 1 AND items.syncBlocked = 0",
+    )
+    suspend fun dirtyRowsForAccount(accountId: String): List<ItemEntity>
+
     @Query("UPDATE items SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
 
@@ -106,6 +113,12 @@ interface ItemDao {
 
     @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
     suspend fun blockedRowCount(): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM items INNER JOIN lists ON lists.id = items.listId " +
+            "WHERE lists.accountId = :accountId AND items.syncBlocked = 1",
+    )
+    suspend fun blockedRowCountForAccount(accountId: String): Int
 
     /** Per-list count of open (todo) items, for the Overview cards (T-42). */
     @Query(
@@ -145,6 +158,17 @@ interface ItemDao {
     @Query("DELETE FROM items WHERE dirty = 0 AND syncBlocked = 0")
     suspend fun deleteSyncedRows()
 
+    /** [deleteSyncedRows] for one account's lists only: the 410 re-base and a logout are per account. */
+    @Query(
+        "DELETE FROM items WHERE dirty = 0 AND syncBlocked = 0 " +
+            "AND listId IN (SELECT id FROM lists WHERE accountId = :accountId)",
+    )
+    suspend fun deleteSyncedRowsForAccount(accountId: String)
+
+    /** Every item of one account's lists, for removing the account from this device. */
+    @Query("DELETE FROM items WHERE listId IN (SELECT id FROM lists WHERE accountId = :accountId)")
+    suspend fun deleteForAccount(accountId: String)
+
     /**
      * Drop one row outright. Used when the server refuses a write for good (a closed expenses
      * list, T-157): the local row can never be pushed and can never be overwritten by a pull,
@@ -179,6 +203,20 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ListEntity>
 
+    @Query("SELECT * FROM lists WHERE accountId = :accountId AND dirty = 1 AND syncBlocked = 0")
+    suspend fun dirtyRowsForAccount(accountId: String): List<ListEntity>
+
+    @Query("SELECT COUNT(*) FROM lists WHERE accountId = :accountId AND syncBlocked = 1")
+    suspend fun blockedRowCountForAccount(accountId: String): Int
+
+    /** Any non-deleted list of one account, for that account's accountId self-heal (T-74). */
+    @Query("SELECT id FROM lists WHERE accountId = :accountId AND deleted_value = 0 LIMIT 1")
+    suspend fun anyActiveListIdForAccount(accountId: String): String?
+
+    /** The ids of one account's lists, local copies only. */
+    @Query("SELECT id FROM lists WHERE accountId = :accountId")
+    suspend fun idsForAccount(accountId: String): List<String>
+
     /** Quarantine a list the server rejected (T-198); dirtyRows() then skips it until it's re-edited. */
     @Query("UPDATE lists SET syncBlocked = 1 WHERE id = :id")
     suspend fun blockRow(id: String)
@@ -196,6 +234,20 @@ interface ListDao {
     /** The list twin of [ItemDao.deleteSyncedRows] (T-259) — keeps whatever is still unpushed. */
     @Query("DELETE FROM lists WHERE dirty = 0 AND syncBlocked = 0")
     suspend fun deleteSyncedRows()
+
+    /**
+     * The list twin of [ItemDao.deleteSyncedRowsForAccount]. Run after it: a list that still holds
+     * an item is kept even when the list itself is clean, so no surviving unpushed item is left
+     * pointing at a list that is no longer here (and so at no account to push it to).
+     */
+    @Query(
+        "DELETE FROM lists WHERE accountId = :accountId AND dirty = 0 AND syncBlocked = 0 " +
+            "AND id NOT IN (SELECT listId FROM items)",
+    )
+    suspend fun deleteSyncedRowsForAccount(accountId: String)
+
+    @Query("DELETE FROM lists WHERE accountId = :accountId")
+    suspend fun deleteForAccount(accountId: String)
 
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
     @Query("DELETE FROM lists WHERE id = :id")

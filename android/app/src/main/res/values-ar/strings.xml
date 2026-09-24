@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">البريد الإلكتروني وكلمة المرور مطلوبان</string>
     <string name="login_msg_incorrect_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
     <string name="login_msg_untrusted_cert">شهادة الخادم غير موثوقة. استخدم شهادة من جهة معتمدة. لخادم تطوير بشهادة موقّعة ذاتيًا، فعّل \"الوثوق بالشهادات الموقّعة ذاتيًا\" في الإعدادات (نسخ التصحيح فقط).</string>
+    <string name="login_msg_server_too_old">هذا الخادم أقدم من أن يعمل مع هذا التطبيق.</string>
     <string name="redeem_msg_code_required">أدخل رمز دعوة</string>
     <string name="redeem_msg_failed">تعذّر استخدام الدعوة</string>
     <string name="item_msg_name_required">الاسم مطلوب</string>

@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">メールアドレスとパスワードの入力が必要です</string>
     <string name="login_msg_incorrect_credentials">メールアドレスまたはパスワードが正しくありません</string>
     <string name="login_msg_untrusted_cert">サーバーの証明書が信頼されていません。認証局が発行した証明書を使用してください。自己署名の開発用サーバーの場合は、設定で「自己署名証明書を信頼する」を有効にしてください（デバッグビルドのみ）。</string>
+    <string name="login_msg_server_too_old">このサーバーはこのアプリには古すぎます。</string>
     <string name="redeem_msg_code_required">招待コードを入力してください</string>
     <string name="redeem_msg_failed">招待を利用できませんでした</string>
     <string name="item_msg_name_required">名前の入力が必要です</string>

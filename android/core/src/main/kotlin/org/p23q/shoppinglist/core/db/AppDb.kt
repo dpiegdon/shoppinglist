@@ -3,8 +3,13 @@ package org.p23q.shoppinglist.core.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 8, exportSchema = true)
+@Database(
+    entities = [AccountEntity::class, ListEntity::class, ItemEntity::class],
+    version = 9,
+    exportSchema = true,
+)
 abstract class AppDb : RoomDatabase() {
+    abstract fun accountDao(): AccountDao
     abstract fun listDao(): ListDao
     abstract fun itemDao(): ItemDao
 }

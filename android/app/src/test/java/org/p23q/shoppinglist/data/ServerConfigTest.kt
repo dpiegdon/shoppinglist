@@ -1,40 +1,50 @@
 package org.p23q.shoppinglist.data
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import kotlinx.coroutines.flow.first
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class ServerConfigTest {
 
-    private fun newServerConfig(): ServerConfig {
+    private fun newDataStore(): DataStore<Preferences> {
         val file = File.createTempFile("server_config_test", ".preferences_pb")
         file.deleteOnExit()
-        return ServerConfig(PreferenceDataStoreFactory.create { file })
+        return PreferenceDataStoreFactory.create { file }
     }
 
     @Test
-    fun `server URL is normalized to always end in a slash`() = runTest {
-        val config = newServerConfig()
-        config.setServerUrl("https://example.com/sub")
-        assertEquals("https://example.com/sub/", config.serverUrl.first())
+    fun `the device id is minted once and then kept`() = runTest {
+        val config = ServerConfig(newDataStore())
+        val first = config.deviceId()
+        assertEquals(first, config.deviceId())
+        assertEquals(first, config.get())
     }
 
     @Test
-    fun `allowSelfSignedCerts defaults to false`() = runTest {
-        assertFalse(newServerConfig().allowSelfSignedCerts.first())
-    }
+    fun `the single-session server keys are readable for the migration, then discarded (T-291)`() = runTest {
+        val store = newDataStore()
+        store.edit {
+            it[ServerConfig.SERVER_URL_KEY] = "https://example.com/sub/"
+            it[ServerConfig.ALLOW_SELF_SIGNED_KEY] = true
+        }
+        val config = ServerConfig(store)
+        val deviceId = config.deviceId()
+        assertEquals("https://example.com/sub/", config.legacyServerUrl())
+        assertTrue(config.legacyAllowSelfSignedCerts())
 
-    @Test
-    fun `allowSelfSignedCerts persists once set`() = runTest {
-        val config = newServerConfig()
-        config.setAllowSelfSignedCerts(true)
-        assertTrue(config.allowSelfSignedCerts.first())
-        config.setAllowSelfSignedCerts(false)
-        assertFalse(config.allowSelfSignedCerts.first())
+        config.discardLegacy()
+
+        assertNull(config.legacyServerUrl())
+        assertFalse(config.legacyAllowSelfSignedCerts())
+        // The device id is not a single-session key: it stays global.
+        assertEquals(deviceId, config.deviceId())
     }
 }

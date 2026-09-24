@@ -5,16 +5,12 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import org.junit.Rule
-import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class LoginScreenTest {
@@ -23,20 +19,20 @@ class LoginScreenTest {
     val composeTestRule = createComposeRule()
 
     private class NoopAuthRepository(private val registrationAllowed: Boolean = true) : AuthRepository {
-        override suspend fun register(email: String, password: String) {}
-        override suspend fun login(email: String, password: String) {}
-        override suspend fun logout() {}
-        override suspend fun clearLocalSession() {}
-        override suspend fun registrationAllowed(): Boolean = registrationAllowed
+        override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) = ""
+        override suspend fun logout(accountId: String) {}
+        override suspend fun clearLocalSession(accountId: String) {}
+        override suspend fun removeAccount(accountId: String) {}
+        override suspend fun removeOtherAccounts(keep: String) {}
+        override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = registrationAllowed
         override fun lastOpenedListId(): String? = null
     }
 
     @Test
     fun `renders server URL, email, password fields and a submit button`() {
-        val tempFile = File.createTempFile("login_screen_test", ".preferences_pb")
-        tempFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
-        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val serverConfig = FakeCurrentAccount(localId = null)
+        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
@@ -50,10 +46,8 @@ class LoginScreenTest {
 
     @Test
     fun `carries the name in cuneiform under the title, uncaptioned (T-225)`() {
-        val tempFile = File.createTempFile("login_screen_cuneiform_test", ".preferences_pb")
-        tempFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
-        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, FakeSessionState(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val serverConfig = FakeCurrentAccount(localId = null)
+        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
@@ -69,15 +63,13 @@ class LoginScreenTest {
 
     @Test
     fun `a server that has registration off says so up front and disables the toggle (T-276)`() {
-        val tempFile = File.createTempFile("login_screen_registration_test", ".preferences_pb")
-        tempFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
+        val serverConfig = FakeCurrentAccount(localId = null)
         // A saved server, as after an earlier login: on a fresh install nothing is asked (T-287).
-        runBlocking { serverConfig.setServerUrl("https://lists.example.com/") }
+        serverConfig.localId = "saved-account"
+        serverConfig.serverUrl = "https://lists.example.com/"
         val viewModel = LoginViewModel(
             NoopAuthRepository(registrationAllowed = false),
             serverConfig,
-            FakeSessionState(),
             org.p23q.shoppinglist.data.PendingInviteHolder(),
             org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
         )

@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.update
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -15,12 +14,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.core.api.TokenProvider
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.update.AvailableUpdate
 import org.p23q.shoppinglist.data.update.UpdateChecker
 import org.p23q.shoppinglist.data.update.UpdatePrefsStore
@@ -40,6 +39,14 @@ class UpdateViewModelTest {
     private lateinit var server: MockWebServer
     private lateinit var prefs: UpdatePrefsStore
     private lateinit var checker: UpdateChecker
+    private val dbs = mutableListOf<AppDb>()
+
+    private fun newDb(): AppDb =
+        Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+            .also { dbs += it }
 
     @Before
     fun setUp() = runTest(mainDispatcherRule.dispatcher) {
@@ -48,25 +55,15 @@ class UpdateViewModelTest {
 
         fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
         prefs = UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile("update_vm_prefs") })
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { prefsFile("update_vm_server_config") })
-        serverConfig.setServerUrl(server.url("/").toString())
-
-        val json = Json { ignoreUnknownKeys = true }
-        checker = UpdateChecker(
-            apiProvider = ApiProvider(
-                serverConfig = serverConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { null }),
-                errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-                json = json,
-            ),
-            serverConfig = serverConfig,
-            prefs = prefs,
-        )
+        val accounts = TestAccounts(newDb())
+        accounts.add(server.url("/").toString())
+        checker = UpdateChecker(accounts.registry, accounts.sessions, prefs)
     }
 
     @After
     fun tearDown() {
         if (::server.isInitialized) server.shutdown()
+        dbs.forEach { it.close() }
     }
 
     @Test
@@ -123,19 +120,8 @@ class UpdateViewModelTest {
             // No server configured is the one thing that still stops a forced check. The About
             // screen renders that outcome as silence; the blocking screen must not, or it would
             // sit on its spinner with no way out.
-            val configFile = File.createTempFile("update_vm_no_server", ".preferences_pb").apply { deleteOnExit() }
-            val emptyConfig = ServerConfig(PreferenceDataStoreFactory.create { configFile })
-            val json = Json { ignoreUnknownKeys = true }
-            val unconfigured = UpdateChecker(
-                apiProvider = ApiProvider(
-                    serverConfig = emptyConfig,
-                    authInterceptor = AuthInterceptor(TokenProvider { null }),
-                    errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-                    json = json,
-                ),
-                serverConfig = emptyConfig,
-                prefs = prefs,
-            )
+            val none = TestAccounts(newDb())
+            val unconfigured = UpdateChecker(none.registry, none.sessions, prefs)
             val viewModel = UpdateViewModel(unconfigured, prefs)
 
             viewModel.checkRequired().join()

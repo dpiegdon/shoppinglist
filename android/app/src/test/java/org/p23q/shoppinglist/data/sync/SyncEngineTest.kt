@@ -24,14 +24,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.ProtocolState
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.core.api.SyncRequest
-import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemDao
@@ -78,11 +74,9 @@ class SyncEngineTest {
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
     private lateinit var serverConfig: ServerConfig
-    private lateinit var sessionState: FakeSessionState
+    private lateinit var accounts: TestAccounts
     private lateinit var syncStatus: SyncStatus
     private lateinit var syncEngine: SyncEngine
-    private lateinit var protocolState: ProtocolState
-    private lateinit var apiProvider: ApiProvider
     private val notifier = RecordingNotifier()
 
     @Before
@@ -99,23 +93,9 @@ class SyncEngineTest {
         tempFile.deleteOnExit()
         serverConfig = ServerConfig(PreferenceDataStoreFactory.create { tempFile })
 
-        sessionState = FakeSessionState()
-
-        val json = Json { ignoreUnknownKeys = true }
-        // One ProtocolState for both, as Hilt hands out: the interceptor raises it, the engine
-        // reads it (T-244).
-        protocolState = ProtocolState()
-        apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents(), protocolState),
-            json = json,
-        )
-
-        syncStatus = SyncStatus()
-        syncEngine = SyncEngine(
-            db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus, notifier, protocolState,
-        )
+        accounts = TestAccounts(db)
+        syncStatus = accounts.syncStatus
+        syncEngine = accounts.syncEngine(deviceId = serverConfig, notifier = notifier)
     }
 
     @After
@@ -124,9 +104,24 @@ class SyncEngineTest {
         if (::db.isInitialized) db.close()
     }
 
+    /**
+     * The one account, signed in on [server], and the list the dummy items are on, clean and with
+     * clocks older than anything a test sends, so it only gives those items an owner.
+     */
     private suspend fun pointAtServer() {
-        serverConfig.setServerUrl(server.url("/").toString())
+        accounts.add(server.url("/").toString())
         serverConfig.deviceId() // mint one so it's stable across the test
+        db.listDao().upsert(dummyList("list-1", "", dirty = false, at = 0L).copy(kind = "shopping".toLww("", 0L)))
+    }
+
+    private suspend fun setCursor(cursor: Long) {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(syncCursor = cursor) }
+    }
+
+    private fun cursor(): Long = accounts.registry.get(TEST_ACCOUNT_ID)!!.syncCursor
+
+    private suspend fun setOwnAccount(accountId: String?, email: String? = "me@example.com") {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(accountId = accountId, email = email) }
     }
 
     private fun dummyItem(id: String, name: String, dirty: Boolean, at: Long = 1_000L): ItemEntity = ItemEntity(
@@ -144,8 +139,9 @@ class SyncEngineTest {
         dirty = dirty,
     )
 
-    private fun dummyList(id: String, name: String, dirty: Boolean, at: Long = 1_000L): ListEntity = ListEntity(
+    private fun dummyList(id: String, name: String, dirty: Boolean, at: Long = 1_000L, accountId: String = TEST_ACCOUNT_ID): ListEntity = ListEntity(
         id = id,
+        accountId = accountId,
         createdAt = at,
         name = name.toLww("this-device", at),
         categoryOrder = "[]".toLww("this-device", at),
@@ -199,7 +195,7 @@ class SyncEngineTest {
         assertEquals(listOf("item-1"), recorded.changes.items.map { it.id })
         val stored = db.itemDao().getById("item-1")!!
         assertFalse(stored.dirty)
-        assertEquals(1L, sessionState.syncCursor)
+        assertEquals(1L, cursor())
 
         // A successful run records health for the UI (T-47): last-sync time set, no error, and the
         // pending count recomputed to 0 now that the row synced.
@@ -241,7 +237,7 @@ class SyncEngineTest {
         val stored = db.itemDao().getById("item-2")!!
         assertEquals("Bread", stored.name.value)
         assertFalse(stored.dirty)
-        assertEquals(5L, sessionState.syncCursor)
+        assertEquals(5L, cursor())
     }
 
     @Test
@@ -283,7 +279,7 @@ class SyncEngineTest {
         // A row the server can reproduce, and one it cannot: only the first is dropped (T-259).
         db.itemDao().upsert(dummyItem("item-synced", "Bread", dirty = false))
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
-        sessionState.syncCursor = 999L
+        setCursor(999L)
 
         server.enqueue(
             MockResponse().setResponseCode(410)
@@ -296,7 +292,7 @@ class SyncEngineTest {
         assertTrue(result is SyncResult.Success)
         assertNull("a synced row is dropped for the cursor-0 pull to bring back", db.itemDao().getById("item-synced"))
         assertNotNull("an unpushed edit is not", db.itemDao().getById("item-1"))
-        assertEquals(1L, sessionState.syncCursor)
+        assertEquals(1L, cursor())
         val firstRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         val retryRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         assertEquals(999L, firstRequest.cursor)
@@ -314,7 +310,7 @@ class SyncEngineTest {
         pointAtServer()
         val total = SyncEngine.MAX_CHANGES_PER_SYNC + 50
         repeat(total) { i -> db.itemDao().upsert(dummyItem("item-$i", "Item $i", dirty = true)) }
-        sessionState.syncCursor = 999L
+        setCursor(999L)
 
         server.enqueue(
             MockResponse().setResponseCode(410)
@@ -344,7 +340,7 @@ class SyncEngineTest {
         pointAtServer()
         db.itemDao().upsert(dummyItem("parked", "Dinner", dirty = true))
         db.itemDao().blockRow("parked", "participant_frozen", "acct-other")
-        sessionState.syncCursor = 999L
+        setCursor(999L)
 
         server.enqueue(
             MockResponse().setResponseCode(410)
@@ -503,6 +499,7 @@ class SyncEngineTest {
 
     @Test
     fun `seedStatus reports the database's counts with no network call, and no verdict (T-265)`() = runTest {
+        pointAtServer()
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
         db.itemDao().upsert(dummyItem("item-2", "Bread", dirty = true))
         db.itemDao().upsert(dummyItem("parked", "Dinner", dirty = false))
@@ -618,8 +615,8 @@ class SyncEngineTest {
     @Test
     fun `items pulled with another account's last_touched_by are reported to the notifier, grouped per list (T-65)`() = runTest {
         pointAtServer()
-        sessionState.accountId = "acc-me"
-        sessionState.syncCursor = 5
+        setOwnAccount("acc-me")
+        setCursor(5)
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 syncResponseJson(
@@ -637,14 +634,14 @@ class SyncEngineTest {
         syncEngine.syncNow()
 
         assertEquals(1, notifier.calls.size)
-        assertEquals(listOf(CollaboratorChange("list-1", "Groceries", 2)), notifier.calls.single())
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2)), notifier.calls.single())
     }
 
     @Test
     fun `a pull containing only own-account and null-account rows stays silent (T-65)`() = runTest {
         pointAtServer()
-        sessionState.accountId = "acc-me"
-        sessionState.syncCursor = 5
+        setOwnAccount("acc-me")
+        setCursor(5)
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 syncResponseJson(
@@ -666,8 +663,8 @@ class SyncEngineTest {
     @Test
     fun `a cursor-zero pull (initial hydration or full resync) never notifies (T-65)`() = runTest {
         pointAtServer()
-        sessionState.accountId = "acc-me"
-        sessionState.syncCursor = 0
+        setOwnAccount("acc-me")
+        setCursor(0)
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 syncResponseJson(
@@ -686,8 +683,8 @@ class SyncEngineTest {
     @Test
     fun `an unknown own account id stays silent rather than guessing (T-65)`() = runTest {
         pointAtServer()
-        sessionState.accountId = null // session predates accountId storage
-        sessionState.syncCursor = 5
+        setOwnAccount(null)
+        setCursor(5)
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 syncResponseJson(
@@ -706,9 +703,8 @@ class SyncEngineTest {
     @Test
     fun `a null accountId is backfilled from the members roster by email, enabling detection (T-74)`() = runTest {
         pointAtServer()
-        sessionState.accountId = null // pre-v1.2.0 session: never stored at login
-        sessionState.accountEmail = "me@example.com"
-        sessionState.syncCursor = 5
+        setOwnAccount(null, email = "me@example.com")
+        setCursor(5)
         // The sync response (applied before the backfill) creates list-1, which the backfill then
         // uses for its members lookup.
         server.enqueue(
@@ -730,8 +726,8 @@ class SyncEngineTest {
 
         syncEngine.syncNow()
 
-        assertEquals("acc-me", sessionState.accountId)
-        assertEquals(listOf(CollaboratorChange("list-1", "Groceries", 1)), notifier.calls.single())
+        assertEquals("acc-me", accounts.registry.get(TEST_ACCOUNT_ID)!!.accountId)
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 1)), notifier.calls.single())
     }
 
     // ---- batch chunking (T-114) ---------------------------------------------
@@ -845,7 +841,7 @@ class SyncEngineTest {
     fun `a tap landing inside the merge's window survives it (T-261)`() = runBlocking<Unit> {
         pointAtServer()
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = false, at = 1_000L))
-        sessionState.syncCursor = 5L
+        setCursor(5L)
 
         val itemsRepo = ItemsRepo(db, DeviceIdProvider { "this-device" }, FakeSyncTrigger())
         val shopper = CoroutineScope(Dispatchers.IO)
@@ -859,7 +855,7 @@ class SyncEngineTest {
                     committedInsideTheWindow = withTimeoutOrNull(2_000) { tap!!.join() } != null
                 }
             },
-            db.listDao(), apiProvider, sessionState, serverConfig, db, syncStatus, notifier, protocolState,
+            db.listDao(), accounts.registry, accounts.sessions, serverConfig, db, syncStatus, notifier,
         )
 
         // The server's copy of the row is newer than the local one, so the merge takes every field
@@ -897,5 +893,189 @@ class SyncEngineTest {
             committedInsideTheWindow,
         )
         shopper.cancel()
+    }
+
+    // ---- several accounts (T-291) ----------------------------------------------------
+
+    private val emptyPull = """{"cursor": 7, "changes": {"lists": [], "items": []}}"""
+
+    /** A second signed-in account on its own server, with its own list and a dirty item on it. */
+    private suspend fun secondAccount(other: MockWebServer) {
+        accounts.add(other.url("/").toString(), id = "second", token = "tok-second", accountId = "acc-second")
+        db.listDao().upsert(dummyList("list-2", "Theirs", dirty = false, at = 0L, accountId = "second"))
+        db.itemDao().upsert(dummyItem("their-item", "Tea", dirty = true).copy(listId = "list-2"))
+    }
+
+    private fun withSecondServer(block: suspend (MockWebServer) -> Unit) = runTest {
+        val other = MockWebServer().apply { start() }
+        try {
+            block(other)
+        } finally {
+            other.shutdown()
+        }
+    }
+
+    @Test
+    fun `each account's rows go to its own server, with its own token and cursor`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        db.itemDao().upsert(dummyItem("my-item", "Milk", dirty = true))
+        setCursor(3)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 40, "changes": {"lists": [], "items": []}}"""))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val mine = server.takeRequest()
+        val theirs = other.takeRequest()
+        assertEquals("Bearer tok-123", mine.getHeader("Authorization"))
+        assertEquals("Bearer tok-second", theirs.getHeader("Authorization"))
+        val mineBody = Json.decodeFromString<SyncRequest>(mine.body.readUtf8())
+        val theirsBody = Json.decodeFromString<SyncRequest>(theirs.body.readUtf8())
+        assertEquals(listOf("my-item"), mineBody.changes.items.map { it.id })
+        assertEquals(listOf("their-item"), theirsBody.changes.items.map { it.id })
+        assertEquals(3L, mineBody.cursor)
+        assertEquals(0L, theirsBody.cursor)
+        assertEquals(7L, cursor())
+        assertEquals(40L, accounts.registry.get("second")!!.syncCursor)
+    }
+
+    @Test
+    fun `one account failing does not stop the next, and the result is the worst of them`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error": "server_error", "message": "boom"}"""))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Failed)
+        assertEquals("the second account still synced", 1, other.requestCount)
+        assertEquals(7L, accounts.registry.get("second")!!.syncCursor)
+        // Per account: the failure is the first's, the success the second's.
+        assertNotNull(syncStatus.accounts.value.getValue(TEST_ACCOUNT_ID).lastError)
+        assertNull(syncStatus.accounts.value.getValue("second").lastError)
+        assertNotNull(syncStatus.accounts.value.getValue("second").lastSyncAt)
+        // And the aggregate the status bar shows is the worst of them.
+        assertNotNull(syncStatus.state.value.lastError)
+        assertNull("one account has never synced", syncStatus.state.value.lastSyncAt)
+    }
+
+    @Test
+    fun `an unreachable server fails only its own account`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.shutdown()
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Failed)
+        assertEquals(1, other.requestCount)
+    }
+
+    @Test
+    fun `a 401 signs out only the account whose token was rejected`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "expired"}"""))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
+
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+        assertTrue(accounts.registry.get("second")!!.signedIn)
+        // The next run leaves the signed-out account alone and syncs the other.
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        assertEquals(1, server.requestCount)
+        assertEquals(2, other.requestCount)
+        accounts.registry.flush()
+        assertFalse("written through", db.accountDao().all().first { it.id == TEST_ACCOUNT_ID }.signedIn)
+    }
+
+    @Test
+    fun `a 426 marks only that account outdated, and the app is not blocked while another works`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.enqueue(MockResponse().setResponseCode(426).setBody("""{"error": "client_outdated", "message": "too old"}"""))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.UpdateRequired)
+
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.outdated)
+        assertFalse(accounts.registry.get("second")!!.outdated)
+        assertFalse("one server still accepts this build", accounts.sessions.isUpdateRequired())
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        assertEquals("the outdated account is not asked again", 1, server.requestCount)
+    }
+
+    @Test
+    fun `every account outdated blocks the app, and an accepted request clears it`() = runTest {
+        pointAtServer()
+        server.enqueue(MockResponse().setResponseCode(426).setBody("""{"error": "client_outdated", "message": "too old"}"""))
+        assertTrue(syncEngine.syncNow() is SyncResult.UpdateRequired)
+        assertTrue(accounts.sessions.isUpdateRequired())
+
+        // A request the server does check the protocol on, and accepts (a server rolled back, say).
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"lists": []}"""))
+        accounts.sessions.get(TEST_ACCOUNT_ID).api.lists()
+
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.outdated)
+        assertFalse(accounts.sessions.isUpdateRequired())
+    }
+
+    @Test
+    fun `a 410 re-base drops only that account's synced rows`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        db.itemDao().upsert(dummyItem("their-synced", "Coffee", dirty = false).copy(listId = "list-2"))
+        db.itemDao().upsert(dummyItem("my-synced", "Bread", dirty = false))
+        setCursor(999)
+        server.enqueue(MockResponse().setResponseCode(410).setBody("""{"error": "full_resync_required", "message": "old"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertNull(db.itemDao().getById("my-synced"))
+        assertNotNull("another account's mirror is not re-based", db.itemDao().getById("their-synced"))
+        assertNotNull(db.listDao().getById("list-2"))
+    }
+
+    @Test
+    fun `a full snapshot is asked only of the account that holds the list`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        syncEngine.syncNow(fullLists = listOf("list-2", "joined-just-now"), fullListsAccountId = TEST_ACCOUNT_ID)
+
+        val mine = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val theirs = Json.decodeFromString<SyncRequest>(other.takeRequest().body.readUtf8())
+        assertEquals(listOf("joined-just-now"), mine.fullLists)
+        assertEquals(listOf("list-2"), theirs.fullLists)
+    }
+
+    @Test
+    fun `a list pulled for the first time belongs to the account that pulled it`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(cursor = 6, lists = listOf(listJson(id = "new-list", name = "Shared")), items = emptyList()),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertEquals(TEST_ACCOUNT_ID, db.listDao().getById("new-list")!!.accountId)
+    }
+
+    @Test
+    fun `with no signed-in account there is nothing to sync and nothing is sent`() = runTest {
+        accounts.add(server.url("/").toString(), token = null)
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
+        assertEquals(0, server.requestCount)
     }
 }

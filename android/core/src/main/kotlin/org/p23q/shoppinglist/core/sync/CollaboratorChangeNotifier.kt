@@ -1,7 +1,15 @@
 package org.p23q.shoppinglist.core.sync
 
-/** One list's worth of collaborator-authored changes pulled in a single sync pass (T-65). */
-data class CollaboratorChange(val listId: String, val listName: String, val changedItemCount: Int)
+/**
+ * One list's worth of collaborator-authored changes pulled in a single sync pass (T-65).
+ * [accountId] is the local id of the account whose sync pulled them.
+ */
+data class CollaboratorChange(
+    val accountId: String,
+    val listId: String,
+    val listName: String,
+    val changedItemCount: Int,
+)
 
 /**
  * Seam between [SyncEngine]'s detection and the Android notification machinery, so the engine

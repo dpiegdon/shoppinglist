@@ -9,9 +9,15 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.normalizeServerUrl
+import org.p23q.shoppinglist.core.account.serverLabel
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemDao
 import org.p23q.shoppinglist.core.db.ListDao
+import org.p23q.shoppinglist.data.LegacySessionSource
+import java.util.UUID
 import javax.inject.Singleton
 
 /** Adds items.syncBlocked (T-32 row quarantine). Non-destructive: existing rows keep their data. */
@@ -84,16 +90,114 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+/**
+ * Accounts (T-291). Creates the `accounts` table and gives every list an `accountId`, turning the
+ * single-session app's state into the one account row it describes.
+ *
+ * If the old session holds an account id, or only the id of the account whose lists survived a
+ * logout (`mirrorAccountId`), or a token, one `server` row is inserted from it and the old
+ * ServerConfig: server URL, cursor, currency, ignored invites and the certificate opt-in move onto
+ * it, `signedIn` is whether a token exists, and the token is stored again under the row's id. A
+ * database that holds lists but none of that still gets a row, signed out, so that every list has
+ * an owner; the next login replaces it as it would have wiped the mirror (T-260). With neither
+ * there are no lists and nothing is inserted.
+ *
+ * `lists` is rebuilt rather than altered: SQLite cannot add a NOT NULL foreign-key column in place.
+ * The old keys are deleted only after the database has opened ([LegacySessionSource.discard]), so a
+ * migration that fails and rolls back finds them again next time.
+ */
+class Migration8To9(private val legacy: LegacySessionSource) : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(CREATE_ACCOUNTS)
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_accounts_serverUrl_accountId` " +
+                "ON `accounts` (`serverUrl`, `accountId`)",
+        )
+
+        val session = legacy.read()
+        val owner = session.accountId ?: session.mirrorAccountId
+        val hasSession = owner != null || session.token != null
+        val localId = UUID.randomUUID().toString()
+        val serverUrl = session.serverUrl?.let(::normalizeServerUrl)
+        db.execSQL(
+            "INSERT INTO `accounts` (`id`, `kind`, `serverUrl`, `accountId`, `email`, `isAdmin`, `label`, " +
+                "`signedIn`, `outdated`, `serverProtocol`, `syncCursor`, `defaultCurrency`, " +
+                "`ignoredInviteIdsJson`, `allowSelfSignedCerts`, `sortOrder`) " +
+                "SELECT ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, 0 " +
+                "WHERE ? OR EXISTS (SELECT 1 FROM `lists`)",
+            arrayOf<Any?>(
+                localId,
+                AccountEntity.KIND_SERVER,
+                serverUrl,
+                owner,
+                session.email,
+                if (session.isAdmin) 1L else 0L,
+                serverUrl?.let(::serverLabel) ?: "",
+                if (session.token != null) 1L else 0L,
+                session.syncCursor,
+                session.defaultCurrency,
+                AccountRegistry.encodeIds(session.ignoredInviteIds),
+                if (session.allowSelfSignedCerts) 1L else 0L,
+                if (hasSession) 1L else 0L,
+            ),
+        )
+
+        db.execSQL(CREATE_LISTS.replace("`lists`", "`lists_new`"))
+        db.execSQL(
+            "INSERT INTO `lists_new` (`accountId`, $LIST_COLUMNS) SELECT ?, $LIST_COLUMNS FROM `lists`",
+            arrayOf<Any?>(localId),
+        )
+        db.execSQL("DROP TABLE `lists`")
+        db.execSQL("ALTER TABLE `lists_new` RENAME TO `lists`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_lists_accountId` ON `lists` (`accountId`)")
+
+        if (session.token != null) legacy.adoptToken(localId)
+    }
+
+    private companion object {
+        /** Room's own SQL, from core/schemas/…/9.json. */
+        const val CREATE_ACCOUNTS =
+            "CREATE TABLE IF NOT EXISTS `accounts` (`id` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                "`serverUrl` TEXT, `accountId` TEXT, `email` TEXT, `isAdmin` INTEGER NOT NULL, " +
+                "`label` TEXT NOT NULL, `signedIn` INTEGER NOT NULL, `outdated` INTEGER NOT NULL, " +
+                "`serverProtocol` INTEGER, `syncCursor` INTEGER NOT NULL, `defaultCurrency` TEXT, " +
+                "`ignoredInviteIdsJson` TEXT NOT NULL, `allowSelfSignedCerts` INTEGER NOT NULL, " +
+                "`sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))"
+
+        const val CREATE_LISTS =
+            "CREATE TABLE IF NOT EXISTS `lists` (`id` TEXT NOT NULL, `accountId` TEXT NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL, `dirty` INTEGER NOT NULL, `syncBlocked` INTEGER NOT NULL, " +
+                "`membersJson` TEXT NOT NULL, `closeVotesJson` TEXT NOT NULL, `closedAt` INTEGER, " +
+                "`name_value` TEXT NOT NULL, `name_updatedAt` INTEGER NOT NULL, `name_updatedBy` TEXT NOT NULL, " +
+                "`categoryOrder_value` TEXT NOT NULL, `categoryOrder_updatedAt` INTEGER NOT NULL, " +
+                "`categoryOrder_updatedBy` TEXT NOT NULL, `notes_value` TEXT, `notes_updatedAt` INTEGER NOT NULL, " +
+                "`notes_updatedBy` TEXT NOT NULL, `kind_value` TEXT NOT NULL, `kind_updatedAt` INTEGER NOT NULL, " +
+                "`kind_updatedBy` TEXT NOT NULL, `currency_value` TEXT, `currency_updatedAt` INTEGER NOT NULL, " +
+                "`currency_updatedBy` TEXT NOT NULL, `deleted_value` INTEGER NOT NULL, " +
+                "`deleted_updatedAt` INTEGER NOT NULL, `deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`id`), " +
+                "FOREIGN KEY(`accountId`) REFERENCES `accounts`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )"
+
+        /** Every column of schema 8's `lists`, which schema 9 keeps unchanged. */
+        const val LIST_COLUMNS =
+            "`id`, `createdAt`, `dirty`, `syncBlocked`, `membersJson`, `closeVotesJson`, `closedAt`, " +
+                "`name_value`, `name_updatedAt`, `name_updatedBy`, `categoryOrder_value`, " +
+                "`categoryOrder_updatedAt`, `categoryOrder_updatedBy`, `notes_value`, `notes_updatedAt`, " +
+                "`notes_updatedBy`, `kind_value`, `kind_updatedAt`, `kind_updatedBy`, `currency_value`, " +
+                "`currency_updatedAt`, `currency_updatedBy`, `deleted_value`, `deleted_updatedAt`, " +
+                "`deleted_updatedBy`"
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
     @Provides
     @Singleton
-    fun provideAppDb(@ApplicationContext context: Context): AppDb =
+    fun provideAppDb(@ApplicationContext context: Context, legacy: LegacySessionSource): AppDb =
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8,
+                MIGRATION_7_8, Migration8To9(legacy),
             )
             .build()
 

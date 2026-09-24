@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.expense
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
+import kotlinx.coroutines.runBlocking
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -24,7 +27,7 @@ import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
-import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 
@@ -42,7 +45,7 @@ class ExpenseFormViewModelTest {
     private lateinit var db: AppDb
     private lateinit var itemsRepo: ItemsRepo
     private lateinit var listsRepo: ListsRepo
-    private lateinit var sessionState: FakeSessionState
+    private lateinit var sessionState: FakeCurrentAccount
     private lateinit var listId: String
 
     private val me = "acct-me"
@@ -54,11 +57,12 @@ class ExpenseFormViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
+        db.insertTestAccount()
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        sessionState = FakeSessionState().apply { accountId = me }
-        listId = listsRepo.createList("Trip", ListKind.EXPENSES, currency = "EUR")
+        sessionState = FakeCurrentAccount().apply { accountId = me }
+        listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip", ListKind.EXPENSES, currency = "EUR")
         setMembers(me, other)
     }
 

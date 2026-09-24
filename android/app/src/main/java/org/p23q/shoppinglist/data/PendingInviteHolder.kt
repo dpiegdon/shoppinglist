@@ -15,16 +15,20 @@ import javax.inject.Singleton
  */
 @Singleton
 class PendingInviteHolder @Inject constructor() {
-    private var pending: String? = null
+    private var pending: PendingInvite? = null
 
-    fun stash(token: String) {
-        pending = token
+    /** [accountId] is the local id of the account the invite was opened for, if the app had one. */
+    fun stash(token: String, accountId: String?) {
+        pending = PendingInvite(token, accountId)
     }
 
-    /** Returns the pending token (if any) and clears it. */
-    fun consume(): String? {
-        val token = pending
+    /** Returns the pending invite (if any) and clears it. */
+    fun consume(): PendingInvite? {
+        val invite = pending
         pending = null
-        return token
+        return invite
     }
 }
+
+/** An invite token parked across a login, and the account it was opened for. */
+data class PendingInvite(val token: String, val accountId: String?)

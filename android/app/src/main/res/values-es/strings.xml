@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">El correo y la contraseña son obligatorios</string>
     <string name="login_msg_incorrect_credentials">Correo o contraseña incorrectos</string>
     <string name="login_msg_untrusted_cert">No se confía en el certificado del servidor. Usa un certificado de una autoridad reconocida. Para un servidor de pruebas autofirmado, activa \"Confiar en certificados autofirmados\" en Ajustes (solo compilaciones de depuración).</string>
+    <string name="login_msg_server_too_old">Este servidor es demasiado antiguo para esta aplicación.</string>
     <string name="redeem_msg_code_required">Introduce un código de invitación</string>
     <string name="redeem_msg_failed">No se ha podido usar la invitación</string>
     <string name="item_msg_name_required">El nombre es obligatorio</string>

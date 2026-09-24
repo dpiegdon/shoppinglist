@@ -11,8 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.data.AppForegroundState
+import org.p23q.shoppinglist.data.LegacySessionSource
 import org.p23q.shoppinglist.data.crash.CrashHandler
 import org.p23q.shoppinglist.data.sync.SyncScheduler
 import javax.inject.Inject
@@ -30,6 +32,10 @@ class ShoppingListApp : Application(), Configuration.Provider {
 
     @Inject lateinit var syncEngine: SyncEngine
 
+    @Inject lateinit var accountRegistry: AccountRegistry
+
+    @Inject lateinit var legacySession: LegacySessionSource
+
     /** Outlives every screen, for the one-shot start-up seed below — never used for per-screen work. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -39,10 +45,16 @@ class ShoppingListApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         crashHandler.install()
-        // Every scheduled sync below needs connectivity, so a cold start offline would otherwise
-        // leave SyncStatus at its initial zeros — no pending count, no attention banner — until one
-        // finally runs (T-265). This reads the database only, no network.
-        appScope.launch { syncEngine.seedStatus() }
+        appScope.launch {
+            // Opening the accounts opens the database, which runs the schema-9 migration on an
+            // upgraded install; only after that may the single-session keys it read go (T-291).
+            accountRegistry.load()
+            legacySession.discard()
+            // Every scheduled sync below needs connectivity, so a cold start offline would otherwise
+            // leave SyncStatus at its initial zeros — no pending count, no attention banner — until
+            // one finally runs (T-265). This reads the database only, no network.
+            syncEngine.seedStatus()
+        }
         syncScheduler.schedulePeriodic()
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {

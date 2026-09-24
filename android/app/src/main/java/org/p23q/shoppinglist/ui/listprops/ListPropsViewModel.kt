@@ -15,7 +15,7 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.NameOrder
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.CreateInviteRequest
 import org.p23q.shoppinglist.core.api.MemberDto
@@ -24,7 +24,7 @@ import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
@@ -82,9 +82,9 @@ class ListPropsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,
-    private val apiProvider: ApiProvider,
+    private val apiProvider: ApiSource,
     private val notificationPrefs: NotificationPrefsStore,
-    private val sessionState: SessionState,
+    private val currentAccount: CurrentAccount,
     private val syncer: Syncer,
 ) : ViewModel() {
 
@@ -109,7 +109,7 @@ class ListPropsViewModel @Inject constructor(
                         ?: emptyList(),
                     closedAt = list?.closedAt,
                     memberCount = list?.let { row -> listsRepo.decodeMembers(row.membersJson).size } ?: 0,
-                    myAccountId = sessionState.accountId,
+                    myAccountId = currentAccount.accountId,
                     categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )

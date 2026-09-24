@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.ApiException
-import org.p23q.shoppinglist.data.api.ApiProvider
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.core.api.InviteForMeDto
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.db.ListEntity
@@ -69,13 +69,13 @@ data class OverviewUiState(
 class OverviewViewModel @Inject constructor(
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,
-    private val sessionState: SessionState,
+    private val currentAccount: CurrentAccount,
     private val syncer: Syncer,
     syncStatus: SyncStatus,
-    private val apiProvider: ApiProvider,
+    private val apiProvider: ApiSource,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(OverviewUiState(ignoredInviteIds = sessionState.ignoredInviteIds))
+    private val _uiState = MutableStateFlow(OverviewUiState(ignoredInviteIds = currentAccount.ignoredInviteIds))
     val uiState: StateFlow<OverviewUiState> = _uiState.asStateFlow()
 
     init {
@@ -101,7 +101,7 @@ class OverviewViewModel @Inject constructor(
                         .mapNotNull { itemsRepo.decodeExpense(it.expense.value) }
                     val members = listsRepo.decodeMembers(list.membersJson)
                     val balance = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
-                        .firstOrNull { b -> b.accountId == sessionState.accountId }
+                        .firstOrNull { b -> b.accountId == currentAccount.accountId }
                     list.id to ExpenseSummary(
                         // Net spent, as on the ledger itself: income off it, settlements counting
                         // for nothing (T-245).
@@ -134,7 +134,7 @@ class OverviewViewModel @Inject constructor(
             isCreateDialogOpen = true,
             newListName = "",
             newListKind = ListKind.DEFAULT,
-            newListCurrency = sessionState.defaultCurrency.orEmpty(),
+            newListCurrency = currentAccount.defaultCurrency.orEmpty(),
         )
     }
 
@@ -146,7 +146,7 @@ class OverviewViewModel @Inject constructor(
 
     fun onNewListKindChange(kind: String) = _uiState.update { it.copy(newListKind = kind) }
 
-    /** Returns the launched Job, or null if the name was blank (dialog stays open, no-op). */
+    /** Returns the launched Job, or null if the name was blank (dialog stays open, no-op) or there is no account. */
     fun createList(): Job? {
         val name = _uiState.value.newListName.trim()
         if (name.isBlank()) return null
@@ -155,8 +155,11 @@ class OverviewViewModel @Inject constructor(
         if (ListKind.isExpenses(_uiState.value.newListKind) && _uiState.value.newListCurrency.isBlank()) {
             return null
         }
+        // The overview is only reached signed in, so there is an account to create it in.
+        val accountId = currentAccount.localId ?: return null
         return viewModelScope.launch {
-            listsRepo.createList(
+            listsRepo.create(
+                accountId,
                 name,
                 _uiState.value.newListKind,
                 currency = _uiState.value.newListCurrency.takeIf {
@@ -171,7 +174,7 @@ class OverviewViewModel @Inject constructor(
 
     /** Notes: tapping a list card persists it as the one to reopen on next login/launch. */
     fun openList(listId: String) {
-        sessionState.lastOpenedListId = listId
+        currentAccount.lastOpenedListId = listId
     }
 
     /** Manual pull-to-refresh: an immediate foreground sync with a visible spinner (T-36). */
@@ -194,8 +197,8 @@ class OverviewViewModel @Inject constructor(
             val invites = apiProvider.get().pendingInvites().invites
             // An ignored id the server no longer offers is dead (used, withdrawn or expired):
             // forget it, so the stored set cannot grow without bound.
-            val live = sessionState.ignoredInviteIds.filterTo(mutableSetOf()) { id -> invites.any { it.id == id } }
-            if (live != sessionState.ignoredInviteIds) sessionState.ignoredInviteIds = live
+            val live = currentAccount.ignoredInviteIds.filterTo(mutableSetOf()) { id -> invites.any { it.id == id } }
+            if (live != currentAccount.ignoredInviteIds) currentAccount.ignoredInviteIds = live
             _uiState.update { it.copy(invites = invites, ignoredInviteIds = live) }
         } catch (e: ApiException) {
             // A server without the endpoint, or a session that just ended: the same as offline —
@@ -208,8 +211,8 @@ class OverviewViewModel @Inject constructor(
 
     /** A device-local choice: the invite moves to the greyed section at the bottom, where Join still is. */
     fun ignoreInvite(inviteId: String) {
-        val next = sessionState.ignoredInviteIds + inviteId
-        sessionState.ignoredInviteIds = next
+        val next = currentAccount.ignoredInviteIds + inviteId
+        currentAccount.ignoredInviteIds = next
         _uiState.update { it.copy(ignoredInviteIds = next) }
     }
 
@@ -219,7 +222,7 @@ class OverviewViewModel @Inject constructor(
         try {
             val listId = apiProvider.get().redeemInvite(RedeemInviteRequest(invite.token)).listId
             syncer.syncNow(listOf(listId))
-            sessionState.lastOpenedListId = listId
+            currentAccount.lastOpenedListId = listId
             _uiState.update { it.copy(joiningInviteId = null, joinedListId = listId) }
         } catch (e: ApiException) {
             val message = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))

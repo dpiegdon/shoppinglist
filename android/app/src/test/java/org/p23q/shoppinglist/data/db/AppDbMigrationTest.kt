@@ -10,12 +10,15 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.lang.reflect.Proxy
 import org.p23q.shoppinglist.core.db.unblocked
+import org.p23q.shoppinglist.data.LegacySession
+import org.p23q.shoppinglist.data.LegacySessionSource
 
 /**
  * The migrations run against a real old database, and land on the schema Room expects (T-162).
@@ -72,14 +75,40 @@ class AppDbMigrationTest {
             "`status_updatedBy` TEXT NOT NULL, `deleted_value` INTEGER NOT NULL, " +
             "`deleted_updatedAt` INTEGER NOT NULL, `deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`id`))"
 
+    /** What the single-session stores hold, as a test sets it; records which id got the token. */
+    private class FakeLegacySession(private val session: LegacySession = LegacySession()) : LegacySessionSource {
+        var adoptedBy: String? = null
+        override fun read(): LegacySession = session
+        override fun adoptToken(localAccountId: String) {
+            adoptedBy = localAccountId
+        }
+        override suspend fun discard() {}
+    }
+
     private val migrations = listOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-        MIGRATION_7_8,
+        MIGRATION_7_8, Migration8To9(FakeLegacySession()),
     )
+
+    private fun execWithArgs(connection: SQLiteConnection, sql: String, bindArgs: Array<*>) {
+        connection.prepare(sql).use { statement ->
+            bindArgs.forEachIndexed { i, arg ->
+                when (arg) {
+                    null -> statement.bindNull(i + 1)
+                    is String -> statement.bindText(i + 1, arg)
+                    is Long -> statement.bindLong(i + 1, arg)
+                    is Int -> statement.bindLong(i + 1, arg.toLong())
+                    is Boolean -> statement.bindLong(i + 1, if (arg) 1L else 0L)
+                    else -> throw UnsupportedOperationException("bind argument of type ${arg::class}")
+                }
+            }
+            statement.step()
+        }
+    }
 
     /**
      * Hands a migration something that looks like a SupportSQLiteDatabase and forwards the only
-     * method migrations use. Anything else fails loudly rather than silently doing nothing, so a
+     * method migrations use: execSQL, with or without bind arguments. Anything else fails loudly rather than silently doing nothing, so a
      * future migration that reaches for a query or a transaction cannot pass this test by accident.
      */
     private fun supportFacade(connection: SQLiteConnection): SupportSQLiteDatabase =
@@ -87,8 +116,9 @@ class AppDbMigrationTest {
             SupportSQLiteDatabase::class.java.classLoader,
             arrayOf(SupportSQLiteDatabase::class.java),
         ) { _, method, args ->
-            when (method.name) {
-                "execSQL" -> connection.execSQL(args[0] as String)
+            when {
+                method.name == "execSQL" && args.size == 1 -> connection.execSQL(args[0] as String)
+                method.name == "execSQL" && args.size == 2 -> execWithArgs(connection, args[0] as String, args[1] as Array<*>)
                 else -> throw UnsupportedOperationException(
                     "this facade forwards execSQL only; a migration now calls ${method.name}",
                 )
@@ -145,14 +175,17 @@ class AppDbMigrationTest {
         return columns
     }
 
-    /** What Room says the current version must look like — its own exported schema, committed alongside. */
-    private fun expectedColumns(table: String): Set<Column> {
-        val file = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/8.json")
+    /** What Room says [version] must look like — its own exported schema, committed alongside. */
+    private fun exportedEntity(table: String, version: Int) = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/$version.json").let { file ->
         assertTrue("exported schema missing — run the ksp task: ${file.absolutePath}", file.exists())
-        val entity = Json.parseToJsonElement(file.readText())
+        Json.parseToJsonElement(file.readText())
             .jsonObject["database"]!!.jsonObject["entities"]!!.jsonArray
             .map { it.jsonObject }
             .single { it["tableName"]!!.jsonPrimitive.content == table }
+    }
+
+    private fun expectedColumns(table: String, version: Int = 8): Set<Column> {
+        val entity = exportedEntity(table, version)
         return entity["fields"]!!.jsonArray.map { field ->
             val f = field.jsonObject
             Column(
@@ -276,7 +309,7 @@ class AppDbMigrationTest {
         // exported schema left stale by a build that was never re-run. @Database is compile-time
         // retained, so the declared version is read from the schema Room exported from it — the
         // same file the other tests here compare against.
-        val exported = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/8.json")
+        val exported = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/9.json")
         assertTrue("exported schema missing: ${exported.absolutePath}", exported.exists())
         val declared = Json.parseToJsonElement(exported.readText())
             .jsonObject["database"]!!.jsonObject["version"]!!.jsonPrimitive.content.toInt()
@@ -284,5 +317,178 @@ class AppDbMigrationTest {
         assertEquals(declared, migrations.maxOf(Migration::endVersion))
         // One migration per step, no gaps: a version bump with no migration strands every upgrade.
         assertEquals((2..declared).toList(), migrations.map(Migration::endVersion).sorted())
+    }
+
+    // ---- 8 to 9: accounts (T-291) ------------------------------------------------------
+
+    /** A database at version 8 with one list and one item, as the single-session app left it. */
+    private fun seedV8(connection: SQLiteConnection) {
+        seedV1(connection)
+        runMigrations(connection, from = 1, to = 8)
+    }
+
+    /** Unique indices and foreign keys, which Room validates on open as it does the columns. */
+    private fun actualIndices(connection: SQLiteConnection, table: String): Set<Pair<String, Boolean>> {
+        val indices = mutableSetOf<Pair<String, Boolean>>()
+        connection.prepare("PRAGMA index_list($table)").use {
+            while (it.step()) {
+                val name = it.getText(1)
+                if (!name.startsWith("sqlite_autoindex")) indices += name to (it.getLong(2) == 1L)
+            }
+        }
+        return indices
+    }
+
+    private fun expectedIndices(table: String): Set<Pair<String, Boolean>> =
+        exportedEntity(table, 9)["indices"]?.jsonArray.orEmpty().map { index ->
+            val i = index.jsonObject
+            i["name"]!!.jsonPrimitive.content to i["unique"]!!.jsonPrimitive.content.toBoolean()
+        }.toSet()
+
+    private fun actualForeignKeys(connection: SQLiteConnection, table: String): Set<Triple<String, String, String>> {
+        val keys = mutableSetOf<Triple<String, String, String>>()
+        connection.prepare("PRAGMA foreign_key_list($table)").use {
+            while (it.step()) keys += Triple(it.getText(2), it.getText(3), it.getText(4))
+        }
+        return keys
+    }
+
+    private fun expectedForeignKeys(table: String): Set<Triple<String, String, String>> =
+        exportedEntity(table, 9)["foreignKeys"]?.jsonArray.orEmpty().flatMap { key ->
+            val k = key.jsonObject
+            val columns = k["columns"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val referenced = k["referencedColumns"]!!.jsonArray.map { it.jsonPrimitive.content }
+            columns.zip(referenced).map { (from, to) -> Triple(k["table"]!!.jsonPrimitive.content, from, to) }
+        }.toSet()
+
+    private fun count(connection: SQLiteConnection, sql: String): Long = readLong(connection, sql)!!
+
+    private val signedIn = LegacySession(
+        token = "tok-legacy",
+        accountId = "acc-1",
+        mirrorAccountId = "acc-1",
+        email = "milk@example.com",
+        isAdmin = true,
+        defaultCurrency = "EUR",
+        syncCursor = 812,
+        ignoredInviteIds = setOf("inv-2", "inv-1"),
+        serverUrl = "https://lists.example.com/shopping",
+        allowSelfSignedCerts = true,
+    )
+
+    @Test
+    fun `migrating 8 to 9 lands on exactly the schema Room expects`() {
+        val connection = openFresh("v8")
+        try {
+            seedV8(connection)
+            Migration8To9(FakeLegacySession(signedIn)).migrate(supportFacade(connection))
+
+            for (table in listOf("accounts", "lists", "items")) {
+                assertEquals(table, expectedColumns(table, 9), actualColumns(connection, table))
+                assertEquals(table, expectedIndices(table), actualIndices(connection, table))
+                assertEquals(table, expectedForeignKeys(table), actualForeignKeys(connection, table))
+            }
+            // Room runs this after migrating a schema with foreign keys; every list must have its owner.
+            connection.prepare("PRAGMA foreign_key_check").use { assertTrue("no dangling accountId", !it.step()) }
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 8 to 9 turns a signed-in session into one signed-in account that owns every list`() {
+        val connection = openFresh("v8-signed-in")
+        val legacy = FakeLegacySession(signedIn)
+        try {
+            seedV8(connection)
+            Migration8To9(legacy).migrate(supportFacade(connection))
+
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM accounts"))
+            val id = readText(connection, "SELECT id FROM accounts")!!
+            assertNotEquals("a local id, never the server's", "acc-1", id)
+            assertEquals("server", readText(connection, "SELECT kind FROM accounts"))
+            assertEquals("https://lists.example.com/shopping/", readText(connection, "SELECT serverUrl FROM accounts"))
+            assertEquals("lists.example.com", readText(connection, "SELECT label FROM accounts"))
+            assertEquals("acc-1", readText(connection, "SELECT accountId FROM accounts"))
+            assertEquals("milk@example.com", readText(connection, "SELECT email FROM accounts"))
+            assertEquals(1L, readLong(connection, "SELECT isAdmin FROM accounts"))
+            assertEquals(1L, readLong(connection, "SELECT signedIn FROM accounts"))
+            assertEquals(0L, readLong(connection, "SELECT outdated FROM accounts"))
+            assertNull(readLong(connection, "SELECT serverProtocol FROM accounts"))
+            assertEquals(812L, readLong(connection, "SELECT syncCursor FROM accounts"))
+            assertEquals("EUR", readText(connection, "SELECT defaultCurrency FROM accounts"))
+            assertEquals("""["inv-1","inv-2"]""", readText(connection, "SELECT ignoredInviteIdsJson FROM accounts"))
+            assertEquals(1L, readLong(connection, "SELECT allowSelfSignedCerts FROM accounts"))
+
+            assertEquals(id, readText(connection, "SELECT accountId FROM lists WHERE id = 'l1'"))
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists"))
+            assertEquals("Milk", readText(connection, "SELECT name_value FROM items"))
+            assertEquals("the token moves under the new id", id, legacy.adoptedBy)
+        } finally {
+            connection.close()
+        }
+    }
+
+    /** T-257/T-260: logged out with unpushed rows left behind — only the mirror's owner is known. */
+    @Test
+    fun `migrating 8 to 9 keeps a signed-out mirror as a signed-out account`() {
+        val connection = openFresh("v8-signed-out")
+        val legacy = FakeLegacySession(
+            LegacySession(mirrorAccountId = "acc-1", serverUrl = "https://lists.example.com/"),
+        )
+        try {
+            seedV8(connection)
+            connection.execSQL("UPDATE items SET dirty = 1")
+            Migration8To9(legacy).migrate(supportFacade(connection))
+
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM accounts"))
+            assertEquals("acc-1", readText(connection, "SELECT accountId FROM accounts"))
+            assertEquals("signed out: there is no token", 0L, readLong(connection, "SELECT signedIn FROM accounts"))
+            assertEquals(0L, readLong(connection, "SELECT syncCursor FROM accounts"))
+            val id = readText(connection, "SELECT id FROM accounts")
+            assertEquals(id, readText(connection, "SELECT accountId FROM lists"))
+            assertEquals("the unpushed row survives", 1L, readLong(connection, "SELECT dirty FROM items"))
+            assertNull("no token to move", legacy.adoptedBy)
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 8 to 9 on a fresh install inserts nothing`() {
+        val connection = openFresh("v8-fresh")
+        val legacy = FakeLegacySession()
+        try {
+            connection.execSQL(v1Lists)
+            connection.execSQL(v1Items)
+            runMigrations(connection, from = 1, to = 8)
+            Migration8To9(legacy).migrate(supportFacade(connection))
+
+            assertEquals(0L, count(connection, "SELECT COUNT(*) FROM accounts"))
+            assertEquals(0L, count(connection, "SELECT COUNT(*) FROM lists"))
+            assertNull(legacy.adoptedBy)
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 8 to 9 gives lists nobody is recorded for a signed-out owner`() {
+        // No session and no mirror owner, but lists: nothing should leave a database like this,
+        // and if one does, its lists still need an owner for the foreign key. The next login
+        // replaces that owner, exactly as it would have wiped an unowned mirror (T-260).
+        val connection = openFresh("v8-unowned")
+        try {
+            seedV8(connection)
+            Migration8To9(FakeLegacySession()).migrate(supportFacade(connection))
+
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM accounts"))
+            assertEquals(0L, readLong(connection, "SELECT signedIn FROM accounts"))
+            assertNull(readText(connection, "SELECT accountId FROM accounts"))
+            assertEquals(readText(connection, "SELECT id FROM accounts"), readText(connection, "SELECT accountId FROM lists"))
+            connection.prepare("PRAGMA foreign_key_check").use { assertTrue(!it.step()) }
+        } finally {
+            connection.close()
+        }
     }
 }

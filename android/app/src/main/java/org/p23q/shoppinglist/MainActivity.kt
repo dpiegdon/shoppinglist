@@ -18,10 +18,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.p23q.shoppinglist.data.LocalePreferenceStore
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.data.deviceLocale
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
@@ -40,7 +43,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var localePreferenceStore: LocalePreferenceStore
 
-    @Inject lateinit var session: SessionState
+    @Inject lateinit var session: CurrentAccount
+
+    @Inject lateinit var accountRegistry: AccountRegistry
 
     @Inject lateinit var notificationPrefs: NotificationPrefsStore
 
@@ -53,9 +58,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Resume the session on cold start instead of always dumping the user on a blank Login
-        // form. token/lastOpenedListId are synchronous (EncryptedSharedPreferences) reads, so the
-        // decision is resolved here, before setContent, and passed as the nav start destination.
-        // (A revoked token still surfaces later via the forced-logout path in ShoppingListNavHost.)
+        // form. The decision is resolved here, before setContent, and passed as the nav start
+        // destination, so the accounts are loaded first: one read of a small table (and, once, the
+        // schema-9 migration), after which every account read below and in the view models is
+        // synchronous. (A revoked token still surfaces later via the forced-logout path in
+        // ShoppingListNavHost.)
+        runBlocking(Dispatchers.IO) { accountRegistry.load() }
         val notifiedListId = intent.getStringExtra(EXTRA_OPEN_LIST_ID)
         val startDestination = when {
             session.token == null -> Routes.LOGIN

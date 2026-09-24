@@ -2,11 +2,12 @@ package org.p23q.shoppinglist.core.sync
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.Expense
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.api.ApiException
-import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.core.api.AppJson
 import org.p23q.shoppinglist.core.api.FieldClock
 import org.p23q.shoppinglist.core.api.ItemDto
@@ -14,7 +15,6 @@ import org.p23q.shoppinglist.core.api.ItemFieldsDto
 import org.p23q.shoppinglist.core.api.ListDto
 import org.p23q.shoppinglist.core.api.ListFieldsDto
 import org.p23q.shoppinglist.core.api.PriceDto
-import org.p23q.shoppinglist.core.api.ProtocolState
 import org.p23q.shoppinglist.core.api.SyncChanges
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.api.UnauthorizedException
@@ -46,31 +46,32 @@ sealed interface SyncResult {
 }
 
 /**
- * Pushes dirty local rows and pulls remote changes in one round trip, per the Wire Contract's
- * /sync endpoint. Applying the response is a field-level LWW merge — NOT a blind overwrite —
- * because a local edit can race the request: the row we snapshotted as "dirty" may have been
- * edited again before the response comes back, and that newer local edit must survive.
+ * Pushes dirty local rows and pulls remote changes in one round trip per account, per the Wire
+ * Contract's /sync endpoint. Applying the response is a field-level LWW merge — NOT a blind
+ * overwrite — because a local edit can race the request: the row we snapshotted as "dirty" may have
+ * been edited again before the response comes back, and that newer local edit must survive.
+ *
+ * [syncNow] runs every signed-in server account that is not outdated, one after the other, each
+ * with its own client, cursor and [AccountSyncStatus]. One account failing does not stop the
+ * others; the result is the worst of theirs.
  */
 class SyncEngine @Inject constructor(
     private val itemDao: ItemDao,
     private val listDao: ListDao,
-    private val apiProvider: ApiSource,
-    private val sessionState: SessionState,
+    private val registry: AccountRegistry,
+    private val sessions: AccountSessions,
     private val deviceIdProvider: DeviceIdProvider,
     private val appDb: AppDb,
     private val syncStatus: SyncStatus,
     private val notifier: CollaboratorChangeNotifier,
-    // Last with a default for the same reason as ErrorInterceptor's: the tests that exercise the
-    // 426 path pass the same instance the interceptor got, the rest need not know it exists.
-    private val protocolState: ProtocolState = ProtocolState(),
 ) {
     companion object {
         /**
          * Server cap on rows per /sync push (sync.MAX_CHANGES_PER_SYNC, T-114). A larger batch is
          * rejected with `too_many_changes`, because applying one holds SQLite's single write lock
          * for its whole duration and an unbounded batch could stall every other write on the
-         * instance. A backlog past this is pushed over several passes — see syncNow. Lowering this
-         * is safe (smaller batches); raising it above the server's value is not.
+         * instance. A backlog past this is pushed over several passes — see syncAccount. Lowering
+         * this is safe (smaller batches); raising it above the server's value is not.
          */
         const val MAX_CHANGES_PER_SYNC = 250
     }
@@ -82,18 +83,76 @@ class SyncEngine @Inject constructor(
      * (which every scheduled trigger requires connectivity for) finally runs and writes real ones.
      */
     suspend fun seedStatus() {
-        val pending = itemDao.dirtyRows().size + listDao.dirtyRows().size
-        syncStatus.seed(pending = pending, blocked = blockedCount())
+        for (account in registry.load().filter { it.isServer }) {
+            val pending = itemDao.dirtyRowsForAccount(account.id).size + listDao.dirtyRowsForAccount(account.id).size
+            syncStatus.account(account.id).seed(pending = pending, blocked = blockedCount(account.id))
+        }
     }
 
-    suspend fun syncNow(fullLists: List<String> = emptyList()): SyncResult {
+    /**
+     * Syncs every account that can be synced. [fullLists] asks for a full snapshot of those lists;
+     * each goes to the account that holds the list, or to [fullListsAccountId] if this device does
+     * not hold it yet (a list just joined through an invite).
+     *
+     * With no account to sync, says why: [SyncResult.UpdateRequired] if every server account is
+     * outdated, [SyncResult.Unauthorized] otherwise (none, or none signed in).
+     */
+    suspend fun syncNow(fullLists: List<String> = emptyList(), fullListsAccountId: String? = null): SyncResult {
+        val servers = registry.load().filter { it.isServer }
+        val eligible = servers.filter { it.signedIn && !it.outdated }
+        if (eligible.isEmpty()) {
+            return if (servers.isNotEmpty() && servers.all { it.outdated }) SyncResult.UpdateRequired else SyncResult.Unauthorized
+        }
+        val owners = fullLists.associateWith { listDao.getById(it)?.accountId ?: fullListsAccountId }
+        val results = eligible.map { account ->
+            val mine = fullLists.filter { owners[it] == account.id }
+            try {
+                syncAccount(account.id, mine)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Isolated: whatever went wrong with this account's run must not cost the next
+                // account its sync. The status records it as that account's failure.
+                val message = e.message ?: e.javaClass.simpleName
+                syncStatus.account(account.id).failed(
+                    message,
+                    pending = itemDao.dirtyRowsForAccount(account.id).size + listDao.dirtyRowsForAccount(account.id).size,
+                    blocked = blockedCount(account.id),
+                )
+                SyncResult.Failed(message)
+            }
+        }
+        return worstOf(results)
+    }
+
+    /** Failed, then UpdateRequired, then Unauthorized; all Success sums up. */
+    private fun worstOf(results: List<SyncResult>): SyncResult {
+        results.firstOrNull { it is SyncResult.Failed }?.let { return it }
+        if (results.any { it is SyncResult.UpdateRequired }) return SyncResult.UpdateRequired
+        if (results.any { it is SyncResult.Unauthorized }) return SyncResult.Unauthorized
+        val done = results.filterIsInstance<SyncResult.Success>()
+        return SyncResult.Success(
+            pushedItems = done.sumOf { it.pushedItems },
+            pushedLists = done.sumOf { it.pushedLists },
+            pulledItems = done.sumOf { it.pulledItems },
+            pulledLists = done.sumOf { it.pulledLists },
+        )
+    }
+
+    /** One account's sync: its dirty rows, its cursor, its server. */
+    suspend fun syncAccount(accountId: String, fullLists: List<String> = emptyList()): SyncResult {
+        val account = registry.get(accountId) ?: return SyncResult.Unauthorized
+        if (!account.signedIn) return SyncResult.Unauthorized
         // Too old for this server (T-240): stop before reading, sending or reporting anything. The
         // dirty rows stay dirty and stay pushable — the app being outdated says nothing about
         // them, and they go out unchanged the moment an updated build talks to the server again.
-        if (protocolState.updateRequired.value) return SyncResult.UpdateRequired
+        if (account.outdated) return SyncResult.UpdateRequired
 
-        val allDirtyItems = itemDao.dirtyRows()
-        val allDirtyLists = listDao.dirtyRows()
+        val session = sessions.get(accountId)
+        val status = session.syncStatus
+
+        val allDirtyItems = itemDao.dirtyRowsForAccount(accountId)
+        val allDirtyLists = listDao.dirtyRowsForAccount(accountId)
         val pendingBefore = allDirtyItems.size + allDirtyLists.size
 
         // Take at most one batch's worth, lists first (T-114). Lists lead because the server
@@ -105,33 +164,33 @@ class SyncEngine @Inject constructor(
 
         // Surface "syncing…" plus the counts as they stand now (T-47). Recursive retries below
         // re-enter this and re-report, so the innermost outcome is what the UI settles on.
-        syncStatus.started(pending = pendingBefore, blocked = blockedCount())
+        status.started(pending = pendingBefore, blocked = blockedCount(accountId))
 
         val request = SyncRequest(
-            cursor = sessionState.syncCursor,
+            cursor = account.syncCursor,
             deviceId = deviceIdProvider.get(),
             fullLists = fullLists,
             changes = SyncChanges(lists = dirtyLists.map { it.toDto() }, items = dirtyItems.map { it.toDto() }),
         )
 
         val response = try {
-            apiProvider.get().sync(request)
+            session.api.sync(request)
         } catch (e: UnauthorizedException) {
-            syncStatus.stoppedUnauthorized(pending = pendingBefore, blocked = blockedCount())
+            status.stoppedUnauthorized(pending = pendingBefore, blocked = blockedCount(accountId))
             return SyncResult.Unauthorized
         } catch (e: ApiException) {
-            // Too old for this server (T-240). ErrorInterceptor has already raised the app-wide
-            // state; this is only about leaving the queue untouched. It is emphatically NOT a row
-            // refusal — the request never reached a row — so it must return before the 422
+            // Too old for this server (T-240). The account's session has already marked it
+            // outdated; this is only about leaving the queue untouched. It is emphatically NOT a
+            // row refusal — the request never reached a row — so it must return before the 422
             // quarantine rules below, which would otherwise be reached if the server ever sent a
             // row_id along with it.
             if (e.httpStatus == 426) {
-                syncStatus.stoppedOutdated(pending = pendingBefore, blocked = blockedCount())
+                status.stoppedOutdated(pending = pendingBefore, blocked = blockedCount(accountId))
                 return SyncResult.UpdateRequired
             }
             if (e.code == "full_resync_required") {
                 // Our cursor has fallen below the server's gc_horizon, so there is no incremental
-                // delta to be had and the mirror has to be re-based on a cursor-0 pull.
+                // delta to be had and this account's lists have to be re-based on a cursor-0 pull.
                 //
                 // Re-based, NOT wiped (T-259). This used to call clearAllTables(), on the grounds
                 // that the server applies a request's pushed changes before rejecting its cursor,
@@ -140,8 +199,9 @@ class SyncEngine @Inject constructor(
                 // quarantined rows outright, so a week of offline edits past the cap and every row
                 // the server refused and the user has not corrected yet were destroyed without a
                 // word. So drop exactly the rows the server can reproduce and keep the ones it
-                // cannot; deleteSyncedRows() is that complement, and one transaction over both
-                // tables leaves no window in which the mirror is half-rebased.
+                // cannot, of this account only; one transaction over both tables leaves no window
+                // in which the mirror is half-rebased. Items go first, so that a clean list still
+                // holding an unpushed item is kept (see ListDao.deleteSyncedRowsForAccount).
                 //
                 // What is kept is NOT special-cased afterwards: the cursor-0 pull that follows
                 // merges it field by field on the ordinary LWW clocks, exactly like any other pull.
@@ -152,11 +212,11 @@ class SyncEngine @Inject constructor(
                 // the retry, like any other edit made offline. The retry is not a pure pull any
                 // more, which is the point: the backlog goes out with it.
                 appDb.inTransaction {
-                    listDao.deleteSyncedRows()
-                    itemDao.deleteSyncedRows()
+                    itemDao.deleteSyncedRowsForAccount(accountId)
+                    listDao.deleteSyncedRowsForAccount(accountId)
                 }
-                sessionState.syncCursor = 0
-                return syncNow(fullLists)
+                registry.update(accountId) { it.copy(syncCursor = 0) }
+                return syncAccount(accountId, fullLists)
             }
             // One row the server rejected (bad field value) aborts the whole transactional push.
             // Quarantine just that row so it stops wedging the queue, then retry immediately: the
@@ -179,7 +239,7 @@ class SyncEngine @Inject constructor(
                 val listId = itemDao.getById(badRowId)?.listId ?: badRowId.takeIf { listDao.getById(it) != null }
                 if (listId != null) {
                     if (itemDao.getById(badRowId) != null) itemDao.hardDelete(badRowId) else listDao.hardDelete(badRowId)
-                    return syncNow(fullLists + listId)
+                    return syncAccount(accountId, fullLists + listId)
                 }
             }
             if (e.httpStatus == 422 && badRowId != null) {
@@ -193,30 +253,30 @@ class SyncEngine @Inject constructor(
                     // that can later say why it was parked, and a push queue empties while nobody
                     // is looking — by the time anyone sees it, this exception is long gone.
                     itemDao.blockRow(badRowId, e.code, e.accountId)
-                    return syncNow(fullLists)
+                    return syncAccount(accountId, fullLists)
                 }
                 if (listDao.getById(badRowId) != null) {
                     listDao.blockRow(badRowId)
-                    return syncNow(fullLists)
+                    return syncAccount(accountId, fullLists)
                 }
             }
             val message = e.message ?: "sync failed"
-            syncStatus.failed(message, pending = pendingBefore, blocked = blockedCount())
+            status.failed(message, pending = pendingBefore, blocked = blockedCount(accountId))
             return SyncResult.Failed(message)
         } catch (e: SSLException) {
             // Distinct, actionable message for an untrusted cert (T-38); SSLException extends
             // IOException, so this catch must precede it.
             //
-            // Deliberately NOT a string resource: nothing renders it. SyncStatus.lastError is only
+            // Deliberately NOT a string resource: nothing renders it. SyncState.lastError is only
             // ever null-checked (SyncStatusBar picks a colour from it), and SyncWorker discards
             // SyncResult.Failed's message entirely. It is a diagnostic, so translating it would be
             // work with no user-visible effect (T-111).
             val message = "Server certificate not trusted"
-            syncStatus.failed(message, pending = pendingBefore, blocked = blockedCount())
+            status.failed(message, pending = pendingBefore, blocked = blockedCount(accountId))
             return SyncResult.Failed(message)
         } catch (e: IOException) {
             val message = e.message ?: "network error"
-            syncStatus.failed(message, pending = pendingBefore, blocked = blockedCount())
+            status.failed(message, pending = pendingBefore, blocked = blockedCount(accountId))
             return SyncResult.Failed(message)
         }
 
@@ -230,19 +290,19 @@ class SyncEngine @Inject constructor(
         // a several-hundred-row pull would stall every edit on the device until it finished. The
         // network round trip is already over by here — no transaction ever spans a request.
         for (dto in response.changes.lists) {
-            appDb.inTransaction { listDao.upsert(mergeList(listDao.getById(dto.id), dto)) }
+            appDb.inTransaction { listDao.upsert(mergeList(listDao.getById(dto.id), dto, accountId)) }
         }
         for (dto in response.changes.items) {
             appDb.inTransaction { itemDao.upsert(mergeItem(itemDao.getById(dto.id), dto)) }
         }
 
-        sessionState.syncCursor = response.cursor
+        registry.update(accountId) { it.copy(syncCursor = response.cursor) }
 
-        ensureAccountId()
-        reportCollaboratorChanges(requestCursor = request.cursor, pulledItems = response.changes.items)
+        ensureAccountId(accountId)
+        reportCollaboratorChanges(accountId, requestCursor = request.cursor, pulledItems = response.changes.items)
 
         // Recompute pending after the merge: a local edit that raced the request may still be dirty.
-        val pendingAfter = itemDao.dirtyRows().size + listDao.dirtyRows().size
+        val pendingAfter = itemDao.dirtyRowsForAccount(accountId).size + listDao.dirtyRowsForAccount(accountId).size
 
         // More backlog than one batch could carry: go round again (T-114). Guarded on the backlog
         // having actually SHRUNK, not merely on rows remaining — a pushed row is only marked clean
@@ -251,7 +311,7 @@ class SyncEngine @Inject constructor(
         // pending strictly decreases each pass and the recursion is bounded by the backlog size.
         // fullLists is deliberately not repeated: it asks for a snapshot, this pass already took it.
         if (hasMoreToPush && pendingAfter < pendingBefore) {
-            return when (val rest = syncNow()) {
+            return when (val rest = syncAccount(accountId)) {
                 is SyncResult.Success -> SyncResult.Success(
                     pushedItems = dirtyItems.size + rest.pushedItems,
                     pushedLists = dirtyLists.size + rest.pushedLists,
@@ -262,10 +322,10 @@ class SyncEngine @Inject constructor(
             }
         }
 
-        syncStatus.succeeded(
+        status.succeeded(
             at = System.currentTimeMillis(),
             pending = pendingAfter,
-            blocked = blockedCount(),
+            blocked = blockedCount(accountId),
         )
         return SyncResult.Success(
             pushedItems = dirtyItems.size,
@@ -275,8 +335,9 @@ class SyncEngine @Inject constructor(
         )
     }
 
-    /** Rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
-    private suspend fun blockedCount(): Int = itemDao.blockedRowCount() + listDao.blockedRowCount()
+    /** One account's rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
+    private suspend fun blockedCount(accountId: String): Int =
+        itemDao.blockedRowCountForAccount(accountId) + listDao.blockedRowCountForAccount(accountId)
 
     /**
      * Self-heals a missing account id (T-74). accountId is only stored at login, so a session that
@@ -286,13 +347,16 @@ class SyncEngine @Inject constructor(
      * per install (stops once set); runs in the background worker too, so it heals without a screen
      * open. Needs a local list to exist (true from the second sync on; the first is cursor-0 anyway).
      */
-    private suspend fun ensureAccountId() {
-        if (sessionState.accountId != null) return
-        val email = sessionState.accountEmail ?: return
-        val listId = listDao.anyActiveListId() ?: return
+    private suspend fun ensureAccountId(accountId: String) {
+        val account = registry.get(accountId) ?: return
+        if (account.accountId != null) return
+        val email = account.email ?: return
+        val listId = listDao.anyActiveListIdForAccount(accountId) ?: return
         try {
-            val members = apiProvider.get().members(listId).members
-            members.firstOrNull { it.email == email }?.let { sessionState.accountId = it.accountId }
+            val members = sessions.get(accountId).api.members(listId).members
+            members.firstOrNull { it.email == email }?.let { me ->
+                registry.update(accountId) { it.copy(accountId = me.accountId) }
+            }
         } catch (e: ApiException) {
             // Best-effort — retried on the next sync.
         } catch (e: IOException) {
@@ -308,13 +372,14 @@ class SyncEngine @Inject constructor(
      * session — can't distinguish, so don't guess), or a row's last_touched_by is null (pre-T-64
      * row never re-touched). Reports RAW detections; pref filtering lives in the notifier impl.
      */
-    private suspend fun reportCollaboratorChanges(requestCursor: Long, pulledItems: List<ItemDto>) {
+    private suspend fun reportCollaboratorChanges(accountId: String, requestCursor: Long, pulledItems: List<ItemDto>) {
         if (requestCursor == 0L) return
-        val myAccountId = sessionState.accountId ?: return
+        val myAccountId = registry.get(accountId)?.accountId ?: return
         val foreign = pulledItems.filter { it.lastTouchedBy != null && it.lastTouchedBy != myAccountId }
         if (foreign.isEmpty()) return
         val changes = foreign.groupBy { it.listId }.map { (listId, items) ->
             CollaboratorChange(
+                accountId = accountId,
                 listId = listId,
                 // Resolved AFTER the merge loops, so a list first seen in this same pull is found.
                 listName = listDao.getById(listId)?.name?.value ?: "a shared list",
@@ -446,7 +511,8 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
     )
 }
 
-private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
+/** [accountId] is the syncing account's, given to a list this device sees for the first time. */
+private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String): ListEntity {
     val categoryOrderRemote = FieldClock(
         Json.encodeToString(remote.fields.categoryOrder.value),
         remote.fields.categoryOrder.updatedAt,
@@ -456,6 +522,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
     if (local == null) {
         return ListEntity(
             id = remote.id,
+            accountId = accountId,
             createdAt = remote.createdAt,
             name = remote.fields.name.value.toLww(remote.fields.name.updatedBy, remote.fields.name.updatedAt),
             categoryOrder = categoryOrderRemote.value.toLww(categoryOrderRemote.updatedBy, categoryOrderRemote.updatedAt),
@@ -480,6 +547,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto): ListEntity {
 
     return ListEntity(
         id = local.id,
+        accountId = local.accountId,
         createdAt = local.createdAt,
         name = LwwString(name.value, name.updatedAt, name.updatedBy),
         categoryOrder = LwwString(categoryOrder.value, categoryOrder.updatedAt, categoryOrder.updatedBy),

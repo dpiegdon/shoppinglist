@@ -10,7 +10,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Guards the manifest policy from T-37: allowBackup must stay off, or a cloud/backup restore would
- * carry SessionStore's encrypted prefs to a new device whose Keystore master key can't decrypt them,
+ * carry KeystoreSecretStore's encrypted prefs to a new device whose Keystore master key can't decrypt them,
  * crash-looping the app at startup.
  */
 @RunWith(RobolectricTestRunner::class)

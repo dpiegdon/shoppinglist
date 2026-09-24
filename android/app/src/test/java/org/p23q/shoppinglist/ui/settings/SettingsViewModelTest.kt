@@ -22,15 +22,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.core.DefaultCurrencyState
-import org.p23q.shoppinglist.data.FakeSessionState
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.RecordingAuthRepository
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
-import org.p23q.shoppinglist.data.ServerConfig
+import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
-import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.core.db.AppDb
 import org.robolectric.RobolectricTestRunner
@@ -47,13 +47,14 @@ class SettingsViewModelTest {
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
-    private lateinit var serverConfig: ServerConfig
-    private lateinit var sessionState: FakeSessionState
+    private lateinit var serverConfig: TestServerAddress
+    private lateinit var sessionState: FakeCurrentAccount
     private lateinit var themePreferenceStore: ThemePreferenceStore
-    private lateinit var apiProvider: ApiProvider
+    private lateinit var apiProvider: ApiSource
     private lateinit var crashLogWriter: CrashLogWriter
     private lateinit var defaultCurrencyState: DefaultCurrencyState
     private lateinit var notificationPrefs: NotificationPrefsStore
+    private val authRepository = RecordingAuthRepository()
 
     @Before
     fun setUp() = runTest(mainDispatcherRule.dispatcher) {
@@ -65,28 +66,22 @@ class SettingsViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
 
-        val serverConfigFile = File.createTempFile("settings_vm_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        serverConfig = ServerConfig(PreferenceDataStoreFactory.create { serverConfigFile })
+        serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
 
         val themeFile = File.createTempFile("settings_vm_theme", ".preferences_pb")
         themeFile.deleteOnExit()
         themePreferenceStore = ThemePreferenceStore(PreferenceDataStoreFactory.create { themeFile })
 
-        sessionState = FakeSessionState().apply {
+        sessionState = FakeCurrentAccount().apply {
             token = "tok-123"
             accountEmail = "milk@example.com"
             defaultCurrency = "EUR"
+            serverUrl = server.url("/").toString()
         }
 
         val json = Json { ignoreUnknownKeys = true }
-        apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
-            json = json,
-        )
+        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
 
         val crashLogFile = File.createTempFile("settings_vm_crash_log", ".txt")
         crashLogFile.deleteOnExit()
@@ -108,7 +103,7 @@ class SettingsViewModelTest {
 
     private fun newViewModel(): SettingsViewModel =
         SettingsViewModel(
-            apiProvider, sessionState, serverConfig, themePreferenceStore, db,
+            apiProvider, sessionState, themePreferenceStore, authRepository,
             crashLogWriter, defaultCurrencyState, notificationPrefs,
         )
 
@@ -272,7 +267,7 @@ class SettingsViewModelTest {
 
     @Test
     fun `updateInitials resends the current currency so it is not overwritten (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
-        val viewModel = newViewModel()  // defaultCurrency = "EUR" from FakeSessionState in setUp
+        val viewModel = newViewModel()  // defaultCurrency = "EUR" from FakeCurrentAccount in setUp
         // Await the init load (currency comes from a DataStore read on Dispatchers.IO) before acting:
         // updateInitials resends _uiState.value.defaultCurrency, so the test must not race that load.
         viewModel.uiState.first { it.defaultCurrency == "EUR" }
@@ -393,11 +388,11 @@ class SettingsViewModelTest {
 
         assertEquals(UiText.res(R.string.settings_msg_delete_password_incorrect), viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isAccountDeleted)
-        assertNotNull(sessionState.token)
+        assertTrue(authRepository.removed.isEmpty())
     }
 
     @Test
-    fun `confirmDeleteAccount success wipes the session and local mirror`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `confirmDeleteAccount success removes the account from the device`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(204))
         val viewModel = newViewModel()
         viewModel.onDeleteAccountPasswordChange("hunter2")
@@ -405,7 +400,8 @@ class SettingsViewModelTest {
         viewModel.confirmDeleteAccount()?.join()
 
         assertTrue(viewModel.uiState.value.isAccountDeleted)
-        assertNull(sessionState.token)
+        // Its lists, token and row go with it (AuthRepository.removeAccount).
+        assertEquals(listOf(TEST_ACCOUNT_ID), authRepository.removed)
     }
 
     @Test
@@ -419,15 +415,15 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `allowSelfSignedCerts loads from and persists to server config`() = runTest(mainDispatcherRule.dispatcher) {
-        serverConfig.setAllowSelfSignedCerts(true)
+    fun `allowSelfSignedCerts loads from and persists to the account`() = runTest(mainDispatcherRule.dispatcher) {
+        sessionState.allowSelfSignedCerts = true
         val viewModel = newViewModel()
         assertTrue(viewModel.uiState.first { it.allowSelfSignedCerts }.allowSelfSignedCerts)
 
         viewModel.setAllowSelfSignedCerts(false).join()
 
         assertFalse(viewModel.uiState.value.allowSelfSignedCerts)
-        assertFalse(serverConfig.allowSelfSignedCerts.first())
+        assertFalse(sessionState.allowSelfSignedCerts)
     }
 
     @Test

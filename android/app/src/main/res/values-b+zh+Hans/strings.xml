@@ -214,6 +214,7 @@
     <string name="login_msg_credentials_required">必须填写邮箱和密码</string>
     <string name="login_msg_incorrect_credentials">邮箱或密码不正确</string>
     <string name="login_msg_untrusted_cert">服务器证书不受信任。请使用受认可机构颁发的证书。若使用自签名测试服务器，请在设置中启用「信任自签名证书」（仅限调试版本）。</string>
+    <string name="login_msg_server_too_old">此服务器版本过旧，无法用于此应用。</string>
     <string name="redeem_msg_code_required">请输入邀请码</string>
     <string name="redeem_msg_failed">无法使用该邀请</string>
     <string name="item_msg_name_required">必须填写名称</string>

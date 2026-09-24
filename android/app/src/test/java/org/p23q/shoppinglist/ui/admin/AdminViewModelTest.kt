@@ -18,13 +18,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.data.FakeCurrentAccount
+import org.p23q.shoppinglist.data.TestServerAddress
+import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.testApiSource
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -38,8 +35,8 @@ class AdminViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var server: MockWebServer
-    private lateinit var apiProvider: ApiProvider
-    private lateinit var sessionState: FakeSessionState
+    private lateinit var apiProvider: ApiSource
+    private lateinit var sessionState: FakeCurrentAccount
 
     private val usersJson = """
         {"users":[
@@ -54,20 +51,15 @@ class AdminViewModelTest {
         server.start()
         val configFile = File.createTempFile("admin_vm_config", ".preferences_pb")
         configFile.deleteOnExit()
-        val serverConfig = ServerConfig(PreferenceDataStoreFactory.create { configFile })
+        val serverConfig = TestServerAddress()
         serverConfig.setServerUrl(server.url("/").toString())
-        sessionState = FakeSessionState().apply {
+        sessionState = FakeCurrentAccount().apply {
             token = "tok"
             accountId = "admin-1"
             isAdmin = true
         }
         val json = Json { ignoreUnknownKeys = true }
-        apiProvider = ApiProvider(
-            serverConfig = serverConfig,
-            authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-            json = json,
-        )
+        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
     }
 
     @After

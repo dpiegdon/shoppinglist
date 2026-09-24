@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui
 
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
+import kotlinx.coroutines.runBlocking
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -34,6 +37,7 @@ class ListTitleViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
+        runTest(mainDispatcherRule.dispatcher) { db.insertTestAccount() }
         listsRepo = ListsRepo(db, DeviceIdProvider { "device-1" }, FakeSyncTrigger())
     }
 
@@ -44,7 +48,7 @@ class ListTitleViewModelTest {
 
     @Test
     fun `name exposes the list name and updates live on rename`() = runTest(mainDispatcherRule.dispatcher) {
-        val listId = listsRepo.createList("Groceries")
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val viewModel = ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo)
 
         assertEquals("Groceries", viewModel.name.first { it == "Groceries" })

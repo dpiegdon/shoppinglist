@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.data.update
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -14,17 +13,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.core.api.TokenProvider
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.TestAccounts
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
 /**
- * T-135. Driven through a real ApiProvider against MockWebServer rather than a hand-rolled fake
+ * T-135. Driven through a real ApiSource against MockWebServer rather than a hand-rolled fake
  * Api, following the existing repo/viewmodel tests: the 404 path in particular only behaves
  * realistically if it goes through ErrorInterceptor, which is what turns a non-2xx into the
  * ApiException this class relies on catching.
@@ -34,8 +34,17 @@ class UpdateCheckerTest {
 
     private lateinit var server: MockWebServer
     private lateinit var prefs: UpdatePrefsStore
-    private lateinit var serverConfig: ServerConfig
+    private lateinit var accounts: TestAccounts
     private lateinit var checker: UpdateChecker
+    private val dbs = mutableListOf<AppDb>()
+
+    private fun newAccounts(): TestAccounts = TestAccounts(
+        Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+            .also { dbs += it },
+    )
 
     @Before
     fun setUp() = runTest {
@@ -46,27 +55,15 @@ class UpdateCheckerTest {
         prefsFile.deleteOnExit()
         prefs = UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile })
 
-        val configFile = File.createTempFile("update_server_config", ".preferences_pb")
-        configFile.deleteOnExit()
-        serverConfig = ServerConfig(PreferenceDataStoreFactory.create { configFile })
-        serverConfig.setServerUrl(server.url("/").toString())
-
-        val json = Json { ignoreUnknownKeys = true }
-        checker = UpdateChecker(
-            apiProvider = ApiProvider(
-                serverConfig = serverConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { null }),
-                errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-                json = json,
-            ),
-            serverConfig = serverConfig,
-            prefs = prefs,
-        )
+        accounts = newAccounts()
+        accounts.add(server.url("/").toString())
+        checker = UpdateChecker(accounts.registry, accounts.sessions, prefs)
     }
 
     @After
     fun tearDown() {
         if (::server.isInitialized) server.shutdown()
+        dbs.forEach { it.close() }
     }
 
     private fun offering(version: String) = MockResponse()
@@ -159,19 +156,8 @@ class UpdateCheckerTest {
 
     @Test
     fun `no server configured means no request`() = runTest {
-        val emptyConfigFile = File.createTempFile("update_no_server", ".preferences_pb")
-        emptyConfigFile.deleteOnExit()
-        val json = Json { ignoreUnknownKeys = true }
-        val unconfigured = UpdateChecker(
-            apiProvider = ApiProvider(
-                serverConfig = ServerConfig(PreferenceDataStoreFactory.create { emptyConfigFile }),
-                authInterceptor = AuthInterceptor(TokenProvider { null }),
-                errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-                json = json,
-            ),
-            serverConfig = ServerConfig(PreferenceDataStoreFactory.create { emptyConfigFile }),
-            prefs = prefs,
-        )
+        val none = newAccounts()
+        val unconfigured = UpdateChecker(none.registry, none.sessions, prefs)
 
         assertNull(unconfigured.check(currentVersion = "1.11.0"))
     }
@@ -298,20 +284,8 @@ class UpdateCheckerTest {
 
     @Test
     fun `a forced check with no server configured asks nothing`() = runTest {
-        val emptyConfigFile = File.createTempFile("update_forced_no_server", ".preferences_pb")
-        emptyConfigFile.deleteOnExit()
-        val json = Json { ignoreUnknownKeys = true }
-        val emptyConfig = ServerConfig(PreferenceDataStoreFactory.create { emptyConfigFile })
-        val unconfigured = UpdateChecker(
-            apiProvider = ApiProvider(
-                serverConfig = emptyConfig,
-                authInterceptor = AuthInterceptor(TokenProvider { null }),
-                errorInterceptor = ErrorInterceptor(json, SessionEvents()),
-                json = json,
-            ),
-            serverConfig = emptyConfig,
-            prefs = prefs,
-        )
+        val none = newAccounts()
+        val unconfigured = UpdateChecker(none.registry, none.sessions, prefs)
 
         assertEquals(CheckOutcome.NotChecked, unconfigured.checkForced(currentVersion = "1.11.0"))
     }
@@ -324,5 +298,55 @@ class UpdateCheckerTest {
         // Leaving settings must not set off a second request straight away.
         assertNull(checker.check(currentVersion = "1.12.0"))
         assertEquals(1, server.requestCount)
+    }
+
+    // ---- several accounts (T-291) --------------------------------------------------
+
+    @Test
+    fun `every server is asked, and the newest version any of them offers is the offer`() = runTest {
+        val second = MockWebServer().apply { start() }
+        try {
+            accounts.add(second.url("/").toString(), id = "second-account", accountId = "acct-2")
+            server.enqueue(offering("1.12.0"))
+            second.enqueue(
+                MockResponse().setResponseCode(200)
+                    .setBody("""{"version": "1.13.0", "download_url": "https://second.example.com/app.apk"}"""),
+            )
+
+            val outcome = checker.checkNow(currentVersion = "1.11.0")
+
+            assertEquals(CheckOutcome.Available(AvailableUpdate("1.13.0", "https://second.example.com/app.apk")), outcome)
+            assertEquals(1, server.requestCount)
+            assertEquals(1, second.requestCount)
+        } finally {
+            second.shutdown()
+        }
+    }
+
+    @Test
+    fun `one server that cannot be asked does not hide another's offer`() = runTest {
+        val second = MockWebServer().apply { start() }
+        try {
+            accounts.add(second.url("/").toString(), id = "second-account", accountId = "acct-2")
+            server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
+            second.enqueue(offering("1.12.0"))
+
+            assertTrue(checker.checkNow(currentVersion = "1.11.0") is CheckOutcome.Available)
+        } finally {
+            second.shutdown()
+        }
+    }
+
+    @Test
+    fun `each answer refreshes the protocol stored on the account`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"version": "1.12.0", "download_url": "https://example.com/a.apk", "protocol": 7}"""),
+        )
+
+        checker.checkNow(currentVersion = "1.11.0")
+
+        assertEquals(7, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertEquals(7, accounts.db.accountDao().all().single().serverProtocol)
     }
 }

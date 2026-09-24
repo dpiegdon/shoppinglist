@@ -16,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.robolectric.RobolectricTestRunner
@@ -55,7 +56,7 @@ class CollaboratorChangeNotificationPosterTest {
 
     @Test
     fun `a single changed list posts one notification naming the list, tapping opens it`() = runTest {
-        poster.notifyCollaboratorChanges(listOf(CollaboratorChange("list-1", "Groceries", 3)))
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 3)))
 
         val posted = shadowOf(notificationManager).allNotifications
         assertEquals(1, posted.size)
@@ -69,7 +70,7 @@ class CollaboratorChangeNotificationPosterTest {
     @Test
     fun `multiple changed lists collapse to one summary notification opening the overview`() = runTest {
         poster.notifyCollaboratorChanges(
-            listOf(CollaboratorChange("list-1", "Groceries", 2), CollaboratorChange("list-2", "Hardware", 1)),
+            listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2), CollaboratorChange(TEST_ACCOUNT_ID, "list-2", "Hardware", 1)),
         )
 
         val posted = shadowOf(notificationManager).allNotifications
@@ -83,7 +84,7 @@ class CollaboratorChangeNotificationPosterTest {
     fun `the global toggle off suppresses everything`() = runTest {
         prefs.setNotificationsEnabled(false)
 
-        poster.notifyCollaboratorChanges(listOf(CollaboratorChange("list-1", "Groceries", 3)))
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 3)))
 
         assertTrue(shadowOf(notificationManager).allNotifications.isEmpty())
     }
@@ -93,7 +94,7 @@ class CollaboratorChangeNotificationPosterTest {
         prefs.setListMuted("list-1", muted = true)
 
         poster.notifyCollaboratorChanges(
-            listOf(CollaboratorChange("list-1", "Groceries", 2), CollaboratorChange("list-2", "Hardware", 1)),
+            listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2), CollaboratorChange(TEST_ACCOUNT_ID, "list-2", "Hardware", 1)),
         )
 
         val posted = shadowOf(notificationManager).allNotifications
@@ -105,7 +106,7 @@ class CollaboratorChangeNotificationPosterTest {
     fun `every audible list muted means nothing is posted`() = runTest {
         prefs.setListMuted("list-1", muted = true)
 
-        poster.notifyCollaboratorChanges(listOf(CollaboratorChange("list-1", "Groceries", 2)))
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2)))
 
         assertTrue(shadowOf(notificationManager).allNotifications.isEmpty())
     }
@@ -114,14 +115,14 @@ class CollaboratorChangeNotificationPosterTest {
     fun `a foregrounded app suppresses notifications — the change is already on screen`() = runTest {
         foreground.isForeground = true
 
-        poster.notifyCollaboratorChanges(listOf(CollaboratorChange("list-1", "Groceries", 2)))
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2)))
 
         assertTrue(shadowOf(notificationManager).allNotifications.isEmpty())
     }
 
     @Test
     fun `singular item count reads naturally`() = runTest {
-        poster.notifyCollaboratorChanges(listOf(CollaboratorChange("list-1", "Groceries", 1)))
+        poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 1)))
 
         assertEquals("Changed items: 1", shadowOf(notificationManager).allNotifications.single().text())
     }

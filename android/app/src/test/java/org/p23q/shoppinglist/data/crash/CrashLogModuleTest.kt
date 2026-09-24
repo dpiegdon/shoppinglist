@@ -13,7 +13,7 @@ import java.io.File
 
 /**
  * file_paths.xml must grant exactly the crash log's own subdirectory, not the whole of filesDir
- * (T-265) — filesDir also holds SessionStore's DataStore files. Exercised through FileProvider
+ * (T-265) — filesDir also holds the app's DataStore files. Exercised through FileProvider
  * itself (not by reading the XML), so a drift between the two would fail here whichever one moved.
  */
 @RunWith(RobolectricTestRunner::class)

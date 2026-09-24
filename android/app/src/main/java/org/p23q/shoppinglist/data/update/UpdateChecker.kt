@@ -2,9 +2,10 @@ package org.p23q.shoppinglist.data.update
 
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.BuildConfig
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.AccountSessions
+import org.p23q.shoppinglist.core.api.AppVersionResponse
 import org.p23q.shoppinglist.core.update.compareVersions
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +24,9 @@ sealed interface CheckOutcome {
 }
 
 /**
- * Asks the configured server whether it carries a newer app than this build (T-135).
+ * Asks the servers this device has accounts on whether they carry a newer app than this build
+ * (T-135). Every server is asked, and the newest version any of them offers is the one offered.
+ * Each answer also refreshes the protocol stored on that server's accounts (T-291).
  *
  * Every "no" is silent by design — no server configured, checking switched off, server too old
  * to answer, network down, version unparseable, already asked about. An update check that
@@ -31,8 +34,8 @@ sealed interface CheckOutcome {
  */
 @Singleton
 class UpdateChecker @Inject constructor(
-    private val apiProvider: ApiProvider,
-    private val serverConfig: ServerConfig,
+    private val registry: AccountRegistry,
+    private val sessions: AccountSessions,
     private val prefs: UpdatePrefsStore,
 ) {
     /**
@@ -41,7 +44,7 @@ class UpdateChecker @Inject constructor(
      */
     suspend fun check(currentVersion: String = BuildConfig.VERSION_NAME): AvailableUpdate? {
         if (!prefs.autoCheckEnabled.first()) return null
-        if (serverConfig.serverUrl.first().isNullOrBlank()) return null
+        if (!hasServer()) return null
 
         val now = System.currentTimeMillis()
         if (now - prefs.lastCheckedAt.first() < CHECK_INTERVAL_MS) return null
@@ -64,7 +67,7 @@ class UpdateChecker @Inject constructor(
      */
     suspend fun checkNow(currentVersion: String = BuildConfig.VERSION_NAME): CheckOutcome {
         if (!prefs.autoCheckEnabled.first()) return CheckOutcome.NotChecked
-        if (serverConfig.serverUrl.first().isNullOrBlank()) return CheckOutcome.NotChecked
+        if (!hasServer()) return CheckOutcome.NotChecked
         // Counts as the automatic check too, so leaving settings does not trigger a second one.
         prefs.recordCheck(System.currentTimeMillis())
 
@@ -85,7 +88,7 @@ class UpdateChecker @Inject constructor(
      * server configured" still stops it, because there is nothing to ask.
      */
     suspend fun checkForced(currentVersion: String = BuildConfig.VERSION_NAME): CheckOutcome {
-        if (serverConfig.serverUrl.first().isNullOrBlank()) return CheckOutcome.NotChecked
+        if (!hasServer()) return CheckOutcome.NotChecked
         // Counts as the automatic check too, so a foreground right after this does not ask again.
         prefs.recordCheck(System.currentTimeMillis())
 
@@ -98,17 +101,34 @@ class UpdateChecker @Inject constructor(
         }
     }
 
-    /** The server's current app version, or null for every way of not getting one. */
-    private suspend fun fetchLatest() = try {
-        apiProvider.get().appVersion()
+    private suspend fun hasServer(): Boolean = registry.load().any { it.isServer && !it.serverUrl.isNullOrBlank() }
+
+    /**
+     * The newest app version any server offers, or null for every way of not getting one. One
+     * request per server, however many accounts are on it.
+     */
+    private suspend fun fetchLatest(): AppVersionResponse? {
+        val byServer = registry.load().filter { it.isServer && !it.serverUrl.isNullOrBlank() }.groupBy { it.serverUrl }
+        val answers = byServer.values.mapNotNull { accounts ->
+            val response = fetchFrom(accounts.first().id) ?: return@mapNotNull null
+            accounts.forEach { account -> registry.update(account.id) { it.copy(serverProtocol = response.protocol) } }
+            response
+        }
+        // Among the versions that parse, the newest; an answer whose version does not parse is
+        // returned only when it is the only kind there is, for the callers to reject as today.
+        val parseable = answers.filter { compareVersions(it.version, it.version) != null }
+        return parseable.maxWithOrNull { a, b -> compareVersions(a.version, b.version)!! } ?: answers.firstOrNull()
+    }
+
+    private suspend fun fetchFrom(accountId: String): AppVersionResponse? = try {
+        sessions.get(accountId).api.appVersion()
     } catch (e: IOException) {
         // Covers both halves of "couldn't ask": genuine network failure, and every non-2xx,
         // which ErrorInterceptor turns into an ApiException (itself an IOException). A 404
         // is the expected answer from any server predating this endpoint.
         null
     } catch (e: IllegalStateException) {
-        // ApiProvider.get() throws this when the server URL vanished between the check above
-        // and here (logout racing a foreground check).
+        // The account vanished between listing it and asking (a removal racing a check).
         null
     }
 
