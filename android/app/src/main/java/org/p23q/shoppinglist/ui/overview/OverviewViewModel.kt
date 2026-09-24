@@ -125,6 +125,10 @@ class OverviewViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             registry.load()
+            // The accounts whose invites were asked for: the first emission asks every one that
+            // can ask, and an account that becomes able to later (signed in again, or added) is
+            // asked then, not at the next pull-to-refresh (T-300).
+            var asked = emptySet<String>()
             registry.accounts.collect { accounts ->
                 val ordered = overviewOrder(accounts)
                 _uiState.update { state ->
@@ -135,9 +139,11 @@ class OverviewViewModel @Inject constructor(
                         invitesByAccount = state.invitesByAccount.filterKeys { id -> ordered.any { it.id == id && it.signedIn } },
                     )
                 }
+                val askable = ordered.filter(::canAskInvites).mapTo(mutableSetOf()) { it.id }
+                (askable - asked).forEach { id -> launch { loadInvites(id) } }
+                asked = askable
             }
         }
-        loadInvites()
         viewModelScope.launch {
             combine(listsRepo.activeLists(), itemsRepo.openItemCounts(), ::Pair).collect { (lists, counts) ->
                 _uiState.update { it.copy(lists = lists, openCounts = counts) }
@@ -276,9 +282,12 @@ class OverviewViewModel @Inject constructor(
      * account's request fails its invites are simply absent, or keep their last good answer.
      */
     fun loadInvites(): Job = viewModelScope.launch {
-        val accounts = registry.load().filter { it.isServer && it.signedIn && !it.outdated && sessions.hasToken(it.id) }
+        val accounts = registry.load().filter(::canAskInvites)
         accounts.map { account -> launch { loadInvites(account.id) } }.joinAll()
     }
+
+    private fun canAskInvites(account: AccountEntity): Boolean =
+        account.isServer && account.signedIn && !account.outdated && sessions.hasToken(account.id)
 
     private suspend fun loadInvites(accountId: String) {
         try {

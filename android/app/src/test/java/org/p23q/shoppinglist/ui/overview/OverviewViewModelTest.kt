@@ -527,6 +527,22 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `an account that signs in again has its invites asked for there and then (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
+        val work = secondAccount(inbox = """{"invites": [${inviteJson("w", "Desk plants")}]}""", token = null)
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.accounts.size == 2 }
+        assertEquals(0, work.requestCount)
+
+        // What a sign-in does to the row: a token, and signed in.
+        accounts.secrets.setToken("work", "tok-work")
+        accounts.registry.update("work") { it.copy(signedIn = true) }
+
+        // No pull-to-refresh: the section fills by itself.
+        val invites = viewModel.uiState.first { it.invitesByAccount["work"] != null }.invitesByAccount["work"]!!
+        assertEquals(listOf("w"), invites.map { it.id })
+    }
+
+    @Test
     fun `a signed-out account's inbox is not asked`() = runTest(mainDispatcherRule.dispatcher) {
         val work = secondAccount(inbox = """{"invites": [${inviteJson("w", "Desk plants")}]}""", token = null)
 
