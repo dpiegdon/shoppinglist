@@ -41,7 +41,7 @@ class ProtocolInterceptor @Inject constructor() : Interceptor {
  *
  * Deliberately a state and not an event like [SessionEvents.forcedLogout]: it does not go away by
  * itself — every request will keep being refused until the app is updated — so both the UI (which
- * blocks the whole screen on it) and [org.p23q.shoppinglist.data.sync.SyncEngine] (which stops
+ * blocks the whole screen on it) and [org.p23q.shoppinglist.core.sync.SyncEngine] (which stops
  * rather than hammer a server that will never accept it) read the current value rather than having
  * to have been listening at the right moment.
  *

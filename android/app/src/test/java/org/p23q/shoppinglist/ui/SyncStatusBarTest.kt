@@ -3,7 +3,7 @@ package org.p23q.shoppinglist.ui
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.sync.SyncState
+import org.p23q.shoppinglist.core.sync.SyncState
 
 /**
  * Pure formatting logic for the sync-health surface (T-47) — no Compose/Robolectric needed.

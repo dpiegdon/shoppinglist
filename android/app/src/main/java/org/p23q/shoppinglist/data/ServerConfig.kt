@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import org.p23q.shoppinglist.core.DeviceIdProvider
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -36,7 +37,7 @@ object ServerConfigModule {
  * normalized to always end in '/'; [Api] paths are relative and resolve underneath it.
  */
 @Singleton
-class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferences>) {
+class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferences>) : DeviceIdProvider {
     val serverUrl: Flow<String?> = dataStore.data.map { it[SERVER_URL_KEY] }
 
     suspend fun setServerUrl(url: String) {
@@ -68,6 +69,8 @@ class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferen
         }
         return dataStore.data.first()[DEVICE_ID_KEY]!!
     }
+
+    override suspend fun get(): String = deviceId()
 
     private companion object {
         val SERVER_URL_KEY = stringPreferencesKey("server_url")

@@ -19,10 +19,10 @@ import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.repo.ItemsRepo
+import org.p23q.shoppinglist.core.repo.ListsRepo
+import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.repo.ItemsRepo
-import org.p23q.shoppinglist.data.repo.ListsRepo
-import org.p23q.shoppinglist.data.sync.Syncer
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText

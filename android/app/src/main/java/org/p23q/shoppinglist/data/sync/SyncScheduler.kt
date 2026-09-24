@@ -15,7 +15,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncTrigger
+import org.p23q.shoppinglist.core.sync.Syncer
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton

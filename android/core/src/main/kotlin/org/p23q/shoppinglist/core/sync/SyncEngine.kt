@@ -1,10 +1,12 @@
-package org.p23q.shoppinglist.data.sync
+package org.p23q.shoppinglist.core.sync
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.SessionState
 import org.p23q.shoppinglist.core.api.ApiException
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.core.api.AppJson
 import org.p23q.shoppinglist.core.api.FieldClock
 import org.p23q.shoppinglist.core.api.ItemDto
@@ -29,8 +31,6 @@ import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
-import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.ApiProvider
 import java.io.IOException
 import javax.inject.Inject
 import javax.net.ssl.SSLException
@@ -56,9 +56,9 @@ sealed interface SyncResult {
 class SyncEngine @Inject constructor(
     private val itemDao: ItemDao,
     private val listDao: ListDao,
-    private val apiProvider: ApiProvider,
+    private val apiProvider: ApiSource,
     private val sessionState: SessionState,
-    private val serverConfig: ServerConfig,
+    private val deviceIdProvider: DeviceIdProvider,
     private val appDb: AppDb,
     private val syncStatus: SyncStatus,
     private val notifier: CollaboratorChangeNotifier,
@@ -111,7 +111,7 @@ class SyncEngine @Inject constructor(
 
         val request = SyncRequest(
             cursor = sessionState.syncCursor,
-            deviceId = serverConfig.deviceId(),
+            deviceId = deviceIdProvider.get(),
             fullLists = fullLists,
             changes = SyncChanges(lists = dirtyLists.map { it.toDto() }, items = dirtyItems.map { it.toDto() }),
         )

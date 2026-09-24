@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.data.api
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -12,6 +13,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import org.p23q.shoppinglist.core.api.Api
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.core.api.AppJson
 import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
@@ -29,6 +31,13 @@ object JsonModule {
     fun provideJson(): Json = AppJson
 }
 
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class ApiSourceModule {
+    @Binds
+    abstract fun bindApiSource(apiProvider: ApiProvider): ApiSource
+}
+
 /** Builds the Retrofit [Api] lazily and rebuilds it whenever [ServerConfig.serverUrl] changes. */
 @Singleton
 class ApiProvider @Inject constructor(
@@ -39,13 +48,13 @@ class ApiProvider @Inject constructor(
     // Stateless, and last with a default, so the existing tests that build a provider by hand keep
     // compiling; every client this builds sends the header either way.
     private val protocolInterceptor: ProtocolInterceptor = ProtocolInterceptor(),
-) {
+) : ApiSource {
     private val mutex = Mutex()
     private var cachedUrl: String? = null
     private var cachedAllowSelfSigned: Boolean? = null
     private var cachedApi: Api? = null
 
-    suspend fun get(): Api {
+    override suspend fun get(): Api {
         val url = serverConfig.serverUrl.first() ?: error("Server URL is not configured")
         val allowSelfSigned = serverConfig.allowSelfSignedCerts.first()
         mutex.withLock {

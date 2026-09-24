@@ -19,11 +19,11 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.core.api.InviteForMeDto
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.db.ListEntity
-import org.p23q.shoppinglist.data.repo.ItemsRepo
-import org.p23q.shoppinglist.data.repo.ListsRepo
-import org.p23q.shoppinglist.data.sync.SyncState
-import org.p23q.shoppinglist.data.sync.SyncStatus
-import org.p23q.shoppinglist.data.sync.Syncer
+import org.p23q.shoppinglist.core.repo.ItemsRepo
+import org.p23q.shoppinglist.core.repo.ListsRepo
+import org.p23q.shoppinglist.core.sync.SyncState
+import org.p23q.shoppinglist.core.sync.SyncStatus
+import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException

@@ -26,7 +26,7 @@ import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.data.sync.SyncEngine
+import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import org.p23q.shoppinglist.R
@@ -67,7 +67,7 @@ class RedeemViewModelTest {
             errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
-        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, org.p23q.shoppinglist.data.sync.SyncStatus(), org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier { })
+        syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, org.p23q.shoppinglist.core.sync.SyncStatus(), org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier { })
     }
 
     @After

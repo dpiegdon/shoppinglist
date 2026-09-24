@@ -11,9 +11,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.crash.CrashHandler
-import org.p23q.shoppinglist.data.sync.SyncEngine
 import org.p23q.shoppinglist.data.sync.SyncScheduler
 import javax.inject.Inject
 

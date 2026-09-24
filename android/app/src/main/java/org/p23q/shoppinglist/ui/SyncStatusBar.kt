@@ -26,7 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import org.p23q.shoppinglist.data.sync.SyncState
+import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.R
 
 /**

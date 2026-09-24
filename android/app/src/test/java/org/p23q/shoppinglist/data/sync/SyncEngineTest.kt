@@ -38,13 +38,16 @@ import org.p23q.shoppinglist.core.db.ItemDao
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.core.db.Status
-import org.p23q.shoppinglist.data.repo.ItemsRepo
+import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
+import org.p23q.shoppinglist.core.sync.SyncEngine
+import org.p23q.shoppinglist.core.sync.SyncResult
+import org.p23q.shoppinglist.core.sync.SyncStatus
 
 @RunWith(RobolectricTestRunner::class)
 class SyncEngineTest {

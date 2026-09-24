@@ -7,6 +7,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import org.p23q.shoppinglist.core.sync.SyncEngine
+import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 
 @HiltWorker

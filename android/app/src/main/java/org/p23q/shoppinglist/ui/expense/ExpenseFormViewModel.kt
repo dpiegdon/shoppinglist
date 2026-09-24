@@ -15,8 +15,8 @@ import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.core.SessionState
-import org.p23q.shoppinglist.data.repo.ItemsRepo
-import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.core.repo.ItemsRepo
+import org.p23q.shoppinglist.core.repo.ListsRepo
 import java.time.LocalDate
 import javax.inject.Inject
 

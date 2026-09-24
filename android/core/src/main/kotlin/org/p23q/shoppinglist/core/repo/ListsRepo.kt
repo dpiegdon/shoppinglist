@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.repo
+package org.p23q.shoppinglist.core.repo
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,7 +19,7 @@ import javax.inject.Inject
 
 /**
  * Takes the database rather than a bare DAO because every edit here is a read-modify-write that
- * has to run inside a transaction — see [org.p23q.shoppinglist.data.repo.ItemsRepo] (T-261).
+ * has to run inside a transaction — see [org.p23q.shoppinglist.core.repo.ItemsRepo] (T-261).
  */
 class ListsRepo @Inject constructor(
     private val db: AppDb,
@@ -96,7 +96,7 @@ class ListsRepo @Inject constructor(
      * Solo-owned snapshot copy (T-63): a new list with its own id and fresh field-clocks, carrying
      * over [source]'s name (suffixed), category order, and notes by VALUE only — no membership, no
      * shared history. Returns the new list's id, or null if [listId] doesn't exist. Items are copied
-     * separately via [org.p23q.shoppinglist.data.repo.ItemsRepo.duplicateForList].
+     * separately via [org.p23q.shoppinglist.core.repo.ItemsRepo.duplicateForList].
      */
     suspend fun duplicate(listId: String): String? {
         val id = db.inTransaction {

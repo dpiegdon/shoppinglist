@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.sync
+package org.p23q.shoppinglist.core.sync
 
 /**
  * The single sync operation a screen needs for manual pull-to-refresh (T-36): a seam over

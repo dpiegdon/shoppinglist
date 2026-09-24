@@ -17,9 +17,9 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
+import org.p23q.shoppinglist.core.repo.ItemsRepo
+import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.repo.ItemsRepo
-import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 

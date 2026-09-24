@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.repo
+package org.p23q.shoppinglist.core.repo
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -289,10 +289,10 @@ class ItemsRepo @Inject constructor(
      * The one read-modify-write every single-field edit goes through, wrapped in a transaction so
      * the row cannot change between the read and the write (T-261).
      *
-     * `internal`, not private, only so [org.p23q.shoppinglist.data.repo.ItemsRepoTest] can run code
-     * inside that window: the transaction is invisible from outside it.
+     * Public, not private, only so ItemsRepoTest (in :app, a module away, so `internal` no longer
+     * reaches it) can run code inside that window: the transaction is invisible from outside it.
      */
-    internal suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
+    suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val changed = db.inTransaction {
             val current = itemDao.getById(itemId) ?: return@inTransaction false
             // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.

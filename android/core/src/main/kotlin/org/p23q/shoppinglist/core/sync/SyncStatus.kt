@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.sync
+package org.p23q.shoppinglist.core.sync
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -26,6 +26,7 @@ import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.db.toLww
+import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 
@@ -344,7 +345,7 @@ class ItemsRepoTest {
      * is nothing queued to recover it. Real, not theoretical: the list screen syncs every 5 s while
      * it is open, and each merged row is exactly the same shape (see SyncEngineTest).
      *
-     * [ItemsRepo.updateField] is `internal` so this test can run code inside the window between the
+     * [ItemsRepo.updateField] is public so this test can run code inside the window between the
      * read and the write — from outside, a transaction is invisible by construction.
      *
      * runBlocking, not runTest: the point is what two coroutines on real threads do to each other,

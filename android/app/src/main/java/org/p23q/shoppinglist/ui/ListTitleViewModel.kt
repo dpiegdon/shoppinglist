@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import org.p23q.shoppinglist.data.repo.ListsRepo
+import org.p23q.shoppinglist.core.repo.ListsRepo
 import javax.inject.Inject
 
 /**
