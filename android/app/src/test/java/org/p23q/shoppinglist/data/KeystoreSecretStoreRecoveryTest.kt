@@ -12,7 +12,7 @@ import java.security.GeneralSecurityException
  * Exercises [openWithRecovery]'s control flow directly — the real KeystoreSecretStore path needs a Keystore
  * that Robolectric can't provide, which is exactly why the recovery logic was extracted (T-37).
  */
-class SessionStoreRecoveryTest {
+class KeystoreSecretStoreRecoveryTest {
 
     @Test
     fun `returns the built value and never cleans up when build succeeds`() {

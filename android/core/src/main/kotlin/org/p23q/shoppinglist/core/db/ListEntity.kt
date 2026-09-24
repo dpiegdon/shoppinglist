@@ -16,7 +16,7 @@ data class ListEntity(
     @PrimaryKey val id: String,
     /**
      * The local id of the [AccountEntity] this list belongs to. Not a synced field: it says which
-     * server the list lives on, and a list never moves.
+     * account on this device holds the list, and a list never moves to another.
      */
     val accountId: String,
     val createdAt: Long,

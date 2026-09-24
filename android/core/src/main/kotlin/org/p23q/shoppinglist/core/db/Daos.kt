@@ -145,20 +145,17 @@ interface ItemDao {
     suspend fun hardDeleteByListId(listId: String)
 
     /**
-     * Drops every row the server can reproduce, keeping the ones it cannot (T-259). The complement
-     * of the push queue: a dirty row is an edit the server has not acknowledged, and a quarantined
-     * row is one it refused and the user has not corrected yet — [dirtyRows] does not even offer
-     * that one, so no amount of pushing would save it.
+     * Drops every row of one account's lists that the server can reproduce, keeping the ones it
+     * cannot (T-259); the 410 re-base and a logout are per account. The complement of the push
+     * queue: a dirty row is an edit the server has not acknowledged, and a quarantined row is one
+     * it refused and the user has not corrected yet — [dirtyRows] does not even offer that one, so
+     * no amount of pushing would save it.
      *
      * This is what a `410 full_resync_required` runs instead of clearing the table: the account's
      * cursor is too old for an incremental pull, so the mirror has to be re-based on a cursor-0
      * pull, but "re-base" must not mean "delete the week of offline edits that has not gone out
      * yet". What is kept is then reconciled by the ordinary field-level LWW merge of that pull.
      */
-    @Query("DELETE FROM items WHERE dirty = 0 AND syncBlocked = 0")
-    suspend fun deleteSyncedRows()
-
-    /** [deleteSyncedRows] for one account's lists only: the 410 re-base and a logout are per account. */
     @Query(
         "DELETE FROM items WHERE dirty = 0 AND syncBlocked = 0 " +
             "AND listId IN (SELECT id FROM lists WHERE accountId = :accountId)",
@@ -195,10 +192,6 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE deleted_value = 0")
     fun activeLists(): Flow<List<ListEntity>>
 
-    /** Any non-deleted list id, for the accountId self-heal's members lookup (T-74). */
-    @Query("SELECT id FROM lists WHERE deleted_value = 0 LIMIT 1")
-    suspend fun anyActiveListId(): String?
-
     /** Rows to push: dirty AND not quarantined by a prior server 422 (T-198), as for items. */
     @Query("SELECT * FROM lists WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ListEntity>
@@ -213,10 +206,6 @@ interface ListDao {
     @Query("SELECT id FROM lists WHERE accountId = :accountId AND deleted_value = 0 LIMIT 1")
     suspend fun anyActiveListIdForAccount(accountId: String): String?
 
-    /** The ids of one account's lists, local copies only. */
-    @Query("SELECT id FROM lists WHERE accountId = :accountId")
-    suspend fun idsForAccount(accountId: String): List<String>
-
     /** Quarantine a list the server rejected (T-198); dirtyRows() then skips it until it's re-edited. */
     @Query("UPDATE lists SET syncBlocked = 1 WHERE id = :id")
     suspend fun blockRow(id: String)
@@ -230,10 +219,6 @@ interface ListDao {
 
     @Query("UPDATE lists SET dirty = 0 WHERE id IN (:ids)")
     suspend fun clearDirty(ids: List<String>)
-
-    /** The list twin of [ItemDao.deleteSyncedRows] (T-259) — keeps whatever is still unpushed. */
-    @Query("DELETE FROM lists WHERE dirty = 0 AND syncBlocked = 0")
-    suspend fun deleteSyncedRows()
 
     /**
      * The list twin of [ItemDao.deleteSyncedRowsForAccount]. Run after it: a list that still holds

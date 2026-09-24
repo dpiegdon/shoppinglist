@@ -27,7 +27,7 @@ data class SyncState(
  *
  * - in progress while any account is syncing;
  * - the oldest last successful sync, and none while any account has never synced;
- * - the first account's error, in account order, if any has one;
+ * - the first error, in the order the accounts first reported to this status, if any has one;
  * - pending and blocked rows summed.
  *
  * With one account the aggregate is that account's state, field for field.
@@ -42,7 +42,7 @@ class SyncStatus @Inject constructor() {
     /** The aggregate over every account; see the class comment. */
     val state: StateFlow<SyncState> = _state.asStateFlow()
 
-    /** Each account's own state, by local account id. */
+    /** Each account's own state, by local account id, in the order they first reported. */
     val accounts: StateFlow<Map<String, SyncState>> = _accounts.asStateFlow()
 
     /** The recorder for one account's runs. */
