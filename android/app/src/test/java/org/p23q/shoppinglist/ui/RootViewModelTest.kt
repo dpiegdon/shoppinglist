@@ -37,7 +37,7 @@ class RootViewModelTest {
     private class FakeAuthRepository : AuthRepository {
         var clearedLocalSession: String? = null
         override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) = ""
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean) = ""
         override suspend fun logout(accountId: String) {}
         override suspend fun clearLocalSession(accountId: String) { clearedLocalSession = accountId }
         override suspend fun removeAccount(accountId: String) {}

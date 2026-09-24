@@ -139,7 +139,7 @@ open class RecordingAuthRepository : AuthRepository {
 
     override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
 
-    override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean): String =
+    override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean): String =
         TEST_ACCOUNT_ID
 
     override suspend fun logout(accountId: String) {

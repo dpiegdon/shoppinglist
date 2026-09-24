@@ -13,6 +13,7 @@ import org.p23q.shoppinglist.core.api.RegisterRequest
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.inTransaction
+import kotlinx.coroutines.CancellationException
 import java.util.UUID
 
 /**
@@ -41,8 +42,23 @@ interface AuthRepository {
      * Before the first sign-in to a server whose protocol this device does not know yet, asks
      * `/app-version` — the first request that server gets — and throws [ServerTooOldException]
      * if it has no `protocol` or one below [MIN_SERVER_PROTOCOL]. Nothing is stored then.
+     *
+     * Unless [keepOtherAccounts], every other server account is removed once the server has
+     * accepted the credentials and before this one is stored: whoever else this device held lists
+     * for is not the person who just signed in, and their mirror goes (T-260). Doing it here, in
+     * one step with the sign-in, leaves no moment in which the new account sits signed in beside
+     * the previous person's lists, whatever fails afterwards. Local accounts are never removed.
+     *
+     * The account's default currency is read afterwards, best-effort: a failure there does not
+     * undo a sign-in the server has already accepted.
      */
-    suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean = false): String
+    suspend fun login(
+        serverUrl: String,
+        email: String,
+        password: String,
+        allowSelfSignedCerts: Boolean = false,
+        keepOtherAccounts: Boolean = false,
+    ): String
 
     /**
      * Best-effort server-side token revoke, then always clears the local session regardless.
@@ -69,14 +85,17 @@ interface AuthRepository {
      */
     suspend fun clearLocalSession(accountId: String)
 
-    /** Removes the account from this device: its lists, their items, its token and its row. */
+    /**
+     * Removes the account from this device: its lists, their items, its token and its row.
+     *
+     * Every other account on the same server has its sync cursor reset, so its next sync pulls
+     * from 0: a list both accounts can see is one row here, owned by whichever account pulled it
+     * first, and removing that account deletes the row the other one's cursor has already moved
+     * past (T-298; how to key such lists is T-292's).
+     */
     suspend fun removeAccount(accountId: String)
 
-    /**
-     * Removes every account but [keep]. The single-account login screen calls this right after
-     * signing in: an account other than the one that just signed in is somebody else's mirror,
-     * and privacy wins (T-260). Goes once the app can hold several accounts on purpose.
-     */
+    /** Removes every server account but [keep]; local accounts stay. [login] does this itself. */
     suspend fun removeOtherAccounts(keep: String)
 
     /**
@@ -110,7 +129,13 @@ class AuthRepositoryImpl(
         sessions.unbound(url, allowSelfSignedCerts).register(RegisterRequest(email, password))
     }
 
-    override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean): String {
+    override suspend fun login(
+        serverUrl: String,
+        email: String,
+        password: String,
+        allowSelfSignedCerts: Boolean,
+        keepOtherAccounts: Boolean,
+    ): String {
         val url = normalizeServerUrl(serverUrl)
         val protocol = checkServerProtocol(url, allowSelfSignedCerts)
         val response = sessions.unbound(url, allowSelfSignedCerts)
@@ -120,6 +145,8 @@ class AuthRepositoryImpl(
         // own, unpushed edits and all, and the cursor-0 pull that follows reconciles them (T-260).
         registry.load()
         val existing = registry.find(url, response.accountId)
+        // Before the new account is stored, not after: see the KDoc.
+        if (!keepOtherAccounts) removeOtherServerAccounts(keep = existing?.id)
         val id = existing?.id ?: UUID.randomUUID().toString()
         secrets.setToken(id, response.token)
         if (existing != null) {
@@ -148,7 +175,14 @@ class AuthRepositoryImpl(
                 ),
             )
         }
-        val currency = sessions.get(id).api.getSettings().defaultCurrency
+        val currency = try {
+            sessions.get(id).api.getSettings().defaultCurrency
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Best-effort; the next Settings visit reads it again.
+            return id
+        }
         registry.update(id) { it.copy(defaultCurrency = currency) }
         defaultCurrencyState.set(currency)
         return id
@@ -198,14 +232,22 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun removeAccount(accountId: String) {
+        val serverUrl = registry.load().firstOrNull { it.id == accountId }?.serverUrl
         secrets.setToken(accountId, null)
         registry.remove(accountId)
         sessions.drop(accountId)
         forgetLastOpenedListOf(accountId)
+        if (serverUrl != null) {
+            registry.snapshot().filter { it.serverUrl == serverUrl }.forEach { other ->
+                registry.update(other.id) { it.copy(syncCursor = 0) }
+            }
+        }
     }
 
-    override suspend fun removeOtherAccounts(keep: String) {
-        registry.load().filter { it.id != keep }.forEach { removeAccount(it.id) }
+    override suspend fun removeOtherAccounts(keep: String) = removeOtherServerAccounts(keep)
+
+    private suspend fun removeOtherServerAccounts(keep: String?) {
+        registry.load().filter { it.isServer && it.id != keep }.forEach { removeAccount(it.id) }
     }
 
     /** A cold start must not reopen a list this account no longer shows; another account's is kept. */

@@ -20,7 +20,7 @@ class LoginScreenTest {
 
     private class NoopAuthRepository(private val registrationAllowed: Boolean = true) : AuthRepository {
         override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) = ""
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean) = ""
         override suspend fun logout(accountId: String) {}
         override suspend fun clearLocalSession(accountId: String) {}
         override suspend fun removeAccount(accountId: String) {}

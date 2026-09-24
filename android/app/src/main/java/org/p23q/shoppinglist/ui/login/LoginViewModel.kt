@@ -130,10 +130,9 @@ class LoginViewModel @Inject constructor(
                 if (state.isRegisterMode) {
                     authRepository.register(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
                 }
-                val accountId = authRepository.login(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
-                // One account at a time on this screen: whoever else this device held lists for is
-                // not the person who just signed in, and their mirror goes (T-260).
-                authRepository.removeOtherAccounts(keep = accountId)
+                // One account at a time on this screen: the login itself removes every other
+                // server account, in the same step (T-260, T-298).
+                authRepository.login(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
                 // The session is now authenticated — pull its data right away, so the first screen
                 // isn't stuck on empty until some later incidental sync (the app-foreground sync
                 // already fired before login, with no token).

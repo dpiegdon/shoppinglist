@@ -23,6 +23,7 @@ import org.p23q.shoppinglist.core.AuthRepositoryImpl
 import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.ServerTooOldException
 import org.p23q.shoppinglist.core.api.MIN_SERVER_PROTOCOL
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.ListEntity
@@ -286,7 +287,6 @@ class AuthRepositoryTest {
         enqueueLogin(accountId = "acc-1")
 
         val id = repository.login(url, "milk@example.com", "hunter2")
-        repository.removeOtherAccounts(keep = id)
 
         assertEquals("the same row, not a new one", TEST_ACCOUNT_ID, id)
         assertTrue(accounts.registry.get(id)!!.signedIn)
@@ -298,18 +298,17 @@ class AuthRepositoryTest {
 
     /**
      * The privacy property the wipe existed for, enforced where it can actually be decided (T-260):
-     * a different account must never see the previous account's lists. The single-account login
-     * screen removes every other account once one has signed in.
+     * a different account must never see the previous account's lists. A login removes every
+     * other server account itself.
      */
     @Test
-    fun `signing in as a different account and keeping only it wipes the other mirror (T-260)`() = runTest {
+    fun `signing in as a different account wipes the other mirror (T-260)`() = runTest {
         accounts.add(url, accountId = "acc-1", token = null)
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
         enqueueLogin(accountId = "acc-2", email = "bread@example.com")
 
         val id = repository.login(url, "bread@example.com", "hunter2")
-        repository.removeOtherAccounts(keep = id)
 
         assertNotEquals(TEST_ACCOUNT_ID, id)
         assertNull("another account must not see the previous one's lists", db.itemDao().getById("item-1"))
@@ -326,10 +325,86 @@ class AuthRepositoryTest {
         seedItem("item-1", "list-1", dirty = true)
         enqueueLogin(accountId = "acc-1")
 
-        val id = repository.login(url, "milk@example.com", "hunter2")
-        repository.removeOtherAccounts(keep = id)
+        repository.login(url, "milk@example.com", "hunter2")
 
         assertNull("privacy wins the tie when whose data it is cannot be established", db.itemDao().getById("item-1"))
+    }
+
+    /**
+     * T-298: the other accounts went only after login had returned, so a failed settings read left
+     * the previous person's lists on the device beside a signed-in new account that the worker
+     * would sync.
+     */
+    @Test
+    fun `a failed settings read still leaves only the account that signed in (T-298)`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-acc-2", "account_id": "acc-2", "email": "bread@example.com"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error": "internal", "message": "boom"}"""))
+
+        val id = repository.login(url, "bread@example.com", "hunter2")
+
+        assertEquals(listOf(id), accounts.registry.snapshot().map { it.id })
+        assertEquals(listOf(id), db.accountDao().all().map { it.id })
+        assertNull(db.listDao().getById("list-1"))
+        assertNull(db.itemDao().getById("item-1"))
+        assertTrue("the sign-in itself stands", accounts.registry.get(id)!!.signedIn)
+        assertEquals("tok-acc-2", accounts.secrets.token(id))
+    }
+
+    @Test
+    fun `a login never removes a local account`() = runTest {
+        accounts.registry.add(
+            AccountEntity(
+                id = "on-device",
+                kind = AccountEntity.KIND_LOCAL,
+                serverUrl = null,
+                accountId = null,
+                email = null,
+                label = "This phone",
+                signedIn = false,
+            ),
+        )
+        enqueueLogin(accountId = "acc-1")
+
+        val id = repository.login(url, "milk@example.com", "hunter2")
+
+        assertEquals(setOf("on-device", id), accounts.registry.snapshot().map { it.id }.toSet())
+    }
+
+    @Test
+    fun `a login asked to keep the other accounts keeps them`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        seedList("list-1")
+        enqueueLogin(accountId = "acc-2")
+
+        val id = repository.login(url, "bread@example.com", "hunter2", keepOtherAccounts = true)
+
+        assertEquals(setOf(TEST_ACCOUNT_ID, id), accounts.registry.snapshot().map { it.id }.toSet())
+        assertNotNull(db.listDao().getById("list-1"))
+    }
+
+    /**
+     * T-298: a list both accounts can see is one row, owned by whichever pulled it first; removing
+     * that account deletes the row under the other, whose cursor has moved past it already.
+     */
+    @Test
+    fun `removing an account makes every other account on its server pull from 0 again`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        accounts.add(url, id = "same-server", accountId = "acc-2")
+        accounts.add(server.url("/other/").toString(), id = "other-server", accountId = "acc-3")
+        listOf("same-server", "other-server").forEach { id -> accounts.registry.update(id) { it.copy(syncCursor = 42) } }
+
+        repository.removeAccount(TEST_ACCOUNT_ID)
+
+        assertEquals(0L, accounts.registry.get("same-server")!!.syncCursor)
+        assertEquals(0L, db.accountDao().all().first { it.id == "same-server" }.syncCursor)
+        assertEquals("another server's cursor stays", 42L, accounts.registry.get("other-server")!!.syncCursor)
     }
 
     @Test

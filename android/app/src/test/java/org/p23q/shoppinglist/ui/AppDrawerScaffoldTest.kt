@@ -29,7 +29,7 @@ class AppDrawerScaffoldTest {
     private class NoopAuthRepository : AuthRepository {
         var loggedOut = false
         override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) = ""
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean) = ""
         override suspend fun logout(accountId: String) { loggedOut = true }
         override suspend fun clearLocalSession(accountId: String) {}
         override suspend fun removeAccount(accountId: String) {}

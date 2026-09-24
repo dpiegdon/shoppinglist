@@ -37,6 +37,7 @@ class LoginViewModelTest {
         var loginAllowedSelfSigned: Boolean? = null
         var loggedOut: String? = null
         var keptOnly: String? = null
+        var loginKeptOthers: Boolean? = null
         /** How often the up-front registration check asked (T-287): must be zero on a fresh install. */
         var registrationChecks = 0
 
@@ -44,10 +45,11 @@ class LoginViewModelTest {
             registerCalled = true
         }
 
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean): String {
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean): String {
             loginCalled = true
             loginUrl = serverUrl
             loginAllowedSelfSigned = allowSelfSignedCerts
+            loginKeptOthers = keepOtherAccounts
             onLogin(email, password)
             return "signed-in-account"
         }
@@ -328,7 +330,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `signing in keeps only the account that signed in (T-260, single-account)`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `signing in asks the login to keep only the account that signed in (T-260, T-298)`() = runTest(mainDispatcherRule.dispatcher) {
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, newServerConfig(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -337,7 +339,8 @@ class LoginViewModelTest {
         viewModel.onPasswordChange("hunter2")
         viewModel.submit()?.join()
 
-        assertEquals("signed-in-account", repo.keptOnly)
+        assertEquals(false, repo.loginKeptOthers)
+        assertNull("the login removes the others itself, in the same step", repo.keptOnly)
     }
 
     @Test
