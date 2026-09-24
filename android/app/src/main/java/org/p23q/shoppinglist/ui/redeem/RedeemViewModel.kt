@@ -10,15 +10,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.account.CurrentAccount
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.AccountSessions
+import org.p23q.shoppinglist.core.account.normalizeServerUrl
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.repo.ListsRepo
-import org.p23q.shoppinglist.core.sync.SyncEngine
+import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.PendingInviteHolder
-import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.ui.ErrorText
+import org.p23q.shoppinglist.ui.LoginArgs
+import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.login
 import java.io.IOException
 import javax.inject.Inject
 
@@ -27,19 +32,35 @@ data class RedeemUiState(
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
     val redeemedListId: String? = null,
-    /** Set when redeem was attempted without a session — the caller should route to Login (T-28). */
-    val needsLogin: Boolean = false,
+    /**
+     * Set when the invite needs an account signed in first (T-28, T-292): the login route to open,
+     * with the invite parked in [PendingInviteHolder] until the sign-in is through.
+     */
+    val needsLogin: String? = null,
+    /** Several accounts could take this invite: the user picks one ("Join with which account?"). */
+    val choices: List<AccountEntity> = emptyList(),
+    /** The account the invite is being redeemed into, named on screen when the phone holds several. */
+    val account: AccountEntity? = null,
+    /** Whether the phone holds more than one account. */
+    val several: Boolean = false,
 )
 
 /**
- * Notes: App Link / pasted token -> POST /invites/redeem -> syncNow(fullLists=[listId]) -> open list.
+ * Notes: App Link / pasted token -> POST /invites/redeem -> sync the list -> open it.
+ *
+ * Which account redeems it (T-292): an invite link names its server, `<server URL>/invite/<token>`,
+ * so the accounts whose server URL is exactly that prefix can take it; the host alone is not
+ * enough, as two instances can share a host under different paths. One such account redeems it,
+ * several ask which, none sends the user to sign in to that server first. A bare token names no
+ * server: with one account it goes there, with several the user picks.
+ *
  * The redemption names the list by its server id; what is opened is this phone's row of it.
  */
 @HiltViewModel
 class RedeemViewModel @Inject constructor(
-    private val apiProvider: ApiSource,
-    private val syncEngine: SyncEngine,
-    private val currentAccount: CurrentAccount,
+    private val registry: AccountRegistry,
+    private val sessions: AccountSessions,
+    private val syncer: Syncer,
     private val pendingInviteHolder: PendingInviteHolder,
     private val listsRepo: ListsRepo,
 ) : ViewModel() {
@@ -47,30 +68,74 @@ class RedeemViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RedeemUiState())
     val uiState: StateFlow<RedeemUiState> = _uiState.asStateFlow()
 
-    fun onTokenChange(value: String) = _uiState.update { it.copy(token = value, errorMessage = null) }
+    /** The invite link the pending choice is for, when it came as one. */
+    private var inviteUrl: String? = null
 
-    fun redeem(): Job? {
-        val token = extractInviteToken(_uiState.value.token)
+    fun onTokenChange(value: String) = _uiState.update { it.copy(token = value, errorMessage = null, choices = emptyList()) }
+
+    /**
+     * Redeems what [onTokenChange] was given. [link] is the invite link a tapped App Link came as
+     * (a pasted one is read from the text itself); [accountId] names the account outright, as after
+     * signing in for this invite.
+     */
+    fun redeem(link: String? = null, accountId: String? = null): Job? {
+        val raw = _uiState.value.token
+        val token = extractInviteToken(raw)
         if (token.isBlank()) {
             _uiState.update { it.copy(errorMessage = UiText.res(R.string.redeem_msg_code_required)) }
             return null
         }
-        // Redeem needs a session. Logged out (e.g. tapped an invite link with no account signed in):
-        // stash the token and signal the caller to send the user through Login, which resumes the
-        // redeem afterwards — instead of a bare 401 that drops the invite (T-28).
-        if (currentAccount.token == null) {
-            pendingInviteHolder.stash(token, currentAccount.localId)
-            _uiState.update { it.copy(needsLogin = true) }
+        val url = link ?: raw.trim().takeIf { inviteServerUrl(it) != null }
+        inviteUrl = url
+        val accounts = registry.snapshot()
+        val servers = accounts.filter { it.isServer }
+        _uiState.update { it.copy(several = accounts.size > 1) }
+        val named = accountId?.let { id -> servers.firstOrNull { it.id == id } }
+        if (named != null) return redeemInto(named, token)
+        val candidates = inviteAccounts(servers, url)
+        return when (candidates.size) {
+            0 -> {
+                // No account on that server (or none at all): sign in to it, then redeem (T-28).
+                pendingInviteHolder.stash(token, null, url)
+                val mode = if (servers.isEmpty()) LoginArgs.MODE_START else LoginArgs.MODE_ADD
+                _uiState.update { it.copy(needsLogin = Routes.login(mode, serverUrl = url?.let(::inviteServerUrl))) }
+                null
+            }
+            1 -> redeemInto(candidates.single(), token)
+            else -> {
+                _uiState.update { it.copy(choices = candidates, errorMessage = null) }
+                null
+            }
+        }
+    }
+
+    /** The user's answer to "Join with which account?". */
+    fun chooseAccount(accountId: String): Job? {
+        val account = _uiState.value.choices.firstOrNull { it.id == accountId } ?: return null
+        _uiState.update { it.copy(choices = emptyList()) }
+        return redeemInto(account, extractInviteToken(_uiState.value.token))
+    }
+
+    private fun redeemInto(account: AccountEntity, token: String): Job? {
+        _uiState.update { it.copy(account = account, choices = emptyList()) }
+        if (account.outdated) {
+            _uiState.update { it.copy(errorMessage = UiText.res(R.string.overview_account_outdated)) }
+            return null
+        }
+        // Signed out: park the invite and sign this account in again, which resumes the redeem
+        // afterwards, instead of a bare 401 that drops the invite (T-28).
+        if (!account.signedIn || !sessions.hasToken(account.id)) {
+            pendingInviteHolder.stash(token, account.id, inviteUrl)
+            _uiState.update { it.copy(needsLogin = Routes.login(LoginArgs.MODE_RESIGNIN, accountId = account.id)) }
             return null
         }
         return viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val serverId = apiProvider.get().redeemInvite(RedeemInviteRequest(token)).listId
-                val accountId = currentAccount.localId
-                syncEngine.syncNow(fullLists = listOf(serverId), fullListsAccountId = accountId)
+                val serverId = sessions.get(account.id).api.redeemInvite(RedeemInviteRequest(token)).listId
+                syncer.syncJoined(account.id, serverId)
                 // Without the row (the pull failed) there is nothing to open yet.
-                val listId = accountId?.let { listsRepo.localIdForServerId(it, serverId) } ?: run {
+                val listId = listsRepo.localIdForServerId(account.id, serverId) ?: run {
                     _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
                     return@launch
                 }
@@ -82,6 +147,27 @@ class RedeemViewModel @Inject constructor(
             }
         }
     }
+}
+
+/**
+ * The accounts that can take an invite: for a link, those whose server URL is the link's own
+ * (everything before `/invite/`, in the canonical spelling); for a bare token, every one.
+ */
+internal fun inviteAccounts(servers: List<AccountEntity>, link: String?): List<AccountEntity> {
+    val server = link?.let(::inviteServerUrl) ?: return servers
+    return servers.filter { it.serverUrl == server }
+}
+
+/**
+ * The server URL an invite link was shared from, canonical ([normalizeServerUrl]): everything
+ * before its last `/invite/` segment. Null for text that is no link (a bare token).
+ */
+internal fun inviteServerUrl(link: String): String? {
+    val trimmed = link.trim()
+    if (!trimmed.contains("://")) return null
+    val index = trimmed.lastIndexOf("/invite/")
+    if (index < 0) return null
+    return normalizeServerUrl(trimmed.substring(0, index + 1))
 }
 
 /**

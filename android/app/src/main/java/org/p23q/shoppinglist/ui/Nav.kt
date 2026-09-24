@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.ui
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
@@ -49,15 +50,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.core.os.BundleCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
@@ -113,12 +118,20 @@ object Routes {
     const val LIST_PROPS_PATTERN = "listProps/{$LIST_ID_ARG}"
 
     const val TOKEN_ARG = "token"
-    const val REDEEM_PATTERN = "redeem/{$TOKEN_ARG}"
+    /** The invite link a token came as, which names its server (T-292); optional. */
+    const val LINK_ARG = "link"
+    /** The account to redeem into, when already settled; optional. */
+    const val ACCOUNT_ARG = "accountId"
+    const val REDEEM_PATTERN = "redeem/{$TOKEN_ARG}?$LINK_ARG={$LINK_ARG}&$ACCOUNT_ARG={$ACCOUNT_ARG}"
 
     fun list(listId: String) = "list/$listId"
     fun registry(listId: String) = "registry/$listId"
     fun listProps(listId: String) = "listProps/$listId"
-    fun redeem(token: String) = "redeem/$token"
+    fun redeem(token: String, link: String? = null, accountId: String? = null) = buildString {
+        append("redeem/").append(routeArg(token))
+        val args = listOfNotNull(link?.let { "$LINK_ARG=" + routeArg(it) }, accountId?.let { "$ACCOUNT_ARG=" + routeArg(it) })
+        if (args.isNotEmpty()) append('?').append(args.joinToString("&"))
+    }
     fun account(accountId: String) = "account/$accountId"
     fun admin(accountId: String) = "admin/$accountId"
 
@@ -445,14 +458,23 @@ fun ShoppingListNavHost(
         }
         composable(
             route = Routes.REDEEM_PATTERN,
-            // The manifest's intent-filter (any https host + /invite/ prefix) gets the OS to
-            // launch this Activity; this deep link is what routes the resulting Intent to this
-            // destination and extracts the token, once the Activity is already running.
-            deepLinks = listOf(navDeepLink { uriPattern = "https://{host}/invite/{${Routes.TOKEN_ARG}}" }),
+            arguments = listOf(
+                navArgument(Routes.TOKEN_ARG) { type = NavType.StringType },
+                navArgument(Routes.LINK_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument(Routes.ACCOUNT_ARG) { type = NavType.StringType; nullable = true; defaultValue = null },
+            ),
+            // The manifest's intent-filter (any https host, /invite/ at the root or under a mount
+            // path) gets the OS to launch this Activity; these deep links route the resulting
+            // Intent to this destination and extract the token. The whole link, which names the
+            // server and so the account (T-292), rides along in the deep-link Intent.
+            deepLinks = INVITE_LINK_PATTERNS.map { pattern -> navDeepLink { uriPattern = pattern } },
         ) { backStackEntry ->
-            val token = checkNotNull(backStackEntry.arguments?.getString(Routes.TOKEN_ARG))
+            val arguments = backStackEntry.arguments
+            val token = checkNotNull(arguments?.getString(Routes.TOKEN_ARG))
             RedeemScreen(
                 token = token,
+                link = inviteLinkOf(arguments),
+                accountId = arguments?.getString(Routes.ACCOUNT_ARG),
                 onRedeemed = { listId ->
                     navController.navigate(Routes.list(listId)) {
                         popUpTo(Routes.REDEEM_PATTERN) { inclusive = true }
@@ -463,12 +485,12 @@ fun ShoppingListNavHost(
                         popUpTo(Routes.REDEEM_PATTERN) { inclusive = true }
                     }
                 },
-                // Logged out: go to Login (the token is already stashed). After a successful login,
-                // LoginViewModel.startDestinationAfterLogin() routes back into redeem (T-28).
-                onNeedsLogin = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                        launchSingleTop = true
+                // No account can take it yet: sign in (the token is already stashed). After a
+                // successful login, LoginViewModel.startDestinationAfterLogin() routes back into
+                // redeem (T-28), for the account that signed in (T-292).
+                onNeedsLogin = { loginRoute ->
+                    navController.navigate(loginRoute) {
+                        popUpTo(Routes.REDEEM_PATTERN) { inclusive = true }
                     }
                 },
             )
@@ -705,6 +727,11 @@ internal fun AppDrawerScaffold(
                 navController.navigate(Routes.list(listId))
             },
             onDismiss = { isJoinDialogOpen = false },
+            // A pasted link for a server this phone has no account on (T-292).
+            onNeedsLogin = { loginRoute ->
+                isJoinDialogOpen = false
+                navController.navigate(loginRoute)
+            },
         )
     }
 }
@@ -728,6 +755,28 @@ private fun BackScaffold(title: String, onBack: () -> Unit, content: @Composable
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) { content() }
     }
+}
+
+/**
+ * The invite links the app opens (T-292): `https://<host>/invite/<token>`, and the same under a
+ * mount path of up to three segments, as a server set up under `/shopping` shares them.
+ */
+internal val INVITE_LINK_PATTERNS = listOf(
+    "https://{host}/invite/{${Routes.TOKEN_ARG}}",
+    "https://{host}/{p1}/invite/{${Routes.TOKEN_ARG}}",
+    "https://{host}/{p1}/{p2}/invite/{${Routes.TOKEN_ARG}}",
+    "https://{host}/{p1}/{p2}/{p3}/invite/{${Routes.TOKEN_ARG}}",
+)
+
+/**
+ * The invite link a redeem destination was opened for: the route's own argument, or the tapped
+ * link itself when the destination came from a deep link. It names the invite's server (T-292).
+ */
+internal fun inviteLinkOf(arguments: Bundle?): String? {
+    if (arguments == null) return null
+    arguments.getString(Routes.LINK_ARG)?.let { return it }
+    val intent = BundleCompat.getParcelable(arguments, NavController.KEY_DEEP_LINK_INTENT, Intent::class.java)
+    return intent?.data?.toString()
 }
 
 /** The app bar's subtitle line, for tests. */

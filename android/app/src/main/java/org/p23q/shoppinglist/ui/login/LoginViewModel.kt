@@ -262,7 +262,7 @@ class LoginViewModel @Inject constructor(
      * was opened from (the Accounts screen, or a signed-out account's banner).
      */
     fun startDestinationAfterLogin(): String? {
-        pendingInviteHolder.consume()?.let { invite -> return Routes.redeem(invite.token) }
+        pendingInviteHolder.consume()?.let { invite -> return Routes.redeem(invite.token, invite.url, invite.accountId) }
         return if (mode == LoginMode.START) authedStartDestination(authRepository.lastOpenedListId()) else null
     }
 }

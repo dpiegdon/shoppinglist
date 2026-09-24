@@ -21,11 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.SyncEngine
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.TestAccounts
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -53,16 +49,9 @@ class RedeemDialogTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeCurrentAccount().apply { token = "tok-123" }
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
-        val syncEngine = TestAccounts(db).run {
-            add(server.url("/").toString())
-            syncEngine()
-        }
-        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
+        val accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        val viewModel = RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
         var redeemedListId: String? = null
 
         composeTestRule.setContent {

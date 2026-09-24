@@ -49,6 +49,12 @@
                     android:scheme="https"
                     android:host="*"
                     android:pathPrefix="/invite/" />
+                <!-- The same under a mount path, as a server set up under /shopping shares them
+                     (T-292); the app matches the link's server to an account by that prefix. -->
+                <data
+                    android:scheme="https"
+                    android:host="*"
+                    android:pathPattern="/.*/invite/.*" />
             </intent-filter>
         </activity>
 

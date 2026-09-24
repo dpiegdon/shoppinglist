@@ -17,9 +17,12 @@ import javax.inject.Singleton
 class PendingInviteHolder @Inject constructor() {
     private var pending: PendingInvite? = null
 
-    /** [accountId] is the local id of the account the invite was opened for, if the app had one. */
-    fun stash(token: String, accountId: String?) {
-        pending = PendingInvite(token, accountId)
+    /**
+     * [accountId] is the local id of the account the invite is for, when that is settled (it only
+     * needs signing in again); [url] the invite link it came as, which names its server (T-292).
+     */
+    fun stash(token: String, accountId: String?, url: String? = null) {
+        pending = PendingInvite(token, accountId, url)
     }
 
     /** Returns the pending invite (if any) and clears it. */
@@ -30,5 +33,5 @@ class PendingInviteHolder @Inject constructor() {
     }
 }
 
-/** An invite token parked across a login, and the account it was opened for. */
-data class PendingInvite(val token: String, val accountId: String?)
+/** An invite token parked across a login, the account it is for if known, and the link it came as. */
+data class PendingInvite(val token: String, val accountId: String?, val url: String? = null)

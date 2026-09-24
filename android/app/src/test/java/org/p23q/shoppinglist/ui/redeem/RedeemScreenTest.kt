@@ -8,6 +8,8 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
+import androidx.lifecycle.viewModelScope
 import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -18,11 +20,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.TestAccounts
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
@@ -53,16 +51,9 @@ class RedeemScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeCurrentAccount().apply { token = "tok-123" }
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
-        val syncEngine = TestAccounts(db).run {
-            add(server.url("/").toString())
-            syncEngine()
-        }
-        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
+        val accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        val viewModel = RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
         var redeemedListId: String? = null
 
         composeTestRule.setContent {
@@ -95,16 +86,9 @@ class RedeemScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val sessionState = FakeCurrentAccount().apply { token = "tok-123" }
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
-        val syncEngine = TestAccounts(db).run {
-            add(server.url("/").toString())
-            syncEngine()
-        }
-        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
+        val accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        val viewModel = RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
 
         composeTestRule.setContent {
             RedeemScreen(token = "bad-token", onRedeemed = {}, onCancel = {}, viewModel = viewModel)
@@ -120,6 +104,67 @@ class RedeemScreenTest {
         // A garbled link reads as an invite that does not exist, in the app's language (see ErrorText).
         composeTestRule.onNodeWithText("This invite doesn't exist").assertExists()
         composeTestRule.onNodeWithText("Back").assertExists()
+        db.close()
+    }
+
+    @Test
+    fun `with several accounts the screen names the one it joins with`() = runBlocking {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(org.p23q.shoppinglist.data.syncResponseWithList("list-42")))
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        accounts.add("https://elsewhere.example.test/", id = "other", accountId = "acct-other", email = "other@example.com")
+        val viewModel = RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
+        var redeemedListId: String? = null
+
+        composeTestRule.setContent {
+            RedeemScreen(
+                token = "abc.def",
+                link = server.url("/invite/abc.def").toString(),
+                onRedeemed = { redeemedListId = it },
+                onCancel = {},
+                viewModel = viewModel,
+            )
+        }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            redeemedListId != null
+        }
+
+        composeTestRule.onNodeWithText("me@example.com").assertExists()
+        composeTestRule.onNodeWithText(server.url("/").toString()).assertExists()
+        viewModel.viewModelScope.cancel()
+        db.close()
+    }
+
+    @Test
+    fun `two accounts on the invite's server ask which to join with`() = runBlocking {
+        server = MockWebServer()
+        server.start()
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        accounts.add(server.url("/").toString(), id = "second", accountId = "acct-second", email = "second@example.com")
+        val viewModel = RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
+
+        composeTestRule.setContent {
+            RedeemScreen(token = "abc.def", link = server.url("/invite/abc.def").toString(), onRedeemed = {}, onCancel = {}, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Join with which account?").assertExists()
+        composeTestRule.onNodeWithText("me@example.com").assertExists()
+        composeTestRule.onNodeWithText("second@example.com").assertExists()
+        assertEquals(0, server.requestCount)
         db.close()
     }
 }

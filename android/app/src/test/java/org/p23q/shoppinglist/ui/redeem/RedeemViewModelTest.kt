@@ -20,21 +20,20 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.syncResponseWithList
 import org.p23q.shoppinglist.data.testListsRepo
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.LoginArgs
+import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.login
 
 @RunWith(RobolectricTestRunner::class)
 class RedeemViewModelTest {
@@ -44,8 +43,7 @@ class RedeemViewModelTest {
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDb
-    private lateinit var sessionState: FakeCurrentAccount
-    private lateinit var apiProvider: ApiSource
+    private lateinit var accounts: TestAccounts
     private lateinit var syncEngine: SyncEngine
 
     @Before
@@ -58,16 +56,9 @@ class RedeemViewModelTest {
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
 
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-
-        sessionState = FakeCurrentAccount().apply { token = "tok-123" }
-        val json = Json { ignoreUnknownKeys = true }
-        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
-        syncEngine = TestAccounts(db).run {
-            add(server.url("/").toString())
-            syncEngine()
-        }
+        accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        syncEngine = accounts.syncEngine()
     }
 
     @After
@@ -76,8 +67,8 @@ class RedeemViewModelTest {
         if (::db.isInitialized) db.close()
     }
 
-    private fun newViewModel(): RedeemViewModel =
-        RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), testListsRepo(db))
+    private fun newViewModel(holder: PendingInviteHolder = PendingInviteHolder()): RedeemViewModel =
+        RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(syncEngine), holder, testListsRepo(db))
 
     /** This phone's row of the list the server calls [serverId]. */
     private suspend fun localIdOf(serverId: String): String? = db.listDao().getByServerId(TEST_ACCOUNT_ID, serverId)?.localId
@@ -119,7 +110,7 @@ class RedeemViewModelTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
         server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseWithList("list-42")))
         val viewModel = newViewModel()
-        viewModel.onTokenChange("https://p23q.org/invite/abc.def")
+        viewModel.onTokenChange(server.url("/invite/abc.def").toString())
 
         viewModel.redeem()?.join()
 
@@ -186,14 +177,16 @@ class RedeemViewModelTest {
     @Test
     fun `redeeming while logged out stashes the token and signals needsLogin without calling the API`() = runTest(mainDispatcherRule.dispatcher) {
         val holder = PendingInviteHolder()
-        val loggedOut = FakeCurrentAccount() // token == null
-        val viewModel = RedeemViewModel(apiProvider, syncEngine, loggedOut, holder, testListsRepo(db))
+        // The server rejected the token: no token, signed out.
+        accounts.secrets.setToken(TEST_ACCOUNT_ID, null)
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(signedIn = false) }
+        val viewModel = newViewModel(holder)
         viewModel.onTokenChange("invite-xyz")
 
         val job = viewModel.redeem()
 
         assertNull("short-circuits before launching any request", job)
-        assertTrue(viewModel.uiState.value.needsLogin)
+        assertEquals(Routes.login(LoginArgs.MODE_RESIGNIN, accountId = TEST_ACCOUNT_ID), viewModel.uiState.value.needsLogin)
         assertEquals("invite-xyz", holder.consume()?.token)
         assertEquals("no request should have reached the server", 0, server.requestCount)
     }

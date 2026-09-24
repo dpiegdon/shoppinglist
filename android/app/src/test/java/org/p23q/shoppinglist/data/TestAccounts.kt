@@ -152,6 +152,14 @@ class TestAccounts(val db: AppDb, val json: Json = Json { ignoreUnknownKeys = tr
     /** The [ListAccounts] the list screens get, over these accounts. */
     fun listAccounts(listsRepo: ListsRepo = testListsRepo(db)): ListAccounts = ListAccounts(listsRepo, registry, sessions)
 
+    /** The [Syncer] the app provides over [engine]: a joined list is pulled for the account that joined it. */
+    fun syncer(engine: SyncEngine = syncEngine()): org.p23q.shoppinglist.core.sync.Syncer = object : org.p23q.shoppinglist.core.sync.Syncer {
+        override suspend fun syncNow(fullLists: List<String>) = engine.syncNow(fullLists)
+
+        override suspend fun syncJoined(accountId: String, serverListId: String) =
+            engine.syncNow(listOf(serverListId), fullListsAccountId = accountId)
+    }
+
     fun syncEngine(
         deviceId: DeviceIdProvider = DeviceIdProvider { "this-device" },
         notifier: CollaboratorChangeNotifier = CollaboratorChangeNotifier { },
