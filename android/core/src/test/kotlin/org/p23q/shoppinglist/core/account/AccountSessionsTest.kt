@@ -61,6 +61,8 @@ class AccountSessionsTest {
     fun tearDown() {
         a.shutdown()
         b.shutdown()
+        // A 401 or a 426 writes the account in the background; it lands before the database goes.
+        runBlocking { registry.flush() }
         db.close()
     }
 

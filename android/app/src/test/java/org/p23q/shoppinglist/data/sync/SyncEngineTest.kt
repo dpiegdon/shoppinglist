@@ -109,6 +109,8 @@ class SyncEngineTest {
     @After
     fun tearDown() {
         if (::server.isInitialized) server.shutdown()
+        // A 401 or a 426 writes the account in the background; it lands before the database goes.
+        if (::accounts.isInitialized) runBlocking { accounts.registry.flush() }
         if (::db.isInitialized) db.close()
     }
 

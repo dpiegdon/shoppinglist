@@ -72,6 +72,8 @@ class AuthRepositoryTest {
     @After
     fun tearDown() {
         if (::server.isInitialized) server.shutdown()
+        // A session's 401 or 426 writes its account in the background; that lands first.
+        if (::accounts.isInitialized) kotlinx.coroutines.runBlocking { accounts.registry.flush() }
         if (::db.isInitialized) db.close()
     }
 
