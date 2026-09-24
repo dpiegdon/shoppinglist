@@ -77,11 +77,11 @@ fun RegistryScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(state.items, key = { it.id }) { item ->
+                items(state.items, key = { it.localId }) { item ->
                     RegistryRow(
                         item = item,
-                        onClick = { onEditItem(item.id) },
-                        onDelete = { viewModel.deleteItem(item.id) },
+                        onClick = { onEditItem(item.localId) },
+                        onDelete = { viewModel.deleteItem(item.localId) },
                     )
                 }
             }

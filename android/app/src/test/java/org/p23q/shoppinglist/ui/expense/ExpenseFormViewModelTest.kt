@@ -324,7 +324,7 @@ class ExpenseFormViewModelTest {
     fun `an untouched edit writes nothing at all`() = runTest(mainDispatcherRule.dispatcher) {
         val expense = Expense(mapOf(me to "64.00"), true, mapOf(me to "32.00", other to "32.00"), true, "2026-09-17")
         val itemId = itemsRepo.createExpense(listId, "Dinner", expense)
-        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.id })
+        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.localId })
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
 

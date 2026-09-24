@@ -203,6 +203,107 @@ class Migration8To9(private val legacy: LegacySessionSource) : Migration(8, 9) {
     }
 }
 
+/**
+ * Phone-local ids (T-299). Every list and item gets a `localId` primary key beside its server id,
+ * so that two accounts on this phone that share a list can each hold a row of it; the server id
+ * is unique only per account. Items point at their list by `listLocalId` and carry their list's
+ * `accountId`.
+ *
+ * An existing row's local id is its server id: a local id need only be unique on this phone, which
+ * the old primary key already was, so every id stored outside the database (the last-opened list,
+ * a muted list, a notification's deep link) still names the same row.
+ *
+ * An item whose list row is missing gets a stub list first, as [Migration8To9] gives one, owned by
+ * the first server account (the one the screens show). Without any account such an item reaches
+ * nobody and could never be pushed, so it is not kept.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(CREATE_LISTS_10.replace("`lists`", "`lists_new`"))
+        db.execSQL(
+            "INSERT INTO `lists_new` (`localId`, `serverId`, `accountId`, $LIST_COLUMNS_9) " +
+                "SELECT `id`, `id`, `accountId`, $LIST_COLUMNS_9 FROM `lists`",
+        )
+        db.execSQL(
+            "INSERT INTO `lists_new` (`localId`, `serverId`, `accountId`, $LIST_COLUMNS_9) " +
+                "SELECT DISTINCT `listId`, `listId`, " +
+                "(SELECT `id` FROM `accounts` ORDER BY `kind` = 'server' DESC, `sortOrder`, rowid LIMIT 1), " +
+                "0, 0, 0, '[]', '[]', NULL, " +
+                "'', 0, '', '[]', 0, '', NULL, 0, '', 'shopping', 0, '', NULL, 0, '', 1, 0, '' " +
+                "FROM `items` WHERE `listId` NOT IN (SELECT `id` FROM `lists`) AND EXISTS (SELECT 1 FROM `accounts`)",
+        )
+        db.execSQL("DROP TABLE `lists`")
+        db.execSQL("ALTER TABLE `lists_new` RENAME TO `lists`")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_lists_accountId_serverId` ON `lists` (`accountId`, `serverId`)",
+        )
+
+        db.execSQL(CREATE_ITEMS_10.replace("`items`", "`items_new`"))
+        db.execSQL(
+            "INSERT INTO `items_new` (`localId`, `serverId`, `accountId`, `listLocalId`, $ITEM_COLUMNS_9) " +
+                "SELECT `items`.`id`, `items`.`id`, `lists`.`accountId`, `items`.`listId`, " +
+                ITEM_COLUMNS_9.split(", ").joinToString(", ") { "`items`.$it" } + " " +
+                "FROM `items` INNER JOIN `lists` ON `lists`.`localId` = `items`.`listId`",
+        )
+        db.execSQL("DROP TABLE `items`")
+        db.execSQL("ALTER TABLE `items_new` RENAME TO `items`")
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_items_accountId_serverId` ON `items` (`accountId`, `serverId`)",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_items_listLocalId` ON `items` (`listLocalId`)")
+    }
+}
+
+/** Room's own SQL, from core/schemas/…/10.json. */
+private const val CREATE_LISTS_10 =
+    "CREATE TABLE IF NOT EXISTS `lists` (`localId` TEXT NOT NULL, `serverId` TEXT NOT NULL, " +
+        "`accountId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `dirty` INTEGER NOT NULL, " +
+        "`syncBlocked` INTEGER NOT NULL, `membersJson` TEXT NOT NULL, `closeVotesJson` TEXT NOT NULL, " +
+        "`closedAt` INTEGER, `name_value` TEXT NOT NULL, `name_updatedAt` INTEGER NOT NULL, " +
+        "`name_updatedBy` TEXT NOT NULL, `categoryOrder_value` TEXT NOT NULL, " +
+        "`categoryOrder_updatedAt` INTEGER NOT NULL, `categoryOrder_updatedBy` TEXT NOT NULL, " +
+        "`notes_value` TEXT, `notes_updatedAt` INTEGER NOT NULL, `notes_updatedBy` TEXT NOT NULL, " +
+        "`kind_value` TEXT NOT NULL, `kind_updatedAt` INTEGER NOT NULL, `kind_updatedBy` TEXT NOT NULL, " +
+        "`currency_value` TEXT, `currency_updatedAt` INTEGER NOT NULL, `currency_updatedBy` TEXT NOT NULL, " +
+        "`deleted_value` INTEGER NOT NULL, `deleted_updatedAt` INTEGER NOT NULL, " +
+        "`deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`localId`), FOREIGN KEY(`accountId`) " +
+        "REFERENCES `accounts`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )"
+
+private const val CREATE_ITEMS_10 =
+    "CREATE TABLE IF NOT EXISTS `items` (`localId` TEXT NOT NULL, `serverId` TEXT NOT NULL, " +
+        "`accountId` TEXT NOT NULL, `listLocalId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+        "`dirty` INTEGER NOT NULL, `syncBlocked` INTEGER NOT NULL, `syncBlockedCode` TEXT, " +
+        "`syncBlockedAccountId` TEXT, `lastTouchedByAccountId` TEXT, `name_value` TEXT NOT NULL, " +
+        "`name_updatedAt` INTEGER NOT NULL, `name_updatedBy` TEXT NOT NULL, `category_value` TEXT, " +
+        "`category_updatedAt` INTEGER NOT NULL, `category_updatedBy` TEXT NOT NULL, " +
+        "`stores_value` TEXT NOT NULL, `stores_updatedAt` INTEGER NOT NULL, `stores_updatedBy` TEXT NOT NULL, " +
+        "`quantity_value` TEXT, `quantity_updatedAt` INTEGER NOT NULL, `quantity_updatedBy` TEXT NOT NULL, " +
+        "`price_value` TEXT, `price_updatedAt` INTEGER NOT NULL, `price_updatedBy` TEXT NOT NULL, " +
+        "`note_value` TEXT, `note_updatedAt` INTEGER NOT NULL, `note_updatedBy` TEXT NOT NULL, " +
+        "`status_value` TEXT NOT NULL, `status_updatedAt` INTEGER NOT NULL, `status_updatedBy` TEXT NOT NULL, " +
+        "`expense_value` TEXT, `expense_updatedAt` INTEGER NOT NULL, `expense_updatedBy` TEXT NOT NULL, " +
+        "`deleted_value` INTEGER NOT NULL, `deleted_updatedAt` INTEGER NOT NULL, " +
+        "`deleted_updatedBy` TEXT NOT NULL, PRIMARY KEY(`localId`))"
+
+/** The columns of schema 9's `lists` that schema 10 keeps as they are: all but `id` and `accountId`. */
+private const val LIST_COLUMNS_9 =
+    "`createdAt`, `dirty`, `syncBlocked`, `membersJson`, `closeVotesJson`, `closedAt`, " +
+        "`name_value`, `name_updatedAt`, `name_updatedBy`, `categoryOrder_value`, " +
+        "`categoryOrder_updatedAt`, `categoryOrder_updatedBy`, `notes_value`, `notes_updatedAt`, " +
+        "`notes_updatedBy`, `kind_value`, `kind_updatedAt`, `kind_updatedBy`, `currency_value`, " +
+        "`currency_updatedAt`, `currency_updatedBy`, `deleted_value`, `deleted_updatedAt`, " +
+        "`deleted_updatedBy`"
+
+/** The columns of schema 9's `items` that schema 10 keeps as they are: all but `id` and `listId`. */
+private const val ITEM_COLUMNS_9 =
+    "`createdAt`, `dirty`, `syncBlocked`, `syncBlockedCode`, `syncBlockedAccountId`, " +
+        "`lastTouchedByAccountId`, `name_value`, `name_updatedAt`, `name_updatedBy`, `category_value`, " +
+        "`category_updatedAt`, `category_updatedBy`, `stores_value`, `stores_updatedAt`, " +
+        "`stores_updatedBy`, `quantity_value`, `quantity_updatedAt`, `quantity_updatedBy`, " +
+        "`price_value`, `price_updatedAt`, `price_updatedBy`, `note_value`, `note_updatedAt`, " +
+        "`note_updatedBy`, `status_value`, `status_updatedAt`, `status_updatedBy`, `expense_value`, " +
+        "`expense_updatedAt`, `expense_updatedBy`, `deleted_value`, `deleted_updatedAt`, `deleted_updatedBy`"
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -212,7 +313,7 @@ object DatabaseModule {
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, Migration8To9(legacy),
+                MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10,
             )
             .build()
 

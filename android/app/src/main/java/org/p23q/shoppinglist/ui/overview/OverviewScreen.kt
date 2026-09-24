@@ -113,14 +113,14 @@ fun OverviewScreen(
                                 )
                             }
                         }
-                        items(state.lists, key = { it.id }) { list ->
+                        items(state.lists, key = { it.localId }) { list ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
                                     .clickable {
-                                        viewModel.openList(list.id)
-                                        onOpenList(list.id)
+                                        viewModel.openList(list.localId)
+                                        onOpenList(list.localId)
                                     },
                             ) {
                                 Row(
@@ -132,7 +132,7 @@ fun OverviewScreen(
                                         modifier = Modifier.padding(end = 8.dp),
                                     )
                                     Text(text = list.name.value, modifier = Modifier.weight(1f))
-                                    val summary = state.expenseSummaries[list.id]
+                                    val summary = state.expenseSummaries[list.localId]
                                     if (summary != null) {
                                         // What has been spent, and where this account stands —
                                         // an expenses list has no open items to count (T-154).
@@ -159,7 +159,7 @@ fun OverviewScreen(
                                             }
                                         }
                                     }
-                                    val openCount = state.openCounts[list.id] ?: 0
+                                    val openCount = state.openCounts[list.localId] ?: 0
                                     if (openCount > 0) {
                                         // Room between an expense list's total/balance and its count
                                         // (T-191), which otherwise sat right against them.

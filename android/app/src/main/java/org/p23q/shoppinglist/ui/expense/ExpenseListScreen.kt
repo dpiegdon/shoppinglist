@@ -219,7 +219,7 @@ fun ExpenseListScreen(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                             )
                         }
-                        itemsIndexed(rows, key = { _, row -> row.item.id }) { rowIndex, row ->
+                        itemsIndexed(rows, key = { _, row -> row.item.localId }) { rowIndex, row ->
                             // Resolved here rather than passed as lambdas: participantLabel is itself a
                             // composable (it reads string resources), and a non-inline lambda is not a
                             // composable context.
@@ -234,7 +234,7 @@ fun ExpenseListScreen(
                                     ?: 0L,
                                 refusal = refusalOf(row, state),
                                 // Nothing to open on a closed list, nor for someone who has agreed to close (T-193).
-                                onClick = if (state.isClosed || state.iHaveVoted) null else ({ onEditExpense(row.item.id) }),
+                                onClick = if (state.isClosed || state.iHaveVoted) null else ({ onEditExpense(row.item.localId) }),
                             )
                             if (rowIndex < rows.lastIndex) {
                                 HorizontalDivider(

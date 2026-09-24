@@ -202,7 +202,7 @@ class ItemFormViewModelTest {
         val seed = seedRepo("seed-device")
         val existingId = seed.createItem(listId, "Milk", status = Status.TODO)
         // Clear the creation dirty flag so a later dirty row can only come from a pick write.
-        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.id })
+        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.localId })
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
 
@@ -552,7 +552,7 @@ class ItemFormViewModelTest {
         seed.setCategory(itemId, "dairy")
         seed.setNote(itemId, "keep me")
         // Clear the creation dirty flag so a later dirty row can only come from a save write.
-        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.id })
+        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.localId })
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
 

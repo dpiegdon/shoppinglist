@@ -310,7 +310,7 @@ class AuthRepositoryTest {
         assertFalse(account.signedIn)
         // The row stays and still says whose lists these are, for the next login to judge (T-260).
         assertEquals("acc-1", account.accountId)
-        assertNotNull(db.itemDao().getById("item-1"))
+        assertNotNull(db.itemDao().get("item-1"))
         assertNull(accounts.currentAccount.token)
     }
 
@@ -342,12 +342,12 @@ class AuthRepositoryTest {
 
         repository.clearLocalSession(TEST_ACCOUNT_ID)
 
-        val kept = db.itemDao().getById("item-1")
+        val kept = db.itemDao().get("item-1")
         assertNotNull("the unpushed edit survives a forced logout", kept)
         assertTrue(kept!!.dirty)
-        assertNull("a synced row is not kept on disk after logout", db.itemDao().getById("item-synced"))
-        assertNull("nor a synced list with nothing unpushed in it", db.listDao().getById("list-clean"))
-        assertNotNull("but the list the unpushed item is on stays with it", db.listDao().getById("list-1"))
+        assertNull("a synced row is not kept on disk after logout", db.itemDao().get("item-synced"))
+        assertNull("nor a synced list with nothing unpushed in it", db.listDao().get("list-clean"))
+        assertNotNull("but the list the unpushed item is on stays with it", db.listDao().get("list-1"))
         assertEquals("the next login re-pulls from 0", 0L, accounts.registry.get(TEST_ACCOUNT_ID)!!.syncCursor)
     }
 
@@ -361,9 +361,9 @@ class AuthRepositoryTest {
 
         repository.clearLocalSession(TEST_ACCOUNT_ID)
 
-        assertNull(db.listDao().getById("mine"))
-        assertNotNull(db.listDao().getById("theirs"))
-        assertNotNull(db.itemDao().getById("their-synced-item"))
+        assertNull(db.listDao().get("mine"))
+        assertNotNull(db.listDao().get("theirs"))
+        assertNotNull(db.itemDao().get("their-synced-item"))
         assertTrue(accounts.registry.get("other")!!.signedIn)
         assertEquals("tok-123", accounts.secrets.token("other"))
     }
@@ -382,7 +382,7 @@ class AuthRepositoryTest {
         assertEquals("the same row, not a new one", TEST_ACCOUNT_ID, id)
         assertTrue(accounts.registry.get(id)!!.signedIn)
         assertEquals("tok-acc-1", accounts.secrets.token(id))
-        val kept = db.itemDao().getById("item-1")
+        val kept = db.itemDao().get("item-1")
         assertNotNull("the returning user's own edits are still there", kept)
         assertTrue("and still queued to go out", kept!!.dirty)
     }
@@ -398,7 +398,7 @@ class AuthRepositoryTest {
         val id = repository.login(url.uppercase().removeSuffix("/"), "milk@example.com", "hunter2")
 
         assertEquals(TEST_ACCOUNT_ID, id)
-        assertNotNull(db.itemDao().getById("item-1"))
+        assertNotNull(db.itemDao().get("item-1"))
     }
 
     /**
@@ -416,8 +416,8 @@ class AuthRepositoryTest {
         val id = repository.login(url, "bread@example.com", "hunter2")
 
         assertNotEquals(TEST_ACCOUNT_ID, id)
-        assertNull("another account must not see the previous one's lists", db.itemDao().getById("item-1"))
-        assertNull(db.listDao().getById("list-1"))
+        assertNull("another account must not see the previous one's lists", db.itemDao().get("item-1"))
+        assertNull(db.listDao().get("list-1"))
         assertEquals(listOf(id), accounts.registry.snapshot().map { it.id })
         assertEquals(listOf(id), db.accountDao().all().map { it.id })
     }
@@ -432,7 +432,7 @@ class AuthRepositoryTest {
 
         repository.login(url, "milk@example.com", "hunter2")
 
-        assertNull("privacy wins the tie when whose data it is cannot be established", db.itemDao().getById("item-1"))
+        assertNull("privacy wins the tie when whose data it is cannot be established", db.itemDao().get("item-1"))
     }
 
     /**
@@ -456,8 +456,8 @@ class AuthRepositoryTest {
 
         assertEquals(listOf(id), accounts.registry.snapshot().map { it.id })
         assertEquals(listOf(id), db.accountDao().all().map { it.id })
-        assertNull(db.listDao().getById("list-1"))
-        assertNull(db.itemDao().getById("item-1"))
+        assertNull(db.listDao().get("list-1"))
+        assertNull(db.itemDao().get("item-1"))
         assertTrue("the sign-in itself stands", accounts.registry.get(id)!!.signedIn)
         assertEquals("tok-acc-2", accounts.secrets.token(id))
     }
@@ -491,25 +491,31 @@ class AuthRepositoryTest {
         val id = repository.login(url, "bread@example.com", "hunter2", keepOtherAccounts = true)
 
         assertEquals(setOf(TEST_ACCOUNT_ID, id), accounts.registry.snapshot().map { it.id }.toSet())
-        assertNotNull(db.listDao().getById("list-1"))
+        assertNotNull(db.listDao().get("list-1"))
     }
 
     /**
-     * T-298: a list both accounts can see is one row, owned by whichever pulled it first; removing
-     * that account deletes the row under the other, whose cursor has moved past it already.
+     * T-299: a list two accounts on one server share is a row of each, so removing one account
+     * takes only its own row, and the other's cursor still describes what the other holds.
      */
     @Test
-    fun `removing an account makes every other account on its server pull from 0 again`() = runTest {
+    fun `removing an account leaves another account's row of a shared list, and its cursor, alone`() = runTest {
         accounts.add(url, accountId = "acc-1")
         accounts.add(url, id = "same-server", accountId = "acc-2")
-        accounts.add(server.url("/other/").toString(), id = "other-server", accountId = "acc-3")
-        listOf("same-server", "other-server").forEach { id -> accounts.registry.update(id) { it.copy(syncCursor = 42) } }
+        accounts.registry.update("same-server") { it.copy(syncCursor = 42) }
+        seedList("mine", serverId = "shared")
+        seedList("theirs", owner = "same-server", serverId = "shared")
+        seedItem("my-item", "mine", dirty = false, serverId = "shared-item")
+        seedItem("their-item", "theirs", dirty = false, serverId = "shared-item")
 
         repository.removeAccount(TEST_ACCOUNT_ID)
 
-        assertEquals(0L, accounts.registry.get("same-server")!!.syncCursor)
-        assertEquals(0L, db.accountDao().all().first { it.id == "same-server" }.syncCursor)
-        assertEquals("another server's cursor stays", 42L, accounts.registry.get("other-server")!!.syncCursor)
+        assertNull(db.listDao().get("mine"))
+        assertNull(db.itemDao().get("my-item"))
+        assertEquals("theirs", db.listDao().getByServerId("same-server", "shared")!!.localId)
+        assertEquals("their-item", db.itemDao().getByServerId("same-server", "shared-item")!!.localId)
+        assertEquals(42L, accounts.registry.get("same-server")!!.syncCursor)
+        assertEquals(42L, db.accountDao().all().first { it.id == "same-server" }.syncCursor)
     }
 
     @Test
@@ -521,19 +527,21 @@ class AuthRepositoryTest {
 
         repository.removeAccount(TEST_ACCOUNT_ID)
 
-        assertNull(db.itemDao().getById("item-1"))
-        assertNull(db.listDao().getById("list-1"))
+        assertNull(db.itemDao().get("item-1"))
+        assertNull(db.listDao().get("list-1"))
         assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
         assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
         assertTrue(db.accountDao().all().isEmpty())
         assertNull("a cold start must not reopen a list that is gone", accounts.secrets.lastOpenedListId)
     }
 
-    private suspend fun seedList(id: String, owner: String = TEST_ACCOUNT_ID) {
+    /** A list with local id [id]; its server id differs from it unless given. */
+    private suspend fun seedList(id: String, owner: String = TEST_ACCOUNT_ID, serverId: String = "srv-$id") {
         val now = System.currentTimeMillis()
         db.listDao().upsert(
             ListEntity(
-                id = id,
+                localId = id,
+                serverId = serverId,
                 accountId = owner,
                 createdAt = now,
                 name = id.toLww("dev", now),
@@ -546,12 +554,15 @@ class AuthRepositoryTest {
         )
     }
 
-    private suspend fun seedItem(id: String, listId: String, dirty: Boolean) {
+    /** An item with local id [id] on the list with local id [listId], of that list's account. */
+    private suspend fun seedItem(id: String, listId: String, dirty: Boolean, serverId: String = "srv-$id") {
         val now = System.currentTimeMillis()
         db.itemDao().upsert(
             ItemEntity(
-                id = id,
-                listId = listId,
+                localId = id,
+                serverId = serverId,
+                accountId = db.listDao().get(listId)!!.accountId,
+                listLocalId = listId,
                 createdAt = now,
                 name = id.toLww("dev", now),
                 category = null.toLwwOptional("dev", now),

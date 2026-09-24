@@ -204,11 +204,11 @@ fun ListScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                         )
                     }
-                    itemsIndexed(group.items, key = { _, it -> it.id }) { itemIndex, item ->
+                    itemsIndexed(group.items, key = { _, it -> it.localId }) { itemIndex, item ->
                         ItemRow(
                             showShoppingFields = state.showShoppingFields,
                             item = item,
-                            exiting = item.id in state.exitingItemIds,
+                            exiting = item.localId in state.exitingItemIds,
                             defaultCurrency = state.defaultCurrency,
                             // Only when the list has 2+ members (T-64) — no clutter for the common
                             // solo case, where "who touched this" has exactly one possible answer.
@@ -219,12 +219,12 @@ fun ListScreen(
                             },
                             onToggle = {
                                 if (item.status.value == Status.CHECKED.wireValue) {
-                                    viewModel.uncheck(item.id)
+                                    viewModel.uncheck(item.localId)
                                 } else {
-                                    viewModel.checkOff(item.id)
+                                    viewModel.checkOff(item.localId)
                                 }
                             },
-                            onEdit = { onEditItem(item.id) },
+                            onEdit = { onEditItem(item.localId) },
                         )
                         // A slightly-visible line between each item within a group (T-78). Skipped
                         // after the last one so it doesn't stack with the next category's divider.

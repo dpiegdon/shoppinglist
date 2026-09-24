@@ -218,7 +218,7 @@ class ExpenseFormViewModel @Inject constructor(
 
     fun startEdit(itemId: String): Job = viewModelScope.launch {
         val item = itemsRepo.getById(itemId) ?: return@launch
-        listId = item.listId
+        listId = item.listLocalId
         loadList()
         val expense = itemsRepo.decodeExpense(item.expense.value) ?: return@launch
         loaded = expense

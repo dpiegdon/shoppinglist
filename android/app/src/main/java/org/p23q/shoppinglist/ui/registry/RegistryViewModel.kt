@@ -45,7 +45,7 @@ class RegistryViewModel @Inject constructor(
      * had itself replaced SQLite's NOCASE for folding only A-Z; a platform collator still disagreed
      * with the web's in details, which is what the shared order is for.
      */
-    private val byName = NameOrder.by<ItemEntity>({ it.name.value }, { it.id })
+    private val byName = NameOrder.by<ItemEntity>({ it.name.value }, { it.serverId })
 
     init {
         viewModelScope.launch {

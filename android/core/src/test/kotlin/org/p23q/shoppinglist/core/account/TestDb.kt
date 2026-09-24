@@ -19,8 +19,10 @@ internal fun testDb(): AppDb = Room.inMemoryDatabaseBuilder<AppDb>()
 internal fun account(id: String, serverUrl: String = "https://$id.example.test/", signedIn: Boolean = true) =
     AccountEntity(id = id, serverUrl = serverUrl, accountId = "server-$id", email = "$id@example.com", label = id, signedIn = signedIn)
 
-internal fun list(id: String, accountId: String) = ListEntity(
-    id = id,
+/** A list with local id [id]; its server id differs from it unless given. */
+internal fun list(id: String, accountId: String, serverId: String = "srv-$id") = ListEntity(
+    localId = id,
+    serverId = serverId,
     accountId = accountId,
     createdAt = 1,
     name = id.toLww("dev", 1),
@@ -31,9 +33,12 @@ internal fun list(id: String, accountId: String) = ListEntity(
     dirty = false,
 )
 
-internal fun item(id: String, listId: String) = ItemEntity(
-    id = id,
-    listId = listId,
+/** An item with local id [id] on the list with local id [listId], of that list's [accountId]. */
+internal fun item(id: String, listId: String, accountId: String, serverId: String = "srv-$id") = ItemEntity(
+    localId = id,
+    serverId = serverId,
+    accountId = accountId,
+    listLocalId = listId,
     createdAt = 1,
     name = id.toLww("dev", 1),
     category = null.toLwwOptional("dev", 1),

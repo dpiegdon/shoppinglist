@@ -123,8 +123,9 @@ class ExpenseListViewModel @Inject constructor(
         _uiState.update { it.copy(isVoting = true, voteError = null) }
         val voted = _uiState.value.iHaveVoted
         try {
+            val serverId = checkNotNull(listsRepo.serverIdOf(listId)) { "No list $listId" }
             val api = apiProvider.get()
-            if (voted) api.withdrawCloseVote(listId) else api.castCloseVote(listId)
+            if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
             syncer.syncNow(emptyList())
         } catch (e: ApiException) {
             // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has

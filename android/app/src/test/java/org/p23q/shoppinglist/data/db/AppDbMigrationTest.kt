@@ -87,7 +87,7 @@ class AppDbMigrationTest {
 
     private val migrations = listOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-        MIGRATION_7_8, Migration8To9(FakeLegacySession()),
+        MIGRATION_7_8, Migration8To9(FakeLegacySession()), MIGRATION_9_10,
     )
 
     private fun execWithArgs(connection: SQLiteConnection, sql: String, bindArgs: Array<*>) {
@@ -309,7 +309,7 @@ class AppDbMigrationTest {
         // exported schema left stale by a build that was never re-run. @Database is compile-time
         // retained, so the declared version is read from the schema Room exported from it — the
         // same file the other tests here compare against.
-        val exported = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/9.json")
+        val exported = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/$LATEST.json")
         assertTrue("exported schema missing: ${exported.absolutePath}", exported.exists())
         val declared = Json.parseToJsonElement(exported.readText())
             .jsonObject["database"]!!.jsonObject["version"]!!.jsonPrimitive.content.toInt()
@@ -339,8 +339,8 @@ class AppDbMigrationTest {
         return indices
     }
 
-    private fun expectedIndices(table: String): Set<Pair<String, Boolean>> =
-        exportedEntity(table, 9)["indices"]?.jsonArray.orEmpty().map { index ->
+    private fun expectedIndices(table: String, version: Int = 9): Set<Pair<String, Boolean>> =
+        exportedEntity(table, version)["indices"]?.jsonArray.orEmpty().map { index ->
             val i = index.jsonObject
             i["name"]!!.jsonPrimitive.content to i["unique"]!!.jsonPrimitive.content.toBoolean()
         }.toSet()
@@ -353,8 +353,8 @@ class AppDbMigrationTest {
         return keys
     }
 
-    private fun expectedForeignKeys(table: String): Set<Triple<String, String, String>> =
-        exportedEntity(table, 9)["foreignKeys"]?.jsonArray.orEmpty().flatMap { key ->
+    private fun expectedForeignKeys(table: String, version: Int = 9): Set<Triple<String, String, String>> =
+        exportedEntity(table, version)["foreignKeys"]?.jsonArray.orEmpty().flatMap { key ->
             val k = key.jsonObject
             val columns = k["columns"]!!.jsonArray.map { it.jsonPrimitive.content }
             val referenced = k["referencedColumns"]!!.jsonArray.map { it.jsonPrimitive.content }
@@ -556,6 +556,163 @@ class AppDbMigrationTest {
             assertNull(readText(connection, "SELECT accountId FROM accounts"))
             assertEquals(readText(connection, "SELECT id FROM accounts"), readText(connection, "SELECT accountId FROM lists"))
             connection.prepare("PRAGMA foreign_key_check").use { assertTrue(!it.step()) }
+        } finally {
+            connection.close()
+        }
+    }
+
+    // ---- 9 to 10: phone-local ids (T-299) ----------------------------------------------
+
+    /** The schema this build's database declares; the newest exported schema. */
+    private val LATEST = 10
+
+    /** A version-9 database: [seedV8]'s list and item, owned by the migrated signed-in account. */
+    private fun seedV9(connection: SQLiteConnection, orphans: Boolean = false) {
+        seedV8(connection)
+        if (orphans) insertItem(connection, "orphan-1", listId = "gone", dirty = true)
+        Migration8To9(FakeLegacySession(signedIn)).migrate(supportFacade(connection))
+    }
+
+    /** A second account at version 9, with list [listId] holding item [itemId]. */
+    private fun addV9AccountWithList(connection: SQLiteConnection, accountId: String, listId: String, itemId: String) {
+        connection.execSQL(
+            "INSERT INTO accounts (id, kind, serverUrl, accountId, email, isAdmin, label, signedIn, outdated, " +
+                "serverProtocol, syncCursor, defaultCurrency, ignoredInviteIdsJson, allowSelfSignedCerts, sortOrder) " +
+                "VALUES ('$accountId', 'server', 'https://other.example.com/', 'acc-$accountId', NULL, 0, 'other', " +
+                "1, 0, NULL, 5, NULL, '[]', 0, 1)",
+        )
+        connection.execSQL(
+            "INSERT INTO lists (id, accountId, createdAt, dirty, syncBlocked, membersJson, closeVotesJson, closedAt, " +
+                "name_value, name_updatedAt, name_updatedBy, categoryOrder_value, categoryOrder_updatedAt, " +
+                "categoryOrder_updatedBy, notes_value, notes_updatedAt, notes_updatedBy, kind_value, kind_updatedAt, " +
+                "kind_updatedBy, currency_value, currency_updatedAt, currency_updatedBy, deleted_value, " +
+                "deleted_updatedAt, deleted_updatedBy) " +
+                "VALUES ('$listId', '$accountId', 20, 1, 0, '[]', '[]', NULL, 'Hardware', 21, 'devB', '[]', 0, '', " +
+                "NULL, 0, '', 'checklist', 21, 'devB', NULL, 0, '', 0, 0, '')",
+        )
+        insertItem(connection, itemId, listId = listId, dirty = true)
+    }
+
+    @Test
+    fun `migrating 9 to 10 lands on exactly the schema Room expects`() {
+        val connection = openFresh("v9")
+        try {
+            seedV9(connection)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            for (table in listOf("accounts", "lists", "items")) {
+                assertEquals(table, expectedColumns(table, 10), actualColumns(connection, table))
+                assertEquals(table, expectedIndices(table, 10), actualIndices(connection, table))
+                assertEquals(table, expectedForeignKeys(table, 10), actualForeignKeys(connection, table))
+            }
+            connection.prepare("PRAGMA foreign_key_check").use { assertTrue("no dangling accountId", !it.step()) }
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 9 to 10 keeps every row, each under its old id as local and server id, items with their list's account`() {
+        val connection = openFresh("v9-two-lists")
+        try {
+            seedV9(connection)
+            addV9AccountWithList(connection, accountId = "acct-2", listId = "l2", itemId = "i2")
+            val first = readText(connection, "SELECT id FROM accounts WHERE id != 'acct-2'")!!
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            assertEquals(2L, count(connection, "SELECT COUNT(*) FROM lists"))
+            assertEquals(2L, count(connection, "SELECT COUNT(*) FROM items"))
+            for ((list, owner) in listOf("l1" to first, "l2" to "acct-2")) {
+                assertEquals(list, readText(connection, "SELECT serverId FROM lists WHERE localId = '$list'"))
+                assertEquals(owner, readText(connection, "SELECT accountId FROM lists WHERE localId = '$list'"))
+            }
+            for ((item, list, owner) in listOf(Triple("i1", "l1", first), Triple("i2", "l2", "acct-2"))) {
+                assertEquals(item, readText(connection, "SELECT serverId FROM items WHERE localId = '$item'"))
+                assertEquals(list, readText(connection, "SELECT listLocalId FROM items WHERE localId = '$item'"))
+                assertEquals("the item's account is its list's", owner, readText(connection, "SELECT accountId FROM items WHERE localId = '$item'"))
+            }
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE localId = 'l1'"))
+            assertEquals("checklist", readText(connection, "SELECT kind_value FROM lists WHERE localId = 'l2'"))
+            assertEquals(1L, readLong(connection, "SELECT dirty FROM lists WHERE localId = 'l2'"))
+            assertEquals("Milk", readText(connection, "SELECT name_value FROM items WHERE localId = 'i1'"))
+            assertEquals(1L, readLong(connection, "SELECT dirty FROM items WHERE localId = 'i2'"))
+            assertEquals(12L, readLong(connection, "SELECT status_updatedAt FROM items WHERE localId = 'i2'"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 9 to 10 keeps the stub lists 8 to 9 gave orphan items`() {
+        val connection = openFresh("v9-stub")
+        try {
+            seedV9(connection, orphans = true)
+            val owner = readText(connection, "SELECT id FROM accounts")
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            assertEquals(2L, count(connection, "SELECT COUNT(*) FROM lists"))
+            assertEquals("gone", readText(connection, "SELECT serverId FROM lists WHERE localId = 'gone'"))
+            assertEquals(1L, readLong(connection, "SELECT deleted_value FROM lists WHERE localId = 'gone'"))
+            assertEquals("gone", readText(connection, "SELECT listLocalId FROM items WHERE localId = 'orphan-1'"))
+            assertEquals(owner, readText(connection, "SELECT accountId FROM items WHERE localId = 'orphan-1'"))
+            assertEquals("still unpushed", 1L, readLong(connection, "SELECT dirty FROM items WHERE localId = 'orphan-1'"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 9 to 10 gives an item whose list is gone a stub of the first server account`() {
+        val connection = openFresh("v9-orphan")
+        try {
+            seedV9(connection)
+            addV9AccountWithList(connection, accountId = "acct-2", listId = "l2", itemId = "i2")
+            val first = readText(connection, "SELECT id FROM accounts WHERE id != 'acct-2'")!!
+            insertItem(connection, "orphan-9", listId = "gone-9", dirty = true)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            assertEquals(first, readText(connection, "SELECT accountId FROM lists WHERE localId = 'gone-9'"))
+            assertEquals(1L, readLong(connection, "SELECT deleted_value FROM lists WHERE localId = 'gone-9'"))
+            assertEquals(0L, readLong(connection, "SELECT dirty FROM lists WHERE localId = 'gone-9'"))
+            assertEquals(first, readText(connection, "SELECT accountId FROM items WHERE localId = 'orphan-9'"))
+            assertEquals(3L, count(connection, "SELECT COUNT(*) FROM items"))
+            connection.prepare("PRAGMA foreign_key_check").use { assertTrue(!it.step()) }
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 9 to 10 drops an item that neither a list nor any account holds`() {
+        val connection = openFresh("v9-nobody")
+        try {
+            connection.execSQL(v1Lists)
+            connection.execSQL(v1Items)
+            runMigrations(connection, from = 1, to = 9)
+            insertItem(connection, "orphan-1", listId = "gone", dirty = true)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+
+            assertEquals(0L, count(connection, "SELECT COUNT(*) FROM lists"))
+            assertEquals(0L, count(connection, "SELECT COUNT(*) FROM items"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 1 to 10 lands on the same schema and keeps the rows`() {
+        val connection = openFresh("v1-to-10")
+        try {
+            seedV1(connection)
+            runMigrations(connection, from = 1, to = LATEST)
+
+            for (table in listOf("accounts", "lists", "items")) {
+                assertEquals(table, expectedColumns(table, LATEST), actualColumns(connection, table))
+                assertEquals(table, expectedIndices(table, LATEST), actualIndices(connection, table))
+            }
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE localId = 'l1'"))
+            assertEquals("l1", readText(connection, "SELECT listLocalId FROM items WHERE localId = 'i1'"))
+            assertEquals(readText(connection, "SELECT id FROM accounts"), readText(connection, "SELECT accountId FROM items"))
         } finally {
             connection.close()
         }

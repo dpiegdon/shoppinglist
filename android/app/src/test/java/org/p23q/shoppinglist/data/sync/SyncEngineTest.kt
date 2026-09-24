@@ -72,8 +72,8 @@ class SyncEngineTest {
         private val delegate: ItemDao,
         private val insideTheWindow: suspend () -> Unit,
     ) : ItemDao by delegate {
-        override suspend fun getById(id: String): ItemEntity? {
-            val row = delegate.getById(id)
+        override suspend fun getByServerId(accountId: String, serverId: String): ItemEntity? {
+            val row = delegate.getByServerId(accountId, serverId)
             insideTheWindow()
             return row
         }
@@ -134,9 +134,29 @@ class SyncEngineTest {
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(accountId = accountId, email = email) }
     }
 
-    private fun dummyItem(id: String, name: String, dirty: Boolean, at: Long = 1_000L): ItemEntity = ItemEntity(
-        id = id,
-        listId = "list-1",
+    /**
+     * The test's rows name each other by server id, as the wire does; each row's local id is
+     * `local-` and its server id, so that a mix-up of the two shows (T-299).
+     */
+    private fun localId(serverId: String) = "local-$serverId"
+
+    /** The row of [accountId] whose server id is [serverId]. */
+    private suspend fun item(serverId: String, accountId: String = TEST_ACCOUNT_ID) = db.itemDao().getByServerId(accountId, serverId)
+
+    private suspend fun list(serverId: String, accountId: String = TEST_ACCOUNT_ID) = db.listDao().getByServerId(accountId, serverId)
+
+    private fun dummyItem(
+        id: String,
+        name: String,
+        dirty: Boolean,
+        at: Long = 1_000L,
+        list: String = "list-1",
+        accountId: String = TEST_ACCOUNT_ID,
+    ): ItemEntity = ItemEntity(
+        localId = localId(id),
+        serverId = id,
+        accountId = accountId,
+        listLocalId = localId(list),
         createdAt = at,
         name = name.toLww("this-device", at),
         category = null.toLwwOptional("this-device", at),
@@ -150,7 +170,8 @@ class SyncEngineTest {
     )
 
     private fun dummyList(id: String, name: String, dirty: Boolean, at: Long = 1_000L, accountId: String = TEST_ACCOUNT_ID): ListEntity = ListEntity(
-        id = id,
+        localId = localId(id),
+        serverId = id,
         accountId = accountId,
         createdAt = at,
         name = name.toLww("this-device", at),
@@ -203,7 +224,7 @@ class SyncEngineTest {
         assertTrue(result is SyncResult.Success)
         val recorded = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         assertEquals(listOf("item-1"), recorded.changes.items.map { it.id })
-        val stored = db.itemDao().getById("item-1")!!
+        val stored = item("item-1")!!
         assertFalse(stored.dirty)
         assertEquals(1L, cursor())
 
@@ -244,7 +265,7 @@ class SyncEngineTest {
         assertTrue(result is SyncResult.Success)
         val recorded = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         assertTrue(recorded.changes.items.isEmpty())
-        val stored = db.itemDao().getById("item-2")!!
+        val stored = item("item-2")!!
         assertEquals("Bread", stored.name.value)
         assertFalse(stored.dirty)
         assertEquals(5L, cursor())
@@ -278,7 +299,7 @@ class SyncEngineTest {
 
         syncEngine.syncNow()
 
-        val stored = db.itemDao().getById("item-1")!!
+        val stored = item("item-1")!!
         assertEquals("Milk 2%", stored.name.value)
         assertTrue("row should still be dirty since the name field wasn't actually acknowledged", stored.dirty)
     }
@@ -300,8 +321,8 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        assertNull("a synced row is dropped for the cursor-0 pull to bring back", db.itemDao().getById("item-synced"))
-        assertNotNull("an unpushed edit is not", db.itemDao().getById("item-1"))
+        assertNull("a synced row is dropped for the cursor-0 pull to bring back", item("item-synced"))
+        assertNotNull("an unpushed edit is not", item("item-1"))
         assertEquals(1L, cursor())
         val firstRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         val retryRequest = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
@@ -349,7 +370,7 @@ class SyncEngineTest {
     fun `410 full_resync_required keeps a quarantined row and its reason (T-259)`() = runTest {
         pointAtServer()
         db.itemDao().upsert(dummyItem("parked", "Dinner", dirty = true))
-        db.itemDao().blockRow("parked", "participant_frozen", "acct-other")
+        db.itemDao().blockRow(localId("parked"), "participant_frozen", "acct-other")
         setCursor(999L)
 
         server.enqueue(
@@ -361,7 +382,7 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        val parked = db.itemDao().getById("parked")
+        val parked = item("parked")
         assertNotNull("a refused row the user has not corrected yet is not the server's to reproduce", parked)
         assertTrue(parked!!.syncBlocked)
         assertEquals("participant_frozen", parked.syncBlockedCode)
@@ -387,8 +408,8 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        assertTrue("the rejected row is quarantined", db.itemDao().getById("bad-item")!!.syncBlocked)
-        assertFalse("the healthy row is not", db.itemDao().getById("good-item")!!.syncBlocked)
+        assertTrue("the rejected row is quarantined", item("bad-item")!!.syncBlocked)
+        assertFalse("the healthy row is not", item("good-item")!!.syncBlocked)
 
         val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
@@ -416,7 +437,7 @@ class SyncEngineTest {
 
         assertTrue(syncEngine.syncNow() is SyncResult.Success)
 
-        val parked = db.itemDao().getById("dinner")!!
+        val parked = item("dinner")!!
         assertTrue(parked.syncBlocked)
         // Not just that it was refused: the code and the participant it named, so the row itself
         // can say why long after the exception is gone.
@@ -449,7 +470,7 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        val parked = db.listDao().getById("list-1")!!
+        val parked = list("list-1")!!
         assertTrue("the refused list row is quarantined", parked.syncBlocked)
         // Everything the server owns is still mirrored onto the parked row — the vote that caused
         // the refusal included, which is what tells the UI why nothing is moving.
@@ -481,8 +502,8 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        assertTrue("the rejected list is quarantined", db.listDao().getById("bad-list")!!.syncBlocked)
-        assertFalse("the healthy one is not", db.listDao().getById("good-list")!!.syncBlocked)
+        assertTrue("the rejected list is quarantined", list("bad-list")!!.syncBlocked)
+        assertFalse("the healthy one is not", list("good-list")!!.syncBlocked)
 
         val first = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         val retry = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
@@ -513,7 +534,7 @@ class SyncEngineTest {
         db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
         db.itemDao().upsert(dummyItem("item-2", "Bread", dirty = true))
         db.itemDao().upsert(dummyItem("parked", "Dinner", dirty = false))
-        db.itemDao().blockRow("parked", "participant_frozen", "acct-other")
+        db.itemDao().blockRow(localId("parked"), "participant_frozen", "acct-other")
         db.listDao().upsert(dummyList("list-2", "Trip", dirty = true))
 
         syncEngine.seedStatus()
@@ -538,7 +559,7 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Unauthorized)
-        assertTrue("dirty row should be untouched", db.itemDao().getById("item-1")!!.dirty)
+        assertTrue("dirty row should be untouched", item("item-1")!!.dirty)
     }
 
     // --- Too old for this server (T-244) -----------------------------------------------------
@@ -558,10 +579,10 @@ class SyncEngineTest {
         assertTrue(result is SyncResult.UpdateRequired)
         // The app being outdated says nothing about the queue: every row is still there, still
         // dirty, still unblocked, ready to go out unchanged from an updated build.
-        val item = db.itemDao().getById("item-1")!!
+        val item = item("item-1")!!
         assertTrue("dirty item should be untouched", item.dirty)
         assertFalse("nothing was quarantined", item.syncBlocked)
-        val list = db.listDao().getById("list-1")!!
+        val list = list("list-1")!!
         assertTrue("dirty list should be untouched", list.dirty)
         assertFalse("nothing was quarantined", list.syncBlocked)
         assertEquals(0, syncStatus.state.value.blockedCount)
@@ -588,7 +609,7 @@ class SyncEngineTest {
         assertTrue(syncEngine.syncNow(fullLists = listOf("list-1")) is SyncResult.UpdateRequired)
 
         assertEquals(afterFirst, server.requestCount)
-        assertTrue("dirty row should still be pushable", db.itemDao().getById("item-1")!!.dirty)
+        assertTrue("dirty row should still be pushable", item("item-1")!!.dirty)
     }
 
     // --- Collaborator-change detection (T-65) -----------------------------------------------
@@ -644,7 +665,7 @@ class SyncEngineTest {
         syncEngine.syncNow()
 
         assertEquals(1, notifier.calls.size)
-        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2)), notifier.calls.single())
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 2)), notifier.calls.single())
     }
 
     @Test
@@ -737,7 +758,7 @@ class SyncEngineTest {
         syncEngine.syncNow()
 
         assertEquals("acc-me", accounts.registry.get(TEST_ACCOUNT_ID)!!.accountId)
-        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 1)), notifier.calls.single())
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 1)), notifier.calls.single())
     }
 
     // ---- batch chunking (T-114) ---------------------------------------------
@@ -861,7 +882,7 @@ class SyncEngineTest {
         val probedEngine = SyncEngine(
             MergeWindowItemDao(db.itemDao()) {
                 if (tap == null) {
-                    tap = shopper.launch { itemsRepo.setStatus("item-1", Status.CHECKED) }
+                    tap = shopper.launch { itemsRepo.setStatus(localId("item-1"), Status.CHECKED) }
                     committedInsideTheWindow = withTimeoutOrNull(2_000) { tap!!.join() } != null
                 }
             },
@@ -893,7 +914,7 @@ class SyncEngineTest {
         tap!!.join()
 
         assertTrue(result is SyncResult.Success)
-        val stored = db.itemDao().getById("item-1")!!
+        val stored = item("item-1")!!
         assertEquals("the tap was overwritten by the merge writing back the pre-tap row", "checked", stored.status.value)
         assertTrue("and, overwritten with the pre-tap clocks, it wasn't even left queued", stored.dirty)
         // The rest of the pull still landed — the tap only claims the field it touched.
@@ -913,7 +934,7 @@ class SyncEngineTest {
     private suspend fun secondAccount(other: MockWebServer) {
         accounts.add(other.url("/").toString(), id = "second", token = "tok-second", accountId = "acc-second")
         db.listDao().upsert(dummyList("list-2", "Theirs", dirty = false, at = 0L, accountId = "second"))
-        db.itemDao().upsert(dummyItem("their-item", "Tea", dirty = true).copy(listId = "list-2"))
+        db.itemDao().upsert(dummyItem("their-item", "Tea", dirty = true, list = "list-2", accountId = "second"))
     }
 
     private fun withSecondServer(block: suspend (MockWebServer) -> Unit) = runTest {
@@ -1038,7 +1059,7 @@ class SyncEngineTest {
     fun `a 410 re-base drops only that account's synced rows`() = withSecondServer { other ->
         pointAtServer()
         secondAccount(other)
-        db.itemDao().upsert(dummyItem("their-synced", "Coffee", dirty = false).copy(listId = "list-2"))
+        db.itemDao().upsert(dummyItem("their-synced", "Coffee", dirty = false, list = "list-2", accountId = "second"))
         db.itemDao().upsert(dummyItem("my-synced", "Bread", dirty = false))
         setCursor(999)
         server.enqueue(MockResponse().setResponseCode(410).setBody("""{"error": "full_resync_required", "message": "old"}"""))
@@ -1047,23 +1068,39 @@ class SyncEngineTest {
 
         assertTrue(syncEngine.syncNow() is SyncResult.Success)
 
-        assertNull(db.itemDao().getById("my-synced"))
-        assertNotNull("another account's mirror is not re-based", db.itemDao().getById("their-synced"))
-        assertNotNull(db.listDao().getById("list-2"))
+        assertNull(item("my-synced"))
+        assertNotNull("another account's mirror is not re-based", item("their-synced", "second"))
+        assertNotNull(list("list-2", "second"))
     }
 
     @Test
-    fun `a full snapshot is asked only of the account that holds the list`() = withSecondServer { other ->
+    fun `a full snapshot for a named account is asked of that account alone`() = withSecondServer { other ->
         pointAtServer()
         secondAccount(other)
         server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
         other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
 
+        // list-2 is a server id the second account holds, but server ids are per account (T-299).
         syncEngine.syncNow(fullLists = listOf("list-2", "joined-just-now"), fullListsAccountId = TEST_ACCOUNT_ID)
 
         val mine = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
         val theirs = Json.decodeFromString<SyncRequest>(other.takeRequest().body.readUtf8())
-        assertEquals(listOf("joined-just-now"), mine.fullLists)
+        assertEquals(listOf("list-2", "joined-just-now"), mine.fullLists)
+        assertEquals(emptyList<String>(), theirs.fullLists)
+    }
+
+    @Test
+    fun `a full snapshot for no account in particular is asked of each account that holds the list`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        syncEngine.syncNow(fullLists = listOf("list-2", "list-1", "nobody-has-it"))
+
+        val mine = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        val theirs = Json.decodeFromString<SyncRequest>(other.takeRequest().body.readUtf8())
+        assertEquals(listOf("list-1"), mine.fullLists)
         assertEquals(listOf("list-2"), theirs.fullLists)
     }
 
@@ -1078,7 +1115,7 @@ class SyncEngineTest {
 
         syncEngine.syncNow()
 
-        assertEquals(TEST_ACCOUNT_ID, db.listDao().getById("new-list")!!.accountId)
+        assertEquals(TEST_ACCOUNT_ID, list("new-list")!!.accountId)
     }
 
     @Test
@@ -1174,8 +1211,8 @@ class SyncEngineTest {
 
         assertFalse("the removal waited for the sync", removedDuringTheRequest)
         assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
-        assertNull(db.listDao().getById("new-list"))
-        assertNull(db.listDao().getById("list-1"))
+        assertNull(list("new-list"))
+        assertNull(list("list-1"))
         assertFalse("its status is not brought back", syncStatus.accounts.value.containsKey(TEST_ACCOUNT_ID))
     }
 }

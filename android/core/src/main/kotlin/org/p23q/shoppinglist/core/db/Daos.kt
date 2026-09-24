@@ -7,28 +7,38 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 /** Per-list open-item count projection ([ItemDao.openItemCounts], T-42). */
-data class ListOpenCount(val listId: String, val openCount: Int)
+data class ListOpenCount(val listLocalId: String, val openCount: Int)
 
+/**
+ * Every id these queries take or return is a local id ([ItemEntity.localId], [ListEntity.localId];
+ * a `listId` parameter is a list's local id) unless its name says `serverId`. Server ids are
+ * unique only per account, so a lookup by one always names the account too.
+ */
 @Dao
 interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(item: ItemEntity)
 
-    @Query("SELECT * FROM items WHERE id = :id")
-    suspend fun getById(id: String): ItemEntity?
+    @Query("SELECT * FROM items WHERE localId = :localId")
+    suspend fun get(localId: String): ItemEntity?
+
+    /** The account's row for an item its server calls [serverId]; only the sync engine asks this. */
+    @Query("SELECT * FROM items WHERE accountId = :accountId AND serverId = :serverId")
+    suspend fun getByServerId(accountId: String, serverId: String): ItemEntity?
 
     /**
      * Case-insensitive exact-name lookup for the local uniqueness pre-check (Global Constraints:
-     * item names unique per list, case-insensitive). [excludingId] takes an empty-string sentinel
-     * (item ids are UUIDs, never "") rather than a nullable bind, so a rename can exclude itself.
+     * item names unique per list, case-insensitive). [excludingLocalId] takes an empty-string
+     * sentinel (local ids are UUIDs, never "") rather than a nullable bind, so a rename can exclude
+     * itself.
      */
     @Query(
-        "SELECT * FROM items WHERE listId = :listId AND deleted_value = 0 " +
-            "AND lower(name_value) = lower(:name) AND id != :excludingId LIMIT 1",
+        "SELECT * FROM items WHERE listLocalId = :listId AND deleted_value = 0 " +
+            "AND lower(name_value) = lower(:name) AND localId != :excludingLocalId LIMIT 1",
     )
-    suspend fun findByExactName(listId: String, name: String, excludingId: String): ItemEntity?
+    suspend fun findByExactName(listId: String, name: String, excludingLocalId: String): ItemEntity?
 
-    @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
+    @Query("SELECT * FROM items WHERE listLocalId = :listId AND status_value = :status AND deleted_value = 0")
     fun itemsForListByStatus(listId: String, status: String): Flow<List<ItemEntity>>
 
     /**
@@ -37,11 +47,11 @@ interface ItemDao {
      * disagree during a status change (both hold the row), which duplicated a LazyColumn key and
      * crashed the screen (fix).
      */
-    @Query("SELECT * FROM items WHERE listId = :listId AND status_value != 'backlog' AND deleted_value = 0")
+    @Query("SELECT * FROM items WHERE listLocalId = :listId AND status_value != 'backlog' AND deleted_value = 0")
     fun itemsForList(listId: String): Flow<List<ItemEntity>>
 
     /** One-shot (non-Flow) variant, for bulk ops like clear-checked that read the current set once (T-35). */
-    @Query("SELECT * FROM items WHERE listId = :listId AND status_value = :status AND deleted_value = 0")
+    @Query("SELECT * FROM items WHERE listLocalId = :listId AND status_value = :status AND deleted_value = 0")
     suspend fun itemsForListByStatusOnce(listId: String, status: String): List<ItemEntity>
 
     /**
@@ -51,22 +61,22 @@ interface ItemDao {
      * the two can name the same no-longer-a-member person differently; it had drifted onto
      * [activeItemsForListOnce] instead, which additionally counts backlog.
      */
-    @Query("SELECT * FROM items WHERE listId = :listId AND status_value != 'backlog' AND deleted_value = 0")
+    @Query("SELECT * FROM items WHERE listLocalId = :listId AND status_value != 'backlog' AND deleted_value = 0")
     suspend fun itemsForListOnce(listId: String): List<ItemEntity>
 
     /** Every non-deleted item regardless of status, for a full-list snapshot like duplicate (T-63). */
-    @Query("SELECT * FROM items WHERE listId = :listId AND deleted_value = 0")
+    @Query("SELECT * FROM items WHERE listLocalId = :listId AND deleted_value = 0")
     suspend fun activeItemsForListOnce(listId: String): List<ItemEntity>
 
     @Query(
-        "SELECT * FROM items WHERE listId = :listId AND deleted_value = 0 " +
+        "SELECT * FROM items WHERE listLocalId = :listId AND deleted_value = 0 " +
             "AND name_value LIKE '%' || :nameQuery || '%' COLLATE NOCASE",
     )
     fun searchRegistry(listId: String, nameQuery: String): Flow<List<ItemEntity>>
 
     @Query(
         "SELECT DISTINCT category_value FROM items " +
-            "WHERE listId = :listId AND deleted_value = 0 AND category_value IS NOT NULL",
+            "WHERE listLocalId = :listId AND deleted_value = 0 AND category_value IS NOT NULL",
     )
     fun distinctCategories(listId: String): Flow<List<String>>
 
@@ -76,7 +86,7 @@ interface ItemDao {
      */
     @Query(
         "SELECT category_value FROM items " +
-            "WHERE listId = :listId AND deleted_value = 0 AND category_value IS NOT NULL",
+            "WHERE listLocalId = :listId AND deleted_value = 0 AND category_value IS NOT NULL",
     )
     fun categoryValues(listId: String): Flow<List<String>>
 
@@ -84,22 +94,19 @@ interface ItemDao {
      * Every item's encoded stores list (T-138). Each row holds a JSON array, not one store, so
      * the distinct set can't be a SELECT DISTINCT — the caller decodes and flattens these.
      */
-    @Query("SELECT stores_value FROM items WHERE listId = :listId AND deleted_value = 0")
+    @Query("SELECT stores_value FROM items WHERE listLocalId = :listId AND deleted_value = 0")
     fun storeValues(listId: String): Flow<List<String>>
 
     /** Rows to push: dirty AND not quarantined by a prior server 422 (T-32). */
     @Query("SELECT * FROM items WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ItemEntity>
 
-    /** [dirtyRows] for one account's lists: what a sync with that account's server pushes. */
-    @Query(
-        "SELECT items.* FROM items INNER JOIN lists ON lists.id = items.listId " +
-            "WHERE lists.accountId = :accountId AND items.dirty = 1 AND items.syncBlocked = 0",
-    )
+    /** [dirtyRows] for one account: what a sync with that account's server pushes, oldest row first. */
+    @Query("SELECT * FROM items WHERE accountId = :accountId AND dirty = 1 AND syncBlocked = 0 ORDER BY rowid")
     suspend fun dirtyRowsForAccount(accountId: String): List<ItemEntity>
 
-    @Query("UPDATE items SET dirty = 0 WHERE id IN (:ids)")
-    suspend fun clearDirty(ids: List<String>)
+    @Query("UPDATE items SET dirty = 0 WHERE localId IN (:localIds)")
+    suspend fun clearDirty(localIds: List<String>)
 
     /**
      * Quarantine a row the server rejected (T-32); dirtyRows() then skips it until it's re-edited.
@@ -107,23 +114,20 @@ interface ItemDao {
      */
     @Query(
         "UPDATE items SET syncBlocked = 1, syncBlockedCode = :code, syncBlockedAccountId = :accountId " +
-            "WHERE id = :id",
+            "WHERE localId = :localId",
     )
-    suspend fun blockRow(id: String, code: String?, accountId: String?)
+    suspend fun blockRow(localId: String, code: String?, accountId: String?)
 
     @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
     suspend fun blockedRowCount(): Int
 
-    @Query(
-        "SELECT COUNT(*) FROM items INNER JOIN lists ON lists.id = items.listId " +
-            "WHERE lists.accountId = :accountId AND items.syncBlocked = 1",
-    )
+    @Query("SELECT COUNT(*) FROM items WHERE accountId = :accountId AND syncBlocked = 1")
     suspend fun blockedRowCountForAccount(accountId: String): Int
 
     /** Per-list count of open (todo) items, for the Overview cards (T-42). */
     @Query(
-        "SELECT listId, COUNT(*) AS openCount FROM items " +
-            "WHERE status_value = 'todo' AND deleted_value = 0 GROUP BY listId",
+        "SELECT listLocalId, COUNT(*) AS openCount FROM items " +
+            "WHERE status_value = 'todo' AND deleted_value = 0 GROUP BY listLocalId",
     )
     fun openItemCounts(): Flow<List<ListOpenCount>>
 
@@ -131,7 +135,7 @@ interface ItemDao {
      * Every non-deleted expense entry, across every list, for the Overview's ledger cards (T-265).
      * Recording or editing an entry touches only this table, not the list row, so a summary driven
      * by the lists flow alone goes stale until something else changes it — a rename, a pull, process
-     * death. Live here instead, and joined to the list roster by listId in the view model.
+     * death. Live here instead, and joined to the list roster by listLocalId in the view model.
      */
     @Query("SELECT * FROM items WHERE deleted_value = 0 AND expense_value IS NOT NULL")
     fun expenseItems(): Flow<List<ItemEntity>>
@@ -141,7 +145,7 @@ interface ItemDao {
     suspend fun firstBlockedItem(): ItemEntity?
 
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
-    @Query("DELETE FROM items WHERE listId = :listId")
+    @Query("DELETE FROM items WHERE listLocalId = :listId")
     suspend fun hardDeleteByListId(listId: String)
 
     /**
@@ -156,14 +160,11 @@ interface ItemDao {
      * pull, but "re-base" must not mean "delete the week of offline edits that has not gone out
      * yet". What is kept is then reconciled by the ordinary field-level LWW merge of that pull.
      */
-    @Query(
-        "DELETE FROM items WHERE dirty = 0 AND syncBlocked = 0 " +
-            "AND listId IN (SELECT id FROM lists WHERE accountId = :accountId)",
-    )
+    @Query("DELETE FROM items WHERE accountId = :accountId AND dirty = 0 AND syncBlocked = 0")
     suspend fun deleteSyncedRowsForAccount(accountId: String)
 
-    /** Every item of one account's lists, for removing the account from this device. */
-    @Query("DELETE FROM items WHERE listId IN (SELECT id FROM lists WHERE accountId = :accountId)")
+    /** Every item of one account, for removing the account from this device. */
+    @Query("DELETE FROM items WHERE accountId = :accountId")
     suspend fun deleteForAccount(accountId: String)
 
     /**
@@ -171,22 +172,31 @@ interface ItemDao {
      * list, T-157): the local row can never be pushed and can never be overwritten by a pull,
      * since its clocks are newer, so the only way back to the truth is to fetch it again.
      */
-    @Query("DELETE FROM items WHERE id = :id")
-    suspend fun hardDelete(id: String)
+    @Query("DELETE FROM items WHERE localId = :localId")
+    suspend fun hardDelete(localId: String)
 }
 
+/** Ids as in [ItemDao]. */
 @Dao
 interface ListDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(list: ListEntity)
 
-    @Query("SELECT * FROM lists WHERE id = :id")
-    suspend fun getById(id: String): ListEntity?
+    @Query("SELECT * FROM lists WHERE localId = :localId")
+    suspend fun get(localId: String): ListEntity?
+
+    /** The account's row for a list its server calls [serverId]; see [ItemDao.getByServerId]. */
+    @Query("SELECT * FROM lists WHERE accountId = :accountId AND serverId = :serverId")
+    suspend fun getByServerId(accountId: String, serverId: String): ListEntity?
+
+    /** Several rows at once, for the list ids a push's items name. */
+    @Query("SELECT * FROM lists WHERE localId IN (:localIds)")
+    suspend fun getAll(localIds: List<String>): List<ListEntity>
 
     /** Live single-list observation — screens use this so a rename / category-order change (local
      *  or arriving via sync) reflects without recreating the screen (T-34). */
-    @Query("SELECT * FROM lists WHERE id = :id")
-    fun observeById(id: String): Flow<ListEntity?>
+    @Query("SELECT * FROM lists WHERE localId = :localId")
+    fun observe(localId: String): Flow<ListEntity?>
 
     // Unordered on purpose: ListsRepo sorts in the shared name order (T-176).
     @Query("SELECT * FROM lists WHERE deleted_value = 0")
@@ -196,29 +206,30 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE dirty = 1 AND syncBlocked = 0")
     suspend fun dirtyRows(): List<ListEntity>
 
-    @Query("SELECT * FROM lists WHERE accountId = :accountId AND dirty = 1 AND syncBlocked = 0")
+    /** Oldest row first, as for items. */
+    @Query("SELECT * FROM lists WHERE accountId = :accountId AND dirty = 1 AND syncBlocked = 0 ORDER BY rowid")
     suspend fun dirtyRowsForAccount(accountId: String): List<ListEntity>
 
     @Query("SELECT COUNT(*) FROM lists WHERE accountId = :accountId AND syncBlocked = 1")
     suspend fun blockedRowCountForAccount(accountId: String): Int
 
-    /** Any non-deleted list of one account, for that account's accountId self-heal (T-74). */
-    @Query("SELECT id FROM lists WHERE accountId = :accountId AND deleted_value = 0 LIMIT 1")
-    suspend fun anyActiveListIdForAccount(accountId: String): String?
+    /** The server id of any non-deleted list of one account, for that account's accountId self-heal (T-74). */
+    @Query("SELECT serverId FROM lists WHERE accountId = :accountId AND deleted_value = 0 LIMIT 1")
+    suspend fun anyActiveListServerIdForAccount(accountId: String): String?
 
     /** Quarantine a list the server rejected (T-198); dirtyRows() then skips it until it's re-edited. */
-    @Query("UPDATE lists SET syncBlocked = 1 WHERE id = :id")
-    suspend fun blockRow(id: String)
+    @Query("UPDATE lists SET syncBlocked = 1 WHERE localId = :localId")
+    suspend fun blockRow(localId: String)
 
     @Query("SELECT COUNT(*) FROM lists WHERE syncBlocked = 1")
     suspend fun blockedRowCount(): Int
 
     /** A quarantined list, so the sync-health surface can open it even when no item is blocked (T-198). */
-    @Query("SELECT id FROM lists WHERE syncBlocked = 1 LIMIT 1")
+    @Query("SELECT localId FROM lists WHERE syncBlocked = 1 LIMIT 1")
     suspend fun firstBlockedListId(): String?
 
-    @Query("UPDATE lists SET dirty = 0 WHERE id IN (:ids)")
-    suspend fun clearDirty(ids: List<String>)
+    @Query("UPDATE lists SET dirty = 0 WHERE localId IN (:localIds)")
+    suspend fun clearDirty(localIds: List<String>)
 
     /**
      * The list twin of [ItemDao.deleteSyncedRowsForAccount]. Run after it: a list that still holds
@@ -227,7 +238,7 @@ interface ListDao {
      */
     @Query(
         "DELETE FROM lists WHERE accountId = :accountId AND dirty = 0 AND syncBlocked = 0 " +
-            "AND id NOT IN (SELECT listId FROM items)",
+            "AND localId NOT IN (SELECT listLocalId FROM items)",
     )
     suspend fun deleteSyncedRowsForAccount(accountId: String)
 
@@ -235,6 +246,6 @@ interface ListDao {
     suspend fun deleteForAccount(accountId: String)
 
     /** Real delete, not the LWW tombstone (A9: leaving a shared list) — never queued for sync. */
-    @Query("DELETE FROM lists WHERE id = :id")
-    suspend fun hardDelete(id: String)
+    @Query("DELETE FROM lists WHERE localId = :localId")
+    suspend fun hardDelete(localId: String)
 }

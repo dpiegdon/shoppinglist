@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.core.api.ProtocolInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncStatus
@@ -97,6 +98,20 @@ fun testAccount(
  * owner. A test that also uses an [AccountRegistry] adds its accounts through the registry instead.
  */
 suspend fun AppDb.insertTestAccount(account: AccountEntity = testAccount()) = accountDao().insert(account)
+
+/** A [ListsRepo] over [db], as the screens get one. */
+fun testListsRepo(db: AppDb): ListsRepo =
+    ListsRepo(db, DeviceIdProvider { "this-device" }, org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+/** A `/sync` answer that brings the list its server calls [serverId], as a pull after joining one does. */
+fun syncResponseWithList(serverId: String, name: String = "Shared", cursor: Long = 1): String = """
+    {"cursor": $cursor, "changes": {"lists": [{"id": "$serverId", "created_at": 1000, "fields": {
+      "name": {"value": "$name", "updated_at": 1000, "updated_by": "other-device"},
+      "category_order": {"value": [], "updated_at": 1000, "updated_by": "other-device"},
+      "notes": {"value": null, "updated_at": 1000, "updated_by": "other-device"},
+      "deleted": {"value": false, "updated_at": 1000, "updated_by": "other-device"}
+    }}], "items": []}}
+""".trimIndent()
 
 /** An [ApiSource] against whatever URL [baseUrl] says at the time of the call, like the app's. */
 fun testApiSource(

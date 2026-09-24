@@ -83,19 +83,37 @@ class AccountRegistryTest {
         val registry = AccountRegistry(db)
         registry.add(account("a"))
         registry.add(account("b"))
-        db.listDao().upsert(list("la", "a"))
-        db.listDao().upsert(list("lb", "b"))
-        db.itemDao().upsert(item("ia", "la"))
-        db.itemDao().upsert(item("ib", "lb"))
+        // Both accounts hold the same shared list: one row each, under the same server ids (T-299).
+        db.listDao().upsert(list("la", "a", serverId = "shared"))
+        db.listDao().upsert(list("lb", "b", serverId = "shared"))
+        db.itemDao().upsert(item("ia", "la", "a", serverId = "shared-item"))
+        db.itemDao().upsert(item("ib", "lb", "b", serverId = "shared-item"))
 
         registry.remove("a")
 
         assertNull(registry.get("a"))
         assertEquals(listOf("b"), db.accountDao().all().map { it.id })
-        assertNull(db.listDao().getById("la"))
-        assertNull(db.itemDao().getById("ia"))
-        assertEquals("lb", db.listDao().getById("lb")!!.id)
-        assertEquals("ib", db.itemDao().getById("ib")!!.id)
+        assertNull(db.listDao().get("la"))
+        assertNull(db.itemDao().get("ia"))
+        assertEquals("lb", db.listDao().getByServerId("b", "shared")!!.localId)
+        assertEquals("ib", db.itemDao().getByServerId("b", "shared-item")!!.localId)
+    }
+
+    @Test
+    fun `one account cannot hold two rows with the same server id`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.add(account("a"))
+        db.listDao().upsert(list("l1", "a", serverId = "same"))
+        db.itemDao().upsert(item("i1", "l1", "a", serverId = "same-item"))
+        // REPLACE resolves the unique (accountId, serverId) index by dropping the older row: there
+        // is never a second row, so a lookup by server id is always unambiguous.
+        db.listDao().upsert(list("l2", "a", serverId = "same"))
+        db.itemDao().upsert(item("i2", "l2", "a", serverId = "same-item"))
+
+        assertNull(db.listDao().get("l1"))
+        assertNull(db.itemDao().get("i1"))
+        assertEquals("l2", db.listDao().getByServerId("a", "same")!!.localId)
+        assertEquals("i2", db.itemDao().getByServerId("a", "same-item")!!.localId)
     }
 
     @Test

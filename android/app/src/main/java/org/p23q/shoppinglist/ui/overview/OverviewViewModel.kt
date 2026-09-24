@@ -95,14 +95,14 @@ class OverviewViewModel @Inject constructor(
             // activeLists() emits kept showing the old total and balance until something else
             // changed the list (a rename, a pull, process death).
             combine(listsRepo.activeLists(), itemsRepo.expenseItems(), ::Pair).collect { (lists, allExpenseItems) ->
-                val itemsByList = allExpenseItems.groupBy { it.listId }
+                val itemsByList = allExpenseItems.groupBy { it.listLocalId }
                 val summaries = lists.filter { ListKind.isExpenses(it.kind.value) }.associate { list ->
-                    val expenses = (itemsByList[list.id] ?: emptyList())
+                    val expenses = (itemsByList[list.localId] ?: emptyList())
                         .mapNotNull { itemsRepo.decodeExpense(it.expense.value) }
                     val members = listsRepo.decodeMembers(list.membersJson)
                     val balance = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
                         .firstOrNull { b -> b.accountId == currentAccount.accountId }
-                    list.id to ExpenseSummary(
+                    list.localId to ExpenseSummary(
                         // Net spent, as on the ledger itself: income off it, settlements counting
                         // for nothing (T-245).
                         totalCents = ExpenseMath.spentTotals(expenses).netCents,
@@ -120,7 +120,7 @@ class OverviewViewModel @Inject constructor(
                 // Resolve which list the attention banner should open only when something is blocked.
                 // A blocked list row counts too (T-198), so fall back to it when no item is blocked.
                 val attentionListId = if (sync.blockedCount > 0) {
-                    itemsRepo.firstBlockedItem()?.listId ?: listsRepo.firstBlockedListId()
+                    itemsRepo.firstBlockedItem()?.listLocalId ?: listsRepo.firstBlockedListId()
                 } else {
                     null
                 }
@@ -220,8 +220,15 @@ class OverviewViewModel @Inject constructor(
     fun joinInvite(invite: InviteForMeDto): Job = viewModelScope.launch {
         _uiState.update { it.copy(joiningInviteId = invite.id, inviteError = null) }
         try {
-            val listId = apiProvider.get().redeemInvite(RedeemInviteRequest(invite.token)).listId
-            syncer.syncNow(listOf(listId))
+            val serverId = apiProvider.get().redeemInvite(RedeemInviteRequest(invite.token)).listId
+            syncer.syncNow(listOf(serverId))
+            // The server names the list by its server id; the screens need this phone's row of it,
+            // which the sync just pulled. Without it (the pull failed) there is nothing to open yet.
+            val accountId = currentAccount.localId
+            val listId = accountId?.let { listsRepo.localIdForServerId(it, serverId) } ?: run {
+                _uiState.update { it.copy(joiningInviteId = null, inviteError = UiText.res(R.string.error_offline)) }
+                return@launch
+            }
             currentAccount.lastOpenedListId = listId
             _uiState.update { it.copy(joiningInviteId = null, joinedListId = listId) }
         } catch (e: ApiException) {

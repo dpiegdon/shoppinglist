@@ -144,8 +144,12 @@ class ListPropsViewModel @Inject constructor(
 
     fun loadMembers(): Job = viewModelScope.launch {
         _uiState.update { it.copy(isMembersLoading = true, membersError = null) }
+        val serverId = listsRepo.serverIdOf(listId) ?: run {
+            _uiState.update { it.copy(isMembersLoading = false) }
+            return@launch
+        }
         try {
-            val response = apiProvider.get().members(listId)
+            val response = apiProvider.get().members(serverId)
             _uiState.update {
                 it.copy(members = response.members, pendingInvites = response.invites, isMembersLoading = false)
             }
@@ -237,7 +241,7 @@ class ListPropsViewModel @Inject constructor(
         return viewModelScope.launch {
             val items = itemsRepo.activeItemsForListOnce(listId)
             val plan = CategoryCanon.planRename(
-                items.map { it.id to (it.category.value ?: "") },
+                items.map { it.localId to (it.category.value ?: "") },
                 current,
                 fromKey,
                 newName,
@@ -257,8 +261,9 @@ class ListPropsViewModel @Inject constructor(
             return null
         }
         return viewModelScope.launch {
+            val serverId = listsRepo.serverIdOf(listId) ?: return@launch
             try {
-                val response = apiProvider.get().createInvite(listId, CreateInviteRequest(email))
+                val response = apiProvider.get().createInvite(serverId, CreateInviteRequest(email))
                 _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, errorMessage = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
@@ -314,8 +319,9 @@ class ListPropsViewModel @Inject constructor(
         val voted = _uiState.value.myAccountId in _uiState.value.closeVotes
         _uiState.update { it.copy(isVoting = true) }
         try {
+            val serverId = checkNotNull(listsRepo.serverIdOf(listId)) { "No list $listId" }
             val api = apiProvider.get()
-            if (voted) api.withdrawCloseVote(listId) else api.castCloseVote(listId)
+            if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
             syncer.syncNow(emptyList())
         } catch (e: ApiException) {
             // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has
@@ -332,8 +338,13 @@ class ListPropsViewModel @Inject constructor(
     }
 
     fun confirmLeave(): Job = viewModelScope.launch {
+        // A list this phone no longer holds has nothing left to leave here.
+        val serverId = listsRepo.serverIdOf(listId) ?: run {
+            _uiState.update { it.copy(isLeaveConfirmOpen = false, hasLeft = true) }
+            return@launch
+        }
         try {
-            apiProvider.get().leaveList(listId)
+            apiProvider.get().leaveList(serverId)
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {

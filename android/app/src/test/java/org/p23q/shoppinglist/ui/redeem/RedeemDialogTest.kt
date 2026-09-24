@@ -15,6 +15,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,7 +47,7 @@ class RedeemDialogTest {
         server = MockWebServer()
         server.start()
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(org.p23q.shoppinglist.data.syncResponseWithList("list-42")))
 
         val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
@@ -61,7 +62,7 @@ class RedeemDialogTest {
             add(server.url("/").toString())
             syncEngine()
         }
-        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
+        val viewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
         var redeemedListId: String? = null
 
         composeTestRule.setContent {
@@ -81,7 +82,9 @@ class RedeemDialogTest {
             attempts++
         }
 
+        val localId = db.listDao().getByServerId(org.p23q.shoppinglist.data.TEST_ACCOUNT_ID, "list-42")?.localId
         db.close()
-        assertEquals("list-42", redeemedListId)
+        assertNotNull(localId)
+        assertEquals(localId, redeemedListId)
     }
 }

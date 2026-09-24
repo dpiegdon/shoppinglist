@@ -10,6 +10,8 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,7 +22,10 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.PendingInviteHolder
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
+import org.p23q.shoppinglist.data.syncResponseWithList
+import org.p23q.shoppinglist.data.testListsRepo
 import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.data.testApiSource
@@ -71,7 +76,11 @@ class RedeemViewModelTest {
         if (::db.isInitialized) db.close()
     }
 
-    private fun newViewModel(): RedeemViewModel = RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder())
+    private fun newViewModel(): RedeemViewModel =
+        RedeemViewModel(apiProvider, syncEngine, sessionState, org.p23q.shoppinglist.data.PendingInviteHolder(), testListsRepo(db))
+
+    /** This phone's row of the list the server calls [serverId]. */
+    private suspend fun localIdOf(serverId: String): String? = db.listDao().getByServerId(TEST_ACCOUNT_ID, serverId)?.localId
 
     @Test
     fun `redeem with a blank token is rejected locally without a network call`() = runTest(mainDispatcherRule.dispatcher) {
@@ -85,15 +94,19 @@ class RedeemViewModelTest {
     }
 
     @Test
-    fun `redeem success syncs the newly shared list and reports its id`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `redeem success syncs the newly shared list and reports its local id`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseWithList("list-42")))
         val viewModel = newViewModel()
         viewModel.onTokenChange("abc.def")
 
         viewModel.redeem()?.join()
 
-        assertEquals("list-42", viewModel.uiState.value.redeemedListId)
+        // The screens open this phone's row of the list, not the server's id for it (T-299).
+        val localId = localIdOf("list-42")
+        assertNotNull(localId)
+        assertNotEquals("list-42", localId)
+        assertEquals(localId, viewModel.uiState.value.redeemedListId)
         assertNull(viewModel.uiState.value.errorMessage)
         val syncRequest = server.takeRequest()
         assertEquals("/api/v1/invites/redeem", syncRequest.path)
@@ -104,16 +117,30 @@ class RedeemViewModelTest {
     @Test
     fun `a pasted full invite URL is redeemed as its bare token (T-71)`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [], "items": []}}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseWithList("list-42")))
         val viewModel = newViewModel()
         viewModel.onTokenChange("https://p23q.org/invite/abc.def")
 
         viewModel.redeem()?.join()
 
-        assertEquals("list-42", viewModel.uiState.value.redeemedListId)
+        assertEquals(localIdOf("list-42"), viewModel.uiState.value.redeemedListId)
         val redeemRequest = server.takeRequest()
         assertEquals("/api/v1/invites/redeem", redeemRequest.path)
         assertTrue(redeemRequest.body.readUtf8().contains("\"abc.def\""))
+    }
+
+    @Test
+    fun `a redeemed list the pull did not bring opens nothing and says the server could not be reached`() = runTest(mainDispatcherRule.dispatcher) {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
+        server.enqueue(MockResponse().setResponseCode(503).setBody("""{"error": "unavailable", "message": "later"}"""))
+        val viewModel = newViewModel()
+        viewModel.onTokenChange("abc.def")
+
+        viewModel.redeem()?.join()
+
+        assertNull(viewModel.uiState.value.redeemedListId)
+        assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.errorMessage)
+        assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
@@ -160,7 +187,7 @@ class RedeemViewModelTest {
     fun `redeeming while logged out stashes the token and signals needsLogin without calling the API`() = runTest(mainDispatcherRule.dispatcher) {
         val holder = PendingInviteHolder()
         val loggedOut = FakeCurrentAccount() // token == null
-        val viewModel = RedeemViewModel(apiProvider, syncEngine, loggedOut, holder)
+        val viewModel = RedeemViewModel(apiProvider, syncEngine, loggedOut, holder, testListsRepo(db))
         viewModel.onTokenChange("invite-xyz")
 
         val job = viewModel.redeem()

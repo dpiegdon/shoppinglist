@@ -10,10 +10,17 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "lists",
     foreignKeys = [ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"])],
-    indices = [Index("accountId")],
+    indices = [Index(value = ["accountId", "serverId"], unique = true)],
 )
 data class ListEntity(
-    @PrimaryKey val id: String,
+    /**
+     * This phone's own id for the row, and the only one screens, routes, notifications and the
+     * last-opened list pass around. Never sent: two accounts on this phone that share a list hold
+     * one row each, with the same [serverId].
+     */
+    @PrimaryKey val localId: String,
+    /** The list's id on its server (the wire's `id`), unique per [accountId]. */
+    val serverId: String,
     /**
      * The local id of the [AccountEntity] this list belongs to. Not a synced field: it says which
      * account on this device holds the list, and a list never moves to another.

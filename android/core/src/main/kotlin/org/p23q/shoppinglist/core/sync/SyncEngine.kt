@@ -30,6 +30,7 @@ import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import java.io.IOException
+import java.util.UUID
 import javax.inject.Inject
 import javax.net.ssl.SSLException
 
@@ -54,6 +55,11 @@ sealed interface SyncResult {
  * [syncNow] runs every signed-in server account that is not outdated, one after the other, each
  * with its own client, cursor and [AccountSyncStatus]. One account failing does not stop the
  * others; the result is the worst of theirs.
+ *
+ * This is the one place that maps server ids to rows, and always per account: a row is the
+ * syncing account's row with that server id ([ListDao.getByServerId], [ItemDao.getByServerId]).
+ * Two accounts on this phone that share a list hold a row each, with their own clocks, dirty flags
+ * and quarantine, and the server reconciles what both push. What goes out carries server ids.
  */
 class SyncEngine @Inject constructor(
     private val itemDao: ItemDao,
@@ -90,9 +96,9 @@ class SyncEngine @Inject constructor(
     }
 
     /**
-     * Syncs every account that can be synced. [fullLists] asks for a full snapshot of those lists;
-     * each goes to the account that holds the list, or to [fullListsAccountId] if this device does
-     * not hold it yet (a list just joined through an invite).
+     * Syncs every account that can be synced. [fullLists] asks for a full snapshot of those lists,
+     * by server id: of [fullListsAccountId] (the account that just joined one through an invite),
+     * or, without it, of every account that holds a list with that server id.
      *
      * With no account to sync, says why: [SyncResult.UpdateRequired] if every server account is
      * outdated, [SyncResult.Unauthorized] otherwise (none, or none signed in).
@@ -106,9 +112,10 @@ class SyncEngine @Inject constructor(
         if (eligible.isEmpty()) {
             return if (servers.isNotEmpty() && servers.all { it.outdated }) SyncResult.UpdateRequired else SyncResult.Unauthorized
         }
-        val owners = fullLists.associateWith { listDao.getById(it)?.accountId ?: fullListsAccountId }
         val results = eligible.map { account ->
-            val mine = fullLists.filter { owners[it] == account.id }
+            val mine = fullLists.filter {
+                if (fullListsAccountId != null) fullListsAccountId == account.id else listDao.getByServerId(account.id, it) != null
+            }
             try {
                 syncAccount(account.id, mine)
             } catch (e: CancellationException) {
@@ -154,6 +161,7 @@ class SyncEngine @Inject constructor(
      * ([AccountRegistry.withAccountLock]) throughout, so the account cannot be signed out locally
      * or removed between the request and the merge of its answer.
      */
+    /** [fullLists] as for [syncNow]: server ids. */
     suspend fun syncAccount(accountId: String, fullLists: List<String> = emptyList()): SyncResult =
         registry.withAccountLock(accountId) { syncAccountLocked(accountId, fullLists) }
 
@@ -188,11 +196,18 @@ class SyncEngine @Inject constructor(
         // re-enter this and re-report, so the innermost outcome is what the UI settles on.
         status.started(pending = pendingBefore, blocked = blockedCount(accountId))
 
+        // An item goes out under its list's server id. Every item has its list: items are deleted
+        // before their list, and a list that still holds an item is never dropped on its own.
+        val listServerIds = listDao.getAll(dirtyItems.map { it.listLocalId }.distinct())
+            .associate { it.localId to it.serverId }
         val request = SyncRequest(
             cursor = account.syncCursor,
             deviceId = deviceIdProvider.get(),
             fullLists = fullLists,
-            changes = SyncChanges(lists = dirtyLists.map { it.toDto() }, items = dirtyItems.map { it.toDto() }),
+            changes = SyncChanges(
+                lists = dirtyLists.map { it.toDto() },
+                items = dirtyItems.mapNotNull { item -> listServerIds[item.listLocalId]?.let { item.toDto(it) } },
+            ),
         )
 
         val response = try {
@@ -244,25 +259,34 @@ class SyncEngine @Inject constructor(
             // Quarantine just that row so it stops wedging the queue, then retry immediately: the
             // remaining dirty rows now go through. The row stays visible/editable; editing it clears
             // the block (ItemsRepo / ListsRepo) so the corrected value is re-tried. Terminates because
-            // each retry excludes the blocked row, so the same id can't 422 twice. The getById guards
-            // avoid looping if the id names neither a known item nor a known list.
+            // each retry excludes the blocked row, so the same id can't 422 twice. The lookups guard
+            // against looping if the id names neither a known item nor a known list. row_id is a
+            // server id, so it names this account's row.
             val badRowId = e.rowId
+            val badItem = badRowId?.let { itemDao.getByServerId(accountId, it) }
+            val badList = if (badRowId == null || badItem != null) null else listDao.getByServerId(accountId, badRowId)
             // A write the server can NEVER accept as sent is not a bad value to be corrected: the
             // local row now disagrees with a server copy that has older clocks, so no pull would
             // ever overwrite it, and quarantining it would leave that disagreement on screen
             // forever. Worse for these two, the row is invisible — a closed list's item and a
             // tombstoned list are both hidden — so the user can't even edit it to clear the block.
-            // Drop the local row instead and ask for a fresh snapshot of its list in the same
+            // Drop the local edits instead and ask for a fresh snapshot of the list in the same
             // retry, which restores the server's truth: a write to a closed expenses list (T-157),
-            // and a tombstone on an expenses list, which can never be deleted (T-198).
-            if (e.httpStatus == 422 && badRowId != null &&
+            // and a tombstone on an expenses list, which can never be deleted (T-198). An item row
+            // is dropped outright (the server may never have had it). A list row is kept, so that
+            // its items and every screen that names it by its local id still find it, with every
+            // clock at zero: the snapshot then wins each field, and the row is clean meanwhile.
+            if (e.httpStatus == 422 && (badItem != null || badList != null) &&
                 (e.code == "list_closed" || e.code == "cannot_delete_expense_list")
             ) {
-                val listId = itemDao.getById(badRowId)?.listId ?: badRowId.takeIf { listDao.getById(it) != null }
-                if (listId != null) {
-                    if (itemDao.getById(badRowId) != null) itemDao.hardDelete(badRowId) else listDao.hardDelete(badRowId)
-                    return syncAccountLocked(accountId, fullLists + listId)
+                val listServerId = if (badItem != null) {
+                    itemDao.hardDelete(badItem.localId)
+                    listDao.get(badItem.listLocalId)?.serverId
+                } else {
+                    appDb.inTransaction { listDao.get(badList!!.localId)?.let { listDao.upsert(it.withLocalEditsForgotten()) } }
+                    badList!!.serverId
                 }
+                return syncAccountLocked(accountId, fullLists + listOfNotNull(listServerId))
             }
             if (e.httpStatus == 422 && badRowId != null) {
                 // A list row is parked exactly like an item row (T-198). Before that it fell
@@ -270,15 +294,15 @@ class SyncEngine @Inject constructor(
                 // author voted to close the list, say — wedged every later sync until the server
                 // state changed. The Wire Contract answers 422-with-row_id precisely so the device
                 // parks the row instead.
-                if (itemDao.getById(badRowId) != null) {
+                if (badItem != null) {
                     // The refusal rides along with the quarantine (T-200): the row is the only place
                     // that can later say why it was parked, and a push queue empties while nobody
                     // is looking — by the time anyone sees it, this exception is long gone.
-                    itemDao.blockRow(badRowId, e.code, e.accountId)
+                    itemDao.blockRow(badItem.localId, e.code, e.accountId)
                     return syncAccountLocked(accountId, fullLists)
                 }
-                if (listDao.getById(badRowId) != null) {
-                    listDao.blockRow(badRowId)
+                if (badList != null) {
+                    listDao.blockRow(badList.localId)
                     return syncAccountLocked(accountId, fullLists)
                 }
             }
@@ -311,11 +335,19 @@ class SyncEngine @Inject constructor(
         // one for the whole pull: the merge holds SQLite's single write lock for its duration, and
         // a several-hundred-row pull would stall every edit on the device until it finished. The
         // network round trip is already over by here — no transaction ever spans a request.
+        //
+        // A DTO merges into the syncing account's row with its server id, and becomes a new row of
+        // that account when there is none; another account's row with the same server id is never
+        // read or written here.
         for (dto in response.changes.lists) {
-            appDb.inTransaction { listDao.upsert(mergeList(listDao.getById(dto.id), dto, accountId)) }
+            appDb.inTransaction { listDao.upsert(mergeList(listDao.getByServerId(accountId, dto.id), dto, accountId)) }
         }
         for (dto in response.changes.items) {
-            appDb.inTransaction { itemDao.upsert(mergeItem(itemDao.getById(dto.id), dto)) }
+            appDb.inTransaction {
+                val local = itemDao.getByServerId(accountId, dto.id)
+                val listLocalId = local?.listLocalId ?: listLocalIdFor(accountId, dto.listId)
+                itemDao.upsert(mergeItem(local, dto, accountId, listLocalId))
+            }
         }
 
         registry.update(accountId) { it.copy(syncCursor = response.cursor) }
@@ -357,6 +389,29 @@ class SyncEngine @Inject constructor(
         )
     }
 
+    /**
+     * The local id of [accountId]'s list with [serverId], for an item pulled for the first time. A
+     * list this phone does not hold gets a stub row, hidden and with every clock at zero, so that
+     * the item has a list and an account; a later pull of the list fills the stub in.
+     */
+    private suspend fun listLocalIdFor(accountId: String, serverId: String): String {
+        listDao.getByServerId(accountId, serverId)?.let { return it.localId }
+        val stub = ListEntity(
+            localId = UUID.randomUUID().toString(),
+            serverId = serverId,
+            accountId = accountId,
+            createdAt = 0,
+            name = LwwString("", 0, ""),
+            categoryOrder = LwwString("[]", 0, ""),
+            notes = LwwOptionalString(null, 0, ""),
+            kind = LwwString("shopping", 0, ""),
+            deleted = LwwBoolean(true, 0, ""),
+            dirty = false,
+        )
+        listDao.upsert(stub)
+        return stub.localId
+    }
+
     /** One account's rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
     private suspend fun blockedCount(accountId: String): Int =
         itemDao.blockedRowCountForAccount(accountId) + listDao.blockedRowCountForAccount(accountId)
@@ -373,7 +428,7 @@ class SyncEngine @Inject constructor(
         val account = registry.get(accountId) ?: return
         if (account.accountId != null) return
         val email = account.email ?: return
-        val listId = listDao.anyActiveListIdForAccount(accountId) ?: return
+        val listId = listDao.anyActiveListServerIdForAccount(accountId) ?: return
         try {
             val members = sessions.get(accountId).api.members(listId).members
             members.firstOrNull { it.email == email }?.let { me ->
@@ -399,12 +454,13 @@ class SyncEngine @Inject constructor(
         val myAccountId = registry.get(accountId)?.accountId ?: return
         val foreign = pulledItems.filter { it.lastTouchedBy != null && it.lastTouchedBy != myAccountId }
         if (foreign.isEmpty()) return
-        val changes = foreign.groupBy { it.listId }.map { (listId, items) ->
+        val changes = foreign.groupBy { it.listId }.mapNotNull { (listServerId, items) ->
+            // Resolved AFTER the merge loops, so a list first seen in this same pull is found.
+            val list = listDao.getByServerId(accountId, listServerId) ?: return@mapNotNull null
             CollaboratorChange(
                 accountId = accountId,
-                listId = listId,
-                // Resolved AFTER the merge loops, so a list first seen in this same pull is found.
-                listName = listDao.getById(listId)?.name?.value ?: "a shared list",
+                listId = list.localId,
+                listName = list.name.value.ifEmpty { "a shared list" },
                 changedItemCount = items.size,
             )
         }
@@ -412,9 +468,10 @@ class SyncEngine @Inject constructor(
     }
 }
 
-private fun ItemEntity.toDto(): ItemDto = ItemDto(
-    id = id,
-    listId = listId,
+/** [listServerId] is the server id of the item's list. */
+private fun ItemEntity.toDto(listServerId: String): ItemDto = ItemDto(
+    id = serverId,
+    listId = listServerId,
     createdAt = createdAt,
     fields = ItemFieldsDto(
         name = FieldClock(name.value, name.updatedAt, name.updatedBy),
@@ -432,7 +489,7 @@ private fun ItemEntity.toDto(): ItemDto = ItemDto(
 )
 
 private fun ListEntity.toDto(): ListDto = ListDto(
-    id = id,
+    id = serverId,
     createdAt = createdAt,
     fields = ListFieldsDto(
         name = FieldClock(name.value, name.updatedAt, name.updatedBy),
@@ -457,7 +514,11 @@ private fun <T> mergeField(localValue: T, localAt: Long, localBy: String, remote
     }
 }
 
-private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
+/**
+ * [accountId] and [listLocalId] are the syncing account's and the item's list's, for an item this
+ * account sees for the first time; an existing row keeps its own.
+ */
+private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, listLocalId: String): ItemEntity {
     val storesRemote = FieldClock(
         Json.encodeToString(remote.fields.stores.value),
         remote.fields.stores.updatedAt,
@@ -476,8 +537,10 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
 
     if (local == null) {
         return ItemEntity(
-            id = remote.id,
-            listId = remote.listId,
+            localId = UUID.randomUUID().toString(),
+            serverId = remote.id,
+            accountId = accountId,
+            listLocalId = listLocalId,
             createdAt = remote.createdAt,
             name = remote.fields.name.value.toLww(remote.fields.name.updatedBy, remote.fields.name.updatedAt),
             category = remote.fields.category.value.toLwwOptional(remote.fields.category.updatedBy, remote.fields.category.updatedAt),
@@ -507,8 +570,10 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto): ItemEntity {
     val stillBlocked = local.syncBlocked && mergedDirty
 
     return ItemEntity(
-        id = local.id,
-        listId = local.listId,
+        localId = local.localId,
+        serverId = local.serverId,
+        accountId = local.accountId,
+        listLocalId = local.listLocalId,
         createdAt = local.createdAt,
         name = LwwString(name.value, name.updatedAt, name.updatedBy),
         category = LwwOptionalString(category.value, category.updatedAt, category.updatedBy),
@@ -543,7 +608,8 @@ private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String): L
 
     if (local == null) {
         return ListEntity(
-            id = remote.id,
+            localId = UUID.randomUUID().toString(),
+            serverId = remote.id,
             accountId = accountId,
             createdAt = remote.createdAt,
             name = remote.fields.name.value.toLww(remote.fields.name.updatedBy, remote.fields.name.updatedAt),
@@ -568,7 +634,8 @@ private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String): L
     val mergedDirty = name.dirty || categoryOrder.dirty || notes.dirty || kind.dirty || currency.dirty || deleted.dirty
 
     return ListEntity(
-        id = local.id,
+        localId = local.localId,
+        serverId = local.serverId,
         accountId = local.accountId,
         createdAt = local.createdAt,
         name = LwwString(name.value, name.updatedAt, name.updatedBy),
@@ -586,3 +653,18 @@ private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String): L
         closedAt = remote.closedAt,
     )
 }
+
+/**
+ * The row with every LWW clock at zero and nothing to push: whatever the server sends for it next
+ * wins every field (see [mergeField]). The values stay until then.
+ */
+private fun ListEntity.withLocalEditsForgotten(): ListEntity = copy(
+    name = name.copy(updatedAt = 0, updatedBy = ""),
+    categoryOrder = categoryOrder.copy(updatedAt = 0, updatedBy = ""),
+    notes = notes.copy(updatedAt = 0, updatedBy = ""),
+    kind = kind.copy(updatedAt = 0, updatedBy = ""),
+    currency = currency.copy(updatedAt = 0, updatedBy = ""),
+    deleted = LwwBoolean(false, 0, ""),
+    dirty = false,
+    syncBlocked = false,
+)

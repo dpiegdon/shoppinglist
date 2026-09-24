@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.core.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
@@ -10,10 +11,22 @@ import androidx.room.PrimaryKey
  * hold JSON-encoded text (array / object-or-null) rather than decoded Kotlin types, matching the
  * Wire Contract's "whole array/object = one LWW field" rule.
  */
-@Entity(tableName = "items")
+@Entity(
+    tableName = "items",
+    indices = [Index(value = ["accountId", "serverId"], unique = true), Index("listLocalId")],
+)
 data class ItemEntity(
-    @PrimaryKey val id: String,
-    val listId: String,
+    /** This phone's own id for the row; see [ListEntity.localId]. */
+    @PrimaryKey val localId: String,
+    /** The item's id on its server (the wire's `id`), unique per [accountId]. */
+    val serverId: String,
+    /**
+     * The account of the item's list, copied here so that per-account queries need no join. Set
+     * when the row is created and never changed, as a list never moves to another account.
+     */
+    val accountId: String,
+    /** The [ListEntity.localId] of the item's list. The wire's `list_id` is that list's [ListEntity.serverId]. */
+    val listLocalId: String,
     val createdAt: Long,
     @Embedded(prefix = "name_") val name: LwwString,
     @Embedded(prefix = "category_") val category: LwwOptionalString,

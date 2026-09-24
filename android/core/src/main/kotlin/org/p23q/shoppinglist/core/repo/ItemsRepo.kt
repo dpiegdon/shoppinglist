@@ -23,6 +23,8 @@ import javax.inject.Inject
 data class Price(val amount: String, val currency: String?)
 
 /**
+ * Every item and list id here is a local one ([ItemEntity.localId], [org.p23q.shoppinglist.core.db.ListEntity.localId]).
+ *
  * Every edit here is a read-modify-write — read the row, stamp one field's LWW clock, write the
  * whole row back — so it must run inside a database transaction (T-261). Without one, a sync merge
  * (which is the same shape) or a second edit landing in the window between the read and the write
@@ -36,6 +38,7 @@ class ItemsRepo @Inject constructor(
     private val syncTrigger: SyncTrigger,
 ) {
     private val itemDao = db.itemDao()
+    private val listDao = db.listDao()
 
     fun itemsForListByStatus(listId: String, status: Status): Flow<List<ItemEntity>> =
         itemDao.itemsForListByStatus(listId, status.wireValue)
@@ -45,7 +48,7 @@ class ItemsRepo @Inject constructor(
 
     /** Open (todo) item count per list id, for the Overview cards (T-42). */
     fun openItemCounts(): Flow<Map<String, Int>> =
-        itemDao.openItemCounts().map { rows -> rows.associate { it.listId to it.openCount } }
+        itemDao.openItemCounts().map { rows -> rows.associate { it.listLocalId to it.openCount } }
 
     fun searchRegistry(listId: String, nameQuery: String): Flow<List<ItemEntity>> =
         itemDao.searchRegistry(listId, nameQuery)
@@ -68,24 +71,27 @@ class ItemsRepo @Inject constructor(
     suspend fun activeItemsForListOnce(listId: String): List<ItemEntity> =
         itemDao.activeItemsForListOnce(listId)
 
-    suspend fun getById(itemId: String): ItemEntity? = itemDao.getById(itemId)
+    suspend fun getById(itemId: String): ItemEntity? = itemDao.get(itemId)
 
     /** Local pre-check mirroring the server's case-insensitive per-list name uniqueness rule. */
     suspend fun findByExactName(listId: String, name: String, excludingId: String = ""): ItemEntity? =
-        itemDao.findByExactName(listId, name, excludingId)
+        itemDao.findByExactName(listId, name, excludingLocalId = excludingId)
 
     suspend fun dirtyRows(): List<ItemEntity> = itemDao.dirtyRows()
 
     suspend fun clearDirty(ids: List<String>) = itemDao.clearDirty(ids)
 
+    /** @return the new item's local id; its server id is minted here too. Throws if [listId] is no list. */
     suspend fun createItem(listId: String, name: String, status: Status = Status.TODO): String {
         val id = UUID.randomUUID().toString()
         val by = deviceId.get()
         val now = System.currentTimeMillis()
-        itemDao.upsert(
+        insertNew(listId) { accountId ->
             ItemEntity(
-                id = id,
-                listId = listId,
+                localId = id,
+                serverId = UUID.randomUUID().toString(),
+                accountId = accountId,
+                listLocalId = listId,
                 createdAt = now,
                 name = name.toLww(by, now),
                 category = null.toLwwOptional(by, now),
@@ -96,10 +102,21 @@ class ItemsRepo @Inject constructor(
                 status = status.wireValue.toLww(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
-            ),
-        )
+            )
+        }
         syncTrigger.scheduleAfterEdit()
         return id
+    }
+
+    /**
+     * Writes the new row [build] makes for the account of [listId], read in the same transaction:
+     * an item's account is its list's, and a list never moves.
+     */
+    private suspend fun insertNew(listId: String, build: (accountId: String) -> ItemEntity) {
+        db.inTransaction {
+            val list = listDao.get(listId) ?: throw IllegalArgumentException("No list $listId")
+            itemDao.upsert(build(list.accountId))
+        }
     }
 
     /**
@@ -111,10 +128,12 @@ class ItemsRepo @Inject constructor(
         val id = UUID.randomUUID().toString()
         val by = deviceId.get()
         val now = System.currentTimeMillis()
-        itemDao.upsert(
+        insertNew(listId) { accountId ->
             ItemEntity(
-                id = id,
-                listId = listId,
+                localId = id,
+                serverId = UUID.randomUUID().toString(),
+                accountId = accountId,
+                listLocalId = listId,
                 createdAt = now,
                 name = name.toLww(by, now),
                 category = null.toLwwOptional(by, now),
@@ -126,8 +145,8 @@ class ItemsRepo @Inject constructor(
                 expense = encodeExpense(expense).toLwwOptional(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
-            ),
-        )
+            )
+        }
         syncTrigger.scheduleAfterEdit()
         return id
     }
@@ -174,7 +193,7 @@ class ItemsRepo @Inject constructor(
         }
         if (checked.isEmpty()) return emptyList()
         syncTrigger.scheduleAfterEdit()
-        return checked.map { it.id }
+        return checked.map { it.localId }
     }
 
     /** Batched [setStatus] over several ids — one dirty batch, one sync push. Backs clear-checked's undo (T-35). */
@@ -185,7 +204,7 @@ class ItemsRepo @Inject constructor(
             val now = System.currentTimeMillis()
             var changed = false
             itemIds.forEach { id ->
-                val current = itemDao.getById(id) ?: return@forEach
+                val current = itemDao.get(id) ?: return@forEach
                 itemDao.upsert(current.copy(status = status.wireValue.toLww(by, now), dirty = true).unblocked())
                 changed = true
             }
@@ -205,7 +224,7 @@ class ItemsRepo @Inject constructor(
             val now = System.currentTimeMillis()
             var changed = false
             itemIds.forEach { id ->
-                val current = itemDao.getById(id) ?: return@forEach
+                val current = itemDao.get(id) ?: return@forEach
                 itemDao.upsert(current.copy(category = category.toLwwOptional(by, now), dirty = true).unblocked())
                 changed = true
             }
@@ -240,14 +259,17 @@ class ItemsRepo @Inject constructor(
      */
     suspend fun duplicateForList(sourceListId: String, targetListId: String): Int {
         val copied = db.inTransaction {
+            val target = listDao.get(targetListId) ?: return@inTransaction 0
             val items = itemDao.activeItemsForListOnce(sourceListId)
             val by = deviceId.get()
             val now = System.currentTimeMillis()
             items.forEach { source ->
                 itemDao.upsert(
                     ItemEntity(
-                        id = UUID.randomUUID().toString(),
-                        listId = targetListId,
+                        localId = UUID.randomUUID().toString(),
+                        serverId = UUID.randomUUID().toString(),
+                        accountId = target.accountId,
+                        listLocalId = targetListId,
                         createdAt = now,
                         name = source.name.value.toLww(by, now),
                         category = source.category.value.toLwwOptional(by, now),
@@ -294,7 +316,7 @@ class ItemsRepo @Inject constructor(
      */
     suspend fun updateField(itemId: String, mutate: suspend (ItemEntity) -> ItemEntity) {
         val changed = db.inTransaction {
-            val current = itemDao.getById(itemId) ?: return@inTransaction false
+            val current = itemDao.get(itemId) ?: return@inTransaction false
             // Any user edit clears a prior quarantine so the corrected row is retried on the next sync.
             itemDao.upsert(mutate(current).copy(dirty = true).unblocked())
             true

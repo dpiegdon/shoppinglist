@@ -182,11 +182,11 @@ class ListViewModelTest {
         val viewModel = newViewModel()
 
         val initial = viewModel.uiState.first { it.listName == "Groceries" }
-        assertTrue(initial.groups.none { g -> g.items.any { it.id == itemId } })
+        assertTrue(initial.groups.none { g -> g.items.any { it.localId == itemId } })
 
         viewModel.toggleShowChecked()
 
-        val afterToggle = viewModel.uiState.first { state -> state.groups.any { g -> g.items.any { it.id == itemId } } }
+        val afterToggle = viewModel.uiState.first { state -> state.groups.any { g -> g.items.any { it.localId == itemId } } }
         assertTrue(afterToggle.showChecked)
     }
 
@@ -214,12 +214,12 @@ class ListViewModelTest {
         viewModel.checkOff(itemId).join()
 
         val checkedState = viewModel.uiState.first { s ->
-            s.groups.flatMap { it.items }.firstOrNull { it.id == itemId }?.status?.value == Status.CHECKED.wireValue
+            s.groups.flatMap { it.items }.firstOrNull { it.localId == itemId }?.status?.value == Status.CHECKED.wireValue
         }
         // Exactly one occurrence, and no id appears twice anywhere — the transient that a duplicate
         // LazyColumn key crashed on can't happen now that todo/checked come from one snapshot.
-        assertEquals(1, checkedState.groups.flatMap { it.items }.count { it.id == itemId })
-        val allIds = checkedState.groups.flatMap { it.items }.map { it.id }
+        assertEquals(1, checkedState.groups.flatMap { it.items }.count { it.localId == itemId })
+        val allIds = checkedState.groups.flatMap { it.items }.map { it.localId }
         assertEquals(allIds.size, allIds.toSet().size)
     }
 
@@ -311,7 +311,7 @@ class ListViewModelTest {
 
         val afterSettingsChange = newViewModel().uiState.first { it.groups.isNotEmpty() }
         assertEquals("EUR", afterSettingsChange.defaultCurrency)
-        val item = afterSettingsChange.groups.flatMap { it.items }.single { it.id == itemId }
+        val item = afterSettingsChange.groups.flatMap { it.items }.single { it.localId == itemId }
         assertEquals("€2.50", formatPrice(item, afterSettingsChange.defaultCurrency, Locale.US))
     }
 
@@ -330,7 +330,7 @@ class ListViewModelTest {
         sessionState.defaultCurrency = "EUR"
 
         val updated = viewModel.uiState.first { it.defaultCurrency == "EUR" }
-        val item = updated.groups.flatMap { it.items }.single { it.id == itemId }
+        val item = updated.groups.flatMap { it.items }.single { it.localId == itemId }
         assertEquals("€2.50", formatPrice(item, updated.defaultCurrency, Locale.US))
     }
 
@@ -420,20 +420,20 @@ class ListViewModelTest {
         // animate.
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
-        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.id == itemId } } }
+        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.localId == itemId } } }
 
         viewModel.checkOff(itemId).join()
 
         val exiting = viewModel.uiState.first { it.exitingItemIds.contains(itemId) }
         assertTrue(
             "the exiting row must still be rendered, not just flagged",
-            exiting.groups.any { group -> group.items.any { it.id == itemId } },
+            exiting.groups.any { group -> group.items.any { it.localId == itemId } },
         )
 
         advanceTimeBy(EXIT_ANIMATION_MS + 50)
         val settled = viewModel.uiState.value
         assertTrue(settled.exitingItemIds.isEmpty())
-        assertTrue(settled.groups.none { group -> group.items.any { it.id == itemId } })
+        assertTrue(settled.groups.none { group -> group.items.any { it.localId == itemId } })
     }
 
     @Test
@@ -446,20 +446,20 @@ class ListViewModelTest {
         viewModel.uiState.first { it.listName == "Groceries" }
 
         viewModel.toggleShowChecked().join()
-        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.id == a } } }
+        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.localId == a } } }
 
         viewModel.toggleShowChecked().join()
 
         val hidden = viewModel.uiState.value
         assertTrue("no row should be exiting after a mere view change", hidden.exitingItemIds.isEmpty())
-        assertTrue(hidden.groups.none { group -> group.items.any { it.id == a || it.id == b } })
+        assertTrue(hidden.groups.none { group -> group.items.any { it.localId == a || it.localId == b } })
     }
 
     @Test
     fun `a row unchecked mid-animation stops exiting instead of rendering twice`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
-        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.id == itemId } } }
+        viewModel.uiState.first { state -> state.groups.any { it.items.any { i -> i.localId == itemId } } }
 
         viewModel.checkOff(itemId).join()
         viewModel.uiState.first { it.exitingItemIds.contains(itemId) }
@@ -467,7 +467,7 @@ class ListViewModelTest {
         viewModel.uncheck(itemId).join()
 
         val back = viewModel.uiState.first { it.exitingItemIds.isEmpty() }
-        val occurrences = back.groups.sumOf { group -> group.items.count { it.id == itemId } }
+        val occurrences = back.groups.sumOf { group -> group.items.count { it.localId == itemId } }
         assertEquals("the row must appear exactly once, not live plus a ghost", 1, occurrences)
     }
 

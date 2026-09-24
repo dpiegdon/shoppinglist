@@ -17,6 +17,7 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -98,10 +99,19 @@ class OverviewViewModelTest {
         viewModel = newViewModel()
     }
 
+    /** Whether the fake sync brings the lists it is asked a snapshot of, as a pull does. */
+    private var pullBringsFullLists = true
+
     private fun newViewModel(): OverviewViewModel {
         val syncer = Syncer { fullLists ->
             syncCalls++
             syncedFullLists += fullLists
+            if (pullBringsFullLists) {
+                fullLists.forEach { serverId ->
+                    val localId = listsRepo.create(TEST_ACCOUNT_ID, "Joined")
+                    db.listDao().upsert(db.listDao().get(localId)!!.copy(serverId = serverId, dirty = false))
+                }
+            }
             SyncResult.Success(0, 0, 0, 0)
         }
         return OverviewViewModel(listsRepo, itemsRepo, sessionState, syncer, syncStatus, apiProvider)
@@ -164,7 +174,7 @@ class OverviewViewModelTest {
     fun `openList persists lastOpenedListId in session state`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.onNewListNameChange("Groceries")
         viewModel.createList()?.join()
-        val listId = viewModel.uiState.first { it.lists.isNotEmpty() }.lists.first().id
+        val listId = viewModel.uiState.first { it.lists.isNotEmpty() }.lists.first().localId
 
         viewModel.openList(listId)
 
@@ -337,8 +347,11 @@ class OverviewViewModelTest {
 
         viewModel.joinInvite(invite).join()
 
-        assertEquals("list-a", viewModel.uiState.value.joinedListId)
-        assertEquals("list-a", sessionState.lastOpenedListId)
+        // What opens is this phone's row of the joined list, found by the server's id for it (T-299).
+        val localId = db.listDao().getByServerId(TEST_ACCOUNT_ID, "list-a")!!.localId
+        assertNotEquals("list-a", localId)
+        assertEquals(localId, viewModel.uiState.value.joinedListId)
+        assertEquals(localId, sessionState.lastOpenedListId)
         assertTrue(syncedFullLists.contains(listOf("list-a")))
         assertNull(viewModel.uiState.value.inviteError)
         val redeem = (0 until server.requestCount).map { server.takeRequest() }.single { it.path == "/api/v1/invites/redeem" }
@@ -346,6 +359,21 @@ class OverviewViewModelTest {
 
         viewModel.joinedListOpened()
         assertNull(viewModel.uiState.value.joinedListId)
+    }
+
+    @Test
+    fun `a join whose list the sync did not bring opens nothing and says so`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        pullBringsFullLists = false
+        val viewModel = newViewModel()
+        val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
+
+        viewModel.joinInvite(invite).join()
+
+        assertNull(viewModel.uiState.value.joinedListId)
+        assertNull(sessionState.lastOpenedListId)
+        assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.inviteError)
+        assertNull(viewModel.uiState.value.joiningInviteId)
     }
 
     @Test

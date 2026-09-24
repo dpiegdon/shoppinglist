@@ -18,6 +18,8 @@ import java.util.UUID
 import javax.inject.Inject
 
 /**
+ * Every list id here is a local one ([ListEntity.localId]); only the sync engine deals in server ids.
+ *
  * Takes the database rather than a bare DAO because every edit here is a read-modify-write that
  * has to run inside a transaction — see [org.p23q.shoppinglist.core.repo.ItemsRepo] (T-261).
  */
@@ -31,12 +33,25 @@ class ListsRepo @Inject constructor(
     /** Every live list in the shared name order (T-176) — sorted here, not in SQL, because SQLite's
      *  NOCASE folds only A-Z and the web orders by the same rules as this. */
     fun activeLists(): Flow<List<ListEntity>> =
-        listDao.activeLists().map { lists -> lists.sortedWith(NameOrder.by({ it.name.value }, { it.id })) }
+        listDao.activeLists().map { lists -> lists.sortedWith(NameOrder.by({ it.name.value }, { it.serverId })) }
 
-    suspend fun getById(listId: String): ListEntity? = listDao.getById(listId)
+    suspend fun getById(listId: String): ListEntity? = listDao.get(listId)
+
+    /**
+     * The server id of list [listId], for an API call that names the list; null once this phone no
+     * longer holds it.
+     */
+    suspend fun serverIdOf(listId: String): String? = listDao.get(listId)?.serverId
+
+    /**
+     * The local id of [accountId]'s row for the list its server calls [serverId], if this phone
+     * holds it: for a server answer that names a list, such as an invite's redemption.
+     */
+    suspend fun localIdForServerId(accountId: String, serverId: String): String? =
+        listDao.getByServerId(accountId, serverId)?.localId
 
     /** Live single-list observation (T-34) — reflects rename / category-order changes as they land. */
-    fun observeById(listId: String): Flow<ListEntity?> = listDao.observeById(listId)
+    fun observeById(listId: String): Flow<ListEntity?> = listDao.observe(listId)
 
     suspend fun dirtyRows(): List<ListEntity> = listDao.dirtyRows()
 
@@ -46,6 +61,7 @@ class ListsRepo @Inject constructor(
      * @param accountId the local id of the account the list is created in; it never moves.
      * @param currency free-text label, required for an expenses list and meaningless elsewhere
      *   (T-151). The kind is fixed for the list's whole life, so both are decided here or never.
+     * @return the new list's local id. Its server id is minted here too.
      */
     suspend fun create(
         accountId: String,
@@ -58,7 +74,8 @@ class ListsRepo @Inject constructor(
         val now = System.currentTimeMillis()
         listDao.upsert(
             ListEntity(
-                id = id,
+                localId = id,
+                serverId = UUID.randomUUID().toString(),
                 accountId = accountId,
                 createdAt = now,
                 name = name.toLww(by, now),
@@ -103,13 +120,14 @@ class ListsRepo @Inject constructor(
      */
     suspend fun duplicate(listId: String): String? {
         val id = db.inTransaction {
-            val source = listDao.getById(listId) ?: return@inTransaction null
+            val source = listDao.get(listId) ?: return@inTransaction null
             val id = UUID.randomUUID().toString()
             val by = deviceId.get()
             val now = System.currentTimeMillis()
             listDao.upsert(
                 ListEntity(
-                    id = id,
+                    localId = id,
+                    serverId = UUID.randomUUID().toString(),
                     // A copy lives where its source does.
                     accountId = source.accountId,
                     createdAt = now,
@@ -158,7 +176,7 @@ class ListsRepo @Inject constructor(
      */
     private suspend fun updateField(listId: String, mutate: suspend (ListEntity) -> ListEntity) {
         val changed = db.inTransaction {
-            val current = listDao.getById(listId) ?: return@inTransaction false
+            val current = listDao.get(listId) ?: return@inTransaction false
             // Any user edit clears a prior quarantine so the corrected row is retried on the next sync,
             // exactly as for an item (T-198).
             listDao.upsert(mutate(current).copy(dirty = true, syncBlocked = false))

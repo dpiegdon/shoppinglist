@@ -119,10 +119,10 @@ class ItemFormViewModel @Inject constructor(
 
     fun startEdit(itemId: String): Job = viewModelScope.launch {
         val item = itemsRepo.getById(itemId) ?: return@launch
-        listId = item.listId
+        listId = item.listLocalId
         val price = itemsRepo.decodePrice(item.price.value)
         _uiState.value = ItemFormUiState(
-            itemId = item.id,
+            itemId = item.localId,
             isEditMode = true,
             name = item.name.value,
             category = item.category.value ?: "",
@@ -138,7 +138,7 @@ class ItemFormViewModel @Inject constructor(
         // Seeded status equals the item's stored status here, so snapshotFrom captures the baseline
         // to diff against on save (T-88).
         loadedSnapshot = snapshotFrom(_uiState.value)
-        listIdFlow.value = item.listId
+        listIdFlow.value = item.listLocalId
         loadCategorySuggestions()
         loadStoreSuggestions()
         loadListKind()
@@ -181,7 +181,7 @@ class ItemFormViewModel @Inject constructor(
         val items = itemsRepo.activeItemsForListOnce(listId)
         val order = listsRepo.getById(listId)?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) }
             ?: emptyList()
-        val plan = CategoryCanon.planRename(items.map { it.id to (it.category.value ?: "") }, order, fromKey, toName)
+        val plan = CategoryCanon.planRename(items.map { it.localId to (it.category.value ?: "") }, order, fromKey, toName)
         itemsRepo.setCategoryBulk(plan.itemIds, toName.trim())
         if (plan.orderChanged) listsRepo.setCategoryOrder(listId, plan.nextCategoryOrder)
     }
@@ -240,7 +240,7 @@ class ItemFormViewModel @Inject constructor(
         val price = itemsRepo.decodePrice(item.price.value)
         _uiState.update {
             it.copy(
-                itemId = item.id,
+                itemId = item.localId,
                 name = item.name.value,
                 nameError = null,
                 suggestions = emptyList(),

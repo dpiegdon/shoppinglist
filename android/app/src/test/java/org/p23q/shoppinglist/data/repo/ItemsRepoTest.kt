@@ -24,6 +24,10 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.ListEntity
+import org.p23q.shoppinglist.core.db.toLwwOptional
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -49,7 +53,26 @@ class ItemsRepoTest {
             .build()
         syncTrigger = FakeSyncTrigger()
         repo = ItemsRepo(db, deviceId, syncTrigger)
+        // An item's account is its list's, so the lists the tests name exist (T-299).
+        runBlocking {
+            db.insertTestAccount()
+            listOf("list-1", "list-2", "list-3").forEach { db.listDao().upsert(testList(it)) }
+        }
     }
+
+    /** A list whose local id is [localId]; its server id differs. */
+    private fun testList(localId: String, accountId: String = TEST_ACCOUNT_ID) = ListEntity(
+        localId = localId,
+        serverId = "srv-$localId",
+        accountId = accountId,
+        createdAt = 1,
+        name = localId.toLww("dev", 1),
+        categoryOrder = "[]".toLww("dev", 1),
+        notes = null.toLwwOptional("dev", 1),
+        kind = "shopping".toLww("dev", 1),
+        deleted = false.toLww("dev", 1),
+        dirty = false,
+    )
 
     @Test
     fun `createItem stamps all fields dirty with the device id`() = runTest {
@@ -158,7 +181,7 @@ class ItemsRepoTest {
 
         val results = repo.searchRegistry(listId = "list-1", nameQuery = "MILK").first()
 
-        assertEquals(setOf(todoId, backlogId), results.map { it.id }.toSet())
+        assertEquals(setOf(todoId, backlogId), results.map { it.localId }.toSet())
     }
 
     @Test
@@ -171,7 +194,7 @@ class ItemsRepoTest {
 
         val results = repo.itemsForListByStatus(listId = "list-1", status = Status.TODO).first()
 
-        assertEquals(listOf(todoId), results.map { it.id })
+        assertEquals(listOf(todoId), results.map { it.localId })
     }
 
     @Test
@@ -219,11 +242,11 @@ class ItemsRepoTest {
     fun `dirtyRows returns only dirty rows and clearDirty clears them`() = runTest {
         val itemId = repo.createItem(listId = "list-1", name = "Milk")
 
-        assertTrue(repo.dirtyRows().any { it.id == itemId })
+        assertTrue(repo.dirtyRows().any { it.localId == itemId })
 
         repo.clearDirty(listOf(itemId))
 
-        assertFalse(repo.dirtyRows().any { it.id == itemId })
+        assertFalse(repo.dirtyRows().any { it.localId == itemId })
     }
 
     @Test
@@ -248,7 +271,7 @@ class ItemsRepoTest {
             repo.itemsForListByStatus("list-3", Status.BACKLOG).first()
         assertEquals(3, copied.size)
         assertEquals(setOf("Milk", "Eggs", "Flour"), copied.map { it.name.value }.toSet())
-        assertTrue(copied.none { it.id == todoId || it.id == checkedId || it.id == backlogId })
+        assertTrue(copied.none { it.localId == todoId || it.localId == checkedId || it.localId == backlogId })
         val milkCopy = copied.single { it.name.value == "Milk" }
         assertEquals("dairy", milkCopy.category.value)
         assertEquals(listOf("Rewe"), repo.decodeStores(milkCopy.stores.value))
@@ -322,7 +345,7 @@ class ItemsRepoTest {
 
         // Quarantined: still in the mirror, but not offered for push.
         assertEquals(1, repo.blockedRowCount())
-        assertFalse(repo.dirtyRows().any { it.id == itemId })
+        assertFalse(repo.dirtyRows().any { it.localId == itemId })
         assertTrue(repo.getById(itemId)!!.syncBlocked)
         // The server's reason is parked with it (T-200), for the row to show.
         assertEquals("participant_frozen", repo.getById(itemId)!!.syncBlockedCode)
@@ -332,7 +355,7 @@ class ItemsRepoTest {
         repo.setQuantity(itemId, "2l")
 
         assertFalse(repo.getById(itemId)!!.syncBlocked)
-        assertTrue(repo.dirtyRows().any { it.id == itemId })
+        assertTrue(repo.dirtyRows().any { it.localId == itemId })
         assertEquals(0, repo.blockedRowCount())
         // And the reason goes with it: it described a value this row no longer holds (T-200).
         assertNull(repo.getById(itemId)!!.syncBlockedCode)

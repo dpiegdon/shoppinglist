@@ -131,7 +131,7 @@ class ListsRepoTest {
 
         val active = repo.activeLists().first()
 
-        assertEquals(listOf(keepId), active.map { it.id })
+        assertEquals(listOf(keepId), active.map { it.localId })
     }
 
     @Test
@@ -153,11 +153,11 @@ class ListsRepoTest {
     fun `dirtyRows returns only dirty rows and clearDirty clears them`() = runTest {
         val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
-        assertTrue(repo.dirtyRows().any { it.id == listId })
+        assertTrue(repo.dirtyRows().any { it.localId == listId })
 
         repo.clearDirty(listOf(listId))
 
-        assertFalse(repo.dirtyRows().any { it.id == listId })
+        assertFalse(repo.dirtyRows().any { it.localId == listId })
     }
 
     @Test
@@ -203,14 +203,14 @@ class ListsRepoTest {
         // Quarantined: still in the mirror and on screen, but not offered for push.
         assertEquals(1, repo.blockedRowCount())
         assertEquals(listId, repo.firstBlockedListId())
-        assertFalse(repo.dirtyRows().any { it.id == listId })
+        assertFalse(repo.dirtyRows().any { it.localId == listId })
         assertTrue(repo.getById(listId)!!.syncBlocked)
 
         // Editing the list (correcting whatever the server refused) clears the block and re-queues it.
         repo.rename(listId, "Trip to Rome")
 
         assertFalse(repo.getById(listId)!!.syncBlocked)
-        assertTrue(repo.dirtyRows().any { it.id == listId })
+        assertTrue(repo.dirtyRows().any { it.localId == listId })
         assertEquals(0, repo.blockedRowCount())
     }
 }

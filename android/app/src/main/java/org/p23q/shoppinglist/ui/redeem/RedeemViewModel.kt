@@ -13,6 +13,7 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
+import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.core.api.ApiSource
@@ -30,13 +31,17 @@ data class RedeemUiState(
     val needsLogin: Boolean = false,
 )
 
-/** Notes: App Link / pasted token -> POST /invites/redeem -> syncNow(fullLists=[listId]) -> open list. */
+/**
+ * Notes: App Link / pasted token -> POST /invites/redeem -> syncNow(fullLists=[listId]) -> open list.
+ * The redemption names the list by its server id; what is opened is this phone's row of it.
+ */
 @HiltViewModel
 class RedeemViewModel @Inject constructor(
     private val apiProvider: ApiSource,
     private val syncEngine: SyncEngine,
     private val currentAccount: CurrentAccount,
     private val pendingInviteHolder: PendingInviteHolder,
+    private val listsRepo: ListsRepo,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RedeemUiState())
@@ -61,8 +66,14 @@ class RedeemViewModel @Inject constructor(
         return viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val listId = apiProvider.get().redeemInvite(RedeemInviteRequest(token)).listId
-                syncEngine.syncNow(fullLists = listOf(listId), fullListsAccountId = currentAccount.localId)
+                val serverId = apiProvider.get().redeemInvite(RedeemInviteRequest(token)).listId
+                val accountId = currentAccount.localId
+                syncEngine.syncNow(fullLists = listOf(serverId), fullListsAccountId = accountId)
+                // Without the row (the pull failed) there is nothing to open yet.
+                val listId = accountId?.let { listsRepo.localIdForServerId(it, serverId) } ?: run {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
+                    return@launch
+                }
                 _uiState.update { it.copy(isLoading = false, redeemedListId = listId) }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))) }

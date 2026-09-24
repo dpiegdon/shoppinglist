@@ -104,12 +104,8 @@ interface AuthRepository {
     suspend fun clearLocalSession(accountId: String)
 
     /**
-     * Removes the account from this device: its lists, their items, its token and its row.
-     *
-     * Every other account on the same server has its sync cursor reset, so its next sync pulls
-     * from 0: a list both accounts can see is one row here, owned by whichever account pulled it
-     * first, and removing that account deletes the row the other one's cursor has already moved
-     * past (T-298; how to key such lists is T-292's).
+     * Removes the account from this device: its lists, their items, its token and its row. No
+     * other account's rows or cursor are touched: a list two accounts share is a row of each.
      */
     suspend fun removeAccount(accountId: String)
 
@@ -260,20 +256,11 @@ class AuthRepositoryImpl(
 
     override suspend fun removeAccount(accountId: String) {
         // Under the account's lock, so no sync of it is between its request and its merge.
-        val serverUrl = registry.withAccountLock(accountId) {
-            val serverUrl = registry.load().firstOrNull { it.id == accountId }?.serverUrl
+        registry.withAccountLock(accountId) {
             secrets.setToken(accountId, null)
             registry.remove(accountId)
             sessions.drop(accountId)
             forgetLastOpenedListOf(accountId)
-            serverUrl
-        }
-        // Each under its own lock, taken only once the removed account's is released: a sync
-        // running for one of them would otherwise store its new cursor over the reset.
-        if (serverUrl != null) {
-            registry.snapshot().filter { it.serverUrl == serverUrl }.forEach { other ->
-                registry.withAccountLock(other.id) { registry.update(other.id) { it.copy(syncCursor = 0) } }
-            }
         }
     }
 
@@ -286,7 +273,7 @@ class AuthRepositoryImpl(
     /** A cold start must not reopen a list this account no longer shows; another account's is kept. */
     private suspend fun forgetLastOpenedListOf(accountId: String) {
         val listId = lastOpened.lastOpenedListId ?: return
-        val owner = appDb.listDao().getById(listId)?.accountId
+        val owner = appDb.listDao().get(listId)?.accountId
         if (owner == null || owner == accountId) lastOpened.lastOpenedListId = null
     }
 

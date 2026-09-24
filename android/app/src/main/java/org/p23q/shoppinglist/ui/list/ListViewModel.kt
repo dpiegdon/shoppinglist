@@ -133,8 +133,9 @@ class ListViewModel @Inject constructor(
         // One-shot, not live (T-64): the badge only needs to know the roster, which changes rarely
         // relative to how often this screen opens. Silently stays empty offline/on error.
         viewModelScope.launch {
+            val serverId = listsRepo.serverIdOf(listId) ?: return@launch
             try {
-                val response = apiProvider.get().members(listId)
+                val response = apiProvider.get().members(serverId)
                 _uiState.update { it.copy(members = response.members) }
             } catch (e: IOException) {
                 // Offline or unreachable — no badges is the safe fallback, not an error state.
@@ -193,7 +194,7 @@ class ListViewModel @Inject constructor(
     private fun regroup() {
         val showChecked = _uiState.value.showChecked
         val visible = if (showChecked) todoItems + checkedItems else todoItems
-        val newIds = visible.mapTo(mutableSetOf()) { it.id }
+        val newIds = visible.mapTo(mutableSetOf()) { it.localId }
 
         // A change of VIEW is not a check-off. Turning "show checked" off removes every checked row
         // at once; animating twenty rows sliding away would be slow and would misrepresent what
@@ -212,7 +213,7 @@ class ListViewModel @Inject constructor(
         visibleIds = newIds
 
         val exiting = exitTimers.keys.toSet()
-        val ghosts = (todoItems + checkedItems).filter { it.id in exiting }
+        val ghosts = (todoItems + checkedItems).filter { it.localId in exiting }
         _uiState.update { state ->
             state.copy(
                 groups = groupByCategory(visible + ghosts, categoryOrder),
@@ -288,7 +289,7 @@ private fun groupByCategory(items: List<ItemEntity>, categoryOrder: List<String>
     return keys.map { key ->
         ItemGroup(
             category = if (key.isEmpty()) null else names[key] ?: key,
-            items = byKey.getValue(key).sortedWith(NameOrder.by({ it.name.value }, { it.id })),
+            items = byKey.getValue(key).sortedWith(NameOrder.by({ it.name.value }, { it.serverId })),
         )
     }
 }
