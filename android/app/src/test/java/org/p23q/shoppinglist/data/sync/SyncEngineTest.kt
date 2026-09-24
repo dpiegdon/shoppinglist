@@ -32,7 +32,7 @@ import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.ProtocolState
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.api.TokenProvider
-import org.p23q.shoppinglist.data.DeviceIdProvider
+import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemDao
 import org.p23q.shoppinglist.core.db.ItemEntity
