@@ -244,7 +244,11 @@ class AuthRepositoryImpl(
     override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean =
         sessions.unbound(normalizeServerUrl(serverUrl), allowSelfSignedCerts).registrationStatus().allowRegistration
 
-    override suspend fun clearLocalSession(accountId: String) {
+    override suspend fun clearLocalSession(accountId: String) = registry.withAccountLock(accountId) {
+        clearLocalSessionLocked(accountId)
+    }
+
+    private suspend fun clearLocalSessionLocked(accountId: String) {
         secrets.setToken(accountId, null)
         registry.update(accountId) { it.copy(signedIn = false, isAdmin = false, syncCursor = 0) } ?: return
         // Unpushed work is the only thing worth keeping across a logout; see the KDoc above. Items
@@ -257,14 +261,20 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun removeAccount(accountId: String) {
-        val serverUrl = registry.load().firstOrNull { it.id == accountId }?.serverUrl
-        secrets.setToken(accountId, null)
-        registry.remove(accountId)
-        sessions.drop(accountId)
-        forgetLastOpenedListOf(accountId)
+        // Under the account's lock, so no sync of it is between its request and its merge.
+        val serverUrl = registry.withAccountLock(accountId) {
+            val serverUrl = registry.load().firstOrNull { it.id == accountId }?.serverUrl
+            secrets.setToken(accountId, null)
+            registry.remove(accountId)
+            sessions.drop(accountId)
+            forgetLastOpenedListOf(accountId)
+            serverUrl
+        }
+        // Each under its own lock, taken only once the removed account's is released: a sync
+        // running for one of them would otherwise store its new cursor over the reset.
         if (serverUrl != null) {
             registry.snapshot().filter { it.serverUrl == serverUrl }.forEach { other ->
-                registry.update(other.id) { it.copy(syncCursor = 0) }
+                registry.withAccountLock(other.id) { registry.update(other.id) { it.copy(syncCursor = 0) } }
             }
         }
     }

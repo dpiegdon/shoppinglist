@@ -39,6 +39,8 @@ class AccountRegistry(
     private val state = MutableStateFlow<List<AccountEntity>?>(null)
     private val loadMutex = Mutex()
     private val writeMutex = Mutex()
+    private val accountLocksGuard = Mutex()
+    private val accountLocks = HashMap<String, Mutex>()
 
     /** Every account, in the user's order. Emits once [load] has run. */
     val accounts: Flow<List<AccountEntity>> = state.filterNotNull()
@@ -111,6 +113,16 @@ class AccountRegistry(
             }
             state.update { current -> current.orEmpty().filterNot { it.id == id } }
         }
+    }
+
+    /**
+     * Runs [block] holding [id]'s account lock: one sync of the account, its local sign-out or its
+     * removal at a time (T-298), so a removal never lands between a sync's request and its merge.
+     * Not reentrant: [block] must not take the same account's lock again.
+     */
+    suspend fun <T> withAccountLock(id: String, block: suspend () -> T): T {
+        val lock = accountLocksGuard.withLock { accountLocks.getOrPut(id) { Mutex() } }
+        return lock.withLock { block() }
     }
 
     /** Waits for every write [updateInBackground] has started. */

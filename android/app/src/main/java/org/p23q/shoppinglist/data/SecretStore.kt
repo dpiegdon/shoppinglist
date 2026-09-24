@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.data
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -49,10 +50,13 @@ class KeystoreSecretStore @Inject constructor(@ApplicationContext context: Conte
 
     override fun token(accountId: String): String? = prefs.getString(tokenKey(accountId), null)
 
+    // commit(), not apply(): the account row that says "signed in" is written right after, and a
+    // process that dies in between must not come back signed in with no token on disk (T-298).
+    @SuppressLint("ApplySharedPref")
     override fun setToken(accountId: String, token: String?) {
         val editor = prefs.edit()
         if (token == null) editor.remove(tokenKey(accountId)) else editor.putString(tokenKey(accountId), token)
-        editor.apply()
+        editor.commit()
     }
 
     override var lastOpenedListId: String?

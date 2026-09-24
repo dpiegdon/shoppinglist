@@ -99,7 +99,10 @@ class SyncEngine @Inject constructor(
      */
     suspend fun syncNow(fullLists: List<String> = emptyList(), fullListsAccountId: String? = null): SyncResult {
         val servers = registry.load().filter { it.isServer }
-        val eligible = servers.filter { it.signedIn && !it.outdated }
+        // Signed in, but its token is gone: nothing can go out for it, so it is signed out as a
+        // 401 would sign it out (T-298), and the login screen asks for the password again.
+        servers.filter { it.signedIn && !sessions.hasToken(it.id) }.forEach { signOutTokenless(it.id) }
+        val eligible = servers.filter { it.signedIn && !it.outdated && sessions.hasToken(it.id) }
         if (eligible.isEmpty()) {
             return if (servers.isNotEmpty() && servers.all { it.outdated }) SyncResult.UpdateRequired else SyncResult.Unauthorized
         }
@@ -112,13 +115,16 @@ class SyncEngine @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 // Isolated: whatever went wrong with this account's run must not cost the next
-                // account its sync. The status records it as that account's failure.
+                // account its sync. The status records it as that account's failure — unless the
+                // account is gone by now, whose status must not be brought back.
                 val message = e.message ?: e.javaClass.simpleName
-                syncStatus.account(account.id).failed(
-                    message,
-                    pending = itemDao.dirtyRowsForAccount(account.id).size + listDao.dirtyRowsForAccount(account.id).size,
-                    blocked = blockedCount(account.id),
-                )
+                if (registry.get(account.id) != null) {
+                    syncStatus.account(account.id).failed(
+                        message,
+                        pending = itemDao.dirtyRowsForAccount(account.id).size + listDao.dirtyRowsForAccount(account.id).size,
+                        blocked = blockedCount(account.id),
+                    )
+                }
                 SyncResult.Failed(message)
             }
         }
@@ -139,10 +145,26 @@ class SyncEngine @Inject constructor(
         )
     }
 
-    /** One account's sync: its dirty rows, its cursor, its server. */
-    suspend fun syncAccount(accountId: String, fullLists: List<String> = emptyList()): SyncResult {
+    private suspend fun signOutTokenless(accountId: String) {
+        registry.update(accountId) { it.copy(signedIn = false) }
+    }
+
+    /**
+     * One account's sync: its dirty rows, its cursor, its server. Holds the account's lock
+     * ([AccountRegistry.withAccountLock]) throughout, so the account cannot be signed out locally
+     * or removed between the request and the merge of its answer.
+     */
+    suspend fun syncAccount(accountId: String, fullLists: List<String> = emptyList()): SyncResult =
+        registry.withAccountLock(accountId) { syncAccountLocked(accountId, fullLists) }
+
+    private suspend fun syncAccountLocked(accountId: String, fullLists: List<String>): SyncResult {
         val account = registry.get(accountId) ?: return SyncResult.Unauthorized
-        if (!account.signedIn) return SyncResult.Unauthorized
+        // A local account has no server to sync with.
+        if (!account.isServer || !account.signedIn) return SyncResult.Unauthorized
+        if (!sessions.hasToken(accountId)) {
+            signOutTokenless(accountId)
+            return SyncResult.Unauthorized
+        }
         // Too old for this server (T-240): stop before reading, sending or reporting anything. The
         // dirty rows stay dirty and stay pushable — the app being outdated says nothing about
         // them, and they go out unchanged the moment an updated build talks to the server again.
@@ -216,7 +238,7 @@ class SyncEngine @Inject constructor(
                     listDao.deleteSyncedRowsForAccount(accountId)
                 }
                 registry.update(accountId) { it.copy(syncCursor = 0) }
-                return syncAccount(accountId, fullLists)
+                return syncAccountLocked(accountId, fullLists)
             }
             // One row the server rejected (bad field value) aborts the whole transactional push.
             // Quarantine just that row so it stops wedging the queue, then retry immediately: the
@@ -239,7 +261,7 @@ class SyncEngine @Inject constructor(
                 val listId = itemDao.getById(badRowId)?.listId ?: badRowId.takeIf { listDao.getById(it) != null }
                 if (listId != null) {
                     if (itemDao.getById(badRowId) != null) itemDao.hardDelete(badRowId) else listDao.hardDelete(badRowId)
-                    return syncAccount(accountId, fullLists + listId)
+                    return syncAccountLocked(accountId, fullLists + listId)
                 }
             }
             if (e.httpStatus == 422 && badRowId != null) {
@@ -253,11 +275,11 @@ class SyncEngine @Inject constructor(
                     // that can later say why it was parked, and a push queue empties while nobody
                     // is looking — by the time anyone sees it, this exception is long gone.
                     itemDao.blockRow(badRowId, e.code, e.accountId)
-                    return syncAccount(accountId, fullLists)
+                    return syncAccountLocked(accountId, fullLists)
                 }
                 if (listDao.getById(badRowId) != null) {
                     listDao.blockRow(badRowId)
-                    return syncAccount(accountId, fullLists)
+                    return syncAccountLocked(accountId, fullLists)
                 }
             }
             val message = e.message ?: "sync failed"
@@ -311,7 +333,7 @@ class SyncEngine @Inject constructor(
         // pending strictly decreases each pass and the recursion is bounded by the backlog size.
         // fullLists is deliberately not repeated: it asks for a snapshot, this pass already took it.
         if (hasMoreToPush && pendingAfter < pendingBefore) {
-            return when (val rest = syncAccount(accountId)) {
+            return when (val rest = syncAccountLocked(accountId, emptyList())) {
                 is SyncResult.Success -> SyncResult.Success(
                     pushedItems = dirtyItems.size + rest.pushedItems,
                     pushedLists = dirtyLists.size + rest.pushedLists,

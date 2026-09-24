@@ -142,6 +142,9 @@ class AccountSessions(
         listOf(ProtocolInterceptor(), ErrorInterceptor(json)),
     )
 
+    /** Whether the secret store holds a token for the account. */
+    fun hasToken(accountId: String): Boolean = secrets.token(accountId) != null
+
     /** Forgets a removed account's session. */
     fun drop(accountId: String) {
         cache.remove(accountId)

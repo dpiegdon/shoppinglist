@@ -8,6 +8,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.RecordedRequest
+import org.p23q.shoppinglist.core.AuthRepositoryImpl
+import org.p23q.shoppinglist.core.DefaultCurrencyState
+import org.p23q.shoppinglist.core.db.AccountEntity
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -1077,5 +1086,95 @@ class SyncEngineTest {
 
         assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
         assertEquals(0, server.requestCount)
+    }
+
+    // ---- guards and the account lock (T-298) -------------------------------------------
+
+    @Test
+    fun `a signed-in account whose token is gone is signed out and sends nothing (T-298)`() = runTest {
+        pointAtServer()
+        accounts.secrets.setToken(TEST_ACCOUNT_ID, null)
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
+
+        assertEquals(0, server.requestCount)
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+    }
+
+    @Test
+    fun `a local account is never synced, even when asked for by id (T-298)`() = runTest {
+        accounts.registry.add(
+            AccountEntity(
+                id = "on-device",
+                kind = AccountEntity.KIND_LOCAL,
+                serverUrl = null,
+                accountId = null,
+                email = null,
+                label = "This phone",
+                signedIn = true,
+            ),
+        )
+        accounts.secrets.setToken("on-device", "never-used")
+
+        assertTrue(syncEngine.syncAccount("on-device") is SyncResult.Unauthorized)
+        assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
+    }
+
+    /** T-298: nothing tested the catch in syncNow; an exception syncAccount does not handle itself. */
+    @Test
+    fun `an account whose run throws does not cost the next account its sync (T-298)`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        // A 200 that is not JSON: the decoder throws, which syncAccount does not catch.
+        server.enqueue(MockResponse().setResponseCode(200).setBody("<html>portal</html>"))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        val result = syncEngine.syncNow()
+
+        assertTrue(result is SyncResult.Failed)
+        assertEquals("the second account still synced", 1, other.requestCount)
+        assertEquals(7L, accounts.registry.get("second")!!.syncCursor)
+        assertNotNull(syncStatus.accounts.value.getValue(TEST_ACCOUNT_ID).lastError)
+        assertFalse(syncStatus.accounts.value.getValue(TEST_ACCOUNT_ID).inProgress)
+    }
+
+    /**
+     * T-298: a removal that lands between a sync's request and its merge left the merge writing
+     * lists for an account that no longer exists, and syncNow's catch then brought the removed
+     * account's status back. The removal now waits for the sync.
+     */
+    @Test
+    fun `removing an account while its sync is out waits for it, and nothing of the account comes back`() = runBlocking<Unit> {
+        pointAtServer()
+        val arrived = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                arrived.countDown()
+                release.await(5, TimeUnit.SECONDS)
+                return MockResponse().setResponseCode(200).setBody(
+                    syncResponseJson(cursor = 6, lists = listOf(listJson(id = "new-list", name = "Shared")), items = emptyList()),
+                )
+            }
+        }
+        val auth = AuthRepositoryImpl(
+            accounts.sessions, accounts.registry, accounts.secrets, accounts.secrets, db,
+            DefaultCurrencyState(accounts.currentAccount), deviceName = "Test device",
+        )
+
+        val sync = async(Dispatchers.IO) { syncEngine.syncNow() }
+        assertTrue(arrived.await(5, TimeUnit.SECONDS))
+        val removal = async(Dispatchers.IO) { auth.removeAccount(TEST_ACCOUNT_ID) }
+        delay(300)
+        val removedDuringTheRequest = removal.isCompleted
+        release.countDown()
+        sync.await()
+        removal.await()
+
+        assertFalse("the removal waited for the sync", removedDuringTheRequest)
+        assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
+        assertNull(db.listDao().getById("new-list"))
+        assertNull(db.listDao().getById("list-1"))
+        assertFalse("its status is not brought back", syncStatus.accounts.value.containsKey(TEST_ACCOUNT_ID))
     }
 }
