@@ -472,6 +472,75 @@ class AppDbMigrationTest {
         }
     }
 
+    /** An item on list [listId], which the test may leave without a list row. */
+    private fun insertItem(connection: SQLiteConnection, id: String, listId: String, dirty: Boolean) {
+        connection.execSQL(
+            "INSERT INTO items (id, listId, createdAt, dirty, name_value, name_updatedAt, " +
+                "name_updatedBy, category_updatedAt, category_updatedBy, stores_value, " +
+                "stores_updatedAt, stores_updatedBy, quantity_updatedAt, quantity_updatedBy, " +
+                "price_updatedAt, price_updatedBy, note_updatedAt, note_updatedBy, status_value, " +
+                "status_updatedAt, status_updatedBy, deleted_value, deleted_updatedAt, " +
+                "deleted_updatedBy) " +
+                "VALUES ('$id', '$listId', 10, ${if (dirty) 1 else 0}, 'Eggs', 12, 'devA', 0, '', '[]', 0, '', " +
+                "0, '', 0, '', 0, '', 'todo', 12, 'devA', 0, 0, '')",
+        )
+    }
+
+    /**
+     * T-298: 3.1.0 deleted a clean list on logout even when it still held an unpushed item. Without
+     * a list such an item reaches no account, so it would never be pushed, counted or removed.
+     */
+    @Test
+    fun `migrating 8 to 9 gives an item whose list is gone a hidden stub list of the account`() {
+        val connection = openFresh("v8-orphan")
+        try {
+            seedV8(connection)
+            insertItem(connection, "orphan-1", listId = "gone", dirty = true)
+            insertItem(connection, "orphan-2", listId = "gone", dirty = false)
+            Migration8To9(FakeLegacySession(signedIn)).migrate(supportFacade(connection))
+
+            val id = readText(connection, "SELECT id FROM accounts")
+            assertEquals(2L, count(connection, "SELECT COUNT(*) FROM lists"))
+            assertEquals("owned by the migrated account", id, readText(connection, "SELECT accountId FROM lists WHERE id = 'gone'"))
+            assertEquals("nothing to push", 0L, readLong(connection, "SELECT dirty FROM lists WHERE id = 'gone'"))
+            assertEquals("hidden", 1L, readLong(connection, "SELECT deleted_value FROM lists WHERE id = 'gone'"))
+            assertEquals(
+                "every clock 0, so any pull wins every field",
+                0L,
+                readLong(
+                    connection,
+                    "SELECT name_updatedAt + categoryOrder_updatedAt + notes_updatedAt + kind_updatedAt + " +
+                        "currency_updatedAt + deleted_updatedAt FROM lists WHERE id = 'gone'",
+                ),
+            )
+            assertEquals("shopping", readText(connection, "SELECT kind_value FROM lists WHERE id = 'gone'"))
+            assertEquals("", readText(connection, "SELECT name_value FROM lists WHERE id = 'gone'"))
+            assertEquals("[]", readText(connection, "SELECT categoryOrder_value FROM lists WHERE id = 'gone'"))
+            assertEquals("the item stays unpushed", 1L, readLong(connection, "SELECT dirty FROM items WHERE id = 'orphan-1'"))
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE id = 'l1'"))
+            connection.prepare("PRAGMA foreign_key_check").use { assertTrue(!it.step()) }
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 8 to 9 gives orphan items an owner even when no list and no session is left`() {
+        val connection = openFresh("v8-orphan-only")
+        try {
+            connection.execSQL(v1Lists)
+            connection.execSQL(v1Items)
+            runMigrations(connection, from = 1, to = 8)
+            insertItem(connection, "orphan-1", listId = "gone", dirty = true)
+            Migration8To9(FakeLegacySession()).migrate(supportFacade(connection))
+
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM accounts"))
+            assertEquals(readText(connection, "SELECT id FROM accounts"), readText(connection, "SELECT accountId FROM lists WHERE id = 'gone'"))
+        } finally {
+            connection.close()
+        }
+    }
+
     @Test
     fun `migrating 8 to 9 gives lists nobody is recorded for a signed-out owner`() {
         // No session and no mirror owner, but lists: nothing should leave a database like this,

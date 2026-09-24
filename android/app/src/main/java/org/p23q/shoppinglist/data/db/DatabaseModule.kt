@@ -102,6 +102,13 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
  * an owner; the next login replaces it as it would have wiped the mirror (T-260). With neither
  * there are no lists and nothing is inserted.
  *
+ * An item whose list is gone gets a stub list, owned by that account (T-298). 3.1.0's logout and
+ * its full-resync re-base deleted every clean list, including one that still held an unpushed
+ * item; items reach their account only through their list, so such an item would belong to no
+ * account at all: never pushed, never counted, never removed with an account, and sent under
+ * whichever account later pulled the list. The stub is clean, every clock is 0 and it is deleted
+ * at clock 0, so it stays hidden until a pull of the real list revives it with the real values.
+ *
  * `lists` is rebuilt rather than altered: SQLite cannot add a NOT NULL foreign-key column in place.
  * The old keys are deleted only after the database has opened ([LegacySessionSource.discard]), so a
  * migration that fails and rolls back finds them again next time.
@@ -124,7 +131,7 @@ class Migration8To9(private val legacy: LegacySessionSource) : Migration(8, 9) {
                 "`signedIn`, `outdated`, `serverProtocol`, `syncCursor`, `defaultCurrency`, " +
                 "`ignoredInviteIdsJson`, `allowSelfSignedCerts`, `sortOrder`) " +
                 "SELECT ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, 0 " +
-                "WHERE ? OR EXISTS (SELECT 1 FROM `lists`)",
+                "WHERE ? OR EXISTS (SELECT 1 FROM `lists`) OR EXISTS (SELECT 1 FROM `items`)",
             arrayOf<Any?>(
                 localId,
                 AccountEntity.KIND_SERVER,
@@ -150,6 +157,7 @@ class Migration8To9(private val legacy: LegacySessionSource) : Migration(8, 9) {
         db.execSQL("DROP TABLE `lists`")
         db.execSQL("ALTER TABLE `lists_new` RENAME TO `lists`")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_lists_accountId` ON `lists` (`accountId`)")
+        db.execSQL(INSERT_ORPHAN_STUBS, arrayOf<Any?>(localId))
 
         if (session.token != null) legacy.adoptToken(localId)
     }
@@ -185,6 +193,13 @@ class Migration8To9(private val legacy: LegacySessionSource) : Migration(8, 9) {
                 "`notes_updatedBy`, `kind_value`, `kind_updatedAt`, `kind_updatedBy`, `currency_value`, " +
                 "`currency_updatedAt`, `currency_updatedBy`, `deleted_value`, `deleted_updatedAt`, " +
                 "`deleted_updatedBy`"
+
+        /** One stub list for every list id items name that has no row; see the class comment. */
+        const val INSERT_ORPHAN_STUBS =
+            "INSERT INTO `lists` (`accountId`, $LIST_COLUMNS) " +
+                "SELECT DISTINCT ?, `listId`, 0, 0, 0, '[]', '[]', NULL, " +
+                "'', 0, '', '[]', 0, '', NULL, 0, '', 'shopping', 0, '', NULL, 0, '', 1, 0, '' " +
+                "FROM `items` WHERE `listId` NOT IN (SELECT `id` FROM `lists`)"
     }
 }
 
