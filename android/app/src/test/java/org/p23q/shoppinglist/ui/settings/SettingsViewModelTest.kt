@@ -21,7 +21,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.data.DefaultCurrencyState
+import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.ServerConfig

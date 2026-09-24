@@ -11,9 +11,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.api.ProtocolState
 import org.p23q.shoppinglist.core.api.SessionEvents
-import org.p23q.shoppinglist.data.AuthRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootViewModelTest {

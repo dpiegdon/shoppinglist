@@ -1,21 +1,13 @@
-package org.p23q.shoppinglist.data
+package org.p23q.shoppinglist.core
 
-import android.os.Build
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.p23q.shoppinglist.core.SessionState
+import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.core.api.LoginRequest
 import org.p23q.shoppinglist.core.api.RegisterRequest
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.clearAll
 import org.p23q.shoppinglist.core.db.inTransaction
-import org.p23q.shoppinglist.data.api.ApiProvider
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Coordinates login/register/logout across the API, session state, and local mirror. An interface
@@ -63,19 +55,16 @@ interface AuthRepository {
     fun lastOpenedListId(): String?
 }
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class AuthRepositoryModule {
-    @Binds
-    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
-}
-
-@Singleton
-class AuthRepositoryImpl @Inject constructor(
-    private val apiProvider: ApiProvider,
+/**
+ * Built by :app's AuthRepositoryModule, which supplies [deviceName] (the label the server shows in
+ * the account's session list) from the platform.
+ */
+class AuthRepositoryImpl(
+    private val apiProvider: ApiSource,
     private val sessionState: SessionState,
     private val appDb: AppDb,
     private val defaultCurrencyState: DefaultCurrencyState,
+    private val deviceName: String,
 ) : AuthRepository {
 
     override suspend fun register(email: String, password: String) {
@@ -84,8 +73,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(email: String, password: String) {
         val api = apiProvider.get()
-        val deviceLabel = "${Build.MANUFACTURER} ${Build.MODEL}"
-        val response = api.login(LoginRequest(email, password, deviceLabel, PLATFORM))
+        val response = api.login(LoginRequest(email, password, deviceName, PLATFORM))
         // Now — and only now — we know whose data the mirror may be shown to (T-260). A mirror left
         // behind by a different account is wiped before anything of this session is stored; the
         // returning account's own mirror is kept, unpushed edits and all, and reconciled by the

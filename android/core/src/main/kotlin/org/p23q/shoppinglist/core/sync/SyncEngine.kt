@@ -29,8 +29,6 @@ import org.p23q.shoppinglist.core.db.LwwString
 import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
-import org.p23q.shoppinglist.core.sync.CollaboratorChange
-import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import java.io.IOException
 import javax.inject.Inject
 import javax.net.ssl.SSLException

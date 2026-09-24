@@ -3,9 +3,6 @@ package org.p23q.shoppinglist.core.db
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import org.p23q.shoppinglist.core.db.LwwBoolean
-import org.p23q.shoppinglist.core.db.LwwOptionalString
-import org.p23q.shoppinglist.core.db.LwwString
 
 /**
  * Local mirror of the Wire Contract's item object. Every syncable field is stored as its own

@@ -17,6 +17,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.AuthRepository
+import org.p23q.shoppinglist.core.AuthRepositoryImpl
+import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
@@ -65,7 +68,7 @@ class AuthRepositoryTest {
         )
 
         defaultCurrencyState = DefaultCurrencyState(sessionState)
-        repository = AuthRepositoryImpl(apiProvider, sessionState, db, defaultCurrencyState)
+        repository = AuthRepositoryImpl(apiProvider, sessionState, db, defaultCurrencyState, deviceName = "Test device")
     }
 
     @After

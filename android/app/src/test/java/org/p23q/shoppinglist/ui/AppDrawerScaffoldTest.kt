@@ -15,8 +15,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.sync.SyncStatus
-import org.p23q.shoppinglist.data.AuthRepository
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.ui.login.LoginViewModel
