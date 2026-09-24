@@ -75,7 +75,7 @@ fun testAccount(
  * Inserts an account row straight into the table, for tests that only need their lists to have an
  * owner. A test that also uses an [AccountRegistry] adds its accounts through the registry instead.
  */
-suspend fun AppDb.insertTestAccount(account: AccountEntity = testAccount()) = accountDao().upsert(account)
+suspend fun AppDb.insertTestAccount(account: AccountEntity = testAccount()) = accountDao().insert(account)
 
 /** An [ApiSource] against whatever URL [baseUrl] says at the time of the call, like the app's. */
 fun testApiSource(

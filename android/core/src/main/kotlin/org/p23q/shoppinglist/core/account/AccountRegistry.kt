@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.core.account
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,7 +52,7 @@ class AccountRegistry(
         return loadMutex.withLock {
             state.value ?: run {
                 val rows = dao.all()
-                rows.filter { it.outdated }.forEach { dao.upsert(it.copy(outdated = false)) }
+                rows.filter { it.outdated }.forEach { dao.update(it.copy(outdated = false)) }
                 val fresh = rows.map { it.copy(outdated = false) }
                 state.value = fresh
                 fresh
@@ -68,7 +69,12 @@ class AccountRegistry(
     fun find(serverUrl: String, accountId: String): AccountEntity? =
         snapshot().firstOrNull { it.serverUrl == serverUrl && it.accountId == accountId }
 
-    /** Adds [account], placed after every existing one (or replaces the one with its id). */
+    /**
+     * Adds [account], placed after every existing one (or replaces the one with its id).
+     *
+     * Throws what the table throws when it refuses the row — another account with the same server
+     * and server-side id — and the copy is then as the table is.
+     */
     suspend fun add(account: AccountEntity): AccountEntity {
         load()
         var added = account
@@ -77,26 +83,38 @@ class AccountRegistry(
             added = account.copy(sortOrder = (others.maxOfOrNull { it.sortOrder } ?: -1) + 1)
             others + added
         }
-        persist(added.id)
+        persistOrRevert(added.id)
         return added
     }
 
-    /** Applies [mutate] to the account and writes it; returns the new row, or null if it is gone. */
+    /**
+     * Applies [mutate] to the account and writes it; returns the new row, or null if it is gone.
+     * A row the table refuses is refused as [add] refuses it.
+     */
     suspend fun update(id: String, mutate: (AccountEntity) -> AccountEntity): AccountEntity? {
         load()
         val updated = apply(id, mutate) ?: return null
-        persist(id)
+        persistOrRevert(id)
         return updated
     }
 
     /**
      * [update] for callers that cannot suspend (an OkHttp interceptor, a view model's setter). The
      * change is visible to every reader when this returns; only the write to the table is left to
-     * run in the background. [flush] waits for it.
+     * run in the background. [flush] waits for it. There is nobody to tell of a refused row here,
+     * so the copy just goes back to what the table holds.
      */
     fun updateInBackground(id: String, mutate: (AccountEntity) -> AccountEntity) {
         apply(id, mutate) ?: return
-        scope.launch { persist(id) }
+        scope.launch {
+            try {
+                persistOrRevert(id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Reverted; see above.
+            }
+        }
     }
 
     /**
@@ -139,10 +157,22 @@ class AccountRegistry(
         return result
     }
 
-    private suspend fun persist(id: String) = writeMutex.withLock {
+    /** Writes the copy's row; if the table refuses it, puts the table's row back in the copy. */
+    private suspend fun persistOrRevert(id: String) = writeMutex.withLock {
         // The copy's row as it is NOW, not as it was when this write was queued.
         val row = get(id) ?: return@withLock
-        dao.upsert(row)
+        try {
+            if (dao.update(row) == 0) dao.insert(row)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val stored = dao.get(id)
+            state.update { current ->
+                val list = current.orEmpty()
+                if (stored == null) list.filterNot { it.id == id } else list.map { if (it.id == id) stored else it }
+            }
+            throw e
+        }
     }
 
     companion object {

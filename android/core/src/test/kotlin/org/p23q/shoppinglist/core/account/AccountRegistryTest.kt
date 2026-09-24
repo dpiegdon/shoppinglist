@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,7 +18,7 @@ class AccountRegistryTest {
 
     @Test
     fun `nothing is known before load, and everything after`() = runBlocking {
-        db.accountDao().upsert(account("a"))
+        db.accountDao().insert(account("a"))
         val registry = AccountRegistry(db)
 
         assertTrue(registry.snapshot().isEmpty())
@@ -100,7 +101,7 @@ class AccountRegistryTest {
     @Test
     fun `a new process starts with no account outdated`() = runBlocking {
         // The flag says the build that got the 426 was too old; this one may be its update.
-        db.accountDao().upsert(account("a").copy(outdated = true))
+        db.accountDao().insert(account("a").copy(outdated = true))
 
         val registry = AccountRegistry(db)
         registry.load()
@@ -113,5 +114,33 @@ class AccountRegistryTest {
     fun `a list's account must exist`() = runBlocking {
         val failure = runCatching { db.listDao().upsert(list("orphan", "nobody")) }.exceptionOrNull()
         assertTrue("the foreign key refuses it: $failure", failure != null)
+    }
+
+    /** T-298: Room's @Upsert turned this conflict into an update that matched nothing, silently. */
+    @Test
+    fun `a second account with the same server and server id is refused, in the table and the copy`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.add(account("a", serverUrl = "https://same.example.test/"))
+
+        val refused = runCatching {
+            registry.add(account("b", serverUrl = "https://same.example.test/").copy(accountId = "server-a"))
+        }.exceptionOrNull()
+
+        assertNotNull("the conflict is surfaced", refused)
+        assertEquals(listOf("a"), registry.snapshot().map { it.id })
+        assertEquals(listOf("a"), db.accountDao().all().map { it.id })
+    }
+
+    @Test
+    fun `an update that would collide with another account is refused, and the copy keeps the stored row`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.add(account("a", serverUrl = "https://same.example.test/"))
+        registry.add(account("b", serverUrl = "https://same.example.test/"))
+
+        val refused = runCatching { registry.update("b") { it.copy(accountId = "server-a") } }.exceptionOrNull()
+
+        assertNotNull(refused)
+        assertEquals("server-b", registry.get("b")!!.accountId)
+        assertEquals("server-b", db.accountDao().all().first { it.id == "b" }.accountId)
     }
 }
