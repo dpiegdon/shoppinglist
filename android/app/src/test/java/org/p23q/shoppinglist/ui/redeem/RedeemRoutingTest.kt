@@ -27,9 +27,8 @@ import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListsRepo
-import org.p23q.shoppinglist.ui.LoginArgs
+import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
-import org.p23q.shoppinglist.ui.login
 import org.robolectric.RobolectricTestRunner
 import java.util.Collections
 
@@ -118,7 +117,7 @@ class RedeemRoutingTest {
 
         assertNull(viewModel.redeem())
 
-        assertEquals(Routes.login(LoginArgs.MODE_ADD, serverUrl = stage), viewModel.uiState.value.needsLogin)
+        assertEquals(Routes.login(LoginMode.ADD, serverUrl = stage), viewModel.uiState.value.needsLogin)
         assertEquals(PendingInvite("tok-1", null, link(stage)), holder.consume())
         assertTrue(requests.isEmpty())
     }
@@ -130,7 +129,7 @@ class RedeemRoutingTest {
 
         viewModel.redeem()
 
-        assertEquals(Routes.login(LoginArgs.MODE_START, serverUrl = prod), viewModel.uiState.value.needsLogin)
+        assertEquals(Routes.login(LoginMode.START, serverUrl = prod), viewModel.uiState.value.needsLogin)
     }
 
     @Test
@@ -208,7 +207,7 @@ class RedeemRoutingTest {
 
         assertNull(viewModel.redeem())
 
-        assertEquals(Routes.login(LoginArgs.MODE_RESIGNIN, accountId = "prod"), viewModel.uiState.value.needsLogin)
+        assertEquals(Routes.login(LoginMode.RESIGNIN, accountId = "prod"), viewModel.uiState.value.needsLogin)
         assertEquals(PendingInvite("tok-1", "prod", link(prod)), holder.consume())
         assertTrue(requests.isEmpty())
     }

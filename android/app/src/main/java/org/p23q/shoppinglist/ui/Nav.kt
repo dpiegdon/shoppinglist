@@ -90,7 +90,6 @@ import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
 import org.p23q.shoppinglist.ui.update.UpdateRequiredScreen
 import org.p23q.shoppinglist.ui.update.UpdateViewModel
-import java.net.URLEncoder
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -139,12 +138,25 @@ object Routes {
      */
     fun login(mode: LoginMode, accountId: String? = null, serverUrl: String? = null): String = buildString {
         append("login?$LOGIN_MODE_ARG=${mode.arg}")
-        accountId?.let { append("&$ACCOUNT_ID_ARG=${encode(it)}") }
-        serverUrl?.let { append("&$SERVER_URL_ARG=${encode(it)}") }
+        accountId?.let { append("&$ACCOUNT_ID_ARG=${routeArg(it)}") }
+        serverUrl?.let { append("&$SERVER_URL_ARG=${routeArg(it)}") }
     }
+}
 
-    // Percent-encoding for a query value; URLEncoder's '+' for a space is not what Navigation decodes.
-    private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+/**
+ * [value] percent-encoded for a route argument: every byte outside the URI's unreserved set, so a
+ * server URL's ':' and '/' survive as one argument. Plain Kotlin rather than android.net.Uri, so
+ * the routes can be built in a plain JVM test.
+ */
+internal fun routeArg(value: String): String = buildString {
+    for (byte in value.toByteArray(Charsets.UTF_8)) {
+        val c = byte.toInt().toChar()
+        if (c in 'A'..'Z' || c in 'a'..'z' || c in '0'..'9' || c in "-._~") {
+            append(c)
+        } else {
+            append('%').append("%02X".format(byte.toInt() and 0xFF))
+        }
+    }
 }
 
 /**
@@ -345,7 +357,7 @@ fun ShoppingListNavHost(
                     onOpenList = { listId -> navController.navigate(Routes.list(listId)) },
                     // A signed-out account's banner: sign that account in again (T-292).
                     onSignIn = { accountId ->
-                        navController.navigate(Routes.login(LoginArgs.MODE_RESIGNIN, accountId = accountId))
+                        navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = accountId))
                     },
                 )
             }

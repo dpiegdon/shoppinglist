@@ -31,9 +31,8 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
-import org.p23q.shoppinglist.ui.LoginArgs
+import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
-import org.p23q.shoppinglist.ui.login
 
 @RunWith(RobolectricTestRunner::class)
 class RedeemViewModelTest {
@@ -186,7 +185,7 @@ class RedeemViewModelTest {
         val job = viewModel.redeem()
 
         assertNull("short-circuits before launching any request", job)
-        assertEquals(Routes.login(LoginArgs.MODE_RESIGNIN, accountId = TEST_ACCOUNT_ID), viewModel.uiState.value.needsLogin)
+        assertEquals(Routes.login(LoginMode.RESIGNIN, accountId = TEST_ACCOUNT_ID), viewModel.uiState.value.needsLogin)
         assertEquals("invite-xyz", holder.consume()?.token)
         assertEquals("no request should have reached the server", 0, server.requestCount)
     }

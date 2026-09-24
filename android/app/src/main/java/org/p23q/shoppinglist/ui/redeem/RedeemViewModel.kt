@@ -20,10 +20,9 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.ui.ErrorText
-import org.p23q.shoppinglist.ui.LoginArgs
+import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
-import org.p23q.shoppinglist.ui.login
 import java.io.IOException
 import javax.inject.Inject
 
@@ -97,7 +96,7 @@ class RedeemViewModel @Inject constructor(
             0 -> {
                 // No account on that server (or none at all): sign in to it, then redeem (T-28).
                 pendingInviteHolder.stash(token, null, url)
-                val mode = if (servers.isEmpty()) LoginArgs.MODE_START else LoginArgs.MODE_ADD
+                val mode = if (servers.isEmpty()) LoginMode.START else LoginMode.ADD
                 _uiState.update { it.copy(needsLogin = Routes.login(mode, serverUrl = url?.let(::inviteServerUrl))) }
                 null
             }
@@ -126,7 +125,7 @@ class RedeemViewModel @Inject constructor(
         // afterwards, instead of a bare 401 that drops the invite (T-28).
         if (!account.signedIn || !sessions.hasToken(account.id)) {
             pendingInviteHolder.stash(token, account.id, inviteUrl)
-            _uiState.update { it.copy(needsLogin = Routes.login(LoginArgs.MODE_RESIGNIN, accountId = account.id)) }
+            _uiState.update { it.copy(needsLogin = Routes.login(LoginMode.RESIGNIN, accountId = account.id)) }
             return null
         }
         return viewModelScope.launch {
