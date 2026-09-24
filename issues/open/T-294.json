@@ -1,6 +1,9 @@
 {
   "body": "Step B4 of the multi-account design (, section 6).\n\n* `ListsRepo.copy(sourceListId, targetAccountId)`: new list under the target with a fresh id,\n  fresh field clocks, `updated_by` = this device, items and category order copied, name suffixed\n  as today (T-63). Into a server account: rows are dirty and push on the next sync. Into the\n  local area: no sync, roster \"You\".\n* List properties \u2192 Copy: with one account exactly today's behaviour; with several, a picker\n  \"Copy to\" listing the accounts (the local area included; the source account first). Ledgers\n  show the picker with only the source account, plus a one-line reason why they cannot cross\n  accounts.\n* Hidden fields survive as today (stores, price, quantity on a checklist).\n* Strings in nine locales; no web change.\n* Tests: copy server \u2192 local strips members and never appears in a push; copy local \u2192 server\n  pushes exactly the copied rows; copying a ledger across accounts is refused in the repo, not\n  only hidden in the UI; shared items stay untouched in the source.",
   "created_at": "2026-09-24T17:19:40+00:00",
+  "deps": [
+    "T-293"
+  ],
   "id": "T-294",
   "labels": [
     "android",
