@@ -487,7 +487,7 @@ class ItemFormViewModelTest {
     /**
      * A second repo over the SAME dao but a distinct device id, used to seed an item. Every field it
      * writes carries "seed-device"; a field the ViewModel (device-1) re-stamps flips to "device-1",
-     * so per-field [org.p23q.shoppinglist.data.db.LwwString.updatedBy] tells us exactly which setters ran.
+     * so per-field [org.p23q.shoppinglist.core.db.LwwString.updatedBy] tells us exactly which setters ran.
      */
     private fun seedRepo(device: String): ItemsRepo =
         ItemsRepo(db, DeviceIdProvider { device }, FakeSyncTrigger())

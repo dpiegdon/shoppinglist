@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.data.update
 
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.BuildConfig
+import org.p23q.shoppinglist.core.update.compareVersions
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
 import java.io.IOException

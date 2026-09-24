@@ -14,12 +14,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.p23q.shoppinglist.data.AppFormat
-import org.p23q.shoppinglist.data.CategoryCanon
+import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.core.CategoryCanon
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.NameOrder
 import org.p23q.shoppinglist.data.DefaultCurrencyState
-import org.p23q.shoppinglist.data.ExpenseMath
 import org.p23q.shoppinglist.data.ListKind
-import org.p23q.shoppinglist.data.NameOrder
 import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.MemberDto

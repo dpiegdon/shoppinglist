@@ -21,10 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.AppFormat
-import org.p23q.shoppinglist.data.Expense
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ExpenseType
+import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.appLocale
 import java.time.LocalDate
 

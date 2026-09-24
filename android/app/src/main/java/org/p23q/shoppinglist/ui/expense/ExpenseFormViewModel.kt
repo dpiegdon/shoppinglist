@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.data.Expense
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ExpenseType
-import org.p23q.shoppinglist.data.ListMember
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo

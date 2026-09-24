@@ -26,12 +26,12 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.data.DeviceIdProvider
-import org.p23q.shoppinglist.data.Expense
-import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
-import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor

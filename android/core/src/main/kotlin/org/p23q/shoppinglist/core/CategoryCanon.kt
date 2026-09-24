@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data
+package org.p23q.shoppinglist.core
 
 /**
  * Case-insensitive category identity + canonical casing (T-108). Mirror of the web client's

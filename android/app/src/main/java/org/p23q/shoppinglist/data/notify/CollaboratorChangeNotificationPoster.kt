@@ -20,10 +20,10 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.sync.CollaboratorChange
+import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
-import org.p23q.shoppinglist.data.sync.CollaboratorChange
-import org.p23q.shoppinglist.data.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.ui.localizedContext
 import javax.inject.Inject
 import javax.inject.Singleton

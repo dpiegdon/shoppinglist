@@ -15,9 +15,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainActivity
+import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
-import org.p23q.shoppinglist.data.sync.CollaboratorChange
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import java.io.File

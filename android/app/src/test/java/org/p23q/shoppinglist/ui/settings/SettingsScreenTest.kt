@@ -33,7 +33,7 @@ import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
-import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore

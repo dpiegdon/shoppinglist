@@ -67,7 +67,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.CategoryCanon
+import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status

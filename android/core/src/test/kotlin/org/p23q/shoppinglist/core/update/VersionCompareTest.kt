@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.update
+package org.p23q.shoppinglist.core.update
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

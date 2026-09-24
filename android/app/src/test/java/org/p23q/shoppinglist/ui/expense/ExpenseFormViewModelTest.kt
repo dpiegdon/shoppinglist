@@ -14,13 +14,13 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.data.DeviceIdProvider
-import org.p23q.shoppinglist.data.Expense
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ExpenseType
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ListKind
-import org.p23q.shoppinglist.data.ListMember
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo

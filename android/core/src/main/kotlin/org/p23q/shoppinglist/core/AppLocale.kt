@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data
+package org.p23q.shoppinglist.core
 
 import java.util.Locale
 

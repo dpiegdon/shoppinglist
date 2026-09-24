@@ -3,6 +3,9 @@ package org.p23q.shoppinglist.data.db
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.p23q.shoppinglist.core.db.LwwBoolean
+import org.p23q.shoppinglist.core.db.LwwOptionalString
+import org.p23q.shoppinglist.core.db.LwwString
 
 /**
  * Local mirror of the Wire Contract's item object. Every syncable field is stored as its own
@@ -23,7 +26,7 @@ data class ItemEntity(
     @Embedded(prefix = "note_") val note: LwwOptionalString,
     @Embedded(prefix = "status_") val status: LwwString,
     /**
-     * JSON-encoded [org.p23q.shoppinglist.data.Expense], or null (T-151) — text rather than a
+     * JSON-encoded [org.p23q.shoppinglist.core.Expense], or null (T-151) — text rather than a
      * decoded type for the same reason as [stores] and [price]: the whole object is one LWW field.
      * Non-null exactly on the items of an expenses list.
      */

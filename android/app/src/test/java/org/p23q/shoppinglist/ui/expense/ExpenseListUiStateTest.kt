@@ -3,8 +3,8 @@ package org.p23q.shoppinglist.ui.expense
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ListMember
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ListMember
 
 /** When Reimburse is offered (T-165), including the voter rule (T-192). */
 class ExpenseListUiStateTest {

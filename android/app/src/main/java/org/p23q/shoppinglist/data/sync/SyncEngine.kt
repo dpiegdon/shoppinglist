@@ -2,7 +2,14 @@ package org.p23q.shoppinglist.data.sync
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.p23q.shoppinglist.data.Expense
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.db.LwwBoolean
+import org.p23q.shoppinglist.core.db.LwwOptionalString
+import org.p23q.shoppinglist.core.db.LwwString
+import org.p23q.shoppinglist.core.db.toLww
+import org.p23q.shoppinglist.core.db.toLwwOptional
+import org.p23q.shoppinglist.core.sync.CollaboratorChange
+import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
@@ -23,12 +30,7 @@ import org.p23q.shoppinglist.data.db.ItemDao
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.ListDao
 import org.p23q.shoppinglist.data.db.ListEntity
-import org.p23q.shoppinglist.data.db.LwwBoolean
-import org.p23q.shoppinglist.data.db.LwwOptionalString
-import org.p23q.shoppinglist.data.db.LwwString
 import org.p23q.shoppinglist.data.db.inTransaction
-import org.p23q.shoppinglist.data.db.toLww
-import org.p23q.shoppinglist.data.db.toLwwOptional
 import java.io.IOException
 import javax.inject.Inject
 import javax.net.ssl.SSLException

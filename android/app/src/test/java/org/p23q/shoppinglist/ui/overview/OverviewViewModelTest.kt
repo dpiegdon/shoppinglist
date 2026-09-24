@@ -239,7 +239,7 @@ class OverviewViewModelTest {
     fun `a ledger's card shows net spent, not everything that ever moved (T-245)`() =
         runTest(mainDispatcherRule.dispatcher) {
             val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
-            val dinner = org.p23q.shoppinglist.data.Expense(
+            val dinner = org.p23q.shoppinglist.core.Expense(
                 mapOf("me" to "60.00"), true, mapOf("me" to "60.00"), true, "2026-09-18",
             )
             itemsRepo.createExpense(id, "Dinner", dinner)
@@ -266,7 +266,7 @@ class OverviewViewModelTest {
     fun `a card already on screen updates when an entry is recorded, not just at start-up (T-265)`() =
         runTest(mainDispatcherRule.dispatcher) {
             val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
-            val lunch = org.p23q.shoppinglist.data.Expense(
+            val lunch = org.p23q.shoppinglist.core.Expense(
                 mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18",
             )
             itemsRepo.createExpense(id, "Lunch", lunch)
@@ -286,7 +286,7 @@ class OverviewViewModelTest {
     @Test
     fun `an expense list's count is its number of expenses (T-191)`() = runTest(mainDispatcherRule.dispatcher) {
         val id = listsRepo.createList("Trip", org.p23q.shoppinglist.data.ListKind.EXPENSES, currency = "EUR")
-        val expense = org.p23q.shoppinglist.data.Expense(mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18")
+        val expense = org.p23q.shoppinglist.core.Expense(mapOf("me" to "10.00"), true, mapOf("me" to "10.00"), true, "2026-09-18")
         itemsRepo.createExpense(id, "Dinner", expense)
         itemsRepo.createExpense(id, "Taxi", expense)
 

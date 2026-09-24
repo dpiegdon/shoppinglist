@@ -17,14 +17,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.db.toLww
+import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.api.AuthInterceptor
 import org.p23q.shoppinglist.data.api.ErrorInterceptor
 import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.data.db.toLww
-import org.p23q.shoppinglist.data.db.toLwwOptional
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 

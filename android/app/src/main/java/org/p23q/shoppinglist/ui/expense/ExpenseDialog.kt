@@ -64,9 +64,9 @@ import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.AppFormat
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ExpenseType
+import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay

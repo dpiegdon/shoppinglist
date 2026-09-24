@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.Expense
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ListMember
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider

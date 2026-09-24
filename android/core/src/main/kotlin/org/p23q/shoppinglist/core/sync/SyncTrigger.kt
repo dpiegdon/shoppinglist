@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.sync
+package org.p23q.shoppinglist.core.sync
 
 /**
  * Requests background syncs. Repos call [scheduleAfterEdit] on every local mutation (debounced);

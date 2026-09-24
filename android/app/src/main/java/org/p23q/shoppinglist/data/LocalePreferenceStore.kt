@@ -15,6 +15,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.p23q.shoppinglist.core.AppLocale
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Qualifier

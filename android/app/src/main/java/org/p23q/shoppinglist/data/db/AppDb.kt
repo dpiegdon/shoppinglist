@@ -11,6 +11,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.p23q.shoppinglist.core.db.LwwOptionalString
+import org.p23q.shoppinglist.core.db.LwwString
 import javax.inject.Singleton
 
 @Database(entities = [ListEntity::class, ItemEntity::class], version = 8, exportSchema = true)

@@ -11,7 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.core.AppLocale
 import org.robolectric.RobolectricTestRunner
 
 /**

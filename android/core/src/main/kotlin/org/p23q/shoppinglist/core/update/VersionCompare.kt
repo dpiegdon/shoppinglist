@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.update
+package org.p23q.shoppinglist.core.update
 
 /**
  * Orders two dot-separated numeric versions ("1.9.3", "1.12.0") the way SemVer means them, not

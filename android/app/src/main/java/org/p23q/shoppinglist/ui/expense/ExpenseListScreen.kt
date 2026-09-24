@@ -48,10 +48,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.AppFormat
-import org.p23q.shoppinglist.data.Expense
-import org.p23q.shoppinglist.data.ExpenseMath
-import org.p23q.shoppinglist.data.ExpenseType
+import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.core.Expense
+import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale

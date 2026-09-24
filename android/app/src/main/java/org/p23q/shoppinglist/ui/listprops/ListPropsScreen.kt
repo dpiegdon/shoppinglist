@@ -48,7 +48,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.AppFormat
+import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.data.ListKind
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.UiText

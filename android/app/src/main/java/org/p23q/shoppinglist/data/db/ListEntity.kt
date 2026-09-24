@@ -3,6 +3,9 @@ package org.p23q.shoppinglist.data.db
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.p23q.shoppinglist.core.db.LwwBoolean
+import org.p23q.shoppinglist.core.db.LwwOptionalString
+import org.p23q.shoppinglist.core.db.LwwString
 
 /** Local mirror of the Wire Contract's list object; [categoryOrder] holds JSON-encoded array text. */
 @Entity(tableName = "lists")

@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.sync
+package org.p23q.shoppinglist.core.sync
 
 /** One list's worth of collaborator-authored changes pulled in a single sync pass (T-65). */
 data class CollaboratorChange(val listId: String, val listName: String, val changedItemCount: Int)

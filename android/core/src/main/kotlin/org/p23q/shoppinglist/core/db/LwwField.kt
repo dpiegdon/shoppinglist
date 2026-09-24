@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.db
+package org.p23q.shoppinglist.core.db
 
 // Room/KSP can't process a generic @Embedded class whose type parameter resolves to a nullable
 // type ("Cannot use unbound properties in entities") — so each LWW column shape below is its own

@@ -44,7 +44,7 @@ import org.p23q.shoppinglist.R
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.LanguagePicker
-import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
 
 @Composable

@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
-import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.core.AppLocale
 
 /**
  * Applies the chosen UI language to everything composed inside (T-111).

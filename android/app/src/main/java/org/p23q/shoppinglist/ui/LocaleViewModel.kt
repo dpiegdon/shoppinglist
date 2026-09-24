@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.data.AppLocale
+import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.deviceLocale
 import javax.inject.Inject

@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data
+package org.p23q.shoppinglist.core
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

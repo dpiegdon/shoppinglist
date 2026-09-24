@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data
+package org.p23q.shoppinglist.core
 
 /**
  * Expense arithmetic (T-153). Money is handled in whole cents everywhere below: a float would make
