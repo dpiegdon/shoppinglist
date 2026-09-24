@@ -38,7 +38,6 @@
     <string name="nav_settings">设置</string>
     <string name="nav_server_admin">服务器管理</string>
     <string name="nav_about">关于</string>
-    <string name="nav_log_out">退出登录</string>
     <string name="nav_join_list">加入清单</string>
     <string name="ago_just_now">刚刚</string>
     <string name="ago_minutes">%1$d 分钟前</string>
@@ -184,7 +183,6 @@
     <string name="settings_trust_self_signed">信任自签名证书</string>
     <string name="settings_trust_self_signed_help">开发者选项 — 跳过 TLS 证书校验。不安全；仅限调试版本。</string>
     <string name="settings_danger_zone">危险操作</string>
-    <string name="settings_delete_account">删除账户</string>
     <string name="settings_delete_account_title">删除账户？</string>
     <string name="settings_delete_account_body">这将永久删除你的账户和所有数据。请输入密码确认。</string>
     <string name="settings_msg_currency_updated">货币已更新</string>
@@ -346,4 +344,25 @@
     <string name="expense_delete_blocked">此记录无法删除：它涉及金额已锁定的成员。</string>
     <string name="expense_error_frozen">%1$s 的金额已锁定：该成员已同意结算，或已退出清单。</string>
     <string name="expense_not_saved">未保存到清单</string>
+
+    <!-- Accounts screens (T-292) -->
+    <string name="nav_accounts">账户列表</string>
+    <string name="accounts_add">添加账户</string>
+    <string name="accounts_state_signed_in">已登录</string>
+    <string name="accounts_state_signed_out">已退出登录：点按以登录</string>
+    <string name="accounts_state_outdated">应用版本过旧，无法用于此服务器</string>
+    <string name="accounts_outdated_help">在更新应用之前，与此服务器的同步已暂停。</string>
+    <string name="accounts_state_local">在此手机上</string>
+    <string name="accounts_move_up">上移</string>
+    <string name="accounts_move_down">下移</string>
+    <string name="account_remove">从此手机移除</string>
+    <string name="account_remove_title">要从手机中移除此账户吗？</string>
+    <string name="account_remove_body">其清单和物品将从此手机中删除。账户及其清单仍保留在服务器上，重新添加账户后即会恢复。</string>
+    <string name="account_remove_unpushed">尚未同步、将会丢失的更改：%1$d</string>
+    <string name="account_remove_copy_hint">如需在此保留某个清单，请先将其复制到另一个账户。</string>
+    <string name="account_remove_confirm">移除</string>
+    <string name="account_delete_on_server">在服务器上删除账户</string>
+    <string name="login_resignin_title">重新登录</string>
+    <string name="login_resignin_help">服务器已将此账户退出登录。请重新登录以同步其清单。</string>
+    <string name="login_msg_already_added">此账户已在此手机上。</string>
 </resources>

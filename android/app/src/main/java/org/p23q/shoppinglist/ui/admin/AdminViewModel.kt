@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.admin
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,12 +11,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.account.CurrentAccount
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.account.AccountSessions
+import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.api.AdminPasswordRequest
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.ServerSettingsDto
-import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
@@ -40,14 +43,27 @@ data class AdminUiState(
     val currentAccountId: String? = null,
 )
 
-/** Admin-only server console (T-107): registration toggle + reset/delete users, all with step-up. */
+/**
+ * Admin-only server console (T-107): registration toggle + reset/delete users, all with step-up.
+ * One server's: the account the route names, on its server with its token (T-292).
+ */
 @HiltViewModel
-class AdminViewModel @Inject constructor(
-    private val apiProvider: ApiSource,
-    currentAccount: CurrentAccount,
+class AdminViewModel internal constructor(
+    private val api: suspend () -> Api,
+    /** The server's id for the signed-in admin, whom the console never offers to delete. */
+    serverAccountId: String?,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AdminUiState(currentAccountId = currentAccount.accountId))
+    @Inject constructor(
+        savedStateHandle: SavedStateHandle,
+        sessions: AccountSessions,
+        registry: AccountRegistry,
+    ) : this(
+        api = { sessions.get(checkNotNull(savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG))).api },
+        serverAccountId = savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG)?.let { registry.get(it)?.accountId },
+    )
+
+    private val _uiState = MutableStateFlow(AdminUiState(currentAccountId = serverAccountId))
     val uiState: StateFlow<AdminUiState> = _uiState.asStateFlow()
 
     init {
@@ -58,7 +74,7 @@ class AdminViewModel @Inject constructor(
 
     fun loadSettings(): Job = viewModelScope.launch {
         try {
-            val settings = apiProvider.get().adminGetServerSettings()
+            val settings = api().adminGetServerSettings()
             _uiState.update { it.copy(allowRegistration = settings.allowRegistration, error = null) }
         } catch (e: ApiException) {
             _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
@@ -71,7 +87,7 @@ class AdminViewModel @Inject constructor(
      *  it here, so both clients read the same way (T-221). */
     fun loadUsers(): Job = viewModelScope.launch {
         try {
-            val users = apiProvider.get().adminUsers().users
+            val users = api().adminUsers().users
             _uiState.update { it.copy(users = users, error = null) }
         } catch (e: ApiException) {
             _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
@@ -101,7 +117,7 @@ class AdminViewModel @Inject constructor(
         val current = _uiState.value.allowRegistration ?: return null
         return viewModelScope.launch {
             try {
-                val result = apiProvider.get().adminSetServerSettings(ServerSettingsDto(!current))
+                val result = api().adminSetServerSettings(ServerSettingsDto(!current))
                 _uiState.update { it.copy(allowRegistration = result.allowRegistration, error = null) }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_update_failed)) }
@@ -116,7 +132,7 @@ class AdminViewModel @Inject constructor(
         val pw = _uiState.value.password
         return viewModelScope.launch {
             try {
-                val result = apiProvider.get().adminResetPassword(user.id, AdminPasswordRequest(pw))
+                val result = api().adminResetPassword(user.id, AdminPasswordRequest(pw))
                 _uiState.update {
                     it.copy(resetEmail = user.email, resetPassword = result.password, error = null)
                 }
@@ -133,7 +149,7 @@ class AdminViewModel @Inject constructor(
         val pw = _uiState.value.password
         return viewModelScope.launch {
             try {
-                apiProvider.get().adminDeleteUser(user.id, AdminPasswordRequest(pw))
+                api().adminDeleteUser(user.id, AdminPasswordRequest(pw))
                 _uiState.update {
                     it.copy(users = it.users?.filterNot { u -> u.id == user.id }, error = null)
                 }

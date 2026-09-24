@@ -38,7 +38,6 @@
     <string name="nav_settings">Paramètres</string>
     <string name="nav_server_admin">Administration du serveur</string>
     <string name="nav_about">À propos</string>
-    <string name="nav_log_out">Se déconnecter</string>
     <string name="nav_join_list">Rejoindre une liste</string>
     <string name="ago_just_now">à l\'instant</string>
     <string name="ago_minutes">il y a %1$d min</string>
@@ -184,7 +183,6 @@
     <string name="settings_trust_self_signed">Faire confiance aux certificats auto-signés</string>
     <string name="settings_trust_self_signed_help">Option de développement — ignore la vérification du certificat TLS. Non sécurisé ; builds de débogage uniquement.</string>
     <string name="settings_danger_zone">Zone sensible</string>
-    <string name="settings_delete_account">Supprimer le compte</string>
     <string name="settings_delete_account_title">Supprimer le compte ?</string>
     <string name="settings_delete_account_body">Cela supprimera définitivement ton compte et toutes tes données. Saisis ton mot de passe pour confirmer.</string>
     <string name="settings_msg_currency_updated">Devise mise à jour</string>
@@ -346,4 +344,25 @@
     <string name="expense_delete_blocked">Cette entrée ne peut pas être supprimée : elle concerne quelqu\'un dont les montants sont figés.</string>
     <string name="expense_error_frozen">Les montants de %1$s sont figés : cette personne a accepté de clore la liste ou l\'a quittée.</string>
     <string name="expense_not_saved">Non enregistré dans la liste</string>
+
+    <!-- Accounts screens (T-292) -->
+    <string name="nav_accounts">Comptes</string>
+    <string name="accounts_add">Ajouter un compte</string>
+    <string name="accounts_state_signed_in">Connecté</string>
+    <string name="accounts_state_signed_out">Déconnecté : touchez pour vous connecter</string>
+    <string name="accounts_state_outdated">Application trop ancienne pour ce serveur</string>
+    <string name="accounts_outdated_help">La synchronisation avec ce serveur est suspendue jusqu\'à la mise à jour de l\'application.</string>
+    <string name="accounts_state_local">Sur ce téléphone</string>
+    <string name="accounts_move_up">Monter</string>
+    <string name="accounts_move_down">Descendre</string>
+    <string name="account_remove">Retirer de ce téléphone</string>
+    <string name="account_remove_title">Retirer ce compte du téléphone ?</string>
+    <string name="account_remove_body">Ses listes et articles sont supprimés de ce téléphone. Le compte et ses listes restent sur le serveur et reviennent quand vous ajoutez à nouveau le compte.</string>
+    <string name="account_remove_unpushed">Modifications pas encore synchronisées, qui seront perdues : %1$d</string>
+    <string name="account_remove_copy_hint">Pour garder une liste ici, copiez-la d\'abord dans un autre compte.</string>
+    <string name="account_remove_confirm">Retirer</string>
+    <string name="account_delete_on_server">Supprimer le compte sur le serveur</string>
+    <string name="login_resignin_title">Se reconnecter</string>
+    <string name="login_resignin_help">Le serveur a déconnecté ce compte. Reconnectez-vous pour synchroniser ses listes.</string>
+    <string name="login_msg_already_added">Ce compte est déjà sur ce téléphone.</string>
 </resources>

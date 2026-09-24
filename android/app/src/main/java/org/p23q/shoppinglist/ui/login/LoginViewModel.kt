@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.login
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,7 @@ import kotlinx.serialization.SerializationException
 import org.p23q.shoppinglist.core.AppTooOldException
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
-import org.p23q.shoppinglist.core.account.CurrentAccount
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.sync.SyncTrigger
@@ -30,7 +31,24 @@ import java.net.URI
 import javax.inject.Inject
 import javax.net.ssl.SSLException
 
+/** What the login form is for (T-292), from the route's `mode` argument. */
+enum class LoginMode(val arg: String) {
+    /** No server account on this phone yet: the start screen. */
+    START("start"),
+
+    /** Another account beside the ones already here, opened from the Accounts screen. */
+    ADD("add"),
+
+    /** An account the server signed out, signing in again: its server URL is fixed. */
+    RESIGNIN("resignin");
+
+    companion object {
+        fun fromArg(arg: String?): LoginMode = entries.firstOrNull { it.arg == arg } ?: START
+    }
+}
+
 data class LoginUiState(
+    val mode: LoginMode = LoginMode.START,
     val serverUrl: String = "",
     val email: String = "",
     val password: String = "",
@@ -38,6 +56,8 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
     val loginSucceeded: Boolean = false,
+    /** A re-sign-in's server is the account's own and cannot be changed here. */
+    val serverUrlLocked: Boolean = false,
     /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
      *  reach it before they've managed to log in — otherwise it's a bootstrap deadlock (T-38/T-46). */
     val allowSelfSignedCerts: Boolean = false,
@@ -54,17 +74,44 @@ data class LoginUiState(
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val currentAccount: CurrentAccount,
+    private val knownAccounts: KnownAccounts,
     private val serverConfig: LastServerAddress,
     private val pendingInviteHolder: PendingInviteHolder,
     private val syncTrigger: SyncTrigger,
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LoginUiState())
+    private val mode = LoginMode.fromArg(savedStateHandle[Routes.LOGIN_MODE_ARG])
+
+    /** The account a re-sign-in is for; null in the other modes, or if it has gone meanwhile. */
+    private val resignInAccount: AccountEntity? =
+        if (mode == LoginMode.RESIGNIN) {
+            savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG)?.let { id -> knownAccounts.snapshot().firstOrNull { it.id == id } }
+        } else {
+            null
+        }
+
+    private val _uiState = MutableStateFlow(
+        resignInAccount?.let { account ->
+            LoginUiState(
+                mode = mode,
+                serverUrl = account.serverUrl.orEmpty(),
+                email = account.email.orEmpty(),
+                serverUrlLocked = true,
+                allowSelfSignedCerts = account.allowSelfSignedCerts,
+            )
+        } ?: LoginUiState(
+            mode = mode,
+            // An invite link for a server this phone has no account on opens the add form on
+            // that server (T-292).
+            serverUrl = savedStateHandle.get<String>(Routes.SERVER_URL_ARG).orEmpty(),
+        ),
+    )
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        // A re-sign-in knows its server and its certificate choice already.
+        if (resignInAccount == null) viewModelScope.launch {
             // Prefill the address last submitted on this device, kept whatever became of the
             // attempt or its account (T-298), or the canonical instance for a first run. A URL
             // the user has started typing in the meantime is left alone.
@@ -111,6 +158,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onServerUrlChange(value: String) {
+        if (_uiState.value.serverUrlLocked) return
         _uiState.update { it.copy(serverUrl = value, errorMessage = null, downloadUrl = null) }
     }
 
@@ -148,9 +196,23 @@ class LoginViewModel @Inject constructor(
                 if (state.isRegisterMode) {
                     authRepository.register(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
                 }
-                // One account at a time on this screen: the login itself removes every other
-                // server account, in the same step (T-260, T-298).
-                authRepository.login(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
+                val before = knownAccounts.snapshot().associateBy { it.id }
+                // Every other account stays (T-292). On the start screen there is none to keep,
+                // and wherever else the form is opened, the accounts beside this one are the
+                // user's own: nobody signs out here, so nobody else's lists are on the phone.
+                val id = authRepository.login(
+                    state.serverUrl,
+                    state.email,
+                    state.password,
+                    state.allowSelfSignedCerts,
+                    keepOtherAccounts = true,
+                )
+                if (mode == LoginMode.ADD && before[id]?.signedIn == true) {
+                    // The same server and account as one already here and signed in: there is
+                    // nothing to add. The sign-in only gave that account a fresh token.
+                    _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_already_added)) }
+                    return@launch
+                }
                 // The session is now authenticated — pull its data right away, so the first screen
                 // isn't stuck on empty until some later incidental sync (the app-foreground sync
                 // already fired before login, with no token).
@@ -194,22 +256,15 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /** Called from the menu (A6) — clears local session/mirror and returns to login regardless of network state. */
-    fun logout(): Job = viewModelScope.launch { currentAccount.localId?.let { authRepository.logout(it) } }
-
-    fun startDestinationAfterLogin(): String {
-        // A logged-out invite (App Link / pasted code) was parked before login — resume straight
-        // into redeeming it, rather than the usual overview/last-list (T-28).
+    /**
+     * Where to go once signed in: into redeeming an invite parked before the sign-in (T-28), else
+     * from the start screen to the lists as a cold start would, else null, back to where the form
+     * was opened from (the Accounts screen, or a signed-out account's banner).
+     */
+    fun startDestinationAfterLogin(): String? {
         pendingInviteHolder.consume()?.let { invite -> return Routes.redeem(invite.token) }
-        return authedStartDestination(authRepository.lastOpenedListId())
+        return if (mode == LoginMode.START) authedStartDestination(authRepository.lastOpenedListId()) else null
     }
-
-    /** Notes "user info": the drawer (A6) shows this alongside the Log out entry. */
-    val loggedInEmail: String? get() = currentAccount.accountEmail
-
-    /** Whether to offer the drawer's Server admin entry (T-220). Read from the same session state
-     *  as [loggedInEmail], so the drawer needs no second view model of its own. */
-    val isAdmin: Boolean get() = currentAccount.isAdmin
 }
 
 private fun isValidHttpsUrl(url: String): Boolean {

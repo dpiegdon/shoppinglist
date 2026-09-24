@@ -50,7 +50,8 @@ import org.p23q.shoppinglist.data.deviceLocale
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (startDestination: String) -> Unit,
+    /** Null: go back to where the form was opened from (add and re-sign-in modes). */
+    onLoginSuccess: (startDestination: String?) -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
     // Plain hoisted state rather than a second hiltViewModel() default (T-127): this screen is
     // rendered directly in unit tests against a fake LoginViewModel, and a Hilt-resolved default
@@ -77,36 +78,45 @@ fun LoginScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.ic_brand_logo),
-            contentDescription = null,
-            modifier = Modifier.size(72.dp).align(Alignment.CenterHorizontally),
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
-        Spacer(Modifier.height(8.dp))
-        // The name in cuneiform, IM.DUB — read ṭuppu (T-225); About explains the signs. Smaller
-        // here and without the transliteration caption: this is a mark, not the explanation.
-        // Tinted to onSurface so it follows the text colour on both themes.
-        Image(
-            painter = painterResource(R.drawable.ic_cuneiform_tuppu),
-            contentDescription = stringResource(R.string.about_transliteration),
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
-            // Height only: the sign is about 3:1, so the width follows from it.
-            modifier = Modifier.height(40.dp).align(Alignment.CenterHorizontally).testTag("login-cuneiform"),
-        )
-        Spacer(Modifier.height(24.dp))
+        // The mark on the start screen only; adding or re-signing an account sits under a top
+        // bar that already says what the form is for.
+        if (state.mode == LoginMode.START) {
+            Image(
+                painter = painterResource(R.drawable.ic_brand_logo),
+                contentDescription = null,
+                modifier = Modifier.size(72.dp).align(Alignment.CenterHorizontally),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+            Spacer(Modifier.height(8.dp))
+            // The name in cuneiform, IM.DUB — read ṭuppu (T-225); About explains the signs. Smaller
+            // here and without the transliteration caption: this is a mark, not the explanation.
+            // Tinted to onSurface so it follows the text colour on both themes.
+            Image(
+                painter = painterResource(R.drawable.ic_cuneiform_tuppu),
+                contentDescription = stringResource(R.string.about_transliteration),
+                contentScale = ContentScale.Fit,
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
+                // Height only: the sign is about 3:1, so the width follows from it.
+                modifier = Modifier.height(40.dp).align(Alignment.CenterHorizontally).testTag("login-cuneiform"),
+            )
+            Spacer(Modifier.height(24.dp))
+        }
+        if (state.mode == LoginMode.RESIGNIN) {
+            Text(stringResource(R.string.login_resignin_help), style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(16.dp))
+        }
 
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = viewModel::onServerUrlChange,
             label = { Text(stringResource(R.string.login_server_url)) },
             singleLine = true,
+            readOnly = state.serverUrlLocked,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -163,17 +173,23 @@ fun LoginScreen(
         }
 
         // Disabled while the configured server is refusing new accounts (T-276), matching the web
-        // login page — asked up front rather than after the user fills in the whole form.
-        TextButton(onClick = viewModel::onToggleRegisterMode, enabled = state.registrationAllowed) {
-            Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
+        // login page — asked up front rather than after the user fills in the whole form. Not
+        // offered to an account signing in again: it exists already.
+        if (state.mode != LoginMode.RESIGNIN) {
+            TextButton(onClick = viewModel::onToggleRegisterMode, enabled = state.registrationAllowed) {
+                Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
+            }
         }
 
-        Spacer(Modifier.height(24.dp))
-        // Before login, deliberately: the chooser must be reachable without an account (T-127),
-        // which is also why the preference is device-local.
-        LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
+        if (state.mode == LoginMode.START) {
+            Spacer(Modifier.height(24.dp))
+            // Before login, deliberately: the chooser must be reachable without an account (T-127),
+            // which is also why the preference is device-local. Past the start screen it is in
+            // Settings.
+            LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
+        }
 
-        if (!state.registrationAllowed) {
+        if (!state.registrationAllowed && state.mode != LoginMode.RESIGNIN) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.login_registration_disabled),

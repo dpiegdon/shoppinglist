@@ -137,7 +137,20 @@ Confirm it, then register a new account or log in. The first request the app
 makes to a server it has not signed in to before asks its protocol version; a
 server older than the app supports (`MIN_SERVER_PROTOCOL` in `Protocol.kt`) is
 refused with *"This server is too old for this app."* On later launches the app
-resumes your session and reopens the list you last had open.
+reopens the list you last had open.
+
+The app holds several accounts, on one server or on several. **Accounts** in
+the menu lists them in your order (the arrows move one up or down, which is also
+the overview's order), each with its email, its full server URL, its state and
+its own sync figures. *Add account* opens the same form and keeps the accounts
+already there; tapping an account opens its own screen, with its default
+currency, initials, password, email, sessions, *Delete account on server* and
+*Remove from this phone* (which deletes its lists and items here only, and
+warns how many changes have not gone out yet). There is no sign-out: when a
+server rejects an account's token (a password change, an admin reset, 62 days
+idle), that account's row says *Signed out: tap to sign in*, its lists stay on
+the phone and editable, and signing in again from there resumes its sync. The
+start screen appears only while the phone holds no server account.
 
 ### Changing the prefilled URL for your own build
 
@@ -161,8 +174,8 @@ the original.
 
 ### Testing against a self-signed server (debug builds only)
 
-A **debug** build's Settings screen has a *"Trust self-signed certificates"*
-toggle for pointing the app at a server with a self-signed cert (e.g. the
+A **debug** build's login form and each account's screen have a *"Trust
+self-signed certificates"* toggle for pointing the app at a server with a self-signed cert (e.g. the
 bundled `dev_tls_server.py` on `:8723`). It disables TLS certificate
 verification — **insecure, for local testing only.** The option and the code
 behind it exist **only in debug builds**: the release APK does not contain the

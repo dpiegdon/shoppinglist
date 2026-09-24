@@ -38,7 +38,6 @@
     <string name="nav_settings">Ajustes</string>
     <string name="nav_server_admin">Administración del servidor</string>
     <string name="nav_about">Acerca de</string>
-    <string name="nav_log_out">Cerrar sesión</string>
     <string name="nav_join_list">Unirse a una lista</string>
     <string name="ago_just_now">ahora mismo</string>
     <string name="ago_minutes">hace %1$d min</string>
@@ -184,7 +183,6 @@
     <string name="settings_trust_self_signed">Confiar en certificados autofirmados</string>
     <string name="settings_trust_self_signed_help">Opción de desarrollo — omite la validación del certificado TLS. Inseguro; solo en compilaciones de depuración.</string>
     <string name="settings_danger_zone">Zona de peligro</string>
-    <string name="settings_delete_account">Eliminar cuenta</string>
     <string name="settings_delete_account_title">¿Eliminar cuenta?</string>
     <string name="settings_delete_account_body">Esto eliminará tu cuenta y todos los datos de forma permanente. Introduce tu contraseña para confirmar.</string>
     <string name="settings_msg_currency_updated">Moneda actualizada</string>
@@ -346,4 +344,25 @@
     <string name="expense_delete_blocked">Este movimiento no se puede eliminar: incluye a alguien cuyos importes están fijados.</string>
     <string name="expense_error_frozen">Los importes de %1$s están fijados: esa persona aceptó cerrar la lista o la abandonó.</string>
     <string name="expense_not_saved">No se guardó en la lista</string>
+
+    <!-- Accounts screens (T-292) -->
+    <string name="nav_accounts">Cuentas</string>
+    <string name="accounts_add">Añadir cuenta</string>
+    <string name="accounts_state_signed_in">Sesión iniciada</string>
+    <string name="accounts_state_signed_out">Sesión cerrada: toca para iniciar sesión</string>
+    <string name="accounts_state_outdated">Aplicación demasiado antigua para este servidor</string>
+    <string name="accounts_outdated_help">La sincronización con este servidor está en pausa hasta que se actualice la aplicación.</string>
+    <string name="accounts_state_local">En este teléfono</string>
+    <string name="accounts_move_up">Subir</string>
+    <string name="accounts_move_down">Bajar</string>
+    <string name="account_remove">Quitar de este teléfono</string>
+    <string name="account_remove_title">¿Quitar esta cuenta del teléfono?</string>
+    <string name="account_remove_body">Sus listas y artículos se eliminan de este teléfono. La cuenta y sus listas siguen en el servidor y vuelven cuando añades la cuenta de nuevo.</string>
+    <string name="account_remove_unpushed">Cambios aún no sincronizados, que se perderán: %1$d</string>
+    <string name="account_remove_copy_hint">Para conservar una lista aquí, cópiala antes a otra cuenta.</string>
+    <string name="account_remove_confirm">Quitar</string>
+    <string name="account_delete_on_server">Eliminar cuenta en el servidor</string>
+    <string name="login_resignin_title">Volver a iniciar sesión</string>
+    <string name="login_resignin_help">El servidor cerró la sesión de esta cuenta. Vuelve a iniciar sesión para sincronizar sus listas.</string>
+    <string name="login_msg_already_added">Esta cuenta ya está en este teléfono.</string>
 </resources>

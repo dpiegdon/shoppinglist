@@ -13,7 +13,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.core.AuthRepository
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.core.AppTooOldException
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
@@ -77,7 +76,7 @@ class LoginViewModelTest {
     }
 
     /** No account yet: a first run. */
-    private fun noAccount() = FakeCurrentAccount(localId = null)
+    private fun noAccount() = KnownAccounts { emptyList() }
 
     /** The device's last-typed address, as the real store keeps it (T-298). */
     private val serverConfig = FakeLastServerAddress()
@@ -211,25 +210,6 @@ class LoginViewModelTest {
 
         assertFalse(repo.loginCalled)
         assertEquals(UiText.res(R.string.login_msg_invalid_url), viewModel.uiState.value.errorMessage)
-    }
-
-    @Test
-    fun `logout delegates to the repository`() = runTest(mainDispatcherRule.dispatcher) {
-        val currentAccount = FakeCurrentAccount()
-        val repo = FakeAuthRepository()
-        val viewModel = LoginViewModel(repo, currentAccount, serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
-
-        viewModel.logout().join()
-
-        assertEquals(TEST_ACCOUNT_ID, repo.loggedOut)
-    }
-
-    @Test
-    fun `loggedInEmail reflects the session state's account email`() = runTest(mainDispatcherRule.dispatcher) {
-        val sessionState = FakeCurrentAccount().apply { accountEmail = "shopper@example.com" }
-        val viewModel = LoginViewModel(FakeAuthRepository(), sessionState, serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
-
-        assertEquals("shopper@example.com", viewModel.loggedInEmail)
     }
 
     @Test
@@ -387,7 +367,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `signing in asks the login to keep only the account that signed in (T-260, T-298)`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `signing in keeps every other account (T-292)`() = runTest(mainDispatcherRule.dispatcher) {
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, noAccount(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -396,8 +376,8 @@ class LoginViewModelTest {
         viewModel.onPasswordChange("hunter2")
         viewModel.submit()?.join()
 
-        assertEquals(false, repo.loginKeptOthers)
-        assertNull("the login removes the others itself, in the same step", repo.keptOnly)
+        assertEquals(true, repo.loginKeptOthers)
+        assertNull(repo.keptOnly)
     }
 
     @Test

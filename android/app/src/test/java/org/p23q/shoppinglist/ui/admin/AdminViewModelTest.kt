@@ -89,7 +89,7 @@ class AdminViewModelTest {
         }
     }
 
-    private fun newViewModel() = AdminViewModel(apiProvider, sessionState)
+    private fun newViewModel() = AdminViewModel(apiProvider::get, sessionState.accountId)
 
     @Test
     fun `opening the console loads the registration flag and no users (T-221)`() = runTest(mainDispatcherRule.dispatcher) {

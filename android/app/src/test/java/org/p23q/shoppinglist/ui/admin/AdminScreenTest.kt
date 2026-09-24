@@ -69,8 +69,8 @@ class AdminScreenTest {
         }
         val json = Json { ignoreUnknownKeys = true }
         val viewModel = AdminViewModel(
-            testApiSource(json, token = { sessionState.token }) { serverConfig.url },
-            sessionState,
+            testApiSource(json, token = { sessionState.token }) { serverConfig.url }::get,
+            sessionState.accountId,
         )
 
         composeTestRule.setContent { AdminScreen(viewModel = viewModel) }

@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +35,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +57,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
@@ -73,7 +74,10 @@ import org.p23q.shoppinglist.ui.item.EditItemDialog
 import org.p23q.shoppinglist.ui.list.ListScreen
 import org.p23q.shoppinglist.ui.listprops.ListPropsScreen
 import org.p23q.shoppinglist.ui.login.LoginScreen
-import org.p23q.shoppinglist.ui.login.LoginViewModel
+import org.p23q.shoppinglist.ui.login.LoginMode
+import org.p23q.shoppinglist.ui.accounts.AccountGone
+import org.p23q.shoppinglist.ui.accounts.AccountScreen
+import org.p23q.shoppinglist.ui.accounts.AccountsScreen
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
 import org.p23q.shoppinglist.ui.redeem.RedeemDialog
 import org.p23q.shoppinglist.ui.redeem.RedeemScreen
@@ -81,14 +85,25 @@ import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
 import org.p23q.shoppinglist.ui.update.UpdateRequiredScreen
 import org.p23q.shoppinglist.ui.update.UpdateViewModel
+import java.net.URLEncoder
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
+    /** The start screen; also matches [LOGIN_PATTERN] with every argument left out. */
     const val LOGIN = "login"
     const val OVERVIEW = "overview"
     const val SETTINGS = "settings"
-    const val ADMIN = "admin"
     const val ABOUT = "about"
+    const val ACCOUNTS = "accounts"
+
+    const val LOGIN_MODE_ARG = "mode"
+    const val ACCOUNT_ID_ARG = "accountId"
+    const val SERVER_URL_ARG = "serverUrl"
+
+    /** The login form; [LoginMode] says what for. All three arguments are optional. */
+    const val LOGIN_PATTERN = "login?$LOGIN_MODE_ARG={$LOGIN_MODE_ARG}&$ACCOUNT_ID_ARG={$ACCOUNT_ID_ARG}&$SERVER_URL_ARG={$SERVER_URL_ARG}"
+    const val ACCOUNT_PATTERN = "account/{$ACCOUNT_ID_ARG}"
+    const val ADMIN_PATTERN = "admin/{$ACCOUNT_ID_ARG}"
 
     const val LIST_ID_ARG = "listId"
     const val LIST_PATTERN = "list/{$LIST_ID_ARG}"
@@ -102,6 +117,21 @@ object Routes {
     fun registry(listId: String) = "registry/$listId"
     fun listProps(listId: String) = "listProps/$listId"
     fun redeem(token: String) = "redeem/$token"
+    fun account(accountId: String) = "account/$accountId"
+    fun admin(accountId: String) = "admin/$accountId"
+
+    /**
+     * The login form in [mode]: for [LoginMode.RESIGNIN] the local id of the account signing in
+     * again, for [LoginMode.ADD] optionally the server URL to prefill.
+     */
+    fun login(mode: LoginMode, accountId: String? = null, serverUrl: String? = null): String = buildString {
+        append("login?$LOGIN_MODE_ARG=${mode.arg}")
+        accountId?.let { append("&$ACCOUNT_ID_ARG=${encode(it)}") }
+        serverUrl?.let { append("&$SERVER_URL_ARG=${encode(it)}") }
+    }
+
+    // Percent-encoding for a query value; URLEncoder's '+' for a space is not what Navigation decodes.
+    private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 }
 
 /**
@@ -133,7 +163,7 @@ fun authedStartDestination(lastOpenedListId: String?): String =
  */
 fun coldStartDestination(accounts: List<AccountEntity>, notifiedListId: String?, lastOpenedListId: String?): String =
     when {
-        accounts.none { it.isServer } -> Routes.LOGIN
+        accounts.none { it.isServer } -> Routes.LOGIN_PATTERN
         notifiedListId != null -> Routes.list(notifiedListId)
         else -> authedStartDestination(lastOpenedListId)
     }
@@ -160,7 +190,7 @@ private fun NavHostController.backToList(listId: String) {
 @Composable
 fun ShoppingListNavHost(
     navController: NavHostController = rememberNavController(),
-    startDestination: String = Routes.LOGIN,
+    startDestination: String = Routes.LOGIN_PATTERN,
     rootViewModel: RootViewModel = hiltViewModel(),
 ) {
     // Obtained here, not inside each screen: Nav is already inside the Hilt graph, and keeping
@@ -207,18 +237,76 @@ fun ShoppingListNavHost(
         popEnterTransition = { EnterTransition.None },
         popExitTransition = { ExitTransition.None },
     ) {
-        composable(Routes.LOGIN) {
+        composable(
+            route = Routes.LOGIN_PATTERN,
+            arguments = listOf(Routes.LOGIN_MODE_ARG, Routes.ACCOUNT_ID_ARG, Routes.SERVER_URL_ARG).map { name ->
+                navArgument(name) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            },
+        ) { backStackEntry ->
             val context = LocalContext.current
-            LoginScreen(
-                selectedLocale = selectedLocale,
-                onSelectLocale = localeViewModel::setLocale,
-                onDownload = { url -> openDownload(context, url) },
-                onLoginSuccess = { destination ->
-                    navController.navigate(destination) {
-                        popUpTo(Routes.LOGIN) { inclusive = true }
-                    }
-                },
-            )
+            val mode = LoginMode.fromArg(backStackEntry.arguments?.getString(Routes.LOGIN_MODE_ARG))
+            val form = @Composable {
+                LoginScreen(
+                    selectedLocale = selectedLocale,
+                    onSelectLocale = localeViewModel::setLocale,
+                    onDownload = { url -> openDownload(context, url) },
+                    onLoginSuccess = { destination ->
+                        if (destination == null) {
+                            navController.popBackStack()
+                        } else {
+                            navController.navigate(destination) {
+                                popUpTo(Routes.LOGIN_PATTERN) { inclusive = true }
+                            }
+                        }
+                    },
+                )
+            }
+            if (mode == LoginMode.START) {
+                form()
+            } else {
+                BackScaffold(
+                    title = stringResource(if (mode == LoginMode.ADD) R.string.accounts_add else R.string.login_resignin_title),
+                    onBack = { navController.popBackStack() },
+                ) { form() }
+            }
+        }
+        composable(Routes.ACCOUNTS) {
+            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_accounts)) {
+                AccountsScreen(
+                    onAddAccount = { navController.navigate(Routes.login(LoginMode.ADD)) },
+                    onOpenAccount = { id -> navController.navigate(Routes.account(id)) },
+                    onSignIn = { id -> navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = id)) },
+                )
+            }
+        }
+        composable(Routes.ACCOUNT_PATTERN) { backStackEntry ->
+            val accountId = checkNotNull(backStackEntry.arguments?.getString(Routes.ACCOUNT_ID_ARG))
+            AppDrawerScaffold(
+                navController = navController,
+                title = stringResource(R.string.settings_account),
+                onTitleClick = { navController.popBackStack(Routes.ACCOUNTS, inclusive = false) },
+            ) {
+                AccountScreen(
+                    onGone = { gone ->
+                        when (gone) {
+                            AccountGone.TO_ACCOUNTS -> navController.navigate(Routes.ACCOUNTS) {
+                                popUpTo(Routes.ACCOUNTS) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                            // The last server account went: nothing is left to show but the start.
+                            AccountGone.TO_START -> navController.navigate(Routes.LOGIN_PATTERN) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    onSignIn = { navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = accountId)) },
+                )
+            }
         }
         composable(Routes.OVERVIEW) {
             AppDrawerScaffold(
@@ -370,19 +458,10 @@ fun ShoppingListNavHost(
         }
         composable(Routes.SETTINGS) {
             AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_settings)) {
-                SettingsScreen(
-                    selectedLocale = selectedLocale,
-                    onSelectLocale = localeViewModel::setLocale,
-                    onAccountDeleted = {
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(navController.graph.id) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
-                )
+                SettingsScreen(selectedLocale = selectedLocale, onSelectLocale = localeViewModel::setLocale)
             }
         }
-        composable(Routes.ADMIN) {
+        composable(Routes.ADMIN_PATTERN) {
             AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_server_admin)) {
                 AdminScreen()
             }
@@ -407,7 +486,7 @@ fun ShoppingListNavHost(
     // Rendered outside the NavHost so it survives a screen change, but suppressed on Login: an
     // update prompt stacked on "please log in" is noise, and there is nothing to update to until
     // a server is configured anyway.
-    val onLoginScreen = navController.currentBackStackEntryAsState().value?.destination?.route == Routes.LOGIN
+    val onLoginScreen = navController.currentBackStackEntryAsState().value?.destination?.route == Routes.LOGIN_PATTERN
     // Bound to a local rather than used through ?.let { }: that lambda is not a @Composable
     // context, so neither the dialog nor LocalContext.current can be called inside one.
     val update = availableUpdate
@@ -455,13 +534,13 @@ private fun openDownload(context: Context, downloadUrl: String) {
     }
 }
 
-/** Top-level scaffold with a menu drawer (Notes: menu -> overview + account/settings, user info, logout). */
+/** Top-level scaffold with a menu drawer (Notes: menu -> overview, accounts, settings). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AppDrawerScaffold(
     navController: NavHostController,
     title: String,
-    loginViewModel: LoginViewModel = hiltViewModel(),
+    drawerViewModel: DrawerViewModel = hiltViewModel(),
     // When set, the top-bar title becomes tappable (the list screen uses it to jump to Overview).
     onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
@@ -469,6 +548,7 @@ internal fun AppDrawerScaffold(
     content: @Composable () -> Unit,
 ) {
     val syncState by syncStatusViewModel.state.collectAsStateWithLifecycle()
+    val adminAccountId by drawerViewModel.adminAccountId.collectAsStateWithLifecycle()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -478,14 +558,6 @@ internal fun AppDrawerScaffold(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                loginViewModel.loggedInEmail?.let { email ->
-                    Text(
-                        text = email,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                    HorizontalDivider()
-                }
                 // Listed one by one rather than driven off a list of destinations: two of these
                 // navigate and one opens a dialog, so a data-driven loop could only ever cover
                 // part of the menu and the odd one out had to be appended after it — which is how
@@ -513,6 +585,15 @@ internal fun AppDrawerScaffold(
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                // Who is signed in where, and adding another (T-292): the drawer's "Log out" went,
+                // since nobody signs out; a server does, and the account's row says so.
+                NavigationDrawerItem(
+                    icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
+                    label = { Text(stringResource(R.string.nav_accounts)) },
+                    selected = currentRoute == Routes.ACCOUNTS,
+                    onClick = { navigateTo(Routes.ACCOUNTS) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
                 NavigationDrawerItem(
                     // "Settings", as the screen it opens is titled (T-170); it was "Account".
                     icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
@@ -524,38 +605,25 @@ internal fun AppDrawerScaffold(
                 // Administering the server is not a personal preference, so it sits beside
                 // Settings rather than inside it (T-220). Hiding it from a non-admin is an
                 // affordance only — the server enforces admin on every /admin route regardless
-                // of what this drawer offers.
-                if (loginViewModel.isAdmin) {
+                // of what this drawer offers. With several accounts, the first admin one's server.
+                adminAccountId?.let { adminId ->
                     NavigationDrawerItem(
                         icon = { Icon(imageVector = Icons.Default.Build, contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_server_admin)) },
-                        selected = currentRoute == Routes.ADMIN,
-                        onClick = { navigateTo(Routes.ADMIN) },
+                        selected = currentRoute == Routes.ADMIN_PATTERN,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            if (currentRoute != Routes.ADMIN_PATTERN) navController.navigate(Routes.admin(adminId))
+                        },
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
-                // Last before Log out (T-224): what the app is, not something you do with it.
+                // Last (T-224): what the app is, not something you do with it.
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_about)) },
                     selected = currentRoute == Routes.ABOUT,
                     onClick = { navigateTo(Routes.ABOUT) },
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_log_out)) },
-                    selected = false,
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            loginViewModel.logout().join()
-                            navController.navigate(Routes.LOGIN) {
-                                popUpTo(navController.graph.id) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
             }
@@ -578,10 +646,16 @@ internal fun AppDrawerScaffold(
                         actions()
                         // One sync status on every screen, where the web keeps it too (T-178): a
                         // quiet dot, with the full "Synced 5 min ago" sentence as its description.
+                        // The worst of every account; tapping it opens Accounts, where each one
+                        // shows its own (T-292).
                         SyncStatusMarker(
                             state = syncState,
                             nowMs = rememberTickingNowMs(),
-                            modifier = Modifier.padding(horizontal = 12.dp),
+                            modifier = Modifier
+                                .clickable {
+                                    if (currentRoute != Routes.ACCOUNTS) navController.navigate(Routes.ACCOUNTS)
+                                }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                         )
                     },
                 )
@@ -601,6 +675,27 @@ internal fun AppDrawerScaffold(
             },
             onDismiss = { isJoinDialogOpen = false },
         )
+    }
+}
+
+/** A sub-screen's top bar with a back arrow and no drawer: the add and re-sign-in forms. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) { content() }
     }
 }
 

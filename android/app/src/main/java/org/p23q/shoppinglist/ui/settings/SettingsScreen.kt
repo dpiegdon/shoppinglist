@@ -50,7 +50,6 @@ import org.p23q.shoppinglist.data.deviceLocale
 
 @Composable
 fun SettingsScreen(
-    onAccountDeleted: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
     // Plain hoisted state, not a second hiltViewModel() default — see LoginScreen (T-127).
     selectedLocale: AppLocale = deviceLocale(),
@@ -59,9 +58,6 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) { viewModel.loadSessions() }
-    LaunchedEffect(Unit) { viewModel.loadInitials() }
-    LaunchedEffect(state.isAccountDeleted) { if (state.isAccountDeleted) onAccountDeleted() }
     // Hoisted above the effect: its body is a coroutine, not a composition.
     val shareCrashLogsTitle = stringResource(R.string.settings_share_crash_logs)
     LaunchedEffect(state.crashLogPath) {
@@ -80,42 +76,6 @@ fun SettingsScreen(
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.settings_account), style = MaterialTheme.typography.titleMedium)
-        state.accountEmail?.let { Text(it) }
-        Text(stringResource(R.string.settings_server, state.serverUrl), style = MaterialTheme.typography.bodySmall)
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.settings_default_currency), style = MaterialTheme.typography.titleMedium)
-        var currencyInput by remember(state.defaultCurrency) { mutableStateOf(state.defaultCurrency) }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = currencyInput,
-                onValueChange = { currencyInput = it },
-                label = { Text(stringResource(R.string.settings_currency)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        // Shown as a small badge on shared-list item rows so collaborators can see who last
-        // touched an item (T-64); defaults to the email's initials until customized here.
-        Text(stringResource(R.string.settings_display_initials), style = MaterialTheme.typography.titleMedium)
-        // state.initials is null until the preload resolves (T-97); the field just starts blank.
-        var initialsInput by remember(state.initials) { mutableStateOf(state.initials ?: "") }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = initialsInput,
-                onValueChange = { initialsInput = it },
-                label = { Text(stringResource(R.string.settings_initials)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
-        }
         Spacer(Modifier.height(16.dp))
 
         Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
@@ -156,112 +116,6 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        // Developer-only escape hatch for testing against a self-signed dev server. Present only in
-        // debug builds; even if this flag were somehow set, release builds ignore it (DevCertTrust).
-        if (BuildConfig.DEBUG) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_trust_self_signed), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.settings_trust_self_signed_help),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Switch(
-                    checked = state.allowSelfSignedCerts,
-                    onCheckedChange = { viewModel.setAllowSelfSignedCerts(it) },
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        Text(stringResource(R.string.settings_change_password), style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = state.currentPassword,
-            onValueChange = viewModel::onCurrentPasswordChange,
-            label = { Text(stringResource(R.string.settings_current_password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = state.newPassword,
-            onValueChange = viewModel::onNewPasswordChange,
-            label = { Text(stringResource(R.string.settings_new_password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.settings_change_email), style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = state.newEmail,
-            onValueChange = viewModel::onNewEmailChange,
-            label = { Text(stringResource(R.string.settings_new_email)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = state.changeEmailPassword,
-            onValueChange = viewModel::onChangeEmailPasswordChange,
-            label = { Text(stringResource(R.string.settings_password)) },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Button(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
-        Spacer(Modifier.height(16.dp))
-
-        state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
-        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.primary) }
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.settings_sessions), style = MaterialTheme.typography.titleMedium)
-        state.sessions.forEach { session ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    val label = session.deviceLabel ?: stringResource(R.string.settings_unknown_device)
-                    Text(
-                        // Was a hard-coded English literal (T-270); untranslated in every other
-                        // locale. Matches the web client's settings.thisDevice word for word.
-                        if (session.current) "$label ${stringResource(R.string.settings_this_device)}" else label,
-                    )
-                    // The current session is active by definition — this request is it. Showing
-                    // its stored lastSeenAt instead would read as up to 15 minutes stale, since
-                    // the server throttles that write (auth.LAST_SEEN_REFRESH_MS).
-                    Text(
-                        if (session.current) {
-                            stringResource(R.string.last_seen_active_now)
-                        } else {
-                            formatLastSeen(session.lastSeenAt).asString()
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (!session.current) {
-                    TextButton(onClick = { viewModel.revokeSession(session.id) }) { Text(stringResource(R.string.action_revoke)) }
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.settings_danger_zone), style = MaterialTheme.typography.titleMedium)
-        // Filled red button (T-112), matching the Clear-checked danger action — not an easy-to-miss
-        // text button. Confirmation still gates the actual delete.
-        Button(
-            onClick = viewModel::requestDeleteAccount,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.settings_delete_account)) }
-        Spacer(Modifier.height(16.dp))
-
         // No telemetry service (T-50) — this is purely local, opt-in, and manual: the crash log
         // never leaves the device unless the user explicitly shares it here.
         Text(stringResource(R.string.settings_diagnostics), style = MaterialTheme.typography.titleMedium)
@@ -274,29 +128,7 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
-    }
-
-    if (state.isDeleteConfirmOpen) {
-        LocalizedAlertDialog(
-            onDismissRequest = viewModel::cancelDeleteAccount,
-            title = { Text(stringResource(R.string.settings_delete_account_title)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.settings_delete_account_body))
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.deleteAccountPassword,
-                        onValueChange = viewModel::onDeleteAccountPasswordChange,
-                        label = { Text(stringResource(R.string.settings_confirm_password)) },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            },
-            confirmButton = { TextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
-            dismissButton = { TextButton(onClick = viewModel::cancelDeleteAccount) { Text(stringResource(R.string.action_cancel)) } },
-        )
+        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.primary) }
     }
 }
 

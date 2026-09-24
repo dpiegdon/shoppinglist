@@ -38,7 +38,6 @@
     <string name="nav_settings">Налаштування</string>
     <string name="nav_server_admin">Адміністрування сервера</string>
     <string name="nav_about">Про застосунок</string>
-    <string name="nav_log_out">Вийти</string>
     <string name="nav_join_list">Приєднатися до списку</string>
     <string name="ago_just_now">щойно</string>
     <string name="ago_minutes">%1$d хв тому</string>
@@ -184,7 +183,6 @@
     <string name="settings_trust_self_signed">Довіряти самопідписаним сертифікатам</string>
     <string name="settings_trust_self_signed_help">Опція для розробників — пропускає перевірку TLS-сертифіката. Небезпечно; лише в debug-збірках.</string>
     <string name="settings_danger_zone">Небезпечна зона</string>
-    <string name="settings_delete_account">Видалити обліковий запис</string>
     <string name="settings_delete_account_title">Видалити обліковий запис?</string>
     <string name="settings_delete_account_body">Це назавжди видалить твій обліковий запис і всі дані. Введи пароль для підтвердження.</string>
     <string name="settings_msg_currency_updated">Валюту оновлено</string>
@@ -346,4 +344,25 @@
     <string name="expense_delete_blocked">Цей запис не можна видалити: він стосується когось, чиї суми зафіксовано.</string>
     <string name="expense_error_frozen">Суми %1$s зафіксовано: ця людина погодилася закрити список або залишила його.</string>
     <string name="expense_not_saved">Не збережено до списку</string>
+
+    <!-- Accounts screens (T-292) -->
+    <string name="nav_accounts">Облікові записи</string>
+    <string name="accounts_add">Додати обліковий запис</string>
+    <string name="accounts_state_signed_in">Вхід виконано</string>
+    <string name="accounts_state_signed_out">Вихід виконано: торкніться, щоб увійти</string>
+    <string name="accounts_state_outdated">Застосунок застарий для цього сервера</string>
+    <string name="accounts_outdated_help">Синхронізацію з цим сервером призупинено до оновлення застосунку.</string>
+    <string name="accounts_state_local">На цьому телефоні</string>
+    <string name="accounts_move_up">Вгору</string>
+    <string name="accounts_move_down">Вниз</string>
+    <string name="account_remove">Прибрати з цього телефона</string>
+    <string name="account_remove_title">Прибрати цей обліковий запис із телефона?</string>
+    <string name="account_remove_body">Його списки й товари буде видалено з цього телефона. Обліковий запис і його списки залишаться на сервері й повернуться, коли ви знову додасте обліковий запис.</string>
+    <string name="account_remove_unpushed">Ще не синхронізовані зміни, які буде втрачено: %1$d</string>
+    <string name="account_remove_copy_hint">Щоб зберегти список тут, спершу скопіюйте його в інший обліковий запис.</string>
+    <string name="account_remove_confirm">Прибрати</string>
+    <string name="account_delete_on_server">Видалити обліковий запис на сервері</string>
+    <string name="login_resignin_title">Увійти знову</string>
+    <string name="login_resignin_help">Сервер виконав вихід із цього облікового запису. Увійдіть знову, щоб синхронізувати його списки.</string>
+    <string name="login_msg_already_added">Цей обліковий запис уже є на цьому телефоні.</string>
 </resources>

@@ -10,53 +10,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.AuthRepository
-import org.p23q.shoppinglist.core.account.CurrentAccount
-import org.p23q.shoppinglist.core.api.ApiException
-import org.p23q.shoppinglist.core.api.ChangeEmailRequest
-import org.p23q.shoppinglist.core.api.ChangePasswordRequest
-import org.p23q.shoppinglist.core.api.DeleteAccountRequest
-import org.p23q.shoppinglist.core.api.SessionDto
-import org.p23q.shoppinglist.core.api.UnauthorizedException
-import org.p23q.shoppinglist.core.api.UpdateSettingsRequest
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
-import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
-import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
-import java.io.IOException
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val serverUrl: String = "",
-    val accountEmail: String? = null,
-    /** Configured-admin flag from the login response (T-107); gates the admin entry point. */
-    val defaultCurrency: String = "",
-    /**
-     * Resolved default-or-override (T-64). `null` means the one-time fetch in [SettingsViewModel]
-     * hasn't resolved yet (or failed) — distinct from a genuinely blank/no-override value once
-     * loaded, so the field can render empty without that looking like a value the user chose.
-     *
-     * Note this is the server's *resolved* value: for an account with no override it is the
-     * email-derived default, indistinguishable here from a stored one. That's why only
-     * [SettingsViewModel.updateInitials] ever sends it, as a deliberate user action — see
-     * [SettingsViewModel.updateCurrency] (T-103).
-     */
-    val initials: String? = null,
     val theme: ThemePreference = ThemePreference.SYSTEM,
-    val allowSelfSignedCerts: Boolean = false,
-    val sessions: List<SessionDto> = emptyList(),
-    val currentPassword: String = "",
-    val newPassword: String = "",
-    val newEmail: String = "",
-    val changeEmailPassword: String = "",
-    val deleteAccountPassword: String = "",
-    val isDeleteConfirmOpen: Boolean = false,
-    val errorMessage: UiText? = null,
     val infoMessage: UiText? = null,
-    val isAccountDeleted: Boolean = false,
     /** Absolute path of the crash log to hand to a share intent (T-50); consumed once fired. */
     val crashLogPath: String? = null,
     /** Global collaborator-change notifications on/off (T-65). */
@@ -65,13 +28,13 @@ data class SettingsUiState(
     val lastBackgroundSyncText: UiText = UiText.res(R.string.background_sync_never),
 )
 
-/** Notes: "the usual stuff" — currency, password/email, sessions, delete account, theme, server URL. */
+/**
+ * What is this phone's rather than an account's: theme, language, notifications and diagnostics.
+ * Everything an account owns lives on its Account screen (T-292).
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val apiProvider: ApiSource,
-    private val currentAccount: CurrentAccount,
     private val themePreferenceStore: ThemePreferenceStore,
-    private val authRepository: AuthRepository,
     private val crashLogWriter: CrashLogWriter,
     private val notificationPrefs: NotificationPrefsStore,
 ) : ViewModel() {
@@ -80,18 +43,6 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        // Local/cached only - no network call, so sessions (a real request) stay opt-in via
-        // loadSessions() instead of firing on every construction (e.g. every settings dialog open).
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    serverUrl = currentAccount.serverUrl ?: "",
-                    accountEmail = currentAccount.accountEmail,
-                    defaultCurrency = currentAccount.defaultCurrency ?: "",
-                    allowSelfSignedCerts = currentAccount.allowSelfSignedCerts,
-                )
-            }
-        }
         viewModelScope.launch {
             themePreferenceStore.theme.collect { pref -> _uiState.update { it.copy(theme = pref) } }
         }
@@ -112,192 +63,6 @@ class SettingsViewModel @Inject constructor(
         notificationPrefs.setNotificationsEnabled(enabled)
     }
 
-    fun loadSessions(): Job = viewModelScope.launch {
-        try {
-            val sessions = apiProvider.get().sessions().sessions
-            _uiState.update { it.copy(sessions = sessions) }
-        } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_sessions_failed)) }
-        }
-    }
-
-    /**
-     * Not cached anywhere locally (unlike currency, via currentAccount) — a real fetch, opt-in like
-     * [loadSessions] rather than in init (this screen's init is local/cached-only by design). The
-     * screen calls this once on open. Best-effort: until it resolves the field just renders blank.
-     * Nothing else depends on it having resolved — the currency save never sends initials at all
-     * (T-103) — so a failed fetch here can't cause a wrong write, only an empty field.
-     */
-    fun loadInitials(): Job = viewModelScope.launch {
-        try {
-            _uiState.update { it.copy(initials = apiProvider.get().getSettings().initials) }
-        } catch (e: IOException) {
-            // Offline — the initials section just starts blank; not a hard error for this screen.
-        }
-    }
-
-    fun onCurrentPasswordChange(value: String) = _uiState.update { it.copy(currentPassword = value, errorMessage = null) }
-
-    fun onNewPasswordChange(value: String) = _uiState.update { it.copy(newPassword = value, errorMessage = null) }
-
-    fun onNewEmailChange(value: String) = _uiState.update { it.copy(newEmail = value, errorMessage = null) }
-
-    fun onChangeEmailPasswordChange(value: String) = _uiState.update { it.copy(changeEmailPassword = value, errorMessage = null) }
-
-    fun onDeleteAccountPasswordChange(value: String) = _uiState.update { it.copy(deleteAccountPassword = value, errorMessage = null) }
-
-    fun updateCurrency(currency: String): Job? {
-        val normalized = currency.trim().uppercase()
-        if (!ISO_CURRENCY.matches(normalized)) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_currency_invalid)) }
-            return null
-        }
-        return viewModelScope.launch {
-            try {
-                // Never send initials from the currency save. The server treats an absent key as
-                // "leave unchanged" (T-87), not PUT-style overwrite, so passing null here omits it
-                // from the request entirely (kotlinx elides a property equal to its declared
-                // default) and the stored value is untouched.
-                //
-                // Resending it was actively harmful (T-103): GET /settings returns the *resolved*
-                // value, so an account with no override reads back the email-derived default
-                // ("BO" for bob@…) with nothing marking it as derived. Echoing that back stored it
-                // as an explicit override, pinning the initials so a later email change no longer
-                // re-derived them. T-97 fixed only the narrower unresolved-preload case.
-                val response = apiProvider.get().updateSettings(
-                    UpdateSettingsRequest(normalized, initials = null),
-                )
-                // An already-open list screen follows it through DefaultCurrencyState (T-55).
-                currentAccount.defaultCurrency = response.defaultCurrency
-                _uiState.update {
-                    it.copy(
-                        defaultCurrency = response.defaultCurrency,
-                        initials = response.initials,
-                        errorMessage = null,
-                        infoMessage = UiText.res(R.string.settings_msg_currency_updated),
-                    )
-                }
-            } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_currency_failed)) }
-            } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
-            }
-        }
-    }
-
-    fun onInitialsChange(value: String) = _uiState.update { it.copy(initials = value, errorMessage = null) }
-
-    fun updateInitials(initials: String): Job? {
-        val normalized = initials.trim().uppercase()
-        if (normalized.length > INITIALS_MAX_LENGTH) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_initials_too_long, INITIALS_MAX_LENGTH)) }
-            return null
-        }
-        return viewModelScope.launch {
-            try {
-                // No longer required by the server (T-87: absent key = unchanged); kept for
-                // parity. Currency is always loaded from cached session state, so unlike
-                // initials there's no staleness risk in resending it here.
-                val response = apiProvider.get().updateSettings(
-                    UpdateSettingsRequest(_uiState.value.defaultCurrency, normalized),
-                )
-                _uiState.update {
-                    it.copy(initials = response.initials, errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_initials_updated))
-                }
-            } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_initials_failed)) }
-            } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
-            }
-        }
-    }
-
-    fun changePassword(): Job? {
-        val state = _uiState.value
-        if (state.currentPassword.isBlank() || state.newPassword.isBlank()) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_fields_required)) }
-            return null
-        }
-        return viewModelScope.launch {
-            try {
-                apiProvider.get().changePassword(ChangePasswordRequest(state.currentPassword, state.newPassword))
-                _uiState.update {
-                    it.copy(currentPassword = "", newPassword = "", errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_password_changed))
-                }
-            } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_incorrect)) }
-            } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_password_failed, mapOf("invalid_credentials" to R.string.settings_msg_password_incorrect))) }
-            } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
-            }
-        }
-    }
-
-    fun changeEmail(): Job? {
-        val state = _uiState.value
-        if (state.changeEmailPassword.isBlank() || state.newEmail.isBlank()) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_email_fields_required)) }
-            return null
-        }
-        return viewModelScope.launch {
-            try {
-                apiProvider.get().changeEmail(ChangeEmailRequest(state.changeEmailPassword, state.newEmail))
-                currentAccount.accountEmail = state.newEmail
-                _uiState.update {
-                    it.copy(
-                        accountEmail = state.newEmail,
-                        newEmail = "",
-                        changeEmailPassword = "",
-                        errorMessage = null,
-                        infoMessage = UiText.res(R.string.settings_msg_email_changed),
-                    )
-                }
-            } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
-            } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_email_failed, mapOf("invalid_credentials" to R.string.settings_msg_delete_password_incorrect))) }
-            } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
-            }
-        }
-    }
-
-    fun revokeSession(id: String): Job = viewModelScope.launch {
-        try {
-            apiProvider.get().revokeSession(id)
-        } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_revoke_failed)) }
-        }
-        loadSessions().join()
-    }
-
-    fun requestDeleteAccount() = _uiState.update { it.copy(isDeleteConfirmOpen = true) }
-
-    fun cancelDeleteAccount() = _uiState.update { it.copy(isDeleteConfirmOpen = false, deleteAccountPassword = "") }
-
-    fun confirmDeleteAccount(): Job? {
-        val password = _uiState.value.deleteAccountPassword
-        if (password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_required)) }
-            return null
-        }
-        return viewModelScope.launch {
-            try {
-                apiProvider.get().deleteAccount(DeleteAccountRequest(password))
-                // Gone on the server, so gone here too: its lists, its token, its row.
-                currentAccount.localId?.let { authRepository.removeAccount(it) }
-                _uiState.update { it.copy(isAccountDeleted = true, isDeleteConfirmOpen = false) }
-            } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
-            } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_delete_failed, mapOf("invalid_credentials" to R.string.settings_msg_delete_password_incorrect))) }
-            } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
-            }
-        }
-    }
-
     /** No log yet, or an empty one, surfaces a message instead of firing an empty share sheet (T-50). */
     fun shareLogs() {
         val file = crashLogWriter.logFile
@@ -311,20 +76,6 @@ class SettingsViewModel @Inject constructor(
     fun consumeCrashLogShare() = _uiState.update { it.copy(crashLogPath = null) }
 
     fun setTheme(preference: ThemePreference): Job = viewModelScope.launch { themePreferenceStore.setTheme(preference) }
-
-    /**
-     * Dev-only (the Settings toggle that calls this is gated to debug builds). Persists the flag;
-     * it only actually affects TLS in debug builds — release ignores it (see DevCertTrust.kt).
-     */
-    fun setAllowSelfSignedCerts(allow: Boolean): Job = viewModelScope.launch {
-        currentAccount.allowSelfSignedCerts = allow
-        _uiState.update { it.copy(allowSelfSignedCerts = allow) }
-    }
-
-    private companion object {
-        val ISO_CURRENCY = Regex("^[A-Z]{3}$")
-        const val INITIALS_MAX_LENGTH = 3
-    }
 }
 
 /** Coarse "how long ago" for the background-sync diagnostic (T-112); 0 = never ran. */

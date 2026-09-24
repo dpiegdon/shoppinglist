@@ -38,7 +38,6 @@
     <string name="nav_settings">設定</string>
     <string name="nav_server_admin">サーバー管理</string>
     <string name="nav_about">このアプリについて</string>
-    <string name="nav_log_out">ログアウト</string>
     <string name="nav_join_list">リストに参加</string>
     <string name="ago_just_now">たった今</string>
     <string name="ago_minutes">%1$d 分前</string>
@@ -184,7 +183,6 @@
     <string name="settings_trust_self_signed">自己署名証明書を信頼する</string>
     <string name="settings_trust_self_signed_help">開発者オプション — TLS 証明書の検証をスキップします。安全ではありません。デバッグビルドのみ。</string>
     <string name="settings_danger_zone">危険な操作</string>
-    <string name="settings_delete_account">アカウントを削除</string>
     <string name="settings_delete_account_title">アカウントを削除しますか？</string>
     <string name="settings_delete_account_body">アカウントとすべてのデータが完全に削除されます。確認のためパスワードを入力してください。</string>
     <string name="settings_msg_currency_updated">通貨を更新しました</string>
@@ -346,4 +344,25 @@
     <string name="expense_delete_blocked">この記録は削除できません：金額が確定している人が関わっています。</string>
     <string name="expense_error_frozen">%1$s の金額は確定しています。締めに同意したか、リストを退出したためです。</string>
     <string name="expense_not_saved">リストに保存されていません</string>
+
+    <!-- Accounts screens (T-292) -->
+    <string name="nav_accounts">アカウント一覧</string>
+    <string name="accounts_add">アカウントを追加</string>
+    <string name="accounts_state_signed_in">ログイン中</string>
+    <string name="accounts_state_signed_out">ログアウト済み：タップしてログイン</string>
+    <string name="accounts_state_outdated">このサーバーにはアプリが古すぎます</string>
+    <string name="accounts_outdated_help">アプリを更新するまで、このサーバーとの同期は停止しています。</string>
+    <string name="accounts_state_local">この端末上</string>
+    <string name="accounts_move_up">上へ移動</string>
+    <string name="accounts_move_down">下へ移動</string>
+    <string name="account_remove">この端末から削除</string>
+    <string name="account_remove_title">このアカウントを端末から削除しますか？</string>
+    <string name="account_remove_body">このアカウントのリストとアイテムはこの端末から削除されます。アカウントとリストはサーバーに残り、アカウントを再び追加すると戻ります。</string>
+    <string name="account_remove_unpushed">まだ同期されておらず失われる変更：%1$d</string>
+    <string name="account_remove_copy_hint">リストをここに残すには、先に別のアカウントへコピーしてください。</string>
+    <string name="account_remove_confirm">削除</string>
+    <string name="account_delete_on_server">サーバー上のアカウントを削除</string>
+    <string name="login_resignin_title">再ログイン</string>
+    <string name="login_resignin_help">サーバーがこのアカウントをログアウトしました。リストを同期するには再度ログインしてください。</string>
+    <string name="login_msg_already_added">このアカウントはすでにこの端末にあります。</string>
 </resources>

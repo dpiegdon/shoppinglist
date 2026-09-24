@@ -38,7 +38,6 @@
     <string name="nav_settings">الإعدادات</string>
     <string name="nav_server_admin">إدارة الخادم</string>
     <string name="nav_about">حول التطبيق</string>
-    <string name="nav_log_out">تسجيل الخروج</string>
     <string name="nav_join_list">الانضمام إلى قائمة</string>
     <string name="ago_just_now">الآن</string>
     <string name="ago_minutes">قبل %1$d د</string>
@@ -184,7 +183,6 @@
     <string name="settings_trust_self_signed">الوثوق بالشهادات الموقّعة ذاتيًا</string>
     <string name="settings_trust_self_signed_help">خيار للمطوّرين — يتخطى التحقق من شهادة TLS. غير آمن؛ في نسخ التصحيح فقط.</string>
     <string name="settings_danger_zone">منطقة الخطر</string>
-    <string name="settings_delete_account">حذف الحساب</string>
     <string name="settings_delete_account_title">حذف الحساب؟</string>
     <string name="settings_delete_account_body">سيؤدي هذا إلى حذف حسابك وكل البيانات نهائيًا. أدخل كلمة المرور للتأكيد.</string>
     <string name="settings_msg_currency_updated">تم تحديث العملة</string>
@@ -346,4 +344,25 @@
     <string name="expense_delete_blocked">لا يمكن حذف هذا القيد: فهو يخص شخصًا مبالغه ثابتة.</string>
     <string name="expense_error_frozen">مبالغ %1$s ثابتة: فقد وافق على إغلاق القائمة أو غادرها.</string>
     <string name="expense_not_saved">لم يُحفظ في القائمة</string>
+
+    <!-- Accounts screens (T-292) -->
+    <string name="nav_accounts">الحسابات</string>
+    <string name="accounts_add">إضافة حساب</string>
+    <string name="accounts_state_signed_in">تم تسجيل الدخول</string>
+    <string name="accounts_state_signed_out">تم تسجيل الخروج: انقر لتسجيل الدخول</string>
+    <string name="accounts_state_outdated">التطبيق أقدم من أن يعمل مع هذا الخادم</string>
+    <string name="accounts_outdated_help">المزامنة مع هذا الخادم متوقفة مؤقتًا حتى يتم تحديث التطبيق.</string>
+    <string name="accounts_state_local">على هذا الهاتف</string>
+    <string name="accounts_move_up">نقل لأعلى</string>
+    <string name="accounts_move_down">نقل لأسفل</string>
+    <string name="account_remove">إزالة من هذا الهاتف</string>
+    <string name="account_remove_title">إزالة هذا الحساب من الهاتف؟</string>
+    <string name="account_remove_body">تُحذف قوائمه وعناصره من هذا الهاتف. يبقى الحساب وقوائمه على الخادم وتعود عند إضافة الحساب مرة أخرى.</string>
+    <string name="account_remove_unpushed">تغييرات لم تتم مزامنتها بعد وستُفقد: %1$d</string>
+    <string name="account_remove_copy_hint">للاحتفاظ بقائمة هنا، انسخها أولًا إلى حساب آخر.</string>
+    <string name="account_remove_confirm">إزالة</string>
+    <string name="account_delete_on_server">حذف الحساب على الخادم</string>
+    <string name="login_resignin_title">تسجيل الدخول مجددًا</string>
+    <string name="login_resignin_help">سجّل الخادم خروج هذا الحساب. سجّل الدخول مجددًا لمزامنة قوائمه.</string>
+    <string name="login_msg_already_added">هذا الحساب موجود بالفعل على هذا الهاتف.</string>
 </resources>

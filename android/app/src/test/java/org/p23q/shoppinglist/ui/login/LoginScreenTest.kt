@@ -14,9 +14,9 @@ import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.junit.Rule
 import org.junit.Test
+import org.p23q.shoppinglist.ui.Routes
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -44,7 +44,7 @@ class LoginScreenTest {
 
     @Test
     fun `renders server URL, email, password fields and a submit button`() {
-        val viewModel = LoginViewModel(NoopAuthRepository(), FakeCurrentAccount(localId = null), org.p23q.shoppinglist.data.FakeLastServerAddress(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val viewModel = LoginViewModel(NoopAuthRepository(), KnownAccounts { emptyList() }, org.p23q.shoppinglist.data.FakeLastServerAddress(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
@@ -58,7 +58,7 @@ class LoginScreenTest {
 
     @Test
     fun `carries the name in cuneiform under the title, uncaptioned (T-225)`() {
-        val viewModel = LoginViewModel(NoopAuthRepository(), FakeCurrentAccount(localId = null), org.p23q.shoppinglist.data.FakeLastServerAddress(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val viewModel = LoginViewModel(NoopAuthRepository(), KnownAccounts { emptyList() }, org.p23q.shoppinglist.data.FakeLastServerAddress(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
@@ -78,7 +78,7 @@ class LoginScreenTest {
         val serverConfig = org.p23q.shoppinglist.data.FakeLastServerAddress(url = "https://lists.example.com/")
         val viewModel = LoginViewModel(
             NoopAuthRepository(registrationAllowed = false),
-            FakeCurrentAccount(localId = null),
+            KnownAccounts { emptyList() },
             serverConfig,
             org.p23q.shoppinglist.data.PendingInviteHolder(),
             org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
@@ -96,7 +96,7 @@ class LoginScreenTest {
     private fun submitAgainst(repository: AuthRepository, onDownload: (String) -> Unit = {}) {
         val viewModel = LoginViewModel(
             repository,
-            FakeCurrentAccount(localId = null),
+            KnownAccounts { emptyList() },
             org.p23q.shoppinglist.data.FakeLastServerAddress(),
             org.p23q.shoppinglist.data.PendingInviteHolder(),
             org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
@@ -138,5 +138,46 @@ class LoginScreenTest {
         submitAgainst(NoopAuthRepository(onLogin = { throw NotATuppuServerException() }))
 
         composeTestRule.onNodeWithText("No Tuppu server answered at this address.").assertExists()
+    }
+
+    @Test
+    fun `the re-sign-in form explains itself, fixes the server and offers no registration (T-292)`() {
+        val stage = org.p23q.shoppinglist.data.testAccount(id = "stage", serverUrl = "https://lists.example.test/stage/", signedIn = false)
+        val viewModel = LoginViewModel(
+            NoopAuthRepository(),
+            KnownAccounts { listOf(stage) },
+            org.p23q.shoppinglist.data.FakeLastServerAddress(),
+            org.p23q.shoppinglist.data.PendingInviteHolder(),
+            org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
+            androidx.lifecycle.SavedStateHandle(
+                mapOf(Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage"),
+            ),
+        )
+
+        composeTestRule.setContent { LoginScreen(onLoginSuccess = {}, viewModel = viewModel) }
+
+        composeTestRule.onNodeWithText("The server signed this account out. Sign in again to sync its lists.").assertExists()
+        composeTestRule.onNodeWithText("https://lists.example.test/stage/").assertExists()
+        composeTestRule.onNodeWithText("New here? Register").assertDoesNotExist()
+        // Not the start screen: no mark, no language picker.
+        composeTestRule.onNodeWithTag("login-cuneiform", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the add form carries no mark but keeps registering (T-292)`() {
+        val viewModel = LoginViewModel(
+            NoopAuthRepository(),
+            KnownAccounts { emptyList() },
+            org.p23q.shoppinglist.data.FakeLastServerAddress(),
+            org.p23q.shoppinglist.data.PendingInviteHolder(),
+            org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
+            androidx.lifecycle.SavedStateHandle(mapOf(Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg)),
+        )
+
+        composeTestRule.setContent { LoginScreen(onLoginSuccess = {}, viewModel = viewModel) }
+
+        composeTestRule.onNodeWithTag("login-cuneiform", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("New here? Register").assertExists()
+        composeTestRule.onNodeWithText("Log in").assertExists()
     }
 }

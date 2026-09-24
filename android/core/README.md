@@ -69,13 +69,16 @@ interface and `:app` implements it and binds it in Hilt:
   flag: a new process may be a newer build, and if it is not, its first request
   raises the flag again. A row the table refuses (the unique server and
   server-side id) is an exception from `add`/`update`, and the copy goes back
-  to the table's row. `withAccountLock(id)` serialises one account's sync, local
-  sign-out and removal.
+  to the table's row. `reorder(ids)` sets the user's order (`sortOrder`).
+  `withAccountLock(id)` serialises one account's sync, local sign-out and
+  removal.
 - `account/AccountSessions` builds one `AccountSession` per server account, on
   first use: an `Api` whose interceptors carry that account's token and report to
   that account (a `401` to the account's current token deletes it, sets
   `signedIn = false` and emits on `forcedLogout`; `426` sets `outdated`, an
-  accepted request clears it), and the account's share of `SyncStatus`. `updateRequired` is true when every server account is outdated.
+  accepted request clears it), and the account's share of `SyncStatus`. Nothing in the UI acts on
+  `forcedLogout`: the account's row says it is signed out, and its lists stay.
+  `updateRequired` is true when every server account is outdated.
   `unbound()` is a token-less client that reports to no account, for what is
   asked before an account exists and for `/app-version`.
 - `account/CurrentAccount` is the first server account, for the screens that
