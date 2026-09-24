@@ -84,8 +84,9 @@ and holds its `Migration` objects and `AppDbMigrationTest`.
 Room generates `AppDb_Impl` here for the JVM, and that differs from what it
 generates for Android in one way: it has no `clearAllTables()`, which exists
 only in Room's Android artifact. Calling it from `:app` compiles and then fails
-at run time with `AbstractMethodError`. Use `AppDb.clearAll()`
-(`db/ClearAll.kt`) instead.
+at run time with `AbstractMethodError`. Nothing calls it: rows are deleted per
+account, through `AccountRegistry.remove` and the `…ForAccount` DAO deletes, so
+the registry's in-memory copy of the `accounts` table stays true.
 
 The exported schemas live in `schemas/`, one directory per `@Database` class.
 A change to them is the reviewable record of a schema change.
