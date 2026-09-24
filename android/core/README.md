@@ -59,12 +59,15 @@ interface and `:app` implements it and binds it in Hilt:
   the table in memory after `load()`, so reads are synchronous; a change applies
   to that copy at once and is written through. `load()` clears every `outdated`
   flag: a new process may be a newer build, and if it is not, its first request
-  raises the flag again.
+  raises the flag again. A row the table refuses (the unique server and
+  server-side id) is an exception from `add`/`update`, and the copy goes back
+  to the table's row. `withAccountLock(id)` serialises one account's sync, local
+  sign-out and removal.
 - `account/AccountSessions` builds one `AccountSession` per server account, on
   first use: an `Api` whose interceptors carry that account's token and report to
-  that account (`401` sets `signedIn = false` and emits on `forcedLogout`, `426`
-  sets `outdated`, an accepted request clears it), and the account's share of
-  `SyncStatus`. `updateRequired` is true when every server account is outdated.
+  that account (a `401` to the account's current token deletes it, sets
+  `signedIn = false` and emits on `forcedLogout`; `426` sets `outdated`, an
+  accepted request clears it), and the account's share of `SyncStatus`. `updateRequired` is true when every server account is outdated.
   `unbound()` is a token-less client that reports to no account, for what is
   asked before an account exists and for `/app-version`.
 - `account/CurrentAccount` is the first server account, for the screens that
@@ -77,8 +80,9 @@ interface and `:app` implements it and binds it in Hilt:
   the floor, one above this build and an answer that is not a Tuppu server's are
   each their own exception, for the login screen to name. A logout signs one
   account out and keeps its unpushed rows.
-- `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account;
-  `syncAccount()` is one. `SyncStatus.state` is the worst of the accounts,
+- `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
+  that has a token (one without is signed out); `syncAccount()` is one, under
+  its account lock. `SyncStatus.state` is the worst of the accounts,
   `SyncStatus.accounts` each one.
 
 `:app` also builds the database (`Room.databaseBuilder(context, AppDb::class.java, …)`)
