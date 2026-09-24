@@ -2,7 +2,7 @@ package org.p23q.shoppinglist.ui
 
 import androidx.annotation.StringRes
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.api.ApiException
+import org.p23q.shoppinglist.core.api.ApiException
 
 /**
  * What a failure says to the user, in the app's language.

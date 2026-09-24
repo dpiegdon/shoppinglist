@@ -56,7 +56,7 @@ class SyncStatus @Inject constructor() {
 
     /**
      * Session expired mid-sync: clears the spinner but is *not* a loud error — the forced-logout
-     * flow ([org.p23q.shoppinglist.data.api.SessionEvents], T-31) drives re-auth, after which sync
+     * flow ([org.p23q.shoppinglist.core.api.SessionEvents], T-31) drives re-auth, after which sync
      * resumes.
      */
     fun stoppedUnauthorized(pending: Int, blocked: Int) = _state.update {

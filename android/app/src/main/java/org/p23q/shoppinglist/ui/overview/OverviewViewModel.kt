@@ -14,10 +14,10 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListKind
-import org.p23q.shoppinglist.data.api.ApiException
+import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.InviteForMeDto
-import org.p23q.shoppinglist.data.api.RedeemInviteRequest
+import org.p23q.shoppinglist.core.api.InviteForMeDto
+import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.data.db.ListEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo

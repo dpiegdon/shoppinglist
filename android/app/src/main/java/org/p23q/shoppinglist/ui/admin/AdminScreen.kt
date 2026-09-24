@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
-import org.p23q.shoppinglist.data.api.AdminUserDto
+import org.p23q.shoppinglist.core.api.AdminUserDto
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString

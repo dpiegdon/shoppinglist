@@ -6,6 +6,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.p23q.shoppinglist.core.api.AppVersionResponse
+import org.p23q.shoppinglist.core.api.ErrorEnvelope
+import org.p23q.shoppinglist.core.api.ItemDto
+import org.p23q.shoppinglist.core.api.ListDto
+import org.p23q.shoppinglist.core.api.LoginRequest
+import org.p23q.shoppinglist.core.api.SyncChanges
+import org.p23q.shoppinglist.core.api.SyncRequest
+import org.p23q.shoppinglist.core.api.SyncResponse
+import org.p23q.shoppinglist.core.api.UpdateSettingsRequest
 
 /**
  * DTO shapes are checked against fully-expanded fixtures of the Wire Contract's Item/List

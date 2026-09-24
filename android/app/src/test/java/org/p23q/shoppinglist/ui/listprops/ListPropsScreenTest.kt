@@ -23,13 +23,13 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.core.api.AuthInterceptor
+import org.p23q.shoppinglist.core.api.ErrorInterceptor
+import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.AuthInterceptor
-import org.p23q.shoppinglist.data.api.ErrorInterceptor
-import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
@@ -81,7 +81,7 @@ class ListPropsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val viewModel = ListPropsViewModel(
@@ -136,7 +136,7 @@ class ListPropsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val viewModel = ListPropsViewModel(
@@ -193,7 +193,7 @@ class ListPropsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val viewModel = ListPropsViewModel(
@@ -250,7 +250,7 @@ class ListPropsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { "tok-123" }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val viewModel = ListPropsViewModel(

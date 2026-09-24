@@ -30,9 +30,9 @@ import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.AuthInterceptor
-import org.p23q.shoppinglist.data.api.ErrorInterceptor
-import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.core.api.AuthInterceptor
+import org.p23q.shoppinglist.core.api.ErrorInterceptor
+import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
@@ -92,7 +92,7 @@ class SettingsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
@@ -165,7 +165,7 @@ class SettingsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val crashLogFile = File.createTempFile("settings_screen_crash_log", ".txt")
@@ -244,7 +244,7 @@ class SettingsScreenTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val crashLogFile = File.createTempFile("settings_screen_crashlog_empty", ".txt")
@@ -308,7 +308,7 @@ class SettingsScreenTest {
             ApiProvider(
                 serverConfig = serverConfig,
                 authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
                 json = json,
             ),
             sessionState,
@@ -365,7 +365,7 @@ class SettingsScreenTest {
             ApiProvider(
                 serverConfig = serverConfig,
                 authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
                 json = json,
             ),
             sessionState,
@@ -427,7 +427,7 @@ class SettingsScreenTest {
             ApiProvider(
                 serverConfig = serverConfig,
                 authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+                errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
                 json = json,
             ),
             sessionState,

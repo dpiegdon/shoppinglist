@@ -19,7 +19,7 @@ import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.AuthRepository
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
-import org.p23q.shoppinglist.data.api.UnauthorizedException
+import org.p23q.shoppinglist.core.api.UnauthorizedException
 import java.io.File
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText

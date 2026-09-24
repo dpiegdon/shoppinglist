@@ -19,10 +19,10 @@ import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.NameOrder
+import org.p23q.shoppinglist.core.api.MemberDto
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.MemberDto
 import org.p23q.shoppinglist.data.db.ItemEntity
 import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo

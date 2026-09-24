@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.api
+package org.p23q.shoppinglist.core.api
 
 import retrofit2.http.Body
 import retrofit2.http.DELETE

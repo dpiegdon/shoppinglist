@@ -7,9 +7,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.p23q.shoppinglist.core.api.ProtocolState
+import org.p23q.shoppinglist.core.api.SessionEvents
 import org.p23q.shoppinglist.data.AuthRepository
-import org.p23q.shoppinglist.data.api.ProtocolState
-import org.p23q.shoppinglist.data.api.SessionEvents
 import javax.inject.Inject
 
 /**

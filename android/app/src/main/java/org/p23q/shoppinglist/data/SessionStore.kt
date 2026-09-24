@@ -9,7 +9,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.core.api.TokenProvider
 import java.io.IOException
 import java.security.GeneralSecurityException
 import javax.inject.Inject

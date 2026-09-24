@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.api.AdminPasswordRequest
+import org.p23q.shoppinglist.core.api.AdminUserDto
+import org.p23q.shoppinglist.core.api.ApiException
+import org.p23q.shoppinglist.core.api.ServerSettingsDto
 import org.p23q.shoppinglist.data.SessionState
-import org.p23q.shoppinglist.data.api.AdminPasswordRequest
-import org.p23q.shoppinglist.data.api.AdminUserDto
-import org.p23q.shoppinglist.data.api.ApiException
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.ServerSettingsDto
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException

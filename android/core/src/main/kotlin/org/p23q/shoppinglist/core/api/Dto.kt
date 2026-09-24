@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.api
+package org.p23q.shoppinglist.core.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

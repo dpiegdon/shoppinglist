@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.api
+package org.p23q.shoppinglist.core.api
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi

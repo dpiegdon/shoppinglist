@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.api
+package org.p23q.shoppinglist.core.api
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

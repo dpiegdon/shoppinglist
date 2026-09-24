@@ -7,9 +7,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.p23q.shoppinglist.core.api.LoginRequest
+import org.p23q.shoppinglist.core.api.RegisterRequest
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.LoginRequest
-import org.p23q.shoppinglist.data.api.RegisterRequest
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.inTransaction
 import javax.inject.Inject

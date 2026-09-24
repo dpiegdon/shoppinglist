@@ -18,12 +18,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.api.AuthInterceptor
+import org.p23q.shoppinglist.core.api.ErrorInterceptor
+import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.AuthInterceptor
-import org.p23q.shoppinglist.data.api.ErrorInterceptor
-import org.p23q.shoppinglist.data.api.TokenProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
@@ -62,7 +62,7 @@ class RedeemDialogTest {
         val apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
         val syncEngine = SyncEngine(db.itemDao(), db.listDao(), apiProvider, sessionState, serverConfig, db, org.p23q.shoppinglist.data.sync.SyncStatus(), org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier { })

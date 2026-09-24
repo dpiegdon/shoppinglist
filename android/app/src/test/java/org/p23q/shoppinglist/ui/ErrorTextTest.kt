@@ -3,7 +3,7 @@ package org.p23q.shoppinglist.ui
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.data.api.ApiException
+import org.p23q.shoppinglist.core.api.ApiException
 import java.io.IOException
 
 /** Server failures in the app's language (see ErrorText), never the server's English text. */

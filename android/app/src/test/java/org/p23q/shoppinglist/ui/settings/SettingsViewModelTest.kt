@@ -28,9 +28,9 @@ import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.AuthInterceptor
-import org.p23q.shoppinglist.data.api.ErrorInterceptor
-import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.core.api.AuthInterceptor
+import org.p23q.shoppinglist.core.api.ErrorInterceptor
+import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.db.AppDb
 import org.robolectric.RobolectricTestRunner
@@ -84,7 +84,7 @@ class SettingsViewModelTest {
         apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents()),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents()),
             json = json,
         )
 

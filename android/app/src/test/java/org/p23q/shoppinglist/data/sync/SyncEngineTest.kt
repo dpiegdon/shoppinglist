@@ -27,11 +27,11 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.api.AuthInterceptor
-import org.p23q.shoppinglist.data.api.ErrorInterceptor
-import org.p23q.shoppinglist.data.api.ProtocolState
-import org.p23q.shoppinglist.data.api.SyncRequest
-import org.p23q.shoppinglist.data.api.TokenProvider
+import org.p23q.shoppinglist.core.api.AuthInterceptor
+import org.p23q.shoppinglist.core.api.ErrorInterceptor
+import org.p23q.shoppinglist.core.api.ProtocolState
+import org.p23q.shoppinglist.core.api.SyncRequest
+import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.db.ItemDao
@@ -105,7 +105,7 @@ class SyncEngineTest {
         apiProvider = ApiProvider(
             serverConfig = serverConfig,
             authInterceptor = AuthInterceptor(TokenProvider { sessionState.token }),
-            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.data.api.SessionEvents(), protocolState),
+            errorInterceptor = ErrorInterceptor(json, org.p23q.shoppinglist.core.api.SessionEvents(), protocolState),
             json = json,
         )
 

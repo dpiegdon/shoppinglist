@@ -40,7 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
-import org.p23q.shoppinglist.data.api.InviteForMeDto
+import org.p23q.shoppinglist.core.api.InviteForMeDto
 import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
