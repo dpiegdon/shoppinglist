@@ -1,6 +1,9 @@
 {
   "body": "Tail of the multi-account design (, section 7, \"B5\"): turn `:core` into a Kotlin\nMultiplatform module so an iPhone client can reuse it. B0 made this mechanical; this ticket does\nthe parts B0 tolerated.\n\n* `kotlin(\"multiplatform\")` with `jvm()` (used by `:app`) and `iosArm64`/`iosSimulatorArm64`\n  targets; the iOS targets must compile in CI on a Mac, or at least `./gradlew :core:compileKotlinIosArm64`\n  is documented as the check the maintainer runs before an iOS milestone.\n* Retrofit + OkHttp interceptors \u2192 Ktor client with plugins (auth header, protocol header, error\n  mapping to the same `ApiError` codes, timeouts, self-signed-cert opt-in on the Android engine\n  only). `MockWebServer` tests move to Ktor's `MockEngine` or keep MockWebServer on the JVM test\n  source set.\n* `javax.inject.Inject` leaves `:core`; `:app` wires the constructors in Hilt `@Provides`.\n* `Room.databaseBuilder` factory per platform (`:app` keeps the Android one; the iOS one is a\n  documented one-liner on the driver path). Migrations rewritten against `SQLiteConnection` so\n  they run on both.\n* `AppFormat`/`AppLocale`: check for `java.text`/`java.util.Locale` use and move behind an\n  `expect`/`actual` or a small interface.\n* Deliverable: `android/core/README.md` describes how an iOS app consumes the module and which\n  interfaces it has to implement (`SecretStore`, `BackgroundSync`, `DeviceId`, database factory).\n* No user-visible change; `verify-all.sh` keeps running `:core:jvmTest`.",
   "created_at": "2026-09-24T17:19:41+00:00",
+  "deps": [
+    "T-290"
+  ],
   "id": "T-295",
   "labels": [
     "android",
