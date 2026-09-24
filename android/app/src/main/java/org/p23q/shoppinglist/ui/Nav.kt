@@ -64,8 +64,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import androidx.navigation.navArgument
-import androidx.navigation.NavType
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
