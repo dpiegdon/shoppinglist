@@ -57,7 +57,6 @@ import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
-import java.util.Date
 
 /**
  * A ledger (T-154, T-245): what was spent, taken in and settled — by whom, for whom.

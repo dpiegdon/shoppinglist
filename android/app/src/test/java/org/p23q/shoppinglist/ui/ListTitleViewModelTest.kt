@@ -4,7 +4,6 @@ import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
-import kotlinx.coroutines.runBlocking
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver

@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.redeem
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -10,7 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.cancel
 import androidx.lifecycle.viewModelScope
-import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -22,9 +20,7 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)

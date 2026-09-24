@@ -7,15 +7,12 @@ import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.runBlocking
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -43,7 +40,6 @@ import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class OverviewViewModelTest {
