@@ -14,9 +14,9 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
+import org.p23q.shoppinglist.data.ListAccounts
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -138,13 +138,15 @@ data class ExpensePrefill(val name: String, val expense: Expense)
 class ExpenseFormViewModel @Inject constructor(
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
-    private val currentAccount: CurrentAccount,
+    private val listAccounts: ListAccounts,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseFormUiState())
     val uiState: StateFlow<ExpenseFormUiState> = _uiState.asStateFlow()
 
     private var listId: String = ""
+    /** This list's account's server-side id: who "I" am among its members. */
+    private var me: String? = null
     private var members: List<ListMember> = emptyList()
     private var participantIds: List<String> = emptyList()
     private var selected = mapOf(Side.PAID_BY to emptySet<String>(), Side.PAID_FOR to emptySet())
@@ -188,7 +190,6 @@ class ExpenseFormViewModel @Inject constructor(
                 )
             }
         } else {
-            val me = currentAccount.accountId
             selected = mapOf(
                 // Whoever is adding it paid, unless they are not on the list at all (they always are).
                 Side.PAID_BY to setOfNotNull(me?.takeIf { it in participantIds && !isFrozen(it) }),
@@ -266,6 +267,7 @@ class ExpenseFormViewModel @Inject constructor(
 
     private suspend fun loadList() {
         val list = listsRepo.observeById(listId).first()
+        me = listAccounts.accountOf(listId)?.accountId
         members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList()
         participantIds = members.map { it.accountId }
         frozenIds = list?.let { listsRepo.decodeCloseVotes(it.closeVotesJson) }?.toSet() ?: emptySet()
@@ -323,7 +325,7 @@ class ExpenseFormViewModel @Inject constructor(
                 from = payers[0]
                 to = beneficiaries[0]
             } else {
-                val me = currentAccount.accountId
+                val me = this.me
                 from = if (me != null && me in candidates) {
                     me
                 } else {

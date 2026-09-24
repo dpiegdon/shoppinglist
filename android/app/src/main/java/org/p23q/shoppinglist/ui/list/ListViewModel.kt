@@ -16,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.CategoryCanon
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.NameOrder
@@ -29,8 +28,8 @@ import org.p23q.shoppinglist.core.repo.Price
 import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.data.ShowCheckedStore
-import org.p23q.shoppinglist.core.api.ApiSource
 import org.p23q.shoppinglist.ui.Routes
 import java.io.IOException
 import java.util.Locale
@@ -73,14 +72,13 @@ class ListViewModel @Inject constructor(
     private val listsRepo: ListsRepo,
     private val syncer: Syncer,
     syncStatus: SyncStatus,
-    defaultCurrencyState: DefaultCurrencyState,
+    private val listAccounts: ListAccounts,
     private val showCheckedStore: ShowCheckedStore,
-    private val apiProvider: ApiSource,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
 
-    private val _uiState = MutableStateFlow(ListUiState(defaultCurrency = defaultCurrencyState.value))
+    private val _uiState = MutableStateFlow(ListUiState())
     val uiState: StateFlow<ListUiState> = _uiState.asStateFlow()
 
     private var categoryOrder: List<String> = emptyList()
@@ -124,18 +122,20 @@ class ListViewModel @Inject constructor(
         viewModelScope.launch {
             syncStatus.state.collect { sync -> _uiState.update { it.copy(sync = sync) } }
         }
-        // Live, not one-shot (T-55): CurrentAccount.defaultCurrency is read once, so without this
-        // an already-open list wouldn't see a Settings currency change until the screen was
-        // recreated.
+        // Live, not one-shot (T-55): the list's account's default currency, so an already-open
+        // list sees a currency change made for its account without the screen being recreated.
         viewModelScope.launch {
-            defaultCurrencyState.currency.collect { currency -> _uiState.update { it.copy(defaultCurrency = currency) } }
+            listAccounts.observeAccount(listId).collect { account ->
+                _uiState.update { it.copy(defaultCurrency = account?.defaultCurrency) }
+            }
         }
         // One-shot, not live (T-64): the badge only needs to know the roster, which changes rarely
         // relative to how often this screen opens. Silently stays empty offline/on error.
         viewModelScope.launch {
             val serverId = listsRepo.serverIdOf(listId) ?: return@launch
+            val api = listAccounts.apiOrNull(listId) ?: return@launch
             try {
-                val response = apiProvider.get().members(serverId)
+                val response = api.members(serverId)
                 _uiState.update { it.copy(members = response.members) }
             } catch (e: IOException) {
                 // Offline or unreachable — no badges is the safe fallback, not an error state.

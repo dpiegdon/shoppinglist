@@ -15,7 +15,6 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.NameOrder
-import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.CreateInviteRequest
 import org.p23q.shoppinglist.core.api.MemberDto
@@ -24,7 +23,7 @@ import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
@@ -82,9 +81,8 @@ class ListPropsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,
-    private val apiProvider: ApiSource,
+    private val listAccounts: ListAccounts,
     private val notificationPrefs: NotificationPrefsStore,
-    private val currentAccount: CurrentAccount,
     private val syncer: Syncer,
 ) : ViewModel() {
 
@@ -109,7 +107,7 @@ class ListPropsViewModel @Inject constructor(
                         ?: emptyList(),
                     closedAt = list?.closedAt,
                     memberCount = list?.let { row -> listsRepo.decodeMembers(row.membersJson).size } ?: 0,
-                    myAccountId = currentAccount.accountId,
+                    myAccountId = listAccounts.accountOf(listId)?.accountId,
                     categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )
@@ -149,7 +147,7 @@ class ListPropsViewModel @Inject constructor(
             return@launch
         }
         try {
-            val response = apiProvider.get().members(serverId)
+            val response = listAccounts.api(listId).members(serverId)
             _uiState.update {
                 it.copy(members = response.members, pendingInvites = response.invites, isMembersLoading = false)
             }
@@ -263,7 +261,7 @@ class ListPropsViewModel @Inject constructor(
         return viewModelScope.launch {
             val serverId = listsRepo.serverIdOf(listId) ?: return@launch
             try {
-                val response = apiProvider.get().createInvite(serverId, CreateInviteRequest(email))
+                val response = listAccounts.api(listId).createInvite(serverId, CreateInviteRequest(email))
                 _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, errorMessage = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
@@ -278,7 +276,7 @@ class ListPropsViewModel @Inject constructor(
 
     fun revokeInvite(inviteId: String): Job = viewModelScope.launch {
         try {
-            apiProvider.get().revokeInvite(inviteId)
+            listAccounts.api(listId).revokeInvite(inviteId)
         } catch (e: ApiException) {
             // 404: the invite is already gone — fall through and refresh so it drops off the list.
             if (e.httpStatus != 404) {
@@ -320,7 +318,7 @@ class ListPropsViewModel @Inject constructor(
         _uiState.update { it.copy(isVoting = true) }
         try {
             val serverId = checkNotNull(listsRepo.serverIdOf(listId)) { "No list $listId" }
-            val api = apiProvider.get()
+            val api = listAccounts.api(listId)
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
             syncer.syncNow(emptyList())
         } catch (e: ApiException) {
@@ -344,7 +342,7 @@ class ListPropsViewModel @Inject constructor(
             return@launch
         }
         try {
-            apiProvider.get().leaveList(serverId)
+            listAccounts.api(listId).leaveList(serverId)
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {

@@ -17,11 +17,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ListKind
-import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
+import org.p23q.shoppinglist.data.ListAccounts
 import javax.inject.Inject
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
@@ -73,7 +73,7 @@ data class ItemFormUiState(
 class ItemFormViewModel @Inject constructor(
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
-    private val currentAccount: CurrentAccount,
+    private val listAccounts: ListAccounts,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemFormUiState())
@@ -109,12 +109,13 @@ class ItemFormViewModel @Inject constructor(
         this.listId = listId
         // isEditMode must land in _uiState BEFORE listIdFlow's new value can trigger the
         // suggestions flow, or it could briefly re-read a stale isEditMode from before this call.
-        _uiState.value = ItemFormUiState(isEditMode = false, priceCurrency = currentAccount.defaultCurrency ?: "")
+        _uiState.value = ItemFormUiState(isEditMode = false)
         loadedSnapshot = null
         listIdFlow.value = listId
         loadCategorySuggestions()
         loadStoreSuggestions()
         loadListKind()
+        loadDefaultCurrency()
     }
 
     fun startEdit(itemId: String): Job = viewModelScope.launch {
@@ -129,7 +130,7 @@ class ItemFormViewModel @Inject constructor(
             stores = itemsRepo.decodeStores(item.stores.value),
             quantity = item.quantity.value ?: "",
             priceAmount = price?.amount ?: "",
-            priceCurrency = price?.currency ?: currentAccount.defaultCurrency ?: "",
+            priceCurrency = price?.currency ?: listAccounts.accountOf(item.listLocalId)?.defaultCurrency ?: "",
             note = item.note.value ?: "",
             status = Status.fromWireValue(item.status.value),
             isBlocked = item.syncBlocked,
@@ -145,6 +146,12 @@ class ItemFormViewModel @Inject constructor(
     }
 
     /** Kind drives which fields the form renders (T-110); resolved per list open. */
+    /** The list's account's default currency, for a new item's price; never over what was typed meanwhile. */
+    private fun loadDefaultCurrency() = viewModelScope.launch {
+        val currency = listAccounts.accountOf(listId)?.defaultCurrency ?: return@launch
+        _uiState.update { if (it.isEditMode || it.priceCurrency.isNotEmpty()) it else it.copy(priceCurrency = currency) }
+    }
+
     private fun loadListKind() = viewModelScope.launch {
         val kind = listsRepo.getById(listId)?.kind?.value
         _uiState.update { it.copy(showShoppingFields = ListKind.showsShoppingFields(kind)) }

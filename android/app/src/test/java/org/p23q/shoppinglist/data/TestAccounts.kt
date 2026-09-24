@@ -149,6 +149,9 @@ class TestAccounts(val db: AppDb, val json: Json = Json { ignoreUnknownKeys = tr
         return registry.add(testAccount(id, serverUrl, accountId, email, signedIn = token != null))
     }
 
+    /** The [ListAccounts] the list screens get, over these accounts. */
+    fun listAccounts(listsRepo: ListsRepo = testListsRepo(db)): ListAccounts = ListAccounts(listsRepo, registry, sessions)
+
     fun syncEngine(
         deviceId: DeviceIdProvider = DeviceIdProvider { "this-device" },
         notifier: CollaboratorChangeNotifier = CollaboratorChangeNotifier { },
@@ -195,4 +198,24 @@ open class RecordingAuthRepository : AuthRepository {
     override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = true
 
     override fun lastOpenedListId(): String? = null
+}
+
+/**
+ * A [ListAccounts] over the accounts [db]'s table holds (as [insertTestAccount] puts them there),
+ * every one of them holding [token]: for a screen test that only needs its list's account to reach
+ * a server, typically `insertTestAccount(testAccount(serverUrl = server.url("/").toString()))`.
+ */
+fun testListAccounts(
+    db: AppDb,
+    listsRepo: ListsRepo = testListsRepo(db),
+    token: String? = "tok-123",
+    json: Json = Json { ignoreUnknownKeys = true },
+): ListAccounts {
+    val secrets = object : SecretStore {
+        override fun token(accountId: String): String? = token
+
+        override fun setToken(accountId: String, token: String?) {}
+    }
+    val registry = AccountRegistry(db)
+    return ListAccounts(listsRepo, registry, AccountSessions(registry, secrets, RetrofitApiFactory(json), json, SyncStatus()))
 }

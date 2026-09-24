@@ -2,6 +2,9 @@ package org.p23q.shoppinglist.ui.listprops
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.ListAccounts
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -38,10 +41,6 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
@@ -64,7 +63,7 @@ class ListPropsViewModelTest {
     private lateinit var db: AppDb
     private lateinit var itemsRepo: ItemsRepo
     private lateinit var listsRepo: ListsRepo
-    private lateinit var apiProvider: ApiSource
+    private lateinit var listAccounts: ListAccounts
     private lateinit var notificationPrefs: NotificationPrefsStore
     private lateinit var listId: String
 
@@ -77,20 +76,13 @@ class ListPropsViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
-        db.insertTestAccount()
+        db.insertTestAccount(testAccount(serverUrl = server.url("/").toString()))
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
 
-        val serverConfigFile = File.createTempFile("listprops_vm_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-
-        val sessionState = FakeCurrentAccount().apply { token = "tok-123" }
-        val json = Json { ignoreUnknownKeys = true }
-        apiProvider = testApiSource(json, token = { sessionState.token }) { serverConfig.url }
+        listAccounts = testListAccounts(db, listsRepo)
 
         val notifPrefsFile = File.createTempFile("listprops_vm_notif_prefs", ".preferences_pb")
         notifPrefsFile.deleteOnExit()
@@ -120,9 +112,8 @@ class ListPropsViewModelTest {
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             listsRepo,
             itemsRepo,
-            apiProvider,
+            listAccounts,
             notificationPrefs,
-            FakeCurrentAccount(),
             Syncer { SyncResult.Success(0, 0, 0, 0) },
         ).also(viewModels::add)
 

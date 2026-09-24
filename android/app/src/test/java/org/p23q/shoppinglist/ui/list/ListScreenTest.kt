@@ -2,6 +2,8 @@ package org.p23q.shoppinglist.ui.list
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -33,7 +35,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
@@ -42,11 +43,7 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.ShowCheckedStore
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
@@ -59,7 +56,7 @@ class ListScreenTest {
     val composeTestRule = createComposeRule()
 
     private lateinit var server: MockWebServer
-    private lateinit var apiProvider: ApiSource
+    private lateinit var serverUrl: String
 
     private fun textStyleOf(text: String) = composeTestRule.onNodeWithText(text).fetchSemanticsNode().let { node ->
         val results = mutableListOf<TextLayoutResult>()
@@ -78,12 +75,7 @@ class ListScreenTest {
                 MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}""")
         }
         server.start()
-        val serverConfigFile = File.createTempFile("list_screen_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        apiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
+        serverUrl = server.url("/").toString()
     }
 
     @After
@@ -97,7 +89,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -110,13 +102,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
         viewModel.toggleShowChecked()
 
@@ -139,7 +130,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -156,13 +147,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         // Before the fix this setContent throws IllegalArgumentException("Key ... was already
@@ -181,7 +171,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -192,13 +182,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
@@ -217,7 +206,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -229,13 +218,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
         var editedItemId: String? = null
 
@@ -258,7 +246,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -270,13 +258,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
         var editedItemId: String? = null
 
@@ -307,7 +294,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -321,13 +308,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
@@ -351,7 +337,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -364,13 +350,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
@@ -385,7 +370,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -396,13 +381,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_fab", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
         var added = false
 
@@ -423,7 +407,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -437,13 +421,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_blocked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
@@ -461,7 +444,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -473,13 +456,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_unblocked", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
@@ -497,7 +479,7 @@ class ListScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = serverUrl)) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -508,13 +490,12 @@ class ListScreenTest {
             listsRepo,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
-            DefaultCurrencyState(FakeCurrentAccount()),
+            testListAccounts(db, listsRepo),
             ShowCheckedStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("list_screen_check_mark", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            apiProvider,
         )
 
         composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }

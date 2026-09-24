@@ -2,6 +2,8 @@ package org.p23q.shoppinglist.ui.expense
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -38,10 +40,6 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
@@ -104,38 +102,22 @@ class ExpenseClosingTest {
     }
 
     /**
-     * A provider pointed at nothing: these tests cover what the screen shows, never the vote
-     * request itself, so an API call here would be a test that lied about what it exercised.
+     * The list's account points at a server that is never asked, unless [server] is given: these
+     * tests cover what the screen shows, and only the one that exercises the vote request itself
+     * backs the account with a real (mock) server.
      */
-    private fun offlineApiProvider(): ApiSource {
-        val file = File.createTempFile("expense_closing_server_config", ".preferences_pb")
-        file.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        val json = Json { ignoreUnknownKeys = true }
-        return testApiSource(json, token = { null }) { serverConfig.url }
+    private fun listViewModel(server: MockWebServer? = null): ExpenseListViewModel {
+        if (server != null) runBlocking { db.accountDao().update(testAccount(serverUrl = server.url("/").toString())) }
+        return ExpenseListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            testListAccounts(db, listsRepo),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
     }
 
-    private fun listViewModel(apiProvider: ApiSource = offlineApiProvider()) = ExpenseListViewModel(
-        SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
-        itemsRepo,
-        listsRepo,
-        apiProvider,
-        Syncer { SyncResult.Success(0, 0, 0, 0) },
-        FakeCurrentAccount().apply { accountId = me },
-    )
-
-    /** A real (mock) server backing, for the one test below that exercises the vote request itself. */
-    private fun apiProviderFor(server: MockWebServer): ApiSource {
-        val file = File.createTempFile("expense_closing_vote_server_config", ".preferences_pb")
-        file.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        runBlocking { serverConfig.setServerUrl(server.url("/").toString()) }
-        val json = Json { ignoreUnknownKeys = true }
-        return testApiSource(json, token = { "tok-123" }) { serverConfig.url }
-    }
-
-    private fun formViewModel() =
-        ExpenseFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount().apply { accountId = me })
+    private fun formViewModel() = ExpenseFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
 
     private fun showList(onEditExpense: (String) -> Unit = {}) {
         composeTestRule.setContent {
@@ -312,7 +294,7 @@ class ExpenseClosingTest {
                     onAddExpense = {},
                     onEditExpense = {},
                     onOpenListProps = {},
-                    viewModel = listViewModel(apiProviderFor(server)),
+                    viewModel = listViewModel(server),
                 )
             }
             composeTestRule.waitForIdle()

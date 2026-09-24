@@ -16,13 +16,12 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListMember
-import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.core.api.ApiSource
+import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -104,14 +103,13 @@ class ExpenseListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
-    private val apiProvider: ApiSource,
+    private val listAccounts: ListAccounts,
     private val syncer: Syncer,
-    currentAccount: CurrentAccount,
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
 
-    private val _uiState = MutableStateFlow(ExpenseListUiState(myAccountId = currentAccount.accountId))
+    private val _uiState = MutableStateFlow(ExpenseListUiState())
     val uiState: StateFlow<ExpenseListUiState> = _uiState.asStateFlow()
 
     /**
@@ -124,7 +122,7 @@ class ExpenseListViewModel @Inject constructor(
         val voted = _uiState.value.iHaveVoted
         try {
             val serverId = checkNotNull(listsRepo.serverIdOf(listId)) { "No list $listId" }
-            val api = apiProvider.get()
+            val api = listAccounts.api(listId)
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
             syncer.syncNow(emptyList())
         } catch (e: ApiException) {
@@ -163,6 +161,11 @@ class ExpenseListViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            // Who "I" am on this list is its account's server-side id, not any other account's.
+            val me = listAccounts.accountOf(listId)?.accountId
+            _uiState.update { it.copy(myAccountId = me) }
+        }
         viewModelScope.launch {
             combine(listsRepo.observeById(listId), itemsRepo.itemsForList(listId), ::Pair)
                 .collect { (list, items) ->

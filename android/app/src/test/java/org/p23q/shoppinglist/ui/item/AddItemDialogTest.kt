@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.item
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -21,7 +22,6 @@ import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
-import org.p23q.shoppinglist.data.FakeCurrentAccount
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 
@@ -48,7 +48,7 @@ class AddItemDialogTest {
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val existingId = itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
-        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount())
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
         var dismissed = false
 
         composeTestRule.setContent {
@@ -93,7 +93,7 @@ class AddItemDialogTest {
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
-        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount())
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
 
         composeTestRule.setContent {
             AddItemDialog(listId = listId, onDismiss = {}, viewModel = viewModel)

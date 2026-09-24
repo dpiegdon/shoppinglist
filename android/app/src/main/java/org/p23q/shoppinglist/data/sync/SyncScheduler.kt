@@ -15,9 +15,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.p23q.shoppinglist.core.account.CurrentAccount
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncTrigger
+import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -32,11 +32,14 @@ abstract class SyncTriggerModule {
     companion object {
         /** Screens depend on the [Syncer] seam for pull-to-refresh; [SyncEngine] is the impl (T-36).
          *  A thin adapter (not @Binds) so SyncEngine keeps its own default-arg public API unchanged.
-         *  A list this device does not hold yet is asked of the current account's server: the
-         *  single-account screens have just joined it there. */
+         *  A list this device does not hold yet is asked of the account that has just joined it. */
         @Provides
-        fun provideSyncer(engine: SyncEngine, currentAccount: CurrentAccount): Syncer =
-            Syncer { fullLists -> engine.syncNow(fullLists, fullListsAccountId = currentAccount.localId) }
+        fun provideSyncer(engine: SyncEngine): Syncer = object : Syncer {
+            override suspend fun syncNow(fullLists: List<String>): SyncResult = engine.syncNow(fullLists)
+
+            override suspend fun syncJoined(accountId: String, serverListId: String): SyncResult =
+                engine.syncNow(listOf(serverListId), fullListsAccountId = accountId)
+        }
     }
 }
 

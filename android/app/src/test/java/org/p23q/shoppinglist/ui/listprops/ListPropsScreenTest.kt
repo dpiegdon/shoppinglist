@@ -2,6 +2,8 @@ package org.p23q.shoppinglist.ui.listprops
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -34,10 +36,6 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
@@ -69,7 +67,7 @@ class ListPropsScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = server.url("/").toString())) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -77,23 +75,16 @@ class ListPropsScreenTest {
         listsRepo.setCategoryOrder(listId, listOf("dairy"))
         itemsRepo.createItem(listId, "Milk").also { itemsRepo.setCategory(it, "dairy") }
 
-        val serverConfigFile = File.createTempFile("listprops_screen_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
         val viewModel = ListPropsViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             listsRepo,
             itemsRepo,
-            apiProvider,
+            testListAccounts(db, listsRepo),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            FakeCurrentAccount(),
             Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
         var left = false
@@ -122,29 +113,22 @@ class ListPropsScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = server.url("/").toString())) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
 
-        val serverConfigFile = File.createTempFile("listprops_screen_notes_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
         val viewModel = ListPropsViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             listsRepo,
             itemsRepo,
-            apiProvider,
+            testListAccounts(db, listsRepo),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            FakeCurrentAccount(),
             Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
 
@@ -174,30 +158,23 @@ class ListPropsScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = server.url("/").toString())) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         itemsRepo.createItem(listId, "Milk")
 
-        val serverConfigFile = File.createTempFile("listprops_screen_duplicate_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
         val viewModel = ListPropsViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             listsRepo,
             itemsRepo,
-            apiProvider,
+            testListAccounts(db, listsRepo),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            FakeCurrentAccount(),
             Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
         var duplicatedListId: String? = null
@@ -227,30 +204,23 @@ class ListPropsScreenTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        runBlocking { db.insertTestAccount() }
+        runBlocking { db.insertTestAccount(testAccount(serverUrl = server.url("/").toString())) }
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         val listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip", ListKind.EXPENSES, currency = "EUR")
         db.listDao().upsert(listsRepo.getById(listId)!!.copy(closeVotesJson = Json.encodeToString(closeVotes)))
 
-        val serverConfigFile = File.createTempFile("listprops_screen_vote_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        val apiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
         val viewModel = ListPropsViewModel(
             SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
             listsRepo,
             itemsRepo,
-            apiProvider,
+            testListAccounts(db, listsRepo),
             NotificationPrefsStore(
                 PreferenceDataStoreFactory.create {
                     File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
                 },
             ),
-            FakeCurrentAccount().apply { accountId = me },
             Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
 

@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.expense
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -38,10 +39,6 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
@@ -101,10 +98,9 @@ class ExpenseScreensTest {
         SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
         itemsRepo,
         listsRepo,
-        // Voting is not what these tests are about; the provider is never asked for an Api.
-        testApiSource(Json { ignoreUnknownKeys = true }, token = { null }) { null },
+        // Voting is not what these tests are about; the account's server is never asked.
+        testListAccounts(db, listsRepo),
         syncer,
-        FakeCurrentAccount().apply { accountId = me },
     )
 
     private fun dinner(paidBy: String = me) = Expense(
@@ -523,7 +519,7 @@ class ExpenseScreensTest {
 
     /** The form, opened on this list with a real view model, as the date-picker test does. */
     private fun showForm(itemId: String? = null) {
-        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount().apply { accountId = me })
+        val form = ExpenseFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
         composeTestRule.setContent {
             ExpenseDialog(listId = listId, itemId = itemId, onDismiss = {}, viewModel = form)
         }
@@ -665,7 +661,7 @@ class ExpenseScreensTest {
 
     @Test
     fun `the expense date is picked from a calendar, not typed`() = runBlocking<Unit> {
-        val form = ExpenseFormViewModel(itemsRepo, listsRepo, FakeCurrentAccount().apply { accountId = me })
+        val form = ExpenseFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
         composeTestRule.setContent { ExpenseDialog(listId = listId, itemId = null, onDismiss = {}, viewModel = form) }
         composeTestRule.waitForIdle()
         val today = form.uiState.value.date

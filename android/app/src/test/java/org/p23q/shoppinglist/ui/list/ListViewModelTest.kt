@@ -1,7 +1,7 @@
 package org.p23q.shoppinglist.ui.list
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
-import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.TestAccounts
 import kotlinx.coroutines.runBlocking
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -29,7 +29,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.core.DefaultCurrencyState
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
@@ -38,11 +37,7 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.data.FakeCurrentAccount
-import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.ShowCheckedStore
-import org.p23q.shoppinglist.core.api.ApiSource
-import org.p23q.shoppinglist.data.testApiSource
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
@@ -58,10 +53,9 @@ class ListViewModelTest {
     private lateinit var db: AppDb
     private lateinit var itemsRepo: ItemsRepo
     private lateinit var listsRepo: ListsRepo
-    private lateinit var sessionState: FakeCurrentAccount
+    private lateinit var accounts: TestAccounts
     private lateinit var listId: String
     private lateinit var server: MockWebServer
-    private lateinit var apiProvider: ApiSource
     private lateinit var showCheckedStore: ShowCheckedStore
     private val syncStatus = SyncStatus()
     private val syncer = RecordingSyncer()
@@ -89,12 +83,9 @@ class ListViewModelTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(mainDispatcherRule.dispatcher)
             .build()
-        db.insertTestAccount()
         val deviceId = DeviceIdProvider { "device-1" }
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
-        sessionState = FakeCurrentAccount()
-        listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
 
         // T-64: ListViewModel fetches the member roster on init. Most tests here don't care about
         // it, so the default dispatcher answers every request with an empty roster; a test that
@@ -105,12 +96,9 @@ class ListViewModelTest {
                 MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}""")
         }
         server.start()
-        val serverConfigFile = File.createTempFile("list_vm_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(server.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        apiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
+        accounts = TestAccounts(db)
+        accounts.add(server.url("/").toString())
+        listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
 
         val showCheckedFile = File.createTempFile("list_vm_show_checked", ".preferences_pb")
         showCheckedFile.deleteOnExit()
@@ -126,17 +114,21 @@ class ListViewModelTest {
         if (::server.isInitialized) server.shutdown()
     }
 
-    private fun newViewModel(defaultCurrencyState: DefaultCurrencyState = DefaultCurrencyState(sessionState)): ListViewModel =
+    private fun newViewModel(forList: String = listId): ListViewModel =
         ListViewModel(
-            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to forList)),
             itemsRepo,
             listsRepo,
             syncer,
             syncStatus,
-            defaultCurrencyState,
+            accounts.listAccounts(listsRepo),
             showCheckedStore,
-            apiProvider,
         ).also(viewModels::add)
+
+    /** What Settings does for an account's currency: store it on the account row. */
+    private suspend fun setDefaultCurrency(currency: String?, accountId: String = TEST_ACCOUNT_ID) {
+        accounts.registry.update(accountId) { it.copy(defaultCurrency = currency) }
+    }
 
     @Test
     fun `groups follow category_order, then leftover categories alphabetically, uncategorized last`() = runTest(mainDispatcherRule.dispatcher) {
@@ -286,7 +278,7 @@ class ListViewModelTest {
         itemsRepo.setPrice(withCurrency, amount = "1.99", currency = "EUR")
         val withoutCurrency = itemsRepo.createItem(listId, "Bread")
         itemsRepo.setPrice(withoutCurrency, amount = "2.50", currency = null)
-        sessionState.defaultCurrency = "USD"
+        setDefaultCurrency("USD")
 
         val groups = newViewModel().uiState.first { it.groups.isNotEmpty() }.groups
         val items = groups.flatMap { it.items }.associateBy { it.name.value }
@@ -300,14 +292,13 @@ class ListViewModelTest {
     fun `a currency change made in Settings is reflected by the next list view (A10)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Bread")
         itemsRepo.setPrice(itemId, amount = "2.50", currency = null)
-        sessionState.defaultCurrency = "USD"
+        setDefaultCurrency("USD")
         val beforeSettingsChange = newViewModel().uiState.first { it.groups.isNotEmpty() }
         assertEquals("USD", beforeSettingsChange.defaultCurrency)
 
-        // Simulates SettingsViewModel.updateCurrency()'s effect: it writes straight through to the
-        // same CurrentAccount this app-wide singleton represents, not a copy - so any ListViewModel
-        // constructed afterwards (i.e. next time the user opens a list) picks it up automatically.
-        sessionState.defaultCurrency = "EUR"
+        // Simulates SettingsViewModel.updateCurrency()'s effect: it writes the account row, so any
+        // ListViewModel constructed afterwards (next time the user opens a list) picks it up.
+        setDefaultCurrency("EUR")
 
         val afterSettingsChange = newViewModel().uiState.first { it.groups.isNotEmpty() }
         assertEquals("EUR", afterSettingsChange.defaultCurrency)
@@ -319,19 +310,45 @@ class ListViewModelTest {
     fun `a currency change reflects immediately in an already-open list, not just the next one (T-55)`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Bread")
         itemsRepo.setPrice(itemId, amount = "2.50", currency = null)
-        sessionState.defaultCurrency = "USD"
-        val defaultCurrencyState = DefaultCurrencyState(sessionState)
-        val viewModel = newViewModel(defaultCurrencyState)
+        setDefaultCurrency("USD")
+        val viewModel = newViewModel()
         viewModel.uiState.first { it.groups.isNotEmpty() }
         assertEquals("USD", viewModel.uiState.value.defaultCurrency)
 
         // What SettingsViewModel.updateCurrency() does: store it on the account, which the
-        // already-open ListViewModel follows through DefaultCurrencyState (T-55).
-        sessionState.defaultCurrency = "EUR"
+        // already-open ListViewModel follows through the list's account row (T-55).
+        setDefaultCurrency("EUR")
 
         val updated = viewModel.uiState.first { it.defaultCurrency == "EUR" }
         val item = updated.groups.flatMap { it.items }.single { it.localId == itemId }
         assertEquals("€2.50", formatPrice(item, updated.defaultCurrency, Locale.US))
+    }
+
+    @Test
+    fun `a list of a second account takes that account's currency and asks that account's server (T-292)`() = runTest(mainDispatcherRule.dispatcher) {
+        setDefaultCurrency("USD")
+        val other = MockWebServer()
+        other.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest) = MockResponse().setResponseCode(200).setBody(
+                """{"members": [{"account_id": "acc-x", "email": "x@example.com", "initials": "X", "joined_at": 1}], "invites": []}""",
+            )
+        }
+        other.start()
+        try {
+            accounts.add(other.url("/").toString(), id = "second-account", accountId = "acct-other", email = "other@example.com")
+            setDefaultCurrency("GBP", accountId = "second-account")
+            val otherList = listsRepo.create("second-account", "Theirs")
+
+            val state = newViewModel(otherList).uiState.first { it.members.isNotEmpty() && it.defaultCurrency != null }
+
+            assertEquals("GBP", state.defaultCurrency)
+            assertEquals(listOf("acc-x"), state.members.map { it.accountId })
+            assertEquals(1, other.requestCount)
+            assertEquals("Bearer tok-123", other.takeRequest().getHeader("Authorization"))
+        } finally {
+            viewModels.forEach { it.viewModelScope.cancel() }
+            other.shutdown()
+        }
     }
 
     @Test
@@ -391,23 +408,9 @@ class ListViewModelTest {
         // A dedicated, never-started server: any request against it fails to connect, without
         // touching the shared server/apiProvider the other tests (and tearDown) depend on.
         val unreachable = MockWebServer()
-        val serverConfigFile = File.createTempFile("list_vm_offline_server_config", ".preferences_pb")
-        serverConfigFile.deleteOnExit()
-        val serverConfig = TestServerAddress()
-        serverConfig.setServerUrl(unreachable.url("/").toString())
-        val json = Json { ignoreUnknownKeys = true }
-        val offlineApiProvider = testApiSource(json, token = { "tok-123" }) { serverConfig.url }
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverUrl = unreachable.url("/").toString()) }
 
-        val viewModel = ListViewModel(
-            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
-            itemsRepo,
-            listsRepo,
-            syncer,
-            syncStatus,
-            DefaultCurrencyState(sessionState),
-            showCheckedStore,
-            offlineApiProvider,
-        ).also(viewModels::add)
+        val viewModel = newViewModel()
         // Give the failed fetch a chance to run; nothing to await on success, so just confirm the
         // view model is otherwise fully usable (the exception didn't propagate and crash init).
         viewModel.uiState.first { it.listName == "Groceries" }
