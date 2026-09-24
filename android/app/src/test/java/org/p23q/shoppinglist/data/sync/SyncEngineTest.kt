@@ -1161,8 +1161,14 @@ class SyncEngineTest {
         assertNotEquals("a row each", mine.localId, theirs.localId)
         assertEquals(TEST_ACCOUNT_ID, mine.accountId)
         assertEquals("mate", theirs.accountId)
+        // Each row holds the pull, not just a stub of the list: the merge filled the account's own row.
+        for (row in listOf(mine, theirs)) {
+            assertEquals("Trip", row.name.value)
+            assertFalse(row.deleted.value)
+        }
         val myItem = item("shared-item")!!
         val theirItem = item("shared-item", "mate")!!
+        assertEquals("Tent", theirItem.name.value)
         assertNotEquals(myItem.localId, theirItem.localId)
         assertEquals("each item is on its own account's row of the list", mine.localId, myItem.listLocalId)
         assertEquals(theirs.localId, theirItem.listLocalId)
