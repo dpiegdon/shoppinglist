@@ -50,9 +50,19 @@ fun RedeemScreen(
         viewModel.onTokenChange(token)
         viewModel.redeem(link, accountId)
     }
-    LaunchedEffect(state.redeemedListId) { state.redeemedListId?.let(onRedeemed) }
+    LaunchedEffect(state.redeemedListId) {
+        state.redeemedListId?.let { listId ->
+            onRedeemed(listId)
+            viewModel.redeemedListOpened()
+        }
+    }
     // The VM has stashed the token; go sign in, then resume the redeem (T-28).
-    LaunchedEffect(state.needsLogin) { state.needsLogin?.let(onNeedsLogin) }
+    LaunchedEffect(state.needsLogin) {
+        state.needsLogin?.let { route ->
+            onNeedsLogin(route)
+            viewModel.loginOpened()
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),

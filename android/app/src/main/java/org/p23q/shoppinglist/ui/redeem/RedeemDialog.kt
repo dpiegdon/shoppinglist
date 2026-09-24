@@ -34,8 +34,18 @@ fun RedeemDialog(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(state.redeemedListId) { state.redeemedListId?.let(onRedeemed) }
-    LaunchedEffect(state.needsLogin) { state.needsLogin?.let(onNeedsLogin) }
+    LaunchedEffect(state.redeemedListId) {
+        state.redeemedListId?.let { listId ->
+            onRedeemed(listId)
+            viewModel.redeemedListOpened()
+        }
+    }
+    LaunchedEffect(state.needsLogin) {
+        state.needsLogin?.let { route ->
+            onNeedsLogin(route)
+            viewModel.loginOpened()
+        }
+    }
 
     LocalizedAlertDialog(
         onDismissRequest = onDismiss,

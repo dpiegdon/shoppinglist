@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.redeem
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -75,5 +78,46 @@ class RedeemDialogTest {
         db.close()
         assertNotNull(localId)
         assertEquals(localId, redeemedListId)
+    }
+
+    @Test
+    fun `the dialog opened again after sending the user to sign in does not send them again`() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        val accounts = TestAccounts(db)
+        // Signed out: a pasted code needs this account signed in again first.
+        accounts.add("https://lists.example.test/", token = null)
+        val viewModel = RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.testListsRepo(db))
+        val loginRoutes = mutableListOf<String>()
+        var open by mutableStateOf(true)
+
+        composeTestRule.setContent {
+            if (open) {
+                RedeemDialog(
+                    onRedeemed = {},
+                    onDismiss = { open = false },
+                    onNeedsLogin = { route ->
+                        loginRoutes += route
+                        open = false
+                    },
+                    viewModel = viewModel,
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("Invite code or link").performTextInput("abc.def")
+        composeTestRule.onNodeWithText("Join").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(1, loginRoutes.size)
+
+        // Back from the login form, the user opens "Join a list" again: the same view model, as
+        // the dialog's is scoped to the screen beneath it.
+        composeTestRule.runOnIdle { open = true }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Invite code or link").assertExists()
+        assertEquals(1, loginRoutes.size)
+        db.close()
     }
 }

@@ -108,6 +108,12 @@ class RedeemViewModel @Inject constructor(
         }
     }
 
+    /** The screen has opened [RedeemUiState.redeemedListId]: a dialog opened again starts afresh. */
+    fun redeemedListOpened() = _uiState.update { it.copy(redeemedListId = null) }
+
+    /** The screen has opened [RedeemUiState.needsLogin]: a dialog opened again does not reopen it. */
+    fun loginOpened() = _uiState.update { it.copy(needsLogin = null) }
+
     /** The user's answer to "Join with which account?". */
     fun chooseAccount(accountId: String): Job? {
         val account = _uiState.value.choices.firstOrNull { it.id == accountId } ?: return null
