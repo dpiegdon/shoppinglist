@@ -1,6 +1,9 @@
 {
   "body": "Step B3 of the multi-account design (, section 1 \"Local area\" and section 4).\n\n* Account row with `kind = local`, no server, never synced, one per phone. Created from the start\n  screen (\"Use without an account\") or from Accounts (\"Add local area\"). On creation a one-time\n  note: lists here stay on this phone only, are not backed up and cannot be shared; sign in to a\n  server any time to add shared lists.\n* Only shopping lists and checklists: the New-list dialog hides the ledger kind under the local\n  area, and the kind switch on List properties cannot pick ledger there. Members are shown as\n  \"You\" only; roster, invites, close votes and the collaborator notification are hidden for local\n  lists.\n* Overview section \"On this phone\", last; phone glyph as card indicator. With only the local\n  area present the overview is the plain single-account screen.\n* Removing the local area is allowed only when it holds no lists (the row action is disabled\n  with the reason); its lists are deleted one by one as today.\n* Item and list `updated_by` stay the device id; field clocks work as today so a later copy\n  (B4) into a server account carries sane values.\n* Strings in nine locales; no web change (parity exception, recorded in B2).\n* Tests: local account excluded from `SyncEngine`, kind restriction in the dialog and in\n  `ListsRepo.setKind`, remove-only-when-empty, start screen creates the row and shows the note\n  once.",
   "created_at": "2026-09-24T17:19:40+00:00",
+  "deps": [
+    "T-292"
+  ],
   "id": "T-293",
   "labels": [
     "android",
