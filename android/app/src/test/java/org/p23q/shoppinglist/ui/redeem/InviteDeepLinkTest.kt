@@ -66,7 +66,7 @@ class InviteDeepLinkTest {
     }
 
     @Test
-    fun `a link under a one-segment mount path, as p23q.org/shopping shares them`() {
+    fun `a link under a one-segment mount path, as a server under shopping shares them`() {
         assertEquals("abc.def" to "https://p23q.org/shopping/invite/abc.def", open("https://p23q.org/shopping/invite/abc.def"))
     }
 
