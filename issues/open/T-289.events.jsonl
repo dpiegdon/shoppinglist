@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-24T17:19:25+00:00", "kind": "created", "ref": "main@73f3a48", "text": "Multiple accounts and servers on Android, with a local-only area (design)"}
+{"actor": "user", "at": "2026-09-24T17:19:41+00:00", "kind": "note", "ref": "main@73f3a48", "text": "Steps: B0 T-290 -> B1 T-291 -> B2 T-292 -> B3 T-293 -> B4 T-294; B5 T-295 (after B0, any time); F-Droid T-296 (blocked, separate decision). B0 is deliberately move-only so its diff reads as renames; B1 changes behaviour inside the new module."}
