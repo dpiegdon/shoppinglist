@@ -371,6 +371,20 @@ class AuthRepositoryTest {
         assertTrue("and still queued to go out", kept!!.dirty)
     }
 
+    /** T-298: the same server typed differently is still the same account, lists and all. */
+    @Test
+    fun `the same server spelled differently signs the same account back in`() = runTest {
+        accounts.add(url, accountId = "acc-1", token = null)
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
+        enqueueLogin(accountId = "acc-1")
+
+        val id = repository.login(url.uppercase().removeSuffix("/"), "milk@example.com", "hunter2")
+
+        assertEquals(TEST_ACCOUNT_ID, id)
+        assertNotNull(db.itemDao().getById("item-1"))
+    }
+
     /**
      * The privacy property the wipe existed for, enforced where it can actually be decided (T-260):
      * a different account must never see the previous account's lists. A login removes every

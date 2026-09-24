@@ -65,9 +65,11 @@ class AccountRegistry(
 
     fun get(id: String): AccountEntity? = snapshot().firstOrNull { it.id == id }
 
-    /** The server account for this URL and server-side account id, if this device has it. */
-    fun find(serverUrl: String, accountId: String): AccountEntity? =
-        snapshot().firstOrNull { it.serverUrl == serverUrl && it.accountId == accountId }
+    /** The server account for this URL (in any spelling) and server-side account id, if this device has it. */
+    fun find(serverUrl: String, accountId: String): AccountEntity? {
+        val url = normalizeServerUrl(serverUrl)
+        return snapshot().firstOrNull { it.serverUrl == url && it.accountId == accountId }
+    }
 
     /**
      * Adds [account], placed after every existing one (or replaces the one with its id).
@@ -183,10 +185,32 @@ class AccountRegistry(
     }
 }
 
-/** A server URL as accounts store it: always ending in '/', so API paths resolve underneath it. */
+/**
+ * A server URL as accounts store it, one spelling per server: scheme and host in lower case, no
+ * default port (443 for https, 80 for http), the path as typed, and always ending in '/' so that
+ * API paths resolve underneath it. Two URLs name the same server exactly when this makes them
+ * equal, which is what "the same account" (T-260) and the schema-9 migration go by.
+ */
 fun normalizeServerUrl(url: String): String {
-    return if (url.endsWith("/")) url else "$url/"
+    val trimmed = url.trim()
+    val schemeEnd = trimmed.indexOf("://")
+    if (schemeEnd <= 0) return withTrailingSlash(trimmed)
+    val scheme = trimmed.substring(0, schemeEnd).lowercase()
+    val rest = trimmed.substring(schemeEnd + 3)
+    val authorityEnd = rest.indexOfFirst { it == '/' || it == '?' || it == '#' }.let { if (it < 0) rest.length else it }
+    val authority = rest.substring(0, authorityEnd)
+    val userInfo = authority.substring(0, authority.lastIndexOf('@') + 1)
+    val hostPort = authority.substring(userInfo.length)
+    // A ':' inside an IPv6 literal's brackets is not the port separator.
+    val portSeparator = hostPort.lastIndexOf(':').takeIf { it > hostPort.lastIndexOf(']') } ?: -1
+    val host = (if (portSeparator >= 0) hostPort.substring(0, portSeparator) else hostPort).lowercase()
+    val port = if (portSeparator >= 0) hostPort.substring(portSeparator + 1) else ""
+    val isDefaultPort = port.isEmpty() || (scheme == "https" && port == "443") || (scheme == "http" && port == "80")
+    val canonicalPort = if (isDefaultPort) "" else ":$port"
+    return withTrailingSlash("$scheme://$userInfo$host$canonicalPort${rest.substring(authorityEnd)}")
 }
+
+private fun withTrailingSlash(url: String): String = if (url.endsWith("/")) url else "$url/"
 
 /** The default label of an account on [serverUrl]: the server's host, or the URL if it has none. */
 fun serverLabel(serverUrl: String): String =
