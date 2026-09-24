@@ -389,6 +389,19 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `a join for an account removed meanwhile says it failed, and does not crash (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        val viewModel = newViewModel()
+        val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
+
+        viewModel.joinInvite("gone", invite).join()
+
+        assertEquals(UiText.res(R.string.redeem_msg_failed), viewModel.uiState.value.inviteError)
+        assertNull(viewModel.uiState.value.joinedListId)
+        assertNull(viewModel.uiState.value.joiningInviteId)
+    }
+
+    @Test
     fun `a refused join says why, in the server's words, and re-reads the inbox`() = runTest(mainDispatcherRule.dispatcher) {
         inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
         redeemResponse = { MockResponse().setResponseCode(409).setBody("""{"error": "invite_revoked", "message": "revoked"}""") }

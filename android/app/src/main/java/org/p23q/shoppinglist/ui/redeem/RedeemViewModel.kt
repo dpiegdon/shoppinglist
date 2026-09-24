@@ -13,17 +13,13 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.normalizeServerUrl
-import org.p23q.shoppinglist.core.api.ApiException
-import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.PendingInviteHolder
-import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
-import java.io.IOException
 import javax.inject.Inject
 
 data class RedeemUiState(
@@ -53,7 +49,7 @@ data class RedeemUiState(
  * several ask which, none sends the user to sign in to that server first. A bare token names no
  * server: with one account it goes there, with several the user picks.
  *
- * The redemption names the list by its server id; what is opened is this phone's row of it.
+ * The redemption itself is [InviteJoiner]'s, shared with the overview's Join.
  */
 @HiltViewModel
 class RedeemViewModel @Inject constructor(
@@ -63,6 +59,8 @@ class RedeemViewModel @Inject constructor(
     private val pendingInviteHolder: PendingInviteHolder,
     private val listsRepo: ListsRepo,
 ) : ViewModel() {
+
+    private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo)
 
     private val _uiState = MutableStateFlow(RedeemUiState())
     val uiState: StateFlow<RedeemUiState> = _uiState.asStateFlow()
@@ -136,19 +134,9 @@ class RedeemViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            try {
-                val serverId = sessions.get(account.id).api.redeemInvite(RedeemInviteRequest(token)).listId
-                syncer.syncJoined(account.id, serverId)
-                // Without the row (the pull failed) there is nothing to open yet.
-                val listId = listsRepo.localIdForServerId(account.id, serverId) ?: run {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
-                    return@launch
-                }
-                _uiState.update { it.copy(isLoading = false, redeemedListId = listId) }
-            } catch (e: ApiException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))) }
-            } catch (e: IOException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
+            when (val result = joiner.join(account.id, token)) {
+                is InviteJoin.Joined -> _uiState.update { it.copy(isLoading = false, redeemedListId = result.listId) }
+                is InviteJoin.Failed -> _uiState.update { it.copy(isLoading = false, errorMessage = result.message) }
             }
         }
     }

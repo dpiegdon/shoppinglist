@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
@@ -19,7 +18,6 @@ import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.InviteForMeDto
-import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -27,8 +25,9 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
-import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.redeem.InviteJoin
+import org.p23q.shoppinglist.ui.redeem.InviteJoiner
 import java.io.IOException
 import javax.inject.Inject
 
@@ -117,6 +116,8 @@ class OverviewViewModel @Inject constructor(
     private val syncer: Syncer,
     syncStatus: SyncStatus,
 ) : ViewModel() {
+
+    private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo)
 
     private val _uiState = MutableStateFlow(OverviewUiState())
     val uiState: StateFlow<OverviewUiState> = _uiState.asStateFlow()
@@ -313,23 +314,15 @@ class OverviewViewModel @Inject constructor(
     /** Join from the overview: the same path as a pasted link — redeem, pull the list, open it — for the invite's account. */
     fun joinInvite(accountId: String, invite: InviteForMeDto): Job = viewModelScope.launch {
         _uiState.update { it.copy(joiningInviteId = invite.id, inviteError = null, inviteErrorAccountId = accountId) }
-        try {
-            val serverId = sessions.get(accountId).api.redeemInvite(RedeemInviteRequest(invite.token)).listId
-            syncer.syncJoined(accountId, serverId)
-            // The server names the list by its server id; the screens need this phone's row of it,
-            // which the sync just pulled. Without it (the pull failed) there is nothing to open yet.
-            val listId = listsRepo.localIdForServerId(accountId, serverId) ?: run {
-                _uiState.update { it.copy(joiningInviteId = null, inviteError = UiText.res(R.string.error_offline)) }
-                return@launch
+        when (val result = joiner.join(accountId, invite.token)) {
+            is InviteJoin.Joined -> {
+                lastOpened.lastOpenedListId = result.listId
+                _uiState.update { it.copy(joiningInviteId = null, joinedListId = result.listId) }
             }
-            lastOpened.lastOpenedListId = listId
-            _uiState.update { it.copy(joiningInviteId = null, joinedListId = listId) }
-        } catch (e: ApiException) {
-            val message = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))
-            _uiState.update { it.copy(joiningInviteId = null, inviteError = message) }
-            loadInvites() // a used, withdrawn or expired invite drops out of the section
-        } catch (e: IOException) {
-            _uiState.update { it.copy(joiningInviteId = null, inviteError = UiText.res(R.string.error_offline)) }
+            is InviteJoin.Failed -> {
+                _uiState.update { it.copy(joiningInviteId = null, inviteError = result.message) }
+                if (result.refused) loadInvites() // a used, withdrawn or expired invite drops out of the section
+            }
         }
     }
 
