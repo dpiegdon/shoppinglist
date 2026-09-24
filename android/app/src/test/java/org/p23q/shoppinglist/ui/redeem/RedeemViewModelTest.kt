@@ -186,7 +186,7 @@ class RedeemViewModelTest {
 
         assertNull("short-circuits before launching any request", job)
         assertEquals(Routes.login(LoginMode.RESIGNIN, accountId = TEST_ACCOUNT_ID), viewModel.uiState.value.needsLogin)
-        assertEquals("invite-xyz", holder.consume()?.token)
+        assertEquals("invite-xyz", holder.consumeFor(LoginMode.RESIGNIN, TEST_ACCOUNT_ID, null)?.token)
         assertEquals("no request should have reached the server", 0, server.requestCount)
     }
 }

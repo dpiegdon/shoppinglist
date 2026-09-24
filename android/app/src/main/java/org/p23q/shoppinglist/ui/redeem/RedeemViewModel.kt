@@ -95,8 +95,8 @@ class RedeemViewModel @Inject constructor(
         return when (candidates.size) {
             0 -> {
                 // No account on that server (or none at all): sign in to it, then redeem (T-28).
-                pendingInviteHolder.stash(token, null, url)
                 val mode = if (servers.isEmpty()) LoginMode.START else LoginMode.ADD
+                pendingInviteHolder.stash(token, url, null, mode)
                 _uiState.update { it.copy(needsLogin = Routes.login(mode, serverUrl = url?.let(::inviteServerUrl))) }
                 null
             }
@@ -124,7 +124,7 @@ class RedeemViewModel @Inject constructor(
         // Signed out: park the invite and sign this account in again, which resumes the redeem
         // afterwards, instead of a bare 401 that drops the invite (T-28).
         if (!account.signedIn || !sessions.hasToken(account.id)) {
-            pendingInviteHolder.stash(token, account.id, inviteUrl)
+            pendingInviteHolder.stash(token, inviteUrl, account.id, LoginMode.RESIGNIN)
             _uiState.update { it.copy(needsLogin = Routes.login(LoginMode.RESIGNIN, accountId = account.id)) }
             return null
         }
