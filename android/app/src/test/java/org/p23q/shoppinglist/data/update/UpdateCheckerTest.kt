@@ -349,4 +349,36 @@ class UpdateCheckerTest {
         assertEquals(7, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
         assertEquals(7, accounts.db.accountDao().all().single().serverProtocol)
     }
+
+    /** T-297: a server without an app package says its protocol in the 404. */
+    @Test
+    fun `a server without a package still refreshes the protocol, and offers nothing`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(404)
+                .setBody("""{"error": "no_app_package", "message": "none", "protocol": 5}"""),
+        )
+
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+
+        assertEquals(5, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+    }
+
+    /** T-298: the endpoint needs no token, and a check must never sign anybody out. */
+    @Test
+    fun `the check carries no token, so a 401 there signs nobody out`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "no"}"""))
+
+        checker.checkNow(currentVersion = "1.11.0")
+
+        assertNull(server.takeRequest().getHeader("Authorization"))
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+        assertEquals("tok-123", accounts.secrets.token(TEST_ACCOUNT_ID))
+    }
+
+    @Test
+    fun `a page that is not the endpoint's answer is silent`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("<html>portal</html>"))
+
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+    }
 }

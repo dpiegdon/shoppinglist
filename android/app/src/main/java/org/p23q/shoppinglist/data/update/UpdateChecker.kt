@@ -4,7 +4,10 @@ import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
+import kotlinx.serialization.SerializationException
+import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.AppVersionResponse
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.update.compareVersions
 import java.io.IOException
 import javax.inject.Inject
@@ -110,9 +113,9 @@ class UpdateChecker @Inject constructor(
     private suspend fun fetchLatest(): AppVersionResponse? {
         val byServer = registry.load().filter { it.isServer && !it.serverUrl.isNullOrBlank() }.groupBy { it.serverUrl }
         val answers = byServer.values.mapNotNull { accounts ->
-            val response = fetchFrom(accounts.first().id) ?: return@mapNotNull null
-            accounts.forEach { account -> registry.update(account.id) { it.copy(serverProtocol = response.protocol) } }
-            response
+            val answer = fetchFrom(accounts.first()) ?: return@mapNotNull null
+            accounts.forEach { account -> registry.update(account.id) { it.copy(serverProtocol = answer.protocol) } }
+            answer.response
         }
         // Among the versions that parse, the newest; an answer whose version does not parse is
         // returned only when it is the only kind there is, for the callers to reject as today.
@@ -120,15 +123,25 @@ class UpdateChecker @Inject constructor(
         return parseable.maxWithOrNull { a, b -> compareVersions(a.version, b.version)!! } ?: answers.firstOrNull()
     }
 
-    private suspend fun fetchFrom(accountId: String): AppVersionResponse? = try {
-        sessions.get(accountId).api.appVersion()
+    /** What a server said: its protocol, and the package it offers, if it carries one. */
+    private class Answer(val protocol: Int?, val response: AppVersionResponse?)
+
+    /**
+     * Asks [account]'s server, with no token: the endpoint needs none, and a request that carries
+     * none cannot sign the account out or mark it outdated either.
+     */
+    private suspend fun fetchFrom(account: AccountEntity): Answer? = try {
+        val response = sessions.unbound(account.serverUrl!!, account.allowSelfSignedCerts).appVersion()
+        Answer(response.protocol, response)
+    } catch (e: ApiException) {
+        // A server without a package still says its protocol (T-297); any other non-2xx, and a
+        // 404 without one from a server predating the endpoint, is not an answer.
+        e.protocol?.takeIf { e.httpStatus == 404 }?.let { Answer(it, null) }
     } catch (e: IOException) {
-        // Covers both halves of "couldn't ask": genuine network failure, and every non-2xx,
-        // which ErrorInterceptor turns into an ApiException (itself an IOException). A 404
-        // is the expected answer from any server predating this endpoint.
+        // Couldn't ask: the network, a certificate.
         null
-    } catch (e: IllegalStateException) {
-        // The account vanished between listing it and asking (a removal racing a check).
+    } catch (e: SerializationException) {
+        // Something answered, but not the endpoint.
         null
     }
 
