@@ -12,8 +12,11 @@ import okhttp3.Response
  * Called on OkHttp's thread: implementations must not block for long and must not suspend.
  */
 interface ApiEvents {
-    /** A request that carried a bearer token was refused with 401: the token is dead. */
-    fun onUnauthorized() {}
+    /**
+     * A request that carried a bearer token was refused with 401: [sentToken], the token that
+     * request carried, is dead. It need not be the account's token any more by now.
+     */
+    fun onUnauthorized(sentToken: String) {}
 
     /** The server refused this build's protocol version (426, T-240). */
     fun onOutdated() {}
@@ -54,8 +57,8 @@ class ErrorInterceptor(
             // rejected" -> force re-login. A 401 with no Authorization header is an ordinary
             // login/register credential failure (no session to invalidate), so it must NOT trigger
             // a forced logout — it's surfaced to the caller as UnauthorizedException as usual.
-            if (chain.request().header("Authorization") != null) {
-                events.onUnauthorized()
+            chain.request().header("Authorization")?.let { header ->
+                events.onUnauthorized(header.removePrefix("Bearer "))
             }
             throw UnauthorizedException(message)
         }

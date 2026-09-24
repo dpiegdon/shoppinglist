@@ -4,6 +4,10 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.RecordedRequest
+import org.junit.Assert.assertNull
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.serialization.json.Json
@@ -100,6 +104,27 @@ class AccountSessionsTest {
         assertEquals("a", event.await())
         assertFalse(registry.get("a")!!.signedIn)
         assertTrue(registry.get("b")!!.signedIn)
+        assertNull("the dead token is not sent again (T-298)", secrets.token("a"))
+        assertEquals("tok-b", secrets.token("b"))
+        registry.flush()
+    }
+
+    /** T-298: signed in again while a request with the old token was still out. */
+    @Test
+    fun `a 401 to a token the account no longer holds changes nothing`() = runBlocking {
+        a.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                secrets.setToken("a", "tok-new")
+                return MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "revoked"}""")
+            }
+        }
+        val event = async(start = CoroutineStart.UNDISPATCHED) { withTimeoutOrNull(500) { sessions.forcedLogout.first() } }
+
+        runCatching { sessions.get("a").api.lists() }
+
+        assertNull("no forced logout", event.await())
+        assertTrue(registry.get("a")!!.signedIn)
+        assertEquals("tok-new", secrets.token("a"))
     }
 
     @Test

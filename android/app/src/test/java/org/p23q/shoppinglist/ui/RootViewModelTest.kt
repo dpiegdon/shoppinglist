@@ -4,7 +4,9 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -62,14 +64,20 @@ class RootViewModelTest {
         runBlocking { accounts.add(server.url("/").toString()) }
     }
 
+    private val viewModels = mutableListOf<RootViewModel>()
+
     @After
     fun tearDown() {
+        // The view model collects the registry eagerly, and a 401 or a 426 writes the account in
+        // the background: both are finished before the database goes, or the next test is blamed.
+        viewModels.forEach { it.viewModelScope.cancel() }
+        if (::accounts.isInitialized) runBlocking { accounts.registry.flush() }
         if (::server.isInitialized) server.shutdown()
         if (::db.isInitialized) db.close()
     }
 
     private fun viewModel(repo: AuthRepository = FakeAuthRepository()) =
-        RootViewModel(accounts.sessions, accounts.currentAccount, repo)
+        RootViewModel(accounts.sessions, accounts.currentAccount, repo).also { viewModels += it }
 
     @Test
     fun `forcedLogout fires when the current account's token is rejected`() = runTest(mainDispatcherRule.dispatcher) {

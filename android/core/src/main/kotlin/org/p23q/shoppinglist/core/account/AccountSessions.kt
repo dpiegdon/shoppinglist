@@ -44,8 +44,8 @@ class AccountSession internal constructor(
  * id. A session is rebuilt when its account's server URL or certificate opt-in changes, and dropped
  * when the account is removed.
  *
- * A 401 on a request that carried the account's token sets that account's
- * [AccountEntity.signedIn] to false and emits its id on [forcedLogout]; a 426 sets its
+ * A 401 on a request that carried the account's current token deletes that token, sets the
+ * account's [AccountEntity.signedIn] to false and emits its id on [forcedLogout]; a 426 sets its
  * [AccountEntity.outdated]; a protocol-checked 2xx clears it again. No other account is touched.
  */
 class AccountSessions(
@@ -93,7 +93,13 @@ class AccountSessions(
         val key = serverUrl to account.allowSelfSignedCerts
         cache[accountId]?.takeIf { it.builtFor == key }?.let { return it }
         val events = object : ApiEvents {
-            override fun onUnauthorized() {
+            override fun onUnauthorized(sentToken: String) {
+                // Only the account's current token: a 401 to a request sent before the account
+                // signed in again is about a token that is already gone (T-298).
+                if (sentToken != secrets.token(accountId)) return
+                // Dropped here, not only in the UI's clearLocalSession: a 401 in the background
+                // must not leave a dead token for every later request to carry.
+                secrets.setToken(accountId, null)
                 registry.updateInBackground(accountId) { it.copy(signedIn = false) }
                 _forcedLogout.tryEmit(accountId)
             }

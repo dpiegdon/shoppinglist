@@ -22,9 +22,10 @@ class ErrorInterceptorTest {
     /** What one account's client reported, beyond the exceptions. */
     private class RecordingEvents : ApiEvents {
         var unauthorized = 0
+        val tokens = mutableListOf<String>()
         var outdated = 0
         var accepted = 0
-        override fun onUnauthorized() { unauthorized++ }
+        override fun onUnauthorized(sentToken: String) { unauthorized++; tokens += sentToken }
         override fun onOutdated() { outdated++ }
         override fun onAccepted() { accepted++ }
     }
@@ -76,6 +77,7 @@ class ErrorInterceptorTest {
 
         assert(e is UnauthorizedException)
         assertEquals(1, events.unauthorized)
+        assertEquals("the token the request carried", listOf("live-token"), events.tokens)
     }
 
     @Test
