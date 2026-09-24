@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.db
+package org.p23q.shoppinglist.core.db
 
 import androidx.room.RoomDatabase
 import androidx.room.immediateTransaction

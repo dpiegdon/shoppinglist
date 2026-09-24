@@ -33,8 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.db.Status
+import org.p23q.shoppinglist.data.db.label
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 

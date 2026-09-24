@@ -69,8 +69,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.api.MemberDto
-import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale

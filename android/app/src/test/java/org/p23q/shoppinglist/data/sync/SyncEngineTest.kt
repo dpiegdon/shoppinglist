@@ -33,11 +33,11 @@ import org.p23q.shoppinglist.core.api.ProtocolState
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.data.DeviceIdProvider
-import org.p23q.shoppinglist.data.db.AppDb
-import org.p23q.shoppinglist.data.db.ItemDao
-import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.data.db.ListEntity
-import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.ItemDao
+import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.db.ListEntity
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional

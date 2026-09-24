@@ -19,10 +19,10 @@ import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.ListMember
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
-import org.p23q.shoppinglist.data.db.AppDb
-import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger

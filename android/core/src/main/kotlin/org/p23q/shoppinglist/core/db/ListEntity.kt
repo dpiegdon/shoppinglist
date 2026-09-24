@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.data.db
+package org.p23q.shoppinglist.core.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -27,7 +27,7 @@ data class ListEntity(
     val dirty: Boolean,
     /**
      * Set when the server rejected this row's pushed values with a 422 (T-198), the same
-     * quarantine [org.p23q.shoppinglist.data.db.ItemEntity.syncBlocked] gives an item: the list
+     * quarantine [org.p23q.shoppinglist.core.db.ItemEntity.syncBlocked] gives an item: the list
      * stays visible and editable, but [ListDao.dirtyRows] skips it, so one refused list row can't
      * wedge the whole push queue. Cleared the moment the user edits the list again (see ListsRepo).
      */

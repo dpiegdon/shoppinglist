@@ -35,7 +35,7 @@ import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
-import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.LocalizedContent
 import org.robolectric.RobolectricTestRunner

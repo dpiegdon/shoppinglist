@@ -15,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.lang.reflect.Proxy
+import org.p23q.shoppinglist.core.db.unblocked
 
 /**
  * The migrations run against a real old database, and land on the schema Room expects (T-162).
@@ -46,7 +47,7 @@ import java.lang.reflect.Proxy
 class AppDbMigrationTest {
 
     /**
-     * Version 1: the schema before any migration, taken from app/schemas/…/8.json minus every
+     * Version 1: the schema before any migration, taken from core/schemas/…/8.json minus every
      * column the later migrations add — so it is Room's own SQL, not a hand-written guess at it.
      */
     private val v1Lists =
@@ -146,7 +147,7 @@ class AppDbMigrationTest {
 
     /** What Room says the current version must look like — its own exported schema, committed alongside. */
     private fun expectedColumns(table: String): Set<Column> {
-        val file = File("schemas/org.p23q.shoppinglist.data.db.AppDb/8.json")
+        val file = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/8.json")
         assertTrue("exported schema missing — run the ksp task: ${file.absolutePath}", file.exists())
         val entity = Json.parseToJsonElement(file.readText())
             .jsonObject["database"]!!.jsonObject["entities"]!!.jsonArray
@@ -275,7 +276,7 @@ class AppDbMigrationTest {
         // exported schema left stale by a build that was never re-run. @Database is compile-time
         // retained, so the declared version is read from the schema Room exported from it — the
         // same file the other tests here compare against.
-        val exported = File("schemas/org.p23q.shoppinglist.data.db.AppDb/8.json")
+        val exported = File("../core/schemas/org.p23q.shoppinglist.core.db.AppDb/8.json")
         assertTrue("exported schema missing: ${exported.absolutePath}", exported.exists())
         val declared = Json.parseToJsonElement(exported.readText())
             .jsonObject["database"]!!.jsonObject["version"]!!.jsonPrimitive.content.toInt()

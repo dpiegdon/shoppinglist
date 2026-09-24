@@ -1,9 +1,7 @@
 package org.p23q.shoppinglist.data.db
 
 import android.content.Context
-import androidx.room.Database
 import androidx.room.Room
-import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.Module
@@ -11,15 +9,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.ItemDao
+import org.p23q.shoppinglist.core.db.ListDao
 import org.p23q.shoppinglist.core.db.LwwOptionalString
 import org.p23q.shoppinglist.core.db.LwwString
 import javax.inject.Singleton
-
-@Database(entities = [ListEntity::class, ItemEntity::class], version = 8, exportSchema = true)
-abstract class AppDb : RoomDatabase() {
-    abstract fun listDao(): ListDao
-    abstract fun itemDao(): ItemDao
-}
 
 /** Adds items.syncBlocked (T-32 row quarantine). Non-destructive: existing rows keep their data. */
 val MIGRATION_1_2 = object : Migration(1, 2) {

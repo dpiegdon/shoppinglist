@@ -22,10 +22,10 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.data.DeviceIdProvider
-import org.p23q.shoppinglist.data.db.AppDb
-import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 

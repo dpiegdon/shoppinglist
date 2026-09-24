@@ -19,9 +19,9 @@ import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.CreateInviteRequest
 import org.p23q.shoppinglist.core.api.MemberDto
 import org.p23q.shoppinglist.core.api.PendingInviteDto
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.SessionState
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo

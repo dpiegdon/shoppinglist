@@ -110,10 +110,10 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.android.compiler)
 
-    // room-ktx isn't used: androidx.room:room-runtime 2.8+ already includes its Flow/coroutines
-    // support natively.
+    // The @Database, entities and DAOs live in :core, which runs the Room compiler; this module
+    // only builds the database (Room.databaseBuilder) and holds its migrations. room-ktx isn't
+    // used: androidx.room:room-runtime 2.8+ already includes its Flow/coroutines support natively.
     implementation(libs.androidx.room.runtime)
-    ksp(libs.androidx.room.compiler)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization.converter)
@@ -181,11 +181,4 @@ tasks.withType<Test>().configureEach {
             languageVersion.set(JavaLanguageVersion.of(21))
         },
     )
-}
-
-// Room exports each schema version as JSON so migrations can be tested against a real old database
-// rather than trusted (T-162). The directory is committed: a diff there is the reviewable record of
-// what a schema change actually did, and it is the input androidx.room:room-testing needs.
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
 }

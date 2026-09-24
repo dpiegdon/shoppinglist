@@ -34,11 +34,11 @@ import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.SessionEvents
 import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.DeviceIdProvider
 import org.p23q.shoppinglist.data.FakeSessionState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.data.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger

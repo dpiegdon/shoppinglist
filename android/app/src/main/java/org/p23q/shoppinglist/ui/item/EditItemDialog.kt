@@ -41,7 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
-import org.p23q.shoppinglist.data.db.Status
+import org.p23q.shoppinglist.core.db.Status
+import org.p23q.shoppinglist.data.db.label
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString

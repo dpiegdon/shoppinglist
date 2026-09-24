@@ -7,15 +7,15 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.api.AppJson
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.db.Status
+import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
+import org.p23q.shoppinglist.core.db.unblocked
 import org.p23q.shoppinglist.core.sync.SyncTrigger
 import org.p23q.shoppinglist.data.DeviceIdProvider
-import org.p23q.shoppinglist.data.db.AppDb
-import org.p23q.shoppinglist.data.db.ItemEntity
-import org.p23q.shoppinglist.data.db.Status
-import org.p23q.shoppinglist.data.db.inTransaction
-import org.p23q.shoppinglist.data.db.unblocked
 import java.util.UUID
 import javax.inject.Inject
 
@@ -55,13 +55,13 @@ class ItemsRepo @Inject constructor(
     /** Category values with duplicates, for frequency-weighted canonical casing (T-108). */
     fun categoryValues(listId: String): Flow<List<String>> = itemDao.categoryValues(listId)
 
-    /** Every expense entry across every list, live (T-265) — see [org.p23q.shoppinglist.data.db.ItemDao.expenseItems]. */
+    /** Every expense entry across every list, live (T-265) — see [org.p23q.shoppinglist.core.db.ItemDao.expenseItems]. */
     fun expenseItems(): Flow<List<ItemEntity>> = itemDao.expenseItems()
 
     /** Encoded stores lists, one JSON array per item — decode with [decodeStores] (T-138). */
     fun storeValues(listId: String): Flow<List<String>> = itemDao.storeValues(listId)
 
-    /** One-shot equivalent of [itemsForList] — see [org.p23q.shoppinglist.data.db.ItemDao.itemsForListOnce] (T-265). */
+    /** One-shot equivalent of [itemsForList] — see [org.p23q.shoppinglist.core.db.ItemDao.itemsForListOnce] (T-265). */
     suspend fun itemsForListOnce(listId: String): List<ItemEntity> = itemDao.itemsForListOnce(listId)
 
     /** All non-deleted items in a list (any status), one-shot — for a category recase (T-108). */

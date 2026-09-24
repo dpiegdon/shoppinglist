@@ -32,7 +32,7 @@ import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
-import org.p23q.shoppinglist.data.db.AppDb
+import org.p23q.shoppinglist.core.db.AppDb
 import org.robolectric.RobolectricTestRunner
 import kotlinx.serialization.json.Json
 import java.io.File

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.NameOrder
-import org.p23q.shoppinglist.data.db.ItemEntity
+import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.data.repo.ItemsRepo
 import org.p23q.shoppinglist.ui.Routes
 import javax.inject.Inject

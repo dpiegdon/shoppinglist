@@ -20,6 +20,8 @@ import org.p23q.shoppinglist.core.api.DeleteAccountRequest
 import org.p23q.shoppinglist.core.api.SessionDto
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.api.UpdateSettingsRequest
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.clearAll
 import org.p23q.shoppinglist.data.DefaultCurrencyState
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.SessionState
@@ -27,7 +29,6 @@ import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.api.ApiProvider
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
-import org.p23q.shoppinglist.data.db.AppDb
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
@@ -295,7 +296,7 @@ class SettingsViewModel @Inject constructor(
             try {
                 apiProvider.get().deleteAccount(DeleteAccountRequest(password))
                 sessionState.clear()
-                withContext(Dispatchers.IO) { appDb.clearAllTables() }
+                withContext(Dispatchers.IO) { appDb.clearAll() }
                 _uiState.update { it.copy(isAccountDeleted = true, isDeleteConfirmOpen = false) }
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }

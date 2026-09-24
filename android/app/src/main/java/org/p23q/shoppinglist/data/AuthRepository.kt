@@ -9,9 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.p23q.shoppinglist.core.api.LoginRequest
 import org.p23q.shoppinglist.core.api.RegisterRequest
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.clearAll
+import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.data.api.ApiProvider
-import org.p23q.shoppinglist.data.db.AppDb
-import org.p23q.shoppinglist.data.db.inTransaction
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -91,7 +92,7 @@ class AuthRepositoryImpl @Inject constructor(
         // a different account: a session old enough to have no account_id (pre-T-65) can't prove
         // the mirror is this user's, and privacy wins that tie.
         if (response.accountId != sessionState.mirrorAccountId) {
-            withContext(Dispatchers.IO) { appDb.clearAllTables() }
+            withContext(Dispatchers.IO) { appDb.clearAll() }
         }
         sessionState.mirrorAccountId = response.accountId
         sessionState.token = response.token

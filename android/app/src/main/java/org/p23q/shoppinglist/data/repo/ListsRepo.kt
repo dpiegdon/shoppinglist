@@ -7,13 +7,13 @@ import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.core.NameOrder
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.ListEntity
+import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.core.sync.SyncTrigger
 import org.p23q.shoppinglist.data.DeviceIdProvider
-import org.p23q.shoppinglist.data.db.AppDb
-import org.p23q.shoppinglist.data.db.ListEntity
-import org.p23q.shoppinglist.data.db.inTransaction
 import java.util.UUID
 import javax.inject.Inject
 
