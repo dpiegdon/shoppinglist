@@ -358,8 +358,9 @@ once; opening its Settings checks right away and offers a skipped version again.
 Users can turn the check off there.
 
 Nothing needs configuring: the endpoint exists whenever the APK does. It answers
-`404 no_app_package` when the instance serves no APK — the same answer servers
-older than the feature give, so old servers need no special-casing.
+`404 no_app_package` when the instance serves no APK, and that answer still
+carries `protocol`: the app asks for it before signing in, so an instance with
+`serve_android_apk` off is still one the app can use.
 
 ## TLS dev server (for client-side testing)
 

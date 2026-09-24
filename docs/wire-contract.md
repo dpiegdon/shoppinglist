@@ -69,14 +69,22 @@ cannot know what a newer client needs. Upgrade the server before its clients.
 **The client's floor.** The other direction is the client's to police. A client
 holds a `MIN_SERVER_PROTOCOL` beside its own `PROTOCOL_VERSION` — the oldest
 server protocol it still works against (Android: `Protocol.kt`, currently **3**).
-Before its first `/login` or `/register` to a server it asks `GET /app-version`
-— the first request that server gets from it — and signs in nowhere whose answer
-has no `protocol`, or one below the floor; a `404` there is a server from before
-the endpoint, and too old as well. A client must keep working against every
-server from its floor up: a feature that needs a newer server is gated per
+Whenever the app holds no protocol at or above the floor for a server URL, it
+asks `GET /app-version` before it sends that server `/login` or `/register`, and
+reads `protocol` from the answer: from the `200`, or from the `404
+no_app_package` of a server that carries no app package. It signs in nowhere
+whose `protocol` is below the floor. An answer without `protocol` — a `404`
+without it, or one that is not JSON — is not a Tuppu server of a supported
+version, and is refused the same way; a server from before the endpoint answers
+exactly that. A server whose `protocol` is **above** the client's own
+`PROTOCOL_VERSION` would refuse it with `426` anyway, so the client stops before
+`/login` there too, says the app needs an update for that server, and offers
+the answer's `download_url` when it has one. A client must keep working against
+every server from its floor up: a feature that needs a newer server is gated per
 server on the `protocol` that server reported, never assumed. The floor is raised
 only in a major release, and each raise is recorded in the table below. The
-server needs nothing for this — it is the same `/app-version` it always serves.
+server's part is to answer `protocol` on every `/app-version`, the `404`
+included.
 
 **When the number changes.** A change to this contract that an already-installed
 client of the previous protocol cannot handle correctly bumps `PROTOCOL_VERSION`,
@@ -92,7 +100,7 @@ refuses a release that breaks either rule.
 
 | Client floor | Since | Why |
 |---|---|---|
-| 3 | Android, protocol 3 | Clients are written against protocol 3 and nothing older. |
+| 3 | Android, unreleased | Clients are written against protocol 3 and nothing older. |
 
 ## Field clock
 
@@ -533,8 +541,9 @@ points at the site-root `GET /shoppinglist.apk` below.
 `protocol` is the server's `PROTOCOL_VERSION`. This endpoint is the one an
 outdated client can still reach (see "Protocol version") — it is exempt from the
 protocol gate for exactly that reason. Android reads `protocol` for its client
-floor (see "Protocol version": it asks before the first sign-in to a server and
-refuses one below the floor or without the field) and stores it per account on
+floor (see "Protocol version": it asks before signing in whenever it holds no
+protocol at or above the floor for that server, and refuses one below the floor,
+above its own protocol, or without the field) and stores it per account on
 every update check; whether an update is needed it still decides from `version`
 alone. The web client never calls this endpoint — it gets its own version from a
 server-injected `<meta>` tag and reads nothing from a `426`'s body but `error`.
@@ -545,9 +554,17 @@ tell it.
 
 `404 no_app_package` when this instance serves no APK — because
 `serve_android_apk` is off, no APK is packaged, or the server is running from a
-source checkout with no installed package version to report. That is also what
-every server released before this endpoint existed answers, so a client can
-treat "no update information" as one case rather than two.
+source checkout with no installed package version to report. That `404` still
+carries `protocol` in its error envelope, since the protocol belongs to the
+server rather than to the app package:
+
+```json
+{"error": "no_app_package", "message": "...", "protocol": 3}
+```
+
+For an update check a `404` means "no update information", whatever its body.
+For the client floor it does not: the client reads `protocol` from it, and only
+a `404` without the key is a server from before this endpoint.
 
 ### Closing an expenses list
 
@@ -678,7 +695,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 403 | `not_admin` | An admin endpoint, called by someone who is not. |
 | 403 | `cannot_delete_self`, `cannot_delete_admin` | See "Admin". |
 | 404 | `account_not_found`, `session_not_found`, `invite_not_found` | The id names nothing. |
-| 404 | `no_app_package` | See "App package". |
+| 404 | `no_app_package` | Carries `protocol`, the server's `PROTOCOL_VERSION`. See "App package". |
 | 409 | `email_taken` | Registering or changing to an address already in use. |
 | 409 | `invite_email_mismatch`, `invite_expired`, `invite_revoked`, `invite_used` | Redeeming an invite that is for someone else, too old, withdrawn, or already used. |
 | 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list". |
