@@ -56,6 +56,27 @@ def test_valid_token_renders_html_with_full_token(client):
     assert "invitee@example.com" in body
 
 
+def test_intent_url_at_a_root_mount_is_host_and_invite_path():
+    from shoppinglist_server.routes.landing import _intent_url
+
+    for base_url in ("https://example.com", "https://example.com/"):
+        assert _intent_url(base_url, "T") == (
+            "intent://example.com/invite/T#Intent;scheme=https;package=org.p23q.shoppinglist;end"
+        )
+
+
+def test_intent_url_carries_the_mount_path():
+    from shoppinglist_server.routes.landing import _intent_url
+
+    # The app matches everything before /invite/ against its accounts' server URLs, so an intent
+    # without the mount path would name the root instance instead of this one.
+    for base_url in ("https://p23q.org/shopping", "https://p23q.org/shopping/"):
+        assert _intent_url(base_url, "T") == (
+            "intent://p23q.org/shopping/invite/T"
+            "#Intent;scheme=https;package=org.p23q.shoppinglist;end"
+        )
+
+
 def test_valid_token_offers_redeem_in_browser_when_web_client_is_served(client):
     owner_token = _register_and_login(client)
     invite = _mint_invite(client, owner_token)

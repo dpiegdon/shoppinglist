@@ -665,9 +665,15 @@ payload = base64url("<invite_id>:<list_id>:<email>:<expires_at_ms>")
 token   = payload + "." + base64url(HMAC_SHA256(INVITE_HMAC_KEY, payload))
 ```
 
-Share URL: `https://<server>/invite/<token>`. Tokens are **stateless and signed**,
+Share URL: `https://<server>/invite/<token>`, where `<server>` is the instance's
+`base_url` including any mount path. Tokens are **stateless and signed**,
 so a link is checkable without server-side invite state. Invites expire 7 days
 after minting.
+
+The landing page's "Open in app" link is the same URL as an Android intent,
+`intent://<host><mount path>/invite/<token>#Intent;scheme=https;package=org.p23q.shoppinglist;end`,
+so the app receives the share URL unchanged and matches its accounts by
+everything before `/invite/`, never by host alone.
 
 The payload is colon-delimited, so **no component may contain a colon**: neither
 the invited email (`422 invalid_email`) nor the list id (`422 invalid_list_id`,

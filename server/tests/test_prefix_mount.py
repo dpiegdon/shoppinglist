@@ -154,3 +154,4 @@ def test_invite_landing_and_its_links_live_under_the_prefix(tmp_path):
     body = resp.get_data(as_text=True)
     assert "/shopping/redeem?token=" in body
     assert "/shopping/shoppinglist.apk" in body
+    assert f"intent://testserver/shopping/invite/{invite['token']}#Intent;" in body

@@ -19,8 +19,11 @@ ANDROID_PACKAGE = "org.p23q.shoppinglist"
 
 
 def _intent_url(base_url: str, token: str) -> str:
-    host = urlsplit(base_url).netloc
-    return f"intent://{host}/invite/{token}#Intent;scheme=https;package={ANDROID_PACKAGE};end"
+    # The mount path is part of the invite's server: the app matches everything before /invite/
+    # against its accounts' server URLs, so a link without it would name another instance.
+    parts = urlsplit(base_url)
+    root = f"{parts.netloc}{parts.path.rstrip('/')}"
+    return f"intent://{root}/invite/{token}#Intent;scheme=https;package={ANDROID_PACKAGE};end"
 
 
 def register_routes(app, invite_hmac_key: bytes, base_url: str, root_path: str = ""):
