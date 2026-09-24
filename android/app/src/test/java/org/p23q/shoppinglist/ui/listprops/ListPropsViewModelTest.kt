@@ -376,6 +376,19 @@ class ListPropsViewModelTest {
     }
 
     @Test
+    fun `revokeInvite for a list that has gone meanwhile does nothing, and does not crash (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        // Its account was removed while the screen was open, and the list with it.
+        listsRepo.removeLocally(listId)
+
+        viewModel.revokeInvite("inv-1").join()
+
+        assertEquals(0, server.requestCount)
+        assertNull(viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
     fun `confirmLeave calls the server and hard-deletes the list and its items locally`() = runTest(mainDispatcherRule.dispatcher) {
         val itemId = itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()

@@ -142,12 +142,15 @@ class ListPropsViewModel @Inject constructor(
 
     fun loadMembers(): Job = viewModelScope.launch {
         _uiState.update { it.copy(isMembersLoading = true, membersError = null) }
-        val serverId = listsRepo.serverIdOf(listId) ?: run {
+        // Without a server id or an account there is nobody to ask: a local list, or one gone.
+        val serverId = listsRepo.serverIdOf(listId)
+        val api = listAccounts.api(listId)
+        if (serverId == null || api == null) {
             _uiState.update { it.copy(isMembersLoading = false) }
             return@launch
         }
         try {
-            val response = listAccounts.api(listId).members(serverId)
+            val response = api.members(serverId)
             _uiState.update {
                 it.copy(members = response.members, pendingInvites = response.invites, isMembersLoading = false)
             }
@@ -260,8 +263,9 @@ class ListPropsViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             val serverId = listsRepo.serverIdOf(listId) ?: return@launch
+            val api = listAccounts.api(listId) ?: return@launch // the list is gone
             try {
-                val response = listAccounts.api(listId).createInvite(serverId, CreateInviteRequest(email))
+                val response = api.createInvite(serverId, CreateInviteRequest(email))
                 _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, errorMessage = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
@@ -275,8 +279,10 @@ class ListPropsViewModel @Inject constructor(
     fun consumeShareUrl() = _uiState.update { it.copy(inviteShareUrl = null) }
 
     fun revokeInvite(inviteId: String): Job = viewModelScope.launch {
+        // The list is gone, and its invites with it as far as this phone is concerned.
+        val api = listAccounts.api(listId) ?: return@launch
         try {
-            listAccounts.api(listId).revokeInvite(inviteId)
+            api.revokeInvite(inviteId)
         } catch (e: ApiException) {
             // 404: the invite is already gone — fall through and refresh so it drops off the list.
             if (e.httpStatus != 404) {
@@ -317,8 +323,13 @@ class ListPropsViewModel @Inject constructor(
         val voted = _uiState.value.myAccountId in _uiState.value.closeVotes
         _uiState.update { it.copy(isVoting = true) }
         try {
-            val serverId = checkNotNull(listsRepo.serverIdOf(listId)) { "No list $listId" }
+            val serverId = listsRepo.serverIdOf(listId)
             val api = listAccounts.api(listId)
+            if (serverId == null || api == null) {
+                // A list this phone no longer holds has no vote left to cast.
+                _uiState.update { it.copy(errorMessage = UiText.res(R.string.expense_vote_failed)) }
+                return@launch
+            }
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
             syncer.syncNow(emptyList())
         } catch (e: ApiException) {
@@ -328,8 +339,6 @@ class ListPropsViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.expense_vote_failed)) }
         } catch (e: IOException) {
             _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline_retry)) }
-        } catch (e: IllegalStateException) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.expense_vote_failed)) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
         }
@@ -337,12 +346,14 @@ class ListPropsViewModel @Inject constructor(
 
     fun confirmLeave(): Job = viewModelScope.launch {
         // A list this phone no longer holds has nothing left to leave here.
-        val serverId = listsRepo.serverIdOf(listId) ?: run {
+        val serverId = listsRepo.serverIdOf(listId)
+        val api = listAccounts.api(listId)
+        if (serverId == null || api == null) {
             _uiState.update { it.copy(isLeaveConfirmOpen = false, hasLeft = true) }
             return@launch
         }
         try {
-            listAccounts.api(listId).leaveList(serverId)
+            api.leaveList(serverId)
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {

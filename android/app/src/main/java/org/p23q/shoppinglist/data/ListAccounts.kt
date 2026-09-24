@@ -32,17 +32,11 @@ class ListAccounts @Inject constructor(
     }
 
     /**
-     * The API client of [listId]'s account. Throws [IllegalStateException] when the list has no
-     * server account, as a request with no account to send it for is a programming error.
+     * The API client of [listId]'s account; null when the list, its account or the account's server
+     * is gone, which a screen treats as the list being gone (T-300): an account can be removed, and
+     * its lists with it, while one of them is open.
      */
-    suspend fun api(listId: String): Api {
-        registry.load()
-        val accountId = listsRepo.getById(listId)?.accountId ?: error("No list $listId")
-        return sessions.get(accountId).api
-    }
-
-    /** [api], or null when the list has no server account: for the reads a screen can do without. */
-    suspend fun apiOrNull(listId: String): Api? =
+    suspend fun api(listId: String): Api? =
         accountOf(listId)?.takeIf { it.isServer && it.serverUrl != null }?.let { sessions.get(it.id).api }
 
     /** [listId]'s account, live: a change to its default currency reaches an open screen. */

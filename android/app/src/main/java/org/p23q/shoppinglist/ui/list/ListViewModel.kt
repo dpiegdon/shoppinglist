@@ -133,7 +133,7 @@ class ListViewModel @Inject constructor(
         // relative to how often this screen opens. Silently stays empty offline/on error.
         viewModelScope.launch {
             val serverId = listsRepo.serverIdOf(listId) ?: return@launch
-            val api = listAccounts.apiOrNull(listId) ?: return@launch
+            val api = listAccounts.api(listId) ?: return@launch
             try {
                 val response = api.members(serverId)
                 _uiState.update { it.copy(members = response.members) }

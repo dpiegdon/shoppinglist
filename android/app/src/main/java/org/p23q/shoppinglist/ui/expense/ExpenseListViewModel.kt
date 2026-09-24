@@ -121,8 +121,13 @@ class ExpenseListViewModel @Inject constructor(
         _uiState.update { it.copy(isVoting = true, voteError = null) }
         val voted = _uiState.value.iHaveVoted
         try {
-            val serverId = checkNotNull(listsRepo.serverIdOf(listId)) { "No list $listId" }
+            val serverId = listsRepo.serverIdOf(listId)
             val api = listAccounts.api(listId)
+            if (serverId == null || api == null) {
+                // A list this phone no longer holds has no vote left to cast.
+                _uiState.update { it.copy(voteError = UiText.res(R.string.expense_vote_failed)) }
+                return@launch
+            }
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
             syncer.syncNow(emptyList())
         } catch (e: ApiException) {
@@ -132,8 +137,6 @@ class ExpenseListViewModel @Inject constructor(
             _uiState.update { it.copy(voteError = ErrorText.of(e, R.string.expense_vote_failed)) }
         } catch (e: IOException) {
             _uiState.update { it.copy(voteError = UiText.res(R.string.error_offline_retry)) }
-        } catch (e: IllegalStateException) {
-            _uiState.update { it.copy(voteError = UiText.res(R.string.expense_vote_failed)) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
         }
