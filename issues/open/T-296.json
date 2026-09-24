@@ -1,0 +1,14 @@
+{
+  "body": "Placeholder for a decision the maintainer wants to take when publishing on F-Droid comes up;\ndeliberately blocked. Not part of the multi-account steps, but touches the same update path.\n\n## What is known\n\n* F-Droid builds from source and signs with **its own key**. An F-Droid install can therefore\n  not be updated by the APK the server embeds (`/shoppinglist.apk`, T-59): Android refuses the\n  install as a signature mismatch, and the \"update required\" screen (T-244) would offer a\n  download that cannot succeed.\n* Maintainer's thought (2026-09-24): once the app is on F-Droid the server need not publish the\n  APK any more; the \"download the app\" link can simply point at the F-Droid store page.\n\n## Surfaces that would change\n\n* server: `routes/apk.py`, `routes/landing.py` (`apk_url`), `routes/app_version.py`\n  (`download_url`), `release.sh` (embeds the APK into the wheel and compares signing certs).\n* web: `LoginPage.tsx` download link (currently shown only when `HEAD /shoppinglist.apk` is ok).\n* android: `UpdateChecker`/`UpdateRequiredScreen` follow `download_url`; nothing else.\n* docs: `wire-contract.md` `/app-version` section; `android/README.md` reproducible-build notes\n  from the T-281 review (build from a clean checkout, pinned toolchain, no `local.properties`\n  secrets).\n\n## To decide when we get there\n\n* Keep serving the APK for self-hosters who sideload, or drop it entirely.\n* Whether `download_url` becomes a store link, a config option per instance, or goes away and the\n  app just stops offering downloads on builds it detects as F-Droid-signed.\n* App id stays `org.p23q.shoppinglist`; the display name is Tuppu. F-Droid metadata wants the\n  source repo, licence and a changelog format \u2014 check `fastlane/metadata` conventions.",
+  "created_at": "2026-09-24T17:19:41+00:00",
+  "id": "T-296",
+  "labels": [
+    "server",
+    "web",
+    "android",
+    "design"
+  ],
+  "priority": 4,
+  "title": "F-Droid publishing: app download link, server-embedded APK and update path (design, decide later)",
+  "updated_at": "2026-09-24T17:19:41+00:00"
+}
