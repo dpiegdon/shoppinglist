@@ -76,13 +76,13 @@ class RedeemViewModel @Inject constructor(
      * signing in for this invite.
      */
     fun redeem(link: String? = null, accountId: String? = null): Job? {
-        val raw = _uiState.value.token
-        val token = extractInviteToken(raw)
+        val pasted = pastedInvite(_uiState.value.token)
+        val token = extractInviteToken(pasted)
         if (token.isBlank()) {
             _uiState.update { it.copy(errorMessage = UiText.res(R.string.redeem_msg_code_required)) }
             return null
         }
-        val url = link ?: raw.trim().takeIf { inviteServerUrl(it) != null }
+        val url = link ?: pasted.takeIf { inviteServerUrl(it) != null }
         inviteUrl = url
         val accounts = registry.snapshot()
         val servers = accounts.filter { it.isServer }
@@ -116,7 +116,7 @@ class RedeemViewModel @Inject constructor(
     fun chooseAccount(accountId: String): Job? {
         val account = _uiState.value.choices.firstOrNull { it.id == accountId } ?: return null
         _uiState.update { it.copy(choices = emptyList()) }
-        return redeemInto(account, extractInviteToken(_uiState.value.token))
+        return redeemInto(account, extractInviteToken(pastedInvite(_uiState.value.token)))
     }
 
     private fun redeemInto(account: AccountEntity, token: String): Job? {
@@ -162,6 +162,20 @@ internal fun inviteServerUrl(link: String): String? {
     if (index < 0) return null
     return normalizeServerUrl(trimmed.substring(0, index + 1))
 }
+
+/**
+ * The invite in pasted text (T-300): a whole message such as "Join my list: https://…/invite/T"
+ * is pasted as readily as the link alone, so the first https URL in it, preferring one with an
+ * `/invite/` segment, with any sentence punctuation after it dropped. Text with no https URL in it
+ * (a bare token) is returned trimmed, unchanged.
+ */
+internal fun pastedInvite(raw: String): String {
+    val urls = HTTPS_URL.findAll(raw).map { it.value.trimEnd(*URL_TRAILING_PUNCTUATION) }.toList()
+    return urls.firstOrNull { it.contains("/invite/") } ?: urls.firstOrNull() ?: raw.trim()
+}
+
+private val HTTPS_URL = Regex("""https://\S+""", RegexOption.IGNORE_CASE)
+private val URL_TRAILING_PUNCTUATION = charArrayOf('.', ',', ';', ':', '!', '?', ')', ']', '>', '"', '\'')
 
 /**
  * Accepts either a bare invite token or a full invite URL (T-71). Share links are
