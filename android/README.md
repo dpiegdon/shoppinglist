@@ -74,8 +74,9 @@ The build has two Gradle modules:
   store of account tokens, WorkManager scheduling, notifications, and building the Room
   database from a `Context` together with its migrations. Where `core` needs one
   of these it declares an interface and `app` implements it. Tests that need
-  Robolectric (screens, Room opened through a `Context`, the migration test)
-  live here.
+  Robolectric live here: the screens, the migration test, and several tests of
+  `core` classes (the repositories, the sync engine) that are here only because
+  they open Room through a `Context`.
 
 ### Accounts
 
@@ -109,12 +110,13 @@ minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
 
 Once installed, the app keeps itself current: on foreground (at most twice a
 day) it asks each server it has an account on, via `GET /api/v1/app-version`,
-whether a newer version exists (the newest any of them offers wins), and offers each new version once. Opening About checks right away,
-says what it found, and offers a version you declined again. Accepting hands the
-APK URL to the system, which installs it the same way a sideload does — the app
-downloads and installs nothing itself and asks for no extra permissions. The
-check can be turned off under About → App updates. A server that carries no
-APK answers 404 and the app stays quiet.
+whether a newer version exists (the newest any of them offers wins), and offers
+each new version once. Opening About checks right away, says what it found, and
+offers a version you declined again. Accepting hands the APK URL to the system,
+which installs it the same way a sideload does — the app downloads and installs
+nothing itself and asks for no extra permissions. The check can be turned off
+under About → App updates. A server that carries no APK answers 404 and the app
+stays quiet.
 
 On first launch the login screen shows the **server URL** — prefilled with
 `https://p23q.org/shopping` (the original instance; edit it if you self-host)

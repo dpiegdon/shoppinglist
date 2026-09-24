@@ -94,6 +94,10 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 - Run `./verify-all.sh` before committing code; a docs-only change may skip it.
   While iterating, run just the suite you touched.
 - A new test should fail when its change is reverted. Check by mutating the code.
+- Android build: after a cherry-pick that deletes a Hilt-injected class, the
+  main checkout's `app/build/generated/hilt` still holds that class's factory
+  and `hiltJavaCompile` fails with "Could not find class file for …". A fresh
+  worktree never sees it. Run `cd android && ./gradlew clean` and rerun the gate.
 - Android (Robolectric) pitfalls:
   - Use Room with `BundledSQLiteDriver()`: Robolectric has no native SQLite on
     aarch64. Room 2.8 cannot run migrations on the driver path; see
@@ -112,11 +116,6 @@ sessions. The READMEs describe the code; this file describes how to work on it.
     test with "uncaught exceptions before the test started" (T-209). A `tearDown`
     closing a `lateinit` field guards it with `::field.isInitialized`, so an
     aborted `setUp` reports its real cause.
-  - After a cherry-pick that deletes a Hilt-injected class, the main checkout's
-    `app/build/generated/hilt` still holds that class's factory and
-    `hiltJavaCompile` fails with "Could not find class file for …". A fresh
-    worktree never sees it. Run `cd android && ./gradlew clean` and rerun the
-    gate.
 
 ## Releases
 
