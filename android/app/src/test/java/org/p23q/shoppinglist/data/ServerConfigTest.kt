@@ -25,26 +25,32 @@ class ServerConfigTest {
         val config = ServerConfig(newDataStore())
         val first = config.deviceId()
         assertEquals(first, config.deviceId())
-        assertEquals(first, config.get())
     }
 
     @Test
-    fun `the single-session server keys are readable for the migration, then discarded (T-291)`() = runTest {
+    fun `the last-typed server is the single-session app's, and nothing discards it (T-298)`() = runTest {
         val store = newDataStore()
         store.edit {
             it[ServerConfig.SERVER_URL_KEY] = "https://example.com/sub/"
             it[ServerConfig.ALLOW_SELF_SIGNED_KEY] = true
         }
         val config = ServerConfig(store)
-        val deviceId = config.deviceId()
-        assertEquals("https://example.com/sub/", config.legacyServerUrl())
-        assertTrue(config.legacyAllowSelfSignedCerts())
 
-        config.discardLegacy()
+        // What 3.1.0 stored is what the login screen prefills, and what the migration reads.
+        assertEquals("https://example.com/sub/", config.lastServerUrl())
+        assertTrue(config.lastAllowSelfSignedCerts())
+    }
 
-        assertNull(config.legacyServerUrl())
-        assertFalse(config.legacyAllowSelfSignedCerts())
-        // The device id is not a single-session key: it stays global.
-        assertEquals(deviceId, config.deviceId())
+    @Test
+    fun `a submitted address is stored normalised`() = runTest {
+        val config = ServerConfig(newDataStore())
+        assertNull(config.lastServerUrl())
+        assertFalse(config.lastAllowSelfSignedCerts())
+
+        config.setLastServerUrl("HTTPS://Lists.Example.com:443/shop")
+        config.setLastAllowSelfSignedCerts(true)
+
+        assertEquals("https://lists.example.com/shop/", config.lastServerUrl())
+        assertTrue(config.lastAllowSelfSignedCerts())
     }
 }

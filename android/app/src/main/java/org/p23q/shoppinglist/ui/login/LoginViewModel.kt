@@ -20,6 +20,7 @@ import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.sync.SyncTrigger
 import org.p23q.shoppinglist.data.PendingInviteHolder
+import org.p23q.shoppinglist.data.LastServerAddress
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -54,6 +55,7 @@ data class LoginUiState(
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val currentAccount: CurrentAccount,
+    private val serverConfig: LastServerAddress,
     private val pendingInviteHolder: PendingInviteHolder,
     private val syncTrigger: SyncTrigger,
 ) : ViewModel() {
@@ -62,21 +64,25 @@ class LoginViewModel @Inject constructor(
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     init {
-        // Prefill the server URL of the account signed in last (nothing seeded the field before,
-        // so a returning user re-typed it every time), or the canonical instance for a first run.
-        val savedUrl = currentAccount.serverUrl
-        _uiState.update {
-            it.copy(
-                serverUrl = savedUrl?.takeIf { url -> url.isNotBlank() } ?: DEFAULT_SERVER_URL,
-                allowSelfSignedCerts = currentAccount.allowSelfSignedCerts,
-            )
+        viewModelScope.launch {
+            // Prefill the address last submitted on this device, kept whatever became of the
+            // attempt or its account (T-298), or the canonical instance for a first run. A URL
+            // the user has started typing in the meantime is left alone.
+            val savedUrl = serverConfig.lastServerUrl()?.takeIf { it.isNotBlank() }
+            val allowSelfSigned = serverConfig.lastAllowSelfSignedCerts()
+            _uiState.update {
+                it.copy(
+                    serverUrl = it.serverUrl.ifBlank { savedUrl ?: DEFAULT_SERVER_URL },
+                    allowSelfSignedCerts = allowSelfSigned,
+                )
+            }
+            // Only once an address has been submitted (T-287). On a fresh install the prefilled
+            // default is a suggestion nobody has confirmed, and the app must not contact any
+            // server before the user has chosen one: if that server turns out to refuse
+            // registration, the attempt failing with 403 is how they find out — the same answer
+            // this check would have given, one screen later.
+            if (savedUrl != null) refreshRegistrationStatus()
         }
-        // Only once there is an account, i.e. after the first successful login (T-287). On a fresh
-        // install the prefilled default is a suggestion nobody has confirmed, and the app must not
-        // contact any server before the user has chosen one: if that server turns out to refuse
-        // registration, the attempt failing with 403 is how they find out — the same answer this
-        // check would have given, one screen later.
-        if (!savedUrl.isNullOrBlank()) refreshRegistrationStatus()
     }
 
     /** Asks the saved server up front whether it is accepting new accounts (T-276), matching the
@@ -84,7 +90,7 @@ class LoginViewModel @Inject constructor(
      *  leaves the toggle enabled rather than surfacing an error nobody asked about. Never called on
      *  a fresh install (T-287): see the init block. */
     fun refreshRegistrationStatus(): Job = viewModelScope.launch {
-        val url = currentAccount.serverUrl ?: return@launch
+        val url = serverConfig.lastServerUrl() ?: return@launch
         val allowed = runCatching {
             authRepository.registrationAllowed(url, _uiState.value.allowSelfSignedCerts)
         }.getOrDefault(true)
@@ -100,8 +106,8 @@ class LoginViewModel @Inject constructor(
      *  in to keeps. Surfaced on login to break the self-hosting bootstrap deadlock — the Settings
      *  screen isn't reachable until you're already logged in (T-38/T-46). */
     fun setAllowSelfSignedCerts(allow: Boolean): Job = viewModelScope.launch {
-        currentAccount.allowSelfSignedCerts = allow
         _uiState.update { it.copy(allowSelfSignedCerts = allow, errorMessage = null) }
+        serverConfig.setLastAllowSelfSignedCerts(allow)
     }
 
     fun onServerUrlChange(value: String) {
@@ -135,6 +141,10 @@ class LoginViewModel @Inject constructor(
         return viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, downloadUrl = null) }
             try {
+                // Before the server has answered, as in 3.1.0: the next visit prefills what was
+                // typed whatever becomes of this attempt.
+                serverConfig.setLastServerUrl(state.serverUrl)
+                serverConfig.setLastAllowSelfSignedCerts(state.allowSelfSignedCerts)
                 if (state.isRegisterMode) {
                     authRepository.register(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
                 }

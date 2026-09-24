@@ -104,7 +104,7 @@ class SyncEngineTest {
 
         accounts = TestAccounts(db)
         syncStatus = accounts.syncStatus
-        syncEngine = accounts.syncEngine(deviceId = serverConfig, notifier = notifier)
+        syncEngine = accounts.syncEngine(deviceId = { serverConfig.deviceId() }, notifier = notifier)
     }
 
     @After
@@ -864,7 +864,7 @@ class SyncEngineTest {
                     committedInsideTheWindow = withTimeoutOrNull(2_000) { tap!!.join() } != null
                 }
             },
-            db.listDao(), accounts.registry, accounts.sessions, serverConfig, db, syncStatus, notifier,
+            db.listDao(), accounts.registry, accounts.sessions, DeviceIdProvider { serverConfig.deviceId() }, db, syncStatus, notifier,
         )
 
         // The server's copy of the row is newer than the local one, so the merge takes every field

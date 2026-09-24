@@ -31,8 +31,9 @@ interface LegacySessionSource {
     fun adoptToken(localAccountId: String)
 
     /**
-     * Deletes the single-session keys. Only once the database has been opened at schema 9, which
-     * is when the migration that reads them has committed.
+     * Deletes the single-session keys in the encrypted preferences. Only once the database has
+     * been opened at schema 9, which is when the migration that reads them has committed.
+     * ServerConfig's address is not one of them: it is the device's, and stays.
      */
     suspend fun discard()
 }
@@ -55,8 +56,8 @@ class StoredLegacySession @Inject constructor(
             ignoredInviteIds = prefs.getStringSet(KEY_IGNORED_INVITE_IDS, emptySet()).orEmpty().toSet(),
             // Room runs migrations off the main thread, on the connection it is opening, so a
             // blocking read of the DataStore is safe here.
-            serverUrl = runBlocking { serverConfig.legacyServerUrl() },
-            allowSelfSignedCerts = runBlocking { serverConfig.legacyAllowSelfSignedCerts() },
+            serverUrl = runBlocking { serverConfig.lastServerUrl() },
+            allowSelfSignedCerts = runBlocking { serverConfig.lastAllowSelfSignedCerts() },
         )
     }
 
@@ -68,7 +69,7 @@ class StoredLegacySession @Inject constructor(
         val editor = secrets.prefs.edit()
         LEGACY_KEYS.forEach { editor.remove(it) }
         editor.apply()
-        serverConfig.discardLegacy()
+        // ServerConfig's address stays: it is the device's last-typed one, not the session's.
     }
 
     private companion object {

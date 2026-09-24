@@ -21,6 +21,21 @@ import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.data.api.RetrofitApiFactory
 
+/** An in-memory [LastServerAddress] that keeps what it is given as [ServerConfig] does: normalised. */
+class FakeLastServerAddress(var url: String? = null, var allowSelfSigned: Boolean = false) : LastServerAddress {
+    override suspend fun lastServerUrl(): String? = url
+
+    override suspend fun setLastServerUrl(url: String) {
+        this.url = org.p23q.shoppinglist.core.account.normalizeServerUrl(url)
+    }
+
+    override suspend fun lastAllowSelfSignedCerts(): Boolean = allowSelfSigned
+
+    override suspend fun setLastAllowSelfSignedCerts(allow: Boolean) {
+        allowSelfSigned = allow
+    }
+}
+
 /** The local id the tests' one account has, wherever a test needs an account behind its lists. */
 const val TEST_ACCOUNT_ID = "local-account-1"
 

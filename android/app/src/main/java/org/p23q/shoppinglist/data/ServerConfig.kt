@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.account.normalizeServerUrl
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,12 +30,40 @@ object ServerConfigModule {
 }
 
 /**
- * This device's id, minted once per install. The server address used to live here too; it is per
- * account now ([org.p23q.shoppinglist.core.db.AccountEntity.serverUrl]), and the old keys are read
- * once by the schema-9 migration and then deleted ([discardLegacy]).
+ * The server address last typed on the login screen, and its debug-only certificate opt-in: a
+ * device-level convenience that no account owns (T-298). [ServerConfig] keeps it.
+ */
+interface LastServerAddress {
+    /** The address last submitted, normalised; null before the first. */
+    suspend fun lastServerUrl(): String?
+
+    suspend fun setLastServerUrl(url: String)
+
+    /** Debug builds only honour it; see DevCertTrust.kt. */
+    suspend fun lastAllowSelfSignedCerts(): Boolean
+
+    suspend fun setLastAllowSelfSignedCerts(allow: Boolean)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class LastServerAddressModule {
+    @Binds
+    abstract fun bindLastServerAddress(config: ServerConfig): LastServerAddress
+}
+
+/**
+ * What this device keeps outside any account: its id, minted once per install, and the server
+ * address last typed on the login screen with its debug-only certificate opt-in.
+ *
+ * The address is a device-level convenience, not an account's: every account has its own
+ * ([org.p23q.shoppinglist.core.db.AccountEntity.serverUrl]). It is saved on every submit, before
+ * the server has answered, so it survives a failed attempt, a removed account and an upgrade that
+ * finds an address but no session (T-298). The schema-9 migration also reads it, as the server of
+ * the single-session app's account; the keys are the ones that app used.
  */
 @Singleton
-class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferences>) : DeviceIdProvider {
+class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferences>) : LastServerAddress {
     /** Minted once per install and persisted; stamped as `updated_by` on every field this device writes. */
     suspend fun deviceId(): String {
         dataStore.data.first()[DEVICE_ID_KEY]?.let { return it }
@@ -46,18 +75,16 @@ class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferen
         return dataStore.data.first()[DEVICE_ID_KEY]!!
     }
 
-    override suspend fun get(): String = deviceId()
+    override suspend fun lastServerUrl(): String? = dataStore.data.first()[SERVER_URL_KEY]
 
-    /** The single-session app's server URL, for the schema-9 migration. */
-    internal suspend fun legacyServerUrl(): String? = dataStore.data.first()[SERVER_URL_KEY]
+    override suspend fun setLastServerUrl(url: String) {
+        dataStore.edit { it[SERVER_URL_KEY] = normalizeServerUrl(url) }
+    }
 
-    internal suspend fun legacyAllowSelfSignedCerts(): Boolean = dataStore.data.first()[ALLOW_SELF_SIGNED_KEY] ?: false
+    override suspend fun lastAllowSelfSignedCerts(): Boolean = dataStore.data.first()[ALLOW_SELF_SIGNED_KEY] ?: false
 
-    internal suspend fun discardLegacy() {
-        dataStore.edit {
-            it.remove(SERVER_URL_KEY)
-            it.remove(ALLOW_SELF_SIGNED_KEY)
-        }
+    override suspend fun setLastAllowSelfSignedCerts(allow: Boolean) {
+        dataStore.edit { it[ALLOW_SELF_SIGNED_KEY] = allow }
     }
 
     internal companion object {

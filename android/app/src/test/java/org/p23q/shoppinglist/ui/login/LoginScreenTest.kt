@@ -44,8 +44,7 @@ class LoginScreenTest {
 
     @Test
     fun `renders server URL, email, password fields and a submit button`() {
-        val serverConfig = FakeCurrentAccount(localId = null)
-        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val viewModel = LoginViewModel(NoopAuthRepository(), FakeCurrentAccount(localId = null), org.p23q.shoppinglist.data.FakeLastServerAddress(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
@@ -59,8 +58,7 @@ class LoginScreenTest {
 
     @Test
     fun `carries the name in cuneiform under the title, uncaptioned (T-225)`() {
-        val serverConfig = FakeCurrentAccount(localId = null)
-        val viewModel = LoginViewModel(NoopAuthRepository(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        val viewModel = LoginViewModel(NoopAuthRepository(), FakeCurrentAccount(localId = null), org.p23q.shoppinglist.data.FakeLastServerAddress(), org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
         composeTestRule.setContent {
             LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
@@ -76,12 +74,11 @@ class LoginScreenTest {
 
     @Test
     fun `a server that has registration off says so up front and disables the toggle (T-276)`() {
-        val serverConfig = FakeCurrentAccount(localId = null)
-        // A saved server, as after an earlier login: on a fresh install nothing is asked (T-287).
-        serverConfig.localId = "saved-account"
-        serverConfig.serverUrl = "https://lists.example.com/"
+        // A saved server, as after an earlier submit: on a fresh install nothing is asked (T-287).
+        val serverConfig = org.p23q.shoppinglist.data.FakeLastServerAddress(url = "https://lists.example.com/")
         val viewModel = LoginViewModel(
             NoopAuthRepository(registrationAllowed = false),
+            FakeCurrentAccount(localId = null),
             serverConfig,
             org.p23q.shoppinglist.data.PendingInviteHolder(),
             org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
@@ -100,6 +97,7 @@ class LoginScreenTest {
         val viewModel = LoginViewModel(
             repository,
             FakeCurrentAccount(localId = null),
+            org.p23q.shoppinglist.data.FakeLastServerAddress(),
             org.p23q.shoppinglist.data.PendingInviteHolder(),
             org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
         )
