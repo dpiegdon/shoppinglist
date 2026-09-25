@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
@@ -71,7 +73,7 @@ class AppDrawerScaffoldTest {
                 composable(Routes.OVERVIEW) {
                     AppDrawerScaffold(
                         navController = navController,
-                        title = "Overview",
+                        title = "Top bar",
                         drawerViewModel = drawerViewModel,
                         syncStatusViewModel = SyncStatusViewModel(SyncStatus()),
                     ) {
@@ -114,6 +116,28 @@ class AppDrawerScaffoldTest {
         assertTrue(y("Accounts") < y("Settings"))
         composeTestRule.onNodeWithText("Accounts").performClick()
         assertEquals(Routes.ACCOUNTS, getNavController().currentBackStackEntry?.destination?.route)
+    }
+
+    @Test
+    fun `the drawer is three groups, Overview, then Join a list and Accounts, then Settings, Server admin and About (T-307)`() {
+        addAccount("boss", isAdmin = true)
+        setDrawerContent()
+
+        composeTestRule.onNodeWithContentDescription("Menu").performClick()
+
+        fun divider(index: Int) = composeTestRule.onNodeWithTag("drawer-divider-$index").fetchSemanticsNode().positionInRoot.y
+        val order = listOf(
+            y("Overview"),
+            divider(1),
+            y("Join a list"),
+            y("Accounts"),
+            divider(2),
+            y("Settings"),
+            y("Server admin"),
+            y("About"),
+        )
+        assertEquals(order.sorted(), order)
+        composeTestRule.onAllNodesWithTag("drawer-divider-3").assertCountEquals(0)
     }
 
     @Test

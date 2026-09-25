@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -691,6 +692,9 @@ internal fun AppDrawerScaffold(
                     onClick = { navigateTo(Routes.OVERVIEW) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                // Three groups (T-307): where your lists are; getting at more of them (joining one,
+                // the accounts they live in); and the app itself.
+                DrawerDivider(1)
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_join_list)) },
@@ -710,6 +714,7 @@ internal fun AppDrawerScaffold(
                     onClick = { navigateTo(Routes.ACCOUNTS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                DrawerDivider(2)
                 NavigationDrawerItem(
                     // "Settings", as the screen it opens is titled (T-170); it was "Account".
                     icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
@@ -824,6 +829,12 @@ internal fun AppDrawerScaffold(
             },
         )
     }
+}
+
+/** The line between two groups of the drawer (T-307). */
+@Composable
+private fun DrawerDivider(index: Int) {
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp).testTag("drawer-divider-$index"))
 }
 
 /** Opens [accountId]'s admin console, unless it is already the screen shown. */

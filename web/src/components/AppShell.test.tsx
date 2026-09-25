@@ -86,4 +86,21 @@ describe("AppShell menu (T-220, T-224)", () => {
     const labels = screen.getAllByRole("link").map((el) => el.textContent);
     expect(labels.indexOf(en["nav.about"])).toBe(labels.indexOf(en["nav.serverAdmin"]) + 1);
   });
+
+  it("groups the menu as Android does: Overview | Join a list | Settings, Server admin, About (T-307)", async () => {
+    renderShell(true);
+    await openMenu();
+
+    const nav = screen.getByRole("navigation");
+    const entries = Array.from(nav.querySelectorAll("a, hr")).map((el) => (el.tagName === "HR" ? "|" : el.textContent));
+    expect(entries).toEqual([
+      en["nav.overview"],
+      "|",
+      en["nav.joinList"],
+      "|",
+      en["settings.title"],
+      en["nav.serverAdmin"],
+      en["nav.about"],
+    ]);
+  });
 });

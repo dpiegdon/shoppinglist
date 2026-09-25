@@ -59,9 +59,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <Link to="/" style={navLinkStyle}>
               {t("nav.overview")}
             </Link>
+            {/* Groups as on Android (T-307): your lists; joining one; the app itself. */}
+            <hr style={navDividerStyle} />
             <Link to="/redeem" style={navLinkStyle}>
               {t("nav.joinList")}
             </Link>
+            <hr style={navDividerStyle} />
             <Link to="/settings" style={navLinkStyle}>
               {t("settings.title")}
             </Link>
@@ -93,6 +96,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </SyncProvider>
   );
 }
+
+const navDividerStyle: React.CSSProperties = {
+  border: "none",
+  borderTop: "1px solid var(--color-border)",
+  margin: "0.25rem 0.6rem",
+  alignSelf: "stretch",
+};
 
 const navLinkStyle: React.CSSProperties = {
   padding: "0.5rem 0.6rem",
