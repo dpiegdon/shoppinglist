@@ -76,7 +76,9 @@ no_app_package` of a server that carries no app package. It signs in nowhere
 whose `protocol` is below the floor. An answer without `protocol` — a `404`
 without it, or one that is not JSON — is not a Tuppu server of a supported
 version, and is refused the same way; a server from before the endpoint answers
-exactly that. A server whose `protocol` is **above** the client's own
+exactly that. So does a 3.0.x or 3.1.x server that serves no app package, whose
+`404` carries no `protocol`: such an instance must run server 3.2.0 or newer
+before its users sign in, or sign in again, with an app that has the floor. A server whose `protocol` is **above** the client's own
 `PROTOCOL_VERSION` would refuse it with `426` anyway, so the client stops before
 `/login` there too, says the app needs an update for that server, and offers
 the answer's `download_url` when it has one. A client must keep working against

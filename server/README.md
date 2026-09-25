@@ -354,13 +354,16 @@ gate, since an app refused as outdated finds its update here. The version report
 this **package's** version rather than one parsed out of the APK — the single
 artifact shares one version number, so those are the same thing. The Android
 client checks on foreground, at most twice a day, and offers each new version
-once; opening its Settings checks right away and offers a skipped version again.
-Users can turn the check off there.
+once; opening its About screen checks right away and offers a skipped version
+again. Users can turn the check off there.
 
 Nothing needs configuring: the endpoint exists whenever the APK does. It answers
 `404 no_app_package` when the instance serves no APK, and that answer still
 carries `protocol`: the app asks for it before signing in, so an instance with
-`serve_android_apk` off is still one the app can use.
+`serve_android_apk` off is still one the app can use. Servers before 3.2.0 leave
+`protocol` out of that `404`, and the app refuses them, so such an instance must
+be upgraded to 3.2.0 or newer before its users sign in, or sign in again, with
+the new app.
 
 ## TLS dev server (for client-side testing)
 
