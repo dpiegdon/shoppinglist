@@ -62,6 +62,8 @@ class ListsRepo @Inject constructor(
      * @param currency free-text label, required for an expenses list and meaningless elsewhere
      *   (T-151). The kind is fixed for the list's whole life, so both are decided here or never.
      * @return the new list's local id. Its server id is minted here too.
+     * @throws IllegalArgumentException for a kind the account cannot hold ([ListKind.choices]):
+     *   the local area has no ledgers (T-293).
      */
     suspend fun create(
         accountId: String,
@@ -69,6 +71,7 @@ class ListsRepo @Inject constructor(
         kind: String = ListKind.DEFAULT,
         currency: String? = null,
     ): String {
+        require(ListKind.of(kind) in ListKind.choices(isServerAccount(accountId))) { "No $kind list in account $accountId" }
         val id = UUID.randomUUID().toString()
         val by = deviceId.get()
         val now = System.currentTimeMillis()
@@ -95,9 +98,20 @@ class ListsRepo @Inject constructor(
      * Convert between shopping list and checklist (T-110). Non-destructive — the item schema is
      * identical for both, so hidden fields (stores/price/quantity) survive and reappear on switching
      * back. An ordinary LWW field write, so a stale device can't silently revert it.
+     *
+     * Refuses, returning false, a kind the list's account cannot hold: a list in the local area
+     * never becomes a ledger (T-293).
      */
-    suspend fun setKind(listId: String, kind: String) =
-        updateField(listId) { it.copy(kind = ListKind.of(kind).toLww(deviceId.get())) }
+    suspend fun setKind(listId: String, kind: String): Boolean {
+        val next = ListKind.of(kind)
+        val list = listDao.get(listId) ?: return false
+        if (next !in ListKind.choices(isServerAccount(list.accountId))) return false
+        updateField(listId) { it.copy(kind = next.toLww(deviceId.get())) }
+        return true
+    }
+
+    /** Whether [accountId] is a server account; the local area, or an account gone, is not. */
+    private suspend fun isServerAccount(accountId: String): Boolean = db.accountDao().get(accountId)?.isServer == true
 
     suspend fun rename(listId: String, name: String) =
         updateField(listId) { it.copy(name = name.toLww(deviceId.get())) }

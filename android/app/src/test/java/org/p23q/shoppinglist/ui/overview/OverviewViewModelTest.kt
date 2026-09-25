@@ -30,6 +30,7 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -570,4 +571,28 @@ class OverviewViewModelTest {
                 .lists.single { it.name.value == "Printer paper" }
             assertEquals("work", created.accountId)
         }
+
+    @Test
+    fun `the New-list dialog offers no ledger in the local area, and a ledger picked elsewhere goes (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        val local = accounts.registry.addLocal()!!
+        viewModel.uiState.first { it.accounts.size == 2 }
+        viewModel.openCreateDialog()
+        viewModel.onNewListKindChange(ListKind.EXPENSES)
+        assertEquals(ListKind.EXPENSES, viewModel.uiState.value.newListKind)
+
+        viewModel.onNewListAccountChange(local.id)
+
+        assertEquals(listOf(ListKind.SHOPPING, ListKind.CHECKLIST), viewModel.uiState.value.newListKinds)
+        assertEquals(ListKind.SHOPPING, viewModel.uiState.value.newListKind)
+        viewModel.onNewListKindChange(ListKind.EXPENSES)
+        assertEquals(ListKind.SHOPPING, viewModel.uiState.value.newListKind)
+
+        viewModel.onNewListKindChange(ListKind.CHECKLIST)
+        viewModel.onNewListNameChange("Hardware")
+        viewModel.createList()?.join()
+
+        val created = viewModel.uiState.first { it.lists.isNotEmpty() }.lists.single()
+        assertEquals(local.id, created.accountId)
+        assertEquals(ListKind.CHECKLIST, created.kind.value)
+    }
 }

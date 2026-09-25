@@ -30,6 +30,13 @@ object ListKind {
         else -> SHOPPING
     }
 
+    /**
+     * The kinds a new list can have in an account (T-293): a ledger is for sharing, so the local
+     * area, whose lists are never shared, has shopping lists and checklists only.
+     */
+    fun choices(serverAccount: Boolean): List<String> =
+        if (serverAccount) listOf(SHOPPING, CHECKLIST, EXPENSES) else listOf(SHOPPING, CHECKLIST)
+
     /** Whether this list holds shared expenses rather than things to buy (T-151). */
     fun isExpenses(kind: String?): Boolean = of(kind) == EXPENSES
 

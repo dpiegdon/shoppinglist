@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui.login
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -77,9 +78,10 @@ class LocalAreaStartTest {
         show()
 
         composeTestRule.onNodeWithTag("login-use-local").performScrollTo().performClick()
+        // The note follows the row's write.
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.waitForIdle()
-            registry.local() != null
+            composeTestRule.onAllNodesWithText(noteBody).fetchSemanticsNodes().isNotEmpty()
         }
 
         val stored = db.accountDao().all().single()

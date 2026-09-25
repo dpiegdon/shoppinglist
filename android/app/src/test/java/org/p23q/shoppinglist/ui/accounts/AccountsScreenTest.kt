@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.ui.accounts
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -166,13 +167,13 @@ class AccountsScreenTest {
 
         show()
         composeTestRule.onNodeWithTag("accounts-add-local").performClick()
+        // The note follows the row's write.
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.waitForIdle()
-            accounts.registry.local() != null
+            composeTestRule.onAllNodesWithText(
+                "Lists here stay on this phone only. They are not backed up and cannot be shared. Sign in to a server any time to add shared lists.",
+            ).fetchSemanticsNodes().isNotEmpty()
         }
-
-        composeTestRule.onNodeWithText("Lists here stay on this phone only. They are not backed up and cannot be shared. Sign in to a server any time to add shared lists.")
-            .assertExists()
         composeTestRule.onNodeWithTag("local-area-note-ok").performClick()
         composeTestRule.onNodeWithText("Lists on this phone").assertDoesNotExist()
         composeTestRule.onNodeWithTag("accounts-add-local").assertDoesNotExist()

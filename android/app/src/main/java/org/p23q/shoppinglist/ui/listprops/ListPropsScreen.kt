@@ -206,44 +206,20 @@ fun ListPropsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        // Per-list collaborator-change notification mute (T-65); the global switch is in Settings.
-        Text(stringResource(R.string.listprops_notifications), style = MaterialTheme.typography.titleMedium)
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.listprops_notify_changes), modifier = Modifier.weight(1f))
-            Switch(
-                checked = state.notificationsEnabledForList,
-                onCheckedChange = { viewModel.setListNotificationsEnabled(it) },
+        // A list in the local area is nobody else's (T-293): no collaborators to hear from, no
+        // roster, no invites. Nothing of this is drawn until the list's account is known.
+        if (state.local == true) {
+            Text(stringResource(R.string.listprops_shared_with), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.listprops_member_you))
+            Text(
+                stringResource(R.string.listprops_local_not_shared),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.listprops_shared_with), style = MaterialTheme.typography.titleMedium)
-        if (state.isMembersLoading) {
-            CircularProgressIndicator()
-        }
-        state.membersError?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
-        state.members.forEach { member -> Text(member.email) }
-        state.pendingInvites.forEach { invite ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(R.string.listprops_invite_pending, invite.invitedEmail))
-                TextButton(onClick = { viewModel.revokeInvite(invite.id) }) { Text(stringResource(R.string.action_revoke)) }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = state.inviteEmail,
-                onValueChange = viewModel::onInviteEmailChange,
-                label = { Text(stringResource(R.string.listprops_invite_by_email)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
+        if (state.local == false) {
+            SharingSections(state, viewModel)
         }
         state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
         Spacer(Modifier.height(16.dp))
@@ -257,53 +233,18 @@ fun ListPropsScreen(
         // Closing an expenses list (T-158): unanimous, and the only way it can later be left. Directly
         // above Leave (T-169): the two are stages of one thing — agree to close, then leave.
         if (isExpenses) {
-            Text(stringResource(R.string.expense_closing), style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(R.string.expense_closing_help),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // Bound to a local: `state` is a delegated property, so its fields cannot smart-cast.
-            val closedAt = state.closedAt
-            if (closedAt != null) {
-                Text(
-                    stringResource(
-                        R.string.expense_closed_on,
-                        AppFormat.day(closedAt, appLocale()),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.expense_agree_count, state.closeVotes.size, state.memberCount),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    TextButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
-                        Text(
-                            stringResource(
-                                if (state.myAccountId in state.closeVotes) {
-                                    R.string.expense_withdraw_vote
-                                } else {
-                                    R.string.expense_agree_to_close
-                                },
-                            ),
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
+            CloseVoteSection(state, viewModel)
         }
 
         // stringResource(R.string.listprops_leave_list) (was stringResource(R.string.action_unsubscribe), T-112): red, matching the Clear-checked danger action.
         // An open expenses list cannot be left (T-157) — saying why beats a button that fails.
+        // A local list is deleted instead: it exists on this phone alone (T-293).
         val leaveBlocked = isExpenses && state.closedAt == null
         Button(
             onClick = viewModel::requestLeave,
             enabled = !leaveBlocked,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-        ) { Text(stringResource(R.string.listprops_leave_list)) }
+        ) { Text(stringResource(if (state.local == true) R.string.listprops_delete_list else R.string.listprops_leave_list)) }
         if (leaveBlocked) {
             Text(
                 stringResource(R.string.listprops_leave_blocked),
@@ -314,15 +255,29 @@ fun ListPropsScreen(
     }
 
     if (state.isLeaveConfirmOpen) {
+        val local = state.local == true
         LocalizedAlertDialog(
             onDismissRequest = viewModel::cancelLeave,
-            title = { Text(stringResource(R.string.listprops_leave_confirm_title)) },
+            title = {
+                Text(stringResource(if (local) R.string.listprops_delete_confirm_title else R.string.listprops_leave_confirm_title))
+            },
             // Through UiText, not stringResource directly, so the list name gets bidi-isolated
             // (T-126) — this is VISIBLE text with the name embedded mid-sentence in quotes. The
             // contentDescription sites elsewhere are spoken by TalkBack, where reordering does not
             // arise, so they stay on plain stringResource.
-            text = { Text(UiText.res(R.string.listprops_leave_confirm_body, state.name).asString()) },
-            confirmButton = { TextButton(onClick = viewModel::confirmLeave) { Text(stringResource(R.string.action_leave)) } },
+            text = {
+                Text(
+                    UiText.res(
+                        if (local) R.string.listprops_delete_confirm_body else R.string.listprops_leave_confirm_body,
+                        state.name,
+                    ).asString(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::confirmLeave) {
+                    Text(stringResource(if (local) R.string.action_delete else R.string.action_leave))
+                }
+            },
             dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
@@ -338,6 +293,94 @@ fun ListPropsScreen(
             dismissButton = { TextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
+}
+
+/**
+ * What a server list shares: the collaborator notifications (T-65), the roster, pending invites
+ * and inviting someone. A list in the local area has none of it (T-293).
+ */
+@Composable
+private fun SharingSections(state: ListPropsUiState, viewModel: ListPropsViewModel) {
+    // Per-list collaborator-change notification mute (T-65); the global switch is in Settings.
+    Text(stringResource(R.string.listprops_notifications), style = MaterialTheme.typography.titleMedium)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.listprops_notify_changes), modifier = Modifier.weight(1f))
+        Switch(
+            checked = state.notificationsEnabledForList,
+            onCheckedChange = { viewModel.setListNotificationsEnabled(it) },
+        )
+    }
+    Spacer(Modifier.height(16.dp))
+
+    Text(stringResource(R.string.listprops_shared_with), style = MaterialTheme.typography.titleMedium)
+    if (state.isMembersLoading) {
+        CircularProgressIndicator()
+    }
+    state.membersError?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
+    state.members.forEach { member -> Text(member.email) }
+    state.pendingInvites.forEach { invite ->
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.listprops_invite_pending, invite.invitedEmail))
+            TextButton(onClick = { viewModel.revokeInvite(invite.id) }) { Text(stringResource(R.string.action_revoke)) }
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = state.inviteEmail,
+            onValueChange = viewModel::onInviteEmailChange,
+            label = { Text(stringResource(R.string.listprops_invite_by_email)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
+    }
+}
+
+/** Agreeing to close an expenses list (T-158), or the day it closed. */
+@Composable
+private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewModel) {
+    Text(stringResource(R.string.expense_closing), style = MaterialTheme.typography.titleMedium)
+    Text(
+        stringResource(R.string.expense_closing_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    val closedAt = state.closedAt
+    if (closedAt != null) {
+        Text(
+            stringResource(
+                R.string.expense_closed_on,
+                AppFormat.day(closedAt, appLocale()),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    } else {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.expense_agree_count, state.closeVotes.size, state.memberCount),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TextButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
+                Text(
+                    stringResource(
+                        if (state.myAccountId in state.closeVotes) {
+                            R.string.expense_withdraw_vote
+                        } else {
+                            R.string.expense_agree_to_close
+                        },
+                    ),
+                )
+            }
+        }
+    }
+    Spacer(Modifier.height(16.dp))
 }
 
 /**

@@ -89,6 +89,10 @@ data class OverviewUiState(
     /** Whether the phone holds more than one account: sections get headers and cards a marker. */
     val several: Boolean get() = accounts.size > 1
 
+    /** The kinds the New-list dialog offers for its account (T-293): no ledger in the local area. */
+    val newListKinds: List<String>
+        get() = ListKind.choices(accounts.firstOrNull { it.id == newListAccountId }?.isServer ?: true)
+
     /** Every invite, of every account. */
     val invites: List<InviteForMeDto> get() = invitesByAccount.values.flatten()
 
@@ -222,6 +226,8 @@ class OverviewViewModel @Inject constructor(
         state.copy(
             newListAccountId = next.id,
             newListCurrency = if (state.newListCurrency == previous) next.defaultCurrency.orEmpty() else state.newListCurrency,
+            // A ledger picked for a server account is no choice in the local area (T-293).
+            newListKind = state.newListKind.takeIf { it in ListKind.choices(next.isServer) } ?: ListKind.DEFAULT,
         )
     }
 
@@ -229,7 +235,7 @@ class OverviewViewModel @Inject constructor(
 
     fun onNewListNameChange(value: String) = _uiState.update { it.copy(newListName = value) }
 
-    fun onNewListKindChange(kind: String) = _uiState.update { it.copy(newListKind = kind) }
+    fun onNewListKindChange(kind: String) = _uiState.update { if (kind in it.newListKinds) it.copy(newListKind = kind) else it }
 
     /** Returns the launched Job, or null if the name was blank (dialog stays open, no-op) or there is no account. */
     fun createList(): Job? {
@@ -245,6 +251,9 @@ class OverviewViewModel @Inject constructor(
         val accountId = state.newListAccountId?.takeIf { id -> state.accounts.any { it.id == id } }
             ?: state.accounts.firstOrNull()?.id
             ?: return null
+        // The dialog offers no ledger in the local area, and the repository would refuse one.
+        val serverAccount = state.accounts.firstOrNull { it.id == accountId }?.isServer ?: return null
+        if (ListKind.of(state.newListKind) !in ListKind.choices(serverAccount)) return null
         return viewModelScope.launch {
             listsRepo.create(
                 accountId,

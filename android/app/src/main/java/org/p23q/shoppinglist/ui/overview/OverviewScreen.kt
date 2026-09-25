@@ -49,6 +49,7 @@ import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
@@ -264,7 +265,8 @@ internal fun NewListDialog(
                 // Kind is chosen up front (T-110) but isn't permanent — list properties can
                 // convert it later, and converting never touches item data.
                 Text(stringResource(R.string.overview_type), style = MaterialTheme.typography.labelMedium)
-                listOf(ListKind.SHOPPING, ListKind.CHECKLIST, ListKind.EXPENSES).forEach { kind ->
+                // No ledger in the local area (T-293): its lists are never shared.
+                state.newListKinds.forEach { kind ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -272,7 +274,8 @@ internal fun NewListDialog(
                                 selected = state.newListKind == kind,
                                 onClick = { onKindChange(kind) },
                             )
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 4.dp)
+                            .testTag("new-list-kind-$kind"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
@@ -330,7 +333,7 @@ private fun accountBanner(account: AccountEntity): Int? = when {
 @Composable
 private fun AccountLines(account: AccountEntity, emailStyle: TextStyle = MaterialTheme.typography.bodyMedium) {
     Column {
-        Text(account.email ?: account.label, style = emailStyle)
+        Text(accountName(account), style = emailStyle)
         account.serverUrl?.let { url ->
             Text(url, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

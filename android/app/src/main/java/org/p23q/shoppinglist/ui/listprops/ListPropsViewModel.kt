@@ -62,6 +62,11 @@ data class ListPropsUiState(
     /** Number of checked items — drives the relocated 'Clear checked (N)' button (T-75). */
     val checkedCount: Int = 0,
     val errorMessage: UiText? = null,
+    /**
+     * Whether the list is in the local area (T-293); null until its account is known. A local list
+     * has no roster, invites, close votes or collaborator notifications, and leaving it deletes it.
+     */
+    val local: Boolean? = null,
 )
 
 /**
@@ -98,6 +103,7 @@ class ListPropsViewModel @Inject constructor(
             val list = listsRepo.getById(listId)
             val currentOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
             val rawCategories = itemsRepo.categoryValues(listId).first()
+            val account = listAccounts.accountOf(listId)
             _uiState.update {
                 it.copy(
                     name = list?.name?.value ?: "",
@@ -107,7 +113,8 @@ class ListPropsViewModel @Inject constructor(
                         ?: emptyList(),
                     closedAt = list?.closedAt,
                     memberCount = list?.let { row -> listsRepo.decodeMembers(row.membersJson).size } ?: 0,
-                    myAccountId = listAccounts.accountOf(listId)?.accountId,
+                    myAccountId = account?.accountId,
+                    local = account?.let { row -> !row.isServer },
                     categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
                     notes = list?.notes?.value ?: "",
                 )
@@ -164,8 +171,8 @@ class ListPropsViewModel @Inject constructor(
      * fields the clients render — stores/price/quantity survive and reappear on switching back.
      */
     fun setKind(kind: String): Job = viewModelScope.launch {
-        listsRepo.setKind(listId, kind)
-        _uiState.update { it.copy(kind = ListKind.of(kind)) }
+        // A kind the list's account cannot hold is refused, and the switch stays where it was.
+        if (listsRepo.setKind(listId, kind)) _uiState.update { it.copy(kind = ListKind.of(kind)) }
     }
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value) }
@@ -345,6 +352,13 @@ class ListPropsViewModel @Inject constructor(
     }
 
     fun confirmLeave(): Job = viewModelScope.launch {
+        // A list in the local area exists here alone: leaving it deletes it (T-293).
+        if (listAccounts.accountOf(listId)?.isServer == false) {
+            itemsRepo.hardDeleteByListId(listId)
+            listsRepo.removeLocally(listId)
+            _uiState.update { it.copy(isLeaveConfirmOpen = false, hasLeft = true) }
+            return@launch
+        }
         // A list this phone no longer holds has nothing left to leave here.
         val serverId = listsRepo.serverIdOf(listId)
         val api = listAccounts.api(listId)

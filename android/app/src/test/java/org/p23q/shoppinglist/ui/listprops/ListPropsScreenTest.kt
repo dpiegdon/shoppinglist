@@ -251,4 +251,48 @@ class ListPropsScreenTest {
         composeTestRule.onNodeWithText("Save notes").performScrollTo().assertIsEnabled()
         db.close()
     }
+
+    @Test
+    fun `a list in the local area shows only you, no invites or notifications, and offers Delete (T-293)`() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.accountDao().insert(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create("on-phone", "Hardware")
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+        var left = false
+
+        composeTestRule.setContent { ListPropsScreen(onLeft = { left = true }, onDuplicated = {}, viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.local != null }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("You").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Lists on this phone cannot be shared.").assertExists()
+        composeTestRule.onNodeWithText("Invite by email").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Notify about changes to this list").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Leave list").assertDoesNotExist()
+
+        composeTestRule.onNodeWithText("Delete list").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Delete this list?").assertExists()
+        composeTestRule.onNodeWithText("Delete").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { left }
+
+        assertEquals(null, listsRepo.getById(listId))
+        db.close()
+    }
 }

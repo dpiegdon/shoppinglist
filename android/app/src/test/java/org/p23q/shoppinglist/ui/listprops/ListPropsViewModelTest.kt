@@ -530,4 +530,44 @@ class ListPropsViewModelTest {
         assertEquals(Status.TODO.wireValue, itemsRepo.getById(bread)!!.status.value)
         assertEquals(0, viewModel.uiState.first { it.checkedCount == 0 }.checkedCount)
     }
+
+    private suspend fun localList(): String {
+        db.accountDao().insert(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        return listsRepo.create("on-phone", "Hardware")
+    }
+
+    @Test
+    fun `a list in the local area is known as one, asks no server and never becomes a ledger (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        listId = localList()
+        val viewModel = newViewModel()
+
+        assertEquals(true, viewModel.uiState.first { it.local != null }.local)
+        viewModel.loadMembers().join()
+        viewModel.setKind(org.p23q.shoppinglist.core.ListKind.EXPENSES).join()
+
+        assertEquals(0, server.requestCount)
+        assertEquals(org.p23q.shoppinglist.core.ListKind.SHOPPING, viewModel.uiState.value.kind)
+        assertEquals(org.p23q.shoppinglist.core.ListKind.SHOPPING, listsRepo.getById(listId)!!.kind.value)
+    }
+
+    @Test
+    fun `a server list is not local (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        assertEquals(false, newViewModel().uiState.first { it.local != null }.local)
+    }
+
+    @Test
+    fun `leaving a list in the local area deletes it and its items from the phone (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        listId = localList()
+        itemsRepo.createItem(listId, "Nails")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.local != null }
+
+        viewModel.requestLeave()
+        viewModel.confirmLeave().join()
+
+        assertTrue(viewModel.uiState.value.hasLeft)
+        assertNull(listsRepo.getById(listId))
+        assertTrue(itemsRepo.activeItemsForListOnce(listId).isEmpty())
+        assertEquals(0, server.requestCount)
+    }
 }

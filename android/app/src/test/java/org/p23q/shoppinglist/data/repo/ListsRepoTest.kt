@@ -11,11 +11,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -212,5 +214,47 @@ class ListsRepoTest {
         assertFalse(repo.getById(listId)!!.syncBlocked)
         assertTrue(repo.dirtyRows().any { it.localId == listId })
         assertEquals(0, repo.blockedRowCount())
+    }
+
+    private suspend fun localArea(): String {
+        db.accountDao().insert(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        return "on-phone"
+    }
+
+    @Test
+    fun `a list in the local area converts between shopping list and checklist, never to a ledger (T-293)`() = runTest {
+        val listId = repo.create(localArea(), "Hardware")
+
+        assertTrue(repo.setKind(listId, ListKind.CHECKLIST))
+        assertEquals(ListKind.CHECKLIST, repo.getById(listId)!!.kind.value)
+        val before = repo.getById(listId)!!
+
+        assertFalse(repo.setKind(listId, ListKind.EXPENSES))
+
+        assertEquals("nothing written", before, repo.getById(listId))
+    }
+
+    @Test
+    fun `the local area creates no ledger (T-293)`() = runTest {
+        val local = localArea()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.create(local, "Trip", ListKind.EXPENSES, currency = "EUR") }
+        }
+        assertTrue(repo.activeLists().first().isEmpty())
+        // A server account still does.
+        val ledger = repo.create(TEST_ACCOUNT_ID, "Trip", ListKind.EXPENSES, currency = "EUR")
+        assertEquals(ListKind.EXPENSES, repo.getById(ledger)!!.kind.value)
+    }
+
+    @Test
+    fun `a local list carries this device's id and field clocks like any other (T-293)`() = runTest {
+        val listId = repo.create(localArea(), "Hardware")
+        repo.rename(listId, "Tools")
+
+        val list = repo.getById(listId)!!
+        assertEquals("device-1", list.name.updatedBy)
+        assertTrue(list.name.updatedAt > 0)
+        assertEquals("device-1", list.kind.updatedBy)
     }
 }

@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.overview
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -206,5 +208,32 @@ class NewListDialogTest {
         composeTestRule.onNodeWithText("me@work.example").performClick()
 
         assertEquals("work", chosen)
+    }
+
+    @Test
+    fun `the new-list dialog offers a ledger for a server account, not for the local area (T-293)`() {
+        val local = org.p23q.shoppinglist.ui.accounts.localAccountRow()
+        var state by androidx.compose.runtime.mutableStateOf(OverviewUiState(accounts = listOf(testAccount(), local), newListAccountId = TEST_ACCOUNT_ID))
+        composeTestRule.setContent {
+            NewListDialog(
+                state = state.copy(isCreateDialogOpen = true),
+                onNameChange = {},
+                onKindChange = {},
+                onCurrencyChange = {},
+                onAccountChange = { id -> state = state.copy(newListAccountId = id) },
+                onCreate = {},
+                onDismiss = {},
+            )
+        }
+        composeTestRule.onNodeWithTag("new-list-kind-expenses").assertExists()
+
+        composeTestRule.onNodeWithTag("new-list-account-${local.id}").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("new-list-kind-expenses").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("new-list-kind-shopping").assertExists()
+        composeTestRule.onNodeWithTag("new-list-kind-checklist").assertExists()
+        // The local area by its name in the app's language.
+        composeTestRule.onNodeWithText("On this phone").assertExists()
     }
 }
