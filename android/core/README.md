@@ -104,8 +104,8 @@ interface and `:app` implements it and binds it in Hilt:
   (`api/Protocol.kt`): the server says it in the `200` and in the
   `no_app_package` `404`. A server below the floor, one above this build and an
   answer that is not a Tuppu server's are each their own exception, for the
-  login screen to name. There is no sign-out; removing an account deletes its
-  rows, and the local area that still holds a list is refused
+  login screen to name. There is no sign-out; removing an account ends its
+  session on the server, best-effort, and deletes its rows, and the local area that still holds a list is refused
   (`LocalAreaNotEmptyException`).
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
   that has a token (one without is signed out); `syncAccount()` is one, under
