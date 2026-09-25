@@ -128,13 +128,27 @@ class ListsRepo @Inject constructor(
 
     /**
      * Solo-owned snapshot copy (T-63): a new list with its own id and fresh field-clocks, carrying
-     * over [source]'s name (suffixed), category order, and notes by VALUE only — no membership, no
-     * shared history. Returns the new list's id, or null if [listId] doesn't exist. Items are copied
-     * separately via [org.p23q.shoppinglist.core.repo.ItemsRepo.duplicateForList].
+     * over [source]'s name (suffixed), category order, notes, kind and currency by VALUE only — no
+     * membership, no close votes, no shared history. Returns the new list's id, or null if [listId]
+     * or [targetAccountId] doesn't exist. Items are copied separately via
+     * [org.p23q.shoppinglist.core.repo.ItemsRepo.duplicateForList].
+     *
+     * @param targetAccountId the account the copy goes to (T-294): the source's own by default,
+     *   or another account on this phone, the local area included. A copy into a server account
+     *   is dirty and goes out on that account's next sync; one into the local area never does.
+     * @throws IllegalArgumentException for a ledger into another account: its debts are between
+     *   the source account's members, and the local area holds no ledgers at all.
      */
-    suspend fun duplicate(listId: String): String? {
+    suspend fun duplicate(listId: String, targetAccountId: String? = null): String? {
         val id = db.inTransaction {
             val source = listDao.get(listId) ?: return@inTransaction null
+            val accountId = targetAccountId ?: source.accountId
+            val target = db.accountDao().get(accountId) ?: return@inTransaction null
+            val kind = ListKind.of(source.kind.value)
+            require(!ListKind.isExpenses(kind) || accountId == source.accountId) {
+                "A ledger is not copied into another account"
+            }
+            require(kind in ListKind.choices(target.isServer)) { "No $kind list in account $accountId" }
             val id = UUID.randomUUID().toString()
             val by = deviceId.get()
             val now = System.currentTimeMillis()
@@ -142,15 +156,16 @@ class ListsRepo @Inject constructor(
                 ListEntity(
                     localId = id,
                     serverId = UUID.randomUUID().toString(),
-                    // A copy lives where its source does.
-                    accountId = source.accountId,
+                    accountId = accountId,
                     createdAt = now,
                     name = "${source.name.value} (Copy)".toLww(by, now),
                     categoryOrder = source.categoryOrder.value.toLww(by, now),
                     notes = source.notes.value.toLwwOptional(by, now),
-                    kind = source.kind.value.toLww(by, now),
+                    kind = kind.toLww(by, now),
+                    currency = source.currency.value.toLwwOptional(by, now),
                     deleted = false.toLww(by, now),
                     dirty = true,
+                    // The roster and close votes are the server's, and the copy has neither yet.
                 ),
             )
             id

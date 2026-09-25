@@ -255,7 +255,8 @@ class ItemsRepo @Inject constructor(
      * Snapshot-copies every non-deleted item of [sourceListId] into [targetListId] as a fresh row
      * (new id, new created_at, fresh field-clocks) with each field's current VALUE carried over —
      * status included, since duplicate is a template/snapshot copy, not a "reset for next week"
-     * action (T-63). Returns the number of items copied.
+     * action (T-63). Returns the number of items copied. The copies belong to [targetListId]'s
+     * account, which may be another than the source's (T-294).
      */
     suspend fun duplicateForList(sourceListId: String, targetListId: String): Int {
         val copied = db.inTransaction {
@@ -278,6 +279,7 @@ class ItemsRepo @Inject constructor(
                         price = source.price.value.toLwwOptional(by, now),
                         note = source.note.value.toLwwOptional(by, now),
                         status = source.status.value.toLww(by, now),
+                        expense = source.expense.value.toLwwOptional(by, now),
                         deleted = false.toLww(by, now),
                         dirty = true,
                     ),

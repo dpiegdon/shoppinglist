@@ -321,6 +321,40 @@ class ItemsRepoTest {
     }
 
     @Test
+    fun `duplicateForList into another account's list gives the copies that account and leaves the source alone (T-294)`() = runTest {
+        db.insertTestAccount(testAccount(id = "work", serverUrl = "https://work.example.test/", accountId = "acct-work"))
+        db.listDao().upsert(testList("work-list", accountId = "work").copy(kind = "checklist".toLww("dev", 1)))
+        // A shopping list's hidden fields on the source; the copy is a checklist, which hides them.
+        val milk = repo.createItem(listId = "list-1", name = "Milk")
+        repo.setStores(milk, listOf("Rewe"))
+        repo.setQuantity(milk, "2l")
+        repo.setPrice(milk, amount = "1.99", currency = "EUR")
+        repo.clearDirty(listOf(milk))
+        val before = repo.getById(milk)
+
+        assertEquals(1, repo.duplicateForList(sourceListId = "list-1", targetListId = "work-list"))
+
+        val copy = repo.itemsForList("work-list").first().single()
+        assertEquals("work", copy.accountId)
+        assertNotEquals(before!!.serverId, copy.serverId)
+        assertEquals(listOf("Rewe"), repo.decodeStores(copy.stores.value))
+        assertEquals("2l", copy.quantity.value)
+        assertEquals("1.99", repo.decodePrice(copy.price.value)?.amount)
+        assertTrue(copy.dirty)
+        assertEquals("the source item is exactly as it was", before, repo.getById(milk))
+    }
+
+    @Test
+    fun `duplicateForList carries a ledger's expense along (T-294)`() = runTest {
+        val expense = Expense(paidBy = mapOf("acc-1" to "10.00"), equalBy = true, paidFor = mapOf("acc-1" to "10.00"), equalFor = true, date = "2026-09-18")
+        val source = repo.getById(repo.createExpense("list-1", "Dinner", expense))!!
+
+        repo.duplicateForList(sourceListId = "list-1", targetListId = "list-2")
+
+        assertEquals(source.expense.value, repo.itemsForList("list-2").first().single().expense.value)
+    }
+
+    @Test
     fun `duplicateForList with nothing to copy returns zero and schedules no sync`() = runTest {
         val before = syncTrigger.scheduleCount
 

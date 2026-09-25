@@ -1387,6 +1387,69 @@ class SyncEngineTest {
         assertFalse(local.id in syncStatus.accounts.value)
     }
 
+    /** A shopping list of [accountId], clean or [dirty], with a roster from the server. */
+    private fun shoppingList(id: String, accountId: String, dirty: Boolean = false): ListEntity =
+        dummyList(id, id, dirty = dirty, accountId = accountId).copy(
+            kind = "shopping".toLww("this-device", 1_000L),
+            currency = null.toLwwOptional("this-device", 1_000L),
+            membersJson = """[{"account_id":"acct-me","email":"me@example.com","initials":"ME"},{"account_id":"acct-you","email":"you@example.com","initials":"YO"}]""",
+        )
+
+    /** Copies [sourceLocalId] and its items into [targetAccountId] as List properties does (T-294). */
+    private suspend fun copyList(sourceLocalId: String, targetAccountId: String): String {
+        val deviceId = DeviceIdProvider { "this-device" }
+        val copyId = org.p23q.shoppinglist.core.repo.ListsRepo(db, deviceId, FakeSyncTrigger()).duplicate(sourceLocalId, targetAccountId)!!
+        ItemsRepo(db, deviceId, FakeSyncTrigger()).duplicateForList(sourceLocalId, copyId)
+        return copyId
+    }
+
+    @Test
+    fun `a shared list copied into the local area has no roster and never goes out (T-294)`() = runTest {
+        pointAtServer()
+        val local = accounts.registry.addLocal()!!
+        db.listDao().upsert(shoppingList("shared", TEST_ACCOUNT_ID))
+        db.itemDao().upsert(dummyItem("tent", "Tent", dirty = false, list = "shared"))
+
+        val copyId = copyList(localId("shared"), local.id)
+        val copy = db.listDao().get(copyId)!!
+        val copiedItem = db.itemDao().activeItemsForListOnce(copyId).single()
+        assertEquals("[]", copy.membersJson)
+
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val sent = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals("nothing to push: the source is clean and the copy is local", emptyList<String>(), sent.changes.lists.map { it.id })
+        assertEquals(emptyList<String>(), sent.changes.items.map { it.id })
+        assertEquals(1, server.requestCount)
+        assertTrue(db.listDao().get(copyId)!!.dirty)
+        assertEquals(local.id, copiedItem.accountId)
+        assertFalse("the shared source is untouched", list("shared")!!.dirty || item("tent")!!.dirty)
+    }
+
+    @Test
+    fun `a local list copied into a server account pushes exactly the copied rows (T-294)`() = runTest {
+        pointAtServer()
+        val local = accounts.registry.addLocal()!!
+        db.listDao().upsert(shoppingList("hardware", local.id, dirty = true).copy(membersJson = "[]"))
+        db.itemDao().upsert(dummyItem("nails", "Nails", dirty = true, list = "hardware", accountId = local.id))
+        db.itemDao().upsert(dummyItem("screws", "Screws", dirty = true, list = "hardware", accountId = local.id))
+
+        val copyId = copyList(localId("hardware"), TEST_ACCOUNT_ID)
+        val copy = db.listDao().get(copyId)!!
+        val copiedItems = db.itemDao().activeItemsForListOnce(copyId)
+
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val sent = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8())
+        assertEquals(listOf(copy.serverId), sent.changes.lists.map { it.id })
+        assertEquals(copiedItems.map { it.serverId }.toSet(), sent.changes.items.map { it.id }.toSet())
+        assertEquals(2, sent.changes.items.size)
+        assertTrue(sent.changes.items.all { it.listId == copy.serverId })
+        assertTrue("the local source stays unsent", db.listDao().get(localId("hardware"))!!.dirty)
+    }
+
     /** T-298: nothing tested the catch in syncNow; an exception syncAccount does not handle itself. */
     @Test
     fun `an account whose run throws does not cost the next account its sync (T-298)`() = withSecondServer { other ->

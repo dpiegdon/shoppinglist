@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.data.repo
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
 import kotlinx.coroutines.runBlocking
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -18,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -256,5 +259,94 @@ class ListsRepoTest {
         assertEquals("device-1", list.name.updatedBy)
         assertTrue(list.name.updatedAt > 0)
         assertEquals("device-1", list.kind.updatedBy)
+    }
+
+    /** A second server account and the local area beside the test's own (T-294). */
+    private suspend fun addOtherAccounts() {
+        db.insertTestAccount(testAccount(id = "work", serverUrl = "https://work.example.test/", accountId = "acct-work", email = "me@work.example"))
+        db.insertTestAccount(
+            AccountEntity(id = "phone", kind = AccountEntity.KIND_LOCAL, serverUrl = null, accountId = null, email = null, label = "", signedIn = true),
+        )
+    }
+
+    /** A shared list as a sync leaves it: clean, with a roster and a close vote from the server. */
+    private suspend fun sharedList(kind: String = ListKind.CHECKLIST): String {
+        val id = repo.create(TEST_ACCOUNT_ID, "Trip", kind = kind, currency = if (ListKind.isExpenses(kind)) "EUR" else null)
+        repo.setCategoryOrder(id, listOf("tent", "food"))
+        val row = repo.getById(id)!!
+        db.listDao().upsert(
+            row.copy(
+                dirty = false,
+                membersJson = """[{"account_id":"acct-me","email":"me@example.com"},{"account_id":"acct-you","email":"you@example.com"}]""",
+                closeVotesJson = """["acct-you"]""",
+                closedAt = 5_000L,
+            ),
+        )
+        return id
+    }
+
+    @Test
+    fun `duplicate into another server account makes a fresh dirty list there with no roster (T-294)`() = runTest {
+        addOtherAccounts()
+        val sourceId = sharedList()
+
+        val copyId = repo.duplicate(sourceId, targetAccountId = "work")!!
+
+        val copy = repo.getById(copyId)!!
+        val source = repo.getById(sourceId)!!
+        assertEquals("work", copy.accountId)
+        assertNotEquals(source.serverId, copy.serverId)
+        assertEquals("Trip (Copy)", copy.name.value)
+        assertEquals(ListKind.CHECKLIST, copy.kind.value)
+        assertEquals(listOf("tent", "food"), repo.decodeCategoryOrder(copy.categoryOrder.value))
+        assertTrue(copy.dirty)
+        assertEquals("device-1", copy.name.updatedBy)
+        assertEquals("[]", copy.membersJson)
+        assertEquals("[]", copy.closeVotesJson)
+    }
+
+    @Test
+    fun `duplicate into the local area strips the roster and leaves the shared source untouched (T-294)`() = runTest {
+        addOtherAccounts()
+        val sourceId = sharedList()
+        val before = repo.getById(sourceId)!!
+
+        val copyId = repo.duplicate(sourceId, targetAccountId = "phone")!!
+
+        val copy = repo.getById(copyId)!!
+        assertEquals("phone", copy.accountId)
+        assertEquals("[]", copy.membersJson)
+        assertEquals("[]", copy.closeVotesJson)
+        assertEquals(null, copy.closedAt)
+        assertEquals("the source is exactly as it was", before, repo.getById(sourceId))
+    }
+
+    @Test
+    fun `a ledger is refused into another account, and into the local area, with nothing made (T-294)`() = runTest {
+        addOtherAccounts()
+        val sourceId = sharedList(ListKind.EXPENSES)
+
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.duplicate(sourceId, targetAccountId = "work") } }
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.duplicate(sourceId, targetAccountId = "phone") } }
+
+        assertEquals(listOf(sourceId), repo.activeLists().first().map { it.localId })
+    }
+
+    @Test
+    fun `a ledger copied within its own account keeps its currency (T-294)`() = runTest {
+        val sourceId = sharedList(ListKind.EXPENSES)
+
+        val copy = repo.getById(repo.duplicate(sourceId, targetAccountId = TEST_ACCOUNT_ID)!!)!!
+
+        assertEquals(ListKind.EXPENSES, copy.kind.value)
+        assertEquals("EUR", copy.currency.value)
+    }
+
+    @Test
+    fun `duplicate into an account this phone does not hold makes nothing (T-294)`() = runTest {
+        val sourceId = repo.create(TEST_ACCOUNT_ID, "Groceries")
+
+        assertEquals(null, repo.duplicate(sourceId, targetAccountId = "gone"))
+        assertEquals(1, repo.activeLists().first().size)
     }
 }
