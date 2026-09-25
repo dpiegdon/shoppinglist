@@ -98,15 +98,15 @@ interface and `:app` implements it and binds it in Hilt:
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
   that has a token (one without is signed out); `syncAccount()` is one, under
   its account lock. The local area is never synced, and its dirty rows count
-  in no account's pending figure.
+  in no account's pending figure. `SyncStatus.state` is the worst of the
+  accounts, `SyncStatus.accounts` each one.
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and
   `setKind` returns false instead of converting. `ListsRepo.duplicate(listId,
   targetAccountId)` copies a list into any account on the phone, the local area
   included, with fresh ids and clocks and no roster or close votes;
   `ItemsRepo.duplicateForList` gives the copied items the target list's account.
-  A ledger is copied only within its own account. `SyncStatus.state` is the worst of the accounts,
-  `SyncStatus.accounts` each one.
+  A ledger is copied only within its own account.
 
 `:app` also builds the database (`Room.databaseBuilder(context, AppDb::class.java, …)`)
 and holds its `Migration` objects and `AppDbMigrationTest`.
