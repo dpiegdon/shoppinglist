@@ -118,7 +118,7 @@ class RedeemRoutingTest {
         assertNull(viewModel.redeem())
 
         assertEquals(Routes.login(LoginMode.ADD, serverUrl = stage), viewModel.uiState.value.needsLogin)
-        assertEquals(PendingInvite("tok-1", null, link(stage), LoginMode.ADD), holder.consumeFor(LoginMode.ADD, "new", stage))
+        assertEquals(PendingInvite("tok-1", null, link(stage), LoginMode.ADD), holder.consumeFor(LoginMode.ADD, "new"))
         assertTrue(requests.isEmpty())
     }
 
@@ -208,7 +208,7 @@ class RedeemRoutingTest {
         assertNull(viewModel.redeem())
 
         assertEquals(Routes.login(LoginMode.RESIGNIN, accountId = "prod"), viewModel.uiState.value.needsLogin)
-        assertEquals(PendingInvite("tok-1", "prod", link(prod), LoginMode.RESIGNIN), holder.consumeFor(LoginMode.RESIGNIN, "prod", prod))
+        assertEquals(PendingInvite("tok-1", "prod", link(prod), LoginMode.RESIGNIN), holder.consumeFor(LoginMode.RESIGNIN, "prod"))
         assertTrue(requests.isEmpty())
     }
 

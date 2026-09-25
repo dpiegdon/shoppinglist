@@ -255,7 +255,7 @@ class LoginModesTest {
 
         store.clear()
 
-        assertNull(pendingInvites.consume())
+        assertNull(pendingInvites.consumeFor(LoginMode.RESIGNIN, "stage"))
     }
 
     @Test

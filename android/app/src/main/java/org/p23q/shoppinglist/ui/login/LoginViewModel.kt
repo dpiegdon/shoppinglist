@@ -299,7 +299,7 @@ class LoginViewModel @Inject constructor(
      * signed-out account's banner).
      */
     fun startDestinationAfterLogin(): String? {
-        pendingInviteHolder.consumeFor(mode, resignInAccount?.id, _uiState.value.serverUrl)?.let { invite ->
+        pendingInviteHolder.consumeFor(mode, resignInAccount?.id)?.let { invite ->
             return Routes.redeem(invite.token, invite.url, signedInId ?: invite.accountId)
         }
         return if (mode == LoginMode.START) authedStartDestination(authRepository.lastOpenedListId()) else null
