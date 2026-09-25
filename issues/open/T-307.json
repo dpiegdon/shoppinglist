@@ -1,0 +1,13 @@
+{
+  "body": "Five design fixes the maintainer found on a device after 3.2.0.\n\n1. **Overview account heading on one line.** With several accounts the section heading shows the\n   email and, under it, the server URL. Make it \"email  \u00b7  server\" on ONE line, breaking into two\n   lines only when it does not fit the width (Compose: a Row/FlowRow that wraps, or measure and\n   fall back; the server part in the muted style as today). Android only (the web has no sections).\n2. **That heading slim.** As little vertical space as possible: one text line where it fits, small\n   top padding to separate it from the previous section's last card, no extra bottom padding.\n3. **Server admin from the main menu, per account.** The drawer's \"Server admin\" entry opens the\n   first signed-in admin account. With several admin accounts it must open a chooser listing them\n   (email \u00b7 server), with one it opens that account's console directly; keep the console's app bar\n   naming the server. Remove the \"Server admin\" button from the Account screen (the maintainer\n   does not want it there). Strings: a chooser title, nine locales.\n4. **Reorder accounts by drag.** The Accounts screen reorders with up/down arrows; List properties\n   reorders categories by dragging a handle (T-30, ListPropsScreen.kt ~line 424). Use the same\n   mechanism for accounts: extract the drag-reorder into a shared composable (e.g. ui/DragReorder.kt)\n   used by both, keep the category behaviour pixel-identical, and let the server accounts be dragged\n   among themselves while the local area stays last and cannot be dragged. Arrows go.\n5. **New list without a name says why.** Creating a list with a blank name silently does nothing\n   on Android; the web shows the browser's native \"required\" bubble. On both clients: the name\n   field goes into its error state with the inline message \"Enter a name.\" (nine locales each,\n   identical English so crossClient pairs them); the error clears when the user types. Same for a\n   blank currency on a new ledger on Android (today it also returns silently): \"Enter a currency.\"\n   \u2014 check what the web does there and match. On the web drop `required` on that field in favour of\n   the inline message so both clients behave the same (keep the field required semantically).",
+  "created_at": "2026-09-25T19:44:57+00:00",
+  "id": "T-307",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Android UI after 3.2.0: one-line slim account headings, server-admin chooser per account, drag-reorder accounts, new-list name validation (both clients)",
+  "updated_at": "2026-09-25T19:44:57+00:00"
+}
