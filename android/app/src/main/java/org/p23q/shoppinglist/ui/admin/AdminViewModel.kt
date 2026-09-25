@@ -52,6 +52,8 @@ class AdminViewModel internal constructor(
     private val api: suspend () -> Api,
     /** The server's id for the signed-in admin, whom the console never offers to delete. */
     serverAccountId: String?,
+    /** The server this console administers, for its app bar (T-300): host and path, no scheme. */
+    val server: String? = null,
 ) : ViewModel() {
 
     @Inject constructor(
@@ -61,6 +63,7 @@ class AdminViewModel internal constructor(
     ) : this(
         api = { sessions.get(checkNotNull(savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG))).api },
         serverAccountId = savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG)?.let { registry.get(it)?.accountId },
+        server = savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG)?.let { registry.get(it)?.serverUrl }?.let(::serverShown),
     )
 
     private val _uiState = MutableStateFlow(AdminUiState(currentAccountId = serverAccountId))
@@ -161,3 +164,6 @@ class AdminViewModel internal constructor(
         }
     }
 }
+
+/** A server URL as the admin console's app bar shows it: `p23q.org/shopping`, no scheme or final slash. */
+internal fun serverShown(serverUrl: String): String = serverUrl.substringAfter("://").removeSuffix("/")

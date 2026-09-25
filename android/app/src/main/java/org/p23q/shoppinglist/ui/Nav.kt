@@ -72,6 +72,7 @@ import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.ui.about.AboutScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
+import org.p23q.shoppinglist.ui.admin.AdminViewModel
 import org.p23q.shoppinglist.ui.expense.ExpenseDialog
 import org.p23q.shoppinglist.ui.expense.ExpenseListScreen
 import org.p23q.shoppinglist.ui.expense.ExpensePrefill
@@ -352,6 +353,7 @@ fun ShoppingListNavHost(
             ) {
                 AccountScreen(
                     onGone = { gone -> navController.afterAccountGone(gone) },
+                    onOpenAdmin = { navController.navigate(Routes.admin(accountId)) },
                     onSignIn = { navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = accountId)) },
                 )
             }
@@ -528,8 +530,15 @@ fun ShoppingListNavHost(
             }
         }
         composable(Routes.ADMIN_PATTERN) {
-            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_server_admin)) {
-                AdminScreen()
+            // The same instance AdminScreen would get: this entry's. Its server under the title,
+            // since each admin account opens its own (T-300).
+            val adminViewModel: AdminViewModel = hiltViewModel()
+            AppDrawerScaffold(
+                navController = navController,
+                title = stringResource(R.string.nav_server_admin),
+                subtitle = adminViewModel.server,
+            ) {
+                AdminScreen(viewModel = adminViewModel)
             }
         }
         composable(Routes.ABOUT) {

@@ -200,12 +200,51 @@ class AccountScreenTest {
         var signIn = false
 
         composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = { signIn = true }, viewModel = viewModel) }
-        composeTestRule.waitUntil(timeoutMillis = 5_000) {
-            composeTestRule.waitForIdle()
-            viewModel.uiState.value.initials != null || server.requestCount >= 2
-        }
+        composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Signed out: tap to sign in").performClick()
+        composeTestRule.onNodeWithText("Signed out. Tap to sign in.").performClick()
         assertTrue(signIn)
+    }
+
+    /** T-300: every server action failed at once, and "delete" read its 401 as a wrong password. */
+    @Test
+    fun `a signed-out account offers only the sign-in and the removal, and asks its server nothing`() = runBlocking<Unit> {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(signedIn = false) }
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("account-sign-in").assertExists()
+        composeTestRule.onNodeWithTag("account-remove").assertExists()
+        composeTestRule.onNodeWithTag("account-delete").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Sessions").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Change password").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Default currency").assertDoesNotExist()
+        assertEquals(0, server.requestCount)
+    }
+
+    /** T-300: with several admin accounts, the drawer reaches only the first one's console. */
+    @Test
+    fun `an admin account's screen opens its own server's console`() = runBlocking<Unit> {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(isAdmin = true) }
+        val viewModel = newViewModel()
+        var opened = false
+
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, onOpenAdmin = { opened = true }, viewModel = viewModel) }
+        awaitLoads(viewModel)
+
+        composeTestRule.onNodeWithTag("account-admin").performScrollTo().performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun `a non-admin account's screen offers no console`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        awaitLoads(viewModel)
+
+        composeTestRule.onNodeWithTag("account-admin").assertDoesNotExist()
     }
 }

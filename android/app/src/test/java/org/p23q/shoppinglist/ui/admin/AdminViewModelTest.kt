@@ -165,4 +165,11 @@ class AdminViewModelTest {
 
         assertFalse(viewModel.uiState.value.users!!.any { it.id == "user-2" })
     }
+
+    /** T-300: every admin account opens its own console, which names its server. */
+    @Test
+    fun `the console's server is shown as host and path`() {
+        assertEquals("p23q.org/shopping", serverShown("https://p23q.org/shopping/"))
+        assertEquals("lists.example.test", serverShown("https://lists.example.test/"))
+    }
 }

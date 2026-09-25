@@ -111,11 +111,16 @@ class AccountViewModel @Inject constructor(
         }
     }
 
-    /** Best-effort, like [loadSessions]: until it resolves the initials field is just blank. */
+    /**
+     * Best-effort, like [loadSessions]: until it resolves the initials field is just blank. The
+     * same answer carries the default currency, which is stored on the row (T-300): the one read
+     * at sign-in may have failed, and an initials save sends the currency back.
+     */
     fun loadInitials(): Job = viewModelScope.launch {
         try {
-            val initials = api().getSettings().initials
-            _uiState.update { it.copy(initials = initials) }
+            val settings = api().getSettings()
+            registry.update(accountId) { it.copy(defaultCurrency = settings.defaultCurrency) }
+            _uiState.update { it.copy(initials = settings.initials, defaultCurrency = settings.defaultCurrency) }
         } catch (e: IOException) {
             // Offline, signed out or refused (an ApiException is an IOException): the field stays blank.
         }
