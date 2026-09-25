@@ -38,6 +38,7 @@ import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -165,7 +166,7 @@ fun OverviewScreen(
                             // to the greyed part at the bottom of the section, where Join is still offered.
                             if (section.invites.isNotEmpty()) {
                                 item(key = "invites-heading-" + account.id) {
-                                    SectionHeading(stringResource(R.string.overview_invites))
+                                    SectionHeading(stringResource(R.string.overview_invites), tag = "invites-heading-" + account.id)
                                 }
                                 items(section.invites, key = { "invite-" + account.id + "-" + it.id }) { invite ->
                                     InviteCard(
@@ -192,7 +193,11 @@ fun OverviewScreen(
                             }
                             if (section.ignoredInvites.isNotEmpty()) {
                                 item(key = "ignored-heading-" + account.id) {
-                                    SectionHeading(stringResource(R.string.overview_invites_ignored), muted = true)
+                                    SectionHeading(
+                                        stringResource(R.string.overview_invites_ignored),
+                                        tag = "ignored-heading-" + account.id,
+                                        muted = true,
+                                    )
                                 }
                                 items(section.ignoredInvites, key = { "ignored-" + account.id + "-" + it.id }) { invite ->
                                     InviteCard(
@@ -528,14 +533,26 @@ private fun ListCard(
     }
 }
 
+/**
+ * The Invitations and Ignored headings in an account's section (T-233). At the end of the line,
+ * which is how they are told from the account's own header at its start, and slim as that one is
+ * (T-307): a 12dp gap above, nothing below, one line (T-309).
+ */
 @Composable
-private fun SectionHeading(text: String, muted: Boolean = false) {
-    Text(
-        text,
-        modifier = Modifier.padding(top = 20.dp, bottom = 4.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-    )
+internal fun SectionHeading(text: String, tag: String, muted: Boolean = false) {
+    Box(
+        modifier = Modifier.testTag(tag).fillMaxWidth().padding(top = 12.dp),
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        Text(
+            text,
+            modifier = Modifier.testTag("$tag-text"),
+            style = MaterialTheme.typography.titleSmall,
+            color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 /** One invite on the overview (T-233): kind, list name, who invited and how long it stands, then Ignore and Join. */

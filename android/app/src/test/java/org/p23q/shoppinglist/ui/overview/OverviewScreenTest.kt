@@ -154,6 +154,21 @@ class OverviewScreenTest {
     }
 
     @Test
+    fun `an invitations heading is slim and at the end of its line, where an account header starts at the start (T-309)`() {
+        composeTestRule.setContent {
+            Box(Modifier.width(400.dp)) { SectionHeading("Invitations", tag = "invites-heading-x") }
+        }
+        fun bounds(tag: String) = composeTestRule.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val box = bounds("invites-heading-x")
+        val text = bounds("invites-heading-x-text")
+
+        assertEquals("at the end of the line", box.right, text.right, 1f)
+        assertTrue("not at the start", text.left > box.left)
+        assertEquals("nothing below", box.bottom, text.bottom, 1f)
+        assertEquals("12dp above", with(composeTestRule.density) { 12.dp.toPx() }, text.top - box.top, 1f)
+    }
+
+    @Test
     fun `an account header that does not fit puts the server on a second line (T-307)`() {
         val account = AccountEntity(
             id = "long",
