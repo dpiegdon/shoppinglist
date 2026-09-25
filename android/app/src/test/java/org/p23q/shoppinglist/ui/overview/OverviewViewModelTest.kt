@@ -494,12 +494,12 @@ class OverviewViewModelTest {
     }
 
     @Test
-    fun `a phone-only account's section comes after every server account's`() {
+    fun `a phone-only account's section sits in the user's order like any other (T-309)`() {
         val server = testAccount(id = "s").copy(sortOrder = 3)
         val local = testAccount(id = "l").copy(kind = AccountEntity.KIND_LOCAL, serverUrl = null, sortOrder = 0)
         val first = testAccount(id = "f").copy(sortOrder = 1)
 
-        assertEquals(listOf("f", "s", "l"), overviewOrder(listOf(server, local, first)).map { it.id })
+        assertEquals(listOf("l", "f", "s"), overviewOrder(listOf(server, local, first)).map { it.id })
     }
 
     @Test
@@ -644,5 +644,17 @@ class OverviewViewModelTest {
 
             val created = viewModel.uiState.first { s -> s.lists.any { it.name.value == "Garden" } }.lists.single { it.name.value == "Garden" }
             assertEquals(local.id, created.accountId)
+        }
+
+    @Test
+    fun `with nothing opened yet, the New-list dialog takes the first account in the user's order, the local area too (T-309)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val local = accounts.registry.addLocal()!!
+            accounts.registry.reorder(listOf(local.id, TEST_ACCOUNT_ID))
+            viewModel.uiState.first { it.accounts.size == 2 && it.accounts.first().id == local.id }
+
+            viewModel.openCreateDialog()
+
+            assertEquals(local.id, viewModel.uiState.value.newListAccountId)
         }
 }

@@ -27,13 +27,11 @@ import androidx.compose.ui.zIndex
  *
  * The step is [fixedStepPx] when given (the categories' rows), otherwise the neighbour's measured
  * height plus [gapPx] — the distance the dragged item's own place moves by when they swap.
- * [canMoveTo] limits where an item may go: the accounts keep the local area last.
  */
 @Stable
 class DragReorderState<K> internal constructor(
     private val keys: State<List<K>>,
     private val onMove: State<(from: Int, to: Int) -> Unit>,
-    private val canMoveTo: State<(to: Int) -> Boolean>,
     private val fixedStepPx: Float?,
     private val gapPx: Float,
 ) {
@@ -63,11 +61,11 @@ class DragReorderState<K> internal constructor(
         if (idx < 0) return
         val up = idx - 1
         val down = idx + 1
-        if (up >= 0 && canMoveTo.value(up) && offset <= -step(current[up])) {
+        if (up >= 0 && offset <= -step(current[up])) {
             val by = step(current[up])
             onMove.value(idx, up)
             offset += by
-        } else if (down < current.size && canMoveTo.value(down) && offset >= step(current[down])) {
+        } else if (down < current.size && offset >= step(current[down])) {
             val by = step(current[down])
             onMove.value(idx, down)
             offset -= by
@@ -81,15 +79,13 @@ class DragReorderState<K> internal constructor(
 fun <K> rememberDragReorderState(
     keys: List<K>,
     onMove: (from: Int, to: Int) -> Unit,
-    canMoveTo: (to: Int) -> Boolean = { true },
     fixedStepPx: Float? = null,
     gapPx: Float = 0f,
 ): DragReorderState<K> {
     val currentKeys = rememberUpdatedState(keys)
     val currentOnMove = rememberUpdatedState(onMove)
-    val currentCanMoveTo = rememberUpdatedState(canMoveTo)
     return remember(fixedStepPx, gapPx) {
-        DragReorderState(currentKeys, currentOnMove, currentCanMoveTo, fixedStepPx, gapPx)
+        DragReorderState(currentKeys, currentOnMove, fixedStepPx, gapPx)
     }
 }
 

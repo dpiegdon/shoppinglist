@@ -67,8 +67,7 @@ fun AccountsScreen(
     val nowMs = rememberTickingNowMs()
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        // Dragged by a handle as a list's categories are (T-307): the server accounts move among
-        // themselves; the local area sorts last, has no handle, and nothing is dragged past it.
+        // Dragged by a handle as a list's categories are (T-307), the local area like any other (T-309).
         val gapPx = with(LocalDensity.current) { 8.dp.toPx() }
         val reorder = rememberDragReorderState(
             keys = rows.map { it.account.id },
@@ -76,10 +75,8 @@ fun AccountsScreen(
                 val id = rows[from].account.id
                 if (to < from) viewModel.moveUp(id) else viewModel.moveDown(id)
             },
-            canMoveTo = { to -> rows.getOrNull(to)?.account?.isServer == true },
             gapPx = gapPx,
         )
-        val lastServer = rows.indexOfLast { it.account.isServer }
         rows.forEachIndexed { index, row ->
             key(row.account.id) {
                 AccountCard(
@@ -87,7 +84,7 @@ fun AccountsScreen(
                     nowMs = nowMs,
                     reorder = reorder,
                     canMoveUp = index > 0,
-                    canMoveDown = index < lastServer,
+                    canMoveDown = index < rows.lastIndex,
                     onOpen = { onOpenAccount(row.account.id) },
                     onSignIn = { onSignIn(row.account.id) },
                     onCheckForUpdate = onCheckForUpdate,
@@ -177,25 +174,23 @@ private fun AccountCard(
                         Text(stringResource(R.string.accounts_local_help), style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            if (account.isServer) {
-                // The arrows' moves stay offered to accessibility services, as actions on the handle.
-                val up = stringResource(R.string.accounts_move_up)
-                val down = stringResource(R.string.accounts_move_down)
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = stringResource(R.string.listprops_reorder_category, accountName(account)),
-                    modifier = Modifier
-                        .dragReorderHandle(reorder, account.id)
-                        .padding(12.dp)
-                        .semantics {
-                            customActions = listOfNotNull(
-                                CustomAccessibilityAction(up) { onMoveUp(); true }.takeIf { canMoveUp },
-                                CustomAccessibilityAction(down) { onMoveDown(); true }.takeIf { canMoveDown },
-                            )
-                        }
-                        .testTag("account-handle-${account.id}"),
-                )
-            }
+            // The arrows' moves stay offered to accessibility services, as actions on the handle.
+            val up = stringResource(R.string.accounts_move_up)
+            val down = stringResource(R.string.accounts_move_down)
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = stringResource(R.string.listprops_reorder_category, accountName(account)),
+                modifier = Modifier
+                    .dragReorderHandle(reorder, account.id)
+                    .padding(12.dp)
+                    .semantics {
+                        customActions = listOfNotNull(
+                            CustomAccessibilityAction(up) { onMoveUp(); true }.takeIf { canMoveUp },
+                            CustomAccessibilityAction(down) { onMoveDown(); true }.takeIf { canMoveDown },
+                        )
+                    }
+                    .testTag("account-handle-${account.id}"),
+            )
         }
     }
 }

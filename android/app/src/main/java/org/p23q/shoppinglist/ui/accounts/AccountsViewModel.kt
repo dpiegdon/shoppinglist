@@ -48,7 +48,7 @@ data class AccountRow(
 
 /**
  * The Accounts screen (T-292): every account on this phone in the order the overview lists them
- * (server accounts in the user's order, the local area last), and that order.
+ * (the user's order, the local area among them), and that order.
  */
 @HiltViewModel
 class AccountsViewModel @Inject constructor(
@@ -71,7 +71,7 @@ class AccountsViewModel @Inject constructor(
     /** The local area was just added here: its one-time note is showing. */
     val localNoteOpen: StateFlow<Boolean> = _localNoteOpen.asStateFlow()
 
-    /** "Add local area": creates it, placed last, and shows its note once. */
+    /** "Add local area": creates it, placed after every account for now, and shows its note once. */
     fun addLocal(): Job = viewModelScope.launch {
         if (registry.addLocal() != null) _localNoteOpen.value = true
     }
@@ -80,17 +80,14 @@ class AccountsViewModel @Inject constructor(
         _localNoteOpen.value = false
     }
 
-    /** Swaps the server account with the one above it; the first stays where it is. */
+    /** Swaps the account with the one above it; the first stays where it is. */
     fun moveUp(id: String): Job = move(id, -1)
 
-    /**
-     * Swaps the server account with the one below it; the last server account stays where it is.
-     * The local area is always last, so it never moves and nothing moves past it.
-     */
+    /** Swaps the account with the one below it; the last stays where it is. The local area moves like any other (T-309). */
     fun moveDown(id: String): Job = move(id, +1)
 
     private fun move(id: String, by: Int): Job = viewModelScope.launch {
-        val ids = overviewOrder(registry.snapshot()).filter { it.isServer }.map { it.id }.toMutableList()
+        val ids = overviewOrder(registry.snapshot()).map { it.id }.toMutableList()
         val from = ids.indexOf(id)
         val to = from + by
         if (from < 0 || to !in ids.indices) return@launch

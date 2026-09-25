@@ -328,7 +328,7 @@ class ListPropsViewModel @Inject constructor(
 
     /**
      * Where this list can be copied: its own account first, then every other in the overview's
-     * order, the local area last. A ledger stays in its own account, where its members are, and
+     * order, the user's (T-309). A ledger stays in its own account, where its members are, and
      * the local area holds none ([ListKind.choices]).
      */
     private suspend fun copyTargets(): List<AccountEntity> {

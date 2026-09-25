@@ -127,8 +127,8 @@ any other, but the sync engine never sends them, and they count towards no
 pending figure; with only the local area the top bar shows no sync status. A
 local list's properties show *You* as its only member and have no invites,
 close votes or collaborator notifications, and *Delete list* removes it and its
-items from the phone. On the overview the local area is the last section, and
-its cards carry a phone glyph; with the local area alone the overview is the
+items from the phone. On the overview the local area is a section in your
+order like any account's, and its cards carry a phone glyph; with the local area alone the overview is the
 plain one-account screen. It takes no invites: an invite on a phone with only
 the local area opens the form to add a server account. Its Account screen
 explains it and counts its lists, and it can be removed only once it holds
@@ -138,7 +138,7 @@ the app: each outdated account's section says so instead.
 A list never moves between accounts, but it can be copied into another. List
 properties' *Duplicate* makes the copy at once when the phone holds one account;
 with several it asks *Copy to*, listing the list's own account first and then the
-others in the overview's order, the local area last. The copy is a new list in
+others in the overview's order. The copy is a new list in
 the chosen account, with fresh ids and field clocks, the name suffixed
 *(Copy)* in the app's language (the name is synced, so it stays in the
 copier's), the category order, notes and kind, and every item that is not
@@ -189,7 +189,7 @@ reopens the list you last had open.
 
 The app holds several accounts, on one server or on several. **Accounts** in
 the menu lists them in your order (drag one by its handle to move it, which is
-also the overview's order; the phone's own area stays last), each with its email,
+also the overview's order; the phone's own area moves like any other), each with its email,
 its full server URL, its state and its own sync figures. *Add account* opens the same form and keeps the accounts
 already there; tapping an account opens its own screen, with its default
 currency, initials, password, email, sessions, *Delete account on server* and

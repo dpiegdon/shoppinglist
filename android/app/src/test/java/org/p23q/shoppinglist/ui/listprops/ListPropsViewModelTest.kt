@@ -593,7 +593,7 @@ class ListPropsViewModelTest {
     }
 
     @Test
-    fun `with several accounts, Duplicate offers them all, the list's own first, and copies into the one picked (T-294)`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `with several accounts, Duplicate offers them all, the list's own first, the rest in the user's order, and copies into the one picked (T-294, T-309)`() = runTest(mainDispatcherRule.dispatcher) {
         addOtherAccounts()
         itemsRepo.createItem(listId, "Milk")
         val viewModel = newViewModel()
@@ -601,7 +601,7 @@ class ListPropsViewModelTest {
 
         viewModel.requestDuplicate("(Copy)").join()
 
-        assertEquals(listOf(TEST_ACCOUNT_ID, "work", "on-phone"), viewModel.uiState.value.copyTargets.map { it.id })
+        assertEquals(listOf(TEST_ACCOUNT_ID, "on-phone", "work"), viewModel.uiState.value.copyTargets.map { it.id })
         assertNull("nothing is copied before a pick", viewModel.uiState.value.duplicatedListId)
 
         viewModel.duplicateList("(Copy)", "on-phone").join()

@@ -218,7 +218,7 @@ class OverviewScreenTest {
     }
 
     @Test
-    fun `the local area is the last section, "On this phone", its cards marked by the phone glyph (T-293)`() = runBlocking<Unit> {
+    fun `the local area's section, "On this phone", sits in the user's order, its cards marked by the phone glyph (T-293, T-309)`() = runBlocking<Unit> {
         val local = accounts.registry.addLocal()!!
         listsRepo.create(local.id, "Hardware")
         addWorkAccount()
@@ -227,10 +227,11 @@ class OverviewScreenTest {
         composeTestRule.onNodeWithTag("account-header-${local.id}").assertExists()
         composeTestRule.onNodeWithText("On this phone").assertExists()
         composeTestRule.onNodeWithText(LOCAL_AREA_GLYPH).assertExists()
-        val headers = listOf(TEST_ACCOUNT_ID, "work", local.id).map { id ->
+        // Added before the work account, so it comes before it.
+        val headers = listOf(TEST_ACCOUNT_ID, local.id, "work").map { id ->
             composeTestRule.onNodeWithTag("account-header-$id").fetchSemanticsNode().positionInRoot.y
         }
-        assertEquals("server accounts first, the local area last", headers.sorted(), headers)
+        assertEquals("in the user's order, the local area among the server accounts", headers.sorted(), headers)
     }
 
     @Test

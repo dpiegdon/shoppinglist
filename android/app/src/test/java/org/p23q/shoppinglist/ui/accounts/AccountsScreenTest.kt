@@ -209,18 +209,19 @@ class AccountsScreenTest {
     }
 
     @Test
-    fun `the local area is last and has no drag handle, the server accounts do (T-302, T-307)`() = runBlocking<Unit> {
+    fun `the local area has a drag handle and its moves like any account, and sits in the user's order (T-309)`() = runBlocking<Unit> {
         accounts.registry.add(localAccountRow())
         accounts.registry.add(accountRow("prod"))
 
         show()
 
-        composeTestRule.onNodeWithTag("account-handle-local", useUnmergedTree = true).assertDoesNotExist()
         composeTestRule.onNodeWithTag("account-handle-prod", useUnmergedTree = true).assertExists()
-        composeTestRule.onNodeWithTag("account-up-prod", useUnmergedTree = true).assertDoesNotExist()
+        val localActions = composeTestRule.onNodeWithTag("account-handle-local", useUnmergedTree = true)
+            .fetchSemanticsNode().config.getOrElse(SemanticsActions.CustomActions) { emptyList() }
+        assertEquals(listOf("Move down"), localActions.map { it.label })
         val prodTop = composeTestRule.onNodeWithTag("account-row-prod").fetchSemanticsNode().boundsInRoot.top
         val localTop = composeTestRule.onNodeWithTag("account-row-local").fetchSemanticsNode().boundsInRoot.top
-        assertTrue("the local area is below the server account", localTop > prodTop)
+        assertTrue("the local area, first in the user's order, is above the server account", localTop < prodTop)
     }
 
     private fun order() = accounts.registry.snapshot().sortedBy { it.sortOrder }.map { it.id }
@@ -251,17 +252,18 @@ class AccountsScreenTest {
     }
 
     @Test
-    fun `a server account dragged down never passes the local area, and one dragged up moves up (T-307)`() = runBlocking<Unit> {
+    fun `a server account dragged down passes the local area, and the local area drags up past one (T-309)`() = runBlocking<Unit> {
         accounts.registry.add(accountRow("prod"))
         accounts.registry.add(accountRow("stage", serverUrl = "https://lists.example.test/stage/"))
         val local = accounts.registry.addLocal()!!.id
 
         show()
-        dragHandle("stage", byRows = 3f)
-        composeTestRule.waitForIdle()
-        assertEquals(listOf("prod", "stage", local), order())
+        dragHandle("stage", byRows = 1.3f)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { order() == listOf("prod", local, "stage") }
 
-        dragHandle("stage", byRows = -1.3f)
-        composeTestRule.waitUntil(timeoutMillis = 5_000) { order() == listOf("stage", "prod", local) }
+        // Its card is shorter than the server account's it passes, and it is at the top after one step.
+        dragHandle(local, byRows = -3f)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { order() == listOf(local, "prod", "stage") }
+        assertEquals(listOf(local, "prod", "stage"), db.accountDao().all().sortedBy { it.sortOrder }.map { it.id })
     }
 }
