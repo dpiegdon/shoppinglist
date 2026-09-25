@@ -519,15 +519,22 @@ class SyncEngine @Inject constructor(
     /**
      * Detects rows in this pull that were last touched by a DIFFERENT account and reports them
      * (T-65). Account-scoped, never device-scoped: a user's own second device must not
-     * self-notify. Deliberately silent when: this pass started from cursor 0 (initial hydration /
+     * self-notify, and neither must an edit by another account signed in on this phone to the
+     * same server. Deliberately silent when: this pass started from cursor 0 (initial hydration /
      * full resync — everything would look "new"), our own account id is unknown (pre-T-65
      * session — can't distinguish, so don't guess), or a row's last_touched_by is null (pre-T-64
      * row never re-touched). Reports RAW detections; pref filtering lives in the notifier impl.
      */
     private suspend fun reportCollaboratorChanges(accountId: String, requestCursor: Long, pulledItems: List<ItemDto>) {
         if (requestCursor == 0L) return
-        val myAccountId = registry.get(accountId)?.accountId ?: return
-        val foreign = pulledItems.filter { it.lastTouchedBy != null && it.lastTouchedBy != myAccountId }
+        val account = registry.get(accountId) ?: return
+        val myAccountId = account.accountId ?: return
+        // Another login on this phone to the same server is this phone too: its own edit, pulled
+        // by this account from a list both share, is nobody else's (T-304).
+        val ownOnThisPhone = registry.snapshot()
+            .filter { it.id != accountId && it.isServer && it.serverUrl == account.serverUrl }
+            .mapNotNullTo(mutableSetOf(myAccountId)) { it.accountId }
+        val foreign = pulledItems.filter { it.lastTouchedBy != null && it.lastTouchedBy !in ownOnThisPhone }
         if (foreign.isEmpty()) return
         val changes = foreign.groupBy { it.listId }.mapNotNull { (listServerId, items) ->
             // Resolved AFTER the merge loops, so a list first seen in this same pull is found.

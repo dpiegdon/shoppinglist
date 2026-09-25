@@ -672,6 +672,33 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `an edit by another account on this phone and the same server is not reported (T-304)`() = runTest {
+        pointAtServer()
+        setOwnAccount("acc-me")
+        setCursor(5)
+        // Signed out, so only the first account syncs; both still name their server-side account.
+        accounts.add(server.url("/").toString(), id = "mate", token = null, accountId = "acc-mate")
+        // The same server-side id on another server is someone else there.
+        accounts.add("https://elsewhere.example.test/", id = "far", token = null, accountId = "acc-far")
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(
+                        itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-mate"),
+                        itemJson(id = "i2", listId = "list-1", name = "Eggs", lastTouchedBy = "acc-far"),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 1)), notifier.calls.single())
+    }
+
+    @Test
     fun `a pull containing only own-account and null-account rows stays silent (T-65)`() = runTest {
         pointAtServer()
         setOwnAccount("acc-me")
