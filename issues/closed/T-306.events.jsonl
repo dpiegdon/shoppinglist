@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-25T19:11:09+00:00", "kind": "created", "ref": "main@45fbb038", "text": "Android tests: closeWhenIdle deadlocks when a registry write is pending on a test-dispatcher database (hung the 3.2.0 release gate)"}
 {"actor": "user", "at": "2026-09-25T19:25:31+00:00", "kind": "note", "ref": "main@7b3423c7", "text": "Fixed in cb9bda2e (before the 3.2.0 tag): flush on Dispatchers.Default while the test dispatcher is pumped; regression test fails within 20 s under the old code; two consecutive full runs of 760 app tests clean, then the release gate green."}
+{"actor": "user", "at": "2026-09-25T19:25:32+00:00", "kind": "closed", "ref": "main@7b3423c7", "text": ""}
