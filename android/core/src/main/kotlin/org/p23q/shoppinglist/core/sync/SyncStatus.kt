@@ -30,12 +30,18 @@ data class SyncState(
  * - the first error, in the order the accounts first reported to this status, if any has one;
  * - pending and blocked rows summed.
  *
+ * The last two of those leave out an account that cannot sync at all, signed out or outdated
+ * ([setActive]): it has its own banner, and would otherwise hold the whole phone at "not synced
+ * yet" or at its last error. Its pending and blocked rows still count. While no account can sync,
+ * every account is taken.
+ *
  * With one account the aggregate is that account's state, field for field.
  */
 @Singleton
 class SyncStatus @Inject constructor() {
     private val lock = Any()
     private val perAccount = LinkedHashMap<String, SyncState>()
+    private val inactive = HashSet<String>()
     private val _accounts = MutableStateFlow<Map<String, SyncState>>(emptyMap())
     private val _state = MutableStateFlow(SyncState())
 
@@ -51,7 +57,17 @@ class SyncStatus @Inject constructor() {
     /** Forgets an account that was removed from the device. */
     fun remove(accountId: String) = synchronized(lock) {
         perAccount.remove(accountId)
+        inactive.remove(accountId)
         publish()
+    }
+
+    /**
+     * Whether the account can sync at all: false while it is signed out or outdated, which leaves
+     * it out of the aggregate's last sync and last error (see the class comment).
+     */
+    fun setActive(accountId: String, active: Boolean) = synchronized(lock) {
+        val changed = if (active) inactive.remove(accountId) else inactive.add(accountId)
+        if (changed) publish()
     }
 
     internal fun change(accountId: String, transform: (SyncState) -> SyncState) = synchronized(lock) {
@@ -61,14 +77,15 @@ class SyncStatus @Inject constructor() {
 
     private fun publish() {
         val states = perAccount.values.toList()
+        val syncing = perAccount.filterKeys { it !in inactive }.values.toList().ifEmpty { states }
         _accounts.value = LinkedHashMap(perAccount)
         _state.value = if (states.isEmpty()) {
             SyncState()
         } else {
             SyncState(
                 inProgress = states.any { it.inProgress },
-                lastSyncAt = if (states.any { it.lastSyncAt == null }) null else states.minOf { it.lastSyncAt!! },
-                lastError = states.firstNotNullOfOrNull { it.lastError },
+                lastSyncAt = if (syncing.any { it.lastSyncAt == null }) null else syncing.minOf { it.lastSyncAt!! },
+                lastError = syncing.firstNotNullOfOrNull { it.lastError },
                 pendingCount = states.sumOf { it.pendingCount },
                 blockedCount = states.sumOf { it.blockedCount },
             )
@@ -93,8 +110,11 @@ class AccountSyncStatus internal constructor(private val status: SyncStatus, val
         it.copy(pendingCount = pending, blockedCount = blocked)
     }
 
-    fun succeeded(at: Long, pending: Int, blocked: Int) = status.change(accountId) {
-        it.copy(inProgress = false, lastSyncAt = at, lastError = null, pendingCount = pending, blockedCount = blocked)
+    fun succeeded(at: Long, pending: Int, blocked: Int) {
+        status.setActive(accountId, true)
+        status.change(accountId) {
+            it.copy(inProgress = false, lastSyncAt = at, lastError = null, pendingCount = pending, blockedCount = blocked)
+        }
     }
 
     fun failed(error: String, pending: Int, blocked: Int) = status.change(accountId) {
@@ -105,8 +125,9 @@ class AccountSyncStatus internal constructor(private val status: SyncStatus, val
      * Session expired mid-sync: clears the spinner but is *not* a loud error — the forced-logout
      * flow (T-31) drives re-auth, after which sync resumes.
      */
-    fun stoppedUnauthorized(pending: Int, blocked: Int) = status.change(accountId) {
-        it.copy(inProgress = false, pendingCount = pending, blockedCount = blocked)
+    fun stoppedUnauthorized(pending: Int, blocked: Int) {
+        status.setActive(accountId, false)
+        status.change(accountId) { it.copy(inProgress = false, pendingCount = pending, blockedCount = blocked) }
     }
 
     /**
@@ -116,7 +137,8 @@ class AccountSyncStatus internal constructor(private val status: SyncStatus, val
      * from here. The pending and blocked counts are left exactly as they were — nothing about the
      * queue changed.
      */
-    fun stoppedOutdated(pending: Int, blocked: Int) = status.change(accountId) {
-        it.copy(inProgress = false, pendingCount = pending, blockedCount = blocked)
+    fun stoppedOutdated(pending: Int, blocked: Int) {
+        status.setActive(accountId, false)
+        status.change(accountId) { it.copy(inProgress = false, pendingCount = pending, blockedCount = blocked) }
     }
 }

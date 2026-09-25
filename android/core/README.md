@@ -113,7 +113,8 @@ interface and `:app` implements it and binds it in Hilt:
   in no account's pending figure. After an account's first successful sync
   in a process, a server whose protocol the account does not hold yet is asked
   `/app-version` once, with no token, and the answer is stored. `SyncStatus.state` is the worst of the
-  accounts, `SyncStatus.accounts` each one.
+  accounts, `SyncStatus.accounts` each one; a signed-out or outdated account
+  counts in its pending and blocked rows only, not in the last sync or error.
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and
   `setKind` returns false instead of converting. `ListsRepo.duplicate(listId,

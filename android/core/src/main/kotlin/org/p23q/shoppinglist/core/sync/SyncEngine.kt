@@ -100,6 +100,7 @@ class SyncEngine @Inject constructor(
      */
     suspend fun seedStatus() {
         for (account in registry.load().filter { it.isServer }) {
+            syncStatus.setActive(account.id, account.signedIn && !account.outdated && sessions.hasToken(account.id))
             val pending = itemDao.dirtyRowsForAccount(account.id).size + listDao.dirtyRowsForAccount(account.id).size
             syncStatus.account(account.id).seed(pending = pending, blocked = blockedCount(account.id))
         }
@@ -119,6 +120,7 @@ class SyncEngine @Inject constructor(
         // 401 would sign it out (T-298), and the login screen asks for the password again.
         servers.filter { it.signedIn && !sessions.hasToken(it.id) }.forEach { signOutTokenless(it.id) }
         val eligible = servers.filter { it.signedIn && !it.outdated && sessions.hasToken(it.id) }
+        servers.forEach { syncStatus.setActive(it.id, it in eligible) }
         if (eligible.isEmpty()) {
             return if (servers.isNotEmpty() && servers.all { it.outdated }) SyncResult.UpdateRequired else SyncResult.Unauthorized
         }

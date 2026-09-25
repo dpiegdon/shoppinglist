@@ -1681,4 +1681,21 @@ class SyncEngineTest {
         assertNull(accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
         assertEquals(3, server.requestCount)
     }
+
+    @Test
+    fun `a signed-out account does not hold the status at not synced yet, and its pending rows still count (T-304)`() = runTest {
+        pointAtServer()
+        accounts.add("https://elsewhere.example.test/", id = "gone", token = null, accountId = "acc-gone")
+        db.listDao().upsert(dummyList("list-g", "Old", dirty = false, at = 0L, accountId = "gone"))
+        db.itemDao().upsert(dummyItem("g-item", "Tea", dirty = true, list = "list-g", accountId = "gone"))
+        syncEngine.seedStatus()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val state = syncStatus.state.value
+        assertNotNull(state.lastSyncAt)
+        assertNull(state.lastError)
+        assertEquals(1, state.pendingCount)
+    }
 }
