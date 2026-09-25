@@ -38,6 +38,7 @@
     <string name="nav_list_properties">Propriétés de la liste</string>
     <string name="nav_settings">Paramètres</string>
     <string name="nav_server_admin">Administration du serveur</string>
+    <string name="nav_server_admin_choose">Administrer quel serveur ?</string>
     <string name="nav_about">À propos</string>
     <string name="nav_join_list">Rejoindre une liste</string>
     <string name="ago_just_now">à l\'instant</string>

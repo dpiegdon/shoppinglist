@@ -241,18 +241,16 @@ class AccountScreenTest {
         assertEquals(0, server.requestCount)
     }
 
-    /** T-300: with several admin accounts, the drawer reaches only the first one's console. */
+    /** T-307: each admin account's console is reached from the drawer, not from here. */
     @Test
-    fun `an admin account's screen opens its own server's console`() = runBlocking<Unit> {
+    fun `an admin account's screen offers no console either`() = runBlocking<Unit> {
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(isAdmin = true) }
         val viewModel = newViewModel()
-        var opened = false
 
-        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, onOpenAdmin = { opened = true }, viewModel = viewModel) }
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
         awaitLoads(viewModel)
 
-        composeTestRule.onNodeWithTag("account-admin").performScrollTo().performClick()
-        assertTrue(opened)
+        composeTestRule.onNodeWithText("Server admin").assertDoesNotExist()
     }
 
     @Test

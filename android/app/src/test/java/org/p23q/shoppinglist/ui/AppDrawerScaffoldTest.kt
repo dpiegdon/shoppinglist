@@ -6,6 +6,8 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -136,8 +138,30 @@ class AppDrawerScaffoldTest {
         assertTrue(y("Settings") < y("Server admin"))
         assertTrue(y("Server admin") < y("About"))
         composeTestRule.onNodeWithText("Server admin").performClick()
+        // With one admin account, straight to its console: no chooser.
+        composeTestRule.onNodeWithText("Administer which server?").assertDoesNotExist()
         assertEquals(Routes.ADMIN_PATTERN, getNavController().currentBackStackEntry?.destination?.route)
         composeTestRule.onNodeWithText("Admin of boss").assertExists()
+    }
+
+    @Test
+    fun `with several admin accounts Server admin asks which, each as email and server (T-307)`() {
+        addAccount("boss", isAdmin = true)
+        addAccount("prod")
+        addAccount("stage", isAdmin = true)
+        val getNavController = setDrawerContent()
+
+        composeTestRule.onNodeWithContentDescription("Menu").performClick()
+        composeTestRule.onNodeWithText("Server admin").performClick()
+
+        composeTestRule.onNodeWithText("Administer which server?").assertExists()
+        composeTestRule.onNodeWithTag("admin-account-boss").assertTextEquals("me@example.com · boss.example.test")
+        composeTestRule.onNodeWithTag("admin-account-prod").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("admin-account-stage").performClick()
+
+        assertEquals(Routes.ADMIN_PATTERN, getNavController().currentBackStackEntry?.destination?.route)
+        composeTestRule.onNodeWithText("Admin of stage").assertExists()
+        composeTestRule.onNodeWithText("Administer which server?").assertDoesNotExist()
     }
 
     @Test

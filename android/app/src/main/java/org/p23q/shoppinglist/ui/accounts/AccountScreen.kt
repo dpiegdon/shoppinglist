@@ -48,7 +48,6 @@ import org.p23q.shoppinglist.ui.settings.formatLastSeen
 fun AccountScreen(
     onGone: (AccountGone) -> Unit,
     onSignIn: () -> Unit,
-    onOpenAdmin: () -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,15 +97,6 @@ fun AccountScreen(
             else -> Unit
         }
         Spacer(Modifier.height(16.dp))
-
-        // This server's admin console, for each admin account (T-300); the drawer offers only the
-        // first one's.
-        if (account?.isAdmin == true && account.status() == AccountStatus.SIGNED_IN) {
-            OutlinedButton(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth().testTag("account-admin")) {
-                Text(stringResource(R.string.nav_server_admin))
-            }
-            Spacer(Modifier.height(16.dp))
-        }
 
         if (!signedOut) {
             Text(stringResource(R.string.settings_default_currency), style = MaterialTheme.typography.titleMedium)

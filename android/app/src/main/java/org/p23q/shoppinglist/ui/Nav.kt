@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -379,7 +380,6 @@ fun ShoppingListNavHost(
             ) {
                 AccountScreen(
                     onGone = { gone -> navController.afterAccountGone(gone) },
-                    onOpenAdmin = { navController.navigate(Routes.admin(accountId)) },
                     onSignIn = { navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = accountId)) },
                 )
             }
@@ -662,12 +662,13 @@ internal fun AppDrawerScaffold(
     content: @Composable () -> Unit,
 ) {
     val syncState by syncStatusViewModel.state.collectAsStateWithLifecycle()
-    val adminAccountId by drawerViewModel.adminAccountId.collectAsStateWithLifecycle()
+    val adminAccounts by drawerViewModel.adminAccounts.collectAsStateWithLifecycle()
     val hasServer by drawerViewModel.hasServer.collectAsStateWithLifecycle()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     var isJoinDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var isAdminChooserOpen by rememberSaveable { mutableStateOf(false) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -717,18 +718,19 @@ internal fun AppDrawerScaffold(
                     onClick = { navigateTo(Routes.SETTINGS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
-                // Administering the server is not a personal preference, so it sits beside
+                // Administering a server is not a personal preference, so it sits beside
                 // Settings rather than inside it (T-220). Hiding it from a non-admin is an
                 // affordance only — the server enforces admin on every /admin route regardless
-                // of what this drawer offers. With several accounts, the first admin one's server.
-                adminAccountId?.let { adminId ->
+                // of what this drawer offers. With several admin accounts it asks which (T-307).
+                if (adminAccounts.isNotEmpty()) {
                     NavigationDrawerItem(
                         icon = { Icon(imageVector = Icons.Default.Build, contentDescription = null) },
                         label = { Text(stringResource(R.string.nav_server_admin)) },
                         selected = currentRoute == Routes.ADMIN_PATTERN,
                         onClick = {
                             scope.launch { drawerState.close() }
-                            if (currentRoute != Routes.ADMIN_PATTERN) navController.navigate(Routes.admin(adminId))
+                            val only = adminAccounts.singleOrNull()
+                            if (only != null) navController.openAdmin(only.id) else isAdminChooserOpen = true
                         },
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
@@ -797,6 +799,17 @@ internal fun AppDrawerScaffold(
         }
     }
 
+    if (isAdminChooserOpen) {
+        AdminChooserDialog(
+            accounts = adminAccounts,
+            onChoose = { id ->
+                isAdminChooserOpen = false
+                navController.openAdmin(id)
+            },
+            onDismiss = { isAdminChooserOpen = false },
+        )
+    }
+
     if (isJoinDialogOpen) {
         RedeemDialog(
             onRedeemed = { listId ->
@@ -811,6 +824,39 @@ internal fun AppDrawerScaffold(
             },
         )
     }
+}
+
+/** Opens [accountId]'s admin console, unless it is already the screen shown. */
+private fun NavHostController.openAdmin(accountId: String) {
+    val current = currentBackStackEntry
+    val showing = current?.destination?.route == Routes.ADMIN_PATTERN &&
+        current.arguments?.getString(Routes.ACCOUNT_ID_ARG) == accountId
+    if (!showing) navigate(Routes.admin(accountId))
+}
+
+/** Which admin account's console "Server admin" opens, with several (T-307): each as email · server. */
+@Composable
+private fun AdminChooserDialog(accounts: List<AccountEntity>, onChoose: (String) -> Unit, onDismiss: () -> Unit) {
+    LocalizedAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.nav_server_admin_choose)) },
+        text = {
+            Column {
+                accounts.forEach { account ->
+                    Text(
+                        accountLineText(account),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onChoose(account.id) }
+                            .padding(vertical = 12.dp)
+                            .testTag("admin-account-" + account.id),
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 /** A sub-screen's top bar with a back arrow and no drawer: the add and re-sign-in forms. */

@@ -38,6 +38,7 @@
     <string name="nav_list_properties">خصائص القائمة</string>
     <string name="nav_settings">الإعدادات</string>
     <string name="nav_server_admin">إدارة الخادم</string>
+    <string name="nav_server_admin_choose">أي خادم تريد إدارته؟</string>
     <string name="nav_about">حول التطبيق</string>
     <string name="nav_join_list">الانضمام إلى قائمة</string>
     <string name="ago_just_now">الآن</string>

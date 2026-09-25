@@ -38,6 +38,7 @@
     <string name="nav_list_properties">清单属性</string>
     <string name="nav_settings">设置</string>
     <string name="nav_server_admin">服务器管理</string>
+    <string name="nav_server_admin_choose">要管理哪个服务器？</string>
     <string name="nav_about">关于</string>
     <string name="nav_join_list">加入清单</string>
     <string name="ago_just_now">刚刚</string>

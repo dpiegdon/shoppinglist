@@ -11,22 +11,23 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AccountEntity
 import javax.inject.Inject
 
-/** What the menu drawer and top bar need to know about the accounts: whose server "Server admin" opens, and whether any syncs. */
+/** What the menu drawer and top bar need to know about the accounts: which servers "Server admin" offers, and whether any syncs. */
 @HiltViewModel
 class DrawerViewModel @Inject constructor(registry: AccountRegistry) : ViewModel() {
 
     /**
-     * The first signed-in admin account in the user's order (T-220, T-292), or null for no Server
-     * admin entry. An affordance only: the server enforces admin on every /admin route.
+     * The signed-in admin accounts in the user's order (T-220, T-292, T-307): none, no Server admin
+     * entry; one, the entry opens its console; several, it asks which. An affordance only: the
+     * server enforces admin on every /admin route.
      */
-    val adminAccountId: StateFlow<String?> =
-        registry.accounts.map(::firstAdmin).stateIn(viewModelScope, SharingStarted.Eagerly, firstAdmin(registry.snapshot()))
+    val adminAccounts: StateFlow<List<AccountEntity>> =
+        registry.accounts.map(::admins).stateIn(viewModelScope, SharingStarted.Eagerly, admins(registry.snapshot()))
 
     /** Whether the phone holds a server account: with only the local area there is no sync to show (T-293). */
     val hasServer: StateFlow<Boolean> =
         registry.accounts.map { accounts -> accounts.any { it.isServer } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, registry.snapshot().any { it.isServer })
 
-    private fun firstAdmin(accounts: List<AccountEntity>): String? =
-        accounts.sortedBy { it.sortOrder }.firstOrNull { it.isServer && it.signedIn && it.isAdmin }?.id
+    private fun admins(accounts: List<AccountEntity>): List<AccountEntity> =
+        accounts.sortedBy { it.sortOrder }.filter { it.isServer && it.signedIn && it.isAdmin }
 }
