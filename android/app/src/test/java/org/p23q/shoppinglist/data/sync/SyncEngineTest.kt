@@ -37,6 +37,7 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.ServerConfig
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
+import org.p23q.shoppinglist.data.testListsRepo
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
@@ -1574,5 +1575,33 @@ class SyncEngineTest {
         assertTrue(syncEngine.syncNow() is SyncResult.Success)
 
         assertEquals("unseen", list("unseen")!!.localId)
+    }
+
+    @Test
+    fun `a list created on this phone keeps its local id when a re-base pulls it back (T-304)`() = runTest {
+        pointAtServer()
+        val created = testListsRepo(db).create(TEST_ACCOUNT_ID, "Mine")
+        val itemId = ItemsRepo(db, DeviceIdProvider { "this-device" }, FakeSyncTrigger()).createItem(created, "Soap")
+        // Pushed and acknowledged long ago: nothing left to push, so the re-base drops both rows.
+        db.listDao().upsert(db.listDao().get(created)!!.copy(dirty = false))
+        db.itemDao().upsert(db.itemDao().get(itemId)!!.copy(dirty = false))
+        val serverId = db.listDao().get(created)!!.serverId
+        val itemServerId = db.itemDao().get(itemId)!!.serverId
+        setCursor(50)
+        server.enqueue(MockResponse().setResponseCode(410).setBody("""{"error": "full_resync_required", "message": "old"}"""))
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 51,
+                    lists = listOf(listJson(id = serverId, name = "Mine")),
+                    items = listOf(itemJson(id = itemServerId, listId = serverId, name = "Soap", lastTouchedBy = null)),
+                ),
+            ),
+        )
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertEquals(created, list(serverId)!!.localId)
+        assertEquals(itemId, item(itemServerId)!!.localId)
     }
 }

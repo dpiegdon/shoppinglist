@@ -26,6 +26,10 @@ import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.syncResponseWithList
 import org.p23q.shoppinglist.data.testListsRepo
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.ListEntity
+import org.p23q.shoppinglist.core.db.LwwBoolean
+import org.p23q.shoppinglist.core.db.LwwOptionalString
+import org.p23q.shoppinglist.core.db.LwwString
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.robolectric.RobolectricTestRunner
 import org.p23q.shoppinglist.R
@@ -89,10 +93,27 @@ class RedeemViewModelTest {
     fun `redeem success syncs the newly shared list and reports its local id`() = runTest(mainDispatcherRule.dispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
         server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseWithList("list-42")))
+        // Another account on this phone already holds the list under the server's id as its local
+        // id, so this account's row gets a local id of its own (T-304), and a mix-up of the two shows.
+        accounts.add("https://other.example.test/", id = "other", token = null, accountId = "acct-other")
+        db.listDao().upsert(
+            ListEntity(
+                localId = "list-42",
+                serverId = "list-42",
+                accountId = "other",
+                createdAt = 0,
+                name = LwwString("Theirs", 0, ""),
+                categoryOrder = LwwString("[]", 0, ""),
+                notes = LwwOptionalString(null, 0, ""),
+                kind = LwwString("shopping", 0, ""),
+                deleted = LwwBoolean(false, 0, ""),
+                dirty = false,
+            ),
+        )
         val viewModel = newViewModel()
         viewModel.onTokenChange("abc.def")
 
-        viewModel.redeem()?.join()
+        viewModel.redeem(accountId = TEST_ACCOUNT_ID)?.join()
 
         // The screens open this phone's row of the list, not the server's id for it (T-299).
         val localId = localIdOf("list-42")

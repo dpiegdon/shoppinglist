@@ -31,6 +31,7 @@ import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.net.ssl.SSLException
 
@@ -71,6 +72,15 @@ class SyncEngine @Inject constructor(
     private val syncStatus: SyncStatus,
     private val notifier: CollaboratorChangeNotifier,
 ) {
+    /**
+     * By account, the local ids of the rows its last `410` re-base dropped, keyed by server id,
+     * until the pull that follows has handed them back ([newListLocalId]). Only touched under the
+     * account's lock.
+     */
+    private val rebasedLocalIds = ConcurrentHashMap<String, RebasedLocalIds>()
+
+    private class RebasedLocalIds(val lists: MutableMap<String, String>, val items: MutableMap<String, String>)
+
     companion object {
         /**
          * Server cap on rows per /sync push (sync.MAX_CHANGES_PER_SYNC, T-114). A larger batch is
@@ -248,9 +258,17 @@ class SyncEngine @Inject constructor(
                 // at all is simply not mentioned by the pull and stays local, dirty, and pushed on
                 // the retry, like any other edit made offline. The retry is not a pure pull any
                 // more, which is the point: the backlog goes out with it.
-                appDb.inTransaction {
+                //
+                // What is dropped leaves its local ids behind (T-304), for the pull to give back to
+                // the rows it brings: notification mutes, the last-opened list and an open screen
+                // name a list by its local id, and a list created on this phone has one that is
+                // not its server id.
+                rebasedLocalIds[accountId] = appDb.inTransaction {
+                    val items = itemDao.syncedRowsForAccount(accountId).associate { it.serverId to it.localId }
                     itemDao.deleteSyncedRowsForAccount(accountId)
+                    val lists = listDao.syncedRowsForAccount(accountId).associate { it.serverId to it.localId }
                     listDao.deleteSyncedRowsForAccount(accountId)
+                    RebasedLocalIds(lists = lists.toMutableMap(), items = items.toMutableMap())
                 }
                 registry.update(accountId) { it.copy(syncCursor = 0) }
                 return syncAccountLocked(accountId, fullLists)
@@ -342,16 +360,18 @@ class SyncEngine @Inject constructor(
         for (dto in response.changes.lists) {
             appDb.inTransaction {
                 val local = listDao.getByServerId(accountId, dto.id)
-                listDao.upsert(mergeList(local, dto, accountId, localId = local?.localId ?: newListLocalId(dto.id)))
+                listDao.upsert(mergeList(local, dto, accountId, localId = local?.localId ?: newListLocalId(accountId, dto.id)))
             }
         }
         for (dto in response.changes.items) {
             appDb.inTransaction {
                 val local = itemDao.getByServerId(accountId, dto.id)
                 val listLocalId = local?.listLocalId ?: listLocalIdFor(accountId, dto.listId)
-                itemDao.upsert(mergeItem(local, dto, accountId, listLocalId, localId = local?.localId ?: newItemLocalId(dto.id)))
+                itemDao.upsert(mergeItem(local, dto, accountId, listLocalId, localId = local?.localId ?: newItemLocalId(accountId, dto.id)))
             }
         }
+        // The pull that follows a re-base is this one: what it did not bring back is gone.
+        rebasedLocalIds.remove(accountId)
 
         registry.update(accountId) { it.copy(syncCursor = response.cursor) }
 
@@ -400,7 +420,7 @@ class SyncEngine @Inject constructor(
     private suspend fun listLocalIdFor(accountId: String, serverId: String): String {
         listDao.getByServerId(accountId, serverId)?.let { return it.localId }
         val stub = ListEntity(
-            localId = newListLocalId(serverId),
+            localId = newListLocalId(accountId, serverId),
             serverId = serverId,
             accountId = accountId,
             createdAt = 0,
@@ -416,18 +436,23 @@ class SyncEngine @Inject constructor(
     }
 
     /**
-     * The local id of a list row this phone creates for [serverId] on a pull: the server id itself,
-     * unless another row already has it as its local id (another account holding the same list),
-     * and then a fresh one. So a list pulled again after a re-base or a new sign-in gets the local
-     * id it had before, and what is keyed by it (notification mutes, the last-opened list, an open
-     * screen) still finds it. The rule MIGRATION_9_10 set for the rows it carried over.
+     * The local id of a list row [accountId]'s pull creates for [serverId]: the one its row had
+     * before a re-base dropped it; otherwise the server id itself, unless another row already has
+     * that as its local id (another account holding the same list), and then a fresh one. So a
+     * list pulled again after a re-base or a new sign-in gets the local id it had before, and what
+     * is keyed by it (notification mutes, the last-opened list, an open screen) still finds it.
+     * The server id is the rule MIGRATION_9_10 set for the rows it carried over.
      */
-    private suspend fun newListLocalId(serverId: String): String =
-        if (listDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+    private suspend fun newListLocalId(accountId: String, serverId: String): String {
+        rebasedLocalIds[accountId]?.lists?.remove(serverId)?.let { if (listDao.get(it) == null) return it }
+        return if (listDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+    }
 
     /** The same for an item: see [newListLocalId]. */
-    private suspend fun newItemLocalId(serverId: String): String =
-        if (itemDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+    private suspend fun newItemLocalId(accountId: String, serverId: String): String {
+        rebasedLocalIds[accountId]?.items?.remove(serverId)?.let { if (itemDao.get(it) == null) return it }
+        return if (itemDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+    }
 
     /** One account's rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
     private suspend fun blockedCount(accountId: String): Int =

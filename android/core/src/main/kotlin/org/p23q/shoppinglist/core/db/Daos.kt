@@ -163,6 +163,10 @@ interface ItemDao {
     @Query("DELETE FROM items WHERE accountId = :accountId AND dirty = 0 AND syncBlocked = 0")
     suspend fun deleteSyncedRowsForAccount(accountId: String)
 
+    /** The rows [deleteSyncedRowsForAccount] drops, read first so the re-base can keep their local ids. */
+    @Query("SELECT * FROM items WHERE accountId = :accountId AND dirty = 0 AND syncBlocked = 0")
+    suspend fun syncedRowsForAccount(accountId: String): List<ItemEntity>
+
     /** Every item of one account, for removing the account from this device. */
     @Query("DELETE FROM items WHERE accountId = :accountId")
     suspend fun deleteForAccount(accountId: String)
@@ -245,6 +249,13 @@ interface ListDao {
             "AND localId NOT IN (SELECT listLocalId FROM items)",
     )
     suspend fun deleteSyncedRowsForAccount(accountId: String)
+
+    /** The rows [deleteSyncedRowsForAccount] drops; see [ItemDao.syncedRowsForAccount]. */
+    @Query(
+        "SELECT * FROM lists WHERE accountId = :accountId AND dirty = 0 AND syncBlocked = 0 " +
+            "AND localId NOT IN (SELECT listLocalId FROM items)",
+    )
+    suspend fun syncedRowsForAccount(accountId: String): List<ListEntity>
 
     @Query("DELETE FROM lists WHERE accountId = :accountId")
     suspend fun deleteForAccount(accountId: String)
