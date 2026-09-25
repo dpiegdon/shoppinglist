@@ -279,7 +279,7 @@ export default function SettingsPage() {
                 </span>
               </span>
               {!s.current && (
-                <button type="button" className="btn-icon" onClick={() => handleRevokeSession(s.id)}>
+                <button type="button" className="btn btn-danger btn-sm" onClick={() => handleRevokeSession(s.id)}>
                   {t("action.revoke")}
                 </button>
               )}

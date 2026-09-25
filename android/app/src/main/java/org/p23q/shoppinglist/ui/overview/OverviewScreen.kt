@@ -16,9 +16,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -49,6 +51,7 @@ import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.ui.AddFab
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.appLocale
@@ -568,9 +571,14 @@ private fun InviteCard(
                 )
             }
             if (!ignored) {
-                TextButton(onClick = onIgnore, enabled = !busy) { Text(stringResource(R.string.action_ignore)) }
+                OutlinedButton(onClick = onIgnore, enabled = !busy, contentPadding = CompactButtonPadding) {
+                    Text(stringResource(R.string.action_ignore))
+                }
+                Spacer(Modifier.width(4.dp))
             }
-            TextButton(onClick = onJoin, enabled = !busy) { Text(stringResource(R.string.action_join)) }
+            Button(onClick = onJoin, enabled = !busy, contentPadding = CompactButtonPadding) {
+                Text(stringResource(R.string.action_join))
+            }
         }
     }
 }

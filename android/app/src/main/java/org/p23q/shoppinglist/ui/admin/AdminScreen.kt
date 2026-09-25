@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -30,7 +31,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
@@ -101,7 +104,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(onClick = { viewModel.loadUsers() }) {
+                Button(onClick = { viewModel.loadUsers() }, contentPadding = CompactButtonPadding) {
                     Text(stringResource(R.string.action_refresh))
                 }
             }
@@ -177,10 +180,11 @@ private fun UserRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onReset) { Text(stringResource(R.string.action_reset)) }
+        Button(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_reset)) }
         if (deletable) {
-            TextButton(onClick = onDelete) {
-                Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.width(4.dp))
+            Button(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
+                Text(stringResource(R.string.action_delete))
             }
         }
     }

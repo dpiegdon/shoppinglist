@@ -210,7 +210,7 @@ export default function AdminPage() {
               <span className="muted" style={{ fontSize: "0.85rem" }}>
                 {t("admin.userCount", { count: users.length })}
               </span>
-              <button type="button" className="btn btn-secondary" onClick={loadUsers}>
+              <button type="button" className="btn btn-sm" onClick={loadUsers}>
                 {t("action.refresh")}
               </button>
             </div>
@@ -272,7 +272,7 @@ export default function AdminPage() {
                     </span>
                   </span>
                   <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
-                    <button type="button" className="btn btn-secondary" onClick={() => resetPassword(user)}>
+                    <button type="button" className="btn" onClick={() => resetPassword(user)}>
                       {t("admin.resetPassword")}
                     </button>
                     {/* Admins and your own account can't be deleted here (the server enforces this too). */}

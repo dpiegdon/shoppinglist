@@ -207,7 +207,7 @@ export default function BalancesPage() {
                     {fmt.money(transfer.cents, currency)}
                   </strong>
                   {canRecord(transfer) && (
-                    <button type="button" className="btn btn-secondary" onClick={() => setRecording(transfer)}>
+                    <button type="button" className="btn btn-sm" onClick={() => setRecording(transfer)}>
                       {t("expense.reimburse")}
                     </button>
                   )}

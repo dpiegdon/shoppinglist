@@ -120,8 +120,8 @@ export default function LoginPage() {
           type="button"
           disabled={!registrationAllowed}
           onClick={() => setMode(mode === "login" ? "register" : "login")}
-          className="btn-secondary btn"
-          style={{ width: "100%", marginTop: "0.5rem", background: "transparent", border: "none" }}
+          className="btn btn-secondary"
+          style={{ width: "100%", marginTop: "0.5rem" }}
         >
           {mode === "login" ? t("login.toggleToRegister") : t("login.toggleToLogin")}
         </button>

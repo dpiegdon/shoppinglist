@@ -370,7 +370,7 @@ export default function ExpenseDialog({
             {result.error === "fixed_sum_mismatch" && (
               <>
                 {" "}
-                <button type="button" className="chip-button" onClick={() => setTotalText(fromCents(sum))}>
+                <button type="button" className="btn btn-sm" onClick={() => setTotalText(fromCents(sum))}>
                   {t("expense.error.useSum", { sum: fromCents(sum) })}
                 </button>
               </>

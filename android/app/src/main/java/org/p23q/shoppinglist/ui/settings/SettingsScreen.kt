@@ -18,7 +18,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -123,7 +123,8 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
         state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.primary) }
     }
 }

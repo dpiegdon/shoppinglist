@@ -19,7 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -152,7 +152,7 @@ private fun AccountCard(
                         SyncFigures(row, nowMs)
                     }
                     AccountStatus.SIGNED_OUT -> {
-                        TextButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
+                        Button(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
                             Text(stringResource(R.string.accounts_state_signed_out))
                         }
                         SyncFigures(row, nowMs)
@@ -168,7 +168,7 @@ private fun AccountCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        TextButton(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}")) {
+                        Button(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}")) {
                             Text(stringResource(R.string.update_check_action))
                         }
                     }

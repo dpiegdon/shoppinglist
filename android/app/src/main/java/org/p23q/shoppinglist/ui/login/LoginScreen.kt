@@ -185,7 +185,12 @@ fun LoginScreen(
         // login page — asked up front rather than after the user fills in the whole form. Not
         // offered to an account signing in again: it exists already.
         if (state.mode != LoginMode.RESIGNIN) {
-            TextButton(onClick = viewModel::onToggleRegisterMode, enabled = state.registrationAllowed) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = viewModel::onToggleRegisterMode,
+                enabled = state.registrationAllowed,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
             }
         }

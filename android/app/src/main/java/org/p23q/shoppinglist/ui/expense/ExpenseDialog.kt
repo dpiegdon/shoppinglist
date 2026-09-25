@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -67,9 +68,11 @@ import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.BlockedBanner
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.dangerButtonColors
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -255,7 +258,7 @@ fun ExpenseDialog(
                         )
                         if (state.isEditMode) {
                             Spacer(Modifier.height(16.dp))
-                            TextButton(onClick = viewModel::requestDelete, enabled = state.canDelete) {
+                            Button(onClick = viewModel::requestDelete, enabled = state.canDelete, colors = dangerButtonColors()) {
                                 Text(stringResource(R.string.action_delete))
                             }
                             if (!state.canDelete) {
@@ -274,7 +277,7 @@ fun ExpenseDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                        OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
                         // An income or a transfer left untitled names itself, and only the screen
                         // can say what that name is in the app's language (T-245).
@@ -558,7 +561,7 @@ private fun ShareSection(
                 style = MaterialTheme.typography.bodySmall,
             )
             // The one-tap way out, for when that sum was the intended total all along.
-            TextButton(onClick = onUseSum) {
+            Button(onClick = onUseSum, contentPadding = CompactButtonPadding) {
                 Text(stringResource(R.string.expense_error_use_sum, ExpenseMath.fromCents(sumCents)))
             }
         }

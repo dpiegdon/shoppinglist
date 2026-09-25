@@ -29,7 +29,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -445,7 +445,7 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
                 )
             }
         }
-        TextButton(onClick = onToggleVote, enabled = !state.isVoting) {
+        Button(onClick = onToggleVote, enabled = !state.isVoting) {
             Text(
                 stringResource(
                     if (state.iHaveVoted) R.string.expense_withdraw_vote else R.string.expense_agree_to_close,

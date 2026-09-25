@@ -498,11 +498,11 @@ export default function ListPropsPage() {
                     style={{ flex: 1 }}
                     aria-label={t("listProps.renameCategory", { category: canonicalNames.get(key) ?? "" })}
                   />
-                  <button type="submit" className="btn btn-secondary">
+                  <button type="submit" className="btn btn-sm">
                     {t("action.save")}
                   </button>
-                  <button type="button" className="btn-icon" onClick={() => setEditingCategoryKey(null)} aria-label={t("action.cancel")}>
-                    ✕
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingCategoryKey(null)}>
+                    {t("action.cancel")}
                   </button>
                 </form>
               );
@@ -556,7 +556,7 @@ export default function ListPropsPage() {
             onChange={(e) => setNewCategory(e.target.value)}
             style={{ flex: 1 }}
           />
-          <button type="submit" className="btn btn-secondary">
+          <button type="submit" className="btn">
             {t("action.add")}
           </button>
         </form>
@@ -574,7 +574,7 @@ export default function ListPropsPage() {
             rows={4}
             style={{ resize: "vertical", font: "inherit" }}
           />
-          <button type="submit" className="btn" disabled={savingNotes || lockedByVote} style={{ alignSelf: "flex-start" }}>
+          <button type="submit" className="btn" disabled={savingNotes || lockedByVote}>
             {t("listProps.saveNotes")}
           </button>
         </form>
@@ -602,9 +602,12 @@ export default function ListPropsPage() {
             </h3>
             <ul style={{ listStyle: "none", padding: 0 }}>
               {members.invites.map((inv) => (
-                <li key={inv.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.2rem 0" }}>
+                <li
+                  key={inv.id}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0" }}
+                >
                   <span>{inv.invited_email}</span>
-                  <button type="button" className="btn-icon" onClick={() => handleRevoke(inv.id)}>
+                  <button type="button" className="btn btn-danger btn-sm" onClick={() => handleRevoke(inv.id)}>
                     {t("action.revoke")}
                   </button>
                 </li>
@@ -620,7 +623,7 @@ export default function ListPropsPage() {
             onChange={(e) => setInviteEmail(e.target.value)}
             style={{ flex: 1 }}
           />
-          <button type="submit" className="btn btn-secondary">
+          <button type="submit" className="btn">
             {t("action.invite")}
           </button>
         </form>
@@ -675,7 +678,7 @@ export default function ListPropsPage() {
       {/* Not offered for expenses (T-155): a copy of a shared ledger, with the same debts owed to
           nobody in particular, is never what someone means. */}
       {!isExpenses(listKind(list)) && (
-        <button type="button" className="btn btn-secondary" onClick={handleDuplicate} style={{ marginInlineEnd: "0.5rem" }}>
+        <button type="button" className="btn" onClick={handleDuplicate} style={{ width: "100%", marginBottom: "0.75rem" }}>
           {t("action.duplicate")}
         </button>
       )}

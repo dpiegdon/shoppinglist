@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,8 +35,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.accountName
+import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.settings.formatLastSeen
 
@@ -109,7 +111,8 @@ fun AccountScreen(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
             }
             Spacer(Modifier.height(16.dp))
 
@@ -125,7 +128,8 @@ fun AccountScreen(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -215,7 +219,11 @@ fun AccountScreen(
                         )
                     }
                     if (!session.current) {
-                        TextButton(onClick = { viewModel.revokeSession(session.id) }) { Text(stringResource(R.string.action_revoke)) }
+                        Button(
+                            onClick = { viewModel.revokeSession(session.id) },
+                            colors = dangerButtonColors(),
+                            contentPadding = CompactButtonPadding,
+                        ) { Text(stringResource(R.string.action_revoke)) }
                     }
                 }
             }
@@ -234,7 +242,7 @@ fun AccountScreen(
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = viewModel::requestDeleteAccount,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                colors = dangerButtonColors(),
                 modifier = Modifier.fillMaxWidth().testTag("account-delete"),
             ) { Text(stringResource(R.string.account_delete_on_server)) }
         }

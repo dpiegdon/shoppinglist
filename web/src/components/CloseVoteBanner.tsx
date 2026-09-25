@@ -79,7 +79,7 @@ export default function CloseVoteBanner({
         </span>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn"
           disabled={busy}
           onClick={() => vote(!iHaveVoted)}
         >

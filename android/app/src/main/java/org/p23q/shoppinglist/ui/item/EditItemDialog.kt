@@ -20,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,6 +47,7 @@ import org.p23q.shoppinglist.data.db.label
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.dangerButtonColors
 
 /** Notes (List view): the row edit icon / a long-press opens this — every field including name,
  *  plus delete. Full-screen (T-80) rather than a floating AlertDialog: no tap-outside-to-cancel
@@ -160,7 +162,9 @@ fun EditItemDialog(
                             }
                             Spacer(Modifier.height(8.dp))
 
-                            TextButton(onClick = viewModel::requestDelete) { Text(stringResource(R.string.action_delete)) }
+                            Button(onClick = viewModel::requestDelete, colors = dangerButtonColors()) {
+                                Text(stringResource(R.string.action_delete))
+                            }
                         }
 
                         HorizontalDivider()
@@ -169,7 +173,7 @@ fun EditItemDialog(
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                             Spacer(Modifier.width(8.dp))
                             Button(onClick = viewModel::save) { Text(stringResource(R.string.action_save)) }
                         }

@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +25,7 @@ import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.appLocale
 import java.time.LocalDate
 
@@ -158,7 +159,9 @@ fun BalancesContent(
                         )
                         if (state.canRecord(transfer)) {
                             val amount = ExpenseMath.fromCents(transfer.cents)
-                            TextButton(
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                contentPadding = CompactButtonPadding,
                                 onClick = {
                                     onReimburse(
                                         ExpensePrefill(

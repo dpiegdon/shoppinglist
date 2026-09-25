@@ -11,17 +11,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -49,10 +50,12 @@ import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.data.label
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.accountLineText
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.dragReorderHandle
 import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
@@ -108,7 +111,8 @@ fun ListPropsScreen(
                 enabled = !lockedByVote,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote) {
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = { viewModel.saveName() }, enabled = !lockedByVote) {
                 Text(stringResource(R.string.action_save))
             }
         }
@@ -167,10 +171,7 @@ fun ListPropsScreen(
         if (state.checkedCount > 0) {
             Button(
                 onClick = { viewModel.clearChecked() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
+                colors = dangerButtonColors(),
             ) {
                 Text(stringResource(R.string.listprops_clear_checked, state.checkedCount))
             }
@@ -190,7 +191,9 @@ fun ListPropsScreen(
                 onMoveDown = viewModel::moveCategoryDown,
                 onRename = { index, newName -> viewModel.renameCategory(index, newName) },
             )
-            TextButton(onClick = { viewModel.saveCategoryOrder() }) { Text(stringResource(R.string.listprops_save_order)) }
+            Button(onClick = { viewModel.saveCategoryOrder() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.listprops_save_order))
+            }
             Spacer(Modifier.height(16.dp))
         }
 
@@ -205,7 +208,8 @@ fun ListPropsScreen(
             enabled = !lockedByVote,
             modifier = Modifier.fillMaxWidth(),
         )
-        TextButton(onClick = { viewModel.saveNotes() }, enabled = !lockedByVote) {
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = { viewModel.saveNotes() }, enabled = !lockedByVote, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.listprops_save_notes))
         }
         Spacer(Modifier.height(16.dp))
@@ -230,7 +234,9 @@ fun ListPropsScreen(
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
         if (!isExpenses) {
-            TextButton(onClick = { viewModel.requestDuplicate(copySuffix) }) { Text(stringResource(R.string.action_duplicate)) }
+            Button(onClick = { viewModel.requestDuplicate(copySuffix) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.action_duplicate))
+            }
         }
         Spacer(Modifier.height(8.dp))
 
@@ -247,7 +253,7 @@ fun ListPropsScreen(
         Button(
             onClick = viewModel::requestLeave,
             enabled = !leaveBlocked,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+            colors = dangerButtonColors(),
         ) { Text(stringResource(if (state.local == true) R.string.listprops_delete_list else R.string.listprops_leave_list)) }
         if (leaveBlocked) {
             Text(
@@ -360,7 +366,11 @@ private fun SharingSections(state: ListPropsUiState, viewModel: ListPropsViewMod
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.listprops_invite_pending, invite.invitedEmail))
-            TextButton(onClick = { viewModel.revokeInvite(invite.id) }) { Text(stringResource(R.string.action_revoke)) }
+            Button(
+                onClick = { viewModel.revokeInvite(invite.id) },
+                colors = dangerButtonColors(),
+                contentPadding = CompactButtonPadding,
+            ) { Text(stringResource(R.string.action_revoke)) }
         }
     }
     Spacer(Modifier.height(8.dp))
@@ -373,7 +383,8 @@ private fun SharingSections(state: ListPropsUiState, viewModel: ListPropsViewMod
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
+        Spacer(Modifier.width(8.dp))
+        Button(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
     }
 }
 
@@ -402,7 +413,7 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            TextButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
+            Button(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
                 Text(
                     stringResource(
                         if (state.myAccountId in state.closeVotes) {
@@ -452,11 +463,18 @@ private fun CategoryOrderList(
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = {
-                            onRename(currentCategories.indexOf(category), draftName)
-                            editingCategory = null
-                        }) { Text(stringResource(R.string.action_save)) }
-                        TextButton(onClick = { editingCategory = null }) { Text(stringResource(R.string.action_cancel)) }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                onRename(currentCategories.indexOf(category), draftName)
+                                editingCategory = null
+                            },
+                            contentPadding = CompactButtonPadding,
+                        ) { Text(stringResource(R.string.action_save)) }
+                        Spacer(Modifier.width(4.dp))
+                        OutlinedButton(onClick = { editingCategory = null }, contentPadding = CompactButtonPadding) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
                     }
                 } else {
                     val dragging = reorder.isDragging(category)
