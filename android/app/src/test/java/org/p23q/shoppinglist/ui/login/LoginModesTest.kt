@@ -13,6 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AlreadyAddedException
@@ -56,7 +57,7 @@ class LoginModesTest {
 
     private val prod = testAccount(id = "prod", serverUrl = "https://lists.example.test/", email = "me@example.com")
     private val stage = testAccount(id = "stage", serverUrl = "https://lists.example.test/stage/", email = "me@example.com", signedIn = false)
-        .copy(allowSelfSignedCerts = true)
+        .copy(allowSelfSignedCerts = true, serverProtocol = PROTOCOL_VERSION)
     private var known = listOf(prod, stage)
     private val serverConfig = FakeLastServerAddress(url = "https://typed.example.test/")
     private val pendingInvites = PendingInviteHolder()
@@ -188,7 +189,7 @@ class LoginModesTest {
     /** T-300: 3.1.0's last typed address may not be the server of the session it migrated. */
     @Test
     fun `a re-sign-in for a row with no recorded account leaves its server editable`() = runTest(mainDispatcherRule.dispatcher) {
-        known = listOf(prod, stage.copy(accountId = null))
+        known = listOf(prod, stage.copy(accountId = null, serverProtocol = null))
         val repo = Repo(signsInAs = "stage")
         val viewModel = viewModel(repo, Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
 
@@ -199,6 +200,35 @@ class LoginModesTest {
 
         assertEquals("https://real.example.test/", repo.loginUrl)
         assertEquals(LoginExpectation.Account("stage"), repo.expected)
+    }
+
+    /**
+     * T-304: 3.1.0 saved the address on every submit, before the server answered, so a migrated
+     * row that records its owner may still hold a wrong address, or none.
+     */
+    @Test
+    fun `a re-sign-in for a row whose server has never answered leaves its server editable`() = runTest(mainDispatcherRule.dispatcher) {
+        known = listOf(prod, stage.copy(serverProtocol = null))
+        val repo = Repo(signsInAs = "stage")
+        val viewModel = viewModel(repo, Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+
+        assertFalse(viewModel.uiState.value.serverUrlLocked)
+        viewModel.onServerUrlChange("https://real.example.test/")
+        viewModel.onPasswordChange("hunter2")
+        viewModel.submit()?.join()
+
+        assertEquals("https://real.example.test/", repo.loginUrl)
+        assertEquals(LoginExpectation.Account("stage"), repo.expected)
+    }
+
+    @Test
+    fun `a re-sign-in for a row with no address leaves its server editable`() = runTest(mainDispatcherRule.dispatcher) {
+        known = listOf(prod, stage.copy(serverUrl = null))
+
+        val viewModel = viewModel(Repo(signsInAs = "stage"), Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+
+        assertFalse(viewModel.uiState.value.serverUrlLocked)
+        assertEquals("", viewModel.uiState.value.serverUrl)
     }
 
     /** T-300: the check asked the last typed server while the form showed the invite's. */

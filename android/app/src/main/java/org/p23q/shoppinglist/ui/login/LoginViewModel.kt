@@ -62,9 +62,10 @@ data class LoginUiState(
     val errorMessage: UiText? = null,
     val loginSucceeded: Boolean = false,
     /**
-     * A re-sign-in's server is the account's own and cannot be changed here; editable for a row
-     * migrated from 3.1.0 that records no server-side account, whose URL is only the address last
-     * typed there and may not be its session's server (T-300).
+     * A re-sign-in's server is the account's own and cannot be changed here, once this phone has
+     * heard from it (its protocol is known). Editable until then: a row migrated from 3.1.0 has
+     * only the address last typed there, saved before the server answered, and may have none at
+     * all (T-300, T-304).
      */
     val serverUrlLocked: Boolean = false,
     /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
@@ -116,7 +117,7 @@ class LoginViewModel @Inject constructor(
                 mode = mode,
                 serverUrl = account.serverUrl.orEmpty(),
                 email = account.email.orEmpty(),
-                serverUrlLocked = account.accountId != null,
+                serverUrlLocked = account.serverProtocol != null && !account.serverUrl.isNullOrBlank(),
                 allowSelfSignedCerts = account.allowSelfSignedCerts,
             )
         } ?: LoginUiState(

@@ -9,6 +9,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -443,6 +444,60 @@ class AuthRepositoryTest {
         assertTrue(account.signedIn)
         assertEquals(account, db.accountDao().all().single())
         assertTrue(db.itemDao().get("item-1")!!.dirty)
+    }
+
+    /**
+     * T-304: 3.1.0 saved the address before the server answered, so a migrated row can name a
+     * server its session was never on. Signed in again at the right one, the row takes it.
+     */
+    @Test
+    fun `a re-sign-in for a row whose server has never answered takes the URL it was signed in with`() = runTest {
+        accounts.add(server.url("/typed-last/").toString(), accountId = "acc-1", token = null)
+        signOut(TEST_ACCOUNT_ID)
+        seedList("list-1")
+        enqueueLogin(accountId = "acc-1")
+
+        val id = repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+
+        assertEquals(TEST_ACCOUNT_ID, id)
+        val account = accounts.registry.get(id)!!
+        assertEquals(url, account.serverUrl)
+        assertEquals(org.p23q.shoppinglist.core.account.serverLabel(url), account.label)
+        assertEquals("its protocol is known now", MIN_SERVER_PROTOCOL, account.serverProtocol)
+        assertEquals(listOf(TEST_ACCOUNT_ID), db.accountDao().all().map { it.id })
+    }
+
+    @Test
+    fun `a re-sign-in at another server than the row's known one is refused and its session ended`() = runTest {
+        accounts.add(server.url("/elsewhere/").toString(), accountId = "acc-1", token = null)
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = MIN_SERVER_PROTOCOL) }
+        signOut(TEST_ACCOUNT_ID)
+        enqueueLogin(accountId = "acc-1")
+
+        assertThrows<WrongAccountException> {
+            repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+        }
+
+        assertEquals(server.url("/elsewhere/").toString(), accounts.registry.get(TEST_ACCOUNT_ID)!!.serverUrl)
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+        server.takeRequest()
+        server.takeRequest()
+        assertEquals("/api/v1/logout", server.takeRequest().path)
+    }
+
+    @Test
+    fun `a re-sign-in whose account was added again at the right URL is refused, both rows as they were`() = runTest {
+        accounts.add(server.url("/typed-last/").toString(), accountId = "acc-1", token = null)
+        signOut(TEST_ACCOUNT_ID)
+        accounts.add(url, id = "acc-1-row", accountId = "acc-1")
+        enqueueLogin(accountId = "acc-1")
+
+        assertThrows<AlreadyAddedException> {
+            repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+        }
+
+        assertEquals(server.url("/typed-last/").toString(), accounts.registry.get(TEST_ACCOUNT_ID)!!.serverUrl)
+        assertEquals("tok-123", accounts.secrets.token("acc-1-row"))
     }
 
     @Test

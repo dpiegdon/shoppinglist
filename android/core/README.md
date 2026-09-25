@@ -97,7 +97,9 @@ interface and `:app` implements it and binds it in Hilt:
   account may take over); either is decided before the matched row changes,
   and ends the session the server just opened. A row that records no
   server-side account (migrated from 3.1.0) takes on the one that signs in again
-  for it. Before all that it asks `/app-version` for the server's protocol
+  for it. A row whose server has not answered this phone yet (no
+  `serverProtocol`) takes the URL it is signed in again with; after that the
+  URL is the row's, and the login form shows it read-only. Before all that it asks `/app-version` for the server's protocol
   whenever it holds none between `MIN_SERVER_PROTOCOL` and `PROTOCOL_VERSION`
   (`api/Protocol.kt`): the server says it in the `200` and in the
   `no_app_package` `404`. A server below the floor, one above this build and an

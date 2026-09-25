@@ -93,8 +93,11 @@ interface AuthRepository {
      * mismatch revokes the session the server just opened and throws, storing nothing:
      * [AlreadyAddedException] when [LoginExpectation.NewAccount] matched a row that is signed
      * in; [WrongAccountException] when [LoginExpectation.Account] got another account than that
-     * row's. A row that records no server-side account (a 3.1.0 session that never said whose
-     * lists it held) takes on the one that signs in again for it, and the server URL it was given.
+     * row's, or another server than the row's once its protocol is known. A row that records no
+     * server-side account (a 3.1.0 session that never said whose lists it held) takes on the one
+     * that signs in again for it; a row whose protocol is not known yet takes the server URL it
+     * was signed in with. [AlreadyAddedException] also when either finds the account at that URL
+     * already a row of its own.
      *
      * The account's default currency is read afterwards, best-effort: a failure there does not
      * undo a sign-in the server has already accepted, and the Account screen reads it again.
@@ -179,7 +182,18 @@ class AuthRepositoryImpl(
                     // The local area has no server to sign in to: no server account may take
                     // its row over (T-302).
                     !row.isServer -> refuse(url, allowSelfSignedCerts, response.token, WrongAccountException())
-                    row.accountId == response.accountId -> row
+                    // A server this phone has heard from is the row's for good; one it has not
+                    // (a migrated row, whose URL is 3.1.0's last typed one) is corrected in the
+                    // form, and the row takes the URL it was signed in with (T-304).
+                    row.serverProtocol != null && row.serverUrl != url ->
+                        refuse(url, allowSelfSignedCerts, response.token, WrongAccountException())
+                    row.accountId == response.accountId -> {
+                        // The account already has a row at that URL, added beside this one.
+                        if (matched != null && matched.id != row.id) {
+                            refuse(url, allowSelfSignedCerts, response.token, AlreadyAddedException())
+                        }
+                        row
+                    }
                     row.accountId != null -> refuse(url, allowSelfSignedCerts, response.token, WrongAccountException())
                     // A migrated row whose owner was never recorded (T-300): the account that signs
                     // in for it takes it, unless that account is already a row of its own.
