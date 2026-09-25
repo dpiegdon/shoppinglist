@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-25T21:22:21+00:00", "kind": "created", "ref": "main@3579de3a", "text": "Release 3.2.2"}
+{"actor": "user", "at": "2026-09-25T21:36:48+00:00", "kind": "note", "ref": "main@3e5b72e5", "text": "Second attempt after the first was aborted by the maintainer to add T-311 (About page source link); notes extended."}
