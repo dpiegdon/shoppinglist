@@ -110,7 +110,9 @@ interface and `:app` implements it and binds it in Hilt:
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
   that has a token (one without is signed out); `syncAccount()` is one, under
   its account lock. The local area is never synced, and its dirty rows count
-  in no account's pending figure. `SyncStatus.state` is the worst of the
+  in no account's pending figure. After an account's first successful sync
+  in a process, a server whose protocol the account does not hold yet is asked
+  `/app-version` once, with no token, and the answer is stored. `SyncStatus.state` is the worst of the
   accounts, `SyncStatus.accounts` each one.
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and

@@ -76,6 +76,18 @@ class AuthRepositoryTest {
         if (::db.isInitialized) db.close()
     }
 
+    /**
+     * An account as 3.1.0 migrated it or a test sets it up: no protocol known for its server, so
+     * a login there asks `/app-version` first, as [enqueueLogin] expects by default.
+     */
+    private suspend fun addAccount(
+        serverUrl: String,
+        id: String = TEST_ACCOUNT_ID,
+        token: String? = "tok-123",
+        accountId: String? = "acct-me",
+        email: String? = "me@example.com",
+    ) = accounts.add(serverUrl, id, token, accountId, email, serverProtocol = null)
+
     private fun appVersion(protocol: Int?) = MockResponse().setResponseCode(200).setBody(
         """{"version": "1.0.0", "download_url": "https://example.com/a.apk"${protocol?.let { ", \"protocol\": $it" } ?: ""}}""",
     )
@@ -217,7 +229,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `a stored protocol above this build's is asked again`() = runTest {
-        accounts.add(url, accountId = "acc-1", token = null)
+        addAccount(url, accountId = "acc-1", token = null)
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = PROTOCOL_VERSION + 1) }
         server.enqueue(appVersion(PROTOCOL_VERSION + 1))
 
@@ -285,7 +297,7 @@ class AuthRepositoryTest {
     /** The whole round trip of T-260's scenario: signed out by the server, then back in as oneself. */
     @Test
     fun `logging back in as the same account re-activates its row and keeps the mirror (T-260)`() = runTest {
-        accounts.add(url, accountId = "acc-1")
+        addAccount(url, accountId = "acc-1")
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
         signOut(TEST_ACCOUNT_ID)
@@ -304,7 +316,7 @@ class AuthRepositoryTest {
     /** T-298: the same server typed differently is still the same account, lists and all. */
     @Test
     fun `the same server spelled differently signs the same account back in`() = runTest {
-        accounts.add(url, accountId = "acc-1", token = null)
+        addAccount(url, accountId = "acc-1", token = null)
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
         enqueueLogin(accountId = "acc-1")
@@ -318,7 +330,7 @@ class AuthRepositoryTest {
     /** T-300: every login keeps the other accounts, server and local, and their lists. */
     @Test
     fun `a login keeps every other account and its lists`() = runTest {
-        accounts.add(url, accountId = "acc-1")
+        addAccount(url, accountId = "acc-1")
         accounts.registry.add(
             AccountEntity(
                 id = "on-device",
@@ -349,7 +361,7 @@ class AuthRepositoryTest {
      */
     @Test
     fun `adding an account that is here and signed in is refused before its row changes, and the new session is ended`() = runTest {
-        accounts.add(url, accountId = "acc-1")
+        addAccount(url, accountId = "acc-1")
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(syncCursor = 42) }
         val before = accounts.registry.get(TEST_ACCOUNT_ID)
         server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
@@ -371,7 +383,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `adding an account that is here but signed out signs its row in again`() = runTest {
-        accounts.add(url, accountId = "acc-1", token = null)
+        addAccount(url, accountId = "acc-1", token = null)
         signOut(TEST_ACCOUNT_ID)
         enqueueLogin(accountId = "acc-1")
 
@@ -384,7 +396,7 @@ class AuthRepositoryTest {
     /** T-300: B's credentials in A's "Sign in again" form used to add B and leave A signed out. */
     @Test
     fun `a re-sign-in with another account's credentials is refused and its session ended`() = runTest {
-        accounts.add(url, accountId = "acc-1", token = null)
+        addAccount(url, accountId = "acc-1", token = null)
         signOut(TEST_ACCOUNT_ID)
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
@@ -409,7 +421,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `a re-sign-in with the account's own credentials signs its row in`() = runTest {
-        accounts.add(url, accountId = "acc-1", token = null)
+        addAccount(url, accountId = "acc-1", token = null)
         signOut(TEST_ACCOUNT_ID)
         enqueueLogin(accountId = "acc-1")
 
@@ -426,7 +438,7 @@ class AuthRepositoryTest {
      */
     @Test
     fun `a re-sign-in for a row with no recorded owner adopts the account that signs in`() = runTest {
-        accounts.add(server.url("/typed-last/").toString(), accountId = null, token = null)
+        addAccount(server.url("/typed-last/").toString(), accountId = null, token = null)
         signOut(TEST_ACCOUNT_ID)
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
@@ -452,7 +464,7 @@ class AuthRepositoryTest {
      */
     @Test
     fun `a re-sign-in for a row whose server has never answered takes the URL it was signed in with`() = runTest {
-        accounts.add(server.url("/typed-last/").toString(), accountId = "acc-1", token = null)
+        addAccount(server.url("/typed-last/").toString(), accountId = "acc-1", token = null)
         signOut(TEST_ACCOUNT_ID)
         seedList("list-1")
         enqueueLogin(accountId = "acc-1")
@@ -469,7 +481,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `a re-sign-in at another server than the row's known one is refused and its session ended`() = runTest {
-        accounts.add(server.url("/elsewhere/").toString(), accountId = "acc-1", token = null)
+        addAccount(server.url("/elsewhere/").toString(), accountId = "acc-1", token = null)
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = MIN_SERVER_PROTOCOL) }
         signOut(TEST_ACCOUNT_ID)
         enqueueLogin(accountId = "acc-1")
@@ -487,9 +499,9 @@ class AuthRepositoryTest {
 
     @Test
     fun `a re-sign-in whose account was added again at the right URL is refused, both rows as they were`() = runTest {
-        accounts.add(server.url("/typed-last/").toString(), accountId = "acc-1", token = null)
+        addAccount(server.url("/typed-last/").toString(), accountId = "acc-1", token = null)
         signOut(TEST_ACCOUNT_ID)
-        accounts.add(url, id = "acc-1-row", accountId = "acc-1")
+        addAccount(url, id = "acc-1-row", accountId = "acc-1")
         enqueueLogin(accountId = "acc-1")
 
         assertThrows<AlreadyAddedException> {
@@ -502,9 +514,9 @@ class AuthRepositoryTest {
 
     @Test
     fun `a row with no recorded owner does not adopt an account that has a row already`() = runTest {
-        accounts.add(url, accountId = null, token = null)
+        addAccount(url, accountId = null, token = null)
         signOut(TEST_ACCOUNT_ID)
-        accounts.add(url, id = "acc-1-row", accountId = "acc-1")
+        addAccount(url, id = "acc-1-row", accountId = "acc-1")
         server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
         enqueueAnswer(accountId = "acc-1")
 
@@ -539,8 +551,8 @@ class AuthRepositoryTest {
      */
     @Test
     fun `removing an account leaves another account's row of a shared list, and its cursor, alone`() = runTest {
-        accounts.add(url, accountId = "acc-1")
-        accounts.add(url, id = "same-server", accountId = "acc-2")
+        addAccount(url, accountId = "acc-1")
+        addAccount(url, id = "same-server", accountId = "acc-2")
         accounts.registry.update("same-server") { it.copy(syncCursor = 42) }
         seedList("mine", serverId = "shared")
         seedList("theirs", owner = "same-server", serverId = "shared")
@@ -559,7 +571,7 @@ class AuthRepositoryTest {
 
     @Test
     fun `removing an account deletes its lists, their items, its token and its row`() = runTest {
-        accounts.add(url, accountId = "acc-1")
+        addAccount(url, accountId = "acc-1")
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
         accounts.secrets.lastOpenedListId = "list-1"

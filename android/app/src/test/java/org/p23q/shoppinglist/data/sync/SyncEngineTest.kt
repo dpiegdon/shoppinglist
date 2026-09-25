@@ -1604,4 +1604,54 @@ class SyncEngineTest {
         assertEquals(created, list(serverId)!!.localId)
         assertEquals(itemId, item(itemServerId)!!.localId)
     }
+
+    // ---- the protocol of a server this phone never asked (T-304) ----------------------
+
+    @Test
+    fun `an account with no protocol stored asks its server once, with no token, after a sync (T-304)`() = runTest {
+        pointAtServer()
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = null) }
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"version": "9.0.0", "download_url": "https://x/a.apk", "protocol": 4}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertEquals(4, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertEquals("/api/v1/sync", server.takeRequest().path)
+        val ask = server.takeRequest()
+        assertEquals("/api/v1/app-version", ask.path)
+        assertNull(ask.getHeader("Authorization"))
+        assertEquals("not asked again", "/api/v1/sync", server.takeRequest().path)
+        assertEquals(3, server.requestCount)
+    }
+
+    @Test
+    fun `a server without an app package gives its protocol in the 404 (T-304)`() = runTest {
+        pointAtServer()
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = null) }
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "no_app_package", "message": "none", "protocol": 3}"""))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertEquals(3, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertTrue("the account is not signed out or outdated by it", accounts.registry.get(TEST_ACCOUNT_ID)!!.let { it.signedIn && !it.outdated })
+    }
+
+    @Test
+    fun `an answer that names no protocol is not asked for again in this process (T-304)`() = runTest {
+        pointAtServer()
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = null) }
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"version": "9.0.0", "download_url": "https://x/a.apk"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertNull(accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertEquals(3, server.requestCount)
+    }
 }

@@ -114,7 +114,10 @@ class UpdateChecker @Inject constructor(
         val byServer = registry.load().filter { it.isServer && !it.serverUrl.isNullOrBlank() }.groupBy { it.serverUrl }
         val answers = byServer.values.mapNotNull { accounts ->
             val answer = fetchFrom(accounts.first()) ?: return@mapNotNull null
-            accounts.forEach { account -> registry.update(account.id) { it.copy(serverProtocol = answer.protocol) } }
+            // A server that says no protocol has not forgotten it: what is stored stays (T-304).
+            answer.protocol?.let { protocol ->
+                accounts.forEach { account -> registry.update(account.id) { it.copy(serverProtocol = protocol) } }
+            }
             answer.response
         }
         // Among the versions that parse, the newest; an answer whose version does not parse is

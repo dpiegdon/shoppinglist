@@ -376,6 +376,7 @@ class SyncEngine @Inject constructor(
         registry.update(accountId) { it.copy(syncCursor = response.cursor) }
 
         ensureAccountId(accountId)
+        ensureServerProtocol(accountId)
         reportCollaboratorChanges(accountId, requestCursor = request.cursor, pulledItems = response.changes.items)
 
         // Recompute pending after the merge: a local edit that raced the request may still be dirty.
@@ -482,6 +483,38 @@ class SyncEngine @Inject constructor(
             // Best-effort — retried on the next sync.
         }
     }
+
+    /**
+     * Asks the server of an account that has no protocol stored for it, once per process, after
+     * the account's first successful sync (T-304). A row migrated from 3.1.0 that was signed in
+     * never went through a sign-in's floor check, and with automatic update checks off nothing
+     * else asks: a feature gated on `serverProtocol` would never unlock for it. With no token, as
+     * the update check asks: this request must not sign the account out or mark it outdated.
+     * Best-effort; a failure to reach the server asks again on the next sync.
+     */
+    private suspend fun ensureServerProtocol(accountId: String) {
+        val account = registry.get(accountId) ?: return
+        if (account.serverProtocol != null || accountId in protocolAsked) return
+        val url = account.serverUrl ?: return
+        val protocol = try {
+            sessions.unbound(url, account.allowSelfSignedCerts).appVersion().protocol
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ApiException) {
+            // A server without a package says its protocol in the 404 (T-297).
+            e.protocol?.takeIf { e.httpStatus == 404 }
+        } catch (e: IOException) {
+            return
+        } catch (e: Exception) {
+            // Something answered, but not the endpoint's JSON.
+            null
+        }
+        protocolAsked.add(accountId)
+        if (protocol != null) registry.update(accountId) { it.copy(serverProtocol = protocol) }
+    }
+
+    /** The accounts [ensureServerProtocol] has had an answer for in this process. */
+    private val protocolAsked: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * Detects rows in this pull that were last touched by a DIFFERENT account and reports them

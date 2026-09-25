@@ -119,9 +119,11 @@ class TestAccounts(val db: AppDb, val json: Json = Json { ignoreUnknownKeys = tr
         token: String? = "tok-123",
         accountId: String? = "acct-me",
         email: String? = "me@example.com",
+        // Known, as after a sign-in, so a sync does not ask the server for it first (T-304).
+        serverProtocol: Int? = org.p23q.shoppinglist.core.api.PROTOCOL_VERSION,
     ): AccountEntity {
         if (token != null) secrets.setToken(id, token)
-        return registry.add(testAccount(id, serverUrl, accountId, email, signedIn = token != null))
+        return registry.add(testAccount(id, serverUrl, accountId, email, signedIn = token != null).copy(serverProtocol = serverProtocol))
     }
 
     /** The [ListAccounts] the list screens get, over these accounts. */

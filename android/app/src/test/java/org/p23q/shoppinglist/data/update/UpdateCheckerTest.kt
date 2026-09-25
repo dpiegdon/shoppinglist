@@ -351,6 +351,18 @@ class UpdateCheckerTest {
         assertEquals(7, accounts.db.accountDao().all().single().serverProtocol)
     }
 
+    /** T-304: an answer that names no protocol says nothing about it, so what is stored stays. */
+    @Test
+    fun `an answer without a protocol keeps the one stored`() = runTest {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = 7) }
+        server.enqueue(offering("1.12.0"))
+
+        checker.checkNow(currentVersion = "1.11.0")
+
+        assertEquals(7, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertEquals(7, accounts.db.accountDao().all().single().serverProtocol)
+    }
+
     /** T-297: a server without an app package says its protocol in the 404. */
     @Test
     fun `a server without a package still refreshes the protocol, and offers nothing`() = runTest {
