@@ -3,10 +3,12 @@ package org.p23q.shoppinglist.data
 import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestDispatcher
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AppDb
@@ -45,7 +47,19 @@ fun closeWhenIdle(
         pumpMain()
         Thread.sleep(1)
     }
-    if (registry != null) runBlocking { registry.flush() }
+    if (registry != null) {
+        // Not runBlocking on this thread: a pending registry write is a Room query, and a test
+        // database built with setQueryCoroutineContext(testDispatcher) resumes it only when that
+        // dispatcher is pumped — which nothing would do while this thread blocks (T-306).
+        val flush = CoroutineScope(Dispatchers.Default).launch { registry.flush() }
+        while (!flush.isCompleted) {
+            check(System.currentTimeMillis() < deadline) {
+                "A registry write was still pending after $timeoutMs ms; the test database is left open"
+            }
+            pumpMain()
+            Thread.sleep(1)
+        }
+    }
     db.close()
 }
 
