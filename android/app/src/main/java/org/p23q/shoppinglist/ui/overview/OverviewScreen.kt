@@ -268,6 +268,13 @@ internal fun NewListDialog(
                     onValueChange = onNameChange,
                     label = { Text(stringResource(R.string.overview_list_name)) },
                     singleLine = true,
+                    isError = state.newListNameMissing,
+                    supportingText = if (state.newListNameMissing) {
+                        { Text(stringResource(R.string.overview_name_required)) }
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.testTag("new-list-name"),
                 )
                 Spacer(Modifier.height(12.dp))
                 // Kind is chosen up front (T-110) but isn't permanent — list properties can
@@ -311,6 +318,13 @@ internal fun NewListDialog(
                         onValueChange = onCurrencyChange,
                         label = { Text(stringResource(R.string.expense_currency)) },
                         singleLine = true,
+                        isError = state.newListCurrencyMissing,
+                        supportingText = if (state.newListCurrencyMissing) {
+                            { Text(stringResource(R.string.overview_currency_required)) }
+                        } else {
+                            null
+                        },
+                        modifier = Modifier.testTag("new-list-currency"),
                     )
                     Text(
                         stringResource(R.string.overview_currency_help),

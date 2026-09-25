@@ -146,6 +146,8 @@ export const zhHans: Catalog = {
 
   "overview.newList": "新建清单",
   "overview.name": "名称",
+  "overview.nameRequired": "请输入名称。",
+  "overview.currencyRequired": "请输入货币。",
   "overview.type": "类型",
   "overview.kind.checklist": "仅包含名称、分类和备注。",
   "overview.kind.shopping": "为每件物品添加商店、数量和价格。",

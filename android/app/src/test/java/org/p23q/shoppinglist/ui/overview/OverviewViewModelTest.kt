@@ -181,6 +181,34 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `a blank name says so until the user types, and a blank ledger currency too (T-307)`() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.openCreateDialog()
+        viewModel.onNewListNameChange("   ")
+        viewModel.onNewListKindChange(ListKind.EXPENSES)
+        viewModel.onNewListCurrencyChange(" ")
+
+        assertNull(viewModel.createList())
+
+        assertTrue(viewModel.uiState.value.isCreateDialogOpen)
+        assertTrue(viewModel.uiState.value.newListNameMissing)
+        assertTrue(viewModel.uiState.value.newListCurrencyMissing)
+        viewModel.onNewListNameChange("Trip")
+        assertFalse(viewModel.uiState.value.newListNameMissing)
+        assertTrue("the currency is still blank", viewModel.uiState.value.newListCurrencyMissing)
+        viewModel.onNewListCurrencyChange("E")
+        assertFalse(viewModel.uiState.value.newListCurrencyMissing)
+
+        // Only the field still blank is flagged; a fresh dialog starts clean.
+        viewModel.onNewListCurrencyChange("")
+        assertNull(viewModel.createList())
+        assertFalse(viewModel.uiState.value.newListNameMissing)
+        assertTrue(viewModel.uiState.value.newListCurrencyMissing)
+        viewModel.dismissCreateDialog()
+        viewModel.openCreateDialog()
+        assertFalse(viewModel.uiState.value.newListCurrencyMissing)
+    }
+
+    @Test
     fun `openCreateDialog and dismissCreateDialog toggle dialog visibility`() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.openCreateDialog()
         assertTrue(viewModel.uiState.value.isCreateDialogOpen)

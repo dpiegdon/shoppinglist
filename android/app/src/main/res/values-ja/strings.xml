@@ -73,6 +73,8 @@
     <string name="overview_invite_expires_hours">%1$d 時間後に期限切れ</string>
     <string name="overview_invite_expires_days">%1$d 日後に期限切れ</string>
     <string name="overview_list_name">リスト名</string>
+    <string name="overview_name_required">名前を入力してください。</string>
+    <string name="overview_currency_required">通貨を入力してください。</string>
     <string name="overview_type">種類</string>
     <string name="overview_kind_checklist">名前、カテゴリ、メモのみ。</string>
     <string name="overview_kind_shopping">各アイテムに店舗、数量、価格を追加します。</string>

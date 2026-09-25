@@ -148,6 +148,8 @@ export const ar: Catalog = {
 
   "overview.newList": "قائمة جديدة",
   "overview.name": "الاسم",
+  "overview.nameRequired": "أدخل اسمًا.",
+  "overview.currencyRequired": "أدخل عملة.",
   "overview.type": "النوع",
   "overview.kind.checklist": "أسماء وفئات وملاحظات فقط.",
   "overview.kind.shopping": "يضيف المتاجر والكمية والسعر لكل عنصر.",

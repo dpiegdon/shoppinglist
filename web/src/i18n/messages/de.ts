@@ -147,6 +147,8 @@ export const de: Catalog = {
 
   "overview.newList": "Neue Liste",
   "overview.name": "Name",
+  "overview.nameRequired": "Gib einen Namen ein.",
+  "overview.currencyRequired": "Gib eine Währung ein.",
   "overview.type": "Typ",
   "overview.kind.checklist": "Nur Namen, Kategorien und Notizen.",
   "overview.kind.shopping": "Ergänzt jeden Artikel um Geschäfte, Menge und Preis.",

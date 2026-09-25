@@ -69,6 +69,9 @@ data class OverviewUiState(
     val newListCurrency: String = "",
     /** The account the new list goes to (T-292); only offered as a choice with several accounts. */
     val newListAccountId: String? = null,
+    /** Create was tapped with a blank name, or an expenses list with a blank currency (T-307); typing clears it. */
+    val newListNameMissing: Boolean = false,
+    val newListCurrencyMissing: Boolean = false,
     /** Total spent and this account's balance per expenses list, for its card (T-154). */
     val expenseSummaries: Map<String, ExpenseSummary> = emptyMap(),
     val sync: SyncState = SyncState(),
@@ -215,10 +218,12 @@ class OverviewViewModel @Inject constructor(
             newListKind = ListKind.DEFAULT,
             newListAccountId = account?.id,
             newListCurrency = account?.defaultCurrency.orEmpty(),
+            newListNameMissing = false,
+            newListCurrencyMissing = false,
         )
     }
 
-    fun onNewListCurrencyChange(value: String) = _uiState.update { it.copy(newListCurrency = value) }
+    fun onNewListCurrencyChange(value: String) = _uiState.update { it.copy(newListCurrency = value, newListCurrencyMissing = false) }
 
     /** Another account for the new list; its default currency replaces the old one's, unless one was typed. */
     fun onNewListAccountChange(accountId: String) = _uiState.update { state ->
@@ -234,17 +239,21 @@ class OverviewViewModel @Inject constructor(
 
     fun dismissCreateDialog() = _uiState.update { it.copy(isCreateDialogOpen = false) }
 
-    fun onNewListNameChange(value: String) = _uiState.update { it.copy(newListName = value) }
+    fun onNewListNameChange(value: String) = _uiState.update { it.copy(newListName = value, newListNameMissing = false) }
 
     fun onNewListKindChange(kind: String) = _uiState.update { if (kind in it.newListKinds) it.copy(newListKind = kind) else it }
 
-    /** Returns the launched Job, or null if the name was blank (dialog stays open, no-op) or there is no account. */
+    /**
+     * Returns the launched Job, or null if there is no account, or if the name was blank or an
+     * expenses list's currency was: then the dialog stays open and the field says so (T-307).
+     */
     fun createList(): Job? {
         val name = _uiState.value.newListName.trim()
-        if (name.isBlank()) return null
         // The server refuses an expenses list without one, and the kind is fixed for life, so
         // there is no second chance to supply it later.
-        if (ListKind.isExpenses(_uiState.value.newListKind) && _uiState.value.newListCurrency.isBlank()) {
+        val currencyMissing = ListKind.isExpenses(_uiState.value.newListKind) && _uiState.value.newListCurrency.isBlank()
+        if (name.isBlank() || currencyMissing) {
+            _uiState.update { it.copy(newListNameMissing = name.isBlank(), newListCurrencyMissing = currencyMissing) }
             return null
         }
         val state = _uiState.value

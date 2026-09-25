@@ -73,6 +73,8 @@
     <string name="overview_invite_expires_hours">Caduca en %1$d h</string>
     <string name="overview_invite_expires_days">Caduca en %1$d d</string>
     <string name="overview_list_name">Nombre de la lista</string>
+    <string name="overview_name_required">Escribe un nombre.</string>
+    <string name="overview_currency_required">Escribe una moneda.</string>
     <string name="overview_type">Tipo</string>
     <string name="overview_kind_checklist">Solo nombres, categorías y notas.</string>
     <string name="overview_kind_shopping">Añade tiendas, cantidad y precio a cada artículo.</string>

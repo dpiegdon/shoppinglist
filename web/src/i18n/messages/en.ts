@@ -182,6 +182,8 @@ export const en = {
   // ---- overview ----
   "overview.newList": "New list",
   "overview.name": "Name",
+  "overview.nameRequired": "Enter a name.",
+  "overview.currencyRequired": "Enter a currency.",
   "overview.type": "Type",
   "overview.kind.checklist": "Just names, categories and notes.",
   "overview.kind.shopping": "Adds stores, quantity and price to each item.",

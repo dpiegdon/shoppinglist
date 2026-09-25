@@ -146,6 +146,8 @@ export const uk: Catalog = {
 
   "overview.newList": "Новий список",
   "overview.name": "Назва",
+  "overview.nameRequired": "Введіть назву.",
+  "overview.currencyRequired": "Введіть валюту.",
   "overview.type": "Тип",
   "overview.kind.checklist": "Лише назви, категорії та нотатки.",
   "overview.kind.shopping": "Додає магазини, кількість і ціну до кожного товару.",

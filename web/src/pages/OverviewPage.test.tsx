@@ -1,4 +1,5 @@
 import { render, screen, waitFor, cleanup, within } from "@testing-library/react";
+import { en } from "../i18n/messages/en";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -274,6 +275,53 @@ describe("OverviewPage create-list error (T-266)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
     // Still open, with what was typed still there — not silently discarded.
     expect(screen.getByLabelText("Name")).toHaveValue("Ski trip");
+  });
+
+  it("says inline that a name is needed, rather than the browser's bubble, until one is typed (T-307)", async () => {
+    vi.mocked(api.sync).mockResolvedValue(syncResponse("list-1"));
+    renderOverview();
+    await screen.findByText("My List");
+
+    await userEvent.click(screen.getByRole("button", { name: "New list" }));
+    const name = screen.getByLabelText("Name");
+    // No native "required", so no browser bubble; still required to assistive technology.
+    expect(name).not.toHaveAttribute("required");
+    expect(name).toBeRequired();
+    await userEvent.type(name, "   ");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(en["overview.nameRequired"]);
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(name).toHaveAccessibleDescription(en["overview.nameRequired"]);
+    expect(screen.getByRole("dialog", { name: "New list" })).toBeInTheDocument();
+    expect(vi.mocked(api.sync).mock.calls.flatMap((call) => call[0].changes.lists ?? [])).toHaveLength(0);
+
+    await userEvent.type(name, "Ski trip");
+    expect(screen.queryByText(en["overview.nameRequired"])).not.toBeInTheDocument();
+    expect(name).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("says inline that a ledger needs a currency, until one is typed (T-307)", async () => {
+    vi.mocked(api.sync).mockResolvedValue(syncResponse("list-1"));
+    renderOverview();
+    await screen.findByText("My List");
+
+    await userEvent.click(screen.getByRole("button", { name: "New list" }));
+    await userEvent.type(screen.getByLabelText("Name"), "Ski trip");
+    await userEvent.click(screen.getByRole("radio", { name: /Ledger/ }));
+    const currency = screen.getByLabelText("Currency");
+    expect(currency).not.toHaveAttribute("required");
+    expect(currency).toBeRequired();
+    await userEvent.clear(currency);
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(en["overview.currencyRequired"]);
+    expect(currency).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(en["overview.nameRequired"])).not.toBeInTheDocument();
+    expect(vi.mocked(api.sync).mock.calls.flatMap((call) => call[0].changes.lists ?? [])).toHaveLength(0);
+
+    await userEvent.type(currency, "CHF");
+    expect(screen.queryByText(en["overview.currencyRequired"])).not.toBeInTheDocument();
   });
 
   it("is a modal dialog: named by its heading, focused on open, closed by Escape with focus back on New list (T-283)", async () => {

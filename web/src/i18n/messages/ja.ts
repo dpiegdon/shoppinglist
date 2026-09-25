@@ -147,6 +147,8 @@ export const ja: Catalog = {
 
   "overview.newList": "新しいリスト",
   "overview.name": "名前",
+  "overview.nameRequired": "名前を入力してください。",
+  "overview.currencyRequired": "通貨を入力してください。",
   "overview.type": "種類",
   "overview.kind.checklist": "名前、カテゴリ、メモのみ。",
   "overview.kind.shopping": "各アイテムに店舗、数量、価格を追加します。",

@@ -145,6 +145,8 @@ export const ptBR: Catalog = {
 
   "overview.newList": "Nova lista",
   "overview.name": "Nome",
+  "overview.nameRequired": "Digite um nome.",
+  "overview.currencyRequired": "Digite uma moeda.",
   "overview.type": "Tipo",
   "overview.kind.checklist": "Apenas nomes, categorias e observações.",
   "overview.kind.shopping": "Adiciona lojas, quantidade e preço a cada item.",

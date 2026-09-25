@@ -94,6 +94,8 @@
     <string name="overview_invite_expires_hours">Expires in %1$d h</string>
     <string name="overview_invite_expires_days">Expires in %1$d d</string>
     <string name="overview_list_name">List name</string>
+    <string name="overview_name_required">Enter a name.</string>
+    <string name="overview_currency_required">Enter a currency.</string>
     <string name="overview_type">Type</string>
     <string name="overview_kind_checklist">Just names, categories and notes.</string>
     <string name="overview_kind_shopping">Adds stores, quantity and price to each item.</string>

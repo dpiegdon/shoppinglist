@@ -62,6 +62,10 @@ export default function OverviewPage() {
   // An expenses list needs a currency up front, and it is fixed afterwards (T-151).
   const defaultCurrency = useDefaultCurrency();
   const [newCurrency, setNewCurrency] = useState("");
+  // Create tapped with a blank name, or a ledger with a blank currency (T-307): said inline, as on
+  // Android, rather than by the browser's own "required" bubble. Typing clears it.
+  const [nameMissing, setNameMissing] = useState(false);
+  const [currencyMissing, setCurrencyMissing] = useState(false);
   const { account } = useAuth();
   const [redirectTo, setRedirectTo] = useState<string | null | undefined>(undefined);
   // Invites addressed to this account (T-233). Online only, like the members screen: when the
@@ -73,6 +77,8 @@ export default function OverviewPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const closeCreateDialog = useCallback(() => {
     setCreateError(null);
+    setNameMissing(false);
+    setCurrencyMissing(false);
     setCreating(false);
   }, []);
 
@@ -144,9 +150,13 @@ export default function OverviewPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     const name = newName.trim();
-    if (!name) return;
-    const currency = (newCurrency.trim() || defaultCurrency).trim();
-    if (isExpenses(newKind) && !currency) return;
+    const currency = newCurrency.trim();
+    const noCurrency = isExpenses(newKind) && !currency;
+    if (!name || noCurrency) {
+      setNameMissing(!name);
+      setCurrencyMissing(noCurrency);
+      return;
+    }
     const id = crypto.randomUUID();
     setCreateError(null);
     try {
@@ -363,10 +373,20 @@ export default function OverviewPage() {
             <input
               id="new-list-name"
               autoFocus
-              required
+              aria-required="true"
+              aria-invalid={nameMissing ? true : undefined}
+              aria-describedby={nameMissing ? "new-list-name-error" : undefined}
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setNameMissing(false);
+              }}
             />
+            {nameMissing && (
+              <p id="new-list-name-error" className="error-text" role="alert">
+                {t("overview.nameRequired")}
+              </p>
+            )}
           </div>
           {/* Kind is chosen up front (T-110) but isn't permanent for shopping/checklist — it can
               be changed later in list properties, and converting never touches item data. An
@@ -407,11 +427,21 @@ export default function OverviewPage() {
               <label htmlFor="new-list-currency">{t("expense.currency")}</label>
               <input
                 id="new-list-currency"
-                required
+                aria-required="true"
+                aria-invalid={currencyMissing ? true : undefined}
+                aria-describedby={currencyMissing ? "new-list-currency-error" : undefined}
                 list="currency-suggestions"
                 value={newCurrency}
-                onChange={(e) => setNewCurrency(e.target.value)}
+                onChange={(e) => {
+                  setNewCurrency(e.target.value);
+                  setCurrencyMissing(false);
+                }}
               />
+              {currencyMissing && (
+                <p id="new-list-currency-error" className="error-text" role="alert">
+                  {t("overview.currencyRequired")}
+                </p>
+              )}
               {/* Suggestions, not a constraint: the server takes free text, so a list can be
                   kept in pizza slices if that is what the group settles in. */}
               <datalist id="currency-suggestions">

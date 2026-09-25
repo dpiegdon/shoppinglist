@@ -73,6 +73,8 @@
     <string name="overview_invite_expires_hours">%1$d 小时后过期</string>
     <string name="overview_invite_expires_days">%1$d 天后过期</string>
     <string name="overview_list_name">清单名称</string>
+    <string name="overview_name_required">请输入名称。</string>
+    <string name="overview_currency_required">请输入货币。</string>
     <string name="overview_type">类型</string>
     <string name="overview_kind_checklist">仅包含名称、分类和备注。</string>
     <string name="overview_kind_shopping">为每件物品添加商店、数量和价格。</string>

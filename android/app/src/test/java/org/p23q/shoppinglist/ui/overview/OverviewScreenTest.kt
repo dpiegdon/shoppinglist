@@ -5,6 +5,9 @@ import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -317,5 +320,31 @@ class NewListDialogTest {
         composeTestRule.onNodeWithTag("new-list-kind-checklist").assertExists()
         // The local area by its name in the app's language.
         composeTestRule.onNodeWithText("On this phone").assertExists()
+    }
+
+    @Test
+    fun `a missing name or currency puts its field in error with the reason (T-307)`() {
+        showDialog(
+            OverviewUiState(
+                accounts = listOf(testAccount()),
+                newListAccountId = TEST_ACCOUNT_ID,
+                newListKind = org.p23q.shoppinglist.core.ListKind.EXPENSES,
+                newListNameMissing = true,
+                newListCurrencyMissing = true,
+            ),
+        )
+
+        composeTestRule.onNodeWithText("Enter a name.").assertExists()
+        composeTestRule.onNodeWithText("Enter a currency.").assertExists()
+        composeTestRule.onNodeWithTag("new-list-name").assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
+        composeTestRule.onNodeWithTag("new-list-currency").assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
+    }
+
+    @Test
+    fun `without a missing field the dialog shows no error`() {
+        showDialog(OverviewUiState(accounts = listOf(testAccount()), newListAccountId = TEST_ACCOUNT_ID))
+
+        composeTestRule.onNodeWithText("Enter a name.").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("new-list-name").assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Error))
     }
 }
