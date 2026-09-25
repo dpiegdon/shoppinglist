@@ -1,0 +1,12 @@
+{
+  "body": "Six UI fixes found on a device after 3.2.0 (T-307): one-line account headings, server-admin chooser per account, the main menu in three groups, accounts reordered by drag, inline errors for a blank list name or currency on both clients. Protocol stays 3.",
+  "created_at": "2026-09-25T20:26:19+00:00",
+  "id": "T-308",
+  "labels": [
+    "android",
+    "web"
+  ],
+  "priority": 1,
+  "title": "Release 3.2.1",
+  "updated_at": "2026-09-25T20:26:19+00:00"
+}
