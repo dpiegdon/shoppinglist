@@ -1,0 +1,13 @@
+{
+  "body": "Two design changes from the maintainer after 3.2.1.\n\n## 1. Buttons, not clickable text, in list and account settings \u2014 both clients\n\nRule: on the List properties screen and the Account screen (and the web's list properties and\nsettings pages), every action is a real button. Text-style buttons remain only inside dialogs\n(Material's confirm/dismiss convention). Concretely on Android (ui/listprops/ListPropsScreen.kt,\nui/accounts/AccountScreen.kt): the name \"Save\", \"Save order\", \"Save notes\", \"Duplicate\", \"Invite\",\nthe pending invite's \"Revoke\", the close-vote button, the Account screen's currency and initials\n\"Save\" and each session's \"Revoke\" become `Button`s in the normal (primary) colour, the way \"Leave\nlist\" is a button but in the danger colour; the inline category editor's Save/Cancel become small\nbuttons too (Save filled, Cancel outlined). Sizing: full-width where the form's field is full\nwidth (Save name, Save notes, Save order, Duplicate, Invite), compact in a row otherwise (Revoke\nnext to a session or invite). On the web (web/src/pages/ListPropsPage.tsx, SettingsPage.tsx and\nany other page with the same actions): the same actions use `btn` (primary) \u2014 today several use\n`btn-icon`, which renders as text; `btn-icon` stays only for real icon buttons (arrows, the pencil).\nCheck the two clients side by side: same actions, same wording, same colour role.\n\n## 2. The local area reorders like any account\n\nToday the local area is pinned last: `overviewOrder` (ui/AccountOrder.kt) puts non-server accounts\nlast, `AccountsViewModel.move` refuses to move past it, the drag guard (`canMoveTo`) stops at it,\n`AccountRegistry.addLocal` appends it, and the Accounts row has no drag handle. The maintainer\nwants it reorderable like the others: order everywhere is the user's `sortOrder` alone (overview\nsections, Accounts screen, the Copy-to picker after the list's own account, the new-list picker's\nfallback). Give the local row the same drag handle and accessibility actions. Keep the tests that\nsay \"local last\" only where they now say \"in the user's order\". README sentences that say the local\narea is last are corrected.",
+  "created_at": "2026-09-25T20:48:15+00:00",
+  "id": "T-309",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "List and account settings use buttons, not clickable text (both clients); the local area reorders like any account",
+  "updated_at": "2026-09-25T20:48:15+00:00"
+}
