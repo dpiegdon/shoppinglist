@@ -164,16 +164,25 @@ class AccountRegistry(
     /**
      * Removes the account together with its lists and their items, in one transaction. The token
      * and the account's API client are the caller's to drop.
+     *
+     * The local area goes only while it holds no list that is not deleted: there is no server to
+     * keep them, so they would be gone for good. The count is taken inside the transaction, so a
+     * list created meanwhile keeps it; it is then left as it is and this returns false (T-302).
+     * Returns true when the account is gone (or was not there).
      */
-    suspend fun remove(id: String) {
+    suspend fun remove(id: String): Boolean {
         load()
-        writeMutex.withLock {
-            db.inTransaction {
+        return writeMutex.withLock {
+            val removed = db.inTransaction {
+                val local = dao.get(id)?.isServer == false
+                if (local && db.listDao().activeListCountForAccount(id) > 0) return@inTransaction false
                 db.itemDao().deleteForAccount(id)
                 db.listDao().deleteForAccount(id)
                 dao.delete(id)
+                true
             }
-            state.update { current -> current.orEmpty().filterNot { it.id == id } }
+            if (removed) state.update { current -> current.orEmpty().filterNot { it.id == id } }
+            removed
         }
     }
 

@@ -69,6 +69,9 @@ interface and `:app` implements it and binds it in Hilt:
   to the table's row. `reorder(ids)` sets the user's order (`sortOrder`).
   `addLocal()` makes the local area, the one account with no server (at most
   one per phone), with an empty label that the UI replaces by a string resource.
+  `remove(id)` deletes an account with its lists and items in one transaction;
+  the local area only while it holds no list that is not deleted, counted in
+  that transaction (it returns false otherwise).
   `withAccountLock(id)` serialises one account's sync, local sign-out and
   removal.
 - `account/AccountSessions` builds one `AccountSession` per server account, on
@@ -85,7 +88,8 @@ interface and `:app` implements it and binds it in Hilt:
   other account. The login says whom it expects (`LoginExpectation`): adding an
   account refuses one that is here and signed in (`AlreadyAddedException`), and
   signing an account in again refuses another account's credentials
-  (`WrongAccountException`); either is decided before the matched row changes,
+  (`WrongAccountException`, also for the local area's row, which no server
+  account may take over); either is decided before the matched row changes,
   and ends the session the server just opened. A row that records no
   server-side account (migrated from 3.1.0) takes on the one that signs in again
   for it. Before all that it asks `/app-version` for the server's protocol
@@ -94,7 +98,8 @@ interface and `:app` implements it and binds it in Hilt:
   `no_app_package` `404`. A server below the floor, one above this build and an
   answer that is not a Tuppu server's are each their own exception, for the
   login screen to name. There is no sign-out; removing an account deletes its
-  rows.
+  rows, and the local area that still holds a list is refused
+  (`LocalAreaNotEmptyException`).
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
   that has a token (one without is signed out); `syncAccount()` is one, under
   its account lock. The local area is never synced, and its dirty rows count

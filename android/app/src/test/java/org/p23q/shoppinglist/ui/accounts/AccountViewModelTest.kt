@@ -27,6 +27,8 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.AuthRepository
+import org.p23q.shoppinglist.core.LocalAreaNotEmptyException
 import org.p23q.shoppinglist.data.RecordingAuthRepository
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
@@ -72,12 +74,12 @@ class AccountViewModelTest {
         if (::db.isInitialized) db.close()
     }
 
-    private fun newViewModel(id: String = TEST_ACCOUNT_ID): AccountViewModel =
+    private fun newViewModel(id: String = TEST_ACCOUNT_ID, auth: AuthRepository = authRepository): AccountViewModel =
         AccountViewModel(
             SavedStateHandle(mapOf(Routes.ACCOUNT_ID_ARG to id)),
             accounts.registry,
             accounts.sessions,
-            authRepository,
+            auth,
             db,
         ).also { viewModels += it }
 
@@ -446,5 +448,25 @@ class AccountViewModelTest {
 
         assertEquals(listOf(local.id), authRepository.removed)
         assertEquals(AccountGone.TO_START, viewModel.uiState.value.gone)
+    }
+
+    /** T-302: the registry counts the lists again; a list this screen had not seen yet keeps the area. */
+    @Test
+    fun `a refused removal of the local area stays on its screen and says why`() = runTest(mainDispatcherRule.dispatcher) {
+        val local = accounts.registry.addLocal()!!
+        val refusing = object : RecordingAuthRepository() {
+            override suspend fun removeAccount(accountId: String) {
+                throw LocalAreaNotEmptyException()
+            }
+        }
+        val viewModel = newViewModel(local.id, auth = refusing)
+        viewModel.uiState.first { it.listCount == 0 }
+        assertFalse(viewModel.uiState.value.removeBlocked)
+
+        viewModel.requestRemove().join()
+
+        assertTrue(viewModel.uiState.value.removeBlocked)
+        assertNull(viewModel.uiState.value.gone)
+        assertFalse(viewModel.uiState.value.isRemoveConfirmOpen)
     }
 }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AuthRepository
+import org.p23q.shoppinglist.core.LocalAreaNotEmptyException
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.api.Api
@@ -70,6 +71,8 @@ data class AccountUiState(
     val listCount: Int? = null,
     /** Whether the phone holds the local area, which a list to keep can be copied to (T-294). */
     val hasLocalArea: Boolean = false,
+    /** The local area's removal was refused: it held a list after all (T-302). */
+    val removeBlocked: Boolean = false,
 )
 
 /**
@@ -326,7 +329,13 @@ class AccountViewModel @Inject constructor(
     }
 
     private suspend fun remove() {
-        authRepository.removeAccount(accountId)
+        try {
+            authRepository.removeAccount(accountId)
+        } catch (e: LocalAreaNotEmptyException) {
+            // A list arrived after the count this screen went by; the registry counts again.
+            _uiState.update { it.copy(isRemoveConfirmOpen = false, removeBlocked = true) }
+            return
+        }
         _uiState.update { it.copy(isRemoveConfirmOpen = false, gone = whereNext()) }
     }
 

@@ -325,7 +325,7 @@ private fun LocalAreaAccount(state: AccountUiState, onRemove: () -> Unit) {
             enabled = state.listCount == 0,
             modifier = Modifier.fillMaxWidth().testTag("account-remove"),
         ) { Text(stringResource(R.string.account_remove)) }
-        if (state.listCount != null && state.listCount > 0) {
+        if ((state.listCount ?: 0) > 0 || state.removeBlocked) {
             Text(
                 stringResource(R.string.account_remove_local_blocked),
                 style = MaterialTheme.typography.bodySmall,

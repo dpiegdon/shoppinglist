@@ -214,6 +214,10 @@ interface ListDao {
     suspend fun blockedRowCountForAccount(accountId: String): Int
 
     /** The server id of any non-deleted list of one account, for that account's accountId self-heal (T-74). */
+    /** The account's lists that are not deleted: what the local area must be rid of before it goes. */
+    @Query("SELECT COUNT(*) FROM lists WHERE accountId = :accountId AND deleted_value = 0")
+    suspend fun activeListCountForAccount(accountId: String): Int
+
     @Query("SELECT serverId FROM lists WHERE accountId = :accountId AND deleted_value = 0 LIMIT 1")
     suspend fun anyActiveListServerIdForAccount(accountId: String): String?
 

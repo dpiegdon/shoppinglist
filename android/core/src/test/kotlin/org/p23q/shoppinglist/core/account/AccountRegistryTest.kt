@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.p23q.shoppinglist.core.db.toLww
 
 class AccountRegistryTest {
 
@@ -155,6 +156,39 @@ class AccountRegistryTest {
         assertNull(db.itemDao().get("ia"))
         assertEquals("lb", db.listDao().getByServerId("b", "shared")!!.localId)
         assertEquals("ib", db.itemDao().getByServerId("b", "shared-item")!!.localId)
+    }
+
+    @Test
+    fun `the local area is not removed while it holds a list, and is once they are deleted (T-302)`() = runBlocking {
+        val registry = AccountRegistry(db)
+        val local = registry.addLocal()!!
+        db.listDao().upsert(list("l1", local.id))
+        db.itemDao().upsert(item("i1", "l1", local.id))
+
+        assertFalse(registry.remove(local.id))
+
+        assertEquals(local, registry.local())
+        assertEquals(local, db.accountDao().get(local.id))
+        assertNotNull(db.listDao().get("l1"))
+        assertNotNull(db.itemDao().get("i1"))
+
+        // A deleted list no longer counts.
+        db.listDao().upsert(list("l1", local.id).copy(deleted = true.toLww("dev", 2)))
+
+        assertTrue(registry.remove(local.id))
+        assertNull(registry.local())
+        assertTrue(db.accountDao().all().isEmpty())
+        assertNull(db.listDao().get("l1"))
+    }
+
+    @Test
+    fun `a server account is removed with its lists`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.add(account("a"))
+        db.listDao().upsert(list("l1", "a"))
+
+        assertTrue(registry.remove("a"))
+        assertNull(db.listDao().get("l1"))
     }
 
     @Test

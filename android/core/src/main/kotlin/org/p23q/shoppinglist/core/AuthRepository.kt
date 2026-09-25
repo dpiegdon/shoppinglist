@@ -59,6 +59,9 @@ class AlreadyAddedException : Exception("that account is already on this phone")
 /** A re-sign-in answered with another account's credentials than the one signing in again. */
 class WrongAccountException : Exception("the credentials are another account's")
 
+/** The local area still holds lists, which removing it would lose for good (T-302). */
+class LocalAreaNotEmptyException : IllegalStateException("the local area still holds lists")
+
 /**
  * Coordinates login, registration and removal across the API, the accounts and the local mirror.
  * An interface (not just [AuthRepositoryImpl] directly) so the view models that use it can be
@@ -107,6 +110,7 @@ interface AuthRepository {
     /**
      * Removes the account from this device: its lists, their items, its token and its row. No
      * other account's rows or cursor are touched: a list two accounts share is a row of each.
+     * The local area is refused with [LocalAreaNotEmptyException] while it holds a list.
      */
     suspend fun removeAccount(accountId: String)
 
@@ -172,6 +176,9 @@ class AuthRepositoryImpl(
                         if (matched?.signedIn == true) refuse(url, allowSelfSignedCerts, response.token, AlreadyAddedException())
                         matched
                     }
+                    // The local area has no server to sign in to: no server account may take
+                    // its row over (T-302).
+                    !row.isServer -> refuse(url, allowSelfSignedCerts, response.token, WrongAccountException())
                     row.accountId == response.accountId -> row
                     row.accountId != null -> refuse(url, allowSelfSignedCerts, response.token, WrongAccountException())
                     // A migrated row whose owner was never recorded (T-300): the account that signs
@@ -276,7 +283,7 @@ class AuthRepositoryImpl(
         // Under the account's lock, so no sync of it is between its request and its merge.
         registry.withAccountLock(accountId) {
             secrets.setToken(accountId, null)
-            registry.remove(accountId)
+            if (!registry.remove(accountId)) throw LocalAreaNotEmptyException()
             sessions.drop(accountId)
             forgetLastOpenedListOf(accountId)
         }

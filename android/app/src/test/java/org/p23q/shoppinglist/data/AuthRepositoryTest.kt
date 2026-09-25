@@ -20,6 +20,7 @@ import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
 import org.p23q.shoppinglist.core.AlreadyAddedException
 import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.LocalAreaNotEmptyException
 import org.p23q.shoppinglist.core.LoginExpectation
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
@@ -516,6 +517,40 @@ class AuthRepositoryTest {
         assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
         assertTrue(db.accountDao().all().isEmpty())
         assertNull("a cold start must not reopen a list that is gone", accounts.secrets.lastOpenedListId)
+    }
+
+    @Test
+    fun `the local area holding a list is not removed, and keeps its lists (T-302)`() = runTest {
+        val local = accounts.registry.addLocal()!!
+        seedList("hardware", owner = local.id)
+        accounts.secrets.lastOpenedListId = "hardware"
+
+        assertThrows<LocalAreaNotEmptyException> { repository.removeAccount(local.id) }
+
+        assertEquals(local, accounts.registry.local())
+        assertEquals("hardware", db.listDao().get("hardware")!!.localId)
+        assertEquals("hardware", accounts.secrets.lastOpenedListId)
+    }
+
+    /** T-302: a sign-in "again" for the local area's row would have made it half a server account. */
+    @Test
+    fun `a re-sign-in for the local area is refused, its row untouched and the session ended`() = runTest {
+        val local = accounts.registry.addLocal()!!
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        enqueueAnswer(accountId = "acc-1")
+
+        assertThrows<WrongAccountException> {
+            repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(local.id))
+        }
+
+        assertEquals(local, accounts.registry.local())
+        assertEquals(local, db.accountDao().all().single())
+        assertNull(accounts.secrets.token(local.id))
+        server.takeRequest() // app-version
+        server.takeRequest() // login
+        val revoke = server.takeRequest()
+        assertEquals("/api/v1/logout", revoke.path)
+        assertEquals("Bearer tok-new", revoke.getHeader("Authorization"))
     }
 
     /** A list with local id [id]; its server id differs from it unless given. */
