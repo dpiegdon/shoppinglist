@@ -7,8 +7,6 @@ import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.account.AccountRegistry
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.cancel
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider

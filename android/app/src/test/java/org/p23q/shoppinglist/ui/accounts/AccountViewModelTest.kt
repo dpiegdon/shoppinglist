@@ -3,12 +3,10 @@ package org.p23q.shoppinglist.ui.accounts
 import org.p23q.shoppinglist.data.runCurrentOn
 import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
