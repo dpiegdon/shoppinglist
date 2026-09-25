@@ -208,4 +208,34 @@ class RedeemViewModelTest {
         assertEquals("invite-xyz", holder.consumeFor(LoginMode.RESIGNIN, TEST_ACCOUNT_ID)?.token)
         assertEquals("no request should have reached the server", 0, server.requestCount)
     }
+
+    @Test
+    fun `beside the local area, an invite goes to the one server account and names no account (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        accounts.registry.addLocal()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"list_id": "list-42"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseWithList("list-42")))
+        val viewModel = newViewModel()
+        viewModel.onTokenChange("abc.def")
+
+        viewModel.redeem()?.join()
+
+        assertTrue("no choice with the local area", viewModel.uiState.value.choices.isEmpty())
+        assertFalse(viewModel.uiState.value.several)
+        assertEquals(localIdOf("list-42"), viewModel.uiState.value.redeemedListId)
+    }
+
+    @Test
+    fun `with only the local area, an invite adds a server account rather than opening the start screen (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        accounts.registry.remove(TEST_ACCOUNT_ID)
+        accounts.registry.addLocal()
+        val holder = PendingInviteHolder()
+        val viewModel = newViewModel(holder)
+        viewModel.onTokenChange("https://other.example.test/lists/invite/abc.def")
+
+        assertNull(viewModel.redeem())
+
+        assertEquals(Routes.login(LoginMode.ADD, serverUrl = "https://other.example.test/lists/"), viewModel.uiState.value.needsLogin)
+        assertEquals("abc.def", holder.consumeFor(LoginMode.ADD, null)?.token)
+        assertEquals(0, server.requestCount)
+    }
 }

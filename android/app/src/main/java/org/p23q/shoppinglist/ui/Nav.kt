@@ -191,14 +191,14 @@ fun authedStartDestination(lastOpenedListId: String?): String =
     lastOpenedListId?.let { Routes.list(it) } ?: Routes.OVERVIEW
 
 /**
- * Where a cold start lands. The start screen only while this phone holds no server account at all:
- * an account the server has signed out keeps its lists, which stay usable, and the overview offers
- * the sign-in. Otherwise the list a notification tap names ([notifiedListId]), else as
- * [authedStartDestination].
+ * Where a cold start lands. The start screen only while this phone holds no account at all: an
+ * account the server has signed out keeps its lists, which stay usable, and the overview offers
+ * the sign-in; the local area alone is a phone used without an account (T-293). Otherwise the list
+ * a notification tap names ([notifiedListId]), else as [authedStartDestination].
  */
 fun coldStartDestination(accounts: List<AccountEntity>, notifiedListId: String?, lastOpenedListId: String?): String =
     when {
-        accounts.none { it.isServer } -> Routes.LOGIN_PATTERN
+        accounts.isEmpty() -> Routes.LOGIN_PATTERN
         notifiedListId != null -> Routes.list(notifiedListId)
         else -> authedStartDestination(lastOpenedListId)
     }
@@ -277,6 +277,7 @@ fun ShoppingListNavHost(
     // Too old for this server (T-240). Rendered INSTEAD of the NavHost, not over it: every request
     // is being refused, so whatever is behind it could only show stale data and a sync that never
     // succeeds. The state is only ever set, never cleared — a successful install restarts the app.
+    // Never while the local area is here, whose lists need no server (T-293).
     val updateRequired by rootViewModel.updateRequired.collectAsStateWithLifecycle()
     if (updateRequired) {
         val updateStatus by updateViewModel.status.collectAsStateWithLifecycle()

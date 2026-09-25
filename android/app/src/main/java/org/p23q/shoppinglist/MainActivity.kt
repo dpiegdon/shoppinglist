@@ -60,8 +60,8 @@ class MainActivity : ComponentActivity() {
         // resolved here, before setContent, and passed as the nav start destination, so the
         // accounts are loaded first: one read of a small table (and, once, the schema-9
         // migration), after which every account read below and in the view models is synchronous.
-        // An account the server has signed out still opens the app on its lists: only a phone
-        // with no server account at all starts on the start screen.
+        // An account the server has signed out still opens the app on its lists, and so does the
+        // local area alone: only a phone with no account at all starts on the start screen.
         val accounts = runBlocking(Dispatchers.IO) { accountRegistry.load() }
         val startDestination = coldStartDestination(
             accounts = accounts,

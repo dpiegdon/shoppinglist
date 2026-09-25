@@ -62,9 +62,10 @@ class NavTest {
     }
 
     @Test
-    fun `a cold start with only a local account still opens the start screen`() {
+    fun `a cold start with only the local area opens its lists, not the start screen (T-293)`() {
         val local = account("local", kind = AccountEntity.KIND_LOCAL)
-        assertEquals(Routes.LOGIN_PATTERN, coldStartDestination(listOf(local), notifiedListId = null, lastOpenedListId = null))
+        assertEquals(Routes.OVERVIEW, coldStartDestination(listOf(local), notifiedListId = null, lastOpenedListId = null))
+        assertEquals(Routes.list("l2"), coldStartDestination(listOf(local), notifiedListId = null, lastOpenedListId = "l2"))
     }
 
     @Test

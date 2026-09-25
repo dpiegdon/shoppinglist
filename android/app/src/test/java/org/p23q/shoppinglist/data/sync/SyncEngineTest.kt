@@ -1363,6 +1363,30 @@ class SyncEngineTest {
         assertTrue(syncEngine.syncNow() is SyncResult.Unauthorized)
     }
 
+    @Test
+    fun `the local area's rows are never sent and never counted as pending (T-293)`() = runTest {
+        pointAtServer()
+        val local = accounts.registry.addLocal()!!
+        db.listDao().upsert(dummyList("hardware", "Hardware", dirty = true, accountId = local.id).copy(kind = "shopping".toLww("this-device", 1_000L)))
+        db.itemDao().upsert(dummyItem("nails", "Nails", dirty = true, list = "hardware", accountId = local.id))
+        db.itemDao().upsert(dummyItem("item-1", "Milk", dirty = true))
+
+        syncEngine.seedStatus()
+
+        assertEquals("the server account's one item", 1, syncStatus.state.value.pendingCount)
+        assertFalse(local.id in syncStatus.accounts.value)
+
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val sent = server.takeRequest().body.readUtf8()
+        assertTrue(sent.contains("item-1"))
+        assertFalse("nothing of the local area goes out", sent.contains("nails") || sent.contains("hardware"))
+        assertEquals(1, server.requestCount)
+        assertTrue("still unsent, and never to be", db.itemDao().get(localId("nails"))!!.dirty)
+        assertFalse(local.id in syncStatus.accounts.value)
+    }
+
     /** T-298: nothing tested the catch in syncNow; an exception syncAccount does not handle itself. */
     @Test
     fun `an account whose run throws does not cost the next account its sync (T-298)`() = withSecondServer { other ->

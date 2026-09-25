@@ -158,4 +158,18 @@ class AccountSessionsTest {
 
         assertEquals(null, a.takeRequest().getHeader("Authorization"))
     }
+
+    @Test
+    fun `every server account outdated blocks nothing while the local area holds its lists (T-293)`() = runBlocking {
+        registry.addLocal()
+        registry.update("a") { it.copy(outdated = true) }
+        registry.update("b") { it.copy(outdated = true) }
+
+        assertFalse(sessions.isUpdateRequired())
+        assertFalse(sessions.updateRequired.first())
+
+        registry.remove(registry.local()!!.id)
+
+        assertTrue(sessions.isUpdateRequired())
+    }
 }

@@ -36,7 +36,7 @@ data class RedeemUiState(
     val choices: List<AccountEntity> = emptyList(),
     /** The account the invite is being redeemed into, named on screen when the phone holds several. */
     val account: AccountEntity? = null,
-    /** Whether the phone holds more than one account. */
+    /** Whether the phone holds more than one server account, any of which could take an invite. */
     val several: Boolean = false,
 )
 
@@ -85,15 +85,18 @@ class RedeemViewModel @Inject constructor(
         val url = link ?: pasted.takeIf { inviteServerUrl(it) != null }
         inviteUrl = url
         val accounts = registry.snapshot()
+        // The local area takes no invites (T-293): it has no server to redeem them with.
         val servers = accounts.filter { it.isServer }
-        _uiState.update { it.copy(several = accounts.size > 1) }
+        _uiState.update { it.copy(several = servers.size > 1) }
         val named = accountId?.let { id -> servers.firstOrNull { it.id == id } }
         if (named != null) return redeemInto(named, token)
         val candidates = inviteAccounts(servers, url)
         return when (candidates.size) {
             0 -> {
                 // No account on that server (or none at all): sign in to it, then redeem (T-28).
-                val mode = if (servers.isEmpty()) LoginMode.START else LoginMode.ADD
+                // The start screen only on a phone with no account of any kind: beside the local
+                // area, a server account is added as any other is (T-293).
+                val mode = if (accounts.isEmpty()) LoginMode.START else LoginMode.ADD
                 pendingInviteHolder.stash(token, url, null, mode)
                 _uiState.update { it.copy(needsLogin = Routes.login(mode, serverUrl = url?.let(::inviteServerUrl))) }
                 null

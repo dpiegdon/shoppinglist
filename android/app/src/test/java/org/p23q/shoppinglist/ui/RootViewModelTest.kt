@@ -100,4 +100,19 @@ class RootViewModelTest {
             advanceUntilIdle()
             assertTrue(viewModel.updateRequired.value)
         }
+
+    @Test
+    fun `the only server account outdated does not block the local area's lists (T-293)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            accounts.registry.addLocal()
+            val viewModel = viewModel()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.updateRequired.collect {} }
+
+            server.enqueue(MockResponse().setResponseCode(426).setBody("""{"error": "client_outdated", "message": "update"}"""))
+            runCatching { accounts.sessions.get(TEST_ACCOUNT_ID).api.lists() }
+            advanceUntilIdle()
+
+            assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.outdated)
+            assertFalse(viewModel.updateRequired.value)
+        }
 }

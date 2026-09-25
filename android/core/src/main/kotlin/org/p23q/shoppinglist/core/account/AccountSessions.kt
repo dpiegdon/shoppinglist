@@ -58,7 +58,8 @@ class AccountSessions(
      * Whether the app is too old for every server it has an account on — the state in which the
      * UI can do nothing but offer the update (T-240). A server this device holds no account for
      * does not count: the login screen reports that one itself, and offers its update there
-     * (T-298).
+     * (T-298). Nor while the phone holds the local area (T-293): its lists need no server and
+     * stay usable, and each outdated account's section on the overview says so instead.
      */
     val updateRequired: Flow<Boolean> = registry.accounts.map(::updateRequired).distinctUntilChanged()
 
@@ -66,6 +67,7 @@ class AccountSessions(
     fun isUpdateRequired(): Boolean = updateRequired(registry.snapshot())
 
     private fun updateRequired(accounts: List<AccountEntity>): Boolean {
+        if (accounts.any { !it.isServer }) return false
         val servers = accounts.filter { it.isServer }
         return servers.isNotEmpty() && servers.all { it.outdated }
     }
