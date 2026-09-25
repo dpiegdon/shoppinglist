@@ -1,0 +1,13 @@
+{
+  "body": "Seen once on 2026-09-25 02:12 UTC in the full gate at 5d22e748 (T-301), not reproduced on the immediate rerun of :app:testDebugUnitTest (739 tests green). The Gradle test executor exited 134 with an hs_err log: SIGSEGV in androidx_sqliteJni (sqlite3DbMallocRawNN+0x37), Java frame org.p23q.shoppinglist.core.db.ListDao_Impl.activeLists$lambda$0 on thread 'DefaultDispatcher-worker-11 @coroutine#6344' (_thread_in_native). Shape: a Room Flow collector (activeLists) still running on Dispatchers.Default after its test closed the in-memory database \u2014 the same leaked-collector class as T-209/T-252, but on the native driver path it is a segfault of the whole executor instead of a test failure. The hs_err file was not kept. To do: find test classes that collect activeLists (overview and list-props view-model and screen tests) and close AppDb without cancelling the view model / test scope first; add the cancellation, or close the database only after the scope is cancelled and joined; consider running the app unit tests with forkEvery or maxParallelForks tuned so one crash does not fail the whole stage. Runs at 02:12 hit no memory pressure (9.7 GB free).",
+  "created_at": "2026-09-25T02:16:50+00:00",
+  "id": "T-303",
+  "labels": [
+    "android",
+    "reliability",
+    "chore"
+  ],
+  "priority": 3,
+  "title": "Android unit tests: rare native SIGSEGV in the bundled SQLite (sqlite3DbMallocRawNN) from a leaked activeLists collector during testDebugUnitTest",
+  "updated_at": "2026-09-25T02:16:50+00:00"
+}
