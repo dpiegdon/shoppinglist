@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-25T20:48:15+00:00", "kind": "created", "ref": "main@5b8d3145", "text": "List and account settings use buttons, not clickable text (both clients); the local area reorders like any account"}
+{"actor": "user", "at": "2026-09-25T20:48:42+00:00", "kind": "note", "ref": "main@5b8d3145", "text": "Also (maintainer): the Server admin page's actions \u2014 reset password, delete user, refresh \u2014 become buttons on both clients (ui/admin/AdminScreen.kt; web AdminPage.tsx). Delete keeps the danger colour; reset and refresh the normal one."}
