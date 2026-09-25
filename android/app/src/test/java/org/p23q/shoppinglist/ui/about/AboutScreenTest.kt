@@ -1,17 +1,23 @@
 package org.p23q.shoppinglist.ui.about
 
 import android.content.Context
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -47,6 +53,30 @@ class AboutScreenTest {
         // The app's own version, as the package manager reports it — not a literal in the source.
         composeTestRule.onNodeWithText("Version ${installedVersion()}").assertExists()
         composeTestRule.onNodeWithText("MIT, © 2026 David R. Piegdon").assertExists()
+    }
+
+    @Test
+    fun `links the source code beside the licence and opens it in the browser (T-311)`() {
+        val opened = mutableListOf<String>()
+        val uriHandler = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalUriHandler provides uriHandler) { AboutScreen() }
+        }
+
+        val link = composeTestRule.onNodeWithTag("about-source-code", useUnmergedTree = true)
+        link.assertTextEquals("Source code")
+        // A real link annotation carrying the address, not merely text that looks like one.
+        val text = link.fetchSemanticsNode().config[SemanticsProperties.Text].single()
+        val urls = text.getLinkAnnotations(0, text.length).map { (it.item as LinkAnnotation.Url).url }
+        assertEquals(listOf("https://github.com/dpiegdon/shoppinglist"), urls)
+
+        link.performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(listOf("https://github.com/dpiegdon/shoppinglist"), opened)
     }
 
     @Test

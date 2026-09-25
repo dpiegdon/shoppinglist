@@ -189,6 +189,7 @@ export const ar: Catalog = {
   "about.tagline": "الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.",
   "about.version": "الإصدار {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "الشيفرة المصدرية",
 
   "admin.title": "إدارة الخادم",
   "admin.registration": "التسجيل",

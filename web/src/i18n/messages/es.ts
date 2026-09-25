@@ -183,6 +183,7 @@ export const es: Catalog = {
   "about.tagline": "La palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.",
   "about.version": "Versión {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "Código fuente",
 
   "admin.title": "Administración del servidor",
   "admin.registration": "Registro",

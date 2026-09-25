@@ -145,6 +145,7 @@
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
+    <string name="about_source_code">الشيفرة المصدرية</string>
     <string name="about_version">الإصدار %1$s</string>
     <string name="about_updates">تحديثات التطبيق</string>
     <string name="about_auto_update_check">البحث عن التحديثات تلقائيًا</string>

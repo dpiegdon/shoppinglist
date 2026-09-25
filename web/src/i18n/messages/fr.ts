@@ -185,6 +185,7 @@ export const fr: Catalog = {
   "about.tagline": "Le mot akkadien pour une tablette d'argile — ce dans quoi on pressait une liste.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "Code source",
 
   "admin.title": "Administration du serveur",
   "admin.registration": "Inscription",

@@ -145,6 +145,7 @@
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">La palabra acadia para una tablilla de arcilla — aquello en lo que se imprimía una lista.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
+    <string name="about_source_code">Código fuente</string>
     <string name="about_version">Versión %1$s</string>
     <string name="about_updates">Actualizaciones de la aplicación</string>
     <string name="about_auto_update_check">Buscar actualizaciones automáticamente</string>

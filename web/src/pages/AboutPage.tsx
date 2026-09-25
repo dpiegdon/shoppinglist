@@ -2,6 +2,9 @@ import { appBasename, appVersion } from "../lib/appConfig";
 import { useT } from "../i18n";
 import CuneiformName from "../components/CuneiformName";
 
+/** Where the sources live; Android's AboutScreen links the same address (T-311). */
+const SOURCE_CODE_URL = "https://github.com/dpiegdon/shoppinglist";
+
 /**
  * What the app is and where its name comes from (T-224).
  *
@@ -57,7 +60,13 @@ export default function AboutPage() {
         className="muted"
         style={{ textAlign: "center", fontSize: "0.8rem", marginTop: "auto", marginBottom: 0 }}
       >
-        {t("about.license")}
+        <span>{t("about.license")}</span>
+        {/* The upstream sources, beside the licence that lets anyone use them (T-311). A prose
+            link, not a button: it leaves the app for another site. The URL is not translated. */}
+        {" · "}
+        <a href={SOURCE_CODE_URL} target="_blank" rel="noopener">
+          {t("about.sourceCode")}
+        </a>
       </p>
     </main>
   );

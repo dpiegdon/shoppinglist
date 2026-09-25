@@ -51,6 +51,17 @@ describe("AboutPage (T-224)", () => {
     expect(screen.getByText(en["about.license"])).toBeInTheDocument();
   });
 
+  it("links the source code beside the licence, opening in a new tab (T-311)", () => {
+    render(<MemoryRouter><AboutPage /></MemoryRouter>);
+
+    const link = screen.getByRole("link", { name: en["about.sourceCode"] });
+    expect(link.getAttribute("href")).toBe("https://github.com/dpiegdon/shoppinglist");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener");
+    // In the small print, right beside the licence line.
+    expect(link.parentElement).toBe(screen.getByText(en["about.license"]).parentElement);
+  });
+
   it("shows the name in cuneiform over its transliteration (T-225)", () => {
     render(<MemoryRouter><AboutPage /></MemoryRouter>);
 

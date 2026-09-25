@@ -1,7 +1,9 @@
 package org.p23q.shoppinglist.ui.about
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,11 +27,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.update.UpdateStatus
+
+/** Where the sources live; the web's AboutPage links the same address (T-311). */
+const val SOURCE_CODE_URL = "https://github.com/dpiegdon/shoppinglist"
 
 /**
  * What the app is and where its name comes from (T-224).
@@ -156,13 +167,42 @@ fun AboutScreen(
             }
         }
 
-        // Small, at the bottom, as on the web page.
-        Text(
-            text = stringResource(R.string.about_license),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+        // Small, at the bottom, as on the web page. Beside the licence, a link to the upstream
+        // sources (T-311): a prose link, not a button, since it leaves the app for another site.
+        // A LinkAnnotation opens it through LocalUriHandler, i.e. in the browser, and reads as a
+        // link to accessibility services. The URL is not translated. Wraps under the licence on
+        // a narrow screen or a long translation, centred either way.
+        val smallPrint = MaterialTheme.typography.bodySmall
+        val smallPrintColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val linkColor = MaterialTheme.colorScheme.primary
+        val sourceCode = stringResource(R.string.about_source_code)
+        FlowRow(
+            horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-        )
+        ) {
+            Text(
+                text = stringResource(R.string.about_license),
+                style = smallPrint,
+                color = smallPrintColor,
+                textAlign = TextAlign.Center,
+            )
+            Text(text = " · ", style = smallPrint, color = smallPrintColor)
+            Text(
+                text = remember(sourceCode, linkColor) {
+                    buildAnnotatedString {
+                        withLink(
+                            LinkAnnotation.Url(
+                                url = SOURCE_CODE_URL,
+                                styles = TextLinkStyles(
+                                    style = SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
+                                ),
+                            ),
+                        ) { append(sourceCode) }
+                    }
+                },
+                style = smallPrint,
+                modifier = Modifier.testTag("about-source-code"),
+            )
+        }
     }
 }

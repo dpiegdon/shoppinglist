@@ -188,6 +188,7 @@ export const de: Catalog = {
   "about.tagline": "Das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "Quellcode",
 
   "admin.title": "Serververwaltung",
   "admin.registration": "Registrierung",

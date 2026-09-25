@@ -187,6 +187,7 @@ export const zhHans: Catalog = {
   "about.tagline": "阿卡德语中表示泥板的词 — 清单就压印在那样的板子上。",
   "about.version": "版本 {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "源代码",
 
   "admin.title": "服务器管理",
   "admin.registration": "注册",

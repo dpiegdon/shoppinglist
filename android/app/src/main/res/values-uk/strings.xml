@@ -145,6 +145,7 @@
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
+    <string name="about_source_code">Вихідний код</string>
     <string name="about_version">Версія %1$s</string>
     <string name="about_updates">Оновлення застосунку</string>
     <string name="about_auto_update_check">Автоматично перевіряти оновлення</string>

@@ -145,6 +145,7 @@
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Le mot akkadien pour une tablette d\'argile — ce dans quoi on pressait une liste.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
+    <string name="about_source_code">Code source</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">Mises à jour de l\'application</string>
     <string name="about_auto_update_check">Rechercher les mises à jour automatiquement</string>

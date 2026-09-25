@@ -187,6 +187,7 @@ export const uk: Catalog = {
   "about.tagline": "Аккадське слово, що означає глиняну табличку: те, у що вдавлювали список.",
   "about.version": "Версія {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "Вихідний код",
 
   "admin.title": "Адміністрування сервера",
   "admin.registration": "Реєстрація",

@@ -186,6 +186,8 @@
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">The Akkadian word for a clay tablet — the thing a list was pressed into.</string>
     <string name="about_license">MIT, © 2026 David R. Piegdon</string>
+    <!-- Beside the licence line, a link to the upstream repository; the URL is not translated (T-311). -->
+    <string name="about_source_code">Source code</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">App updates</string>
     <string name="about_auto_update_check">Check for updates automatically</string>

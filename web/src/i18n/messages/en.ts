@@ -231,6 +231,8 @@ export const en = {
   "about.tagline": "The Akkadian word for a clay tablet — the thing a list was pressed into.",
   "about.version": "Version {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  // Beside the licence line; links to the upstream repository, whose URL is never translated (T-311).
+  "about.sourceCode": "Source code",
 
   // ---- admin ----
   "admin.title": "Server admin",

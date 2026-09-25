@@ -186,6 +186,7 @@ export const ptBR: Catalog = {
   "about.tagline": "A palavra acádia para uma tabuinha de argila — aquilo em que uma lista era impressa.",
   "about.version": "Versão {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "Código-fonte",
 
   "admin.title": "Administração do servidor",
   "admin.registration": "Cadastro",

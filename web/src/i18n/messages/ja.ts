@@ -188,6 +188,7 @@ export const ja: Catalog = {
   "about.tagline": "アッカド語で粘土板を意味する言葉 — リストを押し刻んだ、あの板のことです。",
   "about.version": "バージョン {version}",
   "about.license": "MIT, © 2026 David R. Piegdon",
+  "about.sourceCode": "ソースコード",
 
   "admin.title": "サーバー管理",
   "admin.registration": "新規登録",
