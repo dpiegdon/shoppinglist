@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
@@ -26,6 +27,11 @@ data class SettingsUiState(
     val notificationsEnabled: Boolean = true,
     /** Diagnostics: when the background (WorkManager) sync last ran, humanized (T-112). */
     val lastBackgroundSyncText: UiText = UiText.res(R.string.background_sync_never),
+    /**
+     * Whether the phone holds a server account. Without one nothing syncs and no collaborator
+     * changes anything, so the notification switch and the background-sync line are hidden (T-302).
+     */
+    val hasServerAccount: Boolean = true,
 )
 
 /**
@@ -37,12 +43,16 @@ class SettingsViewModel @Inject constructor(
     private val themePreferenceStore: ThemePreferenceStore,
     private val crashLogWriter: CrashLogWriter,
     private val notificationPrefs: NotificationPrefsStore,
+    private val registry: AccountRegistry,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(SettingsUiState(hasServerAccount = registry.snapshot().any { it.isServer }))
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            registry.accounts.collect { accounts -> _uiState.update { it.copy(hasServerAccount = accounts.any { a -> a.isServer }) } }
+        }
         viewModelScope.launch {
             themePreferenceStore.theme.collect { pref -> _uiState.update { it.copy(theme = pref) } }
         }

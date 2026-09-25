@@ -1,23 +1,34 @@
 package org.p23q.shoppinglist.ui.settings
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.lifecycle.viewModelScope
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.accounts.accountRow
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 
@@ -31,9 +42,18 @@ class SettingsViewModelTest {
     private lateinit var themePreferenceStore: ThemePreferenceStore
     private lateinit var crashLogWriter: CrashLogWriter
     private lateinit var notificationPrefs: NotificationPrefsStore
+    private lateinit var db: AppDb
+    private lateinit var registry: AccountRegistry
+    private val viewModels = mutableListOf<SettingsViewModel>()
 
     @Before
     fun setUp() {
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        registry = AccountRegistry(db)
+        runBlocking { registry.add(accountRow("prod")) }
         val themeFile = File.createTempFile("settings_vm_theme", ".preferences_pb")
         themeFile.deleteOnExit()
         themePreferenceStore = ThemePreferenceStore(PreferenceDataStoreFactory.create { themeFile })
@@ -47,7 +67,32 @@ class SettingsViewModelTest {
         notificationPrefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { notifPrefsFile })
     }
 
-    private fun newViewModel(): SettingsViewModel = SettingsViewModel(themePreferenceStore, crashLogWriter, notificationPrefs)
+    @After
+    fun tearDown() {
+        viewModels.forEach { it.viewModelScope.cancel() }
+        if (::registry.isInitialized) runBlocking { registry.flush() }
+        if (::db.isInitialized) db.close()
+    }
+
+    private fun newViewModel(): SettingsViewModel =
+        SettingsViewModel(themePreferenceStore, crashLogWriter, notificationPrefs, registry).also { viewModels += it }
+
+    @Test
+    fun `a phone with only the local area has no server account, and gains one when it is added (T-302)`() = runTest(mainDispatcherRule.dispatcher) {
+        registry.remove("prod")
+        registry.addLocal()
+        val viewModel = newViewModel()
+        assertFalse(viewModel.uiState.value.hasServerAccount)
+
+        registry.add(accountRow("stage", serverUrl = "https://lists.example.test/stage/"))
+
+        assertTrue(viewModel.uiState.first { it.hasServerAccount }.hasServerAccount)
+    }
+
+    @Test
+    fun `a phone with a server account has one (T-302)`() = runTest(mainDispatcherRule.dispatcher) {
+        assertTrue(newViewModel().uiState.value.hasServerAccount)
+    }
 
     @Test
     fun `setTheme persists the preference and it is reflected in state`() = runTest(mainDispatcherRule.dispatcher) {

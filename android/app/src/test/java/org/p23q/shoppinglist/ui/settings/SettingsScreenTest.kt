@@ -8,15 +8,24 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.viewModelScope
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.ui.accounts.accountRow
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
@@ -29,6 +38,25 @@ class SettingsScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    private lateinit var db: AppDb
+    private lateinit var registry: AccountRegistry
+
+    @Before
+    fun setUp() {
+        db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+        registry = AccountRegistry(db)
+        runBlocking { registry.add(accountRow("prod")) }
+    }
+
+    @After
+    fun tearDown() {
+        if (::registry.isInitialized) runBlocking { registry.flush() }
+        if (::db.isInitialized) db.close()
+    }
+
     private fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
 
     private fun newViewModel(crashLog: File = File.createTempFile("settings_screen_crash_log", ".txt").apply { deleteOnExit() }) =
@@ -36,6 +64,7 @@ class SettingsScreenTest {
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_theme") }),
             CrashLogWriter(crashLog),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_notif") }),
+            registry,
         )
 
     @Test
@@ -70,6 +99,34 @@ class SettingsScreenTest {
         // The whole App-updates block and the version line are on About.
         composeTestRule.onNodeWithText("App updates").assertDoesNotExist()
         composeTestRule.onAllNodesWithText("Version", substring = true).assertCountEquals(0)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `a phone with a server account shows the collaborator switch and the background sync (T-302)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { SettingsScreen(viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Collaborator changes").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Last background sync", substring = true).performScrollTo().assertExists()
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `a phone with only the local area has no collaborator switch and no background sync (T-302)`() = runBlocking<Unit> {
+        registry.remove("prod")
+        registry.addLocal()
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { SettingsScreen(viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Notifications").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Collaborator changes").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Last background sync", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Share crash logs").performScrollTo().assertExists()
         viewModel.viewModelScope.cancel()
     }
 }

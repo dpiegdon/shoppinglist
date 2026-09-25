@@ -82,29 +82,32 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
 
         // Collaborator-change notifications (T-65); mute individual lists in their list properties.
-        Text(stringResource(R.string.settings_notifications), style = MaterialTheme.typography.titleMedium)
-        val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_collaborator_changes))
-                Text(
-                    stringResource(R.string.settings_collaborator_changes_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // Only server accounts have collaborators, so a phone with none has nothing to notify of.
+        if (state.hasServerAccount) {
+            Text(stringResource(R.string.settings_notifications), style = MaterialTheme.typography.titleMedium)
+            val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_collaborator_changes))
+                    Text(
+                        stringResource(R.string.settings_collaborator_changes_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.notificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        viewModel.setNotificationsEnabled(enabled)
+                        // API 33+ needs the runtime permission; requested on enable (not cold start) per T-65.
+                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
                 )
             }
-            Switch(
-                checked = state.notificationsEnabled,
-                onCheckedChange = { enabled ->
-                    viewModel.setNotificationsEnabled(enabled)
-                    // API 33+ needs the runtime permission; requested on enable (not cold start) per T-65.
-                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                },
-            )
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(16.dp))
 
         // No telemetry service (T-50) — this is purely local, opt-in, and manual: the crash log
         // never leaves the device unless the user explicitly shares it here.
@@ -112,11 +115,14 @@ fun SettingsScreen(
         // On-device way to check that background sync (WorkManager) actually runs (T-112) — if this
         // stays "never" while the app is closed, the OS is likely killing background work (battery
         // optimization / Doze), which is also why collaborator-change notifications wouldn't fire.
-        Text(
-            stringResource(R.string.settings_last_background_sync, state.lastBackgroundSyncText.asString()),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        // The local area never syncs, so without a server account there is no background sync.
+        if (state.hasServerAccount) {
+            Text(
+                stringResource(R.string.settings_last_background_sync, state.lastBackgroundSyncText.asString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         TextButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
         state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.primary) }
     }
