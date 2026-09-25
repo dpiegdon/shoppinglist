@@ -1,0 +1,12 @@
+{
+  "body": "Android's redeem now extracts the first https URL (preferring one with /invite/) from pasted text and trims trailing punctuation, so 'Join my list: https://\u2026/invite/T.' works. The web's redeem page accepts a full URL or a bare token (T-71) but not surrounding text. Mirror the extraction in web/src (a small pure function with the same cases as Android's pastedInvite; consider a shared-test-cases table) so both clients behave the same.",
+  "created_at": "2026-09-25T00:23:29+00:00",
+  "id": "T-301",
+  "labels": [
+    "web",
+    "ux"
+  ],
+  "priority": 4,
+  "title": "Web: a pasted invite message with text around the link should still redeem (Android does since T-300)",
+  "updated_at": "2026-09-25T00:23:29+00:00"
+}
