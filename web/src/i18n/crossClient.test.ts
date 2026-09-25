@@ -95,6 +95,9 @@ const ONE_SIDED: Record<string, string> = {
   "item.saveFailed": "the web shows this after an optimistic push to the server fails inline; Android writes to its local mirror and syncs in the background, so there is no synchronous save failure to report here",
   item_msg_name_required: "Android blocks an empty name inline as you type; the web relies on the input's own required attribute and shows no message",
   item_msg_duplicate_name: "Android warns before saving over an existing item name; the web has no such guard",
+  // T-304: where you delete your own account differs by client.
+  "apiError.cannotDeleteSelf": "the web deletes your own account in Settings; Android does it on that account's page (api_error_cannot_delete_self)",
+  api_error_cannot_delete_self: "the web's apiError.cannotDeleteSelf, naming the account's page instead of Settings",
 };
 
 describe("the two clients say the same thing (T-148)", () => {

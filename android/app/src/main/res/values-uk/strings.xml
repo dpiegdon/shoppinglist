@@ -111,8 +111,8 @@
 
     <string name="api_error_client_outdated">Цей застосунок застарий для цього сервера</string>
     <string name="update_required_title">Потрібне оновлення</string>
-    <string name="update_required_body">Сервер оновлено. Встанови нову версію, щоб продовжити.</string>
-    <string name="update_required_unavailable">Цей сервер не пропонує новішого застосунку. Попроси оновлення в того, хто його адмініструє.</string>
+    <string name="update_required_body">Твої сервери оновлено. Встанови нову версію, щоб продовжити.</string>
+    <string name="update_required_unavailable">Жоден із твоїх серверів не пропонує новішого застосунку. Попроси оновлення в тих, хто їх адмініструє.</string>
     <string name="action_retry">Спробувати ще раз</string>
     <string name="listprops_list_name">Назва списку</string>
     <string name="listprops_type">Тип</string>
@@ -145,7 +145,7 @@
     <string name="about_version">Версія %1$s</string>
     <string name="about_updates">Оновлення застосунку</string>
     <string name="about_auto_update_check">Автоматично перевіряти оновлення</string>
-    <string name="about_auto_update_check_help">Запитувати цей сервер, чи доступна новіша версія застосунку. Стосується лише цього пристрою.</string>
+    <string name="about_auto_update_check_help">Запитувати твої сервери, чи доступна новіша версія застосунку. Стосується лише цього пристрою.</string>
     <string name="update_available_title">Доступне оновлення</string>
     <string name="update_available_body">Доступна версія %1$s застосунку. У вас %2$s.</string>
     <string name="update_checking">Перевірка оновлень…</string>
@@ -211,7 +211,7 @@
     <string name="login_msg_invalid_url">Введи дійсну https-адресу сервера</string>
     <string name="login_msg_credentials_required">Електронна пошта та пароль обов\'язкові</string>
     <string name="login_msg_incorrect_credentials">Неправильна електронна пошта або пароль</string>
-    <string name="login_msg_untrusted_cert">Сертифікат сервера не є довіреним. Використай сертифікат від визнаного центру сертифікації. Для тестового сервера із самопідписаним сертифікатом увімкни «Довіряти самопідписаним сертифікатам» у налаштуваннях (лише debug-збірки).</string>
+    <string name="login_msg_untrusted_cert">Сертифікат сервера не є довіреним. Використай сертифікат від визнаного центру сертифікації. Для тестового сервера із самопідписаним сертифікатом увімкни «Довіряти самопідписаним сертифікатам» у цій формі або на сторінці облікового запису (лише debug-збірки).</string>
     <string name="login_msg_server_too_old">Цей сервер застарий для цього застосунку.</string>
     <string name="login_msg_app_too_old">Цей застосунок застарий для цього сервера.</string>
     <string name="login_msg_not_a_server">За цією адресою не відповів жоден сервер Tuppu.</string>
@@ -334,7 +334,7 @@
     <string name="api_error_unknown_list">Цей список для вас більше недоступний</string>
     <string name="api_error_not_admin">Це може зробити лише адмін</string>
     <string name="api_error_cannot_delete_admin">Адмінів не можна видалити тут</string>
-    <string name="api_error_cannot_delete_self">Власний обліковий запис видаляйте в налаштуваннях</string>
+    <string name="api_error_cannot_delete_self">Власний обліковий запис видаляйте на його сторінці</string>
     <string name="api_error_account_not_found">Цього облікового запису більше не існує</string>
     <string name="api_error_session_not_found">Цей сеанс уже завершено</string>
     <string name="api_error_server_busy">Сервер зайнятий. Спробуйте ще раз за мить.</string>

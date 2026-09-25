@@ -111,8 +111,8 @@
 
     <string name="api_error_client_outdated">Diese App ist zu alt für diesen Server</string>
     <string name="update_required_title">Update erforderlich</string>
-    <string name="update_required_body">Der Server wurde aktualisiert. Installiere die neue Version, um fortzufahren.</string>
-    <string name="update_required_unavailable">Dieser Server bietet keine neuere App an. Bitte den Betreiber um ein Update.</string>
+    <string name="update_required_body">Deine Server wurden aktualisiert. Installiere die neue Version, um fortzufahren.</string>
+    <string name="update_required_unavailable">Keiner deiner Server bietet eine neuere App an. Bitte die Betreiber um ein Update.</string>
     <string name="action_retry">Erneut versuchen</string>
     <string name="listprops_list_name">Listenname</string>
     <string name="listprops_type">Typ</string>
@@ -145,7 +145,7 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">App-Aktualisierungen</string>
     <string name="about_auto_update_check">Automatisch nach Updates suchen</string>
-    <string name="about_auto_update_check_help">Diesen Server fragen, ob eine neuere Version der App verfügbar ist. Betrifft nur dieses Gerät.</string>
+    <string name="about_auto_update_check_help">Deine Server fragen, ob eine neuere Version der App verfügbar ist. Betrifft nur dieses Gerät.</string>
     <string name="update_available_title">Update verfügbar</string>
     <string name="update_available_body">Version %1$s der App ist verfügbar. Du hast %2$s.</string>
     <string name="update_checking">Suche nach Updates …</string>
@@ -211,7 +211,7 @@
     <string name="login_msg_invalid_url">Gib eine gültige https-Server-URL ein</string>
     <string name="login_msg_credentials_required">E-Mail und Passwort sind erforderlich</string>
     <string name="login_msg_incorrect_credentials">E-Mail oder Passwort ist falsch</string>
-    <string name="login_msg_untrusted_cert">Dem Zertifikat des Servers wird nicht vertraut. Verwende ein Zertifikat einer anerkannten Zertifizierungsstelle. Für einen selbstsignierten Testserver aktiviere \"Selbstsignierten Zertifikaten vertrauen\" in den Einstellungen (nur Debug-Builds).</string>
+    <string name="login_msg_untrusted_cert">Dem Zertifikat des Servers wird nicht vertraut. Verwende ein Zertifikat einer anerkannten Zertifizierungsstelle. Für einen selbstsignierten Testserver aktiviere \"Selbstsignierten Zertifikaten vertrauen\" in diesem Formular oder auf der Seite des Kontos (nur Debug-Builds).</string>
     <string name="login_msg_server_too_old">Dieser Server ist zu alt für diese App.</string>
     <string name="login_msg_app_too_old">Diese App ist zu alt für diesen Server.</string>
     <string name="login_msg_not_a_server">Unter dieser Adresse hat kein Tuppu-Server geantwortet.</string>
@@ -334,7 +334,7 @@
     <string name="api_error_unknown_list">Diese Liste ist für dich nicht mehr verfügbar</string>
     <string name="api_error_not_admin">Das darf nur ein Admin</string>
     <string name="api_error_cannot_delete_admin">Admins können hier nicht gelöscht werden</string>
-    <string name="api_error_cannot_delete_self">Dein eigenes Konto löschst du in den Einstellungen</string>
+    <string name="api_error_cannot_delete_self">Dein eigenes Konto löschst du auf seiner Kontoseite</string>
     <string name="api_error_account_not_found">Dieses Konto gibt es nicht mehr</string>
     <string name="api_error_session_not_found">Diese Sitzung ist bereits beendet</string>
     <string name="api_error_server_busy">Der Server ist ausgelastet. Versuch es gleich noch einmal.</string>

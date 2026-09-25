@@ -143,8 +143,8 @@
     <!-- protocol version: this build is older than the server (T-244) -->
     <string name="api_error_client_outdated">This app is too old for this server</string>
     <string name="update_required_title">Update required</string>
-    <string name="update_required_body">The server has been updated. Install the new version to continue.</string>
-    <string name="update_required_unavailable">This server has no newer app to offer. Ask whoever runs it for an update.</string>
+    <string name="update_required_body">Your servers have been updated. Install the new version to continue.</string>
+    <string name="update_required_unavailable">None of your servers has a newer app to offer. Ask whoever runs them for an update.</string>
     <string name="action_retry">Retry</string>
 
     <!-- list properties -->
@@ -186,7 +186,7 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">App updates</string>
     <string name="about_auto_update_check">Check for updates automatically</string>
-    <string name="about_auto_update_check_help">Ask this server whether a newer version of the app is available. Only this device is affected.</string>
+    <string name="about_auto_update_check_help">Ask your servers whether a newer version of the app is available. Only this device is affected.</string>
     <string name="update_available_title">Update available</string>
     <string name="update_available_body">Version %1$s of the app is available. You have %2$s.</string>
     <string name="update_checking">Checking for updates…</string>
@@ -263,7 +263,7 @@
     <string name="login_msg_invalid_url">Enter a valid https server URL</string>
     <string name="login_msg_credentials_required">Email and password are required</string>
     <string name="login_msg_incorrect_credentials">Incorrect email or password</string>
-    <string name="login_msg_untrusted_cert">The server\'s certificate isn\'t trusted. Use a certificate from a recognized authority. For a self-signed dev server, enable \"Trust self-signed certificates\" in Settings (debug builds only).</string>
+    <string name="login_msg_untrusted_cert">The server\'s certificate isn\'t trusted. Use a certificate from a recognized authority. For a self-signed dev server, enable \"Trust self-signed certificates\" on this form or on the account\'s page (debug builds only).</string>
     <string name="login_msg_server_too_old">This server is too old for this app.</string>
     <string name="login_msg_app_too_old">This app is too old for this server.</string>
     <string name="login_msg_not_a_server">No Tuppu server answered at this address.</string>
@@ -397,7 +397,7 @@
     <string name="api_error_unknown_list">This list is no longer available to you</string>
     <string name="api_error_not_admin">Only an admin can do that</string>
     <string name="api_error_cannot_delete_admin">Admins can\'t be deleted here</string>
-    <string name="api_error_cannot_delete_self">Delete your own account in Settings</string>
+    <string name="api_error_cannot_delete_self">Delete your own account on its account page</string>
     <string name="api_error_account_not_found">That account no longer exists</string>
     <string name="api_error_session_not_found">That session has already ended</string>
     <string name="api_error_server_busy">The server is busy. Try again in a moment.</string>

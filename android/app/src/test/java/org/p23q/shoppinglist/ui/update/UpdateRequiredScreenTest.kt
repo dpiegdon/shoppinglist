@@ -49,7 +49,7 @@ class UpdateRequiredScreenTest {
         }
 
         composeTestRule.onNodeWithText("Update required").assertExists()
-        composeTestRule.onNodeWithText("The server has been updated. Install the new version to continue.").assertExists()
+        composeTestRule.onNodeWithText("Your servers have been updated. Install the new version to continue.").assertExists()
         composeTestRule.onNodeWithText("Version 3.1.0 of the app is available. You have 2.2.0.").assertExists()
         composeTestRule.onNodeWithTag("update-required-download").performClick()
         composeTestRule.waitForIdle()
@@ -65,7 +65,7 @@ class UpdateRequiredScreenTest {
             UpdateRequiredScreen(status = status, onRetry = { retries++ })
         }
 
-        val unavailable = "This server has no newer app to offer. Ask whoever runs it for an update."
+        val unavailable = "None of your servers has a newer app to offer. Ask whoever runs them for an update."
         // A failed check and a server that simply has nothing newer are the same dead end to the
         // user: only whoever runs the server can resolve either.
         composeTestRule.onNodeWithText(unavailable).assertExists()

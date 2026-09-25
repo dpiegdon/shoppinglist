@@ -111,8 +111,8 @@
 
     <string name="api_error_client_outdated">此应用对该服务器来说版本过旧</string>
     <string name="update_required_title">需要更新</string>
-    <string name="update_required_body">服务器已更新。请安装新版本以继续。</string>
-    <string name="update_required_unavailable">该服务器没有更新的应用可供下载。请向管理服务器的人索取更新。</string>
+    <string name="update_required_body">你的服务器已更新。请安装新版本以继续。</string>
+    <string name="update_required_unavailable">你的服务器都没有更新的应用可供下载。请向管理服务器的人索取更新。</string>
     <string name="action_retry">重试</string>
     <string name="listprops_list_name">清单名称</string>
     <string name="listprops_type">类型</string>
@@ -145,7 +145,7 @@
     <string name="about_version">版本 %1$s</string>
     <string name="about_updates">应用更新</string>
     <string name="about_auto_update_check">自动检查更新</string>
-    <string name="about_auto_update_check_help">向此服务器查询是否有更新版本的应用。仅影响本设备。</string>
+    <string name="about_auto_update_check_help">向你的服务器查询是否有更新版本的应用。仅影响本设备。</string>
     <string name="update_available_title">有可用更新</string>
     <string name="update_available_body">应用版本 %1$s 已可用。当前版本为 %2$s。</string>
     <string name="update_checking">正在检查更新…</string>
@@ -211,7 +211,7 @@
     <string name="login_msg_invalid_url">请输入有效的 https 服务器地址</string>
     <string name="login_msg_credentials_required">必须填写邮箱和密码</string>
     <string name="login_msg_incorrect_credentials">邮箱或密码不正确</string>
-    <string name="login_msg_untrusted_cert">服务器证书不受信任。请使用受认可机构颁发的证书。若使用自签名测试服务器，请在设置中启用「信任自签名证书」（仅限调试版本）。</string>
+    <string name="login_msg_untrusted_cert">服务器证书不受信任。请使用受认可机构颁发的证书。若使用自签名测试服务器，请在此表单或该账户的页面中启用「信任自签名证书」（仅限调试版本）。</string>
     <string name="login_msg_server_too_old">此服务器版本过旧，无法用于此应用。</string>
     <string name="login_msg_app_too_old">此应用版本过旧，无法用于此服务器。</string>
     <string name="login_msg_not_a_server">此地址没有 Tuppu 服务器响应。</string>
@@ -334,7 +334,7 @@
     <string name="api_error_unknown_list">此清单已不再对你可用</string>
     <string name="api_error_not_admin">只有管理员才能执行此操作</string>
     <string name="api_error_cannot_delete_admin">无法在此删除管理员</string>
-    <string name="api_error_cannot_delete_self">请在设置中删除你自己的账户</string>
+    <string name="api_error_cannot_delete_self">请在该账户的页面中删除你自己的账户</string>
     <string name="api_error_account_not_found">该账户已不存在</string>
     <string name="api_error_session_not_found">该会话已结束</string>
     <string name="api_error_server_busy">服务器繁忙，请稍后再试。</string>

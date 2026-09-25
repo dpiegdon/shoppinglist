@@ -111,8 +111,8 @@
 
     <string name="api_error_client_outdated">このアプリはこのサーバーには古すぎます</string>
     <string name="update_required_title">更新が必要です</string>
-    <string name="update_required_body">サーバーが更新されました。続けるには新しいバージョンをインストールしてください。</string>
-    <string name="update_required_unavailable">このサーバーには新しいアプリがありません。運用している人に更新を依頼してください。</string>
+    <string name="update_required_body">お使いのサーバーが更新されました。続けるには新しいバージョンをインストールしてください。</string>
+    <string name="update_required_unavailable">お使いのどのサーバーにも新しいアプリがありません。運用している人に更新を依頼してください。</string>
     <string name="action_retry">再試行</string>
     <string name="listprops_list_name">リスト名</string>
     <string name="listprops_type">種類</string>
@@ -145,7 +145,7 @@
     <string name="about_version">バージョン %1$s</string>
     <string name="about_updates">アプリの更新</string>
     <string name="about_auto_update_check">自動的に更新を確認</string>
-    <string name="about_auto_update_check_help">アプリの新しいバージョンがあるかこのサーバーに確認します。この端末にのみ適用されます。</string>
+    <string name="about_auto_update_check_help">アプリの新しいバージョンがあるか、お使いのサーバーに確認します。この端末にのみ適用されます。</string>
     <string name="update_available_title">更新があります</string>
     <string name="update_available_body">アプリのバージョン %1$s が利用できます。現在は %2$s です。</string>
     <string name="update_checking">更新を確認しています…</string>
@@ -211,7 +211,7 @@
     <string name="login_msg_invalid_url">有効な https サーバー URL を入力してください</string>
     <string name="login_msg_credentials_required">メールアドレスとパスワードの入力が必要です</string>
     <string name="login_msg_incorrect_credentials">メールアドレスまたはパスワードが正しくありません</string>
-    <string name="login_msg_untrusted_cert">サーバーの証明書が信頼されていません。認証局が発行した証明書を使用してください。自己署名の開発用サーバーの場合は、設定で「自己署名証明書を信頼する」を有効にしてください（デバッグビルドのみ）。</string>
+    <string name="login_msg_untrusted_cert">サーバーの証明書が信頼されていません。認証局が発行した証明書を使用してください。自己署名の開発用サーバーの場合は、このフォームまたはアカウントのページで「自己署名証明書を信頼する」を有効にしてください（デバッグビルドのみ）。</string>
     <string name="login_msg_server_too_old">このサーバーはこのアプリには古すぎます。</string>
     <string name="login_msg_app_too_old">このアプリはこのサーバーには古すぎます。</string>
     <string name="login_msg_not_a_server">このアドレスでは Tuppu サーバーが応答しませんでした。</string>
@@ -334,7 +334,7 @@
     <string name="api_error_unknown_list">このリストは利用できなくなりました</string>
     <string name="api_error_not_admin">この操作は管理者のみが行えます</string>
     <string name="api_error_cannot_delete_admin">管理者はここでは削除できません</string>
-    <string name="api_error_cannot_delete_self">自分のアカウントは設定から削除してください</string>
+    <string name="api_error_cannot_delete_self">自分のアカウントはそのアカウントのページから削除してください</string>
     <string name="api_error_account_not_found">そのアカウントはもう存在しません</string>
     <string name="api_error_session_not_found">そのセッションはすでに終了しています</string>
     <string name="api_error_server_busy">サーバーが混み合っています。しばらくしてからもう一度お試しください。</string>

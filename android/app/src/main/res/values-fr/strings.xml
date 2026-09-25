@@ -111,8 +111,8 @@
 
     <string name="api_error_client_outdated">Cette application est trop ancienne pour ce serveur</string>
     <string name="update_required_title">Mise à jour requise</string>
-    <string name="update_required_body">Le serveur a été mis à jour. Installe la nouvelle version pour continuer.</string>
-    <string name="update_required_unavailable">Ce serveur ne propose aucune application plus récente. Demande une mise à jour à la personne qui l\'administre.</string>
+    <string name="update_required_body">Tes serveurs ont été mis à jour. Installe la nouvelle version pour continuer.</string>
+    <string name="update_required_unavailable">Aucun de tes serveurs ne propose d\'application plus récente. Demande une mise à jour aux personnes qui les administrent.</string>
     <string name="action_retry">Réessayer</string>
     <string name="listprops_list_name">Nom de la liste</string>
     <string name="listprops_type">Type</string>
@@ -145,7 +145,7 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_updates">Mises à jour de l\'application</string>
     <string name="about_auto_update_check">Rechercher les mises à jour automatiquement</string>
-    <string name="about_auto_update_check_help">Demander à ce serveur si une version plus récente de l\'application est disponible. Concerne uniquement cet appareil.</string>
+    <string name="about_auto_update_check_help">Demander à tes serveurs si une version plus récente de l\'application est disponible. Concerne uniquement cet appareil.</string>
     <string name="update_available_title">Mise à jour disponible</string>
     <string name="update_available_body">La version %1$s de l\'application est disponible. Vous avez la %2$s.</string>
     <string name="update_checking">Recherche de mises à jour…</string>
@@ -211,7 +211,7 @@
     <string name="login_msg_invalid_url">Saisis une URL de serveur https valide</string>
     <string name="login_msg_credentials_required">L\'e-mail et le mot de passe sont requis</string>
     <string name="login_msg_incorrect_credentials">E-mail ou mot de passe incorrect</string>
-    <string name="login_msg_untrusted_cert">Le certificat du serveur n\'est pas approuvé. Utilise un certificat d\'une autorité reconnue. Pour un serveur de test auto-signé, active \"Faire confiance aux certificats auto-signés\" dans les Paramètres (builds de débogage uniquement).</string>
+    <string name="login_msg_untrusted_cert">Le certificat du serveur n\'est pas approuvé. Utilise un certificat d\'une autorité reconnue. Pour un serveur de test auto-signé, active \"Faire confiance aux certificats auto-signés\" dans ce formulaire ou sur la page du compte (builds de débogage uniquement).</string>
     <string name="login_msg_server_too_old">Ce serveur est trop ancien pour cette application.</string>
     <string name="login_msg_app_too_old">Cette application est trop ancienne pour ce serveur.</string>
     <string name="login_msg_not_a_server">Aucun serveur Tuppu n\'a répondu à cette adresse.</string>
@@ -334,7 +334,7 @@
     <string name="api_error_unknown_list">Cette liste n\'est plus disponible pour vous</string>
     <string name="api_error_not_admin">Seul un administrateur peut faire cela</string>
     <string name="api_error_cannot_delete_admin">Les administrateurs ne peuvent pas être supprimés ici</string>
-    <string name="api_error_cannot_delete_self">Supprimez votre propre compte dans les Paramètres</string>
+    <string name="api_error_cannot_delete_self">Supprimez votre propre compte sur sa page de compte</string>
     <string name="api_error_account_not_found">Ce compte n\'existe plus</string>
     <string name="api_error_session_not_found">Cette session est déjà terminée</string>
     <string name="api_error_server_busy">Le serveur est occupé. Réessayez dans un instant.</string>

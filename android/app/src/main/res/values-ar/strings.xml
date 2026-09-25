@@ -111,8 +111,8 @@
 
     <string name="api_error_client_outdated">هذا التطبيق قديم جدًا على هذا الخادم</string>
     <string name="update_required_title">التحديث مطلوب</string>
-    <string name="update_required_body">تم تحديث الخادم. ثبّت الإصدار الجديد للمتابعة.</string>
-    <string name="update_required_unavailable">لا يوفّر هذا الخادم تطبيقًا أحدث. اطلب تحديثًا ممن يديره.</string>
+    <string name="update_required_body">تم تحديث خوادمك. ثبّت الإصدار الجديد للمتابعة.</string>
+    <string name="update_required_unavailable">لا يوفّر أيٌّ من خوادمك تطبيقًا أحدث. اطلب تحديثًا ممن يديرها.</string>
     <string name="action_retry">إعادة المحاولة</string>
     <string name="listprops_list_name">اسم القائمة</string>
     <string name="listprops_type">النوع</string>
@@ -145,7 +145,7 @@
     <string name="about_version">الإصدار %1$s</string>
     <string name="about_updates">تحديثات التطبيق</string>
     <string name="about_auto_update_check">البحث عن التحديثات تلقائيًا</string>
-    <string name="about_auto_update_check_help">سؤال هذا الخادم عمّا إذا كان هناك إصدار أحدث من التطبيق. يؤثر على هذا الجهاز فقط.</string>
+    <string name="about_auto_update_check_help">سؤال خوادمك عمّا إذا كان هناك إصدار أحدث من التطبيق. يؤثر على هذا الجهاز فقط.</string>
     <string name="update_available_title">يتوفر تحديث</string>
     <string name="update_available_body">الإصدار %1$s من التطبيق متوفر. لديك %2$s.</string>
     <string name="update_checking">جارٍ البحث عن تحديثات…</string>
@@ -211,7 +211,7 @@
     <string name="login_msg_invalid_url">أدخل عنوان خادم https صالحًا</string>
     <string name="login_msg_credentials_required">البريد الإلكتروني وكلمة المرور مطلوبان</string>
     <string name="login_msg_incorrect_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
-    <string name="login_msg_untrusted_cert">شهادة الخادم غير موثوقة. استخدم شهادة من جهة معتمدة. لخادم تطوير بشهادة موقّعة ذاتيًا، فعّل \"الوثوق بالشهادات الموقّعة ذاتيًا\" في الإعدادات (نسخ التصحيح فقط).</string>
+    <string name="login_msg_untrusted_cert">شهادة الخادم غير موثوقة. استخدم شهادة من جهة معتمدة. لخادم تطوير بشهادة موقّعة ذاتيًا، فعّل \"الوثوق بالشهادات الموقّعة ذاتيًا\" في هذا النموذج أو في صفحة الحساب (نسخ التصحيح فقط).</string>
     <string name="login_msg_server_too_old">هذا الخادم أقدم من أن يعمل مع هذا التطبيق.</string>
     <string name="login_msg_app_too_old">هذا التطبيق أقدم من أن يعمل مع هذا الخادم.</string>
     <string name="login_msg_not_a_server">لم يستجب أي خادم Tuppu على هذا العنوان.</string>
@@ -334,7 +334,7 @@
     <string name="api_error_unknown_list">لم تعد هذه القائمة متاحة لك</string>
     <string name="api_error_not_admin">لا يمكن القيام بذلك إلا للمسؤول</string>
     <string name="api_error_cannot_delete_admin">لا يمكن حذف المسؤولين من هنا</string>
-    <string name="api_error_cannot_delete_self">احذف حسابك من الإعدادات</string>
+    <string name="api_error_cannot_delete_self">احذف حسابك من صفحة الحساب</string>
     <string name="api_error_account_not_found">هذا الحساب لم يعد موجودًا</string>
     <string name="api_error_session_not_found">انتهت هذه الجلسة بالفعل</string>
     <string name="api_error_server_busy">الخادم مشغول. حاول مرة أخرى بعد لحظة.</string>
