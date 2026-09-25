@@ -397,4 +397,54 @@ class AccountViewModelTest {
         assertFalse(viewModel.uiState.value.isRemoveConfirmOpen)
         assertTrue(authRepository.removed.isEmpty())
     }
+
+    @Test
+    fun `the local area is removed only once it holds no lists, and without a warning then (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        val local = accounts.registry.addLocal()!!
+        val lists = testListsRepo(db)
+        val listId = lists.create(local.id, "Hardware")
+        val viewModel = newViewModel(local.id)
+        assertEquals(1, viewModel.uiState.first { it.listCount != null }.listCount)
+
+        viewModel.requestRemove().join()
+        viewModel.confirmRemove().join()
+
+        assertTrue("a list would be gone for good", authRepository.removed.isEmpty())
+        assertFalse(viewModel.uiState.value.isRemoveConfirmOpen)
+
+        // Its lists go one by one, as any list does.
+        lists.removeLocally(listId)
+        viewModel.uiState.first { it.listCount == 0 }
+        viewModel.requestRemove().join()
+
+        assertEquals(listOf(local.id), authRepository.removed)
+        assertFalse(viewModel.uiState.value.isRemoveConfirmOpen)
+        assertEquals(AccountGone.TO_ACCOUNTS, viewModel.uiState.value.gone)
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `removing the last server account leaves the local area, so it goes to Accounts, not the start (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        accounts.registry.addLocal()
+        val viewModel = newViewModel()
+
+        viewModel.requestRemove().join()
+        viewModel.confirmRemove().join()
+
+        assertEquals(listOf(TEST_ACCOUNT_ID), authRepository.removed)
+        assertEquals(AccountGone.TO_ACCOUNTS, viewModel.uiState.value.gone)
+    }
+
+    @Test
+    fun `removing the local area when it is the only account goes to the start screen (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        accounts.registry.remove(TEST_ACCOUNT_ID)
+        val local = accounts.registry.addLocal()!!
+        val viewModel = newViewModel(local.id)
+        viewModel.uiState.first { it.listCount == 0 }
+
+        viewModel.requestRemove().join()
+
+        assertEquals(listOf(local.id), authRepository.removed)
+        assertEquals(AccountGone.TO_START, viewModel.uiState.value.gone)
+    }
 }

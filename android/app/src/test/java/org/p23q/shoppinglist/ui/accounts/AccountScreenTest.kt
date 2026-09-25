@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.accounts
 
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -246,5 +248,47 @@ class AccountScreenTest {
         awaitLoads(viewModel)
 
         composeTestRule.onNodeWithTag("account-admin").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the local area's screen says what it is and counts its lists, and holds its removal while it has any (T-293)`() = runBlocking<Unit> {
+        val local = accounts.registry.addLocal()!!
+        testListsRepo(db).create(local.id, "Hardware")
+        val viewModel = newViewModel(local.id)
+
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.listCount != null
+        }
+
+        composeTestRule.onNodeWithText("On this phone").assertExists()
+        composeTestRule.onNodeWithText("Lists: 1").assertExists()
+        composeTestRule.onNodeWithText("Only an empty area can be removed. Delete its lists first.").assertExists()
+        composeTestRule.onNodeWithTag("account-remove").assertIsNotEnabled()
+        // Nothing of a server account's.
+        composeTestRule.onNodeWithText("Change password").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("account-delete").assertDoesNotExist()
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `the empty local area is removed at a tap (T-293)`() = runBlocking<Unit> {
+        val local = accounts.registry.addLocal()!!
+        val viewModel = newViewModel(local.id)
+        var gone: AccountGone? = null
+
+        composeTestRule.setContent { AccountScreen(onGone = { gone = it }, onSignIn = {}, viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.listCount == 0
+        }
+        composeTestRule.onNodeWithText("Lists: 0").assertExists()
+        composeTestRule.onNodeWithText("Only an empty area can be removed. Delete its lists first.").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("account-remove").assertIsEnabled().performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { gone != null }
+
+        assertEquals(listOf(local.id), authRepository.removed)
+        assertEquals(AccountGone.TO_ACCOUNTS, gone)
     }
 }

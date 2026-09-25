@@ -166,4 +166,18 @@ class AppDrawerScaffoldTest {
         composeTestRule.onNodeWithText("About").performClick()
         assertEquals(Routes.ABOUT, getNavController().currentBackStackEntry?.destination?.route)
     }
+
+    @Test
+    fun `the top bar shows the sync status only with a server account, never for the local area alone (T-293)`() = runBlocking<Unit> {
+        accounts.registry.addLocal()
+        setDrawerContent()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Not synced yet").assertDoesNotExist()
+
+        addAccount("prod")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithContentDescription("Not synced yet").assertExists()
+    }
 }

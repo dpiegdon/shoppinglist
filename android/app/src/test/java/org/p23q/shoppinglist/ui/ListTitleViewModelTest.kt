@@ -73,12 +73,12 @@ class ListTitleViewModelTest {
         viewModel.name.first { it == "Groceries" }
 
         // Collected, so the flow has run: it stays null rather than never having been computed.
-        val seen = mutableListOf<String?>()
-        val job = launch { viewModel.subtitle.collect { seen += it } }
+        val seen = mutableListOf<org.p23q.shoppinglist.core.db.AccountEntity?>()
+        val job = launch { viewModel.subtitleAccount.collect { seen += it } }
         advanceUntilIdle()
         job.cancel()
 
-        assertEquals(listOf<String?>(null), seen)
+        assertEquals(listOf<org.p23q.shoppinglist.core.db.AccountEntity?>(null), seen)
     }
 
     @Test
@@ -89,8 +89,16 @@ class ListTitleViewModelTest {
         val mine = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
         val theirs = listsRepo.create("second", "Office")
 
-        assertEquals("me@example.com · lists.example.test", newViewModel(mine).subtitle.first { it != null })
-        assertEquals("me@example.com · work.example.test/stage", newViewModel(theirs).subtitle.first { it != null })
+        assertEquals("me@example.com · lists.example.test", org.p23q.shoppinglist.data.accountLine(newViewModel(mine).subtitleAccount.first { it != null }!!))
+        assertEquals("me@example.com · work.example.test/stage", org.p23q.shoppinglist.data.accountLine(newViewModel(theirs).subtitleAccount.first { it != null }!!))
+    }
+
+    @Test
+    fun `beside a server account, a local list's subtitle names the local area (T-293)`() = runTest(mainDispatcherRule.dispatcher) {
+        db.insertTestAccount(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        val listId = listsRepo.create("on-phone", "Hardware")
+
+        assertEquals("on-phone", newViewModel(listId).subtitleAccount.first { it != null }!!.id)
     }
 
     @Test

@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.settings.formatLastSeen
 
@@ -56,16 +57,22 @@ fun AccountScreen(
     // sign-in, and load once it is back.
     val signedOut = account?.let { it.isServer && !it.signedIn } == true
 
-    LaunchedEffect(signedOut) {
-        if (!signedOut) {
+    LaunchedEffect(signedOut, account?.isServer) {
+        // The local area has no server to ask (T-293).
+        if (!signedOut && account?.isServer == true) {
             viewModel.loadSessions()
             viewModel.loadInitials()
         }
     }
     LaunchedEffect(state.gone) { state.gone?.let(onGone) }
 
+    if (account != null && !account.isServer) {
+        LocalAreaAccount(state, onRemove = { viewModel.requestRemove() })
+        return
+    }
+
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text(account?.email ?: account?.label.orEmpty(), style = MaterialTheme.typography.titleMedium)
+        Text(account?.let { accountName(it) }.orEmpty(), style = MaterialTheme.typography.titleMedium)
         account?.serverUrl?.let {
             Text(stringResource(R.string.settings_server, it), style = MaterialTheme.typography.bodySmall)
         }
@@ -291,5 +298,36 @@ fun AccountScreen(
             confirmButton = { TextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
             dismissButton = { TextButton(onClick = viewModel::cancelDeleteAccount) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+}
+
+/**
+ * The local area's screen (T-293): what it is, how many lists it holds, and its removal, which
+ * waits until it holds none: they would be gone for good, and there is no server to keep them.
+ */
+@Composable
+private fun LocalAreaAccount(state: AccountUiState, onRemove: () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Text(stringResource(R.string.accounts_state_local), style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        Text(stringResource(R.string.local_area_note_body), style = MaterialTheme.typography.bodyMedium)
+        state.listCount?.let { count ->
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.account_local_list_count, count), style = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(stringResource(R.string.settings_danger_zone), style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(
+            onClick = onRemove,
+            enabled = state.listCount == 0,
+            modifier = Modifier.fillMaxWidth().testTag("account-remove"),
+        ) { Text(stringResource(R.string.account_remove)) }
+        if (state.listCount != null && state.listCount > 0) {
+            Text(
+                stringResource(R.string.account_remove_local_blocked),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

@@ -143,7 +143,7 @@ fun OverviewScreen(
                             items(section.lists, key = { it.localId }) { list ->
                                 ListCard(
                                     list = list,
-                                    accountMarker = account.email?.takeIf { state.several },
+                                    accountMarker = accountMarker(account).takeIf { state.several },
                                     summary = state.expenseSummaries[list.localId],
                                     openCount = state.openCounts[list.localId] ?: 0,
                                     onClick = { onOpenList(list.localId) },
@@ -320,6 +320,12 @@ internal fun NewListDialog(
         },
     )
 }
+
+/** The phone glyph that marks a card of the local area among several accounts (T-293). */
+internal const val LOCAL_AREA_GLYPH = "📱"
+
+/** What a card says of its account with several: the email, or the local area's phone glyph. */
+private fun accountMarker(account: AccountEntity): String? = if (account.isServer) account.email else LOCAL_AREA_GLYPH
 
 /** What an account's section says above its lists, if anything (T-292): signed out, or app too old. */
 private fun accountBanner(account: AccountEntity): Int? = when {

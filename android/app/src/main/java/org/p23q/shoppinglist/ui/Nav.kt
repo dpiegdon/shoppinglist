@@ -177,8 +177,8 @@ private fun liveListTitle(fallback: String): String {
 @Composable
 private fun liveListSubtitle(): String? {
     val viewModel: ListTitleViewModel = hiltViewModel()
-    val subtitle by viewModel.subtitle.collectAsStateWithLifecycle()
-    return subtitle
+    val account by viewModel.subtitleAccount.collectAsStateWithLifecycle()
+    return account?.let { accountLineText(it) }
 }
 
 /**
@@ -228,7 +228,7 @@ internal fun NavHostController.afterAccountGone(gone: AccountGone) {
             popUpTo(Routes.ACCOUNTS) { inclusive = true }
             launchSingleTop = true
         }
-        // The last server account went: nothing is left to show but the start, and the route is
+        // The last account went, the local area too: nothing is left to show but the start, and the route is
         // built, not the pattern, whose placeholders would fill the form's fields (T-300).
         AccountGone.TO_START -> navigate(Routes.login(LoginMode.START)) {
             popUpTo(graph.id) { inclusive = true }
@@ -626,6 +626,7 @@ internal fun AppDrawerScaffold(
 ) {
     val syncState by syncStatusViewModel.state.collectAsStateWithLifecycle()
     val adminAccountId by drawerViewModel.adminAccountId.collectAsStateWithLifecycle()
+    val hasServer by drawerViewModel.hasServer.collectAsStateWithLifecycle()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -737,15 +738,18 @@ internal fun AppDrawerScaffold(
                         // quiet dot, with the full "Synced 5 min ago" sentence as its description.
                         // The worst of every account; tapping it opens Accounts, where each one
                         // shows its own (T-292).
-                        SyncStatusMarker(
-                            state = syncState,
-                            nowMs = rememberTickingNowMs(),
-                            modifier = Modifier
-                                .clickable {
-                                    if (currentRoute != Routes.ACCOUNTS) navController.navigate(Routes.ACCOUNTS)
-                                }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        )
+                        // None with only the local area, which never syncs (T-293).
+                        if (hasServer) {
+                            SyncStatusMarker(
+                                state = syncState,
+                                nowMs = rememberTickingNowMs(),
+                                modifier = Modifier
+                                    .clickable {
+                                        if (currentRoute != Routes.ACCOUNTS) navController.navigate(Routes.ACCOUNTS)
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                            )
+                        }
                     },
                 )
             },

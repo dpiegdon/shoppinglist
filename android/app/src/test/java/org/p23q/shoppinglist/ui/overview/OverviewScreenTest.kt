@@ -160,6 +160,35 @@ class OverviewScreenTest {
         composeTestRule.onNodeWithText("Office supplies").assertExists()
         composeTestRule.onAllNodesWithText("Signed out. Tap to sign in.").assertCountEquals(0)
     }
+
+    @Test
+    fun `the local area is the last section, "On this phone", its cards marked by the phone glyph (T-293)`() = runBlocking<Unit> {
+        val local = accounts.registry.addLocal()!!
+        listsRepo.create(local.id, "Hardware")
+        addWorkAccount()
+        show()
+
+        composeTestRule.onNodeWithTag("account-header-${local.id}").assertExists()
+        composeTestRule.onNodeWithText("On this phone").assertExists()
+        composeTestRule.onNodeWithText(LOCAL_AREA_GLYPH).assertExists()
+        val headers = listOf(TEST_ACCOUNT_ID, "work", local.id).map { id ->
+            composeTestRule.onNodeWithTag("account-header-$id").fetchSemanticsNode().positionInRoot.y
+        }
+        assertEquals("server accounts first, the local area last", headers.sorted(), headers)
+    }
+
+    @Test
+    fun `with only the local area the overview is the plain one-account screen (T-293)`() = runBlocking<Unit> {
+        accounts.registry.remove(TEST_ACCOUNT_ID)
+        val local = accounts.registry.addLocal()!!
+        listsRepo.create(local.id, "Hardware")
+        show()
+
+        composeTestRule.onNodeWithText("Hardware").assertExists()
+        composeTestRule.onAllNodesWithTag("account-header-${local.id}").assertCountEquals(0)
+        composeTestRule.onAllNodesWithText(LOCAL_AREA_GLYPH).assertCountEquals(0)
+        composeTestRule.onAllNodesWithText("On this phone").assertCountEquals(0)
+    }
 }
 
 /** The New-list dialog's account picker (T-292), on its own: a dialog is its own window. */

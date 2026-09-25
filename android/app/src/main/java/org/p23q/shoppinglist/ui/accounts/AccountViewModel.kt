@@ -32,10 +32,10 @@ import javax.inject.Inject
 
 /** Where the Account screen goes once its account has left this phone. */
 enum class AccountGone {
-    /** Other server accounts remain: back to the Accounts screen. */
+    /** Other accounts remain, the local area included: back to the Accounts screen. */
     TO_ACCOUNTS,
 
-    /** It was the last server account: the start screen, with nothing behind it. */
+    /** It was the last account of any kind: the start screen, with nothing behind it. */
     TO_START,
 }
 
@@ -66,6 +66,8 @@ data class AccountUiState(
     val infoMessage: UiText? = null,
     /** Set once the account is gone from this phone, deleted on its server or removed here. */
     val gone: AccountGone? = null,
+    /** How many lists the account holds here; the local area can be removed only at 0 (T-293). */
+    val listCount: Int? = null,
 )
 
 /**
@@ -97,7 +99,20 @@ class AccountViewModel @Inject constructor(
                 _uiState.update { it.copy(account = account) }
             }
         }
+        viewModelScope.launch {
+            db.listDao().activeLists().collect { lists ->
+                _uiState.update { it.copy(listCount = lists.count { list -> list.accountId == accountId }) }
+            }
+        }
     }
+
+    /**
+     * Whether "Remove from this phone" may go ahead: always for a server account, whose lists stay
+     * on its server; for the local area only once it holds no lists, which would be gone for good
+     * (T-293). Its lists are deleted one by one first.
+     */
+    private fun removable(state: AccountUiState): Boolean =
+        state.account?.isServer != false || state.listCount == 0
 
     private fun api(): Api = sessions.get(accountId).api
 
@@ -283,6 +298,12 @@ class AccountViewModel @Inject constructor(
 
     /** Opens the removal warning with the count of this account's rows that never went out. */
     fun requestRemove(): Job = viewModelScope.launch {
+        if (!removable(_uiState.value)) return@launch
+        // The empty local area has nothing to lose and nothing to warn of.
+        if (_uiState.value.account?.isServer == false) {
+            remove()
+            return@launch
+        }
         val unpushed = db.listDao().dirtyRowsForAccount(accountId).size +
             db.itemDao().dirtyRowsForAccount(accountId).size +
             db.listDao().blockedRowCountForAccount(accountId) +
@@ -298,12 +319,17 @@ class AccountViewModel @Inject constructor(
      * copied anywhere first; the warning says how to keep a list.
      */
     fun confirmRemove(): Job = viewModelScope.launch {
+        if (!removable(_uiState.value)) return@launch
+        remove()
+    }
+
+    private suspend fun remove() {
         authRepository.removeAccount(accountId)
         _uiState.update { it.copy(isRemoveConfirmOpen = false, gone = whereNext()) }
     }
 
     private fun whereNext(): AccountGone =
-        if (registry.snapshot().any { it.isServer && it.id != accountId }) AccountGone.TO_ACCOUNTS else AccountGone.TO_START
+        if (registry.snapshot().any { it.id != accountId }) AccountGone.TO_ACCOUNTS else AccountGone.TO_START
 
     private companion object {
         val ISO_CURRENCY = Regex("^[A-Z]{3}$")

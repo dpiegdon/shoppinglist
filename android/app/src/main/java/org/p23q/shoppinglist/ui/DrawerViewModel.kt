@@ -11,7 +11,7 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AccountEntity
 import javax.inject.Inject
 
-/** What the menu drawer needs to know about the accounts: whose server "Server admin" opens. */
+/** What the menu drawer and top bar need to know about the accounts: whose server "Server admin" opens, and whether any syncs. */
 @HiltViewModel
 class DrawerViewModel @Inject constructor(registry: AccountRegistry) : ViewModel() {
 
@@ -21,6 +21,11 @@ class DrawerViewModel @Inject constructor(registry: AccountRegistry) : ViewModel
      */
     val adminAccountId: StateFlow<String?> =
         registry.accounts.map(::firstAdmin).stateIn(viewModelScope, SharingStarted.Eagerly, firstAdmin(registry.snapshot()))
+
+    /** Whether the phone holds a server account: with only the local area there is no sync to show (T-293). */
+    val hasServer: StateFlow<Boolean> =
+        registry.accounts.map { accounts -> accounts.any { it.isServer } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, registry.snapshot().any { it.isServer })
 
     private fun firstAdmin(accounts: List<AccountEntity>): String? =
         accounts.sortedBy { it.sortOrder }.firstOrNull { it.isServer && it.signedIn && it.isAdmin }?.id
