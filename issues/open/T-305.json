@@ -1,0 +1,13 @@
+{
+  "body": "Several accounts and servers on Android, the local area, copying lists between accounts, the client's protocol floor; the server's no_app_package 404 carries protocol and the landing page's intent link carries the mount path. Protocol stays 3. Release notes in the tag; the floor table's Since set to 3.2.0 in the same pass. Operators: deploy the server first, then update the phone right away.",
+  "created_at": "2026-09-25T18:54:40+00:00",
+  "id": "T-305",
+  "labels": [
+    "android",
+    "web",
+    "server"
+  ],
+  "priority": 1,
+  "title": "Release 3.2.0",
+  "updated_at": "2026-09-25T18:54:40+00:00"
+}
