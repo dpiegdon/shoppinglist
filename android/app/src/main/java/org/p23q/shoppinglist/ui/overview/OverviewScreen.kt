@@ -32,6 +32,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.stringResource
@@ -351,16 +354,52 @@ private fun AccountLines(account: AccountEntity, emailStyle: TextStyle = Materia
     }
 }
 
-/** The small header over an account's section, with several accounts (T-292). */
+/**
+ * The small header over an account's section, with several accounts (T-292): "email  ·  server" on
+ * one line, the server muted; only when that does not fit is the server put on a second line, then
+ * without the dot (T-307). Slim: a small gap above it to part it from the previous section's last
+ * card, none below, where the cards' own padding separates it from its first one.
+ */
 @Composable
-private fun AccountHeader(account: AccountEntity, first: Boolean) {
-    Box(
+internal fun AccountHeader(account: AccountEntity, first: Boolean) {
+    val server = account.serverUrl
+    Layout(
+        content = {
+            Text(accountName(account), style = MaterialTheme.typography.titleSmall, modifier = Modifier.testTag("account-header-email-" + account.id))
+            if (server != null) {
+                val muted = MaterialTheme.colorScheme.onSurfaceVariant
+                Text("  ·  ", style = MaterialTheme.typography.bodySmall, color = muted)
+                Text(server, style = MaterialTheme.typography.bodySmall, color = muted, modifier = Modifier.testTag("account-header-server-" + account.id))
+            }
+        },
         modifier = Modifier
+            .testTag("account-header-" + account.id)
             .fillMaxWidth()
-            .padding(top = if (first) 0.dp else 20.dp, bottom = 4.dp)
-            .testTag("account-header-" + account.id),
-    ) {
-        AccountLines(account, emailStyle = MaterialTheme.typography.titleSmall)
+            .padding(top = if (first) 0.dp else 12.dp),
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val email = measurables[0].measure(loose)
+        if (measurables.size == 1) {
+            return@Layout layout(constraints.maxWidth, email.height) { email.placeRelative(0, 0) }
+        }
+        val dot = measurables[1].measure(loose)
+        val serverText = measurables[2].measure(loose)
+        if (email.width + dot.width + serverText.width <= constraints.maxWidth) {
+            // One line, the smaller server text on the email's baseline.
+            val baseline = maxOf(email[FirstBaseline], dot[FirstBaseline], serverText[FirstBaseline])
+            val top = { p: Placeable -> baseline - p[FirstBaseline] }
+            val height = maxOf(top(email) + email.height, top(dot) + dot.height, top(serverText) + serverText.height)
+            layout(constraints.maxWidth, height) {
+                email.placeRelative(0, top(email))
+                dot.placeRelative(email.width, top(dot))
+                serverText.placeRelative(email.width + dot.width, top(serverText))
+            }
+        } else {
+            layout(constraints.maxWidth, email.height + serverText.height) {
+                email.placeRelative(0, 0)
+                serverText.placeRelative(0, email.height)
+            }
+        }
     }
 }
 

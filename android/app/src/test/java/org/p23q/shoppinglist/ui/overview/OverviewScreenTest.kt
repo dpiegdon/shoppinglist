@@ -22,6 +22,13 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -126,6 +133,47 @@ class OverviewScreenTest {
         // Header and card marker, per account.
         composeTestRule.onAllNodesWithText("me@example.com").assertCountEquals(2)
         composeTestRule.onAllNodesWithText("me@work.example").assertCountEquals(2)
+    }
+
+    @Test
+    fun `an account header is one slim line, email then server, when it fits (T-307)`() = runBlocking<Unit> {
+        addWorkAccount()
+        show()
+
+        val header = composeTestRule.onNodeWithTag("account-header-work").fetchSemanticsNode().boundsInRoot
+        val email = composeTestRule.onNodeWithTag("account-header-email-work", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val url = composeTestRule.onNodeWithTag("account-header-server-work", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("server beside the email", url.left >= email.right)
+        assertTrue("on the email's line", url.top < email.bottom && url.bottom > email.top)
+        // Slim: the header's own box, below its small top gap, is one line tall and has no bottom padding.
+        assertEquals(email.bottom, header.bottom, 1f)
+        assertTrue("a small gap above, not the old 20dp", email.top - header.top < with(composeTestRule.density) { 16.dp.toPx() })
+    }
+
+    @Test
+    fun `an account header that does not fit puts the server on a second line (T-307)`() {
+        val account = AccountEntity(
+            id = "long",
+            serverUrl = "https://lists.example.org/a-rather-long-path/",
+            accountId = "acct-long",
+            email = "someone.with.a.long.address@example.org",
+            label = "long",
+            signedIn = true,
+        )
+        var width by mutableStateOf(400.dp)
+        composeTestRule.setContent {
+            Box(Modifier.width(width)) { AccountHeader(account, first = true) }
+        }
+        fun bounds(part: String) =
+            composeTestRule.onNodeWithTag("account-header-$part-long", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+
+        assertTrue("wide: one line", bounds("server").top < bounds("email").bottom)
+        // Narrower than email and server together (the test fonts measure far narrower than real ones).
+        width = (bounds("server").right - bounds("email").left).let { with(composeTestRule.density) { it.toDp() } } - 10.dp
+        composeTestRule.waitForIdle()
+
+        assertTrue("narrow: server below the email", bounds("server").top >= bounds("email").bottom)
+        assertEquals("server starts the line", bounds("email").left, bounds("server").left, 1f)
     }
 
     @Test
