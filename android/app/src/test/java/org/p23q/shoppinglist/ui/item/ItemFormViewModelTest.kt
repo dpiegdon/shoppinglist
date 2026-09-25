@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.item
 
+import org.p23q.shoppinglist.data.itemsToPush
+import org.p23q.shoppinglist.data.markItemsClean
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
@@ -215,7 +217,7 @@ class ItemFormViewModelTest {
         val seed = seedRepo("seed-device")
         val existingId = seed.createItem(listId, "Milk", status = Status.TODO)
         // Clear the creation dirty flag so a later dirty row can only come from a pick write.
-        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.localId })
+        db.markItemsClean(db.itemsToPush().map { it.localId })
         val viewModel = newViewModel()
         viewModel.startAdd(listId)
 
@@ -565,7 +567,7 @@ class ItemFormViewModelTest {
         seed.setCategory(itemId, "dairy")
         seed.setNote(itemId, "keep me")
         // Clear the creation dirty flag so a later dirty row can only come from a save write.
-        itemsRepo.clearDirty(itemsRepo.dirtyRows().map { it.localId })
+        db.markItemsClean(db.itemsToPush().map { it.localId })
         val viewModel = newViewModel()
         viewModel.startEdit(itemId).join()
 

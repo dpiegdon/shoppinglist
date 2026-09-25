@@ -155,14 +155,14 @@ class ListsRepoTest {
     }
 
     @Test
-    fun `dirtyRows returns only dirty rows and clearDirty clears them`() = runTest {
+    fun `a new list waits to be pushed with its account, and a clean one does not`() = runTest {
         val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
-        assertTrue(repo.dirtyRows().any { it.localId == listId })
+        assertTrue(db.listDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == listId })
 
-        repo.clearDirty(listOf(listId))
+        db.listDao().upsert(db.listDao().get(listId)!!.copy(dirty = false))
 
-        assertFalse(repo.dirtyRows().any { it.localId == listId })
+        assertFalse(db.listDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == listId })
     }
 
     @Test
@@ -201,22 +201,22 @@ class ListsRepoTest {
     }
 
     @Test
-    fun `a quarantined list is skipped by dirtyRows but re-editing it clears the block (T-198)`() = runTest {
+    fun `a quarantined list is not pushed, but re-editing it clears the block (T-198)`() = runTest {
         val listId = repo.create(TEST_ACCOUNT_ID, "Trip")
         db.listDao().blockRow(listId)
 
         // Quarantined: still in the mirror and on screen, but not offered for push.
-        assertEquals(1, repo.blockedRowCount())
+        assertEquals(1, db.listDao().blockedRowCountForAccount(TEST_ACCOUNT_ID))
         assertEquals(listId, repo.firstBlockedListId())
-        assertFalse(repo.dirtyRows().any { it.localId == listId })
+        assertFalse(db.listDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == listId })
         assertTrue(repo.getById(listId)!!.syncBlocked)
 
         // Editing the list (correcting whatever the server refused) clears the block and re-queues it.
         repo.rename(listId, "Trip to Rome")
 
         assertFalse(repo.getById(listId)!!.syncBlocked)
-        assertTrue(repo.dirtyRows().any { it.localId == listId })
-        assertEquals(0, repo.blockedRowCount())
+        assertTrue(db.listDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == listId })
+        assertEquals(0, db.listDao().blockedRowCountForAccount(TEST_ACCOUNT_ID))
     }
 
     private suspend fun localArea(): String {

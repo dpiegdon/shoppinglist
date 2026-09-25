@@ -355,7 +355,7 @@ class SyncEngineTest {
         val result = syncEngine.syncNow()
 
         assertTrue(result is SyncResult.Success)
-        assertEquals("every unpushed edit survives the re-base", total, db.itemDao().dirtyRows().size)
+        assertEquals("every unpushed edit survives the re-base", total, db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).size)
         // And the retry carries the backlog rather than being a pure pull — one batch of it here,
         // the rest over the following passes.
         server.takeRequest()
@@ -365,7 +365,7 @@ class SyncEngineTest {
     }
 
     /**
-     * T-259. A quarantined row is worse off than a merely-dirty one: dirtyRows() excludes it
+     * T-259. A quarantined row is worse off than a merely-dirty one: dirtyRowsForAccount() excludes it
      * entirely, so no amount of draining the queue first would have saved it, and it is exactly a
      * row the server does not have — it refused it. The user is still meant to correct it.
      */
@@ -840,7 +840,7 @@ class SyncEngineTest {
         // Every row went exactly once, none lost or duplicated.
         assertEquals(ids.toSet(), (first.changes.items + second.changes.items).map { it.id }.toSet())
         assertEquals(total, first.changes.items.size + second.changes.items.size)
-        assertEquals(0, db.itemDao().dirtyRows().size)
+        assertEquals(0, db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).size)
     }
 
     @Test
@@ -884,7 +884,7 @@ class SyncEngineTest {
 
         assertTrue(result is SyncResult.Success)
         assertEquals(1, server.requestCount)
-        assertEquals(total, db.itemDao().dirtyRows().size)
+        assertEquals(total, db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).size)
     }
 
     /**

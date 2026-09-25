@@ -75,6 +75,19 @@ fun testAccount(
  */
 suspend fun AppDb.insertTestAccount(account: AccountEntity = testAccount()) = accountDao().insert(account)
 
+/** Marks the items pushed and acknowledged, as a sync whose answer echoed them would. */
+suspend fun AppDb.markItemsClean(localIds: List<String>) {
+    for (id in localIds) itemDao().get(id)?.let { itemDao().upsert(it.copy(dirty = false)) }
+}
+
+/** Every account's items that are waiting to be pushed. */
+suspend fun AppDb.itemsToPush(): List<org.p23q.shoppinglist.core.db.ItemEntity> =
+    accountDao().all().flatMap { itemDao().dirtyRowsForAccount(it.id) }
+
+/** Every account's lists that are waiting to be pushed. */
+suspend fun AppDb.listsToPush(): List<org.p23q.shoppinglist.core.db.ListEntity> =
+    accountDao().all().flatMap { listDao().dirtyRowsForAccount(it.id) }
+
 /** A [ListsRepo] over [db], as the screens get one. */
 fun testListsRepo(db: AppDb): ListsRepo =
     ListsRepo(db, DeviceIdProvider { "this-device" }, org.p23q.shoppinglist.data.sync.FakeSyncTrigger())

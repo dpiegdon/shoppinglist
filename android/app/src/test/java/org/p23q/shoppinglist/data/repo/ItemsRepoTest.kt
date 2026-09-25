@@ -20,6 +20,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.data.itemsToPush
+import org.p23q.shoppinglist.data.markItemsClean
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
@@ -114,7 +116,7 @@ class ItemsRepoTest {
         val failure = runCatching { repo.createItem(listId = "no-such-list", name = "Milk") }.exceptionOrNull()
 
         assertTrue(failure is IllegalArgumentException)
-        assertTrue(repo.dirtyRows().isEmpty())
+        assertTrue(db.itemsToPush().isEmpty())
         assertEquals(0, syncTrigger.scheduleCount)
     }
 
@@ -142,7 +144,7 @@ class ItemsRepoTest {
         val todo = repo.createItem(listId = "list-1", name = "Bread", status = Status.TODO)
         val otherList = repo.createItem(listId = "list-2", name = "Soap", status = Status.CHECKED)
         val clockBeforeA = repo.getById(checkedA)!!.status.updatedAt
-        repo.clearDirty(listOf(checkedA, checkedB, todo, otherList))
+        db.markItemsClean(listOf(checkedA, checkedB, todo, otherList))
 
         Thread.sleep(2)
         val cleared = repo.clearChecked("list-1")
@@ -272,14 +274,14 @@ class ItemsRepoTest {
     }
 
     @Test
-    fun `dirtyRows returns only dirty rows and clearDirty clears them`() = runTest {
+    fun `a new item waits to be pushed with its account, and a clean one does not`() = runTest {
         val itemId = repo.createItem(listId = "list-1", name = "Milk")
 
-        assertTrue(repo.dirtyRows().any { it.localId == itemId })
+        assertTrue(db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == itemId })
 
-        repo.clearDirty(listOf(itemId))
+        db.markItemsClean(listOf(itemId))
 
-        assertFalse(repo.dirtyRows().any { it.localId == itemId })
+        assertFalse(db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == itemId })
     }
 
     @Test
@@ -329,7 +331,7 @@ class ItemsRepoTest {
         repo.setStores(milk, listOf("Rewe"))
         repo.setQuantity(milk, "2l")
         repo.setPrice(milk, amount = "1.99", currency = "EUR")
-        repo.clearDirty(listOf(milk))
+        db.markItemsClean(listOf(milk))
         val before = repo.getById(milk)
 
         assertEquals(1, repo.duplicateForList(sourceListId = "list-1", targetListId = "work-list"))
@@ -406,13 +408,13 @@ class ItemsRepoTest {
     }
 
     @Test
-    fun `a quarantined row is skipped by dirtyRows but re-editing it clears the block`() = runTest {
+    fun `a quarantined row is not pushed, but re-editing it clears the block`() = runTest {
         val itemId = repo.createItem(listId = "list-1", name = "Milk")
         db.itemDao().blockRow(itemId, "participant_frozen", "acct-other")
 
         // Quarantined: still in the mirror, but not offered for push.
-        assertEquals(1, repo.blockedRowCount())
-        assertFalse(repo.dirtyRows().any { it.localId == itemId })
+        assertEquals(1, db.itemDao().blockedRowCountForAccount(TEST_ACCOUNT_ID))
+        assertFalse(db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == itemId })
         assertTrue(repo.getById(itemId)!!.syncBlocked)
         // The server's reason is parked with it (T-200), for the row to show.
         assertEquals("participant_frozen", repo.getById(itemId)!!.syncBlockedCode)
@@ -422,8 +424,8 @@ class ItemsRepoTest {
         repo.setQuantity(itemId, "2l")
 
         assertFalse(repo.getById(itemId)!!.syncBlocked)
-        assertTrue(repo.dirtyRows().any { it.localId == itemId })
-        assertEquals(0, repo.blockedRowCount())
+        assertTrue(db.itemDao().dirtyRowsForAccount(TEST_ACCOUNT_ID).any { it.localId == itemId })
+        assertEquals(0, db.itemDao().blockedRowCountForAccount(TEST_ACCOUNT_ID))
         // And the reason goes with it: it described a value this row no longer holds (T-200).
         assertNull(repo.getById(itemId)!!.syncBlockedCode)
         assertNull(repo.getById(itemId)!!.syncBlockedAccountId)

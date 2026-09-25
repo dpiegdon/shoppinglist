@@ -53,10 +53,6 @@ class ListsRepo @Inject constructor(
     /** Live single-list observation (T-34) — reflects rename / category-order changes as they land. */
     fun observeById(listId: String): Flow<ListEntity?> = listDao.observe(listId)
 
-    suspend fun dirtyRows(): List<ListEntity> = listDao.dirtyRows()
-
-    suspend fun clearDirty(ids: List<String>) = listDao.clearDirty(ids)
-
     /**
      * @param accountId the local id of the account the list is created in; it never moves.
      * @param currency free-text label, required for an expenses list and meaningless elsewhere
@@ -195,9 +191,6 @@ class ListsRepo @Inject constructor(
     fun decodeCategoryOrder(json: String): List<String> = Json.decodeFromString(json)
 
     private fun encodeCategoryOrder(order: List<String>): String = Json.encodeToString(order)
-
-    /** True after the server quarantined at least one list row (T-198) — counted with the items'. */
-    suspend fun blockedRowCount(): Int = listDao.blockedRowCount()
 
     /** A quarantined list, so a "needs attention" surface can open it even with no item blocked (T-198). */
     suspend fun firstBlockedListId(): String? = listDao.firstBlockedListId()

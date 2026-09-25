@@ -77,10 +77,6 @@ class ItemsRepo @Inject constructor(
     suspend fun findByExactName(listId: String, name: String, excludingId: String = ""): ItemEntity? =
         itemDao.findByExactName(listId, name, excludingLocalId = excludingId)
 
-    suspend fun dirtyRows(): List<ItemEntity> = itemDao.dirtyRows()
-
-    suspend fun clearDirty(ids: List<String>) = itemDao.clearDirty(ids)
-
     /** @return the new item's local id; its server id is minted here too. Throws if [listId] is no list. */
     suspend fun createItem(listId: String, name: String, status: Status = Status.TODO): String {
         val id = UUID.randomUUID().toString()
@@ -302,9 +298,6 @@ class ItemsRepo @Inject constructor(
     fun decodePrice(json: String?): Price? = json?.let { Json.decodeFromString(it) }
 
     private fun encodeStores(stores: List<String>): String = Json.encodeToString(stores)
-
-    /** True after the server quarantined at least one row (T-32) — for a "needs attention" hint. */
-    suspend fun blockedRowCount(): Int = itemDao.blockedRowCount()
 
     /** One quarantined row (or null), so a "needs attention" surface can open the list holding it (T-47). */
     suspend fun firstBlockedItem(): ItemEntity? = itemDao.firstBlockedItem()

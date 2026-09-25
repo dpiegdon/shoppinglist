@@ -97,19 +97,16 @@ interface ItemDao {
     @Query("SELECT stores_value FROM items WHERE listLocalId = :listId AND deleted_value = 0")
     fun storeValues(listId: String): Flow<List<String>>
 
-    /** Rows to push: dirty AND not quarantined by a prior server 422 (T-32). */
-    @Query("SELECT * FROM items WHERE dirty = 1 AND syncBlocked = 0")
-    suspend fun dirtyRows(): List<ItemEntity>
-
-    /** [dirtyRows] for one account: what a sync with that account's server pushes, oldest row first. */
+    /**
+     * One account's rows to push: dirty AND not quarantined by a prior server 422 (T-32), oldest
+     * row first. What a sync with that account's server sends.
+     */
     @Query("SELECT * FROM items WHERE accountId = :accountId AND dirty = 1 AND syncBlocked = 0 ORDER BY rowid")
     suspend fun dirtyRowsForAccount(accountId: String): List<ItemEntity>
 
-    @Query("UPDATE items SET dirty = 0 WHERE localId IN (:localIds)")
-    suspend fun clearDirty(localIds: List<String>)
-
     /**
-     * Quarantine a row the server rejected (T-32); dirtyRows() then skips it until it's re-edited.
+     * Quarantine a row the server rejected (T-32); [dirtyRowsForAccount] then skips it until it's
+     * re-edited.
      * The refusal is kept with it (T-200) so the row can say why it is parked.
      */
     @Query(
@@ -117,9 +114,6 @@ interface ItemDao {
             "WHERE localId = :localId",
     )
     suspend fun blockRow(localId: String, code: String?, accountId: String?)
-
-    @Query("SELECT COUNT(*) FROM items WHERE syncBlocked = 1")
-    suspend fun blockedRowCount(): Int
 
     @Query("SELECT COUNT(*) FROM items WHERE accountId = :accountId AND syncBlocked = 1")
     suspend fun blockedRowCountForAccount(accountId: String): Int
@@ -206,38 +200,28 @@ interface ListDao {
     @Query("SELECT * FROM lists WHERE deleted_value = 0")
     fun activeLists(): Flow<List<ListEntity>>
 
-    /** Rows to push: dirty AND not quarantined by a prior server 422 (T-198), as for items. */
-    @Query("SELECT * FROM lists WHERE dirty = 1 AND syncBlocked = 0")
-    suspend fun dirtyRows(): List<ListEntity>
-
-    /** Oldest row first, as for items. */
+    /** One account's rows to push, as for items: not quarantined (T-198), oldest row first. */
     @Query("SELECT * FROM lists WHERE accountId = :accountId AND dirty = 1 AND syncBlocked = 0 ORDER BY rowid")
     suspend fun dirtyRowsForAccount(accountId: String): List<ListEntity>
 
     @Query("SELECT COUNT(*) FROM lists WHERE accountId = :accountId AND syncBlocked = 1")
     suspend fun blockedRowCountForAccount(accountId: String): Int
 
-    /** The server id of any non-deleted list of one account, for that account's accountId self-heal (T-74). */
     /** The account's lists that are not deleted: what the local area must be rid of before it goes. */
     @Query("SELECT COUNT(*) FROM lists WHERE accountId = :accountId AND deleted_value = 0")
     suspend fun activeListCountForAccount(accountId: String): Int
 
+    /** The server id of any non-deleted list of one account, for that account's accountId self-heal (T-74). */
     @Query("SELECT serverId FROM lists WHERE accountId = :accountId AND deleted_value = 0 LIMIT 1")
     suspend fun anyActiveListServerIdForAccount(accountId: String): String?
 
-    /** Quarantine a list the server rejected (T-198); dirtyRows() then skips it until it's re-edited. */
+    /** Quarantine a list the server rejected (T-198); [dirtyRowsForAccount] then skips it until it's re-edited. */
     @Query("UPDATE lists SET syncBlocked = 1 WHERE localId = :localId")
     suspend fun blockRow(localId: String)
-
-    @Query("SELECT COUNT(*) FROM lists WHERE syncBlocked = 1")
-    suspend fun blockedRowCount(): Int
 
     /** A quarantined list, so the sync-health surface can open it even when no item is blocked (T-198). */
     @Query("SELECT localId FROM lists WHERE syncBlocked = 1 LIMIT 1")
     suspend fun firstBlockedListId(): String?
-
-    @Query("UPDATE lists SET dirty = 0 WHERE localId IN (:localIds)")
-    suspend fun clearDirty(localIds: List<String>)
 
     /**
      * The list twin of [ItemDao.deleteSyncedRowsForAccount]. Run after it: a list that still holds

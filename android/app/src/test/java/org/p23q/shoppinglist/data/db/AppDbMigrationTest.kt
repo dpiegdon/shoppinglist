@@ -247,7 +247,7 @@ class AppDbMigrationTest {
 
             assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists"))
             // A list that existed before the quarantine column must arrive pushable (T-198), not
-            // parked — lists.dirtyRows() skips a blocked row, so a 1 here would silently stop sync.
+            // parked — lists.dirtyRowsForAccount() skips a blocked row, so a 1 here would silently stop sync.
             assertEquals(0L, readLong(connection, "SELECT syncBlocked FROM lists"))
         } finally {
             connection.close()
