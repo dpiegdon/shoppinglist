@@ -340,13 +340,16 @@ class SyncEngine @Inject constructor(
         // that account when there is none; another account's row with the same server id is never
         // read or written here.
         for (dto in response.changes.lists) {
-            appDb.inTransaction { listDao.upsert(mergeList(listDao.getByServerId(accountId, dto.id), dto, accountId)) }
+            appDb.inTransaction {
+                val local = listDao.getByServerId(accountId, dto.id)
+                listDao.upsert(mergeList(local, dto, accountId, localId = local?.localId ?: newListLocalId(dto.id)))
+            }
         }
         for (dto in response.changes.items) {
             appDb.inTransaction {
                 val local = itemDao.getByServerId(accountId, dto.id)
                 val listLocalId = local?.listLocalId ?: listLocalIdFor(accountId, dto.listId)
-                itemDao.upsert(mergeItem(local, dto, accountId, listLocalId))
+                itemDao.upsert(mergeItem(local, dto, accountId, listLocalId, localId = local?.localId ?: newItemLocalId(dto.id)))
             }
         }
 
@@ -397,7 +400,7 @@ class SyncEngine @Inject constructor(
     private suspend fun listLocalIdFor(accountId: String, serverId: String): String {
         listDao.getByServerId(accountId, serverId)?.let { return it.localId }
         val stub = ListEntity(
-            localId = UUID.randomUUID().toString(),
+            localId = newListLocalId(serverId),
             serverId = serverId,
             accountId = accountId,
             createdAt = 0,
@@ -411,6 +414,20 @@ class SyncEngine @Inject constructor(
         listDao.upsert(stub)
         return stub.localId
     }
+
+    /**
+     * The local id of a list row this phone creates for [serverId] on a pull: the server id itself,
+     * unless another row already has it as its local id (another account holding the same list),
+     * and then a fresh one. So a list pulled again after a re-base or a new sign-in gets the local
+     * id it had before, and what is keyed by it (notification mutes, the last-opened list, an open
+     * screen) still finds it. The rule MIGRATION_9_10 set for the rows it carried over.
+     */
+    private suspend fun newListLocalId(serverId: String): String =
+        if (listDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+
+    /** The same for an item: see [newListLocalId]. */
+    private suspend fun newItemLocalId(serverId: String): String =
+        if (itemDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
 
     /** One account's rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
     private suspend fun blockedCount(accountId: String): Int =
@@ -515,10 +532,10 @@ private fun <T> mergeField(localValue: T, localAt: Long, localBy: String, remote
 }
 
 /**
- * [accountId] and [listLocalId] are the syncing account's and the item's list's, for an item this
- * account sees for the first time; an existing row keeps its own.
+ * [accountId], [listLocalId] and [localId] are the syncing account's, the item's list's and the
+ * row's own, for an item this account sees for the first time; an existing row keeps its own.
  */
-private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, listLocalId: String): ItemEntity {
+private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, listLocalId: String, localId: String): ItemEntity {
     val storesRemote = FieldClock(
         Json.encodeToString(remote.fields.stores.value),
         remote.fields.stores.updatedAt,
@@ -537,7 +554,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, li
 
     if (local == null) {
         return ItemEntity(
-            localId = UUID.randomUUID().toString(),
+            localId = localId,
             serverId = remote.id,
             accountId = accountId,
             listLocalId = listLocalId,
@@ -598,8 +615,11 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, li
     )
 }
 
-/** [accountId] is the syncing account's, given to a list this device sees for the first time. */
-private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String): ListEntity {
+/**
+ * [accountId] and [localId] are the syncing account's and the row's own, for a list this account
+ * sees for the first time; an existing row keeps its own.
+ */
+private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String, localId: String): ListEntity {
     val categoryOrderRemote = FieldClock(
         Json.encodeToString(remote.fields.categoryOrder.value),
         remote.fields.categoryOrder.updatedAt,
@@ -608,7 +628,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String): L
 
     if (local == null) {
         return ListEntity(
-            localId = UUID.randomUUID().toString(),
+            localId = localId,
             serverId = remote.id,
             accountId = accountId,
             createdAt = remote.createdAt,

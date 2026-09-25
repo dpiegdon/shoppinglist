@@ -60,6 +60,10 @@ interface and `:app` implements it and binds it in Hilt:
   syncing account's row, creating it when absent, so a list two accounts share
   is a row of each. An item pulled for a list the account does not hold gets a
   hidden stub list with every clock at 0, which the list's own pull fills in.
+  A row a pull creates takes its server id as its local id, unless another
+  account's row already has that local id, and then a fresh one: a list pulled
+  again after a re-base or a new sign-in keeps the local id that notification
+  mutes and the last-opened list name it by.
 - `account/AccountRegistry` is the only writer of the `accounts` table. It keeps
   the table in memory after `load()`, so reads are synchronous; a change applies
   to that copy at once and is written through. `load()` clears every `outdated`

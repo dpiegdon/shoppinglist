@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.RecordedRequest
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
@@ -1506,5 +1507,72 @@ class SyncEngineTest {
         assertNull(list("new-list"))
         assertNull(list("list-1"))
         assertFalse("its status is not brought back", syncStatus.accounts.value.containsKey(TEST_ACCOUNT_ID))
+    }
+
+    // ---- stable local ids (T-304) ----------------------------------------------------
+
+    @Test
+    fun `a muted list pulled again after a re-base keeps its local id, so it stays muted (T-304)`() = runTest {
+        pointAtServer()
+        val file = File.createTempFile("sync_engine_mutes", ".preferences_pb").apply { deleteOnExit() }
+        val prefs = org.p23q.shoppinglist.data.notify.NotificationPrefsStore(PreferenceDataStoreFactory.create { file })
+        val pull = { cursor: Long ->
+            syncResponseJson(
+                cursor = cursor,
+                lists = listOf(listJson(id = "trip", name = "Trip")),
+                items = listOf(itemJson(id = "tent", listId = "trip", name = "Tent", lastTouchedBy = null)),
+            )
+        }
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pull(5)))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+        val before = list("trip")!!
+        val itemBefore = item("tent")!!
+        prefs.setListMuted(before.localId, muted = true)
+        accounts.secrets.lastOpenedListId = before.localId
+
+        // The cursor has fallen behind: the clean rows are dropped and the cursor-0 pull brings them back.
+        server.enqueue(MockResponse().setResponseCode(410).setBody("""{"error": "full_resync_required", "message": "old"}"""))
+        server.enqueue(MockResponse().setResponseCode(200).setBody(pull(9)))
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val after = list("trip")!!
+        assertEquals("the first row for a server id takes it as its local id", "trip", before.localId)
+        assertEquals(before.localId, after.localId)
+        assertEquals(itemBefore.localId, item("tent")!!.localId)
+        assertEquals(after.localId, item("tent")!!.listLocalId)
+        assertTrue("still muted", after.localId in prefs.mutedListIds.first())
+        assertEquals("the last-opened list still names it", after.localId, accounts.secrets.lastOpenedListId?.let { db.listDao().get(it)?.localId })
+    }
+
+    @Test
+    fun `two accounts sharing a list get its server id and a fresh id as local ids (T-304)`() = runTest {
+        pointAtServer()
+        mateOnTheSameServer()
+
+        pullSharedListIntoBoth()
+
+        assertEquals("the first account to pull it", "shared", list("shared")!!.localId)
+        assertEquals("shared-item", item("shared-item")!!.localId)
+        val theirs = list("shared", "mate")!!.localId
+        val theirItem = item("shared-item", "mate")!!.localId
+        // The second holds a fresh one: the server id is taken as a local id.
+        assertNotEquals("shared", theirs)
+        assertNotEquals("shared-item", theirItem)
+        java.util.UUID.fromString(theirs)
+        java.util.UUID.fromString(theirItem)
+    }
+
+    @Test
+    fun `a hidden stub list takes its server id as its local id too (T-304)`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(cursor = 3, lists = emptyList(), items = listOf(itemJson(id = "stray", listId = "unseen", name = "Rope", lastTouchedBy = null))),
+            ),
+        )
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertEquals("unseen", list("unseen")!!.localId)
     }
 }
