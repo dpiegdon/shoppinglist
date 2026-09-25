@@ -29,7 +29,7 @@ import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
-import org.p23q.shoppinglist.ui.overview.overviewOrder
+import org.p23q.shoppinglist.ui.overviewOrder
 import java.io.IOException
 import javax.inject.Inject
 

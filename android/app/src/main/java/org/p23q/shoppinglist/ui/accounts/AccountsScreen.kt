@@ -57,12 +57,14 @@ fun AccountsScreen(
     val nowMs = rememberTickingNowMs()
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+        // The local area sorts last and has no arrows; the server accounts move among themselves.
+        val lastServer = rows.indexOfLast { it.account.isServer }
         rows.forEachIndexed { index, row ->
             AccountCard(
                 row = row,
                 nowMs = nowMs,
                 isFirst = index == 0,
-                isLast = index == rows.lastIndex,
+                isLast = index == lastServer,
                 onOpen = { onOpenAccount(row.account.id) },
                 onSignIn = { onSignIn(row.account.id) },
                 onMoveUp = { viewModel.moveUp(row.account.id) },
@@ -137,12 +139,14 @@ private fun AccountCard(
                         Text(stringResource(R.string.accounts_local_help), style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Column {
-                IconButton(onClick = onMoveUp, enabled = !isFirst) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.accounts_move_up))
-                }
-                IconButton(onClick = onMoveDown, enabled = !isLast) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.accounts_move_down))
+            if (account.isServer) {
+                Column {
+                    IconButton(onClick = onMoveUp, enabled = !isFirst, modifier = Modifier.testTag("account-up-${account.id}")) {
+                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.accounts_move_up))
+                    }
+                    IconButton(onClick = onMoveDown, enabled = !isLast, modifier = Modifier.testTag("account-down-${account.id}")) {
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.accounts_move_down))
+                    }
                 }
             }
         }

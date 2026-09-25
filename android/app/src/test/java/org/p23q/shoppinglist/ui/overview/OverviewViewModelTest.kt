@@ -40,6 +40,7 @@ import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.overviewOrder
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)

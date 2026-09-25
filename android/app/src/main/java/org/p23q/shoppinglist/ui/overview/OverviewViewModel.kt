@@ -26,6 +26,7 @@ import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.overviewOrder
 import org.p23q.shoppinglist.ui.redeem.InviteJoin
 import org.p23q.shoppinglist.ui.redeem.InviteJoiner
 import java.io.IOException
@@ -338,7 +339,3 @@ class OverviewViewModel @Inject constructor(
 
     fun joinedListOpened() = _uiState.update { it.copy(joinedListId = null) }
 }
-
-/** The overview's order of accounts (T-292): server accounts in the user's order, then this phone's own. */
-internal fun overviewOrder(accounts: List<AccountEntity>): List<AccountEntity> =
-    accounts.sortedWith(compareBy<AccountEntity> { if (it.isServer) 0 else 1 }.thenBy { it.sortOrder })

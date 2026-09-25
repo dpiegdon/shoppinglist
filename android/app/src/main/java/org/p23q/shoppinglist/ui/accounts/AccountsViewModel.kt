@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
+import org.p23q.shoppinglist.ui.overviewOrder
 import javax.inject.Inject
 
 /** What an account's row says about it, in the order the checks run. */
@@ -45,7 +46,10 @@ data class AccountRow(
     val sync: SyncState,
 )
 
-/** The Accounts screen (T-292): every account on this phone in the user's order, and that order. */
+/**
+ * The Accounts screen (T-292): every account on this phone in the order the overview lists them
+ * (server accounts in the user's order, the local area last), and that order.
+ */
 @HiltViewModel
 class AccountsViewModel @Inject constructor(
     private val registry: AccountRegistry,
@@ -54,7 +58,7 @@ class AccountsViewModel @Inject constructor(
 
     val rows: StateFlow<List<AccountRow>> =
         combine(registry.accounts, syncStatus.accounts) { accounts, states ->
-            accounts.sortedBy { it.sortOrder }.map { AccountRow(it, it.status(), states[it.id] ?: SyncState()) }
+            overviewOrder(accounts).map { AccountRow(it, it.status(), states[it.id] ?: SyncState()) }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Whether the phone has no local area yet, so the screen offers to add one (T-293). */
@@ -76,14 +80,17 @@ class AccountsViewModel @Inject constructor(
         _localNoteOpen.value = false
     }
 
-    /** Swaps the account with the one above it; the first stays where it is. */
+    /** Swaps the server account with the one above it; the first stays where it is. */
     fun moveUp(id: String): Job = move(id, -1)
 
-    /** Swaps the account with the one below it; the last stays where it is. */
+    /**
+     * Swaps the server account with the one below it; the last server account stays where it is.
+     * The local area is always last, so it never moves and nothing moves past it.
+     */
     fun moveDown(id: String): Job = move(id, +1)
 
     private fun move(id: String, by: Int): Job = viewModelScope.launch {
-        val ids = registry.snapshot().sortedBy { it.sortOrder }.map { it.id }.toMutableList()
+        val ids = overviewOrder(registry.snapshot()).filter { it.isServer }.map { it.id }.toMutableList()
         val from = ids.indexOf(id)
         val to = from + by
         if (from < 0 || to !in ids.indices) return@launch

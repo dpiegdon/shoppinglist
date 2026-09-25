@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -188,5 +189,21 @@ class AccountsScreenTest {
 
         composeTestRule.onNodeWithTag("accounts-add-local").assertDoesNotExist()
         composeTestRule.onNodeWithTag("accounts-add").assertExists()
+    }
+
+    @Test
+    fun `the local area is last and has no arrows, the last server account cannot move down (T-302)`() = runBlocking<Unit> {
+        accounts.registry.add(localAccountRow())
+        accounts.registry.add(accountRow("prod"))
+
+        show()
+
+        composeTestRule.onNodeWithTag("account-up-local").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("account-down-local").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("account-up-prod").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("account-down-prod").assertIsNotEnabled()
+        val prodTop = composeTestRule.onNodeWithTag("account-row-prod").fetchSemanticsNode().boundsInRoot.top
+        val localTop = composeTestRule.onNodeWithTag("account-row-local").fetchSemanticsNode().boundsInRoot.top
+        assertTrue("the local area is below the server account", localTop > prodTop)
     }
 }

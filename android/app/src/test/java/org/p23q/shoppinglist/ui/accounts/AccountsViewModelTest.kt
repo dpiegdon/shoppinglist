@@ -114,4 +114,24 @@ class AccountsViewModelTest {
 
         assertEquals(listOf("prod", "stage", "old", "local"), viewModel.ids())
     }
+
+    @Test
+    fun `the local area is listed last even when a server account was added after it (T-302)`() = runTest(mainDispatcherRule.dispatcher) {
+        // Its sortOrder is below "late"'s; the overview and Copy to still show it last.
+        accounts.registry.add(accountRow("late", serverUrl = "https://late.example.test/"))
+
+        assertEquals(listOf("prod", "stage", "old", "late", "local"), newViewModel().ids())
+    }
+
+    @Test
+    fun `the local area does not move, and no server account moves past it (T-302)`() = runTest(mainDispatcherRule.dispatcher) {
+        accounts.registry.add(accountRow("late", serverUrl = "https://late.example.test/"))
+        val viewModel = newViewModel()
+
+        viewModel.moveUp("local").join()
+        viewModel.moveDown("late").join()
+        viewModel.moveUp("late").join()
+
+        assertEquals(listOf("prod", "stage", "late", "old", "local"), viewModel.rows.first { it[2].account.id == "late" }.map { it.account.id })
+    }
 }
