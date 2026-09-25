@@ -2,3 +2,4 @@
 {"actor": "user", "at": "2026-09-25T02:12:37+00:00", "kind": "note", "ref": "main@5d22e748", "text": "Merged (HEAD 5d22e748), full gate green: web pastedInvite + shared-test-cases/invite-paste.json read by both clients; Android's pastedInvite moved to :core and now stops a link at a Unicode space like the web."}
 {"actor": "user", "at": "2026-09-25T02:12:37+00:00", "kind": "closed", "ref": "main@5d22e748", "text": ""}
 {"actor": "user", "at": "2026-09-25T02:12:46+00:00", "kind": "updated", "ref": "main@5d22e748", "text": "fields updated"}
+{"actor": "user", "at": "2026-09-25T02:16:50+00:00", "kind": "note", "ref": "main@5d22e748", "text": "Gate: the first run's Android stage died with a native SIGSEGV in the bundled SQLite (Gradle test executor exit 134) unrelated to this change; the rerun of the same stage on the same tree is green (739 debug tests), the other five stages had passed. Flake filed separately."}
