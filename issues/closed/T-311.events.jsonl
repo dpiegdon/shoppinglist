@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-09-25T21:28:02+00:00", "kind": "created", "ref": "main@3579de3a", "text": "About page links to the upstream sources on both clients"}
 {"actor": "user", "at": "2026-09-25T21:29:08+00:00", "kind": "note", "ref": "main@3579de3a", "text": "Also: the root README's title reads 'Tuppu \ud808\udd4e\ud808\udc7e' (IM.DUB, the name in cuneiform, as on the About screen)."}
 {"actor": "user", "at": "2026-09-25T21:36:48+00:00", "kind": "note", "ref": "main@3e5b72e5", "text": "On main (3e5b72e5): 'MIT, \u00a9 2026 \u2026 \u00b7 Source code' in the About small print on both clients, nine locales each; README title with the cuneiform. Gate runs inside the 3.2.2 release."}
+{"actor": "user", "at": "2026-09-25T21:46:38+00:00", "kind": "closed", "ref": "main@cabb2045", "text": ""}
