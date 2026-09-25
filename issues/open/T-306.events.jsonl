@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-25T19:11:09+00:00", "kind": "created", "ref": "main@45fbb038", "text": "Android tests: closeWhenIdle deadlocks when a registry write is pending on a test-dispatcher database (hung the 3.2.0 release gate)"}

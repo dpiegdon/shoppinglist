@@ -1,0 +1,13 @@
+{
+  "body": "closeWhenIdle (T-303) flushed the registry with runBlocking on Robolectric's main thread. A pending updateInBackground write is a Room query; on a database built with setQueryCoroutineContext(testDispatcher) it resumes only when that dispatcher is pumped, which nothing does while the thread blocks. Seen as a 0%-CPU hang in OverviewViewModelTest.tearDown during the first 3.2.0 release attempt (jstack: SDK 36 Main Thread in runBlocking at CloseTestDb.kt:48); three earlier full runs passed because no write happened to be pending at teardown. Fix: flush on Dispatchers.Default and pump the main/test dispatcher while waiting, under the same deadline; regression test with a pending write over a StandardTestDispatcher database.",
+  "created_at": "2026-09-25T19:11:09+00:00",
+  "id": "T-306",
+  "labels": [
+    "android",
+    "reliability",
+    "chore"
+  ],
+  "priority": 1,
+  "title": "Android tests: closeWhenIdle deadlocks when a registry write is pending on a test-dispatcher database (hung the 3.2.0 release gate)",
+  "updated_at": "2026-09-25T19:11:09+00:00"
+}
