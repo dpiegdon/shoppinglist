@@ -1,0 +1,71 @@
+{
+  "_comment": [
+    "The invite in pasted text (T-300, T-301): what the redeem field makes of a whole pasted",
+    "message before the token is taken out of it. ONE file, read by BOTH test suites, like",
+    "name-order.json: web/src/lib/inviteToken.test.ts imports it and Android's PastedInviteTest",
+    "reads it from the repo root.",
+    "",
+    "The rule: the first https URL in the text, preferring the first one with an /invite/ segment,",
+    "with any trailing . , ; : ! ? ) ] > \" ' dropped. The scheme matches in any case; http:// is",
+    "not taken. A URL runs to the first whitespace, counting the Unicode spaces too (no-break,",
+    "narrow no-break, ideographic and the rest), so both clients stop at the same character. Text",
+    "with no https URL in it (a bare token) comes back trimmed, otherwise unchanged."
+  ],
+  "cases": [
+    {
+      "name": "a link inside a sentence",
+      "input": "Join my list: https://p23q.org/shopping/invite/abc.def",
+      "expected": "https://p23q.org/shopping/invite/abc.def"
+    },
+    {
+      "name": "a link on its own line of a message",
+      "input": "Join my list!\nhttps://p23q.org/invite/abc.def\nSee you",
+      "expected": "https://p23q.org/invite/abc.def"
+    },
+    {
+      "name": "a link in parentheses with trailing punctuation",
+      "input": "Join my list (https://p23q.org/invite/abc.def). Thanks!",
+      "expected": "https://p23q.org/invite/abc.def"
+    },
+    {
+      "name": "a quoted link",
+      "input": "Tap \"https://p23q.org/invite/abc.def\"!",
+      "expected": "https://p23q.org/invite/abc.def"
+    },
+    {
+      "name": "two links, the second with /invite/",
+      "input": "Get the app from https://p23q.org/app and join https://p23q.org/invite/abc.def",
+      "expected": "https://p23q.org/invite/abc.def"
+    },
+    {
+      "name": "a link without /invite/ is still taken when it is the only one",
+      "input": "See https://p23q.org/app, then paste",
+      "expected": "https://p23q.org/app"
+    },
+    {
+      "name": "a link ends at a no-break space",
+      "input": "Rejoins ma liste : https://p23q.org/invite/abc.def merci",
+      "expected": "https://p23q.org/invite/abc.def"
+    },
+    {
+      "name": "a bare token with whitespace around it",
+      "input": "  abc.def \n",
+      "expected": "abc.def"
+    },
+    {
+      "name": "plain text without a URL",
+      "input": "  no link here  ",
+      "expected": "no link here"
+    },
+    {
+      "name": "an http:// link is not taken",
+      "input": "Join http://p23q.org/invite/abc.def now",
+      "expected": "Join http://p23q.org/invite/abc.def now"
+    },
+    {
+      "name": "an uppercase HTTPS scheme",
+      "input": "Join HTTPS://P23Q.ORG/invite/abc.def!",
+      "expected": "HTTPS://P23Q.ORG/invite/abc.def"
+    }
+  ]
+}

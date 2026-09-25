@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { extractInviteToken } from "./inviteToken";
+import pasteCases from "../../../shared-test-cases/invite-paste.json";
+import { extractInviteToken, pastedInvite } from "./inviteToken";
+
+// Driven by the table Android's PastedInviteTest reads too (T-301): the point is that both agree.
+describe("pastedInvite", () => {
+  it.each(pasteCases.cases)("$name", ({ input, expected }) => {
+    expect(pastedInvite(input)).toBe(expected);
+  });
+
+  it("feeds extractInviteToken the link, so a pasted message redeems its token", () => {
+    expect(extractInviteToken(pastedInvite("Join my list (https://p23q.org/shopping/invite/abc.def). Thanks!"))).toBe(
+      "abc.def",
+    );
+  });
+});
 
 describe("extractInviteToken", () => {
   it("passes a bare token through, trimmed", () => {

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
-import { extractInviteToken } from "../lib/inviteToken";
+import { extractInviteToken, pastedInvite } from "../lib/inviteToken";
 import { safeLocalStorage } from "../lib/safeStorage";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
@@ -22,8 +22,9 @@ export default function RedeemPage() {
     setError(null);
     setRedeeming(true);
     try {
-      // Accept a bare token or a pasted full invite URL (T-71).
-      const { list_id } = await api.redeemInvite(extractInviteToken(token));
+      // Accept a bare token, a pasted full invite URL (T-71), or a whole pasted message with the
+      // link in it (T-301).
+      const { list_id } = await api.redeemInvite(extractInviteToken(pastedInvite(token)));
       // Pull the newly joined list's full state immediately (Spec §6 full_lists).
       await push({}, [list_id]);
       safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
