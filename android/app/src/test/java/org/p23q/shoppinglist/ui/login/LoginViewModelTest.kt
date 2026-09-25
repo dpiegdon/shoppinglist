@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.login
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -379,5 +380,35 @@ class LoginViewModelTest {
         viewModel.submit()?.join()
 
         assertEquals(true, repo.loginAllowedSelfSigned)
+    }
+
+    @Test
+    fun `a second tap on Use without an account while the first runs does not skip the note (T-302)`() = runTest(mainDispatcherRule.dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        var created = false
+        var calls = 0
+        val viewModel = LoginViewModel(
+            FakeAuthRepository(), noAccount(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(),
+            org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
+            localArea = org.p23q.shoppinglist.data.LocalArea {
+                calls++
+                gate.await()
+                // Like AccountRegistry.addLocal: only the first call creates the area.
+                (!created).also { created = true }
+            },
+        )
+
+        val first = viewModel.useWithoutAccount()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.creatingLocalArea)
+        val second = viewModel.useWithoutAccount()
+        gate.complete(Unit)
+        first?.join()
+        second?.join()
+
+        assertEquals(1, calls)
+        assertTrue(viewModel.uiState.value.localAreaNoteOpen)
+        assertFalse(viewModel.uiState.value.localAreaChosen)
+        assertFalse(viewModel.uiState.value.creatingLocalArea)
     }
 }

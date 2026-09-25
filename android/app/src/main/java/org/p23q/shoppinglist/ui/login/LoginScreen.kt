@@ -195,7 +195,7 @@ fun LoginScreen(
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { viewModel.useWithoutAccount() },
-                enabled = !state.isLoading,
+                enabled = !state.isLoading && !state.creatingLocalArea,
                 modifier = Modifier.fillMaxWidth().testTag("login-use-local"),
             ) {
                 Text(stringResource(R.string.login_use_without_account))

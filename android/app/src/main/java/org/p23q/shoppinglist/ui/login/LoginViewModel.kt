@@ -85,6 +85,8 @@ data class LoginUiState(
     val localAreaNoteOpen: Boolean = false,
     /** Set once the start screen is done with: to the lists, without an account (T-293). */
     val localAreaChosen: Boolean = false,
+    /** "Use without an account" is creating the local area: the button waits for it (T-302). */
+    val creatingLocalArea: Boolean = false,
 )
 
 @HiltViewModel
@@ -296,11 +298,21 @@ class LoginViewModel @Inject constructor(
 
     /**
      * The start screen's "Use without an account" (T-293): creates the local area and shows its
-     * one-time note; a phone that has one already goes straight to the lists.
+     * one-time note; a phone that has one already goes straight to the lists. A second tap while
+     * the first runs does nothing: its create() would find the area made and skip the note (T-302).
      */
-    fun useWithoutAccount(): Job = viewModelScope.launch {
-        val created = localArea.create()
-        _uiState.update { if (created) it.copy(localAreaNoteOpen = true) else it.copy(localAreaChosen = true) }
+    fun useWithoutAccount(): Job? {
+        val state = _uiState.value
+        if (state.creatingLocalArea || state.localAreaNoteOpen || state.localAreaChosen) return null
+        _uiState.update { it.copy(creatingLocalArea = true) }
+        return viewModelScope.launch {
+            val created = try {
+                localArea.create()
+            } finally {
+                _uiState.update { it.copy(creatingLocalArea = false) }
+            }
+            _uiState.update { if (created) it.copy(localAreaNoteOpen = true) else it.copy(localAreaChosen = true) }
+        }
     }
 
     /** The note has been read: on to the lists. */
