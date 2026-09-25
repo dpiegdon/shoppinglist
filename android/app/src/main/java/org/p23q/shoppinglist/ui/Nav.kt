@@ -238,6 +238,29 @@ internal fun NavHostController.afterAccountGone(gone: AccountGone) {
 }
 
 /**
+ * Where List properties goes once its list has left this phone (deleted, or left): the overview,
+ * with nothing behind it. Not `popUpTo(OVERVIEW)`: a cold start on the last opened list, or a
+ * sign-in on the start screen, leaves no overview on the stack to pop to (T-302).
+ */
+internal fun NavHostController.afterListLeft() {
+    navigate(Routes.OVERVIEW) {
+        popUpTo(graph.id) { inclusive = true }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * Where List properties goes after Duplicate: the copy, with the overview behind it, whatever
+ * the stack held before, so Back from the copy never lands on the source list's properties (T-302).
+ */
+internal fun NavHostController.afterListDuplicated(newListId: String) {
+    navigate(Routes.OVERVIEW) {
+        popUpTo(graph.id) { inclusive = true }
+    }
+    navigate(Routes.list(newListId))
+}
+
+/**
  * Go back to [listId] from one of its sub-screens — properties or the registry.
  *
  * Both of those show the list's own name in the top bar (see [liveListTitle]), so tapping that
@@ -472,17 +495,8 @@ fun ShoppingListNavHost(
                 onTitleClick = { navController.backToList(listId) },
             ) {
                 ListPropsScreen(
-                    onLeft = {
-                        navController.navigate(Routes.OVERVIEW) {
-                            popUpTo(Routes.OVERVIEW) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    },
-                    onDuplicated = { newListId ->
-                        navController.navigate(Routes.list(newListId)) {
-                            popUpTo(Routes.OVERVIEW)
-                        }
-                    },
+                    onLeft = { navController.afterListLeft() },
+                    onDuplicated = { newListId -> navController.afterListDuplicated(newListId) },
                 )
             }
         }
