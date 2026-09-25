@@ -25,6 +25,7 @@ import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.sync.SyncTrigger
 import org.p23q.shoppinglist.data.LastServerAddress
+import org.p23q.shoppinglist.data.LocalArea
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
@@ -77,6 +78,13 @@ data class LoginUiState(
      * speaks a newer protocol than this build, so an update is the only way in.
      */
     val downloadUrl: String? = null,
+    /**
+     * "Use without an account" created the local area (T-293): the one-time note is showing, and
+     * the lists open once it is read.
+     */
+    val localAreaNoteOpen: Boolean = false,
+    /** Set once the start screen is done with: to the lists, without an account (T-293). */
+    val localAreaChosen: Boolean = false,
 )
 
 @HiltViewModel
@@ -87,6 +95,7 @@ class LoginViewModel @Inject constructor(
     private val pendingInviteHolder: PendingInviteHolder,
     private val syncTrigger: SyncTrigger,
     savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    private val localArea: LocalArea = LocalArea { false },
 ) : ViewModel() {
 
     private val mode = LoginMode.fromArg(savedStateHandle[Routes.LOGIN_MODE_ARG])
@@ -284,6 +293,18 @@ class LoginViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * The start screen's "Use without an account" (T-293): creates the local area and shows its
+     * one-time note; a phone that has one already goes straight to the lists.
+     */
+    fun useWithoutAccount(): Job = viewModelScope.launch {
+        val created = localArea.create()
+        _uiState.update { if (created) it.copy(localAreaNoteOpen = true) else it.copy(localAreaChosen = true) }
+    }
+
+    /** The note has been read: on to the lists. */
+    fun dismissLocalAreaNote() = _uiState.update { it.copy(localAreaNoteOpen = false, localAreaChosen = true) }
 
     private fun expectation(): LoginExpectation = when (mode) {
         LoginMode.START -> LoginExpectation.Anyone

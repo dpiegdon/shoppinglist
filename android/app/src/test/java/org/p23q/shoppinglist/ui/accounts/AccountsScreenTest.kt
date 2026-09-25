@@ -146,4 +146,46 @@ class AccountsScreenTest {
 
         assertEquals(listOf("stage", "prod"), db.accountDao().all().map { it.id })
     }
+
+    @Test
+    fun `the local area is named in the app's language, not by its stored label (T-293)`() = runBlocking<Unit> {
+        accounts.registry.add(accountRow("prod"))
+        // A label stored in the language of the day it was made would go stale.
+        accounts.registry.add(localAccountRow(label = "Auf diesem Telefon"))
+
+        show()
+
+        composeTestRule.onNodeWithText("On this phone").assertExists()
+        composeTestRule.onNodeWithText("Not synced, not backed up, not shared.").assertExists()
+        composeTestRule.onNodeWithText("Auf diesem Telefon").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Add local area creates the area, shows its note once and is then no longer offered (T-293)`() = runBlocking<Unit> {
+        accounts.registry.add(accountRow("prod"))
+
+        show()
+        composeTestRule.onNodeWithTag("accounts-add-local").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            accounts.registry.local() != null
+        }
+
+        composeTestRule.onNodeWithText("Lists here stay on this phone only. They are not backed up and cannot be shared. Sign in to a server any time to add shared lists.")
+            .assertExists()
+        composeTestRule.onNodeWithTag("local-area-note-ok").performClick()
+        composeTestRule.onNodeWithText("Lists on this phone").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("accounts-add-local").assertDoesNotExist()
+        assertEquals(listOf("prod", accounts.registry.local()!!.id), db.accountDao().all().map { it.id })
+    }
+
+    @Test
+    fun `a phone with a local area is not offered another (T-293)`() = runBlocking<Unit> {
+        accounts.registry.add(localAccountRow())
+
+        show()
+
+        composeTestRule.onNodeWithTag("accounts-add-local").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("accounts-add").assertExists()
+    }
 }

@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.account.AccountRegistry
@@ -53,6 +56,25 @@ class AccountsViewModel @Inject constructor(
         combine(registry.accounts, syncStatus.accounts) { accounts, states ->
             accounts.sortedBy { it.sortOrder }.map { AccountRow(it, it.status(), states[it.id] ?: SyncState()) }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Whether the phone has no local area yet, so the screen offers to add one (T-293). */
+    val canAddLocal: StateFlow<Boolean> =
+        registry.accounts.map { accounts -> accounts.none { !it.isServer } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, registry.snapshot().none { !it.isServer })
+
+    private val _localNoteOpen = MutableStateFlow(false)
+
+    /** The local area was just added here: its one-time note is showing. */
+    val localNoteOpen: StateFlow<Boolean> = _localNoteOpen.asStateFlow()
+
+    /** "Add local area": creates it, placed last, and shows its note once. */
+    fun addLocal(): Job = viewModelScope.launch {
+        if (registry.addLocal() != null) _localNoteOpen.value = true
+    }
+
+    fun dismissLocalNote() {
+        _localNoteOpen.value = false
+    }
 
     /** Swaps the account with the one above it; the first stays where it is. */
     fun moveUp(id: String): Job = move(id, -1)

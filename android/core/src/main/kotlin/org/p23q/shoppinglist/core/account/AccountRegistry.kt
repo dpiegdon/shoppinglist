@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.inTransaction
+import java.util.UUID
 
 /**
  * The accounts on this device, and the only code that writes the `accounts` table.
@@ -40,6 +41,7 @@ class AccountRegistry(
     private val state = MutableStateFlow<List<AccountEntity>?>(null)
     private val loadMutex = Mutex()
     private val writeMutex = Mutex()
+    private val localMutex = Mutex()
     private val accountLocksGuard = Mutex()
     private val accountLocks = HashMap<String, Mutex>()
 
@@ -87,6 +89,30 @@ class AccountRegistry(
         }
         persistOrRevert(added.id)
         return added
+    }
+
+    /** The device-local account (the local area), if this phone has one. There is at most one. */
+    fun local(): AccountEntity? = snapshot().firstOrNull { !it.isServer }
+
+    /**
+     * Creates the local area: an account with no server that never syncs, placed after every
+     * other account. Its label stays empty; the UI names it from a string resource, so the name
+     * follows the app's language. Returns the new row, or null when the phone has one already.
+     */
+    suspend fun addLocal(): AccountEntity? = localMutex.withLock {
+        load()
+        if (local() != null) return@withLock null
+        add(
+            AccountEntity(
+                id = UUID.randomUUID().toString(),
+                kind = AccountEntity.KIND_LOCAL,
+                serverUrl = null,
+                accountId = null,
+                email = null,
+                label = "",
+                signedIn = false,
+            ),
+        )
     }
 
     /**

@@ -13,13 +13,13 @@ internal fun accountRow(
 ): AccountEntity = testAccount(id = id, serverUrl = serverUrl, accountId = "acct-$id", email = email, signedIn = signedIn)
     .copy(outdated = outdated)
 
-/** A device-local account (B3's); none can be made yet, but the screen already shows one. */
-internal fun localAccountRow(id: String = "local"): AccountEntity = AccountEntity(
+/** The local area (T-293), as [org.p23q.shoppinglist.core.account.AccountRegistry.addLocal] makes it. */
+internal fun localAccountRow(id: String = "local", label: String = ""): AccountEntity = AccountEntity(
     id = id,
     kind = AccountEntity.KIND_LOCAL,
     serverUrl = null,
     accountId = null,
     email = null,
-    label = "This phone",
+    label = label,
     signedIn = false,
 )

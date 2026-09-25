@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.LocalAreaNote
+import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.attentionText
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
@@ -50,6 +52,8 @@ fun AccountsScreen(
     viewModel: AccountsViewModel = hiltViewModel(),
 ) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
+    val canAddLocal by viewModel.canAddLocal.collectAsStateWithLifecycle()
+    val localNoteOpen by viewModel.localNoteOpen.collectAsStateWithLifecycle()
     val nowMs = rememberTickingNowMs()
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -71,7 +75,18 @@ fun AccountsScreen(
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.accounts_add))
         }
+        // One local area per phone (T-293): offered while there is none.
+        if (canAddLocal) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { viewModel.addLocal() }, modifier = Modifier.fillMaxWidth().testTag("accounts-add-local")) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.accounts_add_local))
+            }
+        }
     }
+
+    if (localNoteOpen) LocalAreaNote(onDismiss = viewModel::dismissLocalNote)
 }
 
 @Composable
@@ -91,7 +106,7 @@ private fun AccountCard(
             Column(modifier = Modifier.weight(1f)) {
                 // Two lines, email then the full server URL, rather than the stored label: two
                 // accounts on one host (prod and stage) differ only in the path.
-                Text(account.email ?: account.label, style = MaterialTheme.typography.titleMedium)
+                Text(accountName(account), style = MaterialTheme.typography.titleMedium)
                 account.serverUrl?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 Spacer(Modifier.height(4.dp))
                 when (row.status) {
@@ -117,8 +132,9 @@ private fun AccountCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    // Named "On this phone" above; what that means, here.
                     AccountStatus.LOCAL ->
-                        Text(stringResource(R.string.accounts_state_local), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.accounts_local_help), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             Column {

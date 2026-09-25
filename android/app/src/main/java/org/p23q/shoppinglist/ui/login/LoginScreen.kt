@@ -44,6 +44,8 @@ import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.LocalAreaNote
+import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
@@ -69,6 +71,13 @@ fun LoginScreen(
         if (state.loginSucceeded) {
             onLoginSuccess(viewModel.startDestinationAfterLogin())
         }
+    }
+    // Without an account (T-293): the lists on this phone, with nothing behind them.
+    LaunchedEffect(state.localAreaChosen) {
+        if (state.localAreaChosen) onLoginSuccess(Routes.OVERVIEW)
+    }
+    if (state.localAreaNoteOpen) {
+        LocalAreaNote(onDismiss = viewModel::dismissLocalAreaNote)
     }
 
     Column(
@@ -178,6 +187,18 @@ fun LoginScreen(
         if (state.mode != LoginMode.RESIGNIN) {
             TextButton(onClick = viewModel::onToggleRegisterMode, enabled = state.registrationAllowed) {
                 Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
+            }
+        }
+
+        // Only on the start screen: from Accounts, the local area is added there (T-293).
+        if (state.mode == LoginMode.START) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { viewModel.useWithoutAccount() },
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth().testTag("login-use-local"),
+            ) {
+                Text(stringResource(R.string.login_use_without_account))
             }
         }
 

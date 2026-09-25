@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">これは別のアカウントの認証情報です。</string>
+    <string name="login_use_without_account">アカウントなしで使う</string>
+    <string name="local_area_note_title">この端末上のリスト</string>
+    <string name="local_area_note_body">ここのリストはこの端末上にのみ保存されます。バックアップされず、共有もできません。共有リストを追加するには、いつでもサーバーにログインできます。</string>
+    <string name="accounts_add_local">ローカル領域を追加</string>
+    <string name="accounts_local_help">同期なし、バックアップなし、共有なし。</string>
+    <string name="account_local_list_count">リスト: %1$d</string>
+    <string name="account_remove_local_blocked">削除できるのは空の領域だけです。先にリストを削除してください。</string>
+    <string name="listprops_member_you">あなた</string>
+    <string name="listprops_local_not_shared">この端末上のリストは共有できません。</string>
+    <string name="listprops_delete_list">リストを削除</string>
+    <string name="listprops_delete_confirm_title">このリストを削除しますか？</string>
+    <string name="listprops_delete_confirm_body">「%1$s」とそのアイテムはこの端末から削除されます。元に戻すことはできません。</string>
 </resources>

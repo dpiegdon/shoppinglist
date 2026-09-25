@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">هذه بيانات اعتماد حساب آخر.</string>
+    <string name="login_use_without_account">الاستخدام بدون حساب</string>
+    <string name="local_area_note_title">قوائم على هذا الهاتف</string>
+    <string name="local_area_note_body">تبقى القوائم هنا على هذا الهاتف فقط. لا تُنسخ احتياطيًا ولا يمكن مشاركتها. سجّل الدخول إلى خادم في أي وقت لإضافة قوائم مشتركة.</string>
+    <string name="accounts_add_local">إضافة منطقة محلية</string>
+    <string name="accounts_local_help">غير متزامن، وغير منسوخ احتياطيًا، وغير مشترك.</string>
+    <string name="account_local_list_count">القوائم: %1$d</string>
+    <string name="account_remove_local_blocked">لا يمكن إزالة إلا منطقة فارغة. احذف قوائمها أولًا.</string>
+    <string name="listprops_member_you">أنت</string>
+    <string name="listprops_local_not_shared">لا يمكن مشاركة القوائم على هذا الهاتف.</string>
+    <string name="listprops_delete_list">حذف القائمة</string>
+    <string name="listprops_delete_confirm_title">حذف هذه القائمة؟</string>
+    <string name="listprops_delete_confirm_body">تُحذف «%1$s» وعناصرها من هذا الهاتف. لا يمكن التراجع عن ذلك.</string>
 </resources>

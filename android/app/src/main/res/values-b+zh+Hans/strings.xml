@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">这是另一个账户的登录凭据。</string>
+    <string name="login_use_without_account">不使用账户</string>
+    <string name="local_area_note_title">此手机上的清单</string>
+    <string name="local_area_note_body">这里的清单只保存在此手机上，不会备份，也无法共享。随时登录服务器即可添加共享清单。</string>
+    <string name="accounts_add_local">添加本地区域</string>
+    <string name="accounts_local_help">不同步、不备份、不共享。</string>
+    <string name="account_local_list_count">清单：%1$d</string>
+    <string name="account_remove_local_blocked">只能移除空的区域。请先删除其中的清单。</string>
+    <string name="listprops_member_you">你</string>
+    <string name="listprops_local_not_shared">此手机上的清单无法共享。</string>
+    <string name="listprops_delete_list">删除清单</string>
+    <string name="listprops_delete_confirm_title">要删除此清单吗？</string>
+    <string name="listprops_delete_confirm_body">“%1$s”及其物品将从此手机中删除。此操作无法撤销。</string>
 </resources>

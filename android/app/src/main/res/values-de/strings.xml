@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">Das sind die Zugangsdaten eines anderen Kontos.</string>
+    <string name="login_use_without_account">Ohne Konto verwenden</string>
+    <string name="local_area_note_title">Listen auf diesem Telefon</string>
+    <string name="local_area_note_body">Listen hier bleiben nur auf diesem Telefon. Sie werden nicht gesichert und können nicht geteilt werden. Melde dich jederzeit bei einem Server an, um geteilte Listen hinzuzufügen.</string>
+    <string name="accounts_add_local">Lokalen Bereich hinzufügen</string>
+    <string name="accounts_local_help">Nicht synchronisiert, nicht gesichert, nicht geteilt.</string>
+    <string name="account_local_list_count">Listen: %1$d</string>
+    <string name="account_remove_local_blocked">Nur ein leerer Bereich kann entfernt werden. Lösche zuerst seine Listen.</string>
+    <string name="listprops_member_you">Du</string>
+    <string name="listprops_local_not_shared">Listen auf diesem Telefon können nicht geteilt werden.</string>
+    <string name="listprops_delete_list">Liste löschen</string>
+    <string name="listprops_delete_confirm_title">Diese Liste löschen?</string>
+    <string name="listprops_delete_confirm_body">„%1$s“ und seine Artikel werden von diesem Telefon gelöscht. Das lässt sich nicht rückgängig machen.</string>
 </resources>

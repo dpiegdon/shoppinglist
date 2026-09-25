@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">Estas son las credenciales de otra cuenta.</string>
+    <string name="login_use_without_account">Usar sin cuenta</string>
+    <string name="local_area_note_title">Listas en este teléfono</string>
+    <string name="local_area_note_body">Las listas de aquí solo se quedan en este teléfono. No tienen copia de seguridad y no se pueden compartir. Inicia sesión en un servidor cuando quieras para añadir listas compartidas.</string>
+    <string name="accounts_add_local">Añadir área local</string>
+    <string name="accounts_local_help">Sin sincronizar, sin copia de seguridad, sin compartir.</string>
+    <string name="account_local_list_count">Listas: %1$d</string>
+    <string name="account_remove_local_blocked">Solo se puede quitar un área vacía. Elimina primero sus listas.</string>
+    <string name="listprops_member_you">Tú</string>
+    <string name="listprops_local_not_shared">Las listas en este teléfono no se pueden compartir.</string>
+    <string name="listprops_delete_list">Eliminar la lista</string>
+    <string name="listprops_delete_confirm_title">¿Eliminar esta lista?</string>
+    <string name="listprops_delete_confirm_body">«%1$s» y sus artículos se eliminan de este teléfono. No se puede deshacer.</string>
 </resources>

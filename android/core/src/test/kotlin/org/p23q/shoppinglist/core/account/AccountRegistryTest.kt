@@ -40,6 +40,25 @@ class AccountRegistryTest {
     }
 
     @Test
+    fun `the local area is one row with no server, placed last and named by the UI (T-293)`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.add(account("a"))
+
+        val local = registry.addLocal()!!
+
+        assertFalse(local.isServer)
+        assertEquals(null, local.serverUrl)
+        assertEquals(null, local.accountId)
+        assertFalse(local.signedIn)
+        assertEquals("a translated name would go stale when the language changes", "", local.label)
+        assertEquals(listOf("a", local.id), registry.snapshot().map { it.id })
+        assertEquals(local, db.accountDao().get(local.id))
+        assertEquals(local, registry.local())
+        assertNull("one per phone", registry.addLocal())
+        assertEquals(2, db.accountDao().all().size)
+    }
+
+    @Test
     fun `reordering sets the order in the copy and the table (T-292)`() = runBlocking {
         val registry = AccountRegistry(db)
         registry.add(account("a"))

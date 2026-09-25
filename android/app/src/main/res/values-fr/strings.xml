@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">Ces identifiants sont ceux d\'un autre compte.</string>
+    <string name="login_use_without_account">Utiliser sans compte</string>
+    <string name="local_area_note_title">Listes sur ce téléphone</string>
+    <string name="local_area_note_body">Les listes d\'ici restent uniquement sur ce téléphone. Elles ne sont pas sauvegardées et ne peuvent pas être partagées. Connectez-vous à un serveur à tout moment pour ajouter des listes partagées.</string>
+    <string name="accounts_add_local">Ajouter un espace local</string>
+    <string name="accounts_local_help">Ni synchronisé, ni sauvegardé, ni partagé.</string>
+    <string name="account_local_list_count">Listes : %1$d</string>
+    <string name="account_remove_local_blocked">Seul un espace vide peut être retiré. Supprimez d\'abord ses listes.</string>
+    <string name="listprops_member_you">Vous</string>
+    <string name="listprops_local_not_shared">Les listes sur ce téléphone ne peuvent pas être partagées.</string>
+    <string name="listprops_delete_list">Supprimer la liste</string>
+    <string name="listprops_delete_confirm_title">Supprimer cette liste ?</string>
+    <string name="listprops_delete_confirm_body">« %1$s » et ses articles sont supprimés de ce téléphone. Cette action est irréversible.</string>
 </resources>

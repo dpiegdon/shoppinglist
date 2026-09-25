@@ -434,4 +434,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">These are another account\'s credentials.</string>
+    <string name="login_use_without_account">Use without an account</string>
+    <string name="local_area_note_title">Lists on this phone</string>
+    <string name="local_area_note_body">Lists here stay on this phone only. They are not backed up and cannot be shared. Sign in to a server any time to add shared lists.</string>
+    <string name="accounts_add_local">Add local area</string>
+    <string name="accounts_local_help">Not synced, not backed up, not shared.</string>
+    <string name="account_local_list_count">Lists: %1$d</string>
+    <string name="account_remove_local_blocked">Only an empty area can be removed. Delete its lists first.</string>
+    <string name="listprops_member_you">You</string>
+    <string name="listprops_local_not_shared">Lists on this phone cannot be shared.</string>
+    <string name="listprops_delete_list">Delete list</string>
+    <string name="listprops_delete_confirm_title">Delete this list?</string>
+    <string name="listprops_delete_confirm_body">\"%1$s\" and its items are deleted from this phone. This cannot be undone.</string>
 </resources>

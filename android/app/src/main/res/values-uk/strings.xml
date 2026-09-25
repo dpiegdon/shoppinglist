@@ -372,4 +372,16 @@
 
     <!-- Login and accounts follow-ups (T-300) -->
     <string name="login_msg_wrong_account">Це облікові дані іншого облікового запису.</string>
+    <string name="login_use_without_account">Користуватися без облікового запису</string>
+    <string name="local_area_note_title">Списки на цьому телефоні</string>
+    <string name="local_area_note_body">Списки тут залишаються лише на цьому телефоні. Вони не мають резервної копії, і ними не можна поділитися. Увійдіть на сервер будь-коли, щоб додати спільні списки.</string>
+    <string name="accounts_add_local">Додати локальну область</string>
+    <string name="accounts_local_help">Не синхронізується, не резервується, не спільний.</string>
+    <string name="account_local_list_count">Списки: %1$d</string>
+    <string name="account_remove_local_blocked">Прибрати можна лише порожню область. Спершу видаліть її списки.</string>
+    <string name="listprops_member_you">Ви</string>
+    <string name="listprops_local_not_shared">Списками на цьому телефоні не можна поділитися.</string>
+    <string name="listprops_delete_list">Видалити список</string>
+    <string name="listprops_delete_confirm_title">Видалити цей список?</string>
+    <string name="listprops_delete_confirm_body">«%1$s» і його товари буде видалено з цього телефона. Цю дію не можна скасувати.</string>
 </resources>
