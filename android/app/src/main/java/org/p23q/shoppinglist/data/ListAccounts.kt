@@ -50,6 +50,12 @@ class ListAccounts @Inject constructor(
             }
             .distinctUntilChanged()
 
+    /** Every account on the phone, as the registry holds them now. */
+    suspend fun all(): List<AccountEntity> {
+        registry.load()
+        return registry.snapshot()
+    }
+
     /** Whether the phone holds more than one account: the screens name a list's account only then. */
     val several: Flow<Boolean> get() = accounts().map { it.size > 1 }.distinctUntilChanged()
 

@@ -28,6 +28,7 @@
     <string name="action_join">参加</string>
     <string name="action_ignore">無視</string>
     <string name="action_duplicate">複製</string>
+    <string name="listprops_copy_to">コピー先</string>
     <string name="action_unsubscribe">通知を解除</string>
     <string name="nav_menu">メニュー</string>
     <string name="nav_overview">概要</string>

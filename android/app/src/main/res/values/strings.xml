@@ -30,6 +30,7 @@
     <string name="action_join">Join</string>
     <string name="action_ignore">Ignore</string>
     <string name="action_duplicate">Duplicate</string>
+    <string name="listprops_copy_to">Copy to</string>
     <string name="action_unsubscribe">Unsubscribe</string>
 
     <!-- navigation -->

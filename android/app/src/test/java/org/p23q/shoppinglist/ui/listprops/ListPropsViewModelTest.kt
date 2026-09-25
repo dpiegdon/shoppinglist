@@ -570,4 +570,72 @@ class ListPropsViewModelTest {
         assertTrue(itemsRepo.activeItemsForListOnce(listId).isEmpty())
         assertEquals(0, server.requestCount)
     }
+
+    /** The local area, ordered before the second server account, which the picker still puts after it (T-294). */
+    private suspend fun addOtherAccounts() {
+        db.accountDao().insert(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        db.insertTestAccount(
+            testAccount(id = "work", serverUrl = "https://work.example.test/", accountId = "acct-work", email = "me@work.example")
+                .copy(sortOrder = 5),
+        )
+    }
+
+    @Test
+    fun `with one account, Duplicate copies at once with no picker (T-294)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+
+        viewModel.requestDuplicate().join()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.copyTargets.isEmpty())
+        assertEquals(TEST_ACCOUNT_ID, listsRepo.getById(state.duplicatedListId!!)!!.accountId)
+    }
+
+    @Test
+    fun `with several accounts, Duplicate offers them all, the list's own first, and copies into the one picked (T-294)`() = runTest(mainDispatcherRule.dispatcher) {
+        addOtherAccounts()
+        itemsRepo.createItem(listId, "Milk")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+
+        viewModel.requestDuplicate().join()
+
+        assertEquals(listOf(TEST_ACCOUNT_ID, "work", "on-phone"), viewModel.uiState.value.copyTargets.map { it.id })
+        assertNull("nothing is copied before a pick", viewModel.uiState.value.duplicatedListId)
+
+        viewModel.duplicateList("on-phone").join()
+
+        val state = viewModel.uiState.value
+        assertTrue("the picker closes", state.copyTargets.isEmpty())
+        assertEquals("on-phone", listsRepo.getById(state.duplicatedListId!!)!!.accountId)
+        assertEquals("on-phone", itemsRepo.itemsForList(state.duplicatedListId!!).first().single().accountId)
+    }
+
+    @Test
+    fun `cancelling the picker copies nothing (T-294)`() = runTest(mainDispatcherRule.dispatcher) {
+        addOtherAccounts()
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        viewModel.requestDuplicate().join()
+
+        viewModel.cancelCopy()
+
+        assertTrue(viewModel.uiState.value.copyTargets.isEmpty())
+        assertEquals(1, listsRepo.activeLists().first().size)
+    }
+
+    @Test
+    fun `a ledger is offered no other account to be copied into (T-294)`() = runTest(mainDispatcherRule.dispatcher) {
+        addOtherAccounts()
+        listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip", kind = org.p23q.shoppinglist.core.ListKind.EXPENSES, currency = "EUR")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+
+        viewModel.requestDuplicate().join()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.copyTargets.isEmpty())
+        assertEquals(TEST_ACCOUNT_ID, listsRepo.getById(state.duplicatedListId!!)!!.accountId)
+    }
 }

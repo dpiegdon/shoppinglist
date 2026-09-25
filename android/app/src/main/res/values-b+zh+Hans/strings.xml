@@ -28,6 +28,7 @@
     <string name="action_join">加入</string>
     <string name="action_ignore">忽略</string>
     <string name="action_duplicate">复制</string>
+    <string name="listprops_copy_to">复制到</string>
     <string name="action_unsubscribe">取消订阅</string>
     <string name="nav_menu">菜单</string>
     <string name="nav_overview">总览</string>

@@ -4,15 +4,20 @@ import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -188,6 +193,61 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals(true, duplicatedListId != null && duplicatedListId != listId)
+        db.close()
+    }
+
+    @Test
+    fun `with several accounts, Duplicate asks where to, naming each account, and copies there (T-294)`() = runBlocking<Unit> {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount(serverUrl = server.url("/").toString()))
+        db.insertTestAccount(testAccount(id = "work", serverUrl = "https://work.example.test/", accountId = "acct-work", email = "me@work.example"))
+        db.accountDao().insert(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+        var duplicatedListId: String? = null
+        composeTestRule.setContent {
+            ListPropsScreen(onLeft = {}, onDuplicated = { duplicatedListId = it }, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Duplicate").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Copy to").assertIsDisplayed()
+        val host = server.url("/").toString().substringAfter("://").trimEnd('/')
+        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + TEST_ACCOUNT_ID).assertTextEquals("me@example.com · $host")
+        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + "work").assertTextEquals("me@work.example · work.example.test")
+        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + "on-phone").assertTextEquals("On this phone")
+        assertEquals("nothing copied before a pick", null, duplicatedListId)
+
+        composeTestRule.onNodeWithText("On this phone").performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals("on-phone", listsRepo.getById(duplicatedListId!!)!!.accountId)
+        composeTestRule.onNodeWithText("Copy to").assertDoesNotExist()
+        viewModel.viewModelScope.cancel()
         db.close()
     }
 

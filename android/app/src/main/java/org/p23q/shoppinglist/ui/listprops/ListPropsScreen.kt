@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.listprops
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -50,9 +52,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.accountLineText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 
@@ -226,7 +230,7 @@ fun ListPropsScreen(
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
         if (!isExpenses) {
-            TextButton(onClick = viewModel::duplicateList) { Text(stringResource(R.string.action_duplicate)) }
+            TextButton(onClick = { viewModel.requestDuplicate() }) { Text(stringResource(R.string.action_duplicate)) }
         }
         Spacer(Modifier.height(8.dp))
 
@@ -282,6 +286,11 @@ fun ListPropsScreen(
         )
     }
 
+    // With several accounts, which one the copy goes to (T-294): the list's own first.
+    if (state.copyTargets.isNotEmpty()) {
+        CopyToDialog(state.copyTargets, onPick = { viewModel.duplicateList(it) }, onDismiss = viewModel::cancelCopy)
+    }
+
     // Renaming a category onto another existing one merges them irreversibly (T-270): the web
     // already confirms this; Android used to do it silently on Save.
     state.pendingCategoryMerge?.let { pending ->
@@ -294,6 +303,32 @@ fun ListPropsScreen(
         )
     }
 }
+
+/** The "Copy to" picker (T-294): one row per account, each named as the overview names it. */
+@Composable
+private fun CopyToDialog(targets: List<AccountEntity>, onPick: (accountId: String) -> Unit, onDismiss: () -> Unit) {
+    LocalizedAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.listprops_copy_to)) },
+        text = {
+            Column {
+                targets.forEach { account ->
+                    Text(
+                        accountLineText(account),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(account.id) }
+                            .padding(vertical = 12.dp)
+                            .testTag(COPY_TARGET_TAG_PREFIX + account.id),
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+internal const val COPY_TARGET_TAG_PREFIX = "copy-target-"
 
 /**
  * What a server list shares: the collaborator notifications (T-65), the roster, pending invites

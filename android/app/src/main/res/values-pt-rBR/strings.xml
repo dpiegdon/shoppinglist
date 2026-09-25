@@ -28,6 +28,7 @@
     <string name="action_join">Entrar</string>
     <string name="action_ignore">Ignorar</string>
     <string name="action_duplicate">Duplicar</string>
+    <string name="listprops_copy_to">Copiar para</string>
     <string name="action_unsubscribe">Cancelar aviso</string>
     <string name="nav_menu">Menu</string>
     <string name="nav_overview">Visão geral</string>

@@ -28,6 +28,7 @@
     <string name="action_join">انضمام</string>
     <string name="action_ignore">تجاهل</string>
     <string name="action_duplicate">تكرار</string>
+    <string name="listprops_copy_to">نسخ إلى</string>
     <string name="action_unsubscribe">إلغاء الاشتراك</string>
     <string name="nav_menu">القائمة</string>
     <string name="nav_overview">نظرة عامة</string>

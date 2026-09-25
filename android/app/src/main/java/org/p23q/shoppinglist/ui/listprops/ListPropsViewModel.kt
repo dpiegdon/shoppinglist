@@ -19,6 +19,7 @@ import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.CreateInviteRequest
 import org.p23q.shoppinglist.core.api.MemberDto
 import org.p23q.shoppinglist.core.api.PendingInviteDto
+import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
@@ -28,6 +29,7 @@ import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.overview.overviewOrder
 import java.io.IOException
 import javax.inject.Inject
 
@@ -57,6 +59,11 @@ data class ListPropsUiState(
      *  web already confirms this destructive merge; Android used to do it silently on Save. */
     val pendingCategoryMerge: PendingCategoryMerge? = null,
     val duplicatedListId: String? = null,
+    /**
+     * The accounts a copy can go to, while the "Copy to" picker is open (T-294): the list's own
+     * first, then the others in the overview's order. Empty when no picker is showing.
+     */
+    val copyTargets: List<AccountEntity> = emptyList(),
     /** Per-list collaborator-change notifications (T-65); false = this list is muted. */
     val notificationsEnabledForList: Boolean = true,
     /** Number of checked items — drives the relocated 'Clear checked (N)' button (T-75). */
@@ -303,9 +310,42 @@ class ListPropsViewModel @Inject constructor(
         loadMembers().join()
     }
 
-    /** Solo-owned snapshot copy of this list and its non-deleted items, purely client-side (T-63). */
-    fun duplicateList(): Job = viewModelScope.launch {
-        val newListId = listsRepo.duplicate(listId) ?: return@launch
+    /**
+     * The Duplicate button (T-294): with one account to copy into, the copy is made at once, as it
+     * always was; with several, the "Copy to" picker opens on them.
+     */
+    fun requestDuplicate(): Job = viewModelScope.launch {
+        val targets = copyTargets()
+        if (targets.size > 1) {
+            _uiState.update { it.copy(copyTargets = targets) }
+        } else {
+            duplicateList().join()
+        }
+    }
+
+    fun cancelCopy() = _uiState.update { it.copy(copyTargets = emptyList()) }
+
+    /**
+     * Where this list can be copied: its own account first, then every other in the overview's
+     * order, the local area last. A ledger stays in its own account, where its members are, and
+     * the local area holds none ([ListKind.choices]).
+     */
+    private suspend fun copyTargets(): List<AccountEntity> {
+        val own = listAccounts.accountOf(listId) ?: return emptyList()
+        val kind = ListKind.of(listsRepo.getById(listId)?.kind?.value)
+        if (ListKind.isExpenses(kind)) return listOf(own)
+        val others = overviewOrder(listAccounts.all().filter { it.id != own.id && kind in ListKind.choices(it.isServer) })
+        return listOf(own) + others
+    }
+
+    /**
+     * Solo-owned snapshot copy of this list and its non-deleted items, purely client-side (T-63),
+     * into [targetAccountId] (T-294), the list's own account by default. An account removed
+     * meanwhile gets nothing.
+     */
+    fun duplicateList(targetAccountId: String? = null): Job = viewModelScope.launch {
+        _uiState.update { it.copy(copyTargets = emptyList()) }
+        val newListId = listsRepo.duplicate(listId, targetAccountId) ?: return@launch
         itemsRepo.duplicateForList(sourceListId = listId, targetListId = newListId)
         _uiState.update { it.copy(duplicatedListId = newListId) }
     }

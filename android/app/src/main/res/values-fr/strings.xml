@@ -28,6 +28,7 @@
     <string name="action_join">Rejoindre</string>
     <string name="action_ignore">Ignorer</string>
     <string name="action_duplicate">Dupliquer</string>
+    <string name="listprops_copy_to">Copier vers</string>
     <string name="action_unsubscribe">Se désabonner</string>
     <string name="nav_menu">Menu</string>
     <string name="nav_overview">Vue d\'ensemble</string>
