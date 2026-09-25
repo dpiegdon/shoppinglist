@@ -152,6 +152,7 @@
     <string name="update_up_to_date">Du hast die neueste Version (%1$s).</string>
     <string name="update_available_status">Version %1$s ist verfügbar.</string>
     <string name="update_check_failed">Konnte nicht nach Updates suchen.</string>
+    <string name="update_check_action">Nach Update suchen</string>
     <string name="action_update">Aktualisieren</string>
     <string name="action_skip">Überspringen</string>
     <string name="settings_language">Sprache</string>
@@ -347,7 +348,7 @@
 
     <!-- Overview by account (T-292) -->
     <string name="overview_account_signed_out">Abgemeldet. Zum Anmelden tippen.</string>
-    <string name="overview_account_outdated">Dieser Server braucht eine neuere App.</string>
+    <string name="overview_account_outdated">Dieser Server braucht eine neuere App. Zum Suchen nach einem Update tippen.</string>
     <string name="overview_new_list_account">Konto</string>
     <string name="redeem_choose_account">Mit welchem Konto beitreten?</string>
 

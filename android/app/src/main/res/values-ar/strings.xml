@@ -152,6 +152,7 @@
     <string name="update_up_to_date">لديك أحدث إصدار (%1$s).</string>
     <string name="update_available_status">الإصدار %1$s متاح.</string>
     <string name="update_check_failed">تعذّر البحث عن تحديثات.</string>
+    <string name="update_check_action">البحث عن تحديث</string>
     <string name="action_update">تحديث</string>
     <string name="action_skip">تخطٍ</string>
     <string name="settings_language">اللغة</string>
@@ -347,7 +348,7 @@
 
     <!-- Overview by account (T-292) -->
     <string name="overview_account_signed_out">تم تسجيل الخروج. انقر لتسجيل الدخول.</string>
-    <string name="overview_account_outdated">يحتاج هذا الخادم إلى إصدار أحدث من التطبيق.</string>
+    <string name="overview_account_outdated">يحتاج هذا الخادم إلى إصدار أحدث من التطبيق. انقر للبحث عن تحديث.</string>
     <string name="overview_new_list_account">الحساب</string>
     <string name="redeem_choose_account">الانضمام بأي حساب؟</string>
 

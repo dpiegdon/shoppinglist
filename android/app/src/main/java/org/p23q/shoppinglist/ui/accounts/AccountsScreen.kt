@@ -49,6 +49,8 @@ fun AccountsScreen(
     onAddAccount: () -> Unit,
     onOpenAccount: (accountId: String) -> Unit,
     onSignIn: (accountId: String) -> Unit,
+    /** An outdated row's "Check for update": ask the servers for a newer app and offer it (T-304). */
+    onCheckForUpdate: () -> Unit = {},
     viewModel: AccountsViewModel = hiltViewModel(),
 ) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
@@ -67,6 +69,7 @@ fun AccountsScreen(
                 isLast = index == lastServer,
                 onOpen = { onOpenAccount(row.account.id) },
                 onSignIn = { onSignIn(row.account.id) },
+                onCheckForUpdate = onCheckForUpdate,
                 onMoveUp = { viewModel.moveUp(row.account.id) },
                 onMoveDown = { viewModel.moveDown(row.account.id) },
             )
@@ -99,6 +102,7 @@ private fun AccountCard(
     isLast: Boolean,
     onOpen: () -> Unit,
     onSignIn: () -> Unit,
+    onCheckForUpdate: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
 ) {
@@ -133,6 +137,9 @@ private fun AccountCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        TextButton(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}")) {
+                            Text(stringResource(R.string.update_check_action))
+                        }
                     }
                     // Named "On this phone" above; what that means, here.
                     AccountStatus.LOCAL ->

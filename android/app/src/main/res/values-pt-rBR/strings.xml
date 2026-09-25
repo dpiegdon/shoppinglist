@@ -152,6 +152,7 @@
     <string name="update_up_to_date">Você tem a versão mais recente (%1$s).</string>
     <string name="update_available_status">A versão %1$s está disponível.</string>
     <string name="update_check_failed">Não foi possível procurar atualizações.</string>
+    <string name="update_check_action">Procurar atualização</string>
     <string name="action_update">Atualizar</string>
     <string name="action_skip">Ignorar</string>
     <string name="settings_language">Idioma</string>
@@ -347,7 +348,7 @@
 
     <!-- Overview by account (T-292) -->
     <string name="overview_account_signed_out">Você saiu. Toque para entrar.</string>
-    <string name="overview_account_outdated">Este servidor precisa de uma versão mais nova do app.</string>
+    <string name="overview_account_outdated">Este servidor precisa de uma versão mais nova do app. Toque para procurar uma atualização.</string>
     <string name="overview_new_list_account">Conta</string>
     <string name="redeem_choose_account">Entrar com qual conta?</string>
 

@@ -60,6 +60,11 @@ fun OverviewScreen(
     onOpenList: (listId: String) -> Unit,
     /** A signed-out account's banner was tapped: sign that account in again (T-292). */
     onSignIn: (accountId: String) -> Unit = {},
+    /**
+     * An outdated account's banner was tapped: ask the servers for a newer app, whatever the
+     * automatic check is set to, and offer it (T-304).
+     */
+    onCheckForUpdate: () -> Unit = {},
     viewModel: OverviewViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -122,10 +127,10 @@ fun OverviewScreen(
                                 item(key = "banner-" + account.id) {
                                     AccountBanner(
                                         text = stringResource(banner),
-                                        onClick = if (banner == R.string.overview_account_signed_out) {
-                                            { onSignIn(account.id) }
-                                        } else {
-                                            null
+                                        onClick = when (banner) {
+                                            R.string.overview_account_signed_out -> { { onSignIn(account.id) } }
+                                            R.string.overview_account_outdated -> onCheckForUpdate
+                                            else -> null
                                         },
                                     )
                                 }

@@ -86,7 +86,7 @@ class OverviewScreenTest {
         listsRepo.create("work", "Office supplies")
     }
 
-    private fun show(onSignIn: (String) -> Unit = {}) {
+    private fun show(onSignIn: (String) -> Unit = {}, onCheckForUpdate: () -> Unit = {}) {
         val viewModel = OverviewViewModel(
             listsRepo,
             itemsRepo,
@@ -96,7 +96,9 @@ class OverviewScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
         ).also(viewModels::add)
-        composeTestRule.setContent { OverviewScreen(onOpenList = {}, onSignIn = onSignIn, viewModel = viewModel) }
+        composeTestRule.setContent {
+            OverviewScreen(onOpenList = {}, onSignIn = onSignIn, onCheckForUpdate = onCheckForUpdate, viewModel = viewModel)
+        }
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             viewModel.uiState.value.lists.isNotEmpty() && viewModel.uiState.value.accounts.isNotEmpty()
         }
@@ -150,14 +152,18 @@ class OverviewScreenTest {
     }
 
     @Test
-    fun `an outdated account's section says so and keeps its lists`() = runBlocking<Unit> {
+    fun `an outdated account's section says so, keeps its lists and offers to check for an update (T-304)`() = runBlocking<Unit> {
         addWorkAccount()
         accounts.registry.update("work") { it.copy(outdated = true) }
-        show()
+        var checks = 0
+        show(onCheckForUpdate = { checks++ })
 
-        composeTestRule.onAllNodesWithText("This server needs a newer app.").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("This server needs a newer app. Tap to check for an update.").assertCountEquals(1)
         composeTestRule.onNodeWithText("Office supplies").assertExists()
         composeTestRule.onAllNodesWithText("Signed out. Tap to sign in.").assertCountEquals(0)
+        composeTestRule.onNodeWithText("This server needs a newer app. Tap to check for an update.").performClick()
+
+        assertEquals(1, checks)
     }
 
     @Test

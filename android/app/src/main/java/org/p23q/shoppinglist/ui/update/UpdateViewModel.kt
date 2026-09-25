@@ -97,6 +97,32 @@ class UpdateViewModel @Inject constructor(
         }
     }
 
+    private val _checkNotice = MutableStateFlow<UpdateStatus?>(null)
+
+    /**
+     * What [checkForOutdated] has to say when it has no update to offer: [UpdateStatus.UpToDate]
+     * (no server offers a newer app than this one) or [UpdateStatus.Failed]; null otherwise.
+     */
+    val checkNotice: StateFlow<UpdateStatus?> = _checkNotice.asStateFlow()
+
+    /**
+     * "Check for update" on an outdated account's overview banner or Accounts row (T-304). With
+     * another account working, or the local area here, the blocking screen does not show, and
+     * with the automatic check off nothing else would ever ask. Forced like [checkRequired]: a
+     * newer app is offered with the ordinary prompt, and anything else is a [checkNotice].
+     */
+    fun checkForOutdated(): Job = viewModelScope.launch {
+        when (val outcome = updateChecker.checkForced()) {
+            is CheckOutcome.Available -> _availableUpdate.value = outcome.update
+            is CheckOutcome.UpToDate -> _checkNotice.value = UpdateStatus.UpToDate(outcome.version)
+            CheckOutcome.Failed, CheckOutcome.NotChecked -> _checkNotice.value = UpdateStatus.Failed
+        }
+    }
+
+    fun dismissCheckNotice() {
+        _checkNotice.value = null
+    }
+
     /**
      * Closes the prompt and records the version as asked-about — called for BOTH answers, since
      * the question was put either way and asking again would defeat the once-per-version rule.

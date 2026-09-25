@@ -5,6 +5,7 @@ import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -54,6 +55,7 @@ class AccountsScreenTest {
     private val opened = mutableListOf<String>()
     private val signIns = mutableListOf<String>()
     private var added = 0
+    private var updateChecks = 0
 
     private fun show() {
         val viewModel = AccountsViewModel(accounts.registry, accounts.syncStatus).also { viewModels += it }
@@ -62,6 +64,7 @@ class AccountsScreenTest {
                 onAddAccount = { added++ },
                 onOpenAccount = { opened += it },
                 onSignIn = { signIns += it },
+                onCheckForUpdate = { updateChecks++ },
                 viewModel = viewModel,
             )
         }
@@ -91,6 +94,20 @@ class AccountsScreenTest {
         // No way to sign out: the server does that.
         composeTestRule.onNodeWithText("Log out").assertDoesNotExist()
         composeTestRule.onNodeWithText("Sign out").assertDoesNotExist()
+    }
+
+    /** T-304: with another account working, the blocking update screen is not there to ask. */
+    @Test
+    fun `an outdated row offers to check for an update`() = runBlocking<Unit> {
+        accounts.registry.add(accountRow("prod"))
+        accounts.registry.add(accountRow("old", serverUrl = "https://old.example.test/", outdated = true))
+
+        show()
+        composeTestRule.onAllNodesWithText("Check for update").assertCountEquals(1)
+        composeTestRule.onNodeWithTag("account-check-update-old", useUnmergedTree = true).performClick()
+
+        assertEquals(1, updateChecks)
+        assertEquals("the row itself was not opened", emptyList<String>(), opened)
     }
 
     @Test

@@ -152,6 +152,7 @@
     <string name="update_up_to_date">У вас остання версія (%1$s).</string>
     <string name="update_available_status">Доступна версія %1$s.</string>
     <string name="update_check_failed">Не вдалося перевірити оновлення.</string>
+    <string name="update_check_action">Перевірити оновлення</string>
     <string name="action_update">Оновити</string>
     <string name="action_skip">Пропустити</string>
     <string name="settings_language">Мова</string>
@@ -347,7 +348,7 @@
 
     <!-- Overview by account (T-292) -->
     <string name="overview_account_signed_out">Ви вийшли. Торкніться, щоб увійти.</string>
-    <string name="overview_account_outdated">Цьому серверу потрібна новіша версія застосунку.</string>
+    <string name="overview_account_outdated">Цьому серверу потрібна новіша версія застосунку. Торкніться, щоб перевірити оновлення.</string>
     <string name="overview_new_list_account">Обліковий запис</string>
     <string name="redeem_choose_account">Приєднатися з яким обліковим записом?</string>
 

@@ -152,6 +152,7 @@
     <string name="update_up_to_date">Vous avez la dernière version (%1$s).</string>
     <string name="update_available_status">La version %1$s est disponible.</string>
     <string name="update_check_failed">Impossible de rechercher les mises à jour.</string>
+    <string name="update_check_action">Rechercher une mise à jour</string>
     <string name="action_update">Mettre à jour</string>
     <string name="action_skip">Ignorer</string>
     <string name="settings_language">Langue</string>
@@ -347,7 +348,7 @@
 
     <!-- Overview by account (T-292) -->
     <string name="overview_account_signed_out">Déconnecté. Touchez pour vous connecter.</string>
-    <string name="overview_account_outdated">Ce serveur demande une application plus récente.</string>
+    <string name="overview_account_outdated">Ce serveur demande une application plus récente. Touchez pour rechercher une mise à jour.</string>
     <string name="overview_new_list_account">Compte</string>
     <string name="redeem_choose_account">Rejoindre avec quel compte ?</string>
 

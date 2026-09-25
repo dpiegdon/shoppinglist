@@ -91,6 +91,7 @@ import org.p23q.shoppinglist.ui.redeem.RedeemScreen
 import org.p23q.shoppinglist.ui.registry.RegistryScreen
 import org.p23q.shoppinglist.ui.settings.SettingsScreen
 import org.p23q.shoppinglist.ui.update.UpdateRequiredScreen
+import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.p23q.shoppinglist.ui.update.UpdateViewModel
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
@@ -365,6 +366,7 @@ fun ShoppingListNavHost(
                     onAddAccount = { navController.navigate(Routes.login(LoginMode.ADD)) },
                     onOpenAccount = { id -> navController.navigate(Routes.account(id)) },
                     onSignIn = { id -> navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = id)) },
+                    onCheckForUpdate = { updateViewModel.checkForOutdated() },
                 )
             }
         }
@@ -400,6 +402,8 @@ fun ShoppingListNavHost(
                     onSignIn = { accountId ->
                         navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = accountId))
                     },
+                    // An outdated account's banner (T-304).
+                    onCheckForUpdate = { updateViewModel.checkForOutdated() },
                 )
             }
         }
@@ -579,6 +583,24 @@ fun ShoppingListNavHost(
     val onLoginScreen = navController.currentBackStackEntryAsState().value?.destination?.route == Routes.LOGIN_PATTERN
     // Bound to a local rather than used through ?.let { }: that lambda is not a @Composable
     // context, so neither the dialog nor LocalContext.current can be called inside one.
+    // What an outdated account's "Check for update" found when there is nothing to install (T-304).
+    val checkNotice by updateViewModel.checkNotice.collectAsStateWithLifecycle()
+    checkNotice?.let { notice ->
+        LocalizedAlertDialog(
+            onDismissRequest = { updateViewModel.dismissCheckNotice() },
+            text = {
+                Text(
+                    stringResource(
+                        if (notice is UpdateStatus.UpToDate) R.string.update_required_unavailable else R.string.update_check_failed,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { updateViewModel.dismissCheckNotice() }) { Text(stringResource(R.string.action_ok)) }
+            },
+        )
+    }
+
     val update = availableUpdate
     if (update != null && !onLoginScreen) {
         val context = LocalContext.current

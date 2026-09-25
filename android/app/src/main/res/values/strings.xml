@@ -193,6 +193,7 @@
     <string name="update_up_to_date">You have the latest version (%1$s).</string>
     <string name="update_available_status">Version %1$s is available.</string>
     <string name="update_check_failed">Couldn\'t check for updates.</string>
+    <string name="update_check_action">Check for update</string>
     <string name="action_update">Update</string>
     <string name="action_skip">Skip</string>
 
@@ -410,7 +411,7 @@
 
     <!-- Overview by account (T-292) -->
     <string name="overview_account_signed_out">Signed out. Tap to sign in.</string>
-    <string name="overview_account_outdated">This server needs a newer app.</string>
+    <string name="overview_account_outdated">This server needs a newer app. Tap to check for an update.</string>
     <string name="overview_new_list_account">Account</string>
     <string name="redeem_choose_account">Join with which account?</string>
 

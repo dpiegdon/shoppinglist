@@ -100,7 +100,10 @@ quarantined rows, and removing one account leaves the other's rows alone.
 With one account the overview is a plain list of lists. With several it has a
 section per account, in the user's order, headed by the account's email and
 server URL, and each card names its account. A signed-out account's section
-offers to sign it in again; an outdated one says its server needs a newer app.
+offers to sign it in again; an outdated one says its server needs a newer app
+and, tapped, asks the servers for one whatever the automatic check is set to,
+as its row on the Accounts screen does with *Check for update*: a newer app is
+offered with the usual prompt, and otherwise a dialog says none was found.
 Each account's pending invites are fetched from its own server and shown in its
 section, as soon as the account is signed in, and a new list goes to the account picked in the New-list dialog
 (by default the account of the list opened last). The list screen shows the

@@ -103,6 +103,44 @@ class UpdateViewModelTest {
             )
         }
 
+    /** T-304: the outdated banner's and row's check, which the blocking screen may not be there to make. */
+    @Test
+    fun `an outdated account's check offers a newer app whatever the switch says`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            prefs.setAutoCheckEnabled(false)
+            prefs.recordCheck(System.currentTimeMillis())
+            server.enqueue(
+                MockResponse().setResponseCode(200)
+                    .setBody("""{"version": "99.0.0", "download_url": "https://example.com/shoppinglist.apk"}"""),
+            )
+            val viewModel = UpdateViewModel(checker, prefs)
+
+            viewModel.checkForOutdated().join()
+
+            assertEquals(AvailableUpdate("99.0.0", "https://example.com/shoppinglist.apk"), viewModel.availableUpdate.value)
+            assertEquals(null, viewModel.checkNotice.value)
+        }
+
+    @Test
+    fun `an outdated account's check says so when no server offers a newer app, or none answers`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            server.enqueue(
+                MockResponse().setResponseCode(200)
+                    .setBody("""{"version": "1.0.0", "download_url": "https://example.com/shoppinglist.apk"}"""),
+            )
+            val viewModel = UpdateViewModel(checker, prefs)
+
+            viewModel.checkForOutdated().join()
+            assertTrue(viewModel.checkNotice.value is UpdateStatus.UpToDate)
+            assertEquals(null, viewModel.availableUpdate.value)
+            viewModel.dismissCheckNotice()
+            assertEquals(null, viewModel.checkNotice.value)
+
+            server.shutdown()
+            viewModel.checkForOutdated().join()
+            assertEquals(UpdateStatus.Failed, viewModel.checkNotice.value)
+        }
+
     @Test
     fun `a check that could not be made is reported, not left looking like it is still running`() =
         runTest(mainDispatcherRule.dispatcher) {
