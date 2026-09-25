@@ -1,5 +1,9 @@
 package org.p23q.shoppinglist.core.account
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -56,6 +60,26 @@ class AccountRegistryTest {
         assertEquals(local, registry.local())
         assertNull("one per phone", registry.addLocal())
         assertEquals(2, db.accountDao().all().size)
+    }
+
+    /**
+     * Calls racing on several threads still make one local area (T-302): the check and the add run
+     * under one lock. Without it the race is a window of a few instructions, so it is run often.
+     */
+    @Test
+    fun `concurrent addLocal calls make one local area`() = runBlocking {
+        val registry = AccountRegistry(db)
+        registry.load()
+        repeat(200) {
+            val start = CompletableDeferred<Unit>()
+            val calls = List(8) { async(Dispatchers.Default) { start.await(); registry.addLocal() } }
+            start.complete(Unit)
+            val made = calls.awaitAll().filterNotNull()
+
+            assertEquals("one per phone", 1, made.size)
+            assertEquals(1, db.accountDao().all().count { !it.isServer })
+            registry.remove(made.single().id)
+        }
     }
 
     @Test

@@ -596,4 +596,25 @@ class OverviewViewModelTest {
         assertEquals(local.id, created.accountId)
         assertEquals(ListKind.CHECKLIST, created.kind.value)
     }
+
+    @Test
+    fun `when the last opened list is in the local area, the New-list dialog preselects it, without a ledger (T-302)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val local = accounts.registry.addLocal()!!
+            val hardware = listsRepo.create(local.id, "Hardware")
+            accounts.secrets.lastOpenedListId = hardware
+            viewModel.uiState.first { it.accounts.size == 2 && it.lists.isNotEmpty() }
+
+            viewModel.openCreateDialog()
+
+            assertEquals(local.id, viewModel.uiState.value.newListAccountId)
+            assertEquals(listOf(ListKind.SHOPPING, ListKind.CHECKLIST), viewModel.uiState.value.newListKinds)
+            assertEquals("", viewModel.uiState.value.newListCurrency)
+
+            viewModel.onNewListNameChange("Garden")
+            viewModel.createList()?.join()
+
+            val created = viewModel.uiState.first { s -> s.lists.any { it.name.value == "Garden" } }.lists.single { it.name.value == "Garden" }
+            assertEquals(local.id, created.accountId)
+        }
 }

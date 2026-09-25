@@ -353,6 +353,7 @@ class ListPropsScreenTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { left }
 
         assertEquals(null, listsRepo.getById(listId))
+        viewModel.viewModelScope.cancel()
         db.close()
     }
 }
