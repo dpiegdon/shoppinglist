@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.data.update
 
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -36,15 +37,14 @@ class UpdateCheckerTest {
     private lateinit var prefs: UpdatePrefsStore
     private lateinit var accounts: TestAccounts
     private lateinit var checker: UpdateChecker
-    private val dbs = mutableListOf<AppDb>()
+    private val allAccounts = mutableListOf<TestAccounts>()
 
     private fun newAccounts(): TestAccounts = TestAccounts(
         Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .build()
-            .also { dbs += it },
-    )
+            .build(),
+    ).also { allAccounts += it }
 
     @Before
     fun setUp() = runTest {
@@ -63,7 +63,8 @@ class UpdateCheckerTest {
     @After
     fun tearDown() {
         if (::server.isInitialized) server.shutdown()
-        dbs.forEach { it.close() }
+        // A 401 writes the account in the background; that lands before its database goes.
+        allAccounts.forEach { closeWhenIdle(it.db, pumpMain = {}, registry = it.registry) }
     }
 
     private fun offering(version: String) = MockResponse()

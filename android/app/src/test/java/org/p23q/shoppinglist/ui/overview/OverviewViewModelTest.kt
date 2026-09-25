@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.overview
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.testAccount
@@ -127,10 +129,10 @@ class OverviewViewModelTest {
 
     @After
     fun tearDown() {
-        viewModels.forEach { it.viewModelScope.cancel() }
+        // Before the rule resets Dispatchers.Main (a rule's finished() runs after @After).
+        if (::db.isInitialized) closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
         viewModels.clear()
         if (::server.isInitialized) server.shutdown()
-        if (::db.isInitialized) db.close()
     }
 
     @Test

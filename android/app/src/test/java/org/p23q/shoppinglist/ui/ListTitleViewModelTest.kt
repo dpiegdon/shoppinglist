@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
@@ -47,8 +49,10 @@ class ListTitleViewModelTest {
 
     @After
     fun tearDown() {
-        if (::db.isInitialized) db.close()
+        if (::db.isInitialized) closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels)
     }
+
+    private val viewModels = mutableListOf<ListTitleViewModel>()
 
     private val lastOpened = object : LastOpenedListStore {
         override var lastOpenedListId: String? = null
@@ -56,6 +60,7 @@ class ListTitleViewModelTest {
 
     private fun newViewModel(listId: String) =
         ListTitleViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), listsRepo, testListAccounts(db, listsRepo), lastOpened)
+            .also { viewModels += it }
 
     @Test
     fun `opening the list screen makes it the last opened list (T-300)`() = runTest(mainDispatcherRule.dispatcher) {

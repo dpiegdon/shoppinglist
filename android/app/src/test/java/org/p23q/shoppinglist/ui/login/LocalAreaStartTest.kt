@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.login
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -54,8 +56,10 @@ class LocalAreaStartTest {
 
     @After
     fun tearDown() {
-        if (::db.isInitialized) db.close()
+        if (::db.isInitialized) closeWhenIdle(db, ::idleMainLooper, viewModels, registry = if (::registry.isInitialized) registry else null)
     }
+
+    private val viewModels = mutableListOf<LoginViewModel>()
 
     private fun show(mode: LoginMode = LoginMode.START) {
         val viewModel = LoginViewModel(
@@ -66,7 +70,7 @@ class LocalAreaStartTest {
             FakeSyncTrigger(),
             SavedStateHandle(mapOf(Routes.LOGIN_MODE_ARG to mode.arg)),
             LocalArea { registry.addLocal() != null },
-        )
+        ).also { viewModels += it }
         composeTestRule.setContent { LoginScreen(onLoginSuccess = { destinations += it }, viewModel = viewModel) }
     }
 

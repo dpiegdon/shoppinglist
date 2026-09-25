@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.accounts
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
@@ -48,9 +50,7 @@ class AccountsViewModelTest {
 
     @After
     fun tearDown() {
-        viewModels.forEach { it.viewModelScope.cancel() }
-        if (::accounts.isInitialized) runBlocking { accounts.registry.flush() }
-        if (::db.isInitialized) db.close()
+        if (::db.isInitialized) closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
     }
 
     private fun newViewModel() = AccountsViewModel(accounts.registry, accounts.syncStatus).also { viewModels += it }

@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.list
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
@@ -397,7 +399,7 @@ class ListScreenTest {
         assertEquals(true, added)
         // And the full-width button it replaced is gone.
         composeTestRule.onNodeWithText("Add item").assertDoesNotExist()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
@@ -434,7 +436,7 @@ class ListScreenTest {
         // The reason where one is mapped, and the mark itself as what TalkBack hears on the row.
         composeTestRule.onNodeWithText("That price isn't valid").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Not saved to the list").assertExists()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
@@ -469,7 +471,7 @@ class ListScreenTest {
         composeTestRule.onNodeWithText("Bread").assertIsDisplayed()
         composeTestRule.onNodeWithText("Not saved to the list").assertDoesNotExist()
         composeTestRule.onNodeWithContentDescription("Not saved to the list").assertDoesNotExist()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
@@ -508,6 +510,6 @@ class ListScreenTest {
         composeTestRule.onNodeWithText("Show checked").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithTag("show-checked-mark", useUnmergedTree = true).assertCountEquals(if (wasOn) 0 else 1)
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

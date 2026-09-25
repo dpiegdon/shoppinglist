@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.redeem
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -71,7 +73,7 @@ class RedeemDialogTest {
         }
 
         val localId = db.listDao().getByServerId(org.p23q.shoppinglist.data.TEST_ACCOUNT_ID, "list-42")?.localId
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel), registry = accounts.registry)
         assertNotNull(localId)
         assertEquals(localId, redeemedListId)
     }
@@ -114,6 +116,6 @@ class RedeemDialogTest {
 
         composeTestRule.onNodeWithText("Invite code or link").assertExists()
         assertEquals(1, loginRoutes.size)
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel), registry = accounts.registry)
     }
 }

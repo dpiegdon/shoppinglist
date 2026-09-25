@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.accounts
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -79,10 +81,8 @@ class AccountScreenTest {
 
     @After
     fun tearDown() {
-        viewModels.forEach { it.viewModelScope.cancel() }
-        if (::accounts.isInitialized) runBlocking { accounts.registry.flush() }
+        if (::db.isInitialized) closeWhenIdle(db, ::idleMainLooper, viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
         if (::server.isInitialized) server.shutdown()
-        if (::db.isInitialized) db.close()
     }
 
     private fun newViewModel(id: String = TEST_ACCOUNT_ID) = AccountViewModel(

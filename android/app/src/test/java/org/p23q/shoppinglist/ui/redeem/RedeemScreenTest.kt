@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.redeem
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.room.Room
@@ -65,7 +67,7 @@ class RedeemScreenTest {
         }
 
         val localId = db.listDao().getByServerId(org.p23q.shoppinglist.data.TEST_ACCOUNT_ID, "list-42")?.localId
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel), registry = accounts.registry)
         assertNotNull(localId)
         assertEquals(localId, redeemedListId)
     }
@@ -100,7 +102,7 @@ class RedeemScreenTest {
         // A garbled link reads as an invite that does not exist, in the app's language (see ErrorText).
         composeTestRule.onNodeWithText("This invite doesn't exist").assertExists()
         composeTestRule.onNodeWithText("Back").assertExists()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel), registry = accounts.registry)
     }
 
     @Test
@@ -135,8 +137,7 @@ class RedeemScreenTest {
 
         composeTestRule.onNodeWithText("me@example.com").assertExists()
         composeTestRule.onNodeWithText(server.url("/").toString()).assertExists()
-        viewModel.viewModelScope.cancel()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel), registry = accounts.registry)
     }
 
     @Test
@@ -161,6 +162,6 @@ class RedeemScreenTest {
         composeTestRule.onNodeWithText("me@example.com").assertExists()
         composeTestRule.onNodeWithText("second@example.com").assertExists()
         assertEquals(0, server.requestCount)
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel), registry = accounts.registry)
     }
 }

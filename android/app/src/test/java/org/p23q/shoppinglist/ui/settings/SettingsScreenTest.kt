@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.settings
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -53,9 +55,10 @@ class SettingsScreenTest {
 
     @After
     fun tearDown() {
-        if (::registry.isInitialized) runBlocking { registry.flush() }
-        if (::db.isInitialized) db.close()
+        if (::db.isInitialized) closeWhenIdle(db, ::idleMainLooper, viewModels, registry = if (::registry.isInitialized) registry else null)
     }
+
+    private val viewModels = mutableListOf<SettingsViewModel>()
 
     private fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
 
@@ -65,7 +68,7 @@ class SettingsScreenTest {
             CrashLogWriter(crashLog),
             NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_notif") }),
             registry,
-        )
+        ).also { viewModels += it }
 
     @Test
     fun `tapping Share crash logs with no log yet surfaces a message instead of a broken share sheet (T-50)`() = runBlocking<Unit> {

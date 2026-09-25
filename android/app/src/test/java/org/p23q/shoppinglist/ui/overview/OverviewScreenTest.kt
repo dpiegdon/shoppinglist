@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.overview
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
@@ -77,9 +79,8 @@ class OverviewScreenTest {
 
     @After
     fun tearDown() {
-        viewModels.forEach { it.viewModelScope.cancel() }
+        if (::db.isInitialized) closeWhenIdle(db, ::idleMainLooper, viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
         if (::server.isInitialized) server.shutdown()
-        if (::db.isInitialized) db.close()
     }
 
     private suspend fun addWorkAccount(token: String? = "tok-work") {

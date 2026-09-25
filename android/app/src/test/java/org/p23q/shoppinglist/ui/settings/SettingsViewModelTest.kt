@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.settings
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
@@ -69,9 +71,9 @@ class SettingsViewModelTest {
 
     @After
     fun tearDown() {
-        viewModels.forEach { it.viewModelScope.cancel() }
-        if (::registry.isInitialized) runBlocking { registry.flush() }
-        if (::db.isInitialized) db.close()
+        if (::db.isInitialized) {
+            closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels, registry = if (::registry.isInitialized) registry else null)
+        }
     }
 
     private fun newViewModel(): SettingsViewModel =

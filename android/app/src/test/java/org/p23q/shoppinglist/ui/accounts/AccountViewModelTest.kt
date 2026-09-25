@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.accounts
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
@@ -68,10 +70,8 @@ class AccountViewModelTest {
 
     @After
     fun tearDown() {
-        viewModels.forEach { it.viewModelScope.cancel() }
-        if (::accounts.isInitialized) runBlocking { accounts.registry.flush() }
+        if (::db.isInitialized) closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
         if (::server.isInitialized) server.shutdown()
-        if (::db.isInitialized) db.close()
     }
 
     private fun newViewModel(id: String = TEST_ACCOUNT_ID, auth: AuthRepository = authRepository): AccountViewModel =

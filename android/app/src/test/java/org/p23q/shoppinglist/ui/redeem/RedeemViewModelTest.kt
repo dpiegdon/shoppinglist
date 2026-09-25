@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.redeem
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -59,12 +61,15 @@ class RedeemViewModelTest {
 
     @After
     fun tearDown() {
+        if (::db.isInitialized) closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
         if (::server.isInitialized) server.shutdown()
-        if (::db.isInitialized) db.close()
     }
+
+    private val viewModels = mutableListOf<RedeemViewModel>()
 
     private fun newViewModel(holder: PendingInviteHolder = PendingInviteHolder()): RedeemViewModel =
         RedeemViewModel(accounts.registry, accounts.sessions, accounts.syncer(syncEngine), holder, testListsRepo(db))
+            .also { viewModels += it }
 
     /** This phone's row of the list the server calls [serverId]. */
     private suspend fun localIdOf(serverId: String): String? = db.listDao().getByServerId(TEST_ACCOUNT_ID, serverId)?.localId

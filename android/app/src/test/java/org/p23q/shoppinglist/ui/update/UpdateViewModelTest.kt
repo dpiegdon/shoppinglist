@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.update
 
+import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -39,14 +40,14 @@ class UpdateViewModelTest {
     private lateinit var server: MockWebServer
     private lateinit var prefs: UpdatePrefsStore
     private lateinit var checker: UpdateChecker
-    private val dbs = mutableListOf<AppDb>()
+    private val allAccounts = mutableListOf<TestAccounts>()
 
-    private fun newDb(): AppDb =
+    private fun newAccounts(): TestAccounts = TestAccounts(
         Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .build()
-            .also { dbs += it }
+            .build(),
+    ).also { allAccounts += it }
 
     @Before
     fun setUp() = runTest(mainDispatcherRule.dispatcher) {
@@ -55,7 +56,7 @@ class UpdateViewModelTest {
 
         fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
         prefs = UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile("update_vm_prefs") })
-        val accounts = TestAccounts(newDb())
+        val accounts = newAccounts()
         accounts.add(server.url("/").toString())
         checker = UpdateChecker(accounts.registry, accounts.sessions, prefs)
     }
@@ -63,7 +64,7 @@ class UpdateViewModelTest {
     @After
     fun tearDown() {
         if (::server.isInitialized) server.shutdown()
-        dbs.forEach { it.close() }
+        allAccounts.forEach { closeWhenIdle(it.db, pumpMain = {}, registry = it.registry) }
     }
 
     @Test
@@ -120,7 +121,7 @@ class UpdateViewModelTest {
             // No server configured is the one thing that still stops a forced check. The About
             // screen renders that outcome as silence; the blocking screen must not, or it would
             // sit on its spinner with no way out.
-            val none = TestAccounts(newDb())
+            val none = newAccounts()
             val unconfigured = UpdateChecker(none.registry, none.sessions, prefs)
             val viewModel = UpdateViewModel(unconfigured, prefs)
 

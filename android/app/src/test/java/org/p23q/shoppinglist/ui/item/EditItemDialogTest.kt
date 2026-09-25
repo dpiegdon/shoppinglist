@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.item
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testListAccounts
@@ -88,6 +90,6 @@ class EditItemDialogTest {
 
         composeTestRule.onNodeWithText("Not saved to the list").assertExists()
         composeTestRule.onNodeWithText("That price isn't valid").assertExists()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

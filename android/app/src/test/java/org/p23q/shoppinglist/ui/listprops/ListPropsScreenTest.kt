@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.listprops
 
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
@@ -105,7 +107,7 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Leave this list?").assertExists()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
         assertEquals(false, left)
     }
 
@@ -151,7 +153,7 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals("Gate code: 4471", listsRepo.getById(listId)!!.notes.value)
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
@@ -194,7 +196,7 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals(true, duplicatedListId != null && duplicatedListId != listId)
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     /** T-302: the name is synced data, so it takes the copier's language; "(Copy)" was English on every phone. */
@@ -237,8 +239,7 @@ class ListPropsScreenTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { duplicatedListId != null }
 
         assertEquals("Groceries (Kopie)", listsRepo.getById(duplicatedListId!!)!!.name.value)
-        viewModel.viewModelScope.cancel()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
@@ -292,15 +293,14 @@ class ListPropsScreenTest {
 
         assertEquals("on-phone", listsRepo.getById(duplicatedListId!!)!!.accountId)
         composeTestRule.onNodeWithText("Copy to").assertDoesNotExist()
-        viewModel.viewModelScope.cancel()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     /**
      * An expenses list's settings, shown to [me] with [closeVotes] already cast. The roster and
      * votes normally arrive from the server on the list row.
      */
-    private suspend fun showExpenseSettings(closeVotes: List<String>): AppDb {
+    private suspend fun showExpenseSettings(closeVotes: List<String>): Pair<AppDb, ListPropsViewModel> {
         server = MockWebServer()
         server.start()
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
@@ -331,11 +331,11 @@ class ListPropsScreenTest {
 
         composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
         composeTestRule.waitForIdle()
-        return db
+        return db to viewModel
     }
     @Test
     fun `once I have agreed to close, the name and notes are locked and it says why (T-193)`() = runBlocking {
-        val db = showExpenseSettings(closeVotes = listOf(me))
+        val (db, viewModel) = showExpenseSettings(closeVotes = listOf(me))
 
         composeTestRule.onNodeWithText("You've agreed to close this list", substring = true).assertExists()
         composeTestRule.onNodeWithText("Trip").assertIsNotEnabled()
@@ -344,17 +344,17 @@ class ListPropsScreenTest {
             .performScrollTo()
             .assertIsNotEnabled()
         composeTestRule.onNodeWithText("Save notes").performScrollTo().assertIsNotEnabled()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
     fun `someone else's vote leaves my name and notes editable`() = runBlocking {
-        val db = showExpenseSettings(closeVotes = listOf("acct-other"))
+        val (db, viewModel) = showExpenseSettings(closeVotes = listOf("acct-other"))
 
         composeTestRule.onNodeWithText("You've agreed to close this list", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Trip").assertIsEnabled()
         composeTestRule.onNodeWithText("Save notes").performScrollTo().assertIsEnabled()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test
@@ -398,7 +398,6 @@ class ListPropsScreenTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { left }
 
         assertEquals(null, listsRepo.getById(listId))
-        viewModel.viewModelScope.cancel()
-        db.close()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

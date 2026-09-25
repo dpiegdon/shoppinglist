@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.listprops
 
+import org.p23q.shoppinglist.data.runCurrentOn
+import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.ListAccounts
@@ -97,10 +99,9 @@ class ListPropsViewModelTest {
     @After
     fun tearDown() {
         // Before the rule resets Dispatchers.Main (a rule's finished() runs after @After).
-        viewModels.forEach { it.viewModelScope.cancel() }
+        if (::db.isInitialized) closeWhenIdle(db, runCurrentOn(mainDispatcherRule.dispatcher), viewModels)
         viewModels.clear()
         if (::server.isInitialized) server.shutdown()
-        if (::db.isInitialized) db.close()
     }
 
     private fun newViewModel(): ListPropsViewModel = ListPropsViewModel(
