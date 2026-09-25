@@ -365,6 +365,7 @@
     <string name="account_remove_body">Sus listas y artículos se eliminan de este teléfono. La cuenta y sus listas siguen en el servidor y vuelven cuando añades la cuenta de nuevo.</string>
     <string name="account_remove_unpushed">Cambios aún no sincronizados, que se perderán: %1$d</string>
     <string name="account_remove_copy_hint">Para conservar una lista aquí, cópiala antes a otra cuenta.</string>
+    <string name="account_remove_copy_hint_local">Para conservar una lista aquí, cópiala antes a otra cuenta o a este teléfono.</string>
     <string name="account_remove_confirm">Quitar</string>
     <string name="account_delete_on_server">Eliminar cuenta en el servidor</string>
     <string name="login_resignin_title">Volver a iniciar sesión</string>

@@ -68,6 +68,8 @@ data class AccountUiState(
     val gone: AccountGone? = null,
     /** How many lists the account holds here; the local area can be removed only at 0 (T-293). */
     val listCount: Int? = null,
+    /** Whether the phone holds the local area, which a list to keep can be copied to (T-294). */
+    val hasLocalArea: Boolean = false,
 )
 
 /**
@@ -96,7 +98,7 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             registry.accounts.collect { accounts ->
                 val account = accounts.firstOrNull { it.id == accountId } ?: return@collect
-                _uiState.update { it.copy(account = account) }
+                _uiState.update { it.copy(account = account, hasLocalArea = accounts.any { other -> !other.isServer }) }
             }
         }
         viewModelScope.launch {

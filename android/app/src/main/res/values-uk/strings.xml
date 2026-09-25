@@ -365,6 +365,7 @@
     <string name="account_remove_body">Його списки й товари буде видалено з цього телефона. Обліковий запис і його списки залишаться на сервері й повернуться, коли ви знову додасте обліковий запис.</string>
     <string name="account_remove_unpushed">Ще не синхронізовані зміни, які буде втрачено: %1$d</string>
     <string name="account_remove_copy_hint">Щоб зберегти список тут, спершу скопіюйте його в інший обліковий запис.</string>
+    <string name="account_remove_copy_hint_local">Щоб зберегти список тут, спершу скопіюйте його в інший обліковий запис або на цей телефон.</string>
     <string name="account_remove_confirm">Прибрати</string>
     <string name="account_delete_on_server">Видалити обліковий запис на сервері</string>
     <string name="login_resignin_title">Увійти знову</string>

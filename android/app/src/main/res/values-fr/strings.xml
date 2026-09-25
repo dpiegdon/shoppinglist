@@ -365,6 +365,7 @@
     <string name="account_remove_body">Ses listes et articles sont supprimés de ce téléphone. Le compte et ses listes restent sur le serveur et reviennent quand vous ajoutez à nouveau le compte.</string>
     <string name="account_remove_unpushed">Modifications pas encore synchronisées, qui seront perdues : %1$d</string>
     <string name="account_remove_copy_hint">Pour garder une liste ici, copiez-la d\'abord dans un autre compte.</string>
+    <string name="account_remove_copy_hint_local">Pour garder une liste ici, copiez-la d\'abord dans un autre compte ou sur ce téléphone.</string>
     <string name="account_remove_confirm">Retirer</string>
     <string name="account_delete_on_server">Supprimer le compte sur le serveur</string>
     <string name="login_resignin_title">Se reconnecter</string>

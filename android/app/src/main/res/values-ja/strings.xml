@@ -365,6 +365,7 @@
     <string name="account_remove_body">このアカウントのリストとアイテムはこの端末から削除されます。アカウントとリストはサーバーに残り、アカウントを再び追加すると戻ります。</string>
     <string name="account_remove_unpushed">まだ同期されておらず失われる変更：%1$d</string>
     <string name="account_remove_copy_hint">リストをここに残すには、先に別のアカウントへコピーしてください。</string>
+    <string name="account_remove_copy_hint_local">リストをここに残すには、先に別のアカウントかこの端末へコピーしてください。</string>
     <string name="account_remove_confirm">削除</string>
     <string name="account_delete_on_server">サーバー上のアカウントを削除</string>
     <string name="login_resignin_title">再ログイン</string>

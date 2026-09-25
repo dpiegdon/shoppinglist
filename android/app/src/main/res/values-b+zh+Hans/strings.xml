@@ -365,6 +365,7 @@
     <string name="account_remove_body">其清单和物品将从此手机中删除。账户及其清单仍保留在服务器上，重新添加账户后即会恢复。</string>
     <string name="account_remove_unpushed">尚未同步、将会丢失的更改：%1$d</string>
     <string name="account_remove_copy_hint">如需在此保留某个清单，请先将其复制到另一个账户。</string>
+    <string name="account_remove_copy_hint_local">如需在此保留某个清单，请先将其复制到另一个账户或此手机上。</string>
     <string name="account_remove_confirm">移除</string>
     <string name="account_delete_on_server">在服务器上删除账户</string>
     <string name="login_resignin_title">重新登录</string>

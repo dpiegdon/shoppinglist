@@ -365,6 +365,7 @@
     <string name="account_remove_body">تُحذف قوائمه وعناصره من هذا الهاتف. يبقى الحساب وقوائمه على الخادم وتعود عند إضافة الحساب مرة أخرى.</string>
     <string name="account_remove_unpushed">تغييرات لم تتم مزامنتها بعد وستُفقد: %1$d</string>
     <string name="account_remove_copy_hint">للاحتفاظ بقائمة هنا، انسخها أولًا إلى حساب آخر.</string>
+    <string name="account_remove_copy_hint_local">للاحتفاظ بقائمة هنا، انسخها أولًا إلى حساب آخر أو إلى هذا الهاتف.</string>
     <string name="account_remove_confirm">إزالة</string>
     <string name="account_delete_on_server">حذف الحساب على الخادم</string>
     <string name="login_resignin_title">تسجيل الدخول مجددًا</string>

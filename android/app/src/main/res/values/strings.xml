@@ -427,6 +427,7 @@
     <string name="account_remove_body">Its lists and items are deleted from this phone. The account and its lists stay on the server and come back when you add the account again.</string>
     <string name="account_remove_unpushed">Changes not yet synced, which will be lost: %1$d</string>
     <string name="account_remove_copy_hint">To keep a list here, copy it to another account first.</string>
+    <string name="account_remove_copy_hint_local">To keep a list here, copy it to another account or to this phone first.</string>
     <string name="account_remove_confirm">Remove</string>
     <string name="account_delete_on_server">Delete account on server</string>
     <string name="login_resignin_title">Sign in again</string>

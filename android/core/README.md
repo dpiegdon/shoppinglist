@@ -101,7 +101,11 @@ interface and `:app` implements it and binds it in Hilt:
   in no account's pending figure.
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and
-  `setKind` returns false instead of converting. `SyncStatus.state` is the worst of the accounts,
+  `setKind` returns false instead of converting. `ListsRepo.duplicate(listId,
+  targetAccountId)` copies a list into any account on the phone, the local area
+  included, with fresh ids and clocks and no roster or close votes;
+  `ItemsRepo.duplicateForList` gives the copied items the target list's account.
+  A ledger is copied only within its own account. `SyncStatus.state` is the worst of the accounts,
   `SyncStatus.accounts` each one.
 
 `:app` also builds the database (`Room.databaseBuilder(context, AppDb::class.java, …)`)

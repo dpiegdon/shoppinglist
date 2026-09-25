@@ -265,7 +265,10 @@ fun AccountScreen(
                         )
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text(stringResource(R.string.account_remove_copy_hint))
+                    // A list to keep can go to another account, or to the local area when there is one (T-294).
+                    Text(
+                        stringResource(if (state.hasLocalArea) R.string.account_remove_copy_hint_local else R.string.account_remove_copy_hint),
+                    )
                 }
             },
             confirmButton = {

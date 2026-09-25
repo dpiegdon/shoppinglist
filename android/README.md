@@ -132,6 +132,19 @@ explains it and counts its lists, and it can be removed only once it holds
 none. While it is on the phone, servers that all need a newer app do not block
 the app: each outdated account's section says so instead.
 
+A list never moves between accounts, but it can be copied into another. List
+properties' *Duplicate* makes the copy at once when the phone holds one account;
+with several it asks *Copy to*, listing the list's own account first and then the
+others in the overview's order, the local area last. The copy is a new list in
+the chosen account, with fresh ids and field clocks, the name suffixed
+*(Copy)*, the category order, notes and kind, and every item that is not
+deleted, hidden shopping fields included. It has no members or close votes of
+its own until its server reports them. A copy into a server account goes out on
+that account's next sync; one into the local area never does. A ledger is not
+offered for copying, and `ListsRepo.duplicate` refuses to copy one into another
+account. Removing a server account says that a list to keep can be copied to
+another account first, or to this phone when the local area is there.
+
 ## Installing on a phone
 
 minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.

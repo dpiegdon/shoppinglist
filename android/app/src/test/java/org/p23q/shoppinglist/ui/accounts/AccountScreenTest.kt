@@ -196,6 +196,23 @@ class AccountScreenTest {
     }
 
     @Test
+    fun `with the local area on the phone, the copy hint names it too (T-294)`() = runBlocking<Unit> {
+        accounts.registry.addLocal()
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        awaitLoads(viewModel)
+        composeTestRule.onNodeWithTag("account-remove").performScrollTo().performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.isRemoveConfirmOpen
+        }
+
+        composeTestRule.onNodeWithText("To keep a list here, copy it to another account or to this phone first.").assertExists()
+        composeTestRule.onNodeWithText("To keep a list here, copy it to another account first.").assertDoesNotExist()
+    }
+
+    @Test
     fun `a signed-out account offers the sign-in`() = runBlocking<Unit> {
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(signedIn = false) }
         val viewModel = newViewModel()
