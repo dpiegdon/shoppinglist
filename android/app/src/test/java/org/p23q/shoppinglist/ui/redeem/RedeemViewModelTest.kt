@@ -131,17 +131,6 @@ class RedeemViewModelTest {
     }
 
     @Test
-    fun `pastedInvite finds the link in a pasted message and leaves a bare token alone (T-300)`() {
-        assertEquals("https://p23q.org/shopping/invite/abc.def", pastedInvite("Join my list: https://p23q.org/shopping/invite/abc.def"))
-        assertEquals("https://p23q.org/invite/abc.def", pastedInvite("Join my list (https://p23q.org/invite/abc.def). Thanks!"))
-        assertEquals(
-            "https://p23q.org/invite/abc.def",
-            pastedInvite("Get the app from https://p23q.org/app and join https://p23q.org/invite/abc.def"),
-        )
-        assertEquals("abc.def", pastedInvite("  abc.def \n"))
-    }
-
-    @Test
     fun `a pasted message with an invite link in it is redeemed as that link (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
         viewModel.onTokenChange("Join my list: https://p23q.org/shopping/invite/abc.def")

@@ -14,6 +14,7 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.normalizeServerUrl
 import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.core.pastedInvite
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.PendingInviteHolder
@@ -165,20 +166,6 @@ internal fun inviteServerUrl(link: String): String? {
     if (index < 0) return null
     return normalizeServerUrl(trimmed.substring(0, index + 1))
 }
-
-/**
- * The invite in pasted text (T-300): a whole message such as "Join my list: https://…/invite/T"
- * is pasted as readily as the link alone, so the first https URL in it, preferring one with an
- * `/invite/` segment, with any sentence punctuation after it dropped. Text with no https URL in it
- * (a bare token) is returned trimmed, unchanged.
- */
-internal fun pastedInvite(raw: String): String {
-    val urls = HTTPS_URL.findAll(raw).map { it.value.trimEnd(*URL_TRAILING_PUNCTUATION) }.toList()
-    return urls.firstOrNull { it.contains("/invite/") } ?: urls.firstOrNull() ?: raw.trim()
-}
-
-private val HTTPS_URL = Regex("""https://\S+""", RegexOption.IGNORE_CASE)
-private val URL_TRAILING_PUNCTUATION = charArrayOf('.', ',', ';', ':', '!', '?', ')', ']', '>', '"', '\'')
 
 /**
  * Accepts either a bare invite token or a full invite URL (T-71). Share links are

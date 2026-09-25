@@ -11,7 +11,7 @@ code portable. Everything that needs the platform lives in `:app`
 ```
 
 The tests that read the cross-client tables in `../../shared-test-cases/`
-(`ExpenseMathTest`, `CategoryCanonTest`, `NameOrderTest`) resolve them relative
+(`ExpenseMathTest`, `CategoryCanonTest`, `NameOrderTest`, `PastedInviteTest`) resolve them relative
 to this directory, the same depth as `app/`.
 
 ## What may be imported
