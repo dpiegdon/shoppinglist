@@ -203,6 +203,40 @@ fun coldStartDestination(accounts: List<AccountEntity>, notifiedListId: String?,
     }
 
 /**
+ * Where a successful sign-in on a form in [mode] goes: to [destination], or back where the form
+ * was opened from when there is none. The start screen leaves nothing behind it (T-300): opened
+ * for an invite it may be the second login entry on the stack, over the first one's.
+ */
+internal fun NavHostController.afterLogin(mode: LoginMode, destination: String?) {
+    when {
+        destination == null -> popBackStack()
+        mode == LoginMode.START -> navigate(destination) {
+            popUpTo(graph.id) { inclusive = true }
+            launchSingleTop = true
+        }
+        else -> navigate(destination) {
+            popUpTo(Routes.LOGIN_PATTERN) { inclusive = true }
+        }
+    }
+}
+
+/** Where the Account screen goes once its account has left this phone. */
+internal fun NavHostController.afterAccountGone(gone: AccountGone) {
+    when (gone) {
+        AccountGone.TO_ACCOUNTS -> navigate(Routes.ACCOUNTS) {
+            popUpTo(Routes.ACCOUNTS) { inclusive = true }
+            launchSingleTop = true
+        }
+        // The last server account went: nothing is left to show but the start, and the route is
+        // built, not the pattern, whose placeholders would fill the form's fields (T-300).
+        AccountGone.TO_START -> navigate(Routes.login(LoginMode.START)) {
+            popUpTo(graph.id) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+}
+
+/**
  * Go back to [listId] from one of its sub-screens — properties or the registry.
  *
  * Both of those show the list's own name in the top bar (see [liveListTitle]), so tapping that
@@ -288,15 +322,7 @@ fun ShoppingListNavHost(
                     selectedLocale = selectedLocale,
                     onSelectLocale = localeViewModel::setLocale,
                     onDownload = { url -> openDownload(context, url) },
-                    onLoginSuccess = { destination ->
-                        if (destination == null) {
-                            navController.popBackStack()
-                        } else {
-                            navController.navigate(destination) {
-                                popUpTo(Routes.LOGIN_PATTERN) { inclusive = true }
-                            }
-                        }
-                    },
+                    onLoginSuccess = { destination -> navController.afterLogin(mode, destination) },
                 )
             }
             if (mode == LoginMode.START) {
@@ -325,19 +351,7 @@ fun ShoppingListNavHost(
                 onTitleClick = { navController.popBackStack(Routes.ACCOUNTS, inclusive = false) },
             ) {
                 AccountScreen(
-                    onGone = { gone ->
-                        when (gone) {
-                            AccountGone.TO_ACCOUNTS -> navController.navigate(Routes.ACCOUNTS) {
-                                popUpTo(Routes.ACCOUNTS) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                            // The last server account went: nothing is left to show but the start.
-                            AccountGone.TO_START -> navController.navigate(Routes.LOGIN_PATTERN) {
-                                popUpTo(navController.graph.id) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    },
+                    onGone = { gone -> navController.afterAccountGone(gone) },
                     onSignIn = { navController.navigate(Routes.login(LoginMode.RESIGNIN, accountId = accountId)) },
                 )
             }

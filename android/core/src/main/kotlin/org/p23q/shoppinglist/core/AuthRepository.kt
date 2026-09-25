@@ -13,7 +13,6 @@ import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.p23q.shoppinglist.core.api.RegisterRequest
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.core.db.inTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import java.util.UUID
@@ -40,9 +39,34 @@ class AppTooOldException(val serverProtocol: Int, val downloadUrl: String?) :
 class NotATuppuServerException(cause: Throwable? = null) : Exception("no Tuppu server answered", cause)
 
 /**
- * Coordinates login/register/logout across the API, the accounts and the local mirror. An interface
- * (not just [AuthRepositoryImpl] directly) so the view models that use it can be tested with a
- * fake, no network/DB required.
+ * The account a sign-in is expected to be (T-300), which [AuthRepository.login] checks against the
+ * server's answer before it stores anything.
+ */
+sealed interface LoginExpectation {
+    /** Whoever signs in: the start screen, with no server account on the phone yet. */
+    data object Anyone : LoginExpectation
+
+    /** An account not already here and signed in: adding one beside the others. */
+    data object NewAccount : LoginExpectation
+
+    /** The account whose local id is [localId], signing in again after its server signed it out. */
+    data class Account(val localId: String) : LoginExpectation
+}
+
+/** An added account is already on this phone and signed in: there is nothing to add. */
+class AlreadyAddedException : Exception("that account is already on this phone")
+
+/** A re-sign-in answered with another account's credentials than the one signing in again. */
+class WrongAccountException : Exception("the credentials are another account's")
+
+/**
+ * Coordinates login, registration and removal across the API, the accounts and the local mirror.
+ * An interface (not just [AuthRepositoryImpl] directly) so the view models that use it can be
+ * tested with a fake, no network/DB required.
+ *
+ * There is no sign-out: a server signs an account out (a `401`, handled in
+ * [org.p23q.shoppinglist.core.account.AccountSessions]), and the phone keeps its rows until the
+ * account is removed.
  */
 interface AuthRepository {
     /**
@@ -54,6 +78,7 @@ interface AuthRepository {
     /**
      * Signs in at [serverUrl] and returns the local id of the account: the existing row for that
      * server and server-side account, signed in again with its lists as they are, or a new row.
+     * Every other account stays as it is.
      *
      * Before the first sign-in to a server whose protocol this device does not know yet, asks
      * `/app-version` — the first request that server gets — and throws, storing nothing:
@@ -61,56 +86,29 @@ interface AuthRepository {
      * server names no protocol or one below [MIN_SERVER_PROTOCOL]; [AppTooOldException] if it
      * names one above [PROTOCOL_VERSION].
      *
-     * Unless [keepOtherAccounts], every other server account is removed once the server has
-     * accepted the credentials and before this one is stored: whoever else this device held lists
-     * for is not the person who just signed in, and their mirror goes (T-260). Doing it here, in
-     * one step with the sign-in, leaves no moment in which the new account sits signed in beside
-     * the previous person's lists, whatever fails afterwards. Local accounts are never removed.
+     * Once the server has accepted the credentials, the answer is checked against [expect], and a
+     * mismatch revokes the session the server just opened and throws, storing nothing:
+     * [AlreadyAddedException] when [LoginExpectation.NewAccount] matched a row that is signed
+     * in; [WrongAccountException] when [LoginExpectation.Account] got another account than that
+     * row's. A row that records no server-side account (a 3.1.0 session that never said whose
+     * lists it held) takes on the one that signs in again for it, and the server URL it was given.
      *
      * The account's default currency is read afterwards, best-effort: a failure there does not
-     * undo a sign-in the server has already accepted.
+     * undo a sign-in the server has already accepted, and the Account screen reads it again.
      */
     suspend fun login(
         serverUrl: String,
         email: String,
         password: String,
         allowSelfSignedCerts: Boolean = false,
-        keepOtherAccounts: Boolean = false,
+        expect: LoginExpectation = LoginExpectation.Anyone,
     ): String
-
-    /**
-     * Best-effort server-side token revoke, then always clears the local session regardless.
-     * Unpushed edits survive for [login] to judge, exactly as on a forced logout — see
-     * [clearLocalSession]; logging out is not a reason to throw away edits that never went out.
-     */
-    suspend fun logout(accountId: String)
-
-    /**
-     * Signs one account out WITHOUT contacting the server. For a forced logout after the server
-     * has already rejected our token (401): the token is dead, so a server call is pointless.
-     *
-     * Keeps whatever of the account's lists is still unpushed, and drops the rest (T-260), along
-     * with the token; the row stays, `signedIn = false`, and says whose rows those are. This runs
-     * on ANY 401 carrying a bearer token, which per the Wire Contract includes an idle-expired
-     * session and a password change on another device (that one revokes every other session by
-     * design): edit the list offline, change the password on the web, foreground the phone, and
-     * the unpushed queue must still be there when the same account signs in again.
-     *
-     * What is dropped is only what the server can send again: the cursor is reset, so the next
-     * login re-pulls from 0 regardless, and keeping a synced copy on disk until then would buy
-     * nothing and leave a signed-out account holding more than it needs to. Other accounts are
-     * not touched.
-     */
-    suspend fun clearLocalSession(accountId: String)
 
     /**
      * Removes the account from this device: its lists, their items, its token and its row. No
      * other account's rows or cursor are touched: a list two accounts share is a row of each.
      */
     suspend fun removeAccount(accountId: String)
-
-    /** Removes every server account but [keep]; local accounts stay. [login] does this itself. */
-    suspend fun removeOtherAccounts(keep: String)
 
     /**
      * Whether the server at [serverUrl] currently accepts new accounts (T-276), checked up front on
@@ -147,7 +145,7 @@ class AuthRepositoryImpl(
         email: String,
         password: String,
         allowSelfSignedCerts: Boolean,
-        keepOtherAccounts: Boolean,
+        expect: LoginExpectation,
     ): String {
         val url = normalizeServerUrl(serverUrl)
         val protocol = checkServerProtocol(url, allowSelfSignedCerts)
@@ -157,14 +155,40 @@ class AuthRepositoryImpl(
         // The same server and the same account: the lists this device already holds for it are its
         // own, unpushed edits and all, and the cursor-0 pull that follows reconciles them (T-260).
         registry.load()
-        val existing = registry.find(url, response.accountId)
-        // Before the new account is stored, not after: see the KDoc.
-        if (!keepOtherAccounts) removeOtherServerAccounts(keep = existing?.id)
+        val matched = registry.find(url, response.accountId)
+        // Checked before anything of the matched row changes: a refused sign-in leaves its token,
+        // cursor and flags, and the server session they belong to, as they were (T-300).
+        val existing = when (expect) {
+            LoginExpectation.Anyone -> matched
+            LoginExpectation.NewAccount -> {
+                if (matched?.signedIn == true) refuse(url, allowSelfSignedCerts, response.token, AlreadyAddedException())
+                matched
+            }
+            is LoginExpectation.Account -> {
+                val row = registry.get(expect.localId)
+                when {
+                    // Gone meanwhile: nothing to sign in again, so as if adding it.
+                    row == null -> {
+                        if (matched?.signedIn == true) refuse(url, allowSelfSignedCerts, response.token, AlreadyAddedException())
+                        matched
+                    }
+                    row.accountId == response.accountId -> row
+                    row.accountId != null -> refuse(url, allowSelfSignedCerts, response.token, WrongAccountException())
+                    // A migrated row whose owner was never recorded (T-300): the account that signs
+                    // in for it takes it, unless that account is already a row of its own.
+                    matched != null -> refuse(url, allowSelfSignedCerts, response.token, AlreadyAddedException())
+                    else -> row
+                }
+            }
+        }
         val id = existing?.id ?: UUID.randomUUID().toString()
         secrets.setToken(id, response.token)
         if (existing != null) {
             registry.update(id) {
                 it.copy(
+                    serverUrl = url,
+                    accountId = response.accountId,
+                    label = if (it.serverUrl == url) it.label else serverLabel(url),
                     email = response.email,
                     isAdmin = response.isAdmin,
                     signedIn = true,
@@ -193,11 +217,26 @@ class AuthRepositoryImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Best-effort; the next Settings visit reads it again.
+            // Best-effort; the Account screen reads it again with the initials.
             return id
         }
         registry.update(id) { it.copy(defaultCurrency = currency) }
         return id
+    }
+
+    /**
+     * Ends the session the server just opened for a sign-in that is refused here, best-effort,
+     * and throws [reason]. Its token was never stored, so only the unbound client can carry it.
+     */
+    private suspend fun refuse(url: String, allowSelfSignedCerts: Boolean, token: String, reason: Exception): Nothing {
+        try {
+            sessions.unbound(url, allowSelfSignedCerts).logout("Bearer $token")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The session then ends on the server's idle timeout.
+        }
+        throw reason
     }
 
     /**
@@ -230,29 +269,8 @@ class AuthRepositoryImpl(
         return protocol
     }
 
-    override suspend fun logout(accountId: String) {
-        runCatching { sessions.get(accountId).api.logout() }
-        clearLocalSession(accountId)
-    }
-
     override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean =
         sessions.unbound(normalizeServerUrl(serverUrl), allowSelfSignedCerts).registrationStatus().allowRegistration
-
-    override suspend fun clearLocalSession(accountId: String) = registry.withAccountLock(accountId) {
-        clearLocalSessionLocked(accountId)
-    }
-
-    private suspend fun clearLocalSessionLocked(accountId: String) {
-        secrets.setToken(accountId, null)
-        registry.update(accountId) { it.copy(signedIn = false, isAdmin = false, syncCursor = 0) } ?: return
-        // Unpushed work is the only thing worth keeping across a logout; see the KDoc above. Items
-        // first, so a clean list that still holds an unpushed item stays with it.
-        appDb.inTransaction {
-            appDb.itemDao().deleteSyncedRowsForAccount(accountId)
-            appDb.listDao().deleteSyncedRowsForAccount(accountId)
-        }
-        forgetLastOpenedListOf(accountId)
-    }
 
     override suspend fun removeAccount(accountId: String) {
         // Under the account's lock, so no sync of it is between its request and its merge.
@@ -262,12 +280,6 @@ class AuthRepositoryImpl(
             sessions.drop(accountId)
             forgetLastOpenedListOf(accountId)
         }
-    }
-
-    override suspend fun removeOtherAccounts(keep: String) = removeOtherServerAccounts(keep)
-
-    private suspend fun removeOtherServerAccounts(keep: String?) {
-        registry.load().filter { it.isServer && it.id != keep }.forEach { removeAccount(it.id) }
     }
 
     /** A cold start must not reopen a list this account no longer shows; another account's is kept. */

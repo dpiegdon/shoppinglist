@@ -14,10 +14,10 @@ import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.LoginExpectation
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
 import org.p23q.shoppinglist.data.FakeLastServerAddress
-import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
@@ -36,9 +36,7 @@ class LoginViewModelTest {
         var loginCalled = false
         var loginUrl: String? = null
         var loginAllowedSelfSigned: Boolean? = null
-        var loggedOut: String? = null
-        var keptOnly: String? = null
-        var loginKeptOthers: Boolean? = null
+        var expected: LoginExpectation? = null
         /** How often the up-front registration check asked (T-287): must be zero on a fresh install. */
         var registrationChecks = 0
 
@@ -46,26 +44,16 @@ class LoginViewModelTest {
             registerCalled = true
         }
 
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean): String {
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, expect: LoginExpectation): String {
             loginCalled = true
             loginUrl = serverUrl
             loginAllowedSelfSigned = allowSelfSignedCerts
-            loginKeptOthers = keepOtherAccounts
+            expected = expect
             onLogin(email, password)
             return "signed-in-account"
         }
 
-        override suspend fun logout(accountId: String) {
-            loggedOut = accountId
-        }
-
-        override suspend fun clearLocalSession(accountId: String) {}
-
         override suspend fun removeAccount(accountId: String) {}
-
-        override suspend fun removeOtherAccounts(keep: String) {
-            keptOnly = keep
-        }
 
         override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean {
             registrationChecks++
@@ -303,7 +291,7 @@ class LoginViewModelTest {
 
     @Test
     fun `a pending invite routes startDestinationAfterLogin into redeem and is consumed once`() = runTest(mainDispatcherRule.dispatcher) {
-        val holder = org.p23q.shoppinglist.data.PendingInviteHolder().apply { stash("invite-xyz", null) }
+        val holder = org.p23q.shoppinglist.data.PendingInviteHolder().apply { stash("invite-xyz", null, null, LoginMode.START) }
         val repo = FakeAuthRepository(lastOpened = "list-42")
         val viewModel = LoginViewModel(repo, noAccount(), serverConfig, holder, org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -367,7 +355,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `signing in keeps every other account (T-292)`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `the start screen signs in whoever it is given (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
         val repo = FakeAuthRepository()
         val viewModel = LoginViewModel(repo, noAccount(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
 
@@ -376,8 +364,7 @@ class LoginViewModelTest {
         viewModel.onPasswordChange("hunter2")
         viewModel.submit()?.join()
 
-        assertEquals(true, repo.loginKeptOthers)
-        assertNull(repo.keptOnly)
+        assertEquals(LoginExpectation.Anyone, repo.expected)
     }
 
     @Test

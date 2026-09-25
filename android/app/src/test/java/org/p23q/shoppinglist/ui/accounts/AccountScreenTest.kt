@@ -37,7 +37,6 @@ import org.p23q.shoppinglist.data.testListsRepo
 import org.p23q.shoppinglist.ui.LocalizedContent
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** One account's screen (T-292): what was the account half of Settings, and removing it. */
 @RunWith(RobolectricTestRunner::class)

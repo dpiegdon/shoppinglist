@@ -1,6 +1,9 @@
 package org.p23q.shoppinglist.ui.login
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -12,6 +15,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.AlreadyAddedException
+import org.p23q.shoppinglist.core.LoginExpectation
+import org.p23q.shoppinglist.core.WrongAccountException
 import org.p23q.shoppinglist.data.FakeLastServerAddress
 import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.RecordingAuthRepository
@@ -26,14 +32,23 @@ class LoginModesTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private class Repo(private val signsInAs: String) : RecordingAuthRepository() {
+    private class Repo(private val signsInAs: String, private val refusal: Exception? = null) : RecordingAuthRepository() {
         var loginUrl: String? = null
-        var keptOthers: Boolean? = null
+        var expected: LoginExpectation? = null
 
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean): String {
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, expect: LoginExpectation): String {
             loginUrl = serverUrl
-            keptOthers = keepOtherAccounts
+            expected = expect
+            refusal?.let { throw it }
             return signsInAs
+        }
+
+        /** The addresses asked whether they accept new accounts. */
+        val registrationChecks = mutableListOf<String>()
+
+        override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean {
+            registrationChecks += serverUrl
+            return true
         }
 
         override fun lastOpenedListId(): String? = "list-42"
@@ -78,7 +93,7 @@ class LoginModesTest {
         viewModel.submit()?.join()
 
         assertTrue(viewModel.uiState.value.loginSucceeded)
-        assertEquals(true, repo.keptOthers)
+        assertEquals(LoginExpectation.NewAccount, repo.expected)
         assertTrue(repo.removed.isEmpty())
         // Null: back to the Accounts screen, not on to the overview.
         assertNull(viewModel.startDestinationAfterLogin())
@@ -86,7 +101,7 @@ class LoginModesTest {
 
     @Test
     fun `add mode opened for an invite's server prefills that server, and redeems after signing in`() = runTest(mainDispatcherRule.dispatcher) {
-        pendingInvites.stash("invite-xyz", null)
+        pendingInvites.stash("invite-xyz", null, null, LoginMode.ADD)
         val viewModel = viewModel(
             Repo("new"),
             Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg,
@@ -101,7 +116,7 @@ class LoginModesTest {
 
     @Test
     fun `adding an account that is already here and signed in is refused with a message`() = runTest(mainDispatcherRule.dispatcher) {
-        val viewModel = viewModel(Repo(signsInAs = "prod"), Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg)
+        val viewModel = viewModel(Repo(signsInAs = "prod", refusal = AlreadyAddedException()), Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg)
         viewModel.uiState.first { it.serverUrl.isNotBlank() }
         viewModel.onServerUrlChange("https://lists.example.test/")
         viewModel.fillIn()
@@ -141,7 +156,7 @@ class LoginModesTest {
 
         assertEquals("https://lists.example.test/stage/", repo.loginUrl)
         assertTrue(viewModel.uiState.value.loginSucceeded)
-        assertEquals(true, repo.keptOthers)
+        assertEquals(LoginExpectation.Account("stage"), repo.expected)
         assertNull(viewModel.startDestinationAfterLogin())
     }
 
@@ -153,6 +168,124 @@ class LoginModesTest {
         advanceUntilIdle()
         assertEquals("https://lists.example.test/stage/", viewModel.uiState.value.serverUrl)
         assertTrue(viewModel.uiState.value.allowSelfSignedCerts)
+    }
+
+    @Test
+    fun `a re-sign-in with another account's credentials says so (T-300)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = viewModel(
+            Repo(signsInAs = "other", refusal = WrongAccountException()),
+            Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg,
+            Routes.ACCOUNT_ID_ARG to "stage",
+        )
+        viewModel.onPasswordChange("hunter2")
+
+        viewModel.submit()?.join()
+
+        assertFalse(viewModel.uiState.value.loginSucceeded)
+        assertEquals(UiText.res(R.string.login_msg_wrong_account), viewModel.uiState.value.errorMessage)
+    }
+
+    /** T-300: 3.1.0's last typed address may not be the server of the session it migrated. */
+    @Test
+    fun `a re-sign-in for a row with no recorded account leaves its server editable`() = runTest(mainDispatcherRule.dispatcher) {
+        known = listOf(prod, stage.copy(accountId = null))
+        val repo = Repo(signsInAs = "stage")
+        val viewModel = viewModel(repo, Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+
+        assertFalse(viewModel.uiState.value.serverUrlLocked)
+        viewModel.onServerUrlChange("https://real.example.test/")
+        viewModel.onPasswordChange("hunter2")
+        viewModel.submit()?.join()
+
+        assertEquals("https://real.example.test/", repo.loginUrl)
+        assertEquals(LoginExpectation.Account("stage"), repo.expected)
+    }
+
+    /** T-300: the check asked the last typed server while the form showed the invite's. */
+    @Test
+    fun `add mode opened for an invite asks no server about registration before one is confirmed`() = runTest(mainDispatcherRule.dispatcher) {
+        val repo = Repo("new")
+        viewModel(repo, Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg, Routes.SERVER_URL_ARG to "https://invite.example.test/lists/")
+
+        advanceUntilIdle()
+
+        assertEquals(emptyList<String>(), repo.registrationChecks)
+    }
+
+    @Test
+    fun `the registration check asks the form's address once it has been submitted`() = runTest(mainDispatcherRule.dispatcher) {
+        serverConfig.url = "https://invite.example.test/lists/"
+        val repo = Repo("new")
+        viewModel(repo, Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg, Routes.SERVER_URL_ARG to "https://invite.example.test/lists/")
+
+        advanceUntilIdle()
+
+        assertEquals(listOf("https://invite.example.test/lists/"), repo.registrationChecks)
+    }
+
+    /** T-300: the redeem matched the link's prefix again and looped back to "already added". */
+    @Test
+    fun `an invite parked for an added account resumes into the account that signed in`() = runTest(mainDispatcherRule.dispatcher) {
+        val link = "https://invite.example.test/lists/invite/invite-xyz"
+        pendingInvites.stash("invite-xyz", link, null, LoginMode.ADD)
+        val viewModel = viewModel(Repo("new"), Routes.LOGIN_MODE_ARG to LoginMode.ADD.arg, Routes.SERVER_URL_ARG to "https://invite.example.test/lists/")
+        viewModel.uiState.first { it.serverUrl.isNotBlank() }
+        viewModel.fillIn()
+
+        viewModel.submit()?.join()
+
+        assertEquals(Routes.redeem("invite-xyz", link, "new"), viewModel.startDestinationAfterLogin())
+    }
+
+    /** A view model that can be cleared, as leaving its screen clears it. */
+    private fun clearable(repo: Repo, vararg args: Pair<String, String>): Pair<LoginViewModel, ViewModelStore> {
+        val store = ViewModelStore()
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = viewModel(repo, *args) as T
+        }
+        return ViewModelProvider(store, factory)[LoginViewModel::class.java] to store
+    }
+
+    /** T-300: a parked invite outlived the form and took over the next, unrelated sign-in. */
+    @Test
+    fun `leaving the form without signing in drops the parked invite`() = runTest(mainDispatcherRule.dispatcher) {
+        pendingInvites.stash("invite-xyz", null, "stage", LoginMode.RESIGNIN)
+        val (_, store) = clearable(Repo("stage"), Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+
+        store.clear()
+
+        assertNull(pendingInvites.consume())
+    }
+
+    @Test
+    fun `signing in keeps the parked invite for the destination after it`() = runTest(mainDispatcherRule.dispatcher) {
+        pendingInvites.stash("invite-xyz", null, "stage", LoginMode.RESIGNIN)
+        val (viewModel, store) = clearable(Repo("stage"), Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+        viewModel.onPasswordChange("hunter2")
+        viewModel.submit()?.join()
+
+        store.clear()
+
+        assertEquals(Routes.redeem("invite-xyz", null, "stage"), viewModel.startDestinationAfterLogin())
+    }
+
+    @Test
+    fun `an invite parked for another account's re-sign-in is not resumed`() = runTest(mainDispatcherRule.dispatcher) {
+        pendingInvites.stash("invite-xyz", null, "prod", LoginMode.RESIGNIN)
+        val viewModel = viewModel(Repo("stage"), Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+        viewModel.onPasswordChange("hunter2")
+        viewModel.submit()?.join()
+
+        assertNull(viewModel.startDestinationAfterLogin())
+    }
+
+    @Test
+    fun `an invite parked for a re-sign-in is not resumed by the start screen`() = runTest(mainDispatcherRule.dispatcher) {
+        pendingInvites.stash("invite-xyz", null, "stage", LoginMode.RESIGNIN)
+        val viewModel = viewModel(Repo("new"))
+
+        assertEquals("list/list-42", viewModel.startDestinationAfterLogin())
     }
 
     @Test

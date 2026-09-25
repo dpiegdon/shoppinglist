@@ -4,6 +4,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
+import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -60,8 +61,13 @@ interface Api {
     @DELETE("api/v1/lists/{listId}/close-votes")
     suspend fun withdrawCloseVote(@Path("listId") listId: String): CloseVoteStateDto
 
+    /**
+     * Ends the session [authorization] (`Bearer <token>`) names. Only the unbound client sends it,
+     * for a sign-in the phone refuses after the server accepted it (T-300): nothing signs out a
+     * stored session, whose client would add its own token beside this one.
+     */
     @POST("api/v1/logout")
-    suspend fun logout()
+    suspend fun logout(@Header("Authorization") authorization: String)
 
     /**
      * The app version this server carries (T-135). Unauthenticated. A 404 means "no app package

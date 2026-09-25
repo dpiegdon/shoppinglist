@@ -9,12 +9,6 @@
   has to agree with a number.
 -->
 <resources>
-    <!-- Overview by account (T-292) -->
-    <string name="overview_account_signed_out">Sesión cerrada. Toca para iniciar sesión.</string>
-    <string name="overview_account_outdated">Este servidor necesita una versión más reciente de la aplicación.</string>
-    <string name="overview_new_list_account">Cuenta</string>
-    <string name="redeem_choose_account">¿Unirse con qué cuenta?</string>
-
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_ok">Aceptar</string>
@@ -208,7 +202,6 @@
     <string name="settings_msg_password_required">La contraseña es obligatoria</string>
     <string name="settings_msg_delete_password_incorrect">La contraseña no es correcta</string>
     <string name="settings_msg_delete_failed">No se ha podido eliminar la cuenta</string>
-    <string name="settings_msg_offline">No se ha podido conectar con el servidor</string>
     <string name="settings_msg_no_crash_logs">Aún no hay registros de fallos</string>
     <string name="error_offline">No se ha podido conectar con el servidor</string>
     <string name="error_offline_retry">Estás sin conexión; inténtalo de nuevo cuando vuelvas a tenerla</string>
@@ -350,6 +343,12 @@
     <string name="expense_error_frozen">Los importes de %1$s están fijados: esa persona aceptó cerrar la lista o la abandonó.</string>
     <string name="expense_not_saved">No se guardó en la lista</string>
 
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Sesión cerrada. Toca para iniciar sesión.</string>
+    <string name="overview_account_outdated">Este servidor necesita una versión más reciente de la aplicación.</string>
+    <string name="overview_new_list_account">Cuenta</string>
+    <string name="redeem_choose_account">¿Unirse con qué cuenta?</string>
+
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Cuentas</string>
     <string name="accounts_add">Añadir cuenta</string>
@@ -370,4 +369,7 @@
     <string name="login_resignin_title">Volver a iniciar sesión</string>
     <string name="login_resignin_help">El servidor cerró la sesión de esta cuenta. Vuelve a iniciar sesión para sincronizar sus listas.</string>
     <string name="login_msg_already_added">Esta cuenta ya está en este teléfono.</string>
+
+    <!-- Login and accounts follow-ups (T-300) -->
+    <string name="login_msg_wrong_account">Estas son las credenciales de otra cuenta.</string>
 </resources>

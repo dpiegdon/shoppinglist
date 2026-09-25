@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.data
 import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.LoginExpectation
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
@@ -155,27 +156,15 @@ class TestServerAddress {
 /** An [AuthRepository] that records what it was asked and does nothing else. */
 open class RecordingAuthRepository : AuthRepository {
     val removed = mutableListOf<String>()
-    val loggedOut = mutableListOf<String>()
-    val clearedLocally = mutableListOf<String>()
 
     override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
 
-    override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean): String =
+    override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, expect: LoginExpectation): String =
         TEST_ACCOUNT_ID
-
-    override suspend fun logout(accountId: String) {
-        loggedOut += accountId
-    }
-
-    override suspend fun clearLocalSession(accountId: String) {
-        clearedLocally += accountId
-    }
 
     override suspend fun removeAccount(accountId: String) {
         removed += accountId
     }
-
-    override suspend fun removeOtherAccounts(keep: String) {}
 
     override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = true
 

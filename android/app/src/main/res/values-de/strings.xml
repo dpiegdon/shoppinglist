@@ -9,12 +9,6 @@
   has to agree with a number.
 -->
 <resources>
-    <!-- Overview by account (T-292) -->
-    <string name="overview_account_signed_out">Abgemeldet. Zum Anmelden tippen.</string>
-    <string name="overview_account_outdated">Dieser Server braucht eine neuere App.</string>
-    <string name="overview_new_list_account">Konto</string>
-    <string name="redeem_choose_account">Mit welchem Konto beitreten?</string>
-
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_ok">OK</string>
@@ -208,7 +202,6 @@
     <string name="settings_msg_password_required">Passwort ist erforderlich</string>
     <string name="settings_msg_delete_password_incorrect">Passwort ist falsch</string>
     <string name="settings_msg_delete_failed">Konto konnte nicht gelöscht werden</string>
-    <string name="settings_msg_offline">Server nicht erreichbar</string>
     <string name="settings_msg_no_crash_logs">Noch keine Absturzprotokolle</string>
     <string name="error_offline">Server nicht erreichbar</string>
     <string name="error_offline_retry">Du bist offline; versuche es erneut, sobald du verbunden bist</string>
@@ -350,6 +343,12 @@
     <string name="expense_error_frozen">Die Beträge von %1$s sind festgeschrieben: Die Person hat dem Abschluss zugestimmt oder die Liste verlassen.</string>
     <string name="expense_not_saved">Nicht in der Liste gespeichert</string>
 
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Abgemeldet. Zum Anmelden tippen.</string>
+    <string name="overview_account_outdated">Dieser Server braucht eine neuere App.</string>
+    <string name="overview_new_list_account">Konto</string>
+    <string name="redeem_choose_account">Mit welchem Konto beitreten?</string>
+
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Konten</string>
     <string name="accounts_add">Konto hinzufügen</string>
@@ -370,4 +369,7 @@
     <string name="login_resignin_title">Erneut anmelden</string>
     <string name="login_resignin_help">Der Server hat dieses Konto abgemeldet. Melde dich erneut an, um seine Listen zu synchronisieren.</string>
     <string name="login_msg_already_added">Dieses Konto ist schon auf diesem Telefon.</string>
+
+    <!-- Login and accounts follow-ups (T-300) -->
+    <string name="login_msg_wrong_account">Das sind die Zugangsdaten eines anderen Kontos.</string>
 </resources>

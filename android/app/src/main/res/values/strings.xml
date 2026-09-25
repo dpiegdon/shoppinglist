@@ -9,11 +9,6 @@
   nothing extra beyond translation.
 -->
 <resources>
-    <!-- Overview by account (T-292) -->
-    <string name="overview_account_signed_out">Signed out. Tap to sign in.</string>
-    <string name="overview_account_outdated">This server needs a newer app.</string>
-    <string name="overview_new_list_account">Account</string>
-    <string name="redeem_choose_account">Join with which account?</string>
     <string name="app_name">Tuppu</string>
 
     <!-- generic actions, reused across screens -->
@@ -254,7 +249,6 @@
     <string name="settings_msg_password_required">Password is required</string>
     <string name="settings_msg_delete_password_incorrect">Password is incorrect</string>
     <string name="settings_msg_delete_failed">Couldn\'t delete account</string>
-    <string name="settings_msg_offline">Couldn\'t reach the server</string>
     <string name="settings_msg_no_crash_logs">No crash logs yet</string>
 
     <!-- shared error messages -->
@@ -411,6 +405,12 @@
     <string name="expense_error_frozen">The amounts of %1$s are fixed: they have agreed to close the list, or have left it.</string>
     <string name="expense_not_saved">Not saved to the list</string>
 
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Signed out. Tap to sign in.</string>
+    <string name="overview_account_outdated">This server needs a newer app.</string>
+    <string name="overview_new_list_account">Account</string>
+    <string name="redeem_choose_account">Join with which account?</string>
+
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Accounts</string>
     <string name="accounts_add">Add account</string>
@@ -431,4 +431,7 @@
     <string name="login_resignin_title">Sign in again</string>
     <string name="login_resignin_help">The server signed this account out. Sign in again to sync its lists.</string>
     <string name="login_msg_already_added">This account is already on this phone.</string>
+
+    <!-- Login and accounts follow-ups (T-300) -->
+    <string name="login_msg_wrong_account">These are another account\'s credentials.</string>
 </resources>

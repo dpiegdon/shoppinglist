@@ -17,6 +17,7 @@ import org.junit.Test
 import org.p23q.shoppinglist.ui.Routes
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
+import org.p23q.shoppinglist.core.LoginExpectation
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -30,14 +31,11 @@ class LoginScreenTest {
         private val onLogin: () -> Unit = {},
     ) : AuthRepository {
         override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
-        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, keepOtherAccounts: Boolean): String {
+        override suspend fun login(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean, expect: LoginExpectation): String {
             onLogin()
             return ""
         }
-        override suspend fun logout(accountId: String) {}
-        override suspend fun clearLocalSession(accountId: String) {}
         override suspend fun removeAccount(accountId: String) {}
-        override suspend fun removeOtherAccounts(keep: String) {}
         override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = registrationAllowed
         override fun lastOpenedListId(): String? = null
     }

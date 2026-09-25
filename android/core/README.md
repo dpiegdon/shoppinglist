@@ -71,21 +71,27 @@ interface and `:app` implements it and binds it in Hilt:
   removal.
 - `account/AccountSessions` builds one `AccountSession` per server account, on
   first use: an `Api` whose interceptors carry that account's token and report to
-  that account (a `401` to the account's current token deletes it, sets
-  `signedIn = false` and emits on `forcedLogout`; `426` sets `outdated`, an
-  accepted request clears it), and the account's share of `SyncStatus`. Nothing in the UI acts on
-  `forcedLogout`: the account's row says it is signed out, and its lists stay.
+  that account (a `401` to the account's current token deletes it and sets
+  `signedIn = false`: the row says it is signed out, and its lists stay; `426`
+  sets `outdated`, an accepted request clears it), and the account's share of
+  `SyncStatus`.
   `updateRequired` is true when every server account is outdated.
   `unbound()` is a token-less client that reports to no account, for what is
   asked before an account exists and for `/app-version`.
-- `AuthRepository` creates or re-activates an account on login and, unless asked
-  to keep them, removes every other server account in the same step. Before
-  that it asks `/app-version` for the server's protocol whenever it holds none
-  between `MIN_SERVER_PROTOCOL` and `PROTOCOL_VERSION` (`api/Protocol.kt`): the
-  server says it in the `200` and in the `no_app_package` `404`. A server below
-  the floor, one above this build and an answer that is not a Tuppu server's are
-  each their own exception, for the login screen to name. A logout signs one
-  account out and keeps its unpushed rows.
+- `AuthRepository` creates or re-activates an account on login and keeps every
+  other account. The login says whom it expects (`LoginExpectation`): adding an
+  account refuses one that is here and signed in (`AlreadyAddedException`), and
+  signing an account in again refuses another account's credentials
+  (`WrongAccountException`); either is decided before the matched row changes,
+  and ends the session the server just opened. A row that records no
+  server-side account (migrated from 3.1.0) takes on the one that signs in again
+  for it. Before all that it asks `/app-version` for the server's protocol
+  whenever it holds none between `MIN_SERVER_PROTOCOL` and `PROTOCOL_VERSION`
+  (`api/Protocol.kt`): the server says it in the `200` and in the
+  `no_app_package` `404`. A server below the floor, one above this build and an
+  answer that is not a Tuppu server's are each their own exception, for the
+  login screen to name. There is no sign-out; removing an account deletes its
+  rows.
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
   that has a token (one without is signed out); `syncAccount()` is one, under
   its account lock. `SyncStatus.state` is the worst of the accounts,

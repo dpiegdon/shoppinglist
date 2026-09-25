@@ -99,8 +99,9 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
  * ServerConfig: server URL, cursor, currency, ignored invites and the certificate opt-in move onto
  * it, `signedIn` is whether a token exists, and the token is stored again under the row's id. A
  * database that holds lists but none of that still gets a row, signed out, so that every list has
- * an owner; the next login replaces it as it would have wiped the mirror (T-260). With neither
- * there are no lists and nothing is inserted.
+ * an owner. That row records no server-side account: the first sign-in from its banner adopts
+ * whichever account signs in there, and the server URL typed for it, which stays editable
+ * (T-300). With neither there are no lists and nothing is inserted.
  *
  * An item whose list is gone gets a stub list, owned by that account (T-298). 3.1.0's logout and
  * its full-resync re-base deleted every clean list, including one that still held an unpushed

@@ -9,8 +9,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,9 +18,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.AuthRepositoryImpl
+import org.p23q.shoppinglist.core.AlreadyAddedException
 import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.LoginExpectation
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
+import org.p23q.shoppinglist.core.WrongAccountException
 import org.p23q.shoppinglist.core.api.MIN_SERVER_PROTOCOL
 import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.p23q.shoppinglist.core.db.AccountEntity
@@ -236,7 +237,7 @@ class AuthRepositoryTest {
     fun `a server whose protocol is known is not asked again`() = runTest {
         enqueueLogin(accountId = "acc-1")
         val id = repository.login(url, "milk@example.com", "hunter2")
-        repository.clearLocalSession(id)
+        signOut(id)
         val before = server.requestCount
 
         enqueueLogin(accountId = "acc-1", askFloor = false)
@@ -262,88 +263,30 @@ class AuthRepositoryTest {
         throw IllegalStateException()
     }
 
-    // ---- logout and the mirror (T-257, T-260) --------------------------------------
-
-    @Test
-    fun `logout calls the server with the account's token and signs it out, keeping unpushed rows`() = runTest {
-        accounts.add(url, accountId = "acc-1")
-        seedList("list-1")
-        seedItem("item-1", "list-1", dirty = true)
-        server.enqueue(MockResponse().setResponseCode(204))
-
-        repository.logout(TEST_ACCOUNT_ID)
-
-        val recorded = server.takeRequest()
-        assertEquals("Bearer tok-123", recorded.getHeader("Authorization"))
-        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
-        val account = accounts.registry.get(TEST_ACCOUNT_ID)!!
-        assertFalse(account.signedIn)
-        // The row stays and still says whose lists these are, for the next login to judge (T-260).
-        assertEquals("acc-1", account.accountId)
-        assertNotNull(db.itemDao().get("item-1"))
+    /** As a 401 leaves an account (AccountSessions): no token, signed out, its rows kept. */
+    private suspend fun signOut(id: String) {
+        accounts.secrets.setToken(id, null)
+        accounts.registry.update(id) { it.copy(signedIn = false) }
     }
 
-    @Test
-    fun `logout still signs out if the server is unreachable`() = runTest {
-        accounts.add(url)
-        server.shutdown()
-
-        repository.logout(TEST_ACCOUNT_ID)
-
-        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
-        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+    /** A login answer for [accountId] with the token `tok-new`, and the settings read. */
+    private fun enqueueAnswer(accountId: String, email: String = "milk@example.com") {
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-new", "account_id": "$accountId", "email": "$email"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "MI"}"""))
     }
 
-    /**
-     * T-260. clearLocalSession runs on ANY 401 that carried a bearer token — per the Wire Contract
-     * that is also an idle-expired session and a password change on another device, which revokes
-     * every other session by design. It used to wipe the mirror, so: edit the list offline, change
-     * the password on the web, foreground the phone, and the unpushed queue was gone.
-     */
-    @Test
-    fun `a forced logout keeps the unpushed queue and drops what the server can resend (T-260)`() = runTest {
-        accounts.add(url, accountId = "acc-1")
-        seedList("list-1")
-        seedList("list-clean")
-        seedItem("item-1", "list-1", dirty = true)
-        seedItem("item-synced", "list-1", dirty = false)
-        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(syncCursor = 42) }
+    // ---- signing in again, and the other accounts (T-260, T-292, T-300) -----------
 
-        repository.clearLocalSession(TEST_ACCOUNT_ID)
-
-        val kept = db.itemDao().get("item-1")
-        assertNotNull("the unpushed edit survives a forced logout", kept)
-        assertTrue(kept!!.dirty)
-        assertNull("a synced row is not kept on disk after logout", db.itemDao().get("item-synced"))
-        assertNull("nor a synced list with nothing unpushed in it", db.listDao().get("list-clean"))
-        assertNotNull("but the list the unpushed item is on stays with it", db.listDao().get("list-1"))
-        assertEquals("the next login re-pulls from 0", 0L, accounts.registry.get(TEST_ACCOUNT_ID)!!.syncCursor)
-    }
-
-    @Test
-    fun `a forced logout of one account leaves every other account's lists alone`() = runTest {
-        accounts.add(url, accountId = "acc-1")
-        accounts.add(server.url("/other/").toString(), id = "other", accountId = "acc-9")
-        seedList("mine", owner = TEST_ACCOUNT_ID)
-        seedList("theirs", owner = "other")
-        seedItem("their-synced-item", "theirs", dirty = false)
-
-        repository.clearLocalSession(TEST_ACCOUNT_ID)
-
-        assertNull(db.listDao().get("mine"))
-        assertNotNull(db.listDao().get("theirs"))
-        assertNotNull(db.itemDao().get("their-synced-item"))
-        assertTrue(accounts.registry.get("other")!!.signedIn)
-        assertEquals("tok-123", accounts.secrets.token("other"))
-    }
-
-    /** The whole round trip of the ticket's scenario: forced out, then back in as oneself. */
+    /** The whole round trip of T-260's scenario: signed out by the server, then back in as oneself. */
     @Test
     fun `logging back in as the same account re-activates its row and keeps the mirror (T-260)`() = runTest {
         accounts.add(url, accountId = "acc-1")
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
-        repository.clearLocalSession(TEST_ACCOUNT_ID)
+        signOut(TEST_ACCOUNT_ID)
         enqueueLogin(accountId = "acc-1")
 
         val id = repository.login(url, "milk@example.com", "hunter2")
@@ -370,69 +313,10 @@ class AuthRepositoryTest {
         assertNotNull(db.itemDao().get("item-1"))
     }
 
-    /**
-     * The privacy property the wipe existed for, enforced where it can actually be decided (T-260):
-     * a different account must never see the previous account's lists. A login removes every
-     * other server account itself.
-     */
+    /** T-300: every login keeps the other accounts, server and local, and their lists. */
     @Test
-    fun `signing in as a different account wipes the other mirror (T-260)`() = runTest {
-        accounts.add(url, accountId = "acc-1", token = null)
-        seedList("list-1")
-        seedItem("item-1", "list-1", dirty = true)
-        enqueueLogin(accountId = "acc-2", email = "bread@example.com")
-
-        val id = repository.login(url, "bread@example.com", "hunter2")
-
-        assertNotEquals(TEST_ACCOUNT_ID, id)
-        assertNull("another account must not see the previous one's lists", db.itemDao().get("item-1"))
-        assertNull(db.listDao().get("list-1"))
-        assertEquals(listOf(id), accounts.registry.snapshot().map { it.id })
-        assertEquals(listOf(id), db.accountDao().all().map { it.id })
-    }
-
-    @Test
-    fun `an unrecorded mirror owner counts as a different account (T-260)`() = runTest {
-        // No owner recorded — a pre-T-65 session, say, which cannot prove the mirror is this user's.
-        accounts.add(url, accountId = null, token = null)
-        seedList("list-1")
-        seedItem("item-1", "list-1", dirty = true)
-        enqueueLogin(accountId = "acc-1")
-
-        repository.login(url, "milk@example.com", "hunter2")
-
-        assertNull("privacy wins the tie when whose data it is cannot be established", db.itemDao().get("item-1"))
-    }
-
-    /**
-     * T-298: the other accounts went only after login had returned, so a failed settings read left
-     * the previous person's lists on the device beside a signed-in new account that the worker
-     * would sync.
-     */
-    @Test
-    fun `a failed settings read still leaves only the account that signed in (T-298)`() = runTest {
+    fun `a login keeps every other account and its lists`() = runTest {
         accounts.add(url, accountId = "acc-1")
-        seedList("list-1")
-        seedItem("item-1", "list-1", dirty = true)
-        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
-        server.enqueue(
-            MockResponse().setResponseCode(200)
-                .setBody("""{"token": "tok-acc-2", "account_id": "acc-2", "email": "bread@example.com"}"""),
-        )
-        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error": "internal", "message": "boom"}"""))
-
-        val id = repository.login(url, "bread@example.com", "hunter2")
-
-        assertEquals(listOf(id), accounts.registry.snapshot().map { it.id })
-        assertEquals(listOf(id), db.accountDao().all().map { it.id })
-        assertNull(db.listDao().get("list-1"))
-        assertNull(db.itemDao().get("item-1"))
-        assertTrue("the sign-in itself stands", accounts.registry.get(id)!!.signedIn)
-        assertEquals("tok-acc-2", accounts.secrets.token(id))
-    }
-
-    @Test
-    fun `a login never removes a local account`() = runTest {
         accounts.registry.add(
             AccountEntity(
                 id = "on-device",
@@ -444,23 +328,153 @@ class AuthRepositoryTest {
                 signedIn = false,
             ),
         )
-        enqueueLogin(accountId = "acc-1")
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = false)
+        enqueueLogin(accountId = "acc-2", email = "bread@example.com")
 
-        val id = repository.login(url, "milk@example.com", "hunter2")
+        val id = repository.login(url, "bread@example.com", "hunter2")
 
-        assertEquals(setOf("on-device", id), accounts.registry.snapshot().map { it.id }.toSet())
+        assertEquals(setOf(TEST_ACCOUNT_ID, "on-device", id), accounts.registry.snapshot().map { it.id }.toSet())
+        assertNotNull(db.listDao().get("list-1"))
+        assertNotNull(db.itemDao().get("item-1"))
+        assertEquals("tok-123", accounts.secrets.token(TEST_ACCOUNT_ID))
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+    }
+
+    /**
+     * T-300: adding an account that is here and signed in used to replace its token and reset its
+     * cursor before the form said "already added", orphaning the session the token belonged to.
+     */
+    @Test
+    fun `adding an account that is here and signed in is refused before its row changes, and the new session is ended`() = runTest {
+        accounts.add(url, accountId = "acc-1")
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(syncCursor = 42) }
+        val before = accounts.registry.get(TEST_ACCOUNT_ID)
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        enqueueAnswer(accountId = "acc-1")
+
+        assertThrows<AlreadyAddedException> {
+            repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.NewAccount)
+        }
+
+        assertEquals("tok-123", accounts.secrets.token(TEST_ACCOUNT_ID))
+        assertEquals(before, accounts.registry.get(TEST_ACCOUNT_ID))
+        assertEquals(listOf(TEST_ACCOUNT_ID), accounts.registry.snapshot().map { it.id })
+        server.takeRequest() // app-version
+        server.takeRequest() // login
+        val revoke = server.takeRequest()
+        assertEquals("/api/v1/logout", revoke.path)
+        assertEquals("Bearer tok-new", revoke.getHeader("Authorization"))
     }
 
     @Test
-    fun `a login asked to keep the other accounts keeps them`() = runTest {
-        accounts.add(url, accountId = "acc-1")
+    fun `adding an account that is here but signed out signs its row in again`() = runTest {
+        accounts.add(url, accountId = "acc-1", token = null)
+        signOut(TEST_ACCOUNT_ID)
+        enqueueLogin(accountId = "acc-1")
+
+        val id = repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.NewAccount)
+
+        assertEquals(TEST_ACCOUNT_ID, id)
+        assertTrue(accounts.registry.get(id)!!.signedIn)
+    }
+
+    /** T-300: B's credentials in A's "Sign in again" form used to add B and leave A signed out. */
+    @Test
+    fun `a re-sign-in with another account's credentials is refused and its session ended`() = runTest {
+        accounts.add(url, accountId = "acc-1", token = null)
+        signOut(TEST_ACCOUNT_ID)
         seedList("list-1")
-        enqueueLogin(accountId = "acc-2")
+        seedItem("item-1", "list-1", dirty = true)
+        val before = accounts.registry.get(TEST_ACCOUNT_ID)
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        enqueueAnswer(accountId = "acc-2", email = "bread@example.com")
 
-        val id = repository.login(url, "bread@example.com", "hunter2", keepOtherAccounts = true)
+        assertThrows<WrongAccountException> {
+            repository.login(url, "bread@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+        }
 
-        assertEquals(setOf(TEST_ACCOUNT_ID, id), accounts.registry.snapshot().map { it.id }.toSet())
-        assertNotNull(db.listDao().get("list-1"))
+        assertEquals("no row for the other account", listOf(TEST_ACCOUNT_ID), accounts.registry.snapshot().map { it.id })
+        assertEquals(before, accounts.registry.get(TEST_ACCOUNT_ID))
+        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
+        assertTrue(db.itemDao().get("item-1")!!.dirty)
+        server.takeRequest()
+        server.takeRequest()
+        val revoke = server.takeRequest()
+        assertEquals("/api/v1/logout", revoke.path)
+        assertEquals("Bearer tok-new", revoke.getHeader("Authorization"))
+    }
+
+    @Test
+    fun `a re-sign-in with the account's own credentials signs its row in`() = runTest {
+        accounts.add(url, accountId = "acc-1", token = null)
+        signOut(TEST_ACCOUNT_ID)
+        enqueueLogin(accountId = "acc-1")
+
+        val id = repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+
+        assertEquals(TEST_ACCOUNT_ID, id)
+        assertTrue(accounts.registry.get(id)!!.signedIn)
+        assertEquals("tok-acc-1", accounts.secrets.token(id))
+    }
+
+    /**
+     * T-300: a row migrated from 3.1.0 with no recorded owner never matched a sign-in, so every
+     * one from its banner added a new row and its lists appeared twice.
+     */
+    @Test
+    fun `a re-sign-in for a row with no recorded owner adopts the account that signs in`() = runTest {
+        accounts.add(server.url("/typed-last/").toString(), accountId = null, token = null)
+        signOut(TEST_ACCOUNT_ID)
+        seedList("list-1")
+        seedItem("item-1", "list-1", dirty = true)
+        enqueueLogin(accountId = "acc-1", email = "milk@example.com")
+
+        // The session's real server, corrected in the form.
+        val id = repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+
+        assertEquals("the same row", TEST_ACCOUNT_ID, id)
+        assertEquals(listOf(TEST_ACCOUNT_ID), accounts.registry.snapshot().map { it.id })
+        val account = accounts.registry.get(id)!!
+        assertEquals("acc-1", account.accountId)
+        assertEquals("milk@example.com", account.email)
+        assertEquals(url, account.serverUrl)
+        assertTrue(account.signedIn)
+        assertEquals(account, db.accountDao().all().single())
+        assertTrue(db.itemDao().get("item-1")!!.dirty)
+    }
+
+    @Test
+    fun `a row with no recorded owner does not adopt an account that has a row already`() = runTest {
+        accounts.add(url, accountId = null, token = null)
+        signOut(TEST_ACCOUNT_ID)
+        accounts.add(url, id = "acc-1-row", accountId = "acc-1")
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        enqueueAnswer(accountId = "acc-1")
+
+        assertThrows<AlreadyAddedException> {
+            repository.login(url, "milk@example.com", "hunter2", expect = LoginExpectation.Account(TEST_ACCOUNT_ID))
+        }
+
+        assertNull(accounts.registry.get(TEST_ACCOUNT_ID)!!.accountId)
+        assertEquals("tok-123", accounts.secrets.token("acc-1-row"))
+    }
+
+    /** T-300: nothing reads the currency again later but the Account screen, so a failed read stands. */
+    @Test
+    fun `a failed settings read does not undo the sign-in`() = runTest {
+        server.enqueue(appVersion(MIN_SERVER_PROTOCOL))
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"token": "tok-acc-2", "account_id": "acc-2", "email": "bread@example.com"}"""),
+        )
+        server.enqueue(MockResponse().setResponseCode(500).setBody("""{"error": "internal", "message": "boom"}"""))
+
+        val id = repository.login(url, "bread@example.com", "hunter2")
+
+        assertTrue("the sign-in itself stands", accounts.registry.get(id)!!.signedIn)
+        assertEquals("tok-acc-2", accounts.secrets.token(id))
+        assertNull(accounts.registry.get(id)!!.defaultCurrency)
     }
 
     /**

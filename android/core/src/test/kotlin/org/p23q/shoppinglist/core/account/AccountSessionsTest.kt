@@ -3,13 +3,9 @@ package org.p23q.shoppinglist.core.account
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertNull
-import kotlinx.coroutines.async
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -97,13 +93,11 @@ class AccountSessionsTest {
     }
 
     @Test
-    fun `a 401 signs out only its own account and names it on forcedLogout`() = runBlocking {
-        val event = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { sessions.forcedLogout.first() } }
+    fun `a 401 signs out only its own account`() = runBlocking {
         a.enqueue(MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "revoked"}"""))
 
         runCatching { sessions.get("a").api.lists() }
 
-        assertEquals("a", event.await())
         assertFalse(registry.get("a")!!.signedIn)
         assertTrue(registry.get("b")!!.signedIn)
         assertNull("the dead token is not sent again (T-298)", secrets.token("a"))
@@ -120,11 +114,8 @@ class AccountSessionsTest {
                 return MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "revoked"}""")
             }
         }
-        val event = async(start = CoroutineStart.UNDISPATCHED) { withTimeoutOrNull(500) { sessions.forcedLogout.first() } }
-
         runCatching { sessions.get("a").api.lists() }
 
-        assertNull("no forced logout", event.await())
         assertTrue(registry.get("a")!!.signedIn)
         assertEquals("tok-new", secrets.token("a"))
     }

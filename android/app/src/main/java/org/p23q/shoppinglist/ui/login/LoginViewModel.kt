@@ -11,17 +11,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.AuthRepository
 import kotlinx.serialization.SerializationException
+import org.p23q.shoppinglist.core.AlreadyAddedException
 import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.AuthRepository
+import org.p23q.shoppinglist.core.LoginExpectation
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
+import org.p23q.shoppinglist.core.WrongAccountException
+import org.p23q.shoppinglist.core.account.normalizeServerUrl
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.sync.SyncTrigger
-import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.LastServerAddress
+import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -56,7 +60,11 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val errorMessage: UiText? = null,
     val loginSucceeded: Boolean = false,
-    /** A re-sign-in's server is the account's own and cannot be changed here. */
+    /**
+     * A re-sign-in's server is the account's own and cannot be changed here; editable for a row
+     * migrated from 3.1.0 that records no server-side account, whose URL is only the address last
+     * typed there and may not be its session's server (T-300).
+     */
     val serverUrlLocked: Boolean = false,
     /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
      *  reach it before they've managed to log in — otherwise it's a bootstrap deadlock (T-38/T-46). */
@@ -97,7 +105,7 @@ class LoginViewModel @Inject constructor(
                 mode = mode,
                 serverUrl = account.serverUrl.orEmpty(),
                 email = account.email.orEmpty(),
-                serverUrlLocked = true,
+                serverUrlLocked = account.accountId != null,
                 allowSelfSignedCerts = account.allowSelfSignedCerts,
             )
         } ?: LoginUiState(
@@ -108,6 +116,12 @@ class LoginViewModel @Inject constructor(
         ),
     )
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    /** The local id of the account the last successful submit signed in (T-300). */
+    private var signedInId: String? = null
+
+    /** The address [refreshRegistrationStatus] last answered for; another one resets its answer. */
+    private var registrationCheckedUrl: String? = null
 
     init {
         // A re-sign-in knows its server and its certificate choice already.
@@ -132,16 +146,26 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /** Asks the saved server up front whether it is accepting new accounts (T-276), matching the
-     *  web login page. Best-effort — see [AuthRepository.registrationAllowed] — so any failure just
-     *  leaves the toggle enabled rather than surfacing an error nobody asked about. Never called on
-     *  a fresh install (T-287): see the init block. */
+    /**
+     * Asks the form's server up front whether it is accepting new accounts (T-276), matching the
+     * web login page. Best-effort — see [AuthRepository.registrationAllowed] — so any failure just
+     * leaves the toggle enabled rather than surfacing an error nobody asked about.
+     *
+     * Only for an address the user has confirmed, by submitting it on this device (T-287): never
+     * the default on a fresh install, and never an address an invite prefilled (T-300) until the
+     * user has submitted it. The form's own address, not the last typed one, which an invite for
+     * another server has replaced in the field.
+     */
     fun refreshRegistrationStatus(): Job = viewModelScope.launch {
-        val url = serverConfig.lastServerUrl() ?: return@launch
+        val url = _uiState.value.serverUrl
+        val confirmed = serverConfig.lastServerUrl() ?: return@launch
+        if (!sameServer(url, confirmed)) return@launch
         val allowed = runCatching {
             authRepository.registrationAllowed(url, _uiState.value.allowSelfSignedCerts)
         }.getOrDefault(true)
-        _uiState.update { it.copy(registrationAllowed = allowed) }
+        registrationCheckedUrl = url
+        // Unless the user has typed another address meanwhile: the answer is not about that one.
+        _uiState.update { if (sameServer(it.serverUrl, url)) it.copy(registrationAllowed = allowed) else it }
     }
 
     private companion object {
@@ -159,7 +183,15 @@ class LoginViewModel @Inject constructor(
 
     fun onServerUrlChange(value: String) {
         if (_uiState.value.serverUrlLocked) return
-        _uiState.update { it.copy(serverUrl = value, errorMessage = null, downloadUrl = null) }
+        _uiState.update {
+            it.copy(
+                serverUrl = value,
+                errorMessage = null,
+                downloadUrl = null,
+                // The answer was about another address.
+                registrationAllowed = it.registrationAllowed || registrationCheckedUrl?.let { url -> !sameServer(value, url) } == true,
+            )
+        }
     }
 
     fun onEmailChange(value: String) {
@@ -196,28 +228,25 @@ class LoginViewModel @Inject constructor(
                 if (state.isRegisterMode) {
                     authRepository.register(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
                 }
-                val before = knownAccounts.snapshot().associateBy { it.id }
-                // Every other account stays (T-292). On the start screen there is none to keep,
-                // and wherever else the form is opened, the accounts beside this one are the
-                // user's own: nobody signs out here, so nobody else's lists are on the phone.
-                val id = authRepository.login(
+                // Every other account stays (T-292); the repository refuses what this mode does
+                // not expect (T-300), before it has changed anything.
+                signedInId = authRepository.login(
                     state.serverUrl,
                     state.email,
                     state.password,
                     state.allowSelfSignedCerts,
-                    keepOtherAccounts = true,
+                    expect = expectation(),
                 )
-                if (mode == LoginMode.ADD && before[id]?.signedIn == true) {
-                    // The same server and account as one already here and signed in: there is
-                    // nothing to add. The sign-in only gave that account a fresh token.
-                    _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_already_added)) }
-                    return@launch
-                }
                 // The session is now authenticated — pull its data right away, so the first screen
                 // isn't stuck on empty until some later incidental sync (the app-foreground sync
                 // already fired before login, with no token).
                 syncTrigger.scheduleImmediate()
                 _uiState.update { it.copy(isLoading = false, loginSucceeded = true) }
+            } catch (e: AlreadyAddedException) {
+                // The same server and account as one already here and signed in: nothing to add.
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_already_added)) }
+            } catch (e: WrongAccountException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_wrong_account)) }
             } catch (e: ServerTooOldException) {
                 // Asked before anything else went to a server this device did not know (T-291).
                 _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_server_too_old)) }
@@ -256,16 +285,35 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    private fun expectation(): LoginExpectation = when (mode) {
+        LoginMode.START -> LoginExpectation.Anyone
+        LoginMode.ADD -> LoginExpectation.NewAccount
+        // The account gone meanwhile: nothing to sign in again, so as if adding one.
+        LoginMode.RESIGNIN -> resignInAccount?.let { LoginExpectation.Account(it.id) } ?: LoginExpectation.NewAccount
+    }
+
     /**
-     * Where to go once signed in: into redeeming an invite parked before the sign-in (T-28), else
-     * from the start screen to the lists as a cold start would, else null, back to where the form
-     * was opened from (the Accounts screen, or a signed-out account's banner).
+     * Where to go once signed in: into redeeming an invite parked for this sign-in (T-28), into
+     * the account that signed in (T-300), else from the start screen to the lists as a cold start
+     * would, else null, back to where the form was opened from (the Accounts screen, or a
+     * signed-out account's banner).
      */
     fun startDestinationAfterLogin(): String? {
-        pendingInviteHolder.consume()?.let { invite -> return Routes.redeem(invite.token, invite.url, invite.accountId) }
+        pendingInviteHolder.consumeFor(mode, resignInAccount?.id, _uiState.value.serverUrl)?.let { invite ->
+            return Routes.redeem(invite.token, invite.url, signedInId ?: invite.accountId)
+        }
         return if (mode == LoginMode.START) authedStartDestination(authRepository.lastOpenedListId()) else null
     }
+
+    /** Left without signing in: an invite parked for this sign-in is not for any later one (T-300). */
+    override fun onCleared() {
+        if (!_uiState.value.loginSucceeded) pendingInviteHolder.clear()
+    }
 }
+
+/** Whether two typed addresses name the same server, as the accounts table compares them. */
+private fun sameServer(a: String, b: String): Boolean =
+    a.isNotBlank() && b.isNotBlank() && normalizeServerUrl(a) == normalizeServerUrl(b)
 
 private fun isValidHttpsUrl(url: String): Boolean {
     if (url.isBlank()) return false

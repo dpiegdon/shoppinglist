@@ -9,12 +9,6 @@
   has to agree with a number.
 -->
 <resources>
-    <!-- Overview by account (T-292) -->
-    <string name="overview_account_signed_out">Déconnecté. Touchez pour vous connecter.</string>
-    <string name="overview_account_outdated">Ce serveur demande une application plus récente.</string>
-    <string name="overview_new_list_account">Compte</string>
-    <string name="redeem_choose_account">Rejoindre avec quel compte ?</string>
-
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_ok">OK</string>
@@ -208,7 +202,6 @@
     <string name="settings_msg_password_required">Le mot de passe est requis</string>
     <string name="settings_msg_delete_password_incorrect">Le mot de passe est incorrect</string>
     <string name="settings_msg_delete_failed">Impossible de supprimer le compte</string>
-    <string name="settings_msg_offline">Impossible de joindre le serveur</string>
     <string name="settings_msg_no_crash_logs">Aucun journal de plantage pour l\'instant</string>
     <string name="error_offline">Impossible de joindre le serveur</string>
     <string name="error_offline_retry">Tu es hors ligne ; réessaie une fois reconnecté</string>
@@ -350,6 +343,12 @@
     <string name="expense_error_frozen">Les montants de %1$s sont figés : cette personne a accepté de clore la liste ou l\'a quittée.</string>
     <string name="expense_not_saved">Non enregistré dans la liste</string>
 
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Déconnecté. Touchez pour vous connecter.</string>
+    <string name="overview_account_outdated">Ce serveur demande une application plus récente.</string>
+    <string name="overview_new_list_account">Compte</string>
+    <string name="redeem_choose_account">Rejoindre avec quel compte ?</string>
+
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Comptes</string>
     <string name="accounts_add">Ajouter un compte</string>
@@ -370,4 +369,7 @@
     <string name="login_resignin_title">Se reconnecter</string>
     <string name="login_resignin_help">Le serveur a déconnecté ce compte. Reconnectez-vous pour synchroniser ses listes.</string>
     <string name="login_msg_already_added">Ce compte est déjà sur ce téléphone.</string>
+
+    <!-- Login and accounts follow-ups (T-300) -->
+    <string name="login_msg_wrong_account">Ces identifiants sont ceux d\'un autre compte.</string>
 </resources>

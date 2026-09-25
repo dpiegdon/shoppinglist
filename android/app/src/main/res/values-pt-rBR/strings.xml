@@ -9,12 +9,6 @@
   has to agree with a number.
 -->
 <resources>
-    <!-- Overview by account (T-292) -->
-    <string name="overview_account_signed_out">Você saiu. Toque para entrar.</string>
-    <string name="overview_account_outdated">Este servidor precisa de uma versão mais nova do app.</string>
-    <string name="overview_new_list_account">Conta</string>
-    <string name="redeem_choose_account">Entrar com qual conta?</string>
-
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_ok">OK</string>
@@ -208,7 +202,6 @@
     <string name="settings_msg_password_required">A senha é obrigatória</string>
     <string name="settings_msg_delete_password_incorrect">A senha está incorreta</string>
     <string name="settings_msg_delete_failed">Não foi possível excluir a conta</string>
-    <string name="settings_msg_offline">Não foi possível conectar ao servidor</string>
     <string name="settings_msg_no_crash_logs">Nenhum registro de falha ainda</string>
     <string name="error_offline">Não foi possível conectar ao servidor</string>
     <string name="error_offline_retry">Você está offline; tente novamente quando reconectar</string>
@@ -350,6 +343,12 @@
     <string name="expense_error_frozen">Os valores de %1$s estão fixados: essa pessoa concordou em encerrar a lista ou saiu dela.</string>
     <string name="expense_not_saved">Não salvo na lista</string>
 
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Você saiu. Toque para entrar.</string>
+    <string name="overview_account_outdated">Este servidor precisa de uma versão mais nova do app.</string>
+    <string name="overview_new_list_account">Conta</string>
+    <string name="redeem_choose_account">Entrar com qual conta?</string>
+
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Contas</string>
     <string name="accounts_add">Adicionar conta</string>
@@ -370,4 +369,7 @@
     <string name="login_resignin_title">Entrar novamente</string>
     <string name="login_resignin_help">O servidor desconectou esta conta. Entre novamente para sincronizar as listas dela.</string>
     <string name="login_msg_already_added">Esta conta já está neste telefone.</string>
+
+    <!-- Login and accounts follow-ups (T-300) -->
+    <string name="login_msg_wrong_account">Essas são as credenciais de outra conta.</string>
 </resources>

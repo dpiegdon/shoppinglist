@@ -1,10 +1,6 @@
 package org.p23q.shoppinglist.core.account
 
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
@@ -44,9 +40,10 @@ class AccountSession internal constructor(
  * id. A session is rebuilt when its account's server URL or certificate opt-in changes, and dropped
  * when the account is removed.
  *
- * A 401 on a request that carried the account's current token deletes that token, sets the
- * account's [AccountEntity.signedIn] to false and emits its id on [forcedLogout]; a 426 sets its
- * [AccountEntity.outdated]; a protocol-checked 2xx clears it again. No other account is touched.
+ * A 401 on a request that carried the account's current token deletes that token and sets the
+ * account's [AccountEntity.signedIn] to false: the row is the state, its lists and unpushed rows
+ * stay, and the UI offers the sign-in from it. A 426 sets its [AccountEntity.outdated]; a
+ * protocol-checked 2xx clears it again. No other account is touched.
  */
 class AccountSessions(
     private val registry: AccountRegistry,
@@ -56,19 +53,6 @@ class AccountSessions(
     private val syncStatus: SyncStatus,
 ) {
     private val cache = ConcurrentHashMap<String, AccountSession>()
-
-    private val _forcedLogout = MutableSharedFlow<String>(
-        replay = 0,
-        extraBufferCapacity = 8,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-
-    /**
-     * The local id of an account whose token the server just rejected. An event, not a state: a
-     * late subscriber must not act on a stale one. The account row keeps `signedIn = false`, which
-     * is the state; this is only the prompt for the UI to route to the login screen now.
-     */
-    val forcedLogout: SharedFlow<String> = _forcedLogout.asSharedFlow()
 
     /**
      * Whether the app is too old for every server it has an account on — the state in which the
@@ -97,11 +81,10 @@ class AccountSessions(
                 // Only the account's current token: a 401 to a request sent before the account
                 // signed in again is about a token that is already gone (T-298).
                 if (sentToken != secrets.token(accountId)) return
-                // Dropped here, not only in the UI's clearLocalSession: a 401 in the background
-                // must not leave a dead token for every later request to carry.
+                // Dropped here, where every 401 arrives, background sync included: a dead token
+                // must not ride on every later request.
                 secrets.setToken(accountId, null)
                 registry.updateInBackground(accountId) { it.copy(signedIn = false) }
-                _forcedLogout.tryEmit(accountId)
             }
 
             override fun onOutdated() {

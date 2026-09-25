@@ -9,12 +9,6 @@
   has to agree with a number.
 -->
 <resources>
-    <!-- Overview by account (T-292) -->
-    <string name="overview_account_signed_out">Ви вийшли. Торкніться, щоб увійти.</string>
-    <string name="overview_account_outdated">Цьому серверу потрібна новіша версія застосунку.</string>
-    <string name="overview_new_list_account">Обліковий запис</string>
-    <string name="redeem_choose_account">Приєднатися з яким обліковим записом?</string>
-
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Скасувати</string>
     <string name="action_ok">Гаразд</string>
@@ -208,7 +202,6 @@
     <string name="settings_msg_password_required">Пароль обов\'язковий</string>
     <string name="settings_msg_delete_password_incorrect">Пароль неправильний</string>
     <string name="settings_msg_delete_failed">Не вдалося видалити обліковий запис</string>
-    <string name="settings_msg_offline">Не вдалося зв\'язатися із сервером</string>
     <string name="settings_msg_no_crash_logs">Журналів збоїв ще немає</string>
     <string name="error_offline">Не вдалося зв\'язатися із сервером</string>
     <string name="error_offline_retry">Ти офлайн; спробуй ще раз, коли з\'явиться зв\'язок</string>
@@ -350,6 +343,12 @@
     <string name="expense_error_frozen">Суми %1$s зафіксовано: ця людина погодилася закрити список або залишила його.</string>
     <string name="expense_not_saved">Не збережено до списку</string>
 
+    <!-- Overview by account (T-292) -->
+    <string name="overview_account_signed_out">Ви вийшли. Торкніться, щоб увійти.</string>
+    <string name="overview_account_outdated">Цьому серверу потрібна новіша версія застосунку.</string>
+    <string name="overview_new_list_account">Обліковий запис</string>
+    <string name="redeem_choose_account">Приєднатися з яким обліковим записом?</string>
+
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Облікові записи</string>
     <string name="accounts_add">Додати обліковий запис</string>
@@ -370,4 +369,7 @@
     <string name="login_resignin_title">Увійти знову</string>
     <string name="login_resignin_help">Сервер виконав вихід із цього облікового запису. Увійдіть знову, щоб синхронізувати його списки.</string>
     <string name="login_msg_already_added">Цей обліковий запис уже є на цьому телефоні.</string>
+
+    <!-- Login and accounts follow-ups (T-300) -->
+    <string name="login_msg_wrong_account">Це облікові дані іншого облікового запису.</string>
 </resources>
