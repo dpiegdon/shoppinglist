@@ -188,13 +188,14 @@ refused with *"This server is too old for this app."* On later launches the app
 reopens the list you last had open.
 
 The app holds several accounts, on one server or on several. **Accounts** in
-the menu lists them in your order (the arrows move one up or down, which is also
-the overview's order), each with its email, its full server URL, its state and
-its own sync figures. *Add account* opens the same form and keeps the accounts
+the menu lists them in your order (drag one by its handle to move it, which is
+also the overview's order; the phone's own area stays last), each with its email,
+its full server URL, its state and its own sync figures. *Add account* opens the same form and keeps the accounts
 already there; tapping an account opens its own screen, with its default
 currency, initials, password, email, sessions, *Delete account on server* and
 *Remove from this phone* (which deletes its lists and items here only, and
-warns how many changes have not gone out yet). There is no sign-out: when a
+warns how many changes have not gone out yet). *Server admin* in the menu opens
+the admin console of a signed-in admin account; with several, it asks which. There is no sign-out: when a
 server rejects an account's token (a password change, an admin reset, 62 days
 idle), that account's row says *Signed out: tap to sign in*, its lists stay on
 the phone and editable, and signing in again from there resumes its sync. The
