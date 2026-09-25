@@ -112,6 +112,26 @@ A login keeps every account already on the phone. Logging in again as an
 account it holds, on the same server, keeps that account's lists, unpushed edits
 included; logging in as anyone else adds a new account beside the others.
 
+The phone can also hold one local area, an account with `kind = local` and no
+server, made from the start screen's *Use without an account* or from Accounts'
+*Add local area*; a note says once, when it is made, that its lists stay on
+this phone only, are not backed up and cannot be shared. Its label is stored
+empty and it is named *On this phone* in the app's language wherever it is
+shown. It holds shopping lists and checklists only: the New-list dialog offers
+no ledger for it, and `ListsRepo` refuses to create one there or to convert a
+list to one. Its lists and items carry this device's id and field clocks like
+any other, but the sync engine never sends them, and they count towards no
+pending figure; with only the local area the top bar shows no sync status. A
+local list's properties show *You* as its only member and have no invites,
+close votes or collaborator notifications, and *Delete list* removes it and its
+items from the phone. On the overview the local area is the last section, and
+its cards carry a phone glyph; with the local area alone the overview is the
+plain one-account screen. It takes no invites: an invite on a phone with only
+the local area opens the form to add a server account. Its Account screen
+explains it and counts its lists, and it can be removed only once it holds
+none. While it is on the phone, servers that all need a newer app do not block
+the app: each outdated account's section says so instead.
+
 ## Installing on a phone
 
 minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
@@ -161,7 +181,8 @@ warns how many changes have not gone out yet). There is no sign-out: when a
 server rejects an account's token (a password change, an admin reset, 62 days
 idle), that account's row says *Signed out: tap to sign in*, its lists stay on
 the phone and editable, and signing in again from there resumes its sync. The
-start screen appears only while the phone holds no server account.
+start screen appears only while the phone holds no account at all, the local
+area included.
 
 ### Changing the prefilled URL for your own build
 

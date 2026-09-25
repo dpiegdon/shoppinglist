@@ -67,6 +67,8 @@ interface and `:app` implements it and binds it in Hilt:
   raises the flag again. A row the table refuses (the unique server and
   server-side id) is an exception from `add`/`update`, and the copy goes back
   to the table's row. `reorder(ids)` sets the user's order (`sortOrder`).
+  `addLocal()` makes the local area, the one account with no server (at most
+  one per phone), with an empty label that the UI replaces by a string resource.
   `withAccountLock(id)` serialises one account's sync, local sign-out and
   removal.
 - `account/AccountSessions` builds one `AccountSession` per server account, on
@@ -75,7 +77,8 @@ interface and `:app` implements it and binds it in Hilt:
   `signedIn = false`: the row says it is signed out, and its lists stay; `426`
   sets `outdated`, an accepted request clears it), and the account's share of
   `SyncStatus`.
-  `updateRequired` is true when every server account is outdated.
+  `updateRequired` is true when every server account is outdated and the phone
+  holds no local area.
   `unbound()` is a token-less client that reports to no account, for what is
   asked before an account exists and for `/app-version`.
 - `AuthRepository` creates or re-activates an account on login and keeps every
@@ -94,7 +97,11 @@ interface and `:app` implements it and binds it in Hilt:
   rows.
 - `sync/SyncEngine.syncNow()` syncs every signed-in, up-to-date server account
   that has a token (one without is signed out); `syncAccount()` is one, under
-  its account lock. `SyncStatus.state` is the worst of the accounts,
+  its account lock. The local area is never synced, and its dirty rows count
+  in no account's pending figure.
+- `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
+  no ledger in the local area. `ListsRepo.create` throws for another kind, and
+  `setKind` returns false instead of converting. `SyncStatus.state` is the worst of the accounts,
   `SyncStatus.accounts` each one.
 
 `:app` also builds the database (`Room.databaseBuilder(context, AppDb::class.java, …)`)
