@@ -108,6 +108,12 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   - Use Room with `BundledSQLiteDriver()`: Robolectric has no native SQLite on
     aarch64. Room 2.8 cannot run migrations on the driver path; see
     `AppDbMigrationTest.kt` for the workaround.
+  - Never `db.close()` a test database while a coroutine may still be inside a
+    query: Room closes every connection at once, and a query running natively on
+    another thread then segfaults the whole test executor (exit 134, an
+    `hs_err_pid*.log` in `app/`, T-303). Close through `closeWhenIdle(...)` in
+    `app/src/test/.../data/CloseTestDb.kt`, which cancels the view models, waits
+    for them, flushes the registry, then closes.
   - Don't put a Compose test rule and `MainDispatcherRule` in one class; they
     wait on each other forever. Screen tests use `runBlocking<Unit>` (JUnit
     rejects a non-Unit return).
