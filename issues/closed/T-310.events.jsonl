@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-09-25T21:22:21+00:00", "kind": "created", "ref": "main@3579de3a", "text": "Release 3.2.2"}
 {"actor": "user", "at": "2026-09-25T21:36:48+00:00", "kind": "note", "ref": "main@3e5b72e5", "text": "Second attempt after the first was aborted by the maintainer to add T-311 (About page source link); notes extended."}
 {"actor": "user", "at": "2026-09-25T21:46:38+00:00", "kind": "note", "ref": "main@cabb2045", "text": "Released: commit cabb2045, tag v3.2.2, versionCode 33, protocol 3, full gate green inside release.sh. Wheel server/dist/shoppinglist_server-3.2.2-py3-none-any.whl sha256 0738fb3942d849ec983682882438071c25c9c42304f832b95c1a5d4f68650672."}
+{"actor": "user", "at": "2026-09-25T21:46:38+00:00", "kind": "closed", "ref": "main@cabb2045", "text": ""}
