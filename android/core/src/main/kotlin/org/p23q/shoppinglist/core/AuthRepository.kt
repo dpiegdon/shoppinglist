@@ -111,7 +111,8 @@ interface AuthRepository {
     ): String
 
     /**
-     * Removes the account from this device: its lists, their items, its token and its row. No
+     * Removes the account from this device: its lists, their items, its token and its row, after
+     * ending its session on the server, best-effort. No
      * other account's rows or cursor are touched: a list two accounts share is a row of each.
      * The local area is refused with [LocalAreaNotEmptyException] while it holds a list.
      */
@@ -296,10 +297,29 @@ class AuthRepositoryImpl(
     override suspend fun removeAccount(accountId: String) {
         // Under the account's lock, so no sync of it is between its request and its merge.
         registry.withAccountLock(accountId) {
+            endServerSession(accountId)
             secrets.setToken(accountId, null)
             if (!registry.remove(accountId)) throw LocalAreaNotEmptyException()
             sessions.drop(accountId)
             forgetLastOpenedListOf(accountId)
+        }
+    }
+
+    /**
+     * Ends the account's session on its server before its token is forgotten, best-effort (T-304):
+     * offline, or with a token the server already dropped, the session ends on its idle timeout.
+     * The unbound client carries the token, so a `401` here signs nothing out.
+     */
+    private suspend fun endServerSession(accountId: String) {
+        val account = registry.get(accountId)?.takeIf { it.isServer } ?: return
+        val url = account.serverUrl ?: return
+        val token = secrets.token(accountId) ?: return
+        try {
+            sessions.unbound(url, account.allowSelfSignedCerts).logout("Bearer $token")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Best-effort, as for a refused sign-in.
         }
     }
 

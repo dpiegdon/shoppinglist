@@ -1270,7 +1270,9 @@ class SyncEngineTest {
             deviceName = "Test device",
         )
 
+        server.enqueue(MockResponse().setResponseCode(204))
         auth.removeAccount(TEST_ACCOUNT_ID)
+        assertEquals("/api/v1/logout", server.takeRequest().path)
         server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
         assertTrue(syncEngine.syncNow() is SyncResult.Success)
 

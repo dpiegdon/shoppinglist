@@ -559,6 +559,7 @@ class AuthRepositoryTest {
         seedItem("my-item", "mine", dirty = false, serverId = "shared-item")
         seedItem("their-item", "theirs", dirty = false, serverId = "shared-item")
 
+        server.enqueue(MockResponse().setResponseCode(204))
         repository.removeAccount(TEST_ACCOUNT_ID)
 
         assertNull(db.listDao().get("mine"))
@@ -575,15 +576,33 @@ class AuthRepositoryTest {
         seedList("list-1")
         seedItem("item-1", "list-1", dirty = true)
         accounts.secrets.lastOpenedListId = "list-1"
+        server.enqueue(MockResponse().setResponseCode(204))
 
         repository.removeAccount(TEST_ACCOUNT_ID)
 
+        // Its session on the server is ended first, with the token it is about to forget (T-304).
+        val logout = server.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
+        assertEquals("/api/v1/logout", logout.path)
+        assertEquals("Bearer tok-123", logout.getHeader("Authorization"))
         assertNull(db.itemDao().get("item-1"))
         assertNull(db.listDao().get("list-1"))
         assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
         assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
         assertTrue(db.accountDao().all().isEmpty())
         assertNull("a cold start must not reopen a list that is gone", accounts.secrets.lastOpenedListId)
+    }
+
+    @Test
+    fun `an account whose server cannot be reached is removed all the same (T-304)`() = runTest {
+        addAccount(url, accountId = "acc-1")
+        seedList("list-1")
+        server.shutdown()
+
+        repository.removeAccount(TEST_ACCOUNT_ID)
+
+        assertNull(accounts.registry.get(TEST_ACCOUNT_ID))
+        assertNull(db.listDao().get("list-1"))
+        assertNull(accounts.secrets.token(TEST_ACCOUNT_ID))
     }
 
     @Test
