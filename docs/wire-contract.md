@@ -102,7 +102,7 @@ refuses a release that breaks either rule.
 
 | Client floor | Since | Why |
 |---|---|---|
-| 3 | Android, unreleased | Clients are written against protocol 3 and nothing older. |
+| 3 | Android 3.2.0 | Clients are written against protocol 3 and nothing older. |
 
 ## Field clock
 
