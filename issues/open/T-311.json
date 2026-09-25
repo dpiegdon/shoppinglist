@@ -1,0 +1,13 @@
+{
+  "body": "On the About page (Android ui/about/AboutScreen.kt; web AboutPage.tsx) add a real hyperlink to the upstream repository https://github.com/dpiegdon/shoppinglist, placed next to the copyright notice in the small print (same small text style), labelled 'Source code' (one string, nine locales on each client, identical English so crossClient pairs it; the URL is not translated). Android opens it in the browser (LocalUriHandler); the web uses a normal <a target=_blank rel=noopener>. A prose hyperlink, which the button rule (T-309) keeps as a link. A test on each client that the link is present and carries that URL.",
+  "created_at": "2026-09-25T21:28:02+00:00",
+  "id": "T-311",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "About page links to the upstream sources on both clients",
+  "updated_at": "2026-09-25T21:28:02+00:00"
+}
