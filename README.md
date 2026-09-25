@@ -1,4 +1,4 @@
-# Tuppu
+# Tuppu 𒅎𒁾
 
 Tuppu (Akkadian: a clay tablet) is a self-hosted app for shared lists, of three
 kinds:
