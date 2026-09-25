@@ -98,6 +98,7 @@ export const es: Catalog = {
   "listProps.addToOrder": "Añadir al orden",
   "listProps.addCategory": "Añadir categoría…",
   "listProps.mergeCategoryConfirm": "¿Combinar con \"{category}\"? Ambas categorías se convertirán en una sola.",
+  "listProps.copySuffix": "(copia)",
   "listProps.clearChecked": "Restablecer completados",
   "listProps.clearCheckedCount": "Restablecer completados ({count})",
   "listProps.kindSwitchHelp": "Cambiar solo afecta a qué campos se muestran — no se borra nada, así que puedes volver atrás.",

@@ -108,8 +108,10 @@ interface and `:app` implements it and binds it in Hilt:
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and
   `setKind` returns false instead of converting. `ListsRepo.duplicate(listId,
-  targetAccountId)` copies a list into any account on the phone, the local area
-  included, with fresh ids and clocks and no roster or close votes;
+  copySuffix, targetAccountId)` copies a list into any account on the phone, the
+  local area included, with fresh ids and clocks and no roster or close votes;
+  the copy's name is the source's, a space and `copySuffix`, which `:app` passes
+  from a string resource;
   `ItemsRepo.duplicateForList` gives the copied items the target list's account.
   A ledger is copied only within its own account.
 

@@ -29,6 +29,7 @@
     <string name="action_ignore">Ignorar</string>
     <string name="action_duplicate">Duplicar</string>
     <string name="listprops_copy_to">Copiar en</string>
+    <string name="list_copy_suffix">(copia)</string>
     <string name="action_unsubscribe">Cancelar aviso</string>
     <string name="nav_menu">Menú</string>
     <string name="nav_overview">Resumen</string>

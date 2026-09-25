@@ -103,6 +103,7 @@ export const de: Catalog = {
   "listProps.addToOrder": "Zur Reihenfolge hinzufügen",
   "listProps.addCategory": "Kategorie hinzufügen…",
   "listProps.mergeCategoryConfirm": "In \"{category}\" zusammenführen? Beide Kategorien werden zu einer.",
+  "listProps.copySuffix": "(Kopie)",
   "listProps.clearChecked": "Erledigte zurücksetzen",
   "listProps.clearCheckedCount": "Erledigte zurücksetzen ({count})",
   "listProps.kindSwitchHelp": "Das Umschalten ändert nur, welche Felder angezeigt werden — es wird nichts gelöscht, du kannst also zurückwechseln.",

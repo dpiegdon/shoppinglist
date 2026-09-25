@@ -134,6 +134,7 @@ export const en = {
   // both categories ends up in one. Was a hard-coded English confirm() call, the only user-facing
   // string in the client that bypassed the catalog.
   "listProps.mergeCategoryConfirm": "Merge into \"{category}\"? Both categories will become one.",
+  "listProps.copySuffix": "(Copy)",
   "listProps.clearChecked": "Clear checked",
   // Separate from the heading above: the BUTTON carries the count, the section title must not.
   "listProps.clearCheckedCount": "Clear checked ({count})",

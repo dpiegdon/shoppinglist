@@ -103,6 +103,7 @@ export const ja: Catalog = {
   "listProps.addToOrder": "並び順に追加",
   "listProps.addCategory": "カテゴリを追加…",
   "listProps.mergeCategoryConfirm": "「{category}」に統合しますか？ 両方のカテゴリーが1つになります。",
+  "listProps.copySuffix": "(コピー)",
   "listProps.clearChecked": "完了済みをリセット",
   "listProps.clearCheckedCount": "完了済みをリセット（{count}）",
   "listProps.kindSwitchHelp": "切り替えても表示される項目が変わるだけで、削除はされません。元に戻すこともできます。",

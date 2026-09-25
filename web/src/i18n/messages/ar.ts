@@ -104,6 +104,7 @@ export const ar: Catalog = {
   "listProps.addToOrder": "إضافة إلى الترتيب",
   "listProps.addCategory": "إضافة فئة…",
   "listProps.mergeCategoryConfirm": "الدمج في \"{category}\"؟ ستصبح الفئتان واحدة.",
+  "listProps.copySuffix": "(نسخة)",
   "listProps.clearChecked": "إعادة المكتملة",
   "listProps.clearCheckedCount": "إعادة المكتملة ({count})",
   "listProps.kindSwitchHelp": "التبديل يغيّر الحقول المعروضة فقط — لا يُحذف أي شيء، ويمكنك التبديل مرة أخرى.",

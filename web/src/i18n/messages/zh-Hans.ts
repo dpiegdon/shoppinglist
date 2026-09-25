@@ -102,6 +102,7 @@ export const zhHans: Catalog = {
   "listProps.addToOrder": "加入排序",
   "listProps.addCategory": "添加分类…",
   "listProps.mergeCategoryConfirm": "合并到「{category}」？两个分类将合并为一个。",
+  "listProps.copySuffix": "(副本)",
   "listProps.clearChecked": "重置已完成",
   "listProps.clearCheckedCount": "重置已完成（{count}）",
   "listProps.kindSwitchHelp": "切换只改变显示哪些字段 — 不会删除任何内容，你可以随时切换回来。",

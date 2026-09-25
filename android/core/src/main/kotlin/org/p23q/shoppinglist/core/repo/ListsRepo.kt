@@ -133,13 +133,16 @@ class ListsRepo @Inject constructor(
      * or [targetAccountId] doesn't exist. Items are copied separately via
      * [org.p23q.shoppinglist.core.repo.ItemsRepo.duplicateForList].
      *
+     * @param copySuffix what follows the source's name, after a space: "(Copy)" in the language of
+     *   whoever makes the copy. The name is synced data, so it stays in that language (T-302);
+     *   this module cannot read the app's resources, so the caller passes it.
      * @param targetAccountId the account the copy goes to (T-294): the source's own by default,
      *   or another account on this phone, the local area included. A copy into a server account
      *   is dirty and goes out on that account's next sync; one into the local area never does.
      * @throws IllegalArgumentException for a ledger into another account: its debts are between
      *   the source account's members, and the local area holds no ledgers at all.
      */
-    suspend fun duplicate(listId: String, targetAccountId: String? = null): String? {
+    suspend fun duplicate(listId: String, copySuffix: String, targetAccountId: String? = null): String? {
         val id = db.inTransaction {
             val source = listDao.get(listId) ?: return@inTransaction null
             val accountId = targetAccountId ?: source.accountId
@@ -158,7 +161,7 @@ class ListsRepo @Inject constructor(
                     serverId = UUID.randomUUID().toString(),
                     accountId = accountId,
                     createdAt = now,
-                    name = "${source.name.value} (Copy)".toLww(by, now),
+                    name = "${source.name.value} $copySuffix".toLww(by, now),
                     categoryOrder = source.categoryOrder.value.toLww(by, now),
                     notes = source.notes.value.toLwwOptional(by, now),
                     kind = kind.toLww(by, now),

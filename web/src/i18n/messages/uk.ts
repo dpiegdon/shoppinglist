@@ -102,6 +102,7 @@ export const uk: Catalog = {
   "listProps.addToOrder": "Додати до порядку",
   "listProps.addCategory": "Додати категорію…",
   "listProps.mergeCategoryConfirm": "Об'єднати з \"{category}\"? Обидві категорії стануть однією.",
+  "listProps.copySuffix": "(копія)",
   "listProps.clearChecked": "Скинути виконані",
   "listProps.clearCheckedCount": "Скинути виконані ({count})",
   "listProps.kindSwitchHelp": "Перемикання лише змінює, які поля показано — нічого не видаляється, тож ти можеш перемкнутися назад.",

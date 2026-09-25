@@ -171,11 +171,11 @@ class ListsRepoTest {
         repo.setCategoryOrder(sourceId, listOf("dairy", "bakery"))
         repo.setNotes(sourceId, "Gate code: 4471")
 
-        val copyId = repo.duplicate(sourceId)!!
+        val copyId = repo.duplicate(sourceId, "(Kopie)")!!
 
         assertTrue(copyId != sourceId)
         val copy = repo.getById(copyId)!!
-        assertEquals("Groceries (Copy)", copy.name.value)
+        assertEquals("Groceries (Kopie)", copy.name.value)
         assertEquals(listOf("dairy", "bakery"), repo.decodeCategoryOrder(copy.categoryOrder.value))
         assertEquals("Gate code: 4471", copy.notes.value)
         assertFalse(copy.deleted.value)
@@ -185,7 +185,7 @@ class ListsRepoTest {
 
     @Test
     fun `duplicate returns null for an unknown source list`() = runTest {
-        val result = repo.duplicate("does-not-exist")
+        val result = repo.duplicate("does-not-exist", "(Copy)")
 
         assertEquals(null, result)
     }
@@ -195,7 +195,7 @@ class ListsRepoTest {
         val sourceId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         val before = syncTrigger.scheduleCount
 
-        repo.duplicate(sourceId)
+        repo.duplicate(sourceId, "(Copy)")
 
         assertEquals(before + 1, syncTrigger.scheduleCount)
     }
@@ -290,7 +290,7 @@ class ListsRepoTest {
         addOtherAccounts()
         val sourceId = sharedList()
 
-        val copyId = repo.duplicate(sourceId, targetAccountId = "work")!!
+        val copyId = repo.duplicate(sourceId, "(Copy)", targetAccountId = "work")!!
 
         val copy = repo.getById(copyId)!!
         val source = repo.getById(sourceId)!!
@@ -311,7 +311,7 @@ class ListsRepoTest {
         val sourceId = sharedList()
         val before = repo.getById(sourceId)!!
 
-        val copyId = repo.duplicate(sourceId, targetAccountId = "phone")!!
+        val copyId = repo.duplicate(sourceId, "(Copy)", targetAccountId = "phone")!!
 
         val copy = repo.getById(copyId)!!
         assertEquals("phone", copy.accountId)
@@ -326,8 +326,8 @@ class ListsRepoTest {
         addOtherAccounts()
         val sourceId = sharedList(ListKind.EXPENSES)
 
-        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.duplicate(sourceId, targetAccountId = "work") } }
-        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.duplicate(sourceId, targetAccountId = "phone") } }
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.duplicate(sourceId, "(Copy)", targetAccountId = "work") } }
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { repo.duplicate(sourceId, "(Copy)", targetAccountId = "phone") } }
 
         assertEquals(listOf(sourceId), repo.activeLists().first().map { it.localId })
     }
@@ -336,7 +336,7 @@ class ListsRepoTest {
     fun `a ledger copied within its own account keeps its currency (T-294)`() = runTest {
         val sourceId = sharedList(ListKind.EXPENSES)
 
-        val copy = repo.getById(repo.duplicate(sourceId, targetAccountId = TEST_ACCOUNT_ID)!!)!!
+        val copy = repo.getById(repo.duplicate(sourceId, "(Copy)", targetAccountId = TEST_ACCOUNT_ID)!!)!!
 
         assertEquals(ListKind.EXPENSES, copy.kind.value)
         assertEquals("EUR", copy.currency.value)
@@ -346,7 +346,7 @@ class ListsRepoTest {
     fun `duplicate into an account this phone does not hold makes nothing (T-294)`() = runTest {
         val sourceId = repo.create(TEST_ACCOUNT_ID, "Groceries")
 
-        assertEquals(null, repo.duplicate(sourceId, targetAccountId = "gone"))
+        assertEquals(null, repo.duplicate(sourceId, "(Copy)", targetAccountId = "gone"))
         assertEquals(1, repo.activeLists().first().size)
     }
 }

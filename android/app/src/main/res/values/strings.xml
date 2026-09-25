@@ -31,6 +31,8 @@
     <string name="action_ignore">Ignore</string>
     <string name="action_duplicate">Duplicate</string>
     <string name="listprops_copy_to">Copy to</string>
+    <!-- Appended, after a space, to the name of a list copy; the name is synced, so it stays in the language it was made in. -->
+    <string name="list_copy_suffix">(Copy)</string>
     <string name="action_unsubscribe">Unsubscribe</string>
 
     <!-- navigation -->

@@ -101,6 +101,7 @@ export const ptBR: Catalog = {
   "listProps.addToOrder": "Adicionar à ordem",
   "listProps.addCategory": "Adicionar categoria…",
   "listProps.mergeCategoryConfirm": "Mesclar com \"{category}\"? As duas categorias vão virar uma só.",
+  "listProps.copySuffix": "(cópia)",
   "listProps.clearChecked": "Redefinir concluídos",
   "listProps.clearCheckedCount": "Redefinir concluídos ({count})",
   "listProps.kindSwitchHelp": "Trocar só muda quais campos aparecem — nada é excluído, então você pode voltar.",

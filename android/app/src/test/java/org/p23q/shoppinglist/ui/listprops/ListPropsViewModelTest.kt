@@ -481,7 +481,7 @@ class ListPropsViewModelTest {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
-        viewModel.duplicateList().join()
+        viewModel.duplicateList("(Copy)").join()
 
         val newListId = viewModel.uiState.value.duplicatedListId
         assertNotNull(newListId)
@@ -585,7 +585,7 @@ class ListPropsViewModelTest {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
-        viewModel.requestDuplicate().join()
+        viewModel.requestDuplicate("(Copy)").join()
 
         val state = viewModel.uiState.value
         assertTrue(state.copyTargets.isEmpty())
@@ -599,12 +599,12 @@ class ListPropsViewModelTest {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
-        viewModel.requestDuplicate().join()
+        viewModel.requestDuplicate("(Copy)").join()
 
         assertEquals(listOf(TEST_ACCOUNT_ID, "work", "on-phone"), viewModel.uiState.value.copyTargets.map { it.id })
         assertNull("nothing is copied before a pick", viewModel.uiState.value.duplicatedListId)
 
-        viewModel.duplicateList("on-phone").join()
+        viewModel.duplicateList("(Copy)", "on-phone").join()
 
         val state = viewModel.uiState.value
         assertTrue("the picker closes", state.copyTargets.isEmpty())
@@ -617,7 +617,7 @@ class ListPropsViewModelTest {
         addOtherAccounts()
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
-        viewModel.requestDuplicate().join()
+        viewModel.requestDuplicate("(Copy)").join()
 
         viewModel.cancelCopy()
 
@@ -632,7 +632,7 @@ class ListPropsViewModelTest {
         val viewModel = newViewModel()
         viewModel.uiState.first { it.name.isNotBlank() }
 
-        viewModel.requestDuplicate().join()
+        viewModel.requestDuplicate("(Copy)").join()
 
         val state = viewModel.uiState.value
         assertTrue(state.copyTargets.isEmpty())

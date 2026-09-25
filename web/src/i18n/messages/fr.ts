@@ -100,6 +100,7 @@ export const fr: Catalog = {
   "listProps.addToOrder": "Ajouter à l'ordre",
   "listProps.addCategory": "Ajouter une catégorie…",
   "listProps.mergeCategoryConfirm": "Fusionner avec \"{category}\" ? Les deux catégories n'en feront plus qu'une.",
+  "listProps.copySuffix": "(copie)",
   "listProps.clearChecked": "Réinitialiser les articles faits",
   "listProps.clearCheckedCount": "Réinitialiser les articles faits ({count})",
   "listProps.kindSwitchHelp": "Le changement n'affecte que les champs affichés — rien n'est supprimé, tu peux donc revenir en arrière.",

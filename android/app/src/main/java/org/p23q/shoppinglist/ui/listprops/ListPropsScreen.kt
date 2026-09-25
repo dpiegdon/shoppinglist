@@ -72,6 +72,8 @@ fun ListPropsScreen(
     LaunchedEffect(Unit) { viewModel.loadMembers() }
     LaunchedEffect(state.hasLeft) { if (state.hasLeft) onLeft() }
     LaunchedEffect(state.duplicatedListId) { state.duplicatedListId?.let(onDuplicated) }
+    // A copy's name ends in "(Copy)" in the app's language, the copier's (T-302).
+    val copySuffix = stringResource(R.string.list_copy_suffix)
     // Hoisted above the effect: its body is a coroutine, not a composition.
     val shareInviteTitle = stringResource(R.string.listprops_share_invite)
     LaunchedEffect(state.inviteShareUrl) {
@@ -230,7 +232,7 @@ fun ListPropsScreen(
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
         if (!isExpenses) {
-            TextButton(onClick = { viewModel.requestDuplicate() }) { Text(stringResource(R.string.action_duplicate)) }
+            TextButton(onClick = { viewModel.requestDuplicate(copySuffix) }) { Text(stringResource(R.string.action_duplicate)) }
         }
         Spacer(Modifier.height(8.dp))
 
@@ -288,7 +290,7 @@ fun ListPropsScreen(
 
     // With several accounts, which one the copy goes to (T-294): the list's own first.
     if (state.copyTargets.isNotEmpty()) {
-        CopyToDialog(state.copyTargets, onPick = { viewModel.duplicateList(it) }, onDismiss = viewModel::cancelCopy)
+        CopyToDialog(state.copyTargets, onPick = { viewModel.duplicateList(copySuffix, it) }, onDismiss = viewModel::cancelCopy)
     }
 
     // Renaming a category onto another existing one merges them irreversibly (T-270): the web

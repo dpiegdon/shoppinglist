@@ -137,7 +137,8 @@ properties' *Duplicate* makes the copy at once when the phone holds one account;
 with several it asks *Copy to*, listing the list's own account first and then the
 others in the overview's order, the local area last. The copy is a new list in
 the chosen account, with fresh ids and field clocks, the name suffixed
-*(Copy)*, the category order, notes and kind, and every item that is not
+*(Copy)* in the app's language (the name is synced, so it stays in the
+copier's), the category order, notes and kind, and every item that is not
 deleted, hidden shopping fields included. It has no members or close votes of
 its own until its server reports them. A copy into a server account goes out on
 that account's next sync; one into the local area never does. A ledger is not

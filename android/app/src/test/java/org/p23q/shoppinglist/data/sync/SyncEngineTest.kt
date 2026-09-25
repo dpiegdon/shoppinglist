@@ -1398,7 +1398,7 @@ class SyncEngineTest {
     /** Copies [sourceLocalId] and its items into [targetAccountId] as List properties does (T-294). */
     private suspend fun copyList(sourceLocalId: String, targetAccountId: String): String {
         val deviceId = DeviceIdProvider { "this-device" }
-        val copyId = org.p23q.shoppinglist.core.repo.ListsRepo(db, deviceId, FakeSyncTrigger()).duplicate(sourceLocalId, targetAccountId)!!
+        val copyId = org.p23q.shoppinglist.core.repo.ListsRepo(db, deviceId, FakeSyncTrigger()).duplicate(sourceLocalId, "(Copy)", targetAccountId)!!
         ItemsRepo(db, deviceId, FakeSyncTrigger()).duplicateForList(sourceLocalId, copyId)
         return copyId
     }

@@ -647,4 +647,38 @@ describe("category merge confirmation goes through the catalog (T-270)", () => {
     expect(confirmSpy).toHaveBeenCalledWith(de["listProps.mergeCategoryConfirm"]!.replace("{category}", "Dairy"));
     confirmSpy.mockRestore();
   });
+
+  it("names a copy in the language of whoever makes it (T-302)", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listObj()], items: [] },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/list/list-1"]}>
+        <I18nProvider>
+          <AuthProvider>
+            <SyncProvider>
+              <Routes>
+                <Route path="/list/:listId" element={<ListPage />} />
+                <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+              </Routes>
+            </SyncProvider>
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+    await screen.findByText("Groceries");
+    await userEvent.click(screen.getByRole("link", { name: de["listProps.title"] }));
+    vi.mocked(api.sync).mockImplementationOnce(async (req) => ({
+      cursor: 2,
+      changes: { lists: req.changes.lists ?? [], items: req.changes.items ?? [] },
+    }));
+    await userEvent.click(await screen.findByRole("button", { name: de["action.duplicate"] }));
+
+    await waitFor(() => {
+      const pushed = vi.mocked(api.sync).mock.calls[1][0].changes.lists!;
+      expect(pushed[0].fields.name?.value).toBe("Groceries (Kopie)");
+    });
+  });
 });

@@ -29,6 +29,7 @@
     <string name="action_ignore">Ігнорувати</string>
     <string name="action_duplicate">Дублювати</string>
     <string name="listprops_copy_to">Копіювати до</string>
+    <string name="list_copy_suffix">(копія)</string>
     <string name="action_unsubscribe">Відписатися</string>
     <string name="nav_menu">Меню</string>
     <string name="nav_overview">Огляд</string>

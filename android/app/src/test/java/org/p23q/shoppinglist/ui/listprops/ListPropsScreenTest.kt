@@ -45,6 +45,7 @@ import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -193,6 +194,50 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals(true, duplicatedListId != null && duplicatedListId != listId)
+        db.close()
+    }
+
+    /** T-302: the name is synced data, so it takes the copier's language; "(Copy)" was English on every phone. */
+    @Test
+    @Config(qualifiers = "de")
+    fun `a copy's name ends in the app's word for copy`() = runBlocking<Unit> {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount(serverUrl = server.url("/").toString()))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+        var duplicatedListId: String? = null
+        composeTestRule.setContent {
+            ListPropsScreen(onLeft = {}, onDuplicated = { duplicatedListId = it }, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Duplizieren").performScrollTo().performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { duplicatedListId != null }
+
+        assertEquals("Groceries (Kopie)", listsRepo.getById(duplicatedListId!!)!!.name.value)
+        viewModel.viewModelScope.cancel()
         db.close()
     }
 

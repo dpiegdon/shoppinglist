@@ -312,14 +312,15 @@ class ListPropsViewModel @Inject constructor(
 
     /**
      * The Duplicate button (T-294): with one account to copy into, the copy is made at once, as it
-     * always was; with several, the "Copy to" picker opens on them.
+     * always was; with several, the "Copy to" picker opens on them. [copySuffix] is the screen's
+     * "(Copy)", in the app's language (T-302).
      */
-    fun requestDuplicate(): Job = viewModelScope.launch {
+    fun requestDuplicate(copySuffix: String): Job = viewModelScope.launch {
         val targets = copyTargets()
         if (targets.size > 1) {
             _uiState.update { it.copy(copyTargets = targets) }
         } else {
-            duplicateList().join()
+            duplicateList(copySuffix).join()
         }
     }
 
@@ -340,12 +341,12 @@ class ListPropsViewModel @Inject constructor(
 
     /**
      * Solo-owned snapshot copy of this list and its non-deleted items, purely client-side (T-63),
-     * into [targetAccountId] (T-294), the list's own account by default. An account removed
-     * meanwhile gets nothing.
+     * into [targetAccountId] (T-294), the list's own account by default, named with [copySuffix]
+     * after the source's name. An account removed meanwhile gets nothing.
      */
-    fun duplicateList(targetAccountId: String? = null): Job = viewModelScope.launch {
+    fun duplicateList(copySuffix: String, targetAccountId: String? = null): Job = viewModelScope.launch {
         _uiState.update { it.copy(copyTargets = emptyList()) }
-        val newListId = listsRepo.duplicate(listId, targetAccountId) ?: return@launch
+        val newListId = listsRepo.duplicate(listId, copySuffix, targetAccountId) ?: return@launch
         itemsRepo.duplicateForList(sourceListId = listId, targetListId = newListId)
         _uiState.update { it.copy(duplicatedListId = newListId) }
     }

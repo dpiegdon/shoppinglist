@@ -303,7 +303,8 @@ export default function ListPropsPage() {
             id: newListId,
             created_at: nowMs(),
             fields: {
-              ...fieldPatch(deviceId, "name", `${listFieldValue(list, "name")} (Copy)`),
+              // In the language of whoever made the copy: the name is synced data, not UI text.
+              ...fieldPatch(deviceId, "name", `${listFieldValue(list, "name")} ${t("listProps.copySuffix")}`),
               ...fieldPatch(deviceId, "category_order", listFieldValue(list, "category_order") ?? []),
               ...fieldPatch(deviceId, "notes", listFieldValue(list, "notes") ?? null),
               // The duplicate must keep the source's kind (T-267): omitting it left the server to
