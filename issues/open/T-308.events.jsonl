@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-25T20:26:19+00:00", "kind": "created", "ref": "main@5e9de023", "text": "Release 3.2.1"}
+{"actor": "user", "at": "2026-09-25T20:36:16+00:00", "kind": "note", "ref": "main@5b8d3145", "text": "Released: commit 5b8d3145, tag v3.2.1, versionCode 32, protocol 3, full gate green inside release.sh. Wheel server/dist/shoppinglist_server-3.2.1-py3-none-any.whl sha256 7d04f7072eb98ec77de83c7e04e650c4089d05ca2f2ef904136c91e26ae460db."}
