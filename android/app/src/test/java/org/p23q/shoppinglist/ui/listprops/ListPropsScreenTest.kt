@@ -12,6 +12,10 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -107,6 +111,49 @@ class ListPropsScreenTest {
         composeTestRule.onNodeWithText("Leave this list?").assertExists()
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
         assertEquals(false, left)
+    }
+
+    /** T-30, kept by T-307's shared drag-reorder: a category moves one place per 44dp dragged. */
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `dragging a category's handle moves it one place per row height`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount())
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery", "produce", "frozen"))
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_drag_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+        composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.categoryOrder.size == 4 }
+        composeTestRule.waitForIdle()
+
+        // 2.6 rows of 44dp, less the touch slop: two swaps, however tall the rows are drawn.
+        val distance = with(composeTestRule.density) { 44.dp.toPx() } * 2.6f
+        composeTestRule.onNodeWithContentDescription("Reorder dairy").performTouchInput {
+            down(center)
+            repeat(40) { moveBy(Offset(0f, distance / 40)) }
+            up()
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(listOf("bakery", "produce", "dairy", "frozen"), viewModel.uiState.value.categoryOrder)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
     @Test

@@ -12,29 +12,37 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.DragReorderState
 import org.p23q.shoppinglist.ui.LocalAreaNote
 import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.attentionText
+import org.p23q.shoppinglist.ui.dragReorderHandle
+import org.p23q.shoppinglist.ui.dragReorderItem
+import org.p23q.shoppinglist.ui.rememberDragReorderState
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.ui.syncRecencyText
 
@@ -59,21 +67,35 @@ fun AccountsScreen(
     val nowMs = rememberTickingNowMs()
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        // The local area sorts last and has no arrows; the server accounts move among themselves.
+        // Dragged by a handle as a list's categories are (T-307): the server accounts move among
+        // themselves; the local area sorts last, has no handle, and nothing is dragged past it.
+        val gapPx = with(LocalDensity.current) { 8.dp.toPx() }
+        val reorder = rememberDragReorderState(
+            keys = rows.map { it.account.id },
+            onMove = { from, to ->
+                val id = rows[from].account.id
+                if (to < from) viewModel.moveUp(id) else viewModel.moveDown(id)
+            },
+            canMoveTo = { to -> rows.getOrNull(to)?.account?.isServer == true },
+            gapPx = gapPx,
+        )
         val lastServer = rows.indexOfLast { it.account.isServer }
         rows.forEachIndexed { index, row ->
-            AccountCard(
-                row = row,
-                nowMs = nowMs,
-                isFirst = index == 0,
-                isLast = index == lastServer,
-                onOpen = { onOpenAccount(row.account.id) },
-                onSignIn = { onSignIn(row.account.id) },
-                onCheckForUpdate = onCheckForUpdate,
-                onMoveUp = { viewModel.moveUp(row.account.id) },
-                onMoveDown = { viewModel.moveDown(row.account.id) },
-            )
-            Spacer(Modifier.height(8.dp))
+            key(row.account.id) {
+                AccountCard(
+                    row = row,
+                    nowMs = nowMs,
+                    reorder = reorder,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < lastServer,
+                    onOpen = { onOpenAccount(row.account.id) },
+                    onSignIn = { onSignIn(row.account.id) },
+                    onCheckForUpdate = onCheckForUpdate,
+                    onMoveUp = { viewModel.moveUp(row.account.id) },
+                    onMoveDown = { viewModel.moveDown(row.account.id) },
+                )
+                Spacer(Modifier.height(8.dp))
+            }
         }
         OutlinedButton(onClick = onAddAccount, modifier = Modifier.fillMaxWidth().testTag("accounts-add")) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
@@ -98,8 +120,9 @@ fun AccountsScreen(
 private fun AccountCard(
     row: AccountRow,
     nowMs: Long,
-    isFirst: Boolean,
-    isLast: Boolean,
+    reorder: DragReorderState<String>,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
     onOpen: () -> Unit,
     onSignIn: () -> Unit,
     onCheckForUpdate: () -> Unit,
@@ -107,7 +130,15 @@ private fun AccountCard(
     onMoveDown: () -> Unit,
 ) {
     val account = row.account
-    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth().testTag("account-row-${account.id}")) {
+    Card(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth().dragReorderItem(reorder, account.id).testTag("account-row-${account.id}"),
+        colors = if (reorder.isDragging(account.id)) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        } else {
+            CardDefaults.cardColors()
+        },
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)) {
             Column(modifier = Modifier.weight(1f)) {
                 // Two lines, email then the full server URL, rather than the stored label: two
@@ -147,14 +178,23 @@ private fun AccountCard(
                 }
             }
             if (account.isServer) {
-                Column {
-                    IconButton(onClick = onMoveUp, enabled = !isFirst, modifier = Modifier.testTag("account-up-${account.id}")) {
-                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.accounts_move_up))
-                    }
-                    IconButton(onClick = onMoveDown, enabled = !isLast, modifier = Modifier.testTag("account-down-${account.id}")) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.accounts_move_down))
-                    }
-                }
+                // The arrows' moves stay offered to accessibility services, as actions on the handle.
+                val up = stringResource(R.string.accounts_move_up)
+                val down = stringResource(R.string.accounts_move_down)
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = stringResource(R.string.listprops_reorder_category, accountName(account)),
+                    modifier = Modifier
+                        .dragReorderHandle(reorder, account.id)
+                        .padding(12.dp)
+                        .semantics {
+                            customActions = listOfNotNull(
+                                CustomAccessibilityAction(up) { onMoveUp(); true }.takeIf { canMoveUp },
+                                CustomAccessibilityAction(down) { onMoveDown(); true }.takeIf { canMoveDown },
+                            )
+                        }
+                        .testTag("account-handle-${account.id}"),
+                )
             }
         }
     }

@@ -2,14 +2,15 @@ package org.p23q.shoppinglist.ui.accounts
 
 import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.closeWhenIdle
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.geometry.Offset
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -148,20 +149,21 @@ class AccountsScreenTest {
     }
 
     @Test
-    fun `the arrows reorder the accounts, and the ends cannot move further`() = runBlocking<Unit> {
+    fun `the handle offers the moves to accessibility services, none past either end (T-307)`() = runBlocking<Unit> {
         accounts.registry.add(accountRow("prod"))
         accounts.registry.add(accountRow("stage", serverUrl = "https://lists.example.test/stage/"))
 
         show()
-        composeTestRule.onAllNodesWithContentDescription("Move up")[0].assertIsNotEnabled()
-        composeTestRule.onAllNodesWithContentDescription("Move down")[1].assertIsNotEnabled()
-        composeTestRule.onAllNodesWithContentDescription("Move down")[0].performClick()
+        fun actions(id: String) = composeTestRule.onNodeWithTag("account-handle-$id", useUnmergedTree = true)
+            .fetchSemanticsNode().config.getOrElse(SemanticsActions.CustomActions) { emptyList() }
+        assertEquals(listOf("Move down"), actions("prod").map { it.label })
+        assertEquals(listOf("Move up"), actions("stage").map { it.label })
+
+        composeTestRule.runOnUiThread { actions("prod").single().action() }
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.waitForIdle()
-            accounts.registry.snapshot().first().id == "stage"
+            order() == listOf("stage", "prod")
         }
-
-        assertEquals(listOf("stage", "prod"), db.accountDao().all().map { it.id })
     }
 
     @Test
@@ -207,18 +209,59 @@ class AccountsScreenTest {
     }
 
     @Test
-    fun `the local area is last and has no arrows, the last server account cannot move down (T-302)`() = runBlocking<Unit> {
+    fun `the local area is last and has no drag handle, the server accounts do (T-302, T-307)`() = runBlocking<Unit> {
         accounts.registry.add(localAccountRow())
         accounts.registry.add(accountRow("prod"))
 
         show()
 
-        composeTestRule.onNodeWithTag("account-up-local").assertDoesNotExist()
-        composeTestRule.onNodeWithTag("account-down-local").assertDoesNotExist()
-        composeTestRule.onNodeWithTag("account-up-prod").assertIsNotEnabled()
-        composeTestRule.onNodeWithTag("account-down-prod").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("account-handle-local", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithTag("account-handle-prod", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithTag("account-up-prod", useUnmergedTree = true).assertDoesNotExist()
         val prodTop = composeTestRule.onNodeWithTag("account-row-prod").fetchSemanticsNode().boundsInRoot.top
         val localTop = composeTestRule.onNodeWithTag("account-row-local").fetchSemanticsNode().boundsInRoot.top
         assertTrue("the local area is below the server account", localTop > prodTop)
+    }
+
+    private fun order() = accounts.registry.snapshot().sortedBy { it.sortOrder }.map { it.id }
+
+    private fun dragHandle(id: String, byRows: Float) {
+        val rowHeight = composeTestRule.onNodeWithTag("account-row-$id").fetchSemanticsNode().boundsInRoot.height
+        composeTestRule.onNodeWithTag("account-handle-$id", useUnmergedTree = true).performTouchInput {
+            down(center)
+            // In small steps, as a finger moves: each swap rebases the offset by the neighbour's height.
+            repeat(40) { moveBy(Offset(0f, rowHeight * byRows / 40)) }
+            up()
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `dragging a server account's handle down past its neighbour swaps them, and the order is kept (T-307)`() = runBlocking<Unit> {
+        accounts.registry.add(accountRow("prod"))
+        accounts.registry.add(accountRow("stage", serverUrl = "https://lists.example.test/stage/"))
+        accounts.registry.add(accountRow("old", serverUrl = "https://old.example.test/"))
+
+        show()
+        dragHandle("prod", byRows = 1.3f)
+
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { order() == listOf("stage", "prod", "old") }
+        assertEquals(listOf("stage", "prod", "old"), db.accountDao().all().sortedBy { it.sortOrder }.map { it.id })
+        assertEquals("a drag is not a tap", emptyList<String>(), opened)
+    }
+
+    @Test
+    fun `a server account dragged down never passes the local area, and one dragged up moves up (T-307)`() = runBlocking<Unit> {
+        accounts.registry.add(accountRow("prod"))
+        accounts.registry.add(accountRow("stage", serverUrl = "https://lists.example.test/stage/"))
+        val local = accounts.registry.addLocal()!!.id
+
+        show()
+        dragHandle("stage", byRows = 3f)
+        composeTestRule.waitForIdle()
+        assertEquals(listOf("prod", "stage", local), order())
+
+        dragHandle("stage", byRows = -1.3f)
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { order() == listOf("stage", "prod", local) }
     }
 }

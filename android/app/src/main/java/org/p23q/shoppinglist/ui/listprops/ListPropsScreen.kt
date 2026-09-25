@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.listprops
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -39,14 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
@@ -58,6 +53,9 @@ import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.accountLineText
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.dragReorderHandle
+import org.p23q.shoppinglist.ui.dragReorderItem
+import org.p23q.shoppinglist.ui.rememberDragReorderState
 import org.p23q.shoppinglist.ui.asString
 
 @Composable
@@ -420,14 +418,7 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
     Spacer(Modifier.height(16.dp))
 }
 
-/**
- * Real drag-reorder (T-30) replacing the old up/down buttons. Dragging the handle starts immediately
- * (no long-press) and the dragged row follows the finger (translationY + raised zIndex); once it has
- * travelled one row-height it swaps with its neighbour via the existing moveCategoryUp/Down edits
- * (persistence unchanged) and the offset is rebased by a row so the motion stays continuous. Rows are
- * keyed by category and the gesture reads the category's *current* index live (rememberUpdatedState),
- * so the handle keeps following its item across swaps.
- */
+/** The categories in order, each renamable and dragged by its handle to reorder (T-30, [rememberDragReorderState]). */
 @Composable
 private fun CategoryOrderList(
     categories: List<String>,
@@ -436,8 +427,12 @@ private fun CategoryOrderList(
     onRename: (Int, String) -> Unit,
 ) {
     val rowHeightPx = with(LocalDensity.current) { 44.dp.toPx() }
-    var draggingCategory by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
+    // Moves go through the existing moveCategoryUp/Down edits, so persistence is unchanged.
+    val reorder = rememberDragReorderState(
+        keys = categories,
+        onMove = { from, to -> if (to < from) onMoveUp(from) else onMoveDown(from) },
+        fixedStepPx = rowHeightPx,
+    )
     var editingCategory by remember { mutableStateOf<String?>(null) }
     var draftName by remember { mutableStateOf("") }
     val currentCategories by rememberUpdatedState(categories)
@@ -464,12 +459,11 @@ private fun CategoryOrderList(
                         TextButton(onClick = { editingCategory = null }) { Text(stringResource(R.string.action_cancel)) }
                     }
                 } else {
-                    val dragging = draggingCategory == category
+                    val dragging = reorder.isDragging(category)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .zIndex(if (dragging) 1f else 0f)
-                            .graphicsLayer { translationY = if (dragging) dragOffset else 0f }
+                            .dragReorderItem(reorder, category)
                             .background(if (dragging) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
                             .padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -482,25 +476,7 @@ private fun CategoryOrderList(
                         Icon(
                             imageVector = Icons.Default.Menu,
                             contentDescription = stringResource(R.string.listprops_reorder_category, category),
-                            modifier = Modifier.pointerInput(category) {
-                                detectDragGestures(
-                                    onDragStart = { draggingCategory = category; dragOffset = 0f },
-                                    onDragEnd = { draggingCategory = null; dragOffset = 0f },
-                                    onDragCancel = { draggingCategory = null; dragOffset = 0f },
-                                ) { change, dragAmount ->
-                                    change.consume()
-                                    dragOffset += dragAmount.y
-                                    val idx = currentCategories.indexOf(category)
-                                    if (idx < 0) return@detectDragGestures
-                                    if (dragOffset <= -rowHeightPx && idx > 0) {
-                                        onMoveUp(idx)
-                                        dragOffset += rowHeightPx
-                                    } else if (dragOffset >= rowHeightPx && idx < currentCategories.size - 1) {
-                                        onMoveDown(idx)
-                                        dragOffset -= rowHeightPx
-                                    }
-                                }
-                            },
+                            modifier = Modifier.dragReorderHandle(reorder, category),
                         )
                     }
                 }
