@@ -354,8 +354,8 @@
     <string name="api_error_session_not_found">そのセッションはすでに終了しています</string>
     <string name="api_error_server_busy">サーバーが混み合っています。しばらくしてからもう一度お試しください。</string>
     <string name="api_error_payload_too_large">一度に送信できる量を超えています</string>
-    <string name="api_error_not_found">サーバーはこのリクエストを認識していません。</string>
-    <string name="api_error_method_not_allowed">サーバーはこのリクエストを認識していません。</string>
+    <string name="api_error_not_found">サーバーはこのリクエストを認識できません。</string>
+    <string name="api_error_method_not_allowed">サーバーはこのリクエストを認識できません。</string>
     <string name="api_error_internal_error">問題が発生しました</string>
     <string name="api_error_voted_to_close">このリストの締めに同意しているため、変更できません。変更するには同意を取り消してください。</string>
     <string name="api_error_not_an_expenses_list">帳簿のみ、締めの投票ができます。</string>

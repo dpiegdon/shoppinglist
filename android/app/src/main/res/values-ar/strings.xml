@@ -354,8 +354,8 @@
     <string name="api_error_session_not_found">انتهت هذه الجلسة بالفعل</string>
     <string name="api_error_server_busy">الخادم مشغول. حاول مرة أخرى بعد لحظة.</string>
     <string name="api_error_payload_too_large">هذا أكثر مما يمكن إرساله دفعة واحدة</string>
-    <string name="api_error_not_found">الخادم لا يعرف هذا الطلب.</string>
-    <string name="api_error_method_not_allowed">الخادم لا يعرف هذا الطلب.</string>
+    <string name="api_error_not_found">لا يعرف الخادم هذا الطلب.</string>
+    <string name="api_error_method_not_allowed">لا يعرف الخادم هذا الطلب.</string>
     <string name="api_error_internal_error">حدث خطأ ما</string>
     <string name="api_error_voted_to_close">لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.</string>
     <string name="api_error_not_an_expenses_list">يمكن التصويت على الإغلاق فقط لدفتر الحسابات.</string>
