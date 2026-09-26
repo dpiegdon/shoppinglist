@@ -168,6 +168,7 @@ export const en = {
   "action.add": "Add",
   "action.copy": "Copy",
   "action.copied": "Copied!",
+  "action.reset": "Reset",
   "common.saved": "Saved.",
   "error.generic": "Something went wrong",
 
@@ -248,6 +249,8 @@ export const en = {
   "admin.yourPassword": "Your password (for reset/delete)",
   "admin.deleteUserTitle": "Delete user?",
   "admin.resetPassword": "Reset password",
+  "admin.resetUserTitle": "Reset password?",
+  "admin.resetUserBody": "Reset the password of {email}? Their current password stops working at once.",
   "admin.passwordRequired": "Enter your password to reset or delete a user.",
   "admin.loadFailed": "Couldn't load admin data",
   "admin.updateFailed": "Couldn't update",

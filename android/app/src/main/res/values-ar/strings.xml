@@ -23,6 +23,8 @@
     <string name="action_hide">إخفاء</string>
     <string name="action_create">إنشاء</string>
     <string name="action_reset">إعادة تعيين</string>
+    <string name="action_copy">نسخ</string>
+    <string name="action_copied">تم النسخ!</string>
     <string name="action_leave">مغادرة</string>
     <string name="action_invite">دعوة</string>
     <string name="action_join">انضمام</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">كلمة مرور جديدة لـ %1$s — تظهر مرة واحدة، أرسلها بأمان:</string>
     <string name="admin_delete_user_title">حذف المستخدم؟</string>
     <string name="admin_delete_user_body">حذف %1$s وكل بياناته نهائيًا. لا يمكن التراجع عن هذا.</string>
+    <string name="admin_reset_user_title">إعادة تعيين كلمة المرور؟</string>
+    <string name="admin_reset_user_body">إعادة تعيين كلمة مرور %1$s؟ ستتوقف كلمة المرور الحالية عن العمل فورًا.</string>
     <string name="admin_msg_password_required">أدخل كلمة المرور لإعادة تعيين مستخدم أو حذفه.</string>
     <string name="admin_msg_load_failed">تعذّر تحميل بيانات الإدارة</string>
     <string name="admin_msg_update_failed">تعذّر التحديث</string>

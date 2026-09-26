@@ -104,8 +104,8 @@ class AdminViewModel internal constructor(
 
     /**
      * True (and complains inline) when the step-up password is missing. Callers check this BEFORE
-     * doing anything else — notably before opening the delete confirmation, so the user is never
-     * asked to confirm a deletion that then can't run (T-113).
+     * doing anything else — notably before opening the reset or delete confirmation, so the user
+     * is never asked to confirm an action that then can't run (T-113, T-313).
      */
     fun requirePassword(): Boolean {
         if (_uiState.value.password.isNotBlank()) {

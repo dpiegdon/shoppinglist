@@ -25,6 +25,8 @@
     <string name="action_hide">Hide</string>
     <string name="action_create">Create</string>
     <string name="action_reset">Reset</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copied">Copied!</string>
     <string name="action_leave">Leave</string>
     <string name="action_invite">Invite</string>
     <string name="action_join">Join</string>
@@ -304,6 +306,8 @@
     <string name="admin_new_password_for">New password for %1$s — shown once, send it securely:</string>
     <string name="admin_delete_user_title">Delete user?</string>
     <string name="admin_delete_user_body">Permanently delete %1$s and all of their data. This can\'t be undone.</string>
+    <string name="admin_reset_user_title">Reset password?</string>
+    <string name="admin_reset_user_body">Reset the password of %1$s? Their current password stops working at once.</string>
     <string name="admin_msg_password_required">Enter your password to reset or delete a user.</string>
     <string name="admin_msg_load_failed">Couldn\'t load admin data</string>
     <string name="admin_msg_update_failed">Couldn\'t update</string>

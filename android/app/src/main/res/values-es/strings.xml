@@ -23,6 +23,8 @@
     <string name="action_hide">Ocultar</string>
     <string name="action_create">Crear</string>
     <string name="action_reset">Restablecer</string>
+    <string name="action_copy">Copiar</string>
+    <string name="action_copied">¡Copiado!</string>
     <string name="action_leave">Salir</string>
     <string name="action_invite">Invitar</string>
     <string name="action_join">Unirse</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">Nueva contraseña para %1$s — se muestra una sola vez, envíala de forma segura:</string>
     <string name="admin_delete_user_title">¿Eliminar usuario?</string>
     <string name="admin_delete_user_body">Eliminar permanentemente a %1$s y todos sus datos. Esto no se puede deshacer.</string>
+    <string name="admin_reset_user_title">¿Restablecer la contraseña?</string>
+    <string name="admin_reset_user_body">¿Restablecer la contraseña de %1$s? Su contraseña actual dejará de funcionar de inmediato.</string>
     <string name="admin_msg_password_required">Introduce tu contraseña para restablecer o eliminar un usuario.</string>
     <string name="admin_msg_load_failed">No se han podido cargar los datos de administración</string>
     <string name="admin_msg_update_failed">No se ha podido actualizar</string>

@@ -61,8 +61,9 @@ function ToggleSwitch({
 /**
  * Admin-only server console (T-107): toggle registration for this run, reset a user's password,
  * delete a user. Reached from the main menu (T-220); gated on the login response's is_admin. Destructive actions
- * re-verify the admin's own password (entered once below), and deleting a user requires an explicit
- * confirmation naming them so a stray click can't nuke an account (T-112).
+ * re-verify the admin's own password (entered once below), and resetting or deleting a user requires
+ * an explicit confirmation naming them so a stray click can't lock out or nuke an account (T-112,
+ * T-313).
  */
 export default function AdminPage() {
   const t = useT();
@@ -78,6 +79,9 @@ export default function AdminPage() {
   // blocked reset/delete look like nothing happened at all.
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
+  const [passwordCopied, setPasswordCopied] = useState(false);
+  const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
+  const closeResetDialog = useCallback(() => setResetTarget(null), []);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const closeDeleteDialog = useCallback(() => setDeleteTarget(null), []);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -132,15 +136,36 @@ export default function AdminPage() {
     }
   }
 
-  async function resetPassword(user: AdminUser) {
+  // The password is checked before the confirmation opens, as for a deletion (T-113), so the admin
+  // is never asked to confirm a reset that then can't run.
+  function requestReset(user: AdminUser) {
     if (!requirePassword()) return;
     setError(null);
+    setResetTarget(user);
+  }
+
+  async function confirmReset() {
+    const user = resetTarget;
+    setResetTarget(null);
+    if (!user) return;
     setResetResult(null);
+    setPasswordCopied(false);
     try {
       const result = await api.adminResetPassword(user.id, password);
       setResetResult({ email: user.email, password: result.password });
     } catch (err) {
       setError(errorMessage(t, err, "admin.resetFailed"));
+    }
+  }
+
+  async function copyResetPassword() {
+    if (!resetResult) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.password);
+      setPasswordCopied(true);
+      setTimeout(() => setPasswordCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable (e.g. non-secure context): the password stays selectable as a fallback.
     }
   }
 
@@ -247,7 +272,17 @@ export default function AdminPage() {
                 <p className="muted" style={{ margin: "0 0 0.3rem", fontSize: "0.85rem" }}>
                   {t("admin.newPasswordFor", { email: resetResult.email })}
                 </p>
-                <code style={{ userSelect: "all" }}>{resetResult.password}</code>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <code
+                    data-testid="reset-password"
+                    style={{ userSelect: "all", fontFamily: "monospace", flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
+                  >
+                    {resetResult.password}
+                  </code>
+                  <button type="button" className="btn btn-sm" onClick={copyResetPassword}>
+                    {passwordCopied ? t("action.copied") : t("action.copy")}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -272,7 +307,7 @@ export default function AdminPage() {
                     </span>
                   </span>
                   <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
-                    <button type="button" className="btn" onClick={() => resetPassword(user)}>
+                    <button type="button" className="btn" onClick={() => requestReset(user)}>
                       {t("admin.resetPassword")}
                     </button>
                     {/* Admins and your own account can't be deleted here (the server enforces this too). */}
@@ -288,6 +323,21 @@ export default function AdminPage() {
           </>
         )}
       </section>
+
+      {resetTarget && (
+        <ModalDialog onClose={closeResetDialog} labelledBy="reset-user-title">
+          <h2 id="reset-user-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.resetUserTitle")}</h2>
+          <p>{t("admin.resetUserBody", { email: resetTarget.email })}</p>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+            <button type="button" className="btn btn-secondary" onClick={closeResetDialog}>
+              {t("action.cancel")}
+            </button>
+            <button type="button" className="btn" onClick={confirmReset}>
+              {t("action.reset")}
+            </button>
+          </div>
+        </ModalDialog>
+      )}
 
       {deleteTarget && (
         <ModalDialog onClose={closeDeleteDialog} labelledBy="delete-user-title">

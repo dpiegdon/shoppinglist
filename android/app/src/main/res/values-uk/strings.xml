@@ -23,6 +23,8 @@
     <string name="action_hide">Сховати</string>
     <string name="action_create">Створити</string>
     <string name="action_reset">Скинути</string>
+    <string name="action_copy">Копіювати</string>
+    <string name="action_copied">Скопійовано!</string>
     <string name="action_leave">Покинути</string>
     <string name="action_invite">Запросити</string>
     <string name="action_join">Приєднатися</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">Новий пароль для %1$s — показується один раз, надішли його безпечно:</string>
     <string name="admin_delete_user_title">Видалити користувача?</string>
     <string name="admin_delete_user_body">Назавжди видалити %1$s і всі його дані. Це не можна скасувати.</string>
+    <string name="admin_reset_user_title">Скинути пароль?</string>
+    <string name="admin_reset_user_body">Скинути пароль %1$s? Поточний пароль одразу перестане працювати.</string>
     <string name="admin_msg_password_required">Введи свій пароль, щоб скинути або видалити користувача.</string>
     <string name="admin_msg_load_failed">Не вдалося завантажити дані адміністрування</string>
     <string name="admin_msg_update_failed">Не вдалося оновити</string>

@@ -135,6 +135,7 @@ export const ja: Catalog = {
   "action.add": "追加",
   "action.copy": "コピー",
   "action.copied": "コピーしました！",
+  "action.reset": "リセット",
   "common.saved": "保存しました。",
   "error.generic": "問題が発生しました",
 
@@ -203,6 +204,8 @@ export const ja: Catalog = {
   "admin.yourPassword": "あなたのパスワード（リセット・削除に必要）",
   "admin.deleteUserTitle": "ユーザーを削除しますか？",
   "admin.resetPassword": "パスワードをリセット",
+  "admin.resetUserTitle": "パスワードをリセットしますか？",
+  "admin.resetUserBody": "{email} のパスワードをリセットしますか？現在のパスワードはすぐに使えなくなります。",
   "admin.passwordRequired": "ユーザーをリセットまたは削除するには、パスワードを入力してください。",
   "admin.loadFailed": "管理データを読み込めませんでした",
   "admin.updateFailed": "更新できませんでした",

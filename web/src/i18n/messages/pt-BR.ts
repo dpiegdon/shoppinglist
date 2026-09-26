@@ -133,6 +133,7 @@ export const ptBR: Catalog = {
   "action.add": "Adicionar",
   "action.copy": "Copiar",
   "action.copied": "Copiado!",
+  "action.reset": "Redefinir",
   "common.saved": "Salvo.",
   "error.generic": "Algo deu errado",
 
@@ -201,6 +202,8 @@ export const ptBR: Catalog = {
   "admin.yourPassword": "Sua senha (para redefinir ou excluir)",
   "admin.deleteUserTitle": "Excluir usuário?",
   "admin.resetPassword": "Redefinir senha",
+  "admin.resetUserTitle": "Redefinir senha?",
+  "admin.resetUserBody": "Redefinir a senha de {email}? A senha atual deixa de funcionar na hora.",
   "admin.passwordRequired": "Digite sua senha para redefinir ou excluir um usuário.",
   "admin.loadFailed": "Não foi possível carregar os dados de administração",
   "admin.updateFailed": "Não foi possível atualizar",

@@ -135,6 +135,7 @@ export const de: Catalog = {
   "action.add": "Hinzufügen",
   "action.copy": "Kopieren",
   "action.copied": "Kopiert!",
+  "action.reset": "Zurücksetzen",
   "common.saved": "Gespeichert.",
   "error.generic": "Etwas ist schiefgelaufen",
 
@@ -203,6 +204,8 @@ export const de: Catalog = {
   "admin.yourPassword": "Dein Passwort (für Zurücksetzen/Löschen)",
   "admin.deleteUserTitle": "Benutzer löschen?",
   "admin.resetPassword": "Passwort zurücksetzen",
+  "admin.resetUserTitle": "Passwort zurücksetzen?",
+  "admin.resetUserBody": "Das Passwort von {email} zurücksetzen? Das bisherige Passwort funktioniert dann sofort nicht mehr.",
   "admin.passwordRequired": "Gib dein Passwort ein, um einen Benutzer zurückzusetzen oder zu löschen.",
   "admin.loadFailed": "Admin-Daten konnten nicht geladen werden",
   "admin.updateFailed": "Aktualisierung fehlgeschlagen",

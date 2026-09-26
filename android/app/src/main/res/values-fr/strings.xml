@@ -23,6 +23,8 @@
     <string name="action_hide">Masquer</string>
     <string name="action_create">Créer</string>
     <string name="action_reset">Réinitialiser</string>
+    <string name="action_copy">Copier</string>
+    <string name="action_copied">Copié !</string>
     <string name="action_leave">Quitter</string>
     <string name="action_invite">Inviter</string>
     <string name="action_join">Rejoindre</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">Nouveau mot de passe pour %1$s — affiché une seule fois, transmets-le de façon sécurisée :</string>
     <string name="admin_delete_user_title">Supprimer l\'utilisateur ?</string>
     <string name="admin_delete_user_body">Supprimer définitivement %1$s et toutes ses données. Cette action est irréversible.</string>
+    <string name="admin_reset_user_title">Réinitialiser le mot de passe ?</string>
+    <string name="admin_reset_user_body">Réinitialiser le mot de passe de %1$s ? Son mot de passe actuel cessera immédiatement de fonctionner.</string>
     <string name="admin_msg_password_required">Saisis ton mot de passe pour réinitialiser ou supprimer un utilisateur.</string>
     <string name="admin_msg_load_failed">Impossible de charger les données d\'administration</string>
     <string name="admin_msg_update_failed">Échec de la mise à jour</string>

@@ -134,6 +134,7 @@ export const uk: Catalog = {
   "action.add": "Додати",
   "action.copy": "Копіювати",
   "action.copied": "Скопійовано!",
+  "action.reset": "Скинути",
   "common.saved": "Збережено.",
   "error.generic": "Щось пішло не так",
 
@@ -202,6 +203,8 @@ export const uk: Catalog = {
   "admin.yourPassword": "Твій пароль (для скидання чи видалення)",
   "admin.deleteUserTitle": "Видалити користувача?",
   "admin.resetPassword": "Скинути пароль",
+  "admin.resetUserTitle": "Скинути пароль?",
+  "admin.resetUserBody": "Скинути пароль {email}? Поточний пароль одразу перестане працювати.",
   "admin.passwordRequired": "Введи свій пароль, щоб скинути або видалити користувача.",
   "admin.loadFailed": "Не вдалося завантажити дані адміністрування",
   "admin.updateFailed": "Не вдалося оновити",

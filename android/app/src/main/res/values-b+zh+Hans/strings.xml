@@ -23,6 +23,8 @@
     <string name="action_hide">隐藏</string>
     <string name="action_create">创建</string>
     <string name="action_reset">重置</string>
+    <string name="action_copy">复制</string>
+    <string name="action_copied">已复制！</string>
     <string name="action_leave">退出</string>
     <string name="action_invite">邀请</string>
     <string name="action_join">加入</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">%1$s 的新密码 — 仅显示一次，请安全发送：</string>
     <string name="admin_delete_user_title">删除用户？</string>
     <string name="admin_delete_user_body">永久删除 %1$s 及其所有数据。此操作无法撤销。</string>
+    <string name="admin_reset_user_title">重置密码？</string>
+    <string name="admin_reset_user_body">重置 %1$s 的密码？其当前密码将立即失效。</string>
     <string name="admin_msg_password_required">请输入你的密码以重置或删除用户。</string>
     <string name="admin_msg_load_failed">无法加载管理数据</string>
     <string name="admin_msg_update_failed">无法更新</string>

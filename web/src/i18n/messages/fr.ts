@@ -132,6 +132,7 @@ export const fr: Catalog = {
   "action.add": "Ajouter",
   "action.copy": "Copier",
   "action.copied": "Copié !",
+  "action.reset": "Réinitialiser",
   "common.saved": "Enregistré.",
   "error.generic": "Une erreur est survenue",
 
@@ -200,6 +201,8 @@ export const fr: Catalog = {
   "admin.yourPassword": "Ton mot de passe (pour réinitialiser ou supprimer)",
   "admin.deleteUserTitle": "Supprimer l'utilisateur ?",
   "admin.resetPassword": "Réinitialiser le mot de passe",
+  "admin.resetUserTitle": "Réinitialiser le mot de passe ?",
+  "admin.resetUserBody": "Réinitialiser le mot de passe de {email} ? Son mot de passe actuel cessera immédiatement de fonctionner.",
   "admin.passwordRequired": "Saisis ton mot de passe pour réinitialiser ou supprimer un utilisateur.",
   "admin.loadFailed": "Impossible de charger les données d'administration",
   "admin.updateFailed": "Échec de la mise à jour",

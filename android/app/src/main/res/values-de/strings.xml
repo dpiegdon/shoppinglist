@@ -23,6 +23,8 @@
     <string name="action_hide">Verbergen</string>
     <string name="action_create">Erstellen</string>
     <string name="action_reset">Zurücksetzen</string>
+    <string name="action_copy">Kopieren</string>
+    <string name="action_copied">Kopiert!</string>
     <string name="action_leave">Verlassen</string>
     <string name="action_invite">Einladen</string>
     <string name="action_join">Beitreten</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">Neues Passwort für %1$s — wird nur einmal angezeigt, sende es sicher:</string>
     <string name="admin_delete_user_title">Benutzer löschen?</string>
     <string name="admin_delete_user_body">%1$s und alle zugehörigen Daten dauerhaft löschen. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="admin_reset_user_title">Passwort zurücksetzen?</string>
+    <string name="admin_reset_user_body">Das Passwort von %1$s zurücksetzen? Das bisherige Passwort funktioniert dann sofort nicht mehr.</string>
     <string name="admin_msg_password_required">Gib dein Passwort ein, um einen Benutzer zurückzusetzen oder zu löschen.</string>
     <string name="admin_msg_load_failed">Admin-Daten konnten nicht geladen werden</string>
     <string name="admin_msg_update_failed">Aktualisierung fehlgeschlagen</string>

@@ -23,6 +23,8 @@
     <string name="action_hide">非表示</string>
     <string name="action_create">作成</string>
     <string name="action_reset">リセット</string>
+    <string name="action_copy">コピー</string>
+    <string name="action_copied">コピーしました！</string>
     <string name="action_leave">退出</string>
     <string name="action_invite">招待</string>
     <string name="action_join">参加</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">%1$s の新しいパスワード — 一度だけ表示されます。安全な方法で伝えてください：</string>
     <string name="admin_delete_user_title">ユーザーを削除しますか？</string>
     <string name="admin_delete_user_body">%1$s とそのすべてのデータを完全に削除します。元に戻せません。</string>
+    <string name="admin_reset_user_title">パスワードをリセットしますか？</string>
+    <string name="admin_reset_user_body">%1$s のパスワードをリセットしますか？現在のパスワードはすぐに使えなくなります。</string>
     <string name="admin_msg_password_required">ユーザーをリセットまたは削除するには、パスワードを入力してください。</string>
     <string name="admin_msg_load_failed">管理データを読み込めませんでした</string>
     <string name="admin_msg_update_failed">更新できませんでした</string>

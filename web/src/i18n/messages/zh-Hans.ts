@@ -134,6 +134,7 @@ export const zhHans: Catalog = {
   "action.add": "添加",
   "action.copy": "复制",
   "action.copied": "已复制！",
+  "action.reset": "重置",
   "common.saved": "已保存。",
   "error.generic": "出错了",
 
@@ -202,6 +203,8 @@ export const zhHans: Catalog = {
   "admin.yourPassword": "你的密码（重置或删除时需要）",
   "admin.deleteUserTitle": "删除用户？",
   "admin.resetPassword": "重置密码",
+  "admin.resetUserTitle": "重置密码？",
+  "admin.resetUserBody": "重置 {email} 的密码？其当前密码将立即失效。",
   "admin.passwordRequired": "请输入你的密码以重置或删除用户。",
   "admin.loadFailed": "无法加载管理数据",
   "admin.updateFailed": "无法更新",

@@ -136,6 +136,7 @@ export const ar: Catalog = {
   "action.add": "إضافة",
   "action.copy": "نسخ",
   "action.copied": "تم النسخ!",
+  "action.reset": "إعادة تعيين",
   "common.saved": "تم الحفظ.",
   "error.generic": "حدث خطأ ما",
 
@@ -204,6 +205,8 @@ export const ar: Catalog = {
   "admin.yourPassword": "كلمة المرور الخاصة بك (لإعادة التعيين أو الحذف)",
   "admin.deleteUserTitle": "حذف المستخدم؟",
   "admin.resetPassword": "إعادة تعيين كلمة المرور",
+  "admin.resetUserTitle": "إعادة تعيين كلمة المرور؟",
+  "admin.resetUserBody": "إعادة تعيين كلمة مرور {email}؟ ستتوقف كلمة المرور الحالية عن العمل فورًا.",
   "admin.passwordRequired": "أدخل كلمة المرور لإعادة تعيين مستخدم أو حذفه.",
   "admin.loadFailed": "تعذّر تحميل بيانات الإدارة",
   "admin.updateFailed": "تعذّر التحديث",

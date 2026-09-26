@@ -23,6 +23,8 @@
     <string name="action_hide">Ocultar</string>
     <string name="action_create">Criar</string>
     <string name="action_reset">Redefinir</string>
+    <string name="action_copy">Copiar</string>
+    <string name="action_copied">Copiado!</string>
     <string name="action_leave">Sair</string>
     <string name="action_invite">Convidar</string>
     <string name="action_join">Entrar</string>
@@ -243,6 +245,8 @@
     <string name="admin_new_password_for">Nova senha para %1$s — exibida uma única vez, envie com segurança:</string>
     <string name="admin_delete_user_title">Excluir usuário?</string>
     <string name="admin_delete_user_body">Excluir permanentemente %1$s e todos os seus dados. Isso não pode ser desfeito.</string>
+    <string name="admin_reset_user_title">Redefinir senha?</string>
+    <string name="admin_reset_user_body">Redefinir a senha de %1$s? A senha atual deixa de funcionar na hora.</string>
     <string name="admin_msg_password_required">Digite sua senha para redefinir ou excluir um usuário.</string>
     <string name="admin_msg_load_failed">Não foi possível carregar os dados de administração</string>
     <string name="admin_msg_update_failed">Não foi possível atualizar</string>

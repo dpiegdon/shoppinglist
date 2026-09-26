@@ -130,6 +130,7 @@ export const es: Catalog = {
   "action.add": "Añadir",
   "action.copy": "Copiar",
   "action.copied": "¡Copiado!",
+  "action.reset": "Restablecer",
   "common.saved": "Guardado.",
   "error.generic": "Algo ha salido mal",
 
@@ -198,6 +199,8 @@ export const es: Catalog = {
   "admin.yourPassword": "Tu contraseña (para restablecer o eliminar)",
   "admin.deleteUserTitle": "¿Eliminar usuario?",
   "admin.resetPassword": "Restablecer contraseña",
+  "admin.resetUserTitle": "¿Restablecer la contraseña?",
+  "admin.resetUserBody": "¿Restablecer la contraseña de {email}? Su contraseña actual dejará de funcionar de inmediato.",
   "admin.passwordRequired": "Introduce tu contraseña para restablecer o eliminar un usuario.",
   "admin.loadFailed": "No se han podido cargar los datos de administración",
   "admin.updateFailed": "No se ha podido actualizar",

@@ -1,4 +1,4 @@
-import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -181,8 +181,72 @@ describe("AdminPage (T-107)", () => {
     // The first "Reset password" is the admin's own row; use the non-admin user's.
     const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reset" }));
 
     expect(await screen.findByText("NEWpw123456")).toBeInTheDocument();
+  });
+
+  it("resets a password only after a confirmation naming the user (T-313)", async () => {
+    vi.mocked(api.adminResetPassword).mockResolvedValue({ password: "NEWpw123456" });
+    renderAdmin();
+
+    await showUsers();
+    await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
+    const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
+    await userEvent.click(resetButtons[resetButtons.length - 1]);
+
+    // The click opens a confirmation naming the user; nothing is reset yet.
+    const dialog = screen.getByRole("dialog", { name: "Reset password?" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(
+      within(dialog).getByText("Reset the password of u@example.com? Their current password stops working at once."),
+    ).toBeInTheDocument();
+    expect(api.adminResetPassword).not.toHaveBeenCalled();
+
+    // Cancel sends nothing.
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(api.adminResetPassword).not.toHaveBeenCalled();
+
+    // Confirming does.
+    await userEvent.click(resetButtons[resetButtons.length - 1]);
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reset" }));
+    await waitFor(() => expect(api.adminResetPassword).toHaveBeenCalledWith("user-2", "adminpw"));
+    expect(api.adminResetPassword).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks for the password before it opens the reset confirmation (T-113, T-313)", async () => {
+    renderAdmin();
+    await showUsers();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[1]!);
+
+    expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("copies the new password to the clipboard and says so (T-313)", async () => {
+    vi.mocked(api.adminResetPassword).mockResolvedValue({ password: "NEWpw123456" });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    renderAdmin();
+
+    await showUsers();
+    await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
+    const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
+    await userEvent.click(resetButtons[resetButtons.length - 1]);
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reset" }));
+    const shown = await screen.findByText("NEWpw123456");
+    // Selectable, in a monospace face, to be read out or pasted exactly.
+    expect(shown.tagName).toBe("CODE");
+    expect(shown).toHaveStyle({ userSelect: "all" });
+
+    // Installed after the userEvent calls, which put their own clipboard stub in place; fireEvent
+    // below does not.
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("NEWpw123456"));
+    expect(await screen.findByRole("button", { name: "Copied!" })).toBeInTheDocument();
   });
 });
 
