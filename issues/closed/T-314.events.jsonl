@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-26T14:26:08+00:00", "kind": "created", "ref": "main@ec958db0", "text": "Language setting label carries an English '(Language)' in every non-English locale, both clients"}
 {"actor": "user", "at": "2026-09-26T14:33:12+00:00", "kind": "note", "ref": "main@6c9b61df", "text": "On main (6c9b61df), full gate green: eight Android and eight web catalogs."}
+{"actor": "user", "at": "2026-09-26T14:33:13+00:00", "kind": "closed", "ref": "main@6c9b61df", "text": ""}
