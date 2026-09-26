@@ -296,7 +296,7 @@ export default function SettingsPage() {
             >
               <span>
                 <span>
-                  {s.device_label} {s.current && <strong>{t("settings.thisDevice")}</strong>}
+                  {s.device_label ?? t("settings.unknownDevice")} {s.current && <strong>{t("settings.thisDevice")}</strong>}
                 </span>
                 {/* The current session is active by definition — this request is it. Showing
                     its stored last_seen_at instead would read as up to 15 minutes stale, since

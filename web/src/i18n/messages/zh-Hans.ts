@@ -170,6 +170,7 @@ export const zhHans: Catalog = {
   "settings.defaultCurrency": "默认货币",
   "settings.currentlyCached": "当前缓存：{currency}",
   "settings.thisDevice": "（本设备）",
+  "settings.unknownDevice": "未知设备",
   "settings.initials": "显示的缩写",
   "settings.changePassword": "修改密码",
   "settings.currentPassword": "当前密码",

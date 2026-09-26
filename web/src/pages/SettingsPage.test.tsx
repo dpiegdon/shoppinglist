@@ -283,3 +283,28 @@ describe("SettingsPage asks for the new password twice (T-313)", () => {
     await waitFor(() => expect(screen.getByLabelText(en["settings.newPasswordAgain"])).toHaveValue(""));
   });
 });
+
+describe("SettingsPage names a session without a device label (T-316)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(api.getToken).mockReturnValue("tok");
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "BO" });
+    vi.mocked(api.listSessions).mockResolvedValue({
+      sessions: [
+        { id: "s1", device_label: null, created_at: 1, last_seen_at: 1, current: false },
+        { id: "s2", device_label: "Pixel", created_at: 1, last_seen_at: 1, current: true },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("shows Unknown device, as the app does, and a stored label as it is", async () => {
+    renderSettingsPage();
+    expect(await screen.findByText("Unknown device")).toBeInTheDocument();
+    expect(screen.getByText(/Pixel/)).toBeInTheDocument();
+  });
+});

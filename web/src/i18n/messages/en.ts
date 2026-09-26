@@ -212,6 +212,7 @@ export const en = {
   "settings.defaultCurrency": "Default currency",
   "settings.currentlyCached": "Currently cached: {currency}",
   "settings.thisDevice": "(this device)",
+  "settings.unknownDevice": "Unknown device",
   "settings.initials": "Displayed initials",
   "settings.changePassword": "Change password",
   "settings.currentPassword": "Current password",

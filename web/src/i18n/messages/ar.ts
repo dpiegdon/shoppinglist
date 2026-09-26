@@ -172,6 +172,7 @@ export const ar: Catalog = {
   "settings.defaultCurrency": "العملة الافتراضية",
   "settings.currentlyCached": "المخزَّن حاليًا: {currency}",
   "settings.thisDevice": "(هذا الجهاز)",
+  "settings.unknownDevice": "جهاز غير معروف",
   "settings.initials": "الأحرف الأولى المعروضة",
   "settings.changePassword": "تغيير كلمة المرور",
   "settings.currentPassword": "كلمة المرور الحالية",

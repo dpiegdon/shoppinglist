@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as client from "./client";
 import { ApiError, apiFetch, getToken, login, onForcedLogout, register, setToken, sync } from "./client";
 import {
   PROTOCOL_VERSION,
@@ -323,4 +324,33 @@ describe("login endpoint", () => {
     const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/v1/login");
   });
+});
+
+describe("ids in paths are one percent-encoded segment (T-316)", () => {
+  const ID = "a/b?c#d%e";
+  const ENC = "a%2Fb%3Fc%23d%25e";
+
+  beforeEach(() => setToken("tok"));
+  afterEach(() => vi.restoreAllMocks());
+
+  const cases: Array<[string, () => Promise<unknown>, string]> = [
+    ["revokeSession", () => client.revokeSession(ID), `/account/sessions/${ENC}`],
+    ["getMembers", () => client.getMembers(ID), `/lists/${ENC}/members`],
+    ["leaveList", () => client.leaveList(ID), `/lists/${ENC}/leave`],
+    ["castCloseVote", () => client.castCloseVote(ID), `/lists/${ENC}/close-votes`],
+    ["withdrawCloseVote", () => client.withdrawCloseVote(ID), `/lists/${ENC}/close-votes`],
+    ["mintInvite", () => client.mintInvite(ID, "x@example.com"), `/lists/${ENC}/invites`],
+    ["revokeInvite", () => client.revokeInvite(ID), `/invites/${ENC}`],
+    ["adminResetPassword", () => client.adminResetPassword(ID, "pw"), `/admin/users/${ENC}/reset-password`],
+    ["adminDeleteUser", () => client.adminDeleteUser(ID, "pw"), `/admin/users/${ENC}`],
+  ];
+
+  for (const [name, call, path] of cases) {
+    it(name, async () => {
+      mockFetchOnce(200, {});
+      await call();
+      const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe(`/api/v1${path}`);
+    });
+  }
 });

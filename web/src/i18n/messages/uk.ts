@@ -170,6 +170,7 @@ export const uk: Catalog = {
   "settings.defaultCurrency": "Валюта за замовчуванням",
   "settings.currentlyCached": "Зараз у кеші: {currency}",
   "settings.thisDevice": "(цей пристрій)",
+  "settings.unknownDevice": "Невідомий пристрій",
   "settings.initials": "Показувані ініціали",
   "settings.changePassword": "Змінити пароль",
   "settings.currentPassword": "Поточний пароль",

@@ -193,7 +193,7 @@ export const SERVER_MESSAGE_MAX_LENGTH = 200;
 
 export interface Session {
   id: string;
-  device_label: string;
+  device_label: string | null;
   created_at: number;
   last_seen_at: number;
   current: boolean;

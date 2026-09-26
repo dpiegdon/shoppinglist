@@ -171,6 +171,7 @@ export const ja: Catalog = {
   "settings.defaultCurrency": "デフォルトの通貨",
   "settings.currentlyCached": "現在のキャッシュ：{currency}",
   "settings.thisDevice": "（この端末）",
+  "settings.unknownDevice": "不明な端末",
   "settings.initials": "表示するイニシャル",
   "settings.changePassword": "パスワードを変更",
   "settings.currentPassword": "現在のパスワード",

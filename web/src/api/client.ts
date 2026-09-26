@@ -193,12 +193,18 @@ export function changeEmail(body: { password: string; new_email: string }): Prom
   return apiFetch("/account/change-email", { method: "POST", body });
 }
 
+/**
+ * An id as one path segment (T-316): percent-encoded, so a "/", "?", "#" or "%" in it can never
+ * change which route a request reaches. Every id interpolated into a path goes through this.
+ */
+const seg = (id: string) => encodeURIComponent(id);
+
 export function listSessions(): Promise<{ sessions: Session[] }> {
   return apiFetch("/account/sessions", { method: "GET" });
 }
 
 export function revokeSession(id: string): Promise<void> {
-  return apiFetch(`/account/sessions/${id}`, { method: "DELETE" });
+  return apiFetch(`/account/sessions/${seg(id)}`, { method: "DELETE" });
 }
 
 export function deleteAccount(body: { password: string }): Promise<void> {
@@ -218,31 +224,31 @@ export function getLists(): Promise<{ lists: ListSummary[] }> {
 }
 
 export function getMembers(listId: string): Promise<MembersResponse> {
-  return apiFetch(`/lists/${listId}/members`, { method: "GET" });
+  return apiFetch(`/lists/${seg(listId)}/members`, { method: "GET" });
 }
 
 export function leaveList(listId: string): Promise<void> {
-  return apiFetch(`/lists/${listId}/leave`, { method: "POST" });
+  return apiFetch(`/lists/${seg(listId)}/leave`, { method: "POST" });
 }
 
 /** Agree to close an expenses list (T-157). It closes when the last current member agrees. */
 export function castCloseVote(listId: string): Promise<CloseVoteState> {
-  return apiFetch(`/lists/${listId}/close-votes`, { method: "POST" });
+  return apiFetch(`/lists/${seg(listId)}/close-votes`, { method: "POST" });
 }
 
 export function withdrawCloseVote(listId: string): Promise<CloseVoteState> {
-  return apiFetch(`/lists/${listId}/close-votes`, { method: "DELETE" });
+  return apiFetch(`/lists/${seg(listId)}/close-votes`, { method: "DELETE" });
 }
 
 export function mintInvite(listId: string, invitedEmail: string): Promise<MintInviteResponse> {
-  return apiFetch(`/lists/${listId}/invites`, {
+  return apiFetch(`/lists/${seg(listId)}/invites`, {
     method: "POST",
     body: { invited_email: invitedEmail },
   });
 }
 
 export function revokeInvite(inviteId: string): Promise<void> {
-  return apiFetch(`/invites/${inviteId}`, { method: "DELETE" });
+  return apiFetch(`/invites/${seg(inviteId)}`, { method: "DELETE" });
 }
 
 export function redeemInvite(token: string): Promise<RedeemResponse> {
@@ -285,10 +291,10 @@ export function setServerSettings(
 
 /** Step-up: `password` is the ADMIN's own password. Returns the new password once. */
 export function adminResetPassword(accountId: string, password: string): Promise<{ password: string }> {
-  return apiFetch(`/admin/users/${accountId}/reset-password`, { method: "POST", body: { password } });
+  return apiFetch(`/admin/users/${seg(accountId)}/reset-password`, { method: "POST", body: { password } });
 }
 
 /** Step-up: `password` is the ADMIN's own password. */
 export function adminDeleteUser(accountId: string, password: string): Promise<void> {
-  return apiFetch(`/admin/users/${accountId}`, { method: "DELETE", body: { password } });
+  return apiFetch(`/admin/users/${seg(accountId)}`, { method: "DELETE", body: { password } });
 }

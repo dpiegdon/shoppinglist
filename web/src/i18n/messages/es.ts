@@ -166,6 +166,7 @@ export const es: Catalog = {
   "settings.defaultCurrency": "Moneda predeterminada",
   "settings.currentlyCached": "En caché ahora: {currency}",
   "settings.thisDevice": "(este dispositivo)",
+  "settings.unknownDevice": "Dispositivo desconocido",
   "settings.initials": "Iniciales mostradas",
   "settings.changePassword": "Cambiar contraseña",
   "settings.currentPassword": "Contraseña actual",

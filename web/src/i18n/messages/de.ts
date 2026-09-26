@@ -171,6 +171,7 @@ export const de: Catalog = {
   "settings.defaultCurrency": "Standardwährung",
   "settings.currentlyCached": "Aktuell zwischengespeichert: {currency}",
   "settings.thisDevice": "(dieses Gerät)",
+  "settings.unknownDevice": "Unbekanntes Gerät",
   "settings.initials": "Anzuzeigende Initialen",
   "settings.changePassword": "Passwort ändern",
   "settings.currentPassword": "Aktuelles Passwort",

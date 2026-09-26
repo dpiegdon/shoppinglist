@@ -169,6 +169,7 @@ export const ptBR: Catalog = {
   "settings.defaultCurrency": "Moeda padrão",
   "settings.currentlyCached": "Em cache agora: {currency}",
   "settings.thisDevice": "(este dispositivo)",
+  "settings.unknownDevice": "Dispositivo desconhecido",
   "settings.initials": "Iniciais exibidas",
   "settings.changePassword": "Alterar senha",
   "settings.currentPassword": "Senha atual",
