@@ -134,12 +134,13 @@ data class AdminUsersResponse(val users: List<AdminUserDto>)
 
 /**
  * GET and PUT /admin/server-settings: both current values. [message] is the one-line server
- * message every client shows (T-315); "" when none.
+ * message every client shows (T-315), "" when none; null (absent) from a server before it, which
+ * would refuse a request that sets only the message, so the console then offers no field.
  */
 @Serializable
 data class ServerSettingsDto(
     @SerialName("allow_registration") val allowRegistration: Boolean,
-    val message: String = "",
+    val message: String? = null,
 )
 
 /**

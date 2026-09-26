@@ -225,6 +225,20 @@ class AdminViewModelTest {
     }
 
     @Test
+    fun `a server without the message setting offers no message to save (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
+        route()
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+        server.takeRequest()
+
+        viewModel.onMessageChange("Hello")
+        assertEquals(null, viewModel.uiState.value.serverMessage)
+        assertEquals("nothing is sent", null, viewModel.saveMessage())
+        assertEquals(null, viewModel.clearMessage())
+        assertEquals(null, server.takeRequest(200, TimeUnit.MILLISECONDS))
+    }
+
+    @Test
     fun `Save sends only the trimmed message, and the toggle only the flag (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
         val puts = settingsServer()
         val viewModel = newViewModel()

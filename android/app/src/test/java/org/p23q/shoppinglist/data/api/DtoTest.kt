@@ -255,6 +255,7 @@ class DtoTest {
         assertEquals(null, json.decodeFromString<RegistrationStatusResponse>("""{"allow_registration": false}""").message)
 
         assertEquals("Hi", json.decodeFromString<ServerSettingsDto>("""{"allow_registration": true, "message": "Hi"}""").message)
-        assertEquals("", json.decodeFromString<ServerSettingsDto>("""{"allow_registration": true}""").message)
+        assertEquals("", json.decodeFromString<ServerSettingsDto>("""{"allow_registration": true, "message": ""}""").message)
+        assertEquals("an older server's", null, json.decodeFromString<ServerSettingsDto>("""{"allow_registration": true}""").message)
     }
 }

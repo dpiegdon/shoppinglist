@@ -29,7 +29,10 @@ data class AdminUiState(
     val users: List<AdminUserDto>? = null,
     /** null = not loaded yet. */
     val allowRegistration: Boolean? = null,
-    /** The server message as the server holds it (T-315), "" for none; null = not loaded yet. */
+    /**
+     * The server message as the server holds it (T-315), "" for none; null = not loaded yet, or a
+     * server too old to have one, for which the console shows no field.
+     */
     val serverMessage: String? = null,
     /** What the message field holds; the loaded message until the admin types. */
     val messageDraft: String = "",
@@ -88,7 +91,7 @@ class AdminViewModel internal constructor(
                 it.copy(
                     allowRegistration = settings.allowRegistration,
                     serverMessage = settings.message,
-                    messageDraft = settings.message,
+                    messageDraft = settings.message.orEmpty(),
                     error = null,
                 )
             }
@@ -164,8 +167,8 @@ class AdminViewModel internal constructor(
                 _uiState.update {
                     it.copy(
                         allowRegistration = result.allowRegistration,
-                        serverMessage = result.message,
-                        messageDraft = result.message,
+                        serverMessage = result.message ?: message,
+                        messageDraft = result.message ?: message,
                         messageError = null,
                         error = null,
                     )

@@ -240,7 +240,7 @@
     <string name="admin_allow_new_accounts">Neue Konten zulassen</string>
     <string name="admin_registration_help">Laufzeit-Übersteuerung — wird beim Neustart auf den konfigurierten Standard zurückgesetzt.</string>
     <string name="admin_server_message">Servernachricht</string>
-    <string name="admin_server_message_help">Eine Zeile, für alle sichtbar auf der Anmeldeseite und über ihren Listen.</string>
+    <string name="admin_server_message_help">Eine Zeile, die alle auf der Anmeldeseite und über ihren Listen sehen.</string>
     <string name="admin_server_message_invalid">Die Nachricht muss eine Zeile mit höchstens 200 Zeichen sein.</string>
     <string name="admin_is_admin_suffix"> (Admin)</string>
     <string name="admin_users">Benutzer</string>

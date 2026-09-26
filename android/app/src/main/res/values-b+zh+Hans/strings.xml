@@ -240,8 +240,8 @@
     <string name="admin_allow_new_accounts">允许新账户</string>
     <string name="admin_registration_help">临时覆盖 — 重启后恢复为服务器配置的默认值。</string>
     <string name="admin_server_message">服务器消息</string>
-    <string name="admin_server_message_help">一行文字，所有人都会在登录页面和自己的清单上方看到。</string>
-    <string name="admin_server_message_invalid">消息必须是一行，最多 200 个字符。</string>
+    <string name="admin_server_message_help">一行文字，在登录页面和列表上方向所有人显示。</string>
+    <string name="admin_server_message_invalid">消息必须为一行，且不超过 200 个字符。</string>
     <string name="admin_is_admin_suffix">（管理员）</string>
     <string name="admin_users">用户</string>
     <string name="admin_show_users">显示注册用户</string>

@@ -94,36 +94,38 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
         }
         Spacer(Modifier.height(8.dp))
 
-        // The server message (T-315): one line every client shows, saved on its own.
-        OutlinedTextField(
-            value = state.messageDraft,
-            onValueChange = viewModel::onMessageChange,
-            label = { Text(stringResource(R.string.admin_server_message)) },
-            singleLine = true,
-            enabled = state.serverMessage != null,
-            isError = state.messageError != null,
-            supportingText = {
-                Text(state.messageError?.asString() ?: stringResource(R.string.admin_server_message_help))
-            },
-            modifier = Modifier.fillMaxWidth().testTag("admin-server-message"),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-        ) {
-            TextButton(
-                onClick = { viewModel.clearMessage() },
-                enabled = state.serverMessage != null && (state.serverMessage.orEmpty().isNotEmpty() || state.messageDraft.isNotEmpty()),
-                modifier = Modifier.testTag("admin-server-message-clear"),
+        // The server message (T-315): one line every client shows, saved on its own. Only when the
+        // server has one to show: an older server would refuse a request that sets only it.
+        if (state.serverMessage != null) {
+            OutlinedTextField(
+                value = state.messageDraft,
+                onValueChange = viewModel::onMessageChange,
+                label = { Text(stringResource(R.string.admin_server_message)) },
+                singleLine = true,
+                isError = state.messageError != null,
+                supportingText = {
+                    Text(state.messageError?.asString() ?: stringResource(R.string.admin_server_message_help))
+                },
+                modifier = Modifier.fillMaxWidth().testTag("admin-server-message"),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
-                Text(stringResource(R.string.action_clear))
-            }
-            Button(
-                onClick = { viewModel.saveMessage() },
-                enabled = state.serverMessage != null && state.messageDraft.trim() != state.serverMessage,
-                modifier = Modifier.testTag("admin-server-message-save"),
-            ) {
-                Text(stringResource(R.string.action_save))
+                TextButton(
+                    onClick = { viewModel.clearMessage() },
+                    enabled = state.serverMessage.orEmpty().isNotEmpty() || state.messageDraft.isNotEmpty(),
+                    modifier = Modifier.testTag("admin-server-message-clear"),
+                ) {
+                    Text(stringResource(R.string.action_clear))
+                }
+                Button(
+                    onClick = { viewModel.saveMessage() },
+                    enabled = state.messageDraft.trim() != state.serverMessage,
+                    modifier = Modifier.testTag("admin-server-message-save"),
+                ) {
+                    Text(stringResource(R.string.action_save))
+                }
             }
         }
         Spacer(Modifier.height(16.dp))

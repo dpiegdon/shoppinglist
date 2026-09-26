@@ -94,6 +94,8 @@ class AdminScreenTest {
 
         // The console is open and the toggle is live, but nobody has been listed.
         composeTestRule.onNodeWithText("Allow new accounts").assertExists()
+        // This server says no message: it predates it (T-315), so there is no field for one.
+        composeTestRule.onNodeWithText("Server message").assertDoesNotExist()
         composeTestRule.onNodeWithText("u@example.com").assertDoesNotExist()
         composeTestRule.onNodeWithText("Your password (for reset/delete)").assertDoesNotExist()
 

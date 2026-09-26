@@ -241,7 +241,7 @@
     <string name="admin_registration_help">Тимчасове перевизначення — після перезапуску повертається до налаштованого значення.</string>
     <string name="admin_server_message">Повідомлення сервера</string>
     <string name="admin_server_message_help">Один рядок, який усі бачать на сторінці входу та над своїми списками.</string>
-    <string name="admin_server_message_invalid">Повідомлення має бути одним рядком до 200 символів.</string>
+    <string name="admin_server_message_invalid">Повідомлення має бути одним рядком не довше 200 символів.</string>
     <string name="admin_is_admin_suffix"> (адмін)</string>
     <string name="admin_users">Користувачі</string>
     <string name="admin_show_users">Показати зареєстрованих користувачів</string>
