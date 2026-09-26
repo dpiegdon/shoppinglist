@@ -208,10 +208,12 @@ data class SettingsResponse(
 // false), a property equal to its declared default is elided from the encoded JSON rather than
 // sent as literal null. This lets a currency-only save skip initials when it isn't known yet
 // (e.g. offline start racing the best-effort preload) instead of clobbering the override with an
-// unresolved empty string (T-97, mirrors web's T-101).
+// unresolved empty string (T-97, mirrors web's T-101). The currency is omitted the same way when
+// null, so an initials save sends only initials and cannot revert a currency another device set
+// (T-316, as the web since T-272).
 @Serializable
 data class UpdateSettingsRequest(
-    @SerialName("default_currency") val defaultCurrency: String,
+    @SerialName("default_currency") val defaultCurrency: String? = null,
     val initials: String? = null,
 )
 

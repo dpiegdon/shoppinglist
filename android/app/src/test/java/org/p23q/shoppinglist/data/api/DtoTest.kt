@@ -163,6 +163,16 @@ class DtoTest {
     }
 
     @Test
+    fun `UpdateSettingsRequest with only initials sends only them (T-316)`() {
+        val encoded = JsonModule.provideJson().encodeToString(
+            UpdateSettingsRequest.serializer(),
+            UpdateSettingsRequest(initials = "XY"),
+        )
+
+        assertEquals("""{"initials":"XY"}""", encoded)
+    }
+
+    @Test
     fun `UpdateSettingsRequest with a real initials value includes it on the wire`() {
         val request = UpdateSettingsRequest(defaultCurrency = "USD", initials = "AB")
 

@@ -206,33 +206,33 @@ class AccountViewModelTest {
         assertEquals(0, server.requestCount)
     }
 
-    /** T-300: a failed read at sign-in left the currency empty, and an initials save sent "". */
+    /** T-300: a failed read at sign-in left the currency empty; the settings load fills it in. */
     @Test
-    fun `the settings load stores the currency on the row, and an initials save sends it`() = runTest(mainDispatcherRule.dispatcher) {
+    fun `the settings load stores the currency on the row`() = runTest(mainDispatcherRule.dispatcher) {
         accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(defaultCurrency = null) }
         val viewModel = newViewModel()
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "SEK", "initials": "MI"}"""))
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "SEK", "initials": "AB"}"""))
 
         viewModel.loadInitials().join()
-        viewModel.updateInitials("ab")?.join()
 
         assertEquals("SEK", accounts.registry.get(TEST_ACCOUNT_ID)!!.defaultCurrency)
         assertEquals("SEK", viewModel.uiState.value.defaultCurrency)
-        server.takeRequest()
-        assertTrue(server.takeRequest().body.readUtf8().contains("\"default_currency\":\"SEK\""))
     }
 
     @Test
-    fun `updateInitials resends the current currency so it is not overwritten (T-64)`() = runTest(mainDispatcherRule.dispatcher) {
-        val viewModel = newViewModel()
-        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "AB"}"""))
+    fun `updateInitials sends only the initials, and takes the currency the server answers (T-316)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val viewModel = newViewModel()
+            // Another device changed the currency since this screen read EUR.
+            server.enqueue(MockResponse().setResponseCode(200).setBody("""{"default_currency": "SEK", "initials": "AB"}"""))
 
-        viewModel.updateInitials("ab")?.join()
+            viewModel.updateInitials("ab")?.join()
 
-        assertTrue(server.takeRequest().body.readUtf8().contains("\"default_currency\":\"EUR\""))
-        assertEquals("AB", viewModel.uiState.value.initials)
-    }
+            assertEquals("""{"initials":"AB"}""", server.takeRequest().body.readUtf8())
+            assertEquals("AB", viewModel.uiState.value.initials)
+            assertEquals("SEK", viewModel.uiState.value.defaultCurrency)
+            assertEquals("SEK", accounts.registry.get(TEST_ACCOUNT_ID)!!.defaultCurrency)
+        }
 
     @Test
     fun `changePassword with the wrong current password surfaces an inline error`() = runTest(mainDispatcherRule.dispatcher) {

@@ -180,7 +180,7 @@ class AccountViewModel @Inject constructor(
                 // Never send initials from the currency save (T-103): the server treats an absent
                 // key as "leave unchanged" (T-87), and echoing the resolved value back would pin
                 // the email-derived default as an explicit override.
-                val response = api().updateSettings(UpdateSettingsRequest(normalized, initials = null))
+                val response = api().updateSettings(UpdateSettingsRequest(defaultCurrency = normalized))
                 // An already-open list of this account follows it through its row.
                 registry.update(accountId) { it.copy(defaultCurrency = response.defaultCurrency) }
                 _uiState.update {
@@ -207,9 +207,17 @@ class AccountViewModel @Inject constructor(
         }
         return viewModelScope.launch {
             try {
-                val response = api().updateSettings(UpdateSettingsRequest(_uiState.value.defaultCurrency, normalized))
+                // Only the initials (T-316): re-sending the currency this screen last saw could
+                // revert one another device set since. The answer carries the current one.
+                val response = api().updateSettings(UpdateSettingsRequest(initials = normalized))
+                registry.update(accountId) { it.copy(defaultCurrency = response.defaultCurrency) }
                 _uiState.update {
-                    it.copy(initials = response.initials, errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_initials_updated))
+                    it.copy(
+                        defaultCurrency = response.defaultCurrency,
+                        initials = response.initials,
+                        errorMessage = null,
+                        infoMessage = UiText.res(R.string.settings_msg_initials_updated),
+                    )
                 }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.settings_msg_initials_failed)) }
