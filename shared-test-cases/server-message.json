@@ -154,6 +154,34 @@
       "result": {
         "error": "invalid_message"
       }
+    },
+    {
+      "name": "a vertical tab (Cc) at the end is refused, not trimmed",
+      "input": "a\u000b",
+      "result": {
+        "error": "invalid_message"
+      }
+    },
+    {
+      "name": "a form feed (Cc) at the start is refused, not trimmed",
+      "input": "\fa",
+      "result": {
+        "error": "invalid_message"
+      }
+    },
+    {
+      "name": "a line separator at the end is refused, not trimmed",
+      "input": "a\u2028",
+      "result": {
+        "error": "invalid_message"
+      }
+    },
+    {
+      "name": "a byte-order mark (Cf) at the start is kept",
+      "input": "\ufeffa",
+      "result": {
+        "message": "\ufeffa"
+      }
     }
   ]
 }
