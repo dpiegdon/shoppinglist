@@ -354,6 +354,9 @@
     <string name="api_error_session_not_found">Цей сеанс уже завершено</string>
     <string name="api_error_server_busy">Сервер зайнятий. Спробуйте ще раз за мить.</string>
     <string name="api_error_payload_too_large">Забагато даних для одного надсилання</string>
+    <string name="api_error_not_found">Сервер не знає цього запиту.</string>
+    <string name="api_error_method_not_allowed">Сервер не знає цього запиту.</string>
+    <string name="api_error_internal_error">Щось пішло не так</string>
     <string name="api_error_voted_to_close">Ви погодилися закрити цей список, тому більше не можете його змінювати. Відкличте свою згоду, щоб вносити зміни.</string>
     <string name="api_error_not_an_expenses_list">Проголосувати за закриття можна лише для книги обліку.</string>
     <string name="expense_delete_blocked">Цей запис не можна видалити: він стосується когось, чиї суми зафіксовано.</string>

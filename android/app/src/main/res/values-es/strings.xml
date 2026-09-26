@@ -354,6 +354,9 @@
     <string name="api_error_session_not_found">Esa sesión ya ha terminado</string>
     <string name="api_error_server_busy">El servidor está ocupado. Inténtalo de nuevo en un momento.</string>
     <string name="api_error_payload_too_large">Es demasiado para enviar de una vez</string>
+    <string name="api_error_not_found">El servidor no reconoce esta solicitud.</string>
+    <string name="api_error_method_not_allowed">El servidor no reconoce esta solicitud.</string>
+    <string name="api_error_internal_error">Algo ha salido mal</string>
     <string name="api_error_voted_to_close">Aceptaste cerrar esta lista, así que ya no puedes cambiarla. Retira tu voto para hacer cambios.</string>
     <string name="api_error_not_an_expenses_list">Solo se puede votar el cierre de un libro de cuentas.</string>
     <string name="expense_delete_blocked">Este movimiento no se puede eliminar: incluye a alguien cuyos importes están fijados.</string>

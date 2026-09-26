@@ -354,6 +354,9 @@
     <string name="api_error_session_not_found">Cette session est déjà terminée</string>
     <string name="api_error_server_busy">Le serveur est occupé. Réessayez dans un instant.</string>
     <string name="api_error_payload_too_large">C\'est trop à envoyer en une fois</string>
+    <string name="api_error_not_found">Le serveur ne connaît pas cette requête.</string>
+    <string name="api_error_method_not_allowed">Le serveur ne connaît pas cette requête.</string>
+    <string name="api_error_internal_error">Une erreur est survenue</string>
     <string name="api_error_voted_to_close">Vous avez accepté de clôturer cette liste : vous ne pouvez plus la modifier. Retirez votre accord pour faire des changements.</string>
     <string name="api_error_not_an_expenses_list">Seul un livre de comptes peut faire l\'objet d\'un vote de clôture.</string>
     <string name="expense_delete_blocked">Cette entrée ne peut pas être supprimée : elle concerne quelqu\'un dont les montants sont figés.</string>

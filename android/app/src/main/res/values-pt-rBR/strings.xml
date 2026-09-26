@@ -354,6 +354,9 @@
     <string name="api_error_session_not_found">Essa sessão já foi encerrada</string>
     <string name="api_error_server_busy">O servidor está ocupado. Tente de novo em instantes.</string>
     <string name="api_error_payload_too_large">É coisa demais para enviar de uma vez</string>
+    <string name="api_error_not_found">O servidor não reconhece esta solicitação.</string>
+    <string name="api_error_method_not_allowed">O servidor não reconhece esta solicitação.</string>
+    <string name="api_error_internal_error">Algo deu errado</string>
     <string name="api_error_voted_to_close">Você concordou em encerrar esta lista, então não pode mais alterá-la. Retire seu voto para fazer alterações.</string>
     <string name="api_error_not_an_expenses_list">Só é possível votar para encerrar um livro-caixa.</string>
     <string name="expense_delete_blocked">Este lançamento não pode ser excluído: ele envolve alguém cujos valores estão fixados.</string>

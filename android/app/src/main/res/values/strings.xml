@@ -418,6 +418,9 @@
     <string name="api_error_session_not_found">That session has already ended</string>
     <string name="api_error_server_busy">The server is busy. Try again in a moment.</string>
     <string name="api_error_payload_too_large">That\'s too much to send at once</string>
+    <string name="api_error_not_found">The server does not know this request.</string>
+    <string name="api_error_method_not_allowed">The server does not know this request.</string>
+    <string name="api_error_internal_error">Something went wrong</string>
     <string name="api_error_voted_to_close">You\'ve agreed to close this list, so you can\'t change it any more. Withdraw your vote to make changes.</string>
     <string name="api_error_not_an_expenses_list">Only a ledger can be voted closed.</string>
     <string name="expense_delete_blocked">This entry can\'t be deleted: it involves someone whose amounts are fixed.</string>
