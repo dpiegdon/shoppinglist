@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-26T18:29:58+00:00", "kind": "created", "ref": "main@ab7268cf", "text": "Android: collaborator-change notifications suppress every edit by another account on this phone, even edits made on the web"}
 {"actor": "user", "at": "2026-09-26T18:51:38+00:00", "kind": "note", "ref": "main@abb1c182", "text": "On main (abb1c182), full gate green: the self-edit filter reads the device off the item's newest field clock (deletion included); a Diagnostics line 'Last change check: <time>, foreign items pulled: N, <outcome>' names the gate that stopped a notification. Test counts app 800 -> 809."}
+{"actor": "user", "at": "2026-09-26T18:51:38+00:00", "kind": "closed", "ref": "main@abb1c182", "text": ""}
