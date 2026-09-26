@@ -43,16 +43,20 @@ abstract class SyncTriggerModule {
     }
 }
 
-/** Owns every WorkManager entry point for [SyncWorker] (Notes: periodic, after-edit, foreground). */
+/** Owns every WorkManager entry point for [TuppuSyncWorker] (Notes: periodic, after-edit, foreground). */
 @Singleton
 class SyncScheduler @Inject constructor(@ApplicationContext private val context: Context) : SyncTrigger {
 
     private val networkConstraint = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-    /** Background sync every 15 minutes while the network is up. Idempotent — safe to call on every app start. */
+    /**
+     * Background sync every 15 minutes while the network is up. Idempotent — safe to call on every app start.
+     *
+     * See [PERIODIC_POLICY] for why the stored request is updated rather than kept.
+     */
     fun schedulePeriodic() {
         WorkManager.getInstance(context)
-            .enqueueUniquePeriodicWork(PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, periodicRequest())
+            .enqueueUniquePeriodicWork(PERIODIC_WORK_NAME, PERIODIC_POLICY, periodicRequest())
     }
 
     override fun scheduleAfterEdit() {
@@ -70,25 +74,33 @@ class SyncScheduler @Inject constructor(@ApplicationContext private val context:
     // validates the config (e.g. rejects expedited + initial delay: "Expedited jobs cannot be delayed"),
     // which crashed every edit and was invisible to the fake-trigger unit tests.
 
-    internal fun periodicRequest() = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+    internal fun periodicRequest() = PeriodicWorkRequestBuilder<TuppuSyncWorker>(15, TimeUnit.MINUTES)
         .setConstraints(networkConstraint)
         .build()
 
     /** Debounced (5s), NOT expedited — an expedited request with an initial delay is rejected at build(). */
-    internal fun afterEditRequest() = OneTimeWorkRequestBuilder<SyncWorker>()
+    internal fun afterEditRequest() = OneTimeWorkRequestBuilder<TuppuSyncWorker>()
         .setInitialDelay(5, TimeUnit.SECONDS)
         .setConstraints(networkConstraint)
         .build()
 
     /** Expedited with NO delay — a valid expedited request (unlike the after-edit one). */
-    internal fun immediateRequest() = OneTimeWorkRequestBuilder<SyncWorker>()
+    internal fun immediateRequest() = OneTimeWorkRequestBuilder<TuppuSyncWorker>()
         .setConstraints(networkConstraint)
         .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
         .build()
 
-    private companion object {
+    internal companion object {
         const val PERIODIC_WORK_NAME = "sync-periodic"
         const val EDIT_WORK_NAME = "sync-after-edit"
         const val FOREGROUND_WORK_NAME = "sync-foreground"
+
+        /**
+         * UPDATE, not KEEP: WorkManager stores a request by its worker's class name, so a request an
+         * older version enqueued, naming a class that no longer exists, would be kept and never run
+         * again. UPDATE swaps the stored request for this one while keeping its schedule, so calling
+         * it on every app start does not push the next run back.
+         */
+        val PERIODIC_POLICY = ExistingPeriodicWorkPolicy.UPDATE
     }
 }

@@ -14,7 +14,7 @@ import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 
 @HiltWorker
-class SyncWorker @AssistedInject constructor(
+class TuppuSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val syncEngine: SyncEngine,
@@ -25,7 +25,7 @@ class SyncWorker @AssistedInject constructor(
         // Record that background work actually ran (T-112): surfaced in Settings → Diagnostics and
         // logged, so the user can tell whether the OS is running WorkManager at all (vs. killing it
         // via battery optimization / Doze, the usual reason notifications never fire on-device).
-        Log.i(TAG, "SyncWorker running")
+        Log.i(TAG, "TuppuSyncWorker running")
         notificationPrefs.recordBackgroundSync(System.currentTimeMillis())
         val result = syncEngine.syncNow()
         // New invites are noticed here rather than by polling (T-319): one small request per
@@ -52,6 +52,6 @@ class SyncWorker @AssistedInject constructor(
     }
 
     private companion object {
-        const val TAG = "SyncWorker"
+        const val TAG = "TuppuSyncWorker"
     }
 }

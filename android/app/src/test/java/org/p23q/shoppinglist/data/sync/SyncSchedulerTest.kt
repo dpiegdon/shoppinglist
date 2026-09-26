@@ -1,6 +1,8 @@
 package org.p23q.shoppinglist.data.sync
 
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.ExistingPeriodicWorkPolicy
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,5 +32,20 @@ class SyncSchedulerTest {
     @Test
     fun `immediate request builds`() {
         assertNotNull(scheduler.immediateRequest())
+    }
+
+    @Test
+    fun `every request names TuppuSyncWorker`() {
+        val name = TuppuSyncWorker::class.java.name
+        assertEquals("org.p23q.shoppinglist.data.sync.TuppuSyncWorker", name)
+        assertEquals(name, scheduler.periodicRequest().workSpec.workerClassName)
+        assertEquals(name, scheduler.afterEditRequest().workSpec.workerClassName)
+        assertEquals(name, scheduler.immediateRequest().workSpec.workerClassName)
+    }
+
+    /** The half of SyncSchedulerWorkManagerTest that runs on every host; that one is skipped on aarch64. */
+    @Test
+    fun `the periodic request replaces a stored one instead of keeping it`() {
+        assertEquals(ExistingPeriodicWorkPolicy.UPDATE, SyncScheduler.PERIODIC_POLICY)
     }
 }

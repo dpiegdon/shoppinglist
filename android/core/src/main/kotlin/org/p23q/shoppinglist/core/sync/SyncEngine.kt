@@ -334,7 +334,7 @@ class SyncEngine @Inject constructor(
             // IOException, so this catch must precede it.
             //
             // Deliberately NOT a string resource: nothing renders it. SyncState.lastError is only
-            // ever null-checked (SyncStatusBar picks a colour from it), and SyncWorker discards
+            // ever null-checked (SyncStatusBar picks a colour from it), and TuppuSyncWorker discards
             // SyncResult.Failed's message entirely. It is a diagnostic, so translating it would be
             // work with no user-visible effect (T-111).
             val message = "Server certificate not trusted"
