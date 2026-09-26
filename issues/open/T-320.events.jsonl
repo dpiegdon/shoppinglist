@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-09-26T18:49:01+00:00", "kind": "created", "ref": "main@abb1c182", "text": "Android: rename SyncWorker to TuppuSyncWorker so its log lines read as the app's own, and replace the enqueued periodic job on upgrade"}
 {"actor": "user", "at": "2026-09-26T18:49:01+00:00", "kind": "dependency", "ref": "main@abb1c182", "text": "T-319"}
+{"actor": "user", "at": "2026-09-26T19:35:47+00:00", "kind": "note", "ref": "main@6c12500e", "text": "On main (6c12500e), full gate green: TuppuSyncWorker (log tag likewise); the periodic job uses ExistingPeriodicWorkPolicy.UPDATE, so a request stored under the old class name is replaced in place on the next app start (real-WorkManager test; skipped only on aarch64)."}
