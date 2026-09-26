@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import * as api from "../api/client";
+import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { ModalDialog } from "../components/ModalDialog";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
+import { isValidServerMessage } from "../lib/serverMessage";
 
 /** Accessible on/off switch (T-112): green track when on, red when off. */
 function ToggleSwitch({
@@ -72,6 +74,11 @@ export default function AdminPage() {
   // with hundreds of them. The registration toggle below is one value, so that still loads on open.
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [allowRegistration, setAllowRegistration] = useState<boolean | null>(null);
+  // The server message (T-315): the draft in the field, and whether this server has the setting at
+  // all — one from before it answers without `message`, and would refuse a PUT of one.
+  const [messageDraft, setMessageDraft] = useState("");
+  const [messageSupported, setMessageSupported] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   // Shown at the password field itself, not with the page-level `error` at the top (T-113): the
@@ -101,6 +108,10 @@ export default function AdminPage() {
     try {
       const settings = await api.getServerSettings();
       setAllowRegistration(settings.allow_registration);
+      if (typeof settings.message === "string") {
+        setMessageDraft(settings.message);
+        setMessageSupported(true);
+      }
     } catch (err) {
       setError(errorMessage(t, err, "admin.loadFailed"));
     }
@@ -129,10 +140,29 @@ export default function AdminPage() {
     if (allowRegistration === null) return;
     setError(null);
     try {
-      const result = await api.setServerSettings(!allowRegistration);
+      // Only the flag (T-315): the PUT is partial, so the message is left as it is.
+      const result = await api.setServerSettings({ allow_registration: !allowRegistration });
       setAllowRegistration(result.allow_registration);
     } catch (err) {
       setError(errorMessage(t, err, "admin.updateFailed"));
+    }
+  }
+
+  /** Save sends the draft, Clear sends "" (T-315); the rule is checked here before anything goes out. */
+  async function saveMessage(text: string) {
+    setError(null);
+    if (!isValidServerMessage(text)) {
+      setMessageError(t("admin.messageInvalid"));
+      return;
+    }
+    setMessageError(null);
+    try {
+      const result = await api.setServerSettings({ message: text.trim() });
+      setMessageDraft(result.message ?? "");
+    } catch (err) {
+      // The server's own refusal of the same rule reads the same as the check above.
+      if (err instanceof ApiError && err.code === "invalid_message") setMessageError(t("admin.messageInvalid"));
+      else setError(errorMessage(t, err, "admin.updateFailed"));
     }
   }
 
@@ -209,6 +239,39 @@ export default function AdminPage() {
             label={t("admin.allowNewAccounts")}
           />
         </div>
+        {messageSupported && (
+          <div className="form-field" style={{ marginTop: "1rem", marginBottom: 0 }}>
+            <label htmlFor="admin-server-message">{t("admin.serverMessage")}</label>
+            <input
+              id="admin-server-message"
+              type="text"
+              dir="auto"
+              value={messageDraft}
+              onChange={(e) => {
+                setMessageDraft(e.target.value);
+                setMessageError(null);
+              }}
+              aria-invalid={messageError ? true : undefined}
+              aria-describedby="admin-server-message-help"
+            />
+            <p id="admin-server-message-help" className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
+              {t("admin.serverMessageHelp")}
+            </p>
+            {messageError && (
+              <p className="error-text" role="alert">
+                {messageError}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <button type="button" className="btn" onClick={() => saveMessage(messageDraft)}>
+                {t("action.save")}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => saveMessage("")}>
+                {t("action.clear")}
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>

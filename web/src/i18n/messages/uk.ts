@@ -135,6 +135,7 @@ export const uk: Catalog = {
   "action.copy": "Копіювати",
   "action.copied": "Скопійовано!",
   "action.reset": "Скинути",
+  "action.clear": "Очистити",
   "common.saved": "Збережено.",
   "error.generic": "Щось пішло не так",
 
@@ -214,6 +215,9 @@ export const uk: Catalog = {
   "admin.deleteFailed": "Не вдалося видалити користувача",
   "admin.sessionCount": "Сеанси: {count}",
   "admin.isAdmin": "(адмін)",
+  "admin.serverMessage": "Повідомлення сервера",
+  "admin.serverMessageHelp": "Один рядок, який усі бачать на сторінці входу та над своїми списками.",
+  "admin.messageInvalid": "Повідомлення має бути одним рядком не довше 200 символів.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "Список покупок",

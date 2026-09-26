@@ -452,3 +452,51 @@ describe("OverviewPage pending invites", () => {
     expect(screen.queryByRole("heading", { name: "Invitations" })).not.toBeInTheDocument();
   });
 });
+
+describe("OverviewPage server message (T-315)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    _resetInitialResumeForTests();
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "ME" });
+    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [] });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("shows the sync's message above the lists, as plain text", async () => {
+    const text = "Down Sunday 10:00, see https://status.example";
+    vi.mocked(api.sync).mockResolvedValue({ ...syncResponse("list-1"), server_message: text });
+    renderOverview();
+
+    const banner = await screen.findByTestId("server-message");
+    expect(banner).toHaveTextContent(text);
+    expect(banner).toHaveClass("info-banner");
+    expect(banner.querySelector("a")).toBeNull();
+    // Above the lists: the banner comes before the first list card in the document.
+    const card = await screen.findByText("My List");
+    expect(banner.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("refreshes it with every sync, so a cleared message goes away", async () => {
+    vi.mocked(api.sync)
+      .mockResolvedValueOnce({ ...syncResponse("list-1"), server_message: "Down Sunday" })
+      .mockResolvedValue({ ...syncResponse("list-1"), server_message: null });
+    renderOverview();
+
+    expect(await screen.findByTestId("server-message")).toHaveTextContent("Down Sunday");
+    window.dispatchEvent(new Event("online"));
+    await waitFor(() => expect(screen.queryByTestId("server-message")).not.toBeInTheDocument());
+    expect(api.sync).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows nothing for a server that sends no message field", async () => {
+    vi.mocked(api.sync).mockResolvedValue(syncResponse("list-1"));
+    renderOverview();
+
+    await screen.findByText("My List");
+    expect(screen.queryByTestId("server-message")).not.toBeInTheDocument();
+  });
+});

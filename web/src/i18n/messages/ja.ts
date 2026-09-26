@@ -136,6 +136,7 @@ export const ja: Catalog = {
   "action.copy": "コピー",
   "action.copied": "コピーしました！",
   "action.reset": "リセット",
+  "action.clear": "クリア",
   "common.saved": "保存しました。",
   "error.generic": "問題が発生しました",
 
@@ -215,6 +216,9 @@ export const ja: Catalog = {
   "admin.deleteFailed": "ユーザーを削除できませんでした",
   "admin.sessionCount": "セッション：{count}",
   "admin.isAdmin": "（管理者）",
+  "admin.serverMessage": "サーバーメッセージ",
+  "admin.serverMessageHelp": "1行で、ログインページとリストの上に全員に表示されます。",
+  "admin.messageInvalid": "メッセージは200文字以内の1行にしてください。",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "買い物リスト",

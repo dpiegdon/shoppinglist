@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AdminPage from "./AdminPage";
 import * as api from "../api/client";
+import type { AdminServerSettings } from "../api/contract";
 import { AuthProvider } from "../auth/AuthContext";
 
 vi.mock("../api/client", async () => {
@@ -47,7 +48,7 @@ function renderAdmin() {
 describe("AdminPage (T-107)", () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true });
+    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true, message: "" });
     vi.mocked(api.getAdminUsers).mockResolvedValue({
       users: [
         { id: "admin-1", email: "boss@example.com", created_at: 1, session_count: 1, is_admin: true },
@@ -62,7 +63,7 @@ describe("AdminPage (T-107)", () => {
   });
 
   it("lists users and toggles registration via the switch", async () => {
-    vi.mocked(api.setServerSettings).mockResolvedValue({ allow_registration: false });
+    vi.mocked(api.setServerSettings).mockResolvedValue({ allow_registration: false, message: "" });
     renderAdmin();
 
     await showUsers();
@@ -71,7 +72,8 @@ describe("AdminPage (T-107)", () => {
 
     await userEvent.click(toggle);
 
-    expect(api.setServerSettings).toHaveBeenCalledWith(false);
+    // Only the flag: the PUT is partial and the message is left alone (T-315).
+    expect(api.setServerSettings).toHaveBeenCalledWith({ allow_registration: false });
     await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "false"));
   });
 
@@ -253,7 +255,7 @@ describe("AdminPage (T-107)", () => {
 describe("AdminPage loads the user list only when asked (T-221)", () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true });
+    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true, message: "" });
     vi.mocked(api.getAdminUsers).mockResolvedValue({
       users: [
         { id: "admin-1", email: "boss@example.com", created_at: 1, session_count: 1, is_admin: true },
@@ -299,5 +301,81 @@ describe("AdminPage loads the user list only when asked (T-221)", () => {
 
     await waitFor(() => expect(screen.getByText("Registered users: 1")).toBeInTheDocument());
     expect(screen.queryByText("u@example.com")).not.toBeInTheDocument();
+  });
+});
+
+describe("AdminPage server message (T-315)", () => {
+  const INVALID = "The message must be one line of at most 200 characters.";
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true, message: "Down Sunday" });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("shows the current message and saves only the message, trimmed", async () => {
+    vi.mocked(api.setServerSettings).mockResolvedValue({ allow_registration: true, message: "Full, use another" });
+    renderAdmin();
+
+    const field = await screen.findByLabelText("Server message");
+    await waitFor(() => expect(field).toHaveValue("Down Sunday"));
+    expect(screen.getByText("One line, shown to everyone on the login page and above their lists.")).toBeInTheDocument();
+
+    await userEvent.clear(field);
+    await userEvent.type(field, "  Full, use another ");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(api.setServerSettings).toHaveBeenCalledWith({ message: "Full, use another" });
+    await waitFor(() => expect(field).toHaveValue("Full, use another"));
+  });
+
+  it("Clear saves an empty message", async () => {
+    vi.mocked(api.setServerSettings).mockResolvedValue({ allow_registration: true, message: "" });
+    renderAdmin();
+
+    const field = await screen.findByLabelText("Server message");
+    await waitFor(() => expect(field).toHaveValue("Down Sunday"));
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(api.setServerSettings).toHaveBeenCalledWith({ message: "" });
+    await waitFor(() => expect(field).toHaveValue(""));
+  });
+
+  it("refuses a message over 200 characters inline and sends nothing", async () => {
+    renderAdmin();
+
+    const field = await screen.findByLabelText("Server message");
+    await waitFor(() => expect(field).toHaveValue("Down Sunday"));
+    fireEvent.change(field, { target: { value: "a".repeat(201) } });
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(INVALID);
+    expect(api.setServerSettings).not.toHaveBeenCalled();
+  });
+
+  it("shows the server's 422 invalid_message as the same sentence", async () => {
+    vi.mocked(api.setServerSettings).mockRejectedValue(
+      new api.ApiError(422, "invalid_message", "message must be one line of at most 200 characters"),
+    );
+    renderAdmin();
+
+    const field = await screen.findByLabelText("Server message");
+    await waitFor(() => expect(field).toHaveValue("Down Sunday"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(INVALID);
+  });
+
+  it("offers no message field on a server from before it", async () => {
+    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true } as unknown as AdminServerSettings);
+    renderAdmin();
+
+    await screen.findByRole("switch", { name: "Allow new accounts" });
+    await waitFor(() => expect(api.getServerSettings).toHaveBeenCalled());
+    expect(screen.queryByLabelText("Server message")).not.toBeInTheDocument();
   });
 });

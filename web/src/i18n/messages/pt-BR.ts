@@ -134,6 +134,7 @@ export const ptBR: Catalog = {
   "action.copy": "Copiar",
   "action.copied": "Copiado!",
   "action.reset": "Redefinir",
+  "action.clear": "Limpar",
   "common.saved": "Salvo.",
   "error.generic": "Algo deu errado",
 
@@ -213,6 +214,9 @@ export const ptBR: Catalog = {
   "admin.deleteFailed": "Não foi possível excluir o usuário",
   "admin.sessionCount": "Sessões: {count}",
   "admin.isAdmin": "(admin)",
+  "admin.serverMessage": "Mensagem do servidor",
+  "admin.serverMessageHelp": "Uma linha, exibida para todos na página de login e acima das listas.",
+  "admin.messageInvalid": "A mensagem deve ter uma linha de no máximo 200 caracteres.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "Lista de compras",

@@ -7,6 +7,7 @@ import { useT } from "../i18n";
 import LanguagePicker from "../components/LanguagePicker";
 import { errorMessage } from "../i18n/apiErrors";
 import CuneiformName from "../components/CuneiformName";
+import ServerMessage from "../components/ServerMessage";
 
 const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
@@ -24,12 +25,19 @@ export default function LoginPage() {
   // live registration toggle is reflected without a redeploy (T-107). Falls back to the meta value
   // if the fetch fails (offline / old server).
   const [registrationAllowed, setRegistrationAllowed] = useState(allowRegistration());
+  // The admin's server message (T-315), straight from the registration-status answer: not cached,
+  // so the login page never shows a stale one. Null until the server has answered.
+  const [serverMessage, setServerMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     api
       .getRegistrationStatus()
-      .then((s) => { if (!cancelled) setRegistrationAllowed(s.allow_registration); })
+      .then((s) => {
+        if (cancelled) return;
+        setRegistrationAllowed(s.allow_registration);
+        setServerMessage(s.message || null);
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -85,6 +93,9 @@ export default function LoginPage() {
         {/* The name in cuneiform under the title, smaller than on About and without the
             transliteration caption — here it is a mark, not the explanation (T-225). */}
         <CuneiformName height={40} style={{ margin: "0 auto 1rem" }} />
+        {/* Where Android shows it under the server field (T-315); the web has no server field, so
+            it leads the form. */}
+        <ServerMessage message={serverMessage} style={{ margin: "0 0 1rem" }} />
         <div className="form-field">
           <label htmlFor="email">{t("login.email")}</label>
           <input

@@ -136,6 +136,7 @@ export const de: Catalog = {
   "action.copy": "Kopieren",
   "action.copied": "Kopiert!",
   "action.reset": "Zurücksetzen",
+  "action.clear": "Leeren",
   "common.saved": "Gespeichert.",
   "error.generic": "Etwas ist schiefgelaufen",
 
@@ -215,6 +216,9 @@ export const de: Catalog = {
   "admin.deleteFailed": "Benutzer konnte nicht gelöscht werden",
   "admin.sessionCount": "Sitzungen: {count}",
   "admin.isAdmin": "(Admin)",
+  "admin.serverMessage": "Servernachricht",
+  "admin.serverMessageHelp": "Eine Zeile, die alle auf der Anmeldeseite und über ihren Listen sehen.",
+  "admin.messageInvalid": "Die Nachricht muss eine Zeile mit höchstens 200 Zeichen sein.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "Einkaufsliste",

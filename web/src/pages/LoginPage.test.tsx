@@ -2,6 +2,13 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "./LoginPage";
+import * as api from "../api/client";
+
+// Offline by default, as the other tests here have always run; the server-message tests answer it.
+vi.mock("../api/client", async () => {
+  const actual = await vi.importActual<typeof api>("../api/client");
+  return { ...actual, getRegistrationStatus: vi.fn(() => Promise.reject(new Error("offline"))) };
+});
 
 // A resolving auth so submitting the form always "succeeds"; we only care where it navigates.
 vi.mock("../auth/AuthContext", () => ({
@@ -98,5 +105,38 @@ describe("LoginPage header (T-213)", () => {
     // sign is a mark, not the explanation.
     expect(sign.style.height).toBe("40px");
     expect(screen.queryByText("ṭuppu")).toBeNull();
+  });
+});
+
+describe("the server message on the login page (T-315)", () => {
+  it("shows the registration-status message as plain text, links unlinked", async () => {
+    const text = "Registration is closed here, please use https://other.example instead";
+    vi.mocked(api.getRegistrationStatus).mockResolvedValueOnce({ allow_registration: false, message: text });
+    renderLogin();
+
+    const banner = await screen.findByTestId("server-message");
+    expect(banner).toHaveTextContent(text);
+    expect(banner).toHaveClass("info-banner");
+    expect(banner).not.toHaveClass("error-text");
+    // Nothing clickable: the URL stays text.
+    expect(banner.querySelector("a")).toBeNull();
+    expect(screen.queryByRole("link", { name: /other\.example/ })).not.toBeInTheDocument();
+  });
+
+  it("shows nothing when the server has no message", async () => {
+    vi.mocked(api.getRegistrationStatus).mockResolvedValueOnce({ allow_registration: false, message: null });
+    renderLogin();
+
+    // Waits for the answer to land: the notice follows it.
+    await screen.findByText("Registration is disabled on this server.");
+    expect(screen.queryByTestId("server-message")).not.toBeInTheDocument();
+  });
+
+  it("shows nothing for a server from before the message", async () => {
+    vi.mocked(api.getRegistrationStatus).mockResolvedValueOnce({ allow_registration: false });
+    renderLogin();
+
+    await screen.findByText("Registration is disabled on this server.");
+    expect(screen.queryByTestId("server-message")).not.toBeInTheDocument();
   });
 });

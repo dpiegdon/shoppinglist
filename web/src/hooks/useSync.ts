@@ -83,6 +83,8 @@ export interface SyncState {
   error: string | null;
   /** Epoch-ms of the last successful sync, for the sync-health indicator (T-47); null until the first. */
   lastSyncAt: number | null;
+  /** The server's one-line message (T-315), from the latest sync response; null for none. Memory only. */
+  serverMessage: string | null;
   deviceId: string;
   /** Push local changes (and/or force a snapshot of full_lists), then pull. */
   push: (changes: { lists?: ListObject[]; items?: ItemObject[] }, fullLists?: string[]) => Promise<void>;
@@ -134,6 +136,7 @@ export function useSync(): SyncState {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  const [serverMessage, setServerMessage] = useState<string | null>(null);
   const cursorRef = useRef(0);
   // Whether applyResponse has ever actually applied a response yet (T-272) — see its own comment;
   // kept separate from cursorRef because cursorRef's value of 0 before the first response is a
@@ -170,6 +173,10 @@ export function useSync(): SyncState {
     }
     hasAppliedRef.current = true;
     cursorRef.current = response.cursor;
+    // Every response carries it (T-315), so each sync refreshes it; a server from before it sends
+    // nothing, which reads as no message. After the stale check, so an older answer can't bring
+    // back a message the admin has since cleared.
+    setServerMessage(response.server_message || null);
 
     const deletedListIds = new Set(
       response.changes.lists.filter((list) => list.fields.deleted?.value).map((list) => list.id),
@@ -362,7 +369,7 @@ export function useSync(): SyncState {
     return () => clearInterval(id);
   }, [refresh]);
 
-  return { lists, items, loading, error, lastSyncAt, deviceId, push, refresh, forgetList };
+  return { lists, items, loading, error, lastSyncAt, serverMessage, deviceId, push, refresh, forgetList };
 }
 
 export function itemFieldValue<K extends keyof ItemFields>(

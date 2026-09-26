@@ -135,6 +135,7 @@ export const zhHans: Catalog = {
   "action.copy": "复制",
   "action.copied": "已复制！",
   "action.reset": "重置",
+  "action.clear": "清除",
   "common.saved": "已保存。",
   "error.generic": "出错了",
 
@@ -214,6 +215,9 @@ export const zhHans: Catalog = {
   "admin.deleteFailed": "无法删除用户",
   "admin.sessionCount": "会话：{count}",
   "admin.isAdmin": "（管理员）",
+  "admin.serverMessage": "服务器消息",
+  "admin.serverMessageHelp": "一行文字，在登录页面和列表上方向所有人显示。",
+  "admin.messageInvalid": "消息必须为一行，且不超过 200 个字符。",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "购物清单",

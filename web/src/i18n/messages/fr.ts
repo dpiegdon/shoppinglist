@@ -133,6 +133,7 @@ export const fr: Catalog = {
   "action.copy": "Copier",
   "action.copied": "Copié !",
   "action.reset": "Réinitialiser",
+  "action.clear": "Effacer",
   "common.saved": "Enregistré.",
   "error.generic": "Une erreur est survenue",
 
@@ -212,6 +213,9 @@ export const fr: Catalog = {
   "admin.deleteFailed": "Impossible de supprimer l'utilisateur",
   "admin.sessionCount": "Sessions : {count}",
   "admin.isAdmin": "(admin)",
+  "admin.serverMessage": "Message du serveur",
+  "admin.serverMessageHelp": "Une ligne, affichée à tous sur la page de connexion et au-dessus de leurs listes.",
+  "admin.messageInvalid": "Le message doit tenir sur une ligne de 200 caractères au plus.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "Liste de courses",

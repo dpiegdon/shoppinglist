@@ -1,6 +1,7 @@
 import type {
   CloseVoteState,
   AdminServerSettings,
+  RegistrationStatus,
   AdminUsersResponse,
   ApiErrorBody,
   ListSummary,
@@ -260,7 +261,7 @@ export function sync(body: SyncRequest): Promise<SyncResponse> {
 // --- Admin (T-107) ---
 
 /** Public: the EFFECTIVE registration flag (reflects an admin's live override), for the auth page. */
-export function getRegistrationStatus(): Promise<AdminServerSettings> {
+export function getRegistrationStatus(): Promise<RegistrationStatus> {
   return apiFetch("/registration-status", { method: "GET", skipAuth: true });
 }
 
@@ -272,10 +273,13 @@ export function getServerSettings(): Promise<AdminServerSettings> {
   return apiFetch("/admin/server-settings", { method: "GET" });
 }
 
-export function setServerSettings(allowRegistration: boolean): Promise<AdminServerSettings> {
+/** Partial (T-315): only the keys given change; the answer carries both current values. */
+export function setServerSettings(
+  changes: { allow_registration?: boolean; message?: string },
+): Promise<AdminServerSettings> {
   return apiFetch("/admin/server-settings", {
     method: "PUT",
-    body: { allow_registration: allowRegistration },
+    body: changes,
   });
 }
 

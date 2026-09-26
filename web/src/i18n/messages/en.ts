@@ -169,6 +169,7 @@ export const en = {
   "action.copy": "Copy",
   "action.copied": "Copied!",
   "action.reset": "Reset",
+  "action.clear": "Clear",
   "common.saved": "Saved.",
   "error.generic": "Something went wrong",
 
@@ -260,6 +261,9 @@ export const en = {
   "admin.deleteFailed": "Couldn't delete user",
   "admin.sessionCount": "Sessions: {count}",
   "admin.isAdmin": "(admin)",
+  "admin.serverMessage": "Server message",
+  "admin.serverMessageHelp": "One line, shown to everyone on the login page and above their lists.",
+  "admin.messageInvalid": "The message must be one line of at most 200 characters.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "Shopping list",

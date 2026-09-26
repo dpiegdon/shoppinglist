@@ -137,6 +137,7 @@ export const ar: Catalog = {
   "action.copy": "نسخ",
   "action.copied": "تم النسخ!",
   "action.reset": "إعادة تعيين",
+  "action.clear": "مسح",
   "common.saved": "تم الحفظ.",
   "error.generic": "حدث خطأ ما",
 
@@ -216,6 +217,9 @@ export const ar: Catalog = {
   "admin.deleteFailed": "تعذّر حذف المستخدم",
   "admin.sessionCount": "الجلسات: {count}",
   "admin.isAdmin": "(مسؤول)",
+  "admin.serverMessage": "رسالة الخادم",
+  "admin.serverMessageHelp": "سطر واحد يظهر للجميع في صفحة تسجيل الدخول وفوق قوائمهم.",
+  "admin.messageInvalid": "يجب أن تكون الرسالة سطرًا واحدًا لا يتجاوز 200 حرف.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "قائمة تسوق",

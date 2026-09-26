@@ -129,6 +129,9 @@ export interface SyncResponse {
     lists: ListObject[];
     items: ItemObject[];
   };
+  // The admin's one-line server message, or null for none (T-315); on every response, so each
+  // sync refreshes it. Optional because a server from before it omits the field: read as null.
+  server_message?: string | null;
 }
 
 export interface RegisterRequest {
@@ -174,7 +177,19 @@ export interface AdminUsersResponse {
 
 export interface AdminServerSettings {
   allow_registration: boolean;
+  // The server message (T-315), "" when none. PUT is partial: each key is optional.
+  message: string;
 }
+
+/** `GET /registration-status`: public, for the login page. */
+export interface RegistrationStatus {
+  allow_registration: boolean;
+  // The server message (T-315), null when none; absent from a server that predates it.
+  message?: string | null;
+}
+
+/** The server message's rule, mirrored from the server (T-315): trimmed, at most this many characters. */
+export const SERVER_MESSAGE_MAX_LENGTH = 200;
 
 export interface Session {
   id: string;

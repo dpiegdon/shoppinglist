@@ -131,6 +131,7 @@ export const es: Catalog = {
   "action.copy": "Copiar",
   "action.copied": "¡Copiado!",
   "action.reset": "Restablecer",
+  "action.clear": "Borrar",
   "common.saved": "Guardado.",
   "error.generic": "Algo ha salido mal",
 
@@ -210,6 +211,9 @@ export const es: Catalog = {
   "admin.deleteFailed": "No se ha podido eliminar el usuario",
   "admin.sessionCount": "Sesiones: {count}",
   "admin.isAdmin": "(admin)",
+  "admin.serverMessage": "Mensaje del servidor",
+  "admin.serverMessageHelp": "Una línea, visible para todos en la página de inicio de sesión y encima de sus listas.",
+  "admin.messageInvalid": "El mensaje debe ser una sola línea de 200 caracteres como máximo.",
 
   // --- Expense lists (T-155) ---
   "listKind.shopping": "Lista de la compra",

@@ -4,6 +4,7 @@ import * as api from "../api/client";
 import AddFab from "../components/AddFab";
 import { safeLocalStorage } from "../lib/safeStorage";
 import { useSyncContext } from "../hooks/SyncContext";
+import ServerMessage from "../components/ServerMessage";
 import { ModalDialog } from "../components/ModalDialog";
 import { fieldPatch, nowMs } from "../hooks/useSync";
 import { itemFieldValue, listFieldValue } from "../hooks/useSync";
@@ -53,7 +54,7 @@ export function _resetInitialResumeForTests() {
 export default function OverviewPage() {
   const t = useT();
   const fmt = useFormat();
-  const { lists, items, loading, push, deviceId, lastSyncAt } = useSyncContext();
+  const { lists, items, loading, push, deviceId, lastSyncAt, serverMessage } = useSyncContext();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -275,6 +276,9 @@ export default function OverviewPage() {
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       {/* "Overview", as the menus on both clients call it (T-186); it said "Your lists". */}
       <h1 style={{ fontSize: "1.3rem" }}>{t("nav.overview")}</h1>
+
+      {/* The admin's server message (T-315), above the lists: refreshed by every sync. */}
+      <ServerMessage message={serverMessage} />
 
       {loading && listArray.length === 0 && <p className="muted">{t("common.loading")}</p>}
       {!loading && listArray.length === 0 && <p className="muted">{t("overview.empty")}</p>}
