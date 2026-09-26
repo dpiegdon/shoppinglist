@@ -198,7 +198,8 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 INSERT OR IGNORE INTO meta (id, change_seq, gc_horizon, last_gc_at) VALUES (1, 0, 0, 0);
 
--- Single-row table: runtime, NON-durable admin overrides (T-107). registration_override
+-- Single-row table: admin-set server settings. The registration override is runtime and
+-- NON-durable (T-107); the server message is durable (T-315). registration_override
 -- is NULL (no override, use the config default) or 0/1; boot_id tags which server run set
 -- it, so it's ignored + cleared after a restart (see server_settings.py / boot.py).
 CREATE TABLE IF NOT EXISTS server_runtime (
@@ -210,6 +211,10 @@ CREATE TABLE IF NOT EXISTS server_runtime (
     -- a new server run, which is one of the two things that make a sweep due.
     -- Non-durable in the same sense as boot_id above: it is only ever compared
     -- against the current run's id, never read for its own sake.
-    audit_boot_id TEXT
+    audit_boot_id TEXT,
+    -- The one-line message every client shows on the login page and above the lists
+    -- (T-315); '' = none. Unlike registration_override this one IS durable: it is not
+    -- tagged with a boot id and survives a restart.
+    message TEXT NOT NULL DEFAULT ''
 );
 INSERT OR IGNORE INTO server_runtime (id, registration_override, boot_id) VALUES (1, NULL, NULL);

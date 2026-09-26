@@ -396,8 +396,11 @@ def test_fresh_schema_and_migration_8_agree_on_the_housekeeping_columns(tmp_path
         "CREATE TABLE server_runtime (id INTEGER PRIMARY KEY CHECK (id = 1), "
         "registration_override INTEGER, boot_id TEXT)"
     )
-    for statement in dict(migrations_module.MIGRATIONS)[8]:
-        migrated.execute(statement)
+    # Migration 10 (T-315) adds server_runtime.message after this one; the fresh
+    # schema has it too, so both have to run for the end states to match.
+    for version in (8, 10):
+        for statement in dict(migrations_module.MIGRATIONS)[version]:
+            migrated.execute(statement)
     migrated.commit()
 
     def _columns(conn, table):
@@ -465,5 +468,64 @@ def test_fresh_schema_and_migration_9_agree_on_the_accounts_columns(tmp_path):
         ]
 
     assert _columns(fresh) == _columns(migrated)
+    fresh.close()
+    migrated.close()
+
+
+def _pre_t315_server_runtime(conn):
+    """server_runtime as it existed before migration 10, with a live override row."""
+    conn.execute(
+        "CREATE TABLE server_runtime (id INTEGER PRIMARY KEY CHECK (id = 1), "
+        "registration_override INTEGER, boot_id TEXT, audit_boot_id TEXT)"
+    )
+    conn.execute(
+        "INSERT INTO server_runtime (id, registration_override, boot_id, audit_boot_id) "
+        "VALUES (1, 0, 'boot-a', 'boot-b')"
+    )
+
+
+def test_migration_10_adds_an_empty_server_message(tmp_path):
+    """An existing deployment starts with no server message, and the row's other
+    settings are untouched (T-315)."""
+    conn = sqlite3.connect(str(tmp_path / "pre_t315.db"))
+    conn.row_factory = sqlite3.Row
+    _pre_t315_server_runtime(conn)
+    conn.commit()
+
+    for statement in dict(migrations_module.MIGRATIONS)[10]:
+        conn.execute(statement)
+    conn.commit()
+
+    row = conn.execute("SELECT * FROM server_runtime WHERE id = 1").fetchone()
+    assert row["message"] == ""
+    assert (row["registration_override"], row["boot_id"], row["audit_boot_id"]) == (
+        0,
+        "boot-a",
+        "boot-b",
+    )
+    conn.close()
+
+
+def test_fresh_schema_and_migration_10_agree_on_the_server_runtime_columns(tmp_path):
+    """schema.sql and the migration must produce the same end state (see the
+    migrations.py docstring) — column names, types, NOT NULL and DEFAULT."""
+    fresh = db_module.connect(str(tmp_path / "fresh_t315.db"))
+    db_module.init_db(fresh)
+
+    migrated = sqlite3.connect(str(tmp_path / "migrated_t315.db"))
+    migrated.row_factory = sqlite3.Row
+    _pre_t315_server_runtime(migrated)
+    for statement in dict(migrations_module.MIGRATIONS)[10]:
+        migrated.execute(statement)
+    migrated.commit()
+
+    def _columns(conn):
+        return [
+            (row["name"], row["type"], row["notnull"], row["dflt_value"])
+            for row in conn.execute("PRAGMA table_info(server_runtime)").fetchall()
+        ]
+
+    assert _columns(fresh) == _columns(migrated)
+    assert fresh.execute("SELECT message FROM server_runtime WHERE id = 1").fetchone()[0] == ""
     fresh.close()
     migrated.close()

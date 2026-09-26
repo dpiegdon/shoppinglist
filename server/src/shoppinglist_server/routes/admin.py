@@ -18,34 +18,51 @@ def register_routes(bp):
         admin_emails = get_config().get("admin_emails", frozenset())
         return jsonify({"users": accounts.list_all_accounts(conn, admin_emails)}), 200
 
+    def _server_settings_body(conn):
+        default = get_config().get("allow_registration", True)
+        return {
+            "allow_registration": server_settings.effective_allow_registration(conn, default),
+            "message": server_settings.get_message(conn),
+        }
+
     @bp.route("/admin/server-settings", methods=["GET"])
     @admin_required
     def admin_get_server_settings_view():
-        conn = get_db()
-        default = get_config().get("allow_registration", True)
-        return (
-            jsonify(
-                {"allow_registration": server_settings.effective_allow_registration(conn, default)}
-            ),
-            200,
-        )
+        return jsonify(_server_settings_body(get_db())), 200
 
     @bp.route("/admin/server-settings", methods=["PUT"])
     @admin_required
     def admin_set_server_settings_view():
+        # Partial (T-315): each setting is optional, a missing one stays as it is, and at least
+        # one must be present. Both are validated before either is written.
         data = json_body()
+        if "allow_registration" not in data and "message" not in data:
+            raise ApiError(422, "invalid_request", "Send allow_registration, message, or both.")
         allow = data.get("allow_registration")
-        if not isinstance(allow, bool):
+        if "allow_registration" in data and not isinstance(allow, bool):
             raise ApiError(422, "invalid_request", "allow_registration must be true or false.")
+        message = None
+        if "message" in data:
+            message = server_settings.validate_message(data["message"])
         conn = get_db()
-        # Runtime override only — resets to the config default on restart (T-107).
-        server_settings.set_registration_override(conn, allow)
-        audit.record(
-            "admin.registration_toggled",
-            account_id=g.shoppinglist_account.id,
-            allow_registration=allow,
-        )
-        return jsonify({"allow_registration": allow}), 200
+        if "allow_registration" in data:
+            # Runtime override only — resets to the config default on restart (T-107).
+            server_settings.set_registration_override(conn, allow)
+            audit.record(
+                "admin.registration_toggled",
+                account_id=g.shoppinglist_account.id,
+                allow_registration=allow,
+            )
+        if message is not None:
+            # Durable (T-315). The audit log gets the length only, never the text.
+            server_settings.set_message(conn, message)
+            if message:
+                audit.record(
+                    "admin.message_set", account_id=g.shoppinglist_account.id, length=len(message)
+                )
+            else:
+                audit.record("admin.message_cleared", account_id=g.shoppinglist_account.id)
+        return jsonify(_server_settings_body(conn)), 200
 
     @bp.route("/admin/users/<account_id>/reset-password", methods=["POST"])
     @admin_required

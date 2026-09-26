@@ -280,3 +280,192 @@ def test_admin_delete_needs_step_up_password(tmp_path):
     # Not deleted.
     users = client.get("/api/v1/admin/users", headers=_bearer(token)).get_json()["users"]
     assert "gone@example.com" in {u["email"] for u in users}
+
+
+# ---- server message (durable, T-315) ---------------------------------------
+
+
+def _admin_client(tmp_path, **kwargs):
+    app = _admin_app(tmp_path, **kwargs)
+    client = app.test_client()
+    _register(client, ADMIN_EMAIL)
+    return client, _login(client, ADMIN_EMAIL)["token"]
+
+
+def _put_settings(client, token, body):
+    return client.put("/api/v1/admin/server-settings", json=body, headers=_bearer(token))
+
+
+def test_server_message_is_empty_by_default_everywhere(tmp_path):
+    client, token = _admin_client(tmp_path)
+
+    assert client.get("/api/v1/admin/server-settings", headers=_bearer(token)).get_json() == {
+        "allow_registration": True,
+        "message": "",
+    }
+    assert client.get("/api/v1/registration-status").get_json() == {
+        "allow_registration": True,
+        "message": None,
+    }
+    sync = client.post("/api/v1/sync", json={"cursor": 0}, headers=_bearer(token))
+    assert sync.status_code == 200
+    assert "server_message" in sync.get_json()
+    assert sync.get_json()["server_message"] is None
+
+
+def test_admin_sets_the_server_message_and_every_read_endpoint_shows_it(tmp_path):
+    client, token = _admin_client(tmp_path)
+
+    resp = _put_settings(client, token, {"message": "  Down for maintenance Sunday 10:00.  "})
+    assert resp.status_code == 200
+    # Trimmed on the way in; the response carries both settings.
+    assert resp.get_json() == {
+        "allow_registration": True,
+        "message": "Down for maintenance Sunday 10:00.",
+    }
+    assert client.get("/api/v1/admin/server-settings", headers=_bearer(token)).get_json() == {
+        "allow_registration": True,
+        "message": "Down for maintenance Sunday 10:00.",
+    }
+    assert (
+        client.get("/api/v1/registration-status").get_json()["message"]
+        == "Down for maintenance Sunday 10:00."
+    )
+    # Every user sees it with each sync, not only the admin.
+    _register(client, "user@example.com")
+    user_token = _login(client, "user@example.com")["token"]
+    sync = client.post("/api/v1/sync", json={"cursor": 0}, headers=_bearer(user_token))
+    assert sync.get_json()["server_message"] == "Down for maintenance Sunday 10:00."
+
+
+def test_an_empty_message_clears_it(tmp_path):
+    client, token = _admin_client(tmp_path)
+    _put_settings(client, token, {"message": "Full, please use another server."})
+
+    resp = _put_settings(client, token, {"message": ""})
+    assert resp.status_code == 200
+    assert resp.get_json()["message"] == ""
+    assert client.get("/api/v1/registration-status").get_json()["message"] is None
+    sync = client.post("/api/v1/sync", json={"cursor": 0}, headers=_bearer(token))
+    assert sync.get_json()["server_message"] is None
+
+    # Whitespace only trims to nothing, which is the same as clearing.
+    _put_settings(client, token, {"message": "x"})
+    assert _put_settings(client, token, {"message": "   "}).get_json()["message"] == ""
+
+
+def test_server_settings_put_is_partial(tmp_path):
+    client, token = _admin_client(tmp_path)
+    _put_settings(client, token, {"message": "Hello"})
+
+    # Only the toggle: the message stays.
+    resp = _put_settings(client, token, {"allow_registration": False})
+    assert resp.get_json() == {"allow_registration": False, "message": "Hello"}
+    # Only the message: the toggle stays.
+    resp = _put_settings(client, token, {"message": "Bye"})
+    assert resp.get_json() == {"allow_registration": False, "message": "Bye"}
+    # Both at once.
+    resp = _put_settings(client, token, {"allow_registration": True, "message": ""})
+    assert resp.get_json() == {"allow_registration": True, "message": ""}
+
+
+def test_server_settings_put_needs_at_least_one_setting(tmp_path):
+    client, token = _admin_client(tmp_path)
+
+    resp = _put_settings(client, token, {})
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_request"
+    resp = _put_settings(client, token, {"something_else": 1})
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_request"
+
+
+def test_server_message_validation(tmp_path):
+    client, token = _admin_client(tmp_path)
+    _put_settings(client, token, {"message": "Keep me"})
+
+    ok = [
+        "x" * 200,
+        "  " + "x" * 200 + "  ",  # 200 after trimming
+        "See https://example.com/status",  # links are fine; clients never make them clickable
+        "Wartung am Sonntag – äöü \U0001f6a7",
+    ]
+    for text in ok:
+        resp = _put_settings(client, token, {"message": text})
+        assert resp.status_code == 200, text
+        assert resp.get_json()["message"] == text.strip()
+
+    _put_settings(client, token, {"message": "Keep me"})
+    bad = [
+        "x" * 201,
+        "two\nlines",
+        "two\rlines",
+        "a\ttab",
+        "bell\x07",
+        "c1\x85control",
+        "del\x7fchar",
+        5,
+        None,
+        True,
+        ["x"],
+    ]
+    for value in bad:
+        resp = _put_settings(client, token, {"message": value})
+        assert resp.status_code == 422, repr(value)
+        assert resp.get_json()["error"] == "invalid_message", repr(value)
+    # Nothing refused was stored.
+    assert client.get("/api/v1/registration-status").get_json()["message"] == "Keep me"
+
+
+def test_an_invalid_message_does_not_apply_the_toggle_sent_with_it(tmp_path):
+    client, token = _admin_client(tmp_path)
+
+    resp = _put_settings(client, token, {"allow_registration": False, "message": "a\nb"})
+    assert resp.status_code == 422
+    assert client.get("/api/v1/registration-status").get_json()["allow_registration"] is True
+
+
+def test_server_message_is_admin_only(tmp_path):
+    client, _ = _admin_client(tmp_path)
+    _register(client, "user@example.com")
+    user_token = _login(client, "user@example.com")["token"]
+
+    resp = _put_settings(client, user_token, {"message": "pwned"})
+    assert resp.status_code == 403
+    assert client.get("/api/v1/registration-status").get_json()["message"] is None
+
+
+def test_server_message_survives_a_restart(tmp_path, monkeypatch):
+    client, token = _admin_client(tmp_path)
+    _put_settings(client, token, {"allow_registration": False, "message": "Still here"})
+
+    # A new boot id voids the registration override but not the message.
+    monkeypatch.setattr(boot, "current_boot_id", lambda: "a-different-boot-id")
+    assert client.get("/api/v1/registration-status").get_json() == {
+        "allow_registration": True,
+        "message": "Still here",
+    }
+    # And a whole new app on the same database file reads it back.
+    fresh = _admin_app(tmp_path).test_client()
+    assert fresh.get("/api/v1/registration-status").get_json()["message"] == "Still here"
+
+
+def test_server_message_audit_records_the_length_never_the_text(tmp_path, caplog):
+    import logging
+
+    from shoppinglist_server import audit
+
+    client, token = _admin_client(tmp_path)
+    caplog.set_level(logging.INFO, logger=audit.LOGGER_NAME)
+
+    _put_settings(client, token, {"message": "  Secret-ish maintenance note  "})
+    _put_settings(client, token, {"message": ""})
+    messages = [r.getMessage() for r in caplog.records if r.name == audit.LOGGER_NAME]
+
+    set_lines = [m for m in messages if "event=admin.message_set" in m]
+    cleared_lines = [m for m in messages if "event=admin.message_cleared" in m]
+    assert len(set_lines) == 1 and len(cleared_lines) == 1
+    assert f"length={len('Secret-ish maintenance note')}" in set_lines[0]
+    assert all("Secret" not in m for m in messages)
+    # A message-only PUT does not claim the registration toggle changed.
+    assert not any("event=admin.registration_toggled" in m for m in messages)

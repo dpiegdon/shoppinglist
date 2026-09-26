@@ -30,9 +30,15 @@ def register_routes(bp):
         # index.html meta tag baked at startup, which can't reflect a runtime admin toggle (T-107).
         conn = get_db()
         default = get_config().get("allow_registration", True)
+        # The server message (T-315) rides along so the login page can show it; null when none.
         return (
             jsonify(
-                {"allow_registration": server_settings.effective_allow_registration(conn, default)}
+                {
+                    "allow_registration": server_settings.effective_allow_registration(
+                        conn, default
+                    ),
+                    "message": server_settings.get_message(conn) or None,
+                }
             ),
             200,
         )

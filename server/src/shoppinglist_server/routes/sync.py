@@ -1,6 +1,6 @@
 from flask import g, jsonify
 
-from .. import get_db
+from .. import get_db, server_settings
 from .. import sync as sync_engine
 from ..auth import authed
 from ..errors import ApiError
@@ -102,5 +102,8 @@ def register_routes(bp):
             conn.commit()
             raise
 
+        # On every successful response, so a logged-in client refreshes the server message with
+        # each sync instead of polling for it (T-315). null when none.
+        result["server_message"] = server_settings.get_message(conn) or None
         conn.commit()
         return jsonify(result), 200

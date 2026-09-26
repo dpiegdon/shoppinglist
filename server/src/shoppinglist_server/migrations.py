@@ -126,6 +126,12 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "UPDATE accounts SET email_set_at = created_at",
         ],
     ),  # T-234: when the account started holding its current email address
+    (
+        10,
+        [
+            "ALTER TABLE server_runtime ADD COLUMN message TEXT NOT NULL DEFAULT ''",
+        ],
+    ),  # T-315: the admin-set server message (durable, '' = none)
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0
