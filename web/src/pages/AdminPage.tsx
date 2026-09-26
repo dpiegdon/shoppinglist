@@ -74,9 +74,11 @@ export default function AdminPage() {
   // with hundreds of them. The registration toggle below is one value, so that still loads on open.
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [allowRegistration, setAllowRegistration] = useState<boolean | null>(null);
-  // The server message (T-315): the draft in the field, and whether this server has the setting at
-  // all — one from before it answers without `message`, and would refuse a PUT of one.
+  // The server message (T-315): the draft in the field, the text the server holds ("" for none),
+  // and whether this server has the setting at all — one from before it answers without `message`,
+  // and would refuse a PUT of one.
   const [messageDraft, setMessageDraft] = useState("");
+  const [storedMessage, setStoredMessage] = useState("");
   const [messageSupported, setMessageSupported] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
@@ -110,6 +112,7 @@ export default function AdminPage() {
       setAllowRegistration(settings.allow_registration);
       if (typeof settings.message === "string") {
         setMessageDraft(settings.message);
+        setStoredMessage(settings.message);
         setMessageSupported(true);
       }
     } catch (err) {
@@ -132,6 +135,12 @@ export default function AdminPage() {
     loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // As on Android (T-316): Save only once the draft would change what is stored, Clear only while
+  // something is stored. A draft the rule refuses keeps Save enabled, so pressing it says why.
+  const draftChecked = normalizeServerMessage(messageDraft);
+  const saveDisabled = "message" in draftChecked && (draftChecked.message ?? "") === storedMessage;
+  const clearDisabled = storedMessage === "";
 
   // Non-admins (or a stale stored account) never see this page's data.
   if (account && !account.isAdmin) return <Navigate to="/" replace />;
@@ -161,6 +170,7 @@ export default function AdminPage() {
       // The text the server will store, trimmed by the same rule; "" clears it.
       const result = await api.setServerSettings({ message: checked.message ?? "" });
       setMessageDraft(result.message ?? "");
+      setStoredMessage(result.message ?? "");
     } catch (err) {
       // The server's own refusal of the same rule reads the same as the check above.
       if (err instanceof ApiError && err.code === "invalid_message") setMessageError(t("admin.messageInvalid"));
@@ -265,10 +275,15 @@ export default function AdminPage() {
               </p>
             )}
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <button type="button" className="btn" onClick={() => saveMessage(messageDraft)}>
+              <button type="button" className="btn" disabled={saveDisabled} onClick={() => saveMessage(messageDraft)}>
                 {t("action.save")}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => saveMessage("")}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={clearDisabled}
+                onClick={() => saveMessage("")}
+              >
                 {t("action.clear")}
               </button>
             </div>

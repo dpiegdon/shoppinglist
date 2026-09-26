@@ -365,9 +365,44 @@ describe("AdminPage server message (T-315)", () => {
 
     const field = await screen.findByLabelText("Server message");
     await waitFor(() => expect(field).toHaveValue("Down Sunday"));
+    await userEvent.type(field, " again");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(INVALID);
+  });
+
+  it("offers Save only once the draft would change the stored message (T-316)", async () => {
+    vi.mocked(api.setServerSettings).mockResolvedValue({ allow_registration: true, message: "Down Monday" });
+    renderAdmin();
+
+    const field = await screen.findByLabelText("Server message");
+    await waitFor(() => expect(field).toHaveValue("Down Sunday"));
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+
+    // Only what the rule trims away: still the stored text.
+    await userEvent.type(field, "  ");
+    expect(save).toBeDisabled();
+
+    await userEvent.clear(field);
+    await userEvent.type(field, "Down Monday");
+    expect(save).toBeEnabled();
+    await userEvent.click(save);
+
+    expect(api.setServerSettings).toHaveBeenCalledWith({ message: "Down Monday" });
+    await waitFor(() => expect(save).toBeDisabled());
+  });
+
+  it("offers Clear only while a message is stored, and puts Save before it (T-316)", async () => {
+    vi.mocked(api.getServerSettings).mockResolvedValue({ allow_registration: true, message: "" });
+    renderAdmin();
+
+    const field = await screen.findByLabelText("Server message");
+    await userEvent.type(field, "Draft only");
+    const save = screen.getByRole("button", { name: "Save" });
+    const clear = screen.getByRole("button", { name: "Clear" });
+    expect(clear).toBeDisabled();
+    expect(save.compareDocumentPosition(clear) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("offers no message field on a server from before it", async () => {
