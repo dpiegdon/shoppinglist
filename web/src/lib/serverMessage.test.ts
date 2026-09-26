@@ -1,33 +1,43 @@
+/// <reference types="node" />
+// Node's file APIs and JSON.parse, not a JSON import: Vite's JSON plugin refuses the table's lone
+// surrogate ("\ud800"), which is legal JSON and exactly one of the cases.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { isValidServerMessage } from "./serverMessage";
+import { normalizeServerMessage, type ServerMessageResult } from "./serverMessage";
 
-describe("isValidServerMessage (T-315)", () => {
-  it("accepts an empty message, which clears it", () => {
-    expect(isValidServerMessage("")).toBe(true);
+const TABLE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../shared-test-cases/server-message.json");
+const table = JSON.parse(readFileSync(TABLE, "utf8")) as {
+  cases: Array<{ name: string; input: string; result: ServerMessageResult }>;
+};
+
+describe("normalizeServerMessage follows the shared table (T-316)", () => {
+  it("has cases to check", () => {
+    expect(table.cases.length).toBeGreaterThan(0);
   });
 
-  it("accepts a link: only clients keep it unclickable", () => {
-    expect(isValidServerMessage("Down Sunday 10:00, see https://example.com/status")).toBe(true);
+  for (const c of table.cases) {
+    it(c.name, () => {
+      expect(normalizeServerMessage(c.input)).toEqual(c.result);
+    });
+  }
+});
+
+// The shared table cannot tell the rule's trim from String.prototype.trim, which also strips
+// U+000B, U+000C, U+2028, U+2029 and U+FEFF from the ends. The rule trims only its own set.
+describe("normalizeServerMessage trims only the rule's characters", () => {
+  it("refuses a vertical tab or form feed at an end instead of trimming it", () => {
+    expect(normalizeServerMessage("a\u000b")).toEqual({ error: "invalid_message" });
+    expect(normalizeServerMessage("\u000ca")).toEqual({ error: "invalid_message" });
   });
 
-  it("allows 200 characters and refuses 201", () => {
-    expect(isValidServerMessage("a".repeat(200))).toBe(true);
-    expect(isValidServerMessage("a".repeat(201))).toBe(false);
+  it("refuses a line or paragraph separator at an end instead of trimming it", () => {
+    expect(normalizeServerMessage("a ")).toEqual({ error: "invalid_message" });
+    expect(normalizeServerMessage(" a")).toEqual({ error: "invalid_message" });
   });
 
-  it("counts after trimming", () => {
-    expect(isValidServerMessage(`  ${"a".repeat(200)}  `)).toBe(true);
-  });
-
-  it("counts characters, not UTF-16 units", () => {
-    expect(isValidServerMessage("😀".repeat(200))).toBe(true);
-    expect(isValidServerMessage("😀".repeat(201))).toBe(false);
-  });
-
-  it("refuses a line break or another control character inside", () => {
-    expect(isValidServerMessage("one\ntwo")).toBe(false);
-    expect(isValidServerMessage("one\rtwo")).toBe(false);
-    expect(isValidServerMessage("one\ttwo")).toBe(false);
-    expect(isValidServerMessage("one\u0007two")).toBe(false);
+  it("keeps a byte-order mark (Cf) at an end", () => {
+    expect(normalizeServerMessage("a﻿")).toEqual({ message: "a﻿" });
   });
 });

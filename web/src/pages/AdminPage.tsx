@@ -7,7 +7,7 @@ import { ModalDialog } from "../components/ModalDialog";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
-import { isValidServerMessage } from "../lib/serverMessage";
+import { normalizeServerMessage } from "../lib/serverMessage";
 
 /** Accessible on/off switch (T-112): green track when on, red when off. */
 function ToggleSwitch({
@@ -151,13 +151,15 @@ export default function AdminPage() {
   /** Save sends the draft, Clear sends "" (T-315); the rule is checked here before anything goes out. */
   async function saveMessage(text: string) {
     setError(null);
-    if (!isValidServerMessage(text)) {
+    const checked = normalizeServerMessage(text);
+    if ("error" in checked) {
       setMessageError(t("admin.messageInvalid"));
       return;
     }
     setMessageError(null);
     try {
-      const result = await api.setServerSettings({ message: text.trim() });
+      // The text the server will store, trimmed by the same rule; "" clears it.
+      const result = await api.setServerSettings({ message: checked.message ?? "" });
       setMessageDraft(result.message ?? "");
     } catch (err) {
       // The server's own refusal of the same rule reads the same as the check above.
