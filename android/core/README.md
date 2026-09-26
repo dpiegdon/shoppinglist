@@ -48,6 +48,7 @@ interface and `:app` implements it and binds it in Hilt:
 | `DeviceIdProvider` | `DeviceIdModule`, from `ServerConfig` (DataStore) |
 | `sync/SyncTrigger` | `SyncScheduler` (WorkManager) |
 | `sync/CollaboratorChangeNotifier` | `CollaboratorChangeNotificationPoster` (notifications) |
+| `sync/InviteNotifier` | `InviteNotificationPoster` (notifications) |
 
 ## Accounts
 
@@ -118,6 +119,12 @@ interface and `:app` implements it and binds it in Hilt:
   the overview shows, offline too. `SyncStatus.state` is the worst of the
   accounts, `SyncStatus.accounts` each one; a signed-out or outdated account
   counts in its pending and blocked rows only, not in the last sync or error.
+- `sync/InviteChecker.check()` asks `/invites/pending` once of every account
+  that can sync and whose last sync succeeded, and hands every listed invite,
+  of all of them together, to `InviteNotifier`; which are new to the phone is
+  the notifier's to decide. An account whose request fails is left out; with
+  none answering, the notifier is not called. `:app` runs it after each
+  background sync.
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and
   `setKind` returns false instead of converting. `ListsRepo.duplicate(listId,
