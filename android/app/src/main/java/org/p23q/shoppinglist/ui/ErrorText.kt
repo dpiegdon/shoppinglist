@@ -38,7 +38,7 @@ object ErrorText {
         "invalid_status" to UiText.res(R.string.api_error_invalid_status),
         "invalid_device_label" to UiText.res(R.string.api_error_invalid_device_label),
         // The admin-set server message breaks its rule: one line, at most 200 characters (T-315).
-        "invalid_message" to UiText.res(R.string.api_error_invalid_message),
+        "invalid_message" to UiText.res(R.string.admin_server_message_invalid),
         "invite_expired" to UiText.res(R.string.api_error_invite_expired),
         "invite_revoked" to UiText.res(R.string.api_error_invite_revoked),
         "invite_used" to UiText.res(R.string.api_error_invite_used),

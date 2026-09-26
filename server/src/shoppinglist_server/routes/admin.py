@@ -38,14 +38,16 @@ def register_routes(bp):
         data = json_body()
         if "allow_registration" not in data and "message" not in data:
             raise ApiError(422, "invalid_request", "Send allow_registration, message, or both.")
-        allow = data.get("allow_registration")
-        if "allow_registration" in data and not isinstance(allow, bool):
-            raise ApiError(422, "invalid_request", "allow_registration must be true or false.")
+        allow: bool | None = None
+        if "allow_registration" in data:
+            allow = data["allow_registration"]
+            if not isinstance(allow, bool):
+                raise ApiError(422, "invalid_request", "allow_registration must be true or false.")
         message = None
         if "message" in data:
             message = server_settings.validate_message(data["message"])
         conn = get_db()
-        if "allow_registration" in data:
+        if allow is not None:
             # Runtime override only — resets to the config default on restart (T-107).
             server_settings.set_registration_override(conn, allow)
             audit.record(

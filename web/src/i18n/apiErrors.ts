@@ -32,7 +32,7 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   invalid_status: "apiError.invalidStatus",
   invalid_device_label: "apiError.invalidDeviceLabel",
   // The admin-set server message breaks its rule: one line, at most 200 characters (T-315).
-  invalid_message: "apiError.invalidMessage",
+  invalid_message: "admin.messageInvalid",
   invite_expired: "apiError.inviteExpired",
   invite_revoked: "apiError.inviteRevoked",
   invite_used: "apiError.inviteUsed",
