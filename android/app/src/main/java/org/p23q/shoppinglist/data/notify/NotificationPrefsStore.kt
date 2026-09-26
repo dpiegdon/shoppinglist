@@ -19,6 +19,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
+import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
 import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -39,6 +40,9 @@ object NotificationPrefsModule {
 
 /** The last collaborator-change check (T-318): when, how many foreign items, how it ended. */
 data class ChangeCheck(val atMillis: Long, val foreignItems: Int, val outcome: ChangeCheckOutcome)
+
+/** The last invite check (T-319): when, how many invites were new to this phone, how it ended. */
+data class InviteCheck(val atMillis: Long, val newInvites: Int, val outcome: InviteCheckOutcome)
 
 /**
  * Collaborator-change notification preferences (T-65): a global on/off plus per-list mutes.
@@ -95,6 +99,50 @@ class NotificationPrefsStore @Inject constructor(
         }
     }
 
+    /** Invite notifications on/off (T-319), its own switch beside the collaborator one; on by default. */
+    val inviteNotificationsEnabled: Flow<Boolean> = dataStore.data.map { it[INVITES_ENABLED_KEY] ?: true }
+
+    suspend fun setInviteNotificationsEnabled(enabled: Boolean) {
+        dataStore.edit { it[INVITES_ENABLED_KEY] = enabled }
+    }
+
+    /**
+     * Records the invites the servers listed ([expiresAtById], epoch milliseconds) as seen on this
+     * phone and returns the ids among them that had not been seen before (T-319). In the same
+     * edit, forgets every seen id whose invite expired before [now], so the set holds only
+     * invites that could still be listed and cannot grow without bound. An id is not forgotten
+     * merely for being absent from one answer: that account's request may have failed.
+     */
+    suspend fun markInvitesSeen(expiresAtById: Map<String, Long>, now: Long): Set<String> {
+        var unseen: Set<String> = emptySet()
+        dataStore.edit { prefs ->
+            val seen = decodeSeen(prefs[SEEN_INVITES_KEY].orEmpty()).filterValues { it >= now }
+            unseen = expiresAtById.keys - seen.keys
+            prefs[SEEN_INVITES_KEY] = encodeSeen(seen + expiresAtById)
+        }
+        return unseen
+    }
+
+    /** The seen invite ids with their expiry (T-319), for tests and diagnostics. */
+    val seenInvites: Flow<Map<String, Long>> = dataStore.data.map { decodeSeen(it[SEEN_INVITES_KEY].orEmpty()) }
+
+    /** The last invite check and what decided it (T-319), or null before the first. */
+    val lastInviteCheck: Flow<InviteCheck?> = dataStore.data.map { prefs ->
+        val at = prefs[INVITE_CHECK_AT_KEY] ?: return@map null
+        val outcome = prefs[INVITE_CHECK_OUTCOME_KEY]
+            ?.let { name -> InviteCheckOutcome.entries.firstOrNull { it.name == name } }
+            ?: return@map null
+        InviteCheck(at, prefs[INVITE_CHECK_NEW_KEY] ?: 0, outcome)
+    }
+
+    suspend fun recordInviteCheck(check: InviteCheck) {
+        dataStore.edit {
+            it[INVITE_CHECK_AT_KEY] = check.atMillis
+            it[INVITE_CHECK_NEW_KEY] = check.newInvites
+            it[INVITE_CHECK_OUTCOME_KEY] = check.outcome.name
+        }
+    }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[ENABLED_KEY] = enabled }
     }
@@ -118,5 +166,19 @@ class NotificationPrefsStore @Inject constructor(
         val CHECK_AT_KEY = longPreferencesKey("last_change_check_at")
         val CHECK_ITEMS_KEY = intPreferencesKey("last_change_check_foreign_items")
         val CHECK_OUTCOME_KEY = stringPreferencesKey("last_change_check_outcome")
+        val INVITES_ENABLED_KEY = booleanPreferencesKey("invite_notifications_enabled")
+
+        /** Each entry is "<expires_at>:<invite id>"; a DataStore set holds strings only. */
+        val SEEN_INVITES_KEY = stringSetPreferencesKey("seen_invites")
+        val INVITE_CHECK_AT_KEY = longPreferencesKey("last_invite_check_at")
+        val INVITE_CHECK_NEW_KEY = intPreferencesKey("last_invite_check_new")
+        val INVITE_CHECK_OUTCOME_KEY = stringPreferencesKey("last_invite_check_outcome")
+
+        fun decodeSeen(entries: Set<String>): Map<String, Long> = entries.mapNotNull { entry ->
+            val expiresAt = entry.substringBefore(':', "").toLongOrNull() ?: return@mapNotNull null
+            entry.substringAfter(':') to expiresAt
+        }.toMap()
+
+        fun encodeSeen(seen: Map<String, Long>): Set<String> = seen.mapTo(mutableSetOf()) { (id, expiresAt) -> "$expiresAt:$id" }
     }
 }

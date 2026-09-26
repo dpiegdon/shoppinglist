@@ -187,6 +187,8 @@
     <string name="settings_notifications">Notificaciones</string>
     <string name="settings_collaborator_changes">Cambios de otros miembros</string>
     <string name="settings_collaborator_changes_help">Avisar cuando otra persona edite una lista compartida. Puedes silenciar listas concretas en sus propiedades.</string>
+    <string name="settings_invitations">Invitaciones</string>
+    <string name="settings_invitations_help">Avisar cuando alguien te invite a una lista compartida.</string>
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_last_background_sync">Última sincronización en segundo plano: %1$s</string>
     <string name="settings_last_change_check">Última comprobación de cambios: %1$s, artículos ajenos recibidos: %2$d, %3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">lista silenciada</string>
     <string name="change_check_no_permission">sin permiso</string>
     <string name="change_check_posted">notificado</string>
+    <string name="settings_last_invite_check">Última comprobación de invitaciones: %1$s, invitaciones nuevas: %2$d, %3$s</string>
+    <string name="settings_last_invite_check_never">Última comprobación de invitaciones: nunca</string>
+    <string name="invite_check_invites_off">invitaciones desactivadas</string>
+    <string name="invite_check_nothing_new">nada nuevo</string>
     <string name="settings_server">Servidor: %1$s</string>
     <string name="settings_share_crash_logs">Compartir registros de fallos</string>
     <string name="settings_trust_self_signed">Confiar en certificados autofirmados</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">Listas de la compra</string>
     <string name="notif_changed_items">Artículos cambiados: %1$d</string>
     <string name="notif_changed_items_lists">Artículos cambiados: %1$d · Listas: %2$d</string>
+    <string name="notif_channel_invites">Invitaciones</string>
+    <string name="notif_invites_count">Invitaciones: %1$d</string>
     <string name="expense_add">Añadir movimiento</string>
     <string name="expense_new">Nuevo movimiento</string>
     <string name="expense_edit">Editar movimiento</string>

@@ -12,10 +12,12 @@ import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
+import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.ChangeCheck
+import org.p23q.shoppinglist.data.notify.InviteCheck
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.UiText
 import javax.inject.Inject
@@ -27,10 +29,14 @@ data class SettingsUiState(
     val crashLogPath: String? = null,
     /** Global collaborator-change notifications on/off (T-65). */
     val notificationsEnabled: Boolean = true,
+    /** Invite notifications on/off (T-319), apart from the collaborator switch. */
+    val inviteNotificationsEnabled: Boolean = true,
     /** Diagnostics: when the background (WorkManager) sync last ran, humanized (T-112). */
     val lastBackgroundSyncText: UiText = UiText.res(R.string.background_sync_never),
     /** Diagnostics: the last collaborator-change check and what decided it (T-318). */
     val lastChangeCheckText: UiText = UiText.res(R.string.settings_last_change_check_never),
+    /** Diagnostics: the last invite check and what decided it (T-319). */
+    val lastInviteCheckText: UiText = UiText.res(R.string.settings_last_invite_check_never),
     /**
      * Whether the phone holds a server account. Without one nothing syncs and no collaborator
      * changes anything, so the notification switch and the background-sync line are hidden (T-302).
@@ -66,6 +72,16 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            notificationPrefs.inviteNotificationsEnabled.collect { enabled ->
+                _uiState.update { it.copy(inviteNotificationsEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            notificationPrefs.lastInviteCheck.collect { check ->
+                _uiState.update { it.copy(lastInviteCheckText = formatInviteCheck(check)) }
+            }
+        }
+        viewModelScope.launch {
             notificationPrefs.lastBackgroundSyncAt.collect { at ->
                 _uiState.update { it.copy(lastBackgroundSyncText = formatBackgroundSync(at)) }
             }
@@ -80,6 +96,11 @@ class SettingsViewModel @Inject constructor(
     /** Global collaborator-change notification toggle (T-65); per-list mutes live in list properties. */
     fun setNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {
         notificationPrefs.setNotificationsEnabled(enabled)
+    }
+
+    /** Invite notifications on/off (T-319). */
+    fun setInviteNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {
+        notificationPrefs.setInviteNotificationsEnabled(enabled)
     }
 
     /** No log yet, or an empty one, surfaces a message instead of firing an empty share sheet (T-50). */
@@ -118,6 +139,26 @@ internal fun formatChangeCheck(check: ChangeCheck?, now: Long = System.currentTi
         check.foreignItems,
         UiText.res(check.outcome.label()),
     )
+}
+
+/** "Last invite check: 5 min ago, new invitations: 1, posted" (T-319); null = none yet. */
+internal fun formatInviteCheck(check: InviteCheck?, now: Long = System.currentTimeMillis()): UiText {
+    if (check == null) return UiText.res(R.string.settings_last_invite_check_never)
+    return UiText.res(
+        R.string.settings_last_invite_check,
+        formatBackgroundSync(check.atMillis, now),
+        check.newInvites,
+        UiText.res(check.outcome.label()),
+    )
+}
+
+/** The change check's phrases where they mean the same (T-319). */
+private fun InviteCheckOutcome.label(): Int = when (this) {
+    InviteCheckOutcome.NOTHING_NEW -> R.string.invite_check_nothing_new
+    InviteCheckOutcome.FOREGROUND -> R.string.change_check_foreground
+    InviteCheckOutcome.INVITES_OFF -> R.string.invite_check_invites_off
+    InviteCheckOutcome.NO_PERMISSION -> R.string.change_check_no_permission
+    InviteCheckOutcome.POSTED -> R.string.change_check_posted
 }
 
 private fun ChangeCheckOutcome.label(): Int = when (this) {

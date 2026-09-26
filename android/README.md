@@ -105,9 +105,15 @@ and, tapped, asks the servers for one whatever the automatic check is set to,
 as its row on the Accounts screen does with *Check for update*: a newer app is
 offered with the usual prompt, and otherwise a dialog says none was found.
 Each account's pending invites are fetched from its own server and shown in its
-section, as soon as the account is signed in, and a new list goes to the account picked in the New-list dialog
+section, as soon as the account is signed in. After each background sync, every account whose
+sync succeeded is asked for its pending invites once more, and an invite this phone has not seen
+before is posted as a notification in its own *Invitations* channel (one per check, however many
+are new; tapping it opens the overview). It stays silent while the app is in the foreground,
+under Settings' *Invitations* switch (on by default) and without the notification permission;
+an invite counts as seen either way, and the phone forgets it once it has expired. Settings →
+Diagnostics shows the last invite check and what decided it. A new list goes to the account picked in the New-list dialog
 (by default the account of the list opened last). The list screen shows the
-list's account under its name, and a collaborator notification names it, as
+list's account under its name, and a collaborator or invite notification names it, as
 "email · host/path", only when the phone holds more than one account. A screen showing one list takes
 its account, API client and default currency from the list's row.
 

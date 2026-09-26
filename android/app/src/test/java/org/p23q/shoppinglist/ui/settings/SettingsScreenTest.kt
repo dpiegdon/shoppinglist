@@ -28,6 +28,14 @@ import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import org.p23q.shoppinglist.data.notify.ChangeCheck
+import org.p23q.shoppinglist.data.notify.InviteCheck
+import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.onNodeWithTag
+import kotlinx.coroutines.flow.first
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.accounts.accountRow
 import org.robolectric.RobolectricTestRunner
@@ -120,6 +128,7 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText("Collaborator changes").performScrollTo().assertExists()
         composeTestRule.onNodeWithText("Last background sync", substring = true).performScrollTo().assertExists()
         composeTestRule.onNodeWithText("Last change check: never").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Last invite check: never").performScrollTo().assertExists()
         viewModel.viewModelScope.cancel()
     }
 
@@ -149,7 +158,46 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText("Collaborator changes").assertDoesNotExist()
         composeTestRule.onNodeWithText("Last background sync", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Last change check", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Invitations").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Last invite check", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Share crash logs").performScrollTo().assertExists()
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `the Invitations switch sits under Notifications, is on by default and turns off on its own (T-319)`() = runBlocking<Unit> {
+        val prefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_notif_invites") })
+        val viewModel = newViewModel(notificationPrefs = prefs)
+
+        composeTestRule.setContent { SettingsScreen(viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Invitations").performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Notify when someone invites you to a shared list.").assertExists()
+        composeTestRule.onNodeWithTag("invite-notifications-switch").performScrollTo().assertIsOn().performClick()
+        // The write lands on DataStore's own thread; the switch follows the stored value.
+        composeTestRule.waitUntil(5_000) {
+            idleMainLooper()
+            runBlocking { !prefs.inviteNotificationsEnabled.first() }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("invite-notifications-switch").assertIsOff()
+        assertFalse(prefs.inviteNotificationsEnabled.first())
+        assertTrue(prefs.notificationsEnabled.first())
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `diagnostics say how the last invite check ended (T-319)`() = runBlocking<Unit> {
+        val prefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_invite_check") })
+        prefs.recordInviteCheck(InviteCheck(System.currentTimeMillis(), newInvites = 2, outcome = InviteCheckOutcome.INVITES_OFF))
+        val viewModel = newViewModel(notificationPrefs = prefs)
+
+        composeTestRule.setContent { SettingsScreen(viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Last invite check: just now, new invitations: 2, invitations off").performScrollTo().assertExists()
         viewModel.viewModelScope.cancel()
     }
 }

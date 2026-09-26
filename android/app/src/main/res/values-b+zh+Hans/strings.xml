@@ -187,6 +187,8 @@
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">其他成员的变动</string>
     <string name="settings_collaborator_changes_help">当其他人编辑共享列表时通知你。可在各列表的属性中单独关闭通知。</string>
+    <string name="settings_invitations">邀请</string>
+    <string name="settings_invitations_help">有人邀请你加入共享列表时通知你。</string>
     <string name="settings_diagnostics">诊断</string>
     <string name="settings_last_background_sync">上次后台同步：%1$s</string>
     <string name="settings_last_change_check">上次变动检查：%1$s，收到他人的物品：%2$d，%3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">列表已静音</string>
     <string name="change_check_no_permission">无权限</string>
     <string name="change_check_posted">已通知</string>
+    <string name="settings_last_invite_check">上次邀请检查：%1$s，新邀请：%2$d，%3$s</string>
+    <string name="settings_last_invite_check_never">上次邀请检查：从未</string>
+    <string name="invite_check_invites_off">邀请通知已关闭</string>
+    <string name="invite_check_nothing_new">没有新邀请</string>
     <string name="settings_server">服务器：%1$s</string>
     <string name="settings_share_crash_logs">分享崩溃日志</string>
     <string name="settings_trust_self_signed">信任自签名证书</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">购物清单</string>
     <string name="notif_changed_items">变更的物品：%1$d</string>
     <string name="notif_changed_items_lists">变更的物品：%1$d · 清单：%2$d</string>
+    <string name="notif_channel_invites">邀请</string>
+    <string name="notif_invites_count">邀请：%1$d</string>
     <string name="expense_add">添加记录</string>
     <string name="expense_new">新建记录</string>
     <string name="expense_edit">编辑记录</string>

@@ -67,6 +67,8 @@ class MainActivity : ComponentActivity() {
             accounts = accounts,
             // A collaborator-change notification tap deep-links straight to the affected list (T-65).
             notifiedListId = intent.getStringExtra(EXTRA_OPEN_LIST_ID),
+            // An invite notification's tap opens the overview, where the invites wait (T-319).
+            openOverview = intent.getBooleanExtra(EXTRA_OPEN_OVERVIEW, false),
             lastOpenedListId = lastOpened.lastOpenedListId,
         )
 
@@ -130,5 +132,8 @@ class MainActivity : ComponentActivity() {
     companion object {
         /** A notification tap's target list (T-65); absent = open normally. */
         const val EXTRA_OPEN_LIST_ID = "open_list_id"
+
+        /** An invite notification's tap (T-319): open the overview, not the last-opened list. */
+        const val EXTRA_OPEN_OVERVIEW = "open_overview"
     }
 }

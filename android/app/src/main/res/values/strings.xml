@@ -234,6 +234,8 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Collaborator changes</string>
     <string name="settings_collaborator_changes_help">Notify when someone else edits a shared list. Mute individual lists in their list properties.</string>
+    <string name="settings_invitations">Invitations</string>
+    <string name="settings_invitations_help">Notify when someone invites you to a shared list.</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_last_background_sync">Last background sync: %1$s</string>
     <string name="settings_last_change_check">Last change check: %1$s, foreign items pulled: %2$d, %3$s</string>
@@ -245,6 +247,10 @@
     <string name="change_check_list_muted">list muted</string>
     <string name="change_check_no_permission">no permission</string>
     <string name="change_check_posted">posted</string>
+    <string name="settings_last_invite_check">Last invite check: %1$s, new invitations: %2$d, %3$s</string>
+    <string name="settings_last_invite_check_never">Last invite check: never</string>
+    <string name="invite_check_invites_off">invitations off</string>
+    <string name="invite_check_nothing_new">nothing new</string>
     <string name="settings_server">Server: %1$s</string>
     <string name="settings_share_crash_logs">Share crash logs</string>
     <string name="settings_trust_self_signed">Trust self-signed certificates</string>
@@ -336,6 +342,8 @@
     <string name="notif_shopping_lists">Shopping lists</string>
     <string name="notif_changed_items">Changed items: %1$d</string>
     <string name="notif_changed_items_lists">Changed items: %1$d · Lists: %2$d</string>
+    <string name="notif_channel_invites">Invitations</string>
+    <string name="notif_invites_count">Invitations: %1$d</string>
     <string name="expense_add">Add entry</string>
     <string name="expense_new">New entry</string>
     <string name="expense_edit">Edit entry</string>

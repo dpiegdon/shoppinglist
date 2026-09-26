@@ -79,4 +79,9 @@ class NavTest {
     fun `a cold start from a notification opens its list`() {
         assertEquals(Routes.list("l1"), coldStartDestination(listOf(account("a")), notifiedListId = "l1", lastOpenedListId = "l2"))
     }
+
+    @Test
+    fun `a cold start from an invite notification opens the overview, not the last-opened list (T-319)`() {
+        assertEquals(Routes.OVERVIEW, coldStartDestination(listOf(account("a")), notifiedListId = null, lastOpenedListId = "l2", openOverview = true))
+    }
 }

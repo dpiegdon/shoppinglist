@@ -54,4 +54,32 @@ class NotificationPrefsStoreTest {
         store.setListMuted("list-a", muted = false)
         assertEquals(setOf("list-b"), store.mutedListIds.first())
     }
+
+    @Test
+    fun `invite notifications are on by default, apart from the collaborator switch (T-319)`() = runTest {
+        assertTrue(store.inviteNotificationsEnabled.first())
+        store.setInviteNotificationsEnabled(false)
+        assertFalse(store.inviteNotificationsEnabled.first())
+        assertTrue(store.notificationsEnabled.first())
+        store.setNotificationsEnabled(false)
+        store.setInviteNotificationsEnabled(true)
+        assertTrue(store.inviteNotificationsEnabled.first())
+    }
+
+    @Test
+    fun `an invite is new only the first time it is listed (T-319)`() = runTest {
+        assertEquals(setOf("i1", "i2"), store.markInvitesSeen(mapOf("i1" to 5_000L, "i2" to 6_000L), now = 1_000))
+        assertEquals(setOf("i3"), store.markInvitesSeen(mapOf("i1" to 5_000L, "i3" to 7_000L), now = 2_000))
+        assertEquals(emptySet<String>(), store.markInvitesSeen(mapOf("i2" to 6_000L), now = 3_000))
+    }
+
+    @Test
+    fun `a seen invite is forgotten once it has expired, not merely when it is absent (T-319)`() = runTest {
+        store.markInvitesSeen(mapOf("i1" to 5_000L, "i2" to 9_000L), now = 1_000)
+
+        // i2 is absent from this answer (its account's request may have failed): still remembered.
+        store.markInvitesSeen(emptyMap(), now = 6_000)
+
+        assertEquals(mapOf("i2" to 9_000L), store.seenInvites.first())
+    }
 }

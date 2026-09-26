@@ -116,6 +116,19 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `the invitations switch is on by default, loads from prefs and leaves the collaborator switch alone (T-319)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        assertTrue(viewModel.uiState.first { it.inviteNotificationsEnabled }.inviteNotificationsEnabled)
+
+        viewModel.setInviteNotificationsEnabled(false).join()
+
+        assertFalse(viewModel.uiState.first { !it.inviteNotificationsEnabled }.inviteNotificationsEnabled)
+        assertFalse(notificationPrefs.inviteNotificationsEnabled.first())
+        assertTrue(notificationPrefs.notificationsEnabled.first())
+        assertTrue(viewModel.uiState.value.notificationsEnabled)
+    }
+
+    @Test
     fun `shareLogs with no crash log yet surfaces a message instead of a path (T-50)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = newViewModel()
 

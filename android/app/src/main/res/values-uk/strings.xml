@@ -187,6 +187,8 @@
     <string name="settings_notifications">Сповіщення</string>
     <string name="settings_collaborator_changes">Зміни інших учасників</string>
     <string name="settings_collaborator_changes_help">Сповіщати, коли хтось інший редагує спільний список. Окремі списки можна вимкнути в їхніх властивостях.</string>
+    <string name="settings_invitations">Запрошення</string>
+    <string name="settings_invitations_help">Сповіщати, коли хтось запрошує вас до спільного списку.</string>
     <string name="settings_diagnostics">Діагностика</string>
     <string name="settings_last_background_sync">Остання фонова синхронізація: %1$s</string>
     <string name="settings_last_change_check">Остання перевірка змін: %1$s, отримано чужих товарів: %2$d, %3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">список без звуку</string>
     <string name="change_check_no_permission">немає дозволу</string>
     <string name="change_check_posted">сповіщено</string>
+    <string name="settings_last_invite_check">Остання перевірка запрошень: %1$s, нових запрошень: %2$d, %3$s</string>
+    <string name="settings_last_invite_check_never">Остання перевірка запрошень: ніколи</string>
+    <string name="invite_check_invites_off">запрошення вимкнено</string>
+    <string name="invite_check_nothing_new">нічого нового</string>
     <string name="settings_server">Сервер: %1$s</string>
     <string name="settings_share_crash_logs">Поділитися журналами збоїв</string>
     <string name="settings_trust_self_signed">Довіряти самопідписаним сертифікатам</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">Списки покупок</string>
     <string name="notif_changed_items">Змінені товари: %1$d</string>
     <string name="notif_changed_items_lists">Змінені товари: %1$d · Списки: %2$d</string>
+    <string name="notif_channel_invites">Запрошення</string>
+    <string name="notif_invites_count">Запрошення: %1$d</string>
     <string name="expense_add">Додати запис</string>
     <string name="expense_new">Новий запис</string>
     <string name="expense_edit">Редагувати запис</string>

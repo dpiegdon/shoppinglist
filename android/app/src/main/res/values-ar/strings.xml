@@ -187,6 +187,8 @@
     <string name="settings_notifications">الإشعارات</string>
     <string name="settings_collaborator_changes">تغييرات الأعضاء</string>
     <string name="settings_collaborator_changes_help">التنبيه عندما يعدّل شخص آخر قائمة مشتركة. يمكنك كتم قوائم بعينها من خصائصها.</string>
+    <string name="settings_invitations">الدعوات</string>
+    <string name="settings_invitations_help">التنبيه عندما يدعوك شخص إلى قائمة مشتركة.</string>
     <string name="settings_diagnostics">التشخيص</string>
     <string name="settings_last_background_sync">آخر مزامنة في الخلفية: %1$s</string>
     <string name="settings_last_change_check">آخر فحص للتغييرات: %1$s، عناصر من الآخرين: %2$d، %3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">القائمة مكتومة</string>
     <string name="change_check_no_permission">لا إذن</string>
     <string name="change_check_posted">أُرسل إشعار</string>
+    <string name="settings_last_invite_check">آخر فحص للدعوات: %1$s، دعوات جديدة: %2$d، %3$s</string>
+    <string name="settings_last_invite_check_never">آخر فحص للدعوات: أبدًا</string>
+    <string name="invite_check_invites_off">الدعوات متوقفة</string>
+    <string name="invite_check_nothing_new">لا جديد</string>
     <string name="settings_server">الخادم: %1$s</string>
     <string name="settings_share_crash_logs">مشاركة سجلات الأعطال</string>
     <string name="settings_trust_self_signed">الوثوق بالشهادات الموقّعة ذاتيًا</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">قوائم التسوق</string>
     <string name="notif_changed_items">العناصر المتغيّرة: %1$d</string>
     <string name="notif_changed_items_lists">العناصر المتغيّرة: %1$d · القوائم: %2$d</string>
+    <string name="notif_channel_invites">الدعوات</string>
+    <string name="notif_invites_count">الدعوات: %1$d</string>
     <string name="expense_add">إضافة قيد</string>
     <string name="expense_new">قيد جديد</string>
     <string name="expense_edit">تعديل القيد</string>

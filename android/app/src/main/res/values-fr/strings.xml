@@ -187,6 +187,8 @@
     <string name="settings_notifications">Notifications</string>
     <string name="settings_collaborator_changes">Changements des autres membres</string>
     <string name="settings_collaborator_changes_help">Prévenir quand quelqu\'un d\'autre modifie une liste partagée. Chaque liste peut être mise en sourdine dans ses propriétés.</string>
+    <string name="settings_invitations">Invitations</string>
+    <string name="settings_invitations_help">Prévenir quand quelqu\'un vous invite à une liste partagée.</string>
     <string name="settings_diagnostics">Diagnostic</string>
     <string name="settings_last_background_sync">Dernière synchronisation en arrière-plan : %1$s</string>
     <string name="settings_last_change_check">Dernière vérification des changements : %1$s, articles d’autres membres reçus : %2$d, %3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">liste en sourdine</string>
     <string name="change_check_no_permission">pas d’autorisation</string>
     <string name="change_check_posted">notifiée</string>
+    <string name="settings_last_invite_check">Dernière vérification des invitations : %1$s, nouvelles invitations : %2$d, %3$s</string>
+    <string name="settings_last_invite_check_never">Dernière vérification des invitations : jamais</string>
+    <string name="invite_check_invites_off">invitations désactivées</string>
+    <string name="invite_check_nothing_new">rien de nouveau</string>
     <string name="settings_server">Serveur : %1$s</string>
     <string name="settings_share_crash_logs">Partager les journaux de plantage</string>
     <string name="settings_trust_self_signed">Faire confiance aux certificats auto-signés</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">Listes de courses</string>
     <string name="notif_changed_items">Articles modifiés : %1$d</string>
     <string name="notif_changed_items_lists">Articles modifiés : %1$d · Listes : %2$d</string>
+    <string name="notif_channel_invites">Invitations</string>
+    <string name="notif_invites_count">Invitations : %1$d</string>
     <string name="expense_add">Ajouter une entrée</string>
     <string name="expense_new">Nouvelle entrée</string>
     <string name="expense_edit">Modifier l\'entrée</string>

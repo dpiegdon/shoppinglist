@@ -187,6 +187,8 @@
     <string name="settings_notifications">通知</string>
     <string name="settings_collaborator_changes">メンバーによる変更</string>
     <string name="settings_collaborator_changes_help">共有リストが他の人に編集されたときに通知します。リストごとの通知はリストのプロパティでオフにできます。</string>
+    <string name="settings_invitations">招待</string>
+    <string name="settings_invitations_help">共有リストに招待されたときに通知します。</string>
     <string name="settings_diagnostics">診断</string>
     <string name="settings_last_background_sync">最後のバックグラウンド同期：%1$s</string>
     <string name="settings_last_change_check">最後の変更チェック：%1$s、他のメンバーのアイテム：%2$d、%3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">リストをミュート中</string>
     <string name="change_check_no_permission">権限なし</string>
     <string name="change_check_posted">通知済み</string>
+    <string name="settings_last_invite_check">最後の招待チェック：%1$s、新しい招待：%2$d、%3$s</string>
+    <string name="settings_last_invite_check_never">最後の招待チェック：なし</string>
+    <string name="invite_check_invites_off">招待の通知オフ</string>
+    <string name="invite_check_nothing_new">新しい招待なし</string>
     <string name="settings_server">サーバー：%1$s</string>
     <string name="settings_share_crash_logs">クラッシュログを共有</string>
     <string name="settings_trust_self_signed">自己署名証明書を信頼する</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">買い物リスト</string>
     <string name="notif_changed_items">変更されたアイテム：%1$d</string>
     <string name="notif_changed_items_lists">変更されたアイテム：%1$d · リスト：%2$d</string>
+    <string name="notif_channel_invites">招待</string>
+    <string name="notif_invites_count">招待：%1$d</string>
     <string name="expense_add">記録を追加</string>
     <string name="expense_new">新しい記録</string>
     <string name="expense_edit">記録を編集</string>

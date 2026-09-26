@@ -187,6 +187,8 @@
     <string name="settings_notifications">Notificações</string>
     <string name="settings_collaborator_changes">Mudanças de outros membros</string>
     <string name="settings_collaborator_changes_help">Avisar quando outra pessoa editar uma lista compartilhada. Você pode silenciar listas específicas nas propriedades delas.</string>
+    <string name="settings_invitations">Convites</string>
+    <string name="settings_invitations_help">Avisar quando alguém convidar você para uma lista compartilhada.</string>
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_last_background_sync">Última sincronização em segundo plano: %1$s</string>
     <string name="settings_last_change_check">Última verificação de mudanças: %1$s, itens de outros recebidos: %2$d, %3$s</string>
@@ -198,6 +200,10 @@
     <string name="change_check_list_muted">lista silenciada</string>
     <string name="change_check_no_permission">sem permissão</string>
     <string name="change_check_posted">notificado</string>
+    <string name="settings_last_invite_check">Última verificação de convites: %1$s, convites novos: %2$d, %3$s</string>
+    <string name="settings_last_invite_check_never">Última verificação de convites: nunca</string>
+    <string name="invite_check_invites_off">convites desativados</string>
+    <string name="invite_check_nothing_new">nada novo</string>
     <string name="settings_server">Servidor: %1$s</string>
     <string name="settings_share_crash_logs">Compartilhar registros de falha</string>
     <string name="settings_trust_self_signed">Confiar em certificados autoassinados</string>
@@ -273,6 +279,8 @@
     <string name="notif_shopping_lists">Listas de compras</string>
     <string name="notif_changed_items">Itens alterados: %1$d</string>
     <string name="notif_changed_items_lists">Itens alterados: %1$d · Listas: %2$d</string>
+    <string name="notif_channel_invites">Convites</string>
+    <string name="notif_invites_count">Convites: %1$d</string>
     <string name="expense_add">Adicionar lançamento</string>
     <string name="expense_new">Novo lançamento</string>
     <string name="expense_edit">Editar lançamento</string>

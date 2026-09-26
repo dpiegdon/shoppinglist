@@ -197,12 +197,19 @@ fun authedStartDestination(lastOpenedListId: String?): String =
  * Where a cold start lands. The start screen only while this phone holds no account at all: an
  * account the server has signed out keeps its lists, which stay usable, and the overview offers
  * the sign-in; the local area alone is a phone used without an account (T-293). Otherwise the list
- * a notification tap names ([notifiedListId]), else as [authedStartDestination].
+ * a notification tap names ([notifiedListId]), the overview for an invite notification's tap
+ * ([openOverview]), else as [authedStartDestination].
  */
-fun coldStartDestination(accounts: List<AccountEntity>, notifiedListId: String?, lastOpenedListId: String?): String =
+fun coldStartDestination(
+    accounts: List<AccountEntity>,
+    notifiedListId: String?,
+    lastOpenedListId: String?,
+    openOverview: Boolean = false,
+): String =
     when {
         accounts.isEmpty() -> Routes.LOGIN_PATTERN
         notifiedListId != null -> Routes.list(notifiedListId)
+        openOverview -> Routes.OVERVIEW
         else -> authedStartDestination(lastOpenedListId)
     }
 

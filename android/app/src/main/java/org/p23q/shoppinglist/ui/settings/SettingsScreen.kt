@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -106,6 +107,27 @@ fun SettingsScreen(
                     },
                 )
             }
+            // Invite notifications (T-319): their own switch, sharing the permission request.
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.settings_invitations))
+                    Text(
+                        stringResource(R.string.settings_invitations_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.inviteNotificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        viewModel.setInviteNotificationsEnabled(enabled)
+                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
+                    modifier = Modifier.testTag("invite-notifications-switch"),
+                )
+            }
             Spacer(Modifier.height(16.dp))
         }
 
@@ -126,6 +148,12 @@ fun SettingsScreen(
             // notifies can say whether nothing foreign arrived or what held the notification back.
             Text(
                 state.lastChangeCheckText.asString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // And of the last invite check (T-319), run after each background sync.
+            Text(
+                state.lastInviteCheckText.asString(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
