@@ -26,6 +26,8 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
+import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
+import org.p23q.shoppinglist.data.notify.ChangeCheck
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.accounts.accountRow
 import org.robolectric.RobolectricTestRunner
@@ -62,11 +64,14 @@ class SettingsScreenTest {
 
     private fun prefsFile(name: String) = File.createTempFile(name, ".preferences_pb").apply { deleteOnExit() }
 
-    private fun newViewModel(crashLog: File = File.createTempFile("settings_screen_crash_log", ".txt").apply { deleteOnExit() }) =
+    private fun newViewModel(
+        crashLog: File = File.createTempFile("settings_screen_crash_log", ".txt").apply { deleteOnExit() },
+        notificationPrefs: NotificationPrefsStore = NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_notif") }),
+    ) =
         SettingsViewModel(
             ThemePreferenceStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_theme") }),
             CrashLogWriter(crashLog),
-            NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_notif") }),
+            notificationPrefs,
             registry,
         ).also { viewModels += it }
 
@@ -114,6 +119,20 @@ class SettingsScreenTest {
 
         composeTestRule.onNodeWithText("Collaborator changes").performScrollTo().assertExists()
         composeTestRule.onNodeWithText("Last background sync", substring = true).performScrollTo().assertExists()
+        composeTestRule.onNodeWithText("Last change check: never").performScrollTo().assertExists()
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `diagnostics say how the last change check ended (T-318)`() = runBlocking<Unit> {
+        val prefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile("settings_screen_notif_check") })
+        prefs.recordChangeCheck(ChangeCheck(System.currentTimeMillis(), foreignItems = 2, outcome = ChangeCheckOutcome.LIST_MUTED))
+        val viewModel = newViewModel(notificationPrefs = prefs)
+
+        composeTestRule.setContent { SettingsScreen(viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Last change check: just now, foreign items pulled: 2, list muted").performScrollTo().assertExists()
         viewModel.viewModelScope.cancel()
     }
 
@@ -129,6 +148,7 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText("Notifications").assertDoesNotExist()
         composeTestRule.onNodeWithText("Collaborator changes").assertDoesNotExist()
         composeTestRule.onNodeWithText("Last background sync", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Last change check", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Share crash logs").performScrollTo().assertExists()
         viewModel.viewModelScope.cancel()
     }

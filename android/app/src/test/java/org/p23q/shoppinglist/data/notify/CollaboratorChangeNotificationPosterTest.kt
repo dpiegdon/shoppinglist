@@ -19,6 +19,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainActivity
+import kotlinx.coroutines.flow.first
+import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AppDb
@@ -162,5 +164,84 @@ class CollaboratorChangeNotificationPosterTest {
         poster.notifyCollaboratorChanges(listOf(CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 1)))
 
         assertEquals("Changed items: 1", shadowOf(notificationManager).allNotifications.single().text())
+    }
+
+    // ---- the diagnostics line's record (T-318) -----------------------------------------------
+
+    private suspend fun recorded(): Pair<ChangeCheckOutcome, Int>? =
+        prefs.lastChangeCheck.first()?.let { it.outcome to it.foreignItems }
+
+    private val twoLists = listOf(
+        CollaboratorChange(TEST_ACCOUNT_ID, "list-1", "Groceries", 2),
+        CollaboratorChange(TEST_ACCOUNT_ID, "list-2", "Hardware", 1),
+    )
+
+    @Test
+    fun `a posted notification is recorded with every foreign item, muted lists included (T-318)`() = runTest {
+        prefs.setListMuted("list-1", muted = true)
+
+        poster.notifyCollaboratorChanges(twoLists)
+
+        assertEquals(ChangeCheckOutcome.POSTED to 3, recorded())
+        assertTrue(prefs.lastChangeCheck.first()!!.atMillis > 0)
+    }
+
+    @Test
+    fun `a foregrounded app is recorded as the gate that stopped it (T-318)`() = runTest {
+        foreground.isForeground = true
+        prefs.setNotificationsEnabled(false)
+
+        poster.notifyCollaboratorChanges(twoLists)
+
+        // The first gate in order wins.
+        assertEquals(ChangeCheckOutcome.FOREGROUND to 3, recorded())
+    }
+
+    @Test
+    fun `the global toggle off is recorded (T-318)`() = runTest {
+        prefs.setNotificationsEnabled(false)
+        prefs.setListMuted("list-1", muted = true)
+        prefs.setListMuted("list-2", muted = true)
+
+        poster.notifyCollaboratorChanges(twoLists)
+
+        assertEquals(ChangeCheckOutcome.NOTIFICATIONS_OFF to 3, recorded())
+    }
+
+    @Test
+    fun `every list muted is recorded (T-318)`() = runTest {
+        prefs.setListMuted("list-1", muted = true)
+        prefs.setListMuted("list-2", muted = true)
+        shadowOf(context as Application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+
+        poster.notifyCollaboratorChanges(twoLists)
+
+        assertEquals(ChangeCheckOutcome.LIST_MUTED to 3, recorded())
+    }
+
+    @Test
+    fun `a missing permission is recorded (T-318)`() = runTest {
+        shadowOf(context as Application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+
+        poster.notifyCollaboratorChanges(twoLists)
+
+        assertTrue(shadowOf(notificationManager).allNotifications.isEmpty())
+        assertEquals(ChangeCheckOutcome.NO_PERMISSION to 3, recorded())
+    }
+
+    @Test
+    fun `system notifications off for the app are recorded as no permission (T-318)`() = runTest {
+        shadowOf(notificationManager).setNotificationsEnabled(false)
+
+        poster.notifyCollaboratorChanges(twoLists)
+
+        assertEquals(ChangeCheckOutcome.NO_PERMISSION to 3, recorded())
+    }
+
+    @Test
+    fun `a check the engine ended is recorded as it says (T-318)`() = runTest {
+        poster.recordCheck(ChangeCheckOutcome.FIRST_SYNC, foreignItems = 0)
+
+        assertEquals(ChangeCheckOutcome.FIRST_SYNC to 0, recorded())
     }
 }

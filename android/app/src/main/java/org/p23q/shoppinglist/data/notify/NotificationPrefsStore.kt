@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import dagger.Module
@@ -16,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import javax.inject.Inject
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -33,6 +36,9 @@ object NotificationPrefsModule {
     fun provideNotificationPrefsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("notification_prefs") }
 }
+
+/** The last collaborator-change check (T-318): when, how many foreign items, how it ended. */
+data class ChangeCheck(val atMillis: Long, val foreignItems: Int, val outcome: ChangeCheckOutcome)
 
 /**
  * Collaborator-change notification preferences (T-65): a global on/off plus per-list mutes.
@@ -68,6 +74,27 @@ class NotificationPrefsStore @Inject constructor(
         dataStore.edit { it[LAST_BG_SYNC_KEY] = atMillis }
     }
 
+    /**
+     * The last collaborator-change check and the gate that decided it (T-318), or null before the
+     * first. Shown in Settings → Diagnostics beside the background sync, so a phone that stays
+     * silent can say why.
+     */
+    val lastChangeCheck: Flow<ChangeCheck?> = dataStore.data.map { prefs ->
+        val at = prefs[CHECK_AT_KEY] ?: return@map null
+        val outcome = prefs[CHECK_OUTCOME_KEY]
+            ?.let { name -> ChangeCheckOutcome.entries.firstOrNull { it.name == name } }
+            ?: return@map null
+        ChangeCheck(at, prefs[CHECK_ITEMS_KEY] ?: 0, outcome)
+    }
+
+    suspend fun recordChangeCheck(check: ChangeCheck) {
+        dataStore.edit {
+            it[CHECK_AT_KEY] = check.atMillis
+            it[CHECK_ITEMS_KEY] = check.foreignItems
+            it[CHECK_OUTCOME_KEY] = check.outcome.name
+        }
+    }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[ENABLED_KEY] = enabled }
     }
@@ -88,5 +115,8 @@ class NotificationPrefsStore @Inject constructor(
         val MUTED_LISTS_KEY = stringSetPreferencesKey("muted_list_ids")
         val PERMISSION_REQUESTED_KEY = booleanPreferencesKey("notification_permission_requested")
         val LAST_BG_SYNC_KEY = longPreferencesKey("last_background_sync_at")
+        val CHECK_AT_KEY = longPreferencesKey("last_change_check_at")
+        val CHECK_ITEMS_KEY = intPreferencesKey("last_change_check_foreign_items")
+        val CHECK_OUTCOME_KEY = stringPreferencesKey("last_change_check_outcome")
     }
 }

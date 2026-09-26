@@ -189,6 +189,15 @@
     <string name="settings_collaborator_changes_help">Prévenir quand quelqu\'un d\'autre modifie une liste partagée. Chaque liste peut être mise en sourdine dans ses propriétés.</string>
     <string name="settings_diagnostics">Diagnostic</string>
     <string name="settings_last_background_sync">Dernière synchronisation en arrière-plan : %1$s</string>
+    <string name="settings_last_change_check">Dernière vérification des changements : %1$s, articles d’autres membres reçus : %2$d, %3$s</string>
+    <string name="settings_last_change_check_never">Dernière vérification des changements : jamais</string>
+    <string name="change_check_first_sync">première synchronisation</string>
+    <string name="change_check_nothing_foreign">rien d’autres membres</string>
+    <string name="change_check_foreground">app au premier plan</string>
+    <string name="change_check_notifications_off">notifications désactivées</string>
+    <string name="change_check_list_muted">liste en sourdine</string>
+    <string name="change_check_no_permission">pas d’autorisation</string>
+    <string name="change_check_posted">notifiée</string>
     <string name="settings_server">Serveur : %1$s</string>
     <string name="settings_share_crash_logs">Partager les journaux de plantage</string>
     <string name="settings_trust_self_signed">Faire confiance aux certificats auto-signés</string>

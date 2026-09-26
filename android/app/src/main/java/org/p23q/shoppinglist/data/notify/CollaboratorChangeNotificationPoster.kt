@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.AppForegroundState
@@ -42,7 +43,8 @@ abstract class CollaboratorChangeNotifierModule {
  * pass (T-65). Gates, in order: app foregrounded (change already visible on screen — stay
  * silent), global toggle (Settings), per-list mutes (list properties), notification permission
  * (API 33+ runtime; also covers the user disabling notifications in system settings). A fixed
- * notification id means a newer sync's notification replaces a stale unread one.
+ * notification id means a newer sync's notification replaces a stale unread one. Each pass records
+ * the first gate that stopped it, or that it posted, for Settings → Diagnostics (T-318).
  */
 @Singleton
 class CollaboratorChangeNotificationPoster @Inject constructor(
@@ -57,12 +59,18 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
     // see the check across that method boundary, so the guarded notify() below is a false positive.
     @SuppressLint("MissingPermission")
     override suspend fun notifyCollaboratorChanges(changes: List<CollaboratorChange>) {
-        if (changes.isEmpty() || foregroundState.isForeground) return
-        if (!prefs.notificationsEnabled.first()) return
+        if (changes.isEmpty()) return
+        val foreignItems = changes.sumOf { it.changedItemCount }
+        val stoppedBy = when {
+            foregroundState.isForeground -> ChangeCheckOutcome.FOREGROUND
+            !prefs.notificationsEnabled.first() -> ChangeCheckOutcome.NOTIFICATIONS_OFF
+            else -> null
+        }
+        if (stoppedBy != null) return recordCheck(stoppedBy, foreignItems)
         val muted = prefs.mutedListIds.first()
         val audible = changes.filter { it.listId !in muted }
-        if (audible.isEmpty()) return
-        if (!canPost()) return
+        if (audible.isEmpty()) return recordCheck(ChangeCheckOutcome.LIST_MUTED, foreignItems)
+        if (!canPost()) return recordCheck(ChangeCheckOutcome.NO_PERMISSION, foreignItems)
 
         val totalItems = audible.sumOf { it.changedItemCount }
         val singleList = audible.singleOrNull()
@@ -109,6 +117,11 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+        recordCheck(ChangeCheckOutcome.POSTED, foreignItems)
+    }
+
+    override suspend fun recordCheck(outcome: ChangeCheckOutcome, foreignItems: Int) {
+        prefs.recordChangeCheck(ChangeCheck(System.currentTimeMillis(), foreignItems, outcome))
     }
 
     /** Explicit permission check on 33+ (satisfies lint's MissingPermission); system-toggle check below it. */

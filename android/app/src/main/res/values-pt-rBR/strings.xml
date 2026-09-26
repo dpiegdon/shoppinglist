@@ -189,6 +189,15 @@
     <string name="settings_collaborator_changes_help">Avisar quando outra pessoa editar uma lista compartilhada. Você pode silenciar listas específicas nas propriedades delas.</string>
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_last_background_sync">Última sincronização em segundo plano: %1$s</string>
+    <string name="settings_last_change_check">Última verificação de mudanças: %1$s, itens de outros recebidos: %2$d, %3$s</string>
+    <string name="settings_last_change_check_never">Última verificação de mudanças: nunca</string>
+    <string name="change_check_first_sync">primeira sincronização</string>
+    <string name="change_check_nothing_foreign">nada de outros</string>
+    <string name="change_check_foreground">app em primeiro plano</string>
+    <string name="change_check_notifications_off">notificações desativadas</string>
+    <string name="change_check_list_muted">lista silenciada</string>
+    <string name="change_check_no_permission">sem permissão</string>
+    <string name="change_check_posted">notificado</string>
     <string name="settings_server">Servidor: %1$s</string>
     <string name="settings_share_crash_logs">Compartilhar registros de falha</string>
     <string name="settings_trust_self_signed">Confiar em certificados autoassinados</string>

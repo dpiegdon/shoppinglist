@@ -236,6 +236,15 @@
     <string name="settings_collaborator_changes_help">Notify when someone else edits a shared list. Mute individual lists in their list properties.</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_last_background_sync">Last background sync: %1$s</string>
+    <string name="settings_last_change_check">Last change check: %1$s, foreign items pulled: %2$d, %3$s</string>
+    <string name="settings_last_change_check_never">Last change check: never</string>
+    <string name="change_check_first_sync">first sync</string>
+    <string name="change_check_nothing_foreign">nothing foreign</string>
+    <string name="change_check_foreground">app in foreground</string>
+    <string name="change_check_notifications_off">notifications off</string>
+    <string name="change_check_list_muted">list muted</string>
+    <string name="change_check_no_permission">no permission</string>
+    <string name="change_check_posted">posted</string>
     <string name="settings_server">Server: %1$s</string>
     <string name="settings_share_crash_logs">Share crash logs</string>
     <string name="settings_trust_self_signed">Trust self-signed certificates</string>

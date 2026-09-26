@@ -533,14 +533,22 @@ class SyncEngine @Inject constructor(
      * row never re-touched). Reports RAW detections; pref filtering lives in the notifier impl.
      */
     private suspend fun reportCollaboratorChanges(accountId: String, requestCursor: Long, pulledItems: List<ItemDto>) {
-        if (requestCursor == 0L) return
+        if (requestCursor == 0L) {
+            notifier.recordCheck(ChangeCheckOutcome.FIRST_SYNC, foreignItems = 0)
+            return
+        }
         val account = registry.get(accountId) ?: return
         val myAccountId = account.accountId ?: return
+        // A pull that brought no items leaves the last check standing, so the line stays telling.
+        if (pulledItems.isEmpty()) return
         val thisDevice = deviceIdProvider.get()
         val foreign = pulledItems.filter {
             it.lastTouchedBy != null && it.lastTouchedBy != myAccountId && it.newestClockDevice() != thisDevice
         }
-        if (foreign.isEmpty()) return
+        if (foreign.isEmpty()) {
+            notifier.recordCheck(ChangeCheckOutcome.NOTHING_FOREIGN, foreignItems = 0)
+            return
+        }
         val changes = foreign.groupBy { it.listId }.mapNotNull { (listServerId, items) ->
             // Resolved AFTER the merge loops, so a list first seen in this same pull is found.
             val list = listDao.getByServerId(accountId, listServerId) ?: return@mapNotNull null

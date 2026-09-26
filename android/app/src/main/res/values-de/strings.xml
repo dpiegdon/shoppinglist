@@ -189,6 +189,15 @@
     <string name="settings_collaborator_changes_help">Benachrichtigen, wenn jemand anderes eine geteilte Liste bearbeitet. Einzelne Listen lassen sich in ihren Listeneigenschaften stummschalten.</string>
     <string name="settings_diagnostics">Diagnose</string>
     <string name="settings_last_background_sync">Letzte Hintergrundsynchronisierung: %1$s</string>
+    <string name="settings_last_change_check">Letzte Änderungsprüfung: %1$s, fremde Artikel geladen: %2$d, %3$s</string>
+    <string name="settings_last_change_check_never">Letzte Änderungsprüfung: nie</string>
+    <string name="change_check_first_sync">erste Synchronisierung</string>
+    <string name="change_check_nothing_foreign">nichts Fremdes</string>
+    <string name="change_check_foreground">App im Vordergrund</string>
+    <string name="change_check_notifications_off">Benachrichtigungen aus</string>
+    <string name="change_check_list_muted">Liste stummgeschaltet</string>
+    <string name="change_check_no_permission">keine Berechtigung</string>
+    <string name="change_check_posted">benachrichtigt</string>
     <string name="settings_server">Server: %1$s</string>
     <string name="settings_share_crash_logs">Absturzprotokolle teilen</string>
     <string name="settings_trust_self_signed">Selbstsignierten Zertifikaten vertrauen</string>

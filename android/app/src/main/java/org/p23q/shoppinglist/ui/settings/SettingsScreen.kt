@@ -122,6 +122,13 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Which gate decided the last collaborator-change check (T-318), so a phone that never
+            // notifies can say whether nothing foreign arrived or what held the notification back.
+            Text(
+                state.lastChangeCheckText.asString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Spacer(Modifier.height(8.dp))
         Button(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }

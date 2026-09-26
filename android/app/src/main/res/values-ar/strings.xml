@@ -189,6 +189,15 @@
     <string name="settings_collaborator_changes_help">التنبيه عندما يعدّل شخص آخر قائمة مشتركة. يمكنك كتم قوائم بعينها من خصائصها.</string>
     <string name="settings_diagnostics">التشخيص</string>
     <string name="settings_last_background_sync">آخر مزامنة في الخلفية: %1$s</string>
+    <string name="settings_last_change_check">آخر فحص للتغييرات: %1$s، عناصر من الآخرين: %2$d، %3$s</string>
+    <string name="settings_last_change_check_never">آخر فحص للتغييرات: أبدًا</string>
+    <string name="change_check_first_sync">أول مزامنة</string>
+    <string name="change_check_nothing_foreign">لا شيء من الآخرين</string>
+    <string name="change_check_foreground">التطبيق في المقدمة</string>
+    <string name="change_check_notifications_off">الإشعارات متوقفة</string>
+    <string name="change_check_list_muted">القائمة مكتومة</string>
+    <string name="change_check_no_permission">لا إذن</string>
+    <string name="change_check_posted">أُرسل إشعار</string>
     <string name="settings_server">الخادم: %1$s</string>
     <string name="settings_share_crash_logs">مشاركة سجلات الأعطال</string>
     <string name="settings_trust_self_signed">الوثوق بالشهادات الموقّعة ذاتيًا</string>

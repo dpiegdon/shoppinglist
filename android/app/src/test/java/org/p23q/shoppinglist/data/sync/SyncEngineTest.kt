@@ -51,6 +51,7 @@ import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import org.p23q.shoppinglist.core.sync.CollaboratorChange
+import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncResult
@@ -61,8 +62,12 @@ class SyncEngineTest {
 
     private class RecordingNotifier : CollaboratorChangeNotifier {
         val calls = mutableListOf<List<CollaboratorChange>>()
+        val checks = mutableListOf<ChangeCheckOutcome>()
         override suspend fun notifyCollaboratorChanges(changes: List<CollaboratorChange>) {
             calls.add(changes)
+        }
+        override suspend fun recordCheck(outcome: ChangeCheckOutcome, foreignItems: Int) {
+            checks.add(outcome)
         }
     }
 
@@ -737,6 +742,7 @@ class SyncEngineTest {
         syncEngine.syncNow()
 
         assertTrue(notifier.calls.isEmpty())
+        assertEquals(listOf(ChangeCheckOutcome.NOTHING_FOREIGN), notifier.checks)
     }
 
     @Test
@@ -757,6 +763,20 @@ class SyncEngineTest {
         syncEngine.syncNow()
 
         assertTrue(notifier.calls.isEmpty())
+        assertEquals(listOf(ChangeCheckOutcome.FIRST_SYNC), notifier.checks)
+    }
+
+    @Test
+    fun `a pull that brings no items leaves the last check standing (T-318)`() = runTest {
+        pointAtServer()
+        setOwnAccount("acc-me")
+        setCursor(5)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(syncResponseJson(cursor = 6, lists = emptyList(), items = emptyList())))
+
+        syncEngine.syncNow()
+
+        assertTrue(notifier.calls.isEmpty())
+        assertTrue(notifier.checks.isEmpty())
     }
 
     @Test

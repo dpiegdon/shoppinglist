@@ -189,6 +189,15 @@
     <string name="settings_collaborator_changes_help">共有リストが他の人に編集されたときに通知します。リストごとの通知はリストのプロパティでオフにできます。</string>
     <string name="settings_diagnostics">診断</string>
     <string name="settings_last_background_sync">最後のバックグラウンド同期：%1$s</string>
+    <string name="settings_last_change_check">最後の変更チェック：%1$s、他のメンバーのアイテム：%2$d、%3$s</string>
+    <string name="settings_last_change_check_never">最後の変更チェック：なし</string>
+    <string name="change_check_first_sync">初回同期</string>
+    <string name="change_check_nothing_foreign">他のメンバーの変更なし</string>
+    <string name="change_check_foreground">アプリを表示中</string>
+    <string name="change_check_notifications_off">通知オフ</string>
+    <string name="change_check_list_muted">リストをミュート中</string>
+    <string name="change_check_no_permission">権限なし</string>
+    <string name="change_check_posted">通知済み</string>
     <string name="settings_server">サーバー：%1$s</string>
     <string name="settings_share_crash_logs">クラッシュログを共有</string>
     <string name="settings_trust_self_signed">自己署名証明書を信頼する</string>

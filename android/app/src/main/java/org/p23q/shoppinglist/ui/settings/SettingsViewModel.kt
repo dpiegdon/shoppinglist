@@ -11,9 +11,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
+import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
+import org.p23q.shoppinglist.data.notify.ChangeCheck
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.UiText
 import javax.inject.Inject
@@ -27,6 +29,8 @@ data class SettingsUiState(
     val notificationsEnabled: Boolean = true,
     /** Diagnostics: when the background (WorkManager) sync last ran, humanized (T-112). */
     val lastBackgroundSyncText: UiText = UiText.res(R.string.background_sync_never),
+    /** Diagnostics: the last collaborator-change check and what decided it (T-318). */
+    val lastChangeCheckText: UiText = UiText.res(R.string.settings_last_change_check_never),
     /**
      * Whether the phone holds a server account. Without one nothing syncs and no collaborator
      * changes anything, so the notification switch and the background-sync line are hidden (T-302).
@@ -66,6 +70,11 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(lastBackgroundSyncText = formatBackgroundSync(at)) }
             }
         }
+        viewModelScope.launch {
+            notificationPrefs.lastChangeCheck.collect { check ->
+                _uiState.update { it.copy(lastChangeCheckText = formatChangeCheck(check)) }
+            }
+        }
     }
 
     /** Global collaborator-change notification toggle (T-65); per-list mutes live in list properties. */
@@ -98,4 +107,25 @@ internal fun formatBackgroundSync(at: Long, now: Long = System.currentTimeMillis
         elapsed < 86_400_000 -> UiText.res(R.string.ago_hours, (elapsed / 3_600_000).toInt())
         else -> UiText.res(R.string.ago_days, (elapsed / 86_400_000).toInt())
     }
+}
+
+/** "Last change check: 5 min ago, foreign items pulled: 2, list muted" (T-318); null = none yet. */
+internal fun formatChangeCheck(check: ChangeCheck?, now: Long = System.currentTimeMillis()): UiText {
+    if (check == null) return UiText.res(R.string.settings_last_change_check_never)
+    return UiText.res(
+        R.string.settings_last_change_check,
+        formatBackgroundSync(check.atMillis, now),
+        check.foreignItems,
+        UiText.res(check.outcome.label()),
+    )
+}
+
+private fun ChangeCheckOutcome.label(): Int = when (this) {
+    ChangeCheckOutcome.FIRST_SYNC -> R.string.change_check_first_sync
+    ChangeCheckOutcome.NOTHING_FOREIGN -> R.string.change_check_nothing_foreign
+    ChangeCheckOutcome.FOREGROUND -> R.string.change_check_foreground
+    ChangeCheckOutcome.NOTIFICATIONS_OFF -> R.string.change_check_notifications_off
+    ChangeCheckOutcome.LIST_MUTED -> R.string.change_check_list_muted
+    ChangeCheckOutcome.NO_PERMISSION -> R.string.change_check_no_permission
+    ChangeCheckOutcome.POSTED -> R.string.change_check_posted
 }
