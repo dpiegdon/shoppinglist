@@ -143,7 +143,7 @@ instances, and the CLI's instance-selection behavior).
 | `DATABASE_PATH` / `database_path` | SQLite file path. Created (with schema) by `init-db`; the parent directory must exist and be writable. |
 | `INVITE_HMAC_KEY` / `invite_hmac_key` | The signing key for invite tokens — see below. |
 | `BASE_URL` / `base_url` | The absolute public URL clients reach this server at (scheme + host, plus any mount path; a trailing `/` is tolerated). Used to build the invite **share URLs** (`<base_url>/invite/<token>`) and the landing page's open-in-app link — get it wrong and invite links point somewhere unreachable. |
-| `admin_emails` | Argument only. The instance's admins, matched case-insensitively against the logged-in account's email on every request — the only way to grant admin, so no API call can escalate privilege. Admins get the Server admin screen on both clients: registration on/off (until restart), reset a user's password, delete a user. |
+| `admin_emails` | Argument only. The instance's admins, matched case-insensitively against the logged-in account's email on every request — the only way to grant admin, so no API call can escalate privilege. Admins get the Server admin screen on both clients: registration on/off (until restart), a one-line server message every client shows on the login page and above the lists (kept across restarts), reset a user's password, delete a user. |
 | `max_content_length` | Argument only: the request-body cap, in bytes, of **this blueprint's own routes** (default **4 MB**, so a host is protected without proxy tuning). It is applied per request and nothing else: the host app's `MAX_CONTENT_LENGTH` is neither written nor read, so a co-mounted service keeps its own limit (or none) and a host that raises its own limit does not loosen this one. Oversized requests get a `413 payload_too_large` JSON error. Needs Flask 3.1 or newer. |
 | `SECRET_KEY` | Read by the dev `app.py` only, as ordinary Flask hygiene. The blueprint itself never uses Flask sessions or cookies (auth is bearer tokens), so it does not depend on this value. |
 
@@ -541,7 +541,8 @@ logger, so rotation policy is entirely the host app's choice.
 Recorded: `account.registered`, `auth.login`, `auth.logout`,
 `auth.session_revoked`, `account.password_changed`, `account.email_changed`,
 `account.deleted`, `invite.minted`, `invite.redeemed`, `invite.revoked`,
-`admin.registration_toggled`, `admin.password_reset`, `admin.user_deleted`,
+`admin.registration_toggled`, `admin.message_set` (with the message's length,
+never its text), `admin.message_cleared`, `admin.password_reset`, `admin.user_deleted`,
 `db.contention`, and `authz.denied` for every 401/403 (carrying the error code,
 so failed logins and cross-account attempts are both visible).
 

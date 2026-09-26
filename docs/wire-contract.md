@@ -92,7 +92,10 @@ included.
 client of the previous protocol cannot handle correctly bumps `PROTOCOL_VERSION`,
 and the release that ships it is a new **MAJOR** version. Additive changes an old
 client simply ignores — a new optional response field, an endpoint it never calls
-— do not bump it. The protocol version never exceeds the release's major version,
+— do not bump it. The server message (`message` on `/registration-status` and
+`/admin/server-settings`, `server_message` on `/sync`, and the partial `PUT
+/admin/server-settings`) is such an additive change and left the protocol at 3.
+The protocol version never exceeds the release's major version,
 and a major release with no wire change leaves the protocol alone. `release.sh`
 refuses a release that breaks either rule.
 
@@ -346,7 +349,7 @@ nulling it later, is refused too.
 | Endpoint | Request body | Success response |
 |---|---|---|
 | `POST /register` | `{"email", "password"}` | `201 {"account_id"}` |
-| `GET /registration-status` | — | `200 {"allow_registration"}` |
+| `GET /registration-status` | — | `200 {"allow_registration", "message"}` |
 | `POST /login` | `{"email", "password", "device_label"?, "platform"?}` | `200 {"token", "account_id", "email", "is_admin"}` |
 | `POST /logout` | — | `204` |
 
@@ -358,6 +361,11 @@ static `admin_emails` config and is never stored.
 
 `POST /register` returns `403 registration_disabled` when registration is
 disabled for the instance.
+
+`GET /registration-status` is unauthenticated. Its `message` is the server
+message an admin set (see "Admin"), or `null` when there is none; the login page
+shows it once the server address is confirmed. A client shows it as plain text
+and never makes any part of it clickable.
 
 ### Account
 
@@ -433,10 +441,15 @@ accepts unchanged.
 ```
 ```json
 {"cursor": 456,
- "changes": {"lists": [<List object>...], "items": [<Item object>...]}}
+ "changes": {"lists": [<List object>...], "items": [<Item object>...]},
+ "server_message": "Down for maintenance Sunday 10:00."}
 ```
 
-`full_lists` and `changes` are both optional. The response contains every row
+`full_lists` and `changes` are both optional. Every `200` carries
+`server_message`: the server message an admin set (see "Admin"), or `null` when
+there is none, so a signed-in client refreshes it with each sync and never polls
+for it. A client shows it as plain text and never makes any part of it
+clickable. The response contains every row
 (full state) with `change_seq >` the request cursor that the caller may see, plus
 all live rows of any `full_lists`, plus the new cursor.
 
@@ -504,8 +517,8 @@ The destructive two re-verify the calling admin's **own** password (step-up).
 | Endpoint | Request body | Success response |
 |---|---|---|
 | `GET /admin/users` | — | `200 {"users": [{"id", "email", "created_at", "session_count", "is_admin"}]}`, by email, case-insensitively |
-| `GET /admin/server-settings` | — | `200 {"allow_registration"}` |
-| `PUT /admin/server-settings` | `{"allow_registration"}` | `200 {"allow_registration"}` |
+| `GET /admin/server-settings` | — | `200 {"allow_registration", "message"}` |
+| `PUT /admin/server-settings` | `{"allow_registration"?, "message"?}`, at least one | `200 {"allow_registration", "message"}` |
 | `POST /admin/users/{account_id}/reset-password` | `{"password"}` | `200 {"password"}` |
 | `DELETE /admin/users/{account_id}` | `{"password"}` | `204` |
 
@@ -514,7 +527,25 @@ of their own; neither re-orders what it is given. Clients fetch it on request
 rather than on opening the console, which is why the registration settings sit
 on endpoints of their own.
 
-The `PUT` is a **runtime override** that resets to the config default on restart.
+The server settings are two:
+
+- `allow_registration` (boolean) is a **runtime override** that resets to the
+  config default on restart.
+- `message` (string, `""` when none) is the **server message** every client
+  shows on its login page and above the lists: a scheduled downtime, "this
+  server is full, please use another", and the like. It is durable and survives
+  a restart. The server trims it; after trimming it is at most 200 characters
+  and contains no control character (Unicode category Cc: no `\n`, `\r`, tab),
+  otherwise `422 invalid_message`. Anything else is allowed, links included:
+  clients show it as plain text and never make it clickable. `""` (or only
+  whitespace) clears it. The audit log records `admin.message_set` with the
+  length only, never the text, and `admin.message_cleared`.
+
+The `PUT` is partial: a key it leaves out keeps its current value, and a body
+with neither is `422 invalid_request`. Both keys are validated before either is
+written. Both responses carry both current values. The admin console's
+registration toggle sends only `allow_registration`, its message field only
+`message`.
 The reset-password response carries the newly generated password, shown once to
 the admin and relayed out of band — the same trust model as invite tokens.
 Deleting yourself returns `403 cannot_delete_self`; deleting another admin
@@ -710,6 +741,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 410 | `full_resync_required` | See "Sync". |
 | 413 | `payload_too_large` | The request body is over the size cap (4 MB by default, `max_content_length`). |
 | 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers a body that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`) — on any route that takes one. |
+| 422 | `invalid_message` | `PUT /admin/server-settings` `message` is not a string, or after trimming is over 200 characters or contains a control character. See "Admin". |
 | 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
 | 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
