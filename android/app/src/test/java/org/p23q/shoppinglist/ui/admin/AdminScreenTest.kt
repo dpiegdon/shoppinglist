@@ -3,6 +3,8 @@ package org.p23q.shoppinglist.ui.admin
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -273,6 +275,12 @@ class AdminScreenTest {
         composeTestRule.onNodeWithText("Server message").assertExists()
         composeTestRule.onNodeWithText("Down Sunday").assertExists()
         composeTestRule.onNodeWithText("One line, shown to everyone on the login page and above their lists.").assertExists()
+        // Save, then Clear, as on the web (T-316); Save waits for a change.
+        val saveLeft = composeTestRule.onNodeWithTag("admin-server-message-save").fetchSemanticsNode().boundsInRoot.left
+        val clearLeft = composeTestRule.onNodeWithTag("admin-server-message-clear").fetchSemanticsNode().boundsInRoot.left
+        assertTrue("Save comes before Clear", saveLeft < clearLeft)
+        composeTestRule.onNodeWithTag("admin-server-message-save").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("admin-server-message-clear").assertIsEnabled()
 
         // Over 200 characters: the rule's sentence at the field, and nothing sent.
         composeTestRule.onNodeWithTag("admin-server-message").performTextReplacement("x".repeat(201))
@@ -292,6 +300,12 @@ class AdminScreenTest {
             composeTestRule.waitForIdle()
             viewModel.uiState.value.serverMessage == ""
         }
+        // Nothing stored: nothing to clear, and an empty field is nothing to save (T-316).
+        composeTestRule.onNodeWithTag("admin-server-message-clear").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("admin-server-message-save").assertIsNotEnabled()
+        // Only an invisible character is no message either, as the server would store it.
+        composeTestRule.onNodeWithTag("admin-server-message").performTextReplacement("\u200b")
+        composeTestRule.onNodeWithTag("admin-server-message-save").assertIsNotEnabled()
 
         assertEquals(listOf("""{"message":"Full, use another"}""", """{"message":""}"""), puts.toList())
         viewModel.viewModelScope.cancel()

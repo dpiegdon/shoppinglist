@@ -110,21 +110,22 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TextButton(
-                    onClick = { viewModel.clearMessage() },
-                    enabled = state.serverMessage.orEmpty().isNotEmpty() || state.messageDraft.isNotEmpty(),
-                    modifier = Modifier.testTag("admin-server-message-clear"),
-                ) {
-                    Text(stringResource(R.string.action_clear))
-                }
+                // Save, then Clear, at the start of the row, as on the web (T-316).
                 Button(
                     onClick = { viewModel.saveMessage() },
-                    enabled = state.messageDraft.trim() != state.serverMessage,
+                    enabled = state.canSaveMessage(),
                     modifier = Modifier.testTag("admin-server-message-save"),
                 ) {
                     Text(stringResource(R.string.action_save))
+                }
+                TextButton(
+                    onClick = { viewModel.clearMessage() },
+                    enabled = state.canClearMessage(),
+                    modifier = Modifier.testTag("admin-server-message-clear"),
+                ) {
+                    Text(stringResource(R.string.action_clear))
                 }
             }
         }

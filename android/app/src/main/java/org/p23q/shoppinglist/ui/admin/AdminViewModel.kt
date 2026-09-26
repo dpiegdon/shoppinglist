@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.ServerMessageRule
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.api.Api
@@ -149,19 +150,29 @@ class AdminViewModel internal constructor(
 
     fun onMessageChange(value: String) = _uiState.update { it.copy(messageDraft = value, messageError = null) }
 
-    /** Saves the field's text as the server message (T-315); checked here first, as the server checks it. */
-    fun saveMessage(): Job? = sendMessage(_uiState.value.messageDraft.trim())
+    /**
+     * Saves the field's text as the server message (T-315): checked here first by the server's own
+     * rule (T-316), and sent as the server would store it, "" when that is no message.
+     */
+    fun saveMessage(): Job? {
+        if (_uiState.value.serverMessage == null) return null
+        return when (val checked = ServerMessageRule.check(_uiState.value.messageDraft)) {
+            ServerMessageRule.Result.Invalid -> {
+                _uiState.update { it.copy(messageError = UiText.res(R.string.admin_server_message_invalid)) }
+                null
+            }
+            is ServerMessageRule.Result.Valid -> sendMessage(checked.message.orEmpty())
+        }
+    }
 
     /** Clear is saving "": no message. */
-    fun clearMessage(): Job? = sendMessage("")
-
-    private fun sendMessage(message: String): Job? {
+    fun clearMessage(): Job? {
         if (_uiState.value.serverMessage == null) return null
-        if (!isValidServerMessage(message)) {
-            _uiState.update { it.copy(messageError = UiText.res(R.string.admin_server_message_invalid)) }
-            return null
-        }
-        return viewModelScope.launch {
+        return sendMessage("")
+    }
+
+    private fun sendMessage(message: String): Job =
+        viewModelScope.launch {
             try {
                 val result = api().adminSetServerSettings(ServerSettingsUpdate(message = message))
                 _uiState.update {
@@ -183,7 +194,6 @@ class AdminViewModel internal constructor(
                 _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
         }
-    }
 
     fun resetPassword(user: AdminUserDto): Job? {
         if (!requirePassword()) return null
@@ -221,15 +231,20 @@ class AdminViewModel internal constructor(
 }
 
 /**
- * The server's rule for its message (T-315), applied to the already trimmed text: at most
- * [SERVER_MESSAGE_MAX] characters (code points, as the server counts them) and one line, with no
- * control character at all (Unicode category Cc). "" is valid: no message.
+ * Save is offered while the field says something other than the stored message, compared as the
+ * server would store it (T-316). A draft the rule refuses keeps Save enabled, so pressing it names
+ * the rule at the field.
  */
-internal fun isValidServerMessage(trimmed: String): Boolean =
-    trimmed.codePointCount(0, trimmed.length) <= SERVER_MESSAGE_MAX &&
-        trimmed.codePoints().noneMatch { Character.getType(it) == Character.CONTROL.toInt() }
+internal fun AdminUiState.canSaveMessage(): Boolean {
+    val stored = serverMessage ?: return false
+    return when (val checked = ServerMessageRule.check(messageDraft)) {
+        ServerMessageRule.Result.Invalid -> true
+        is ServerMessageRule.Result.Valid -> checked.message.orEmpty() != stored
+    }
+}
 
-internal const val SERVER_MESSAGE_MAX = 200
+/** Clear is offered only while a message is stored (T-316). */
+internal fun AdminUiState.canClearMessage(): Boolean = !serverMessage.isNullOrEmpty()
 
 /** A server URL as the admin console's app bar shows it: `p23q.org/shopping`, no scheme or final slash. */
 internal fun serverShown(serverUrl: String): String = serverUrl.substringAfter("://").removeSuffix("/")

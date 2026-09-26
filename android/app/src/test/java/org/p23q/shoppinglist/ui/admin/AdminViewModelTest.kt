@@ -306,12 +306,52 @@ class AdminViewModelTest {
     }
 
     @Test
-    fun `the message rule counts characters as the server does (T-315)`() {
-        assertTrue(isValidServerMessage(""))
-        assertTrue("an emoji is one character", isValidServerMessage("\uD83D\uDE00".repeat(200)))
-        assertFalse(isValidServerMessage("\uD83D\uDE00".repeat(201)))
-        assertFalse(isValidServerMessage("a\rb"))
-        assertFalse(isValidServerMessage("a\u0007b"))
-        assertTrue("other Unicode is fine", isValidServerMessage("Wartung · 10–12 Uhr ✓"))
+    fun `Save sends the message as the server's rule stores it, and a blank one as none (T-316)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val puts = settingsServer(message = "Down Sunday")
+            val viewModel = newViewModel()
+            viewModel.uiState.first { it.allowRegistration != null }
+
+            viewModel.onMessageChange("\u00a0No-break\u00a0")
+            viewModel.saveMessage()!!.join()
+            viewModel.onMessageChange("\u200b\u200d")
+            viewModel.saveMessage()!!.join()
+
+            assertEquals(listOf("""{"message":"No-break"}""", """{"message":""}"""), puts)
+            assertEquals("", viewModel.uiState.value.serverMessage)
+        }
+
+    @Test
+    fun `a message the shared rule refuses is not sent (T-316)`() = runTest(mainDispatcherRule.dispatcher) {
+        val puts = settingsServer()
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+
+        for (bad in listOf("a\u2028b", "a\u202eb", "a\u0085b")) {
+            viewModel.onMessageChange(bad)
+            assertEquals(bad, null, viewModel.saveMessage())
+            assertEquals(bad, UiText.res(R.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
+        }
+        assertEquals(emptyList<String>(), puts)
+    }
+
+    @Test
+    fun `Save is offered while the text differs from the stored message, Clear while one is stored (T-316)`() {
+        val stored = AdminUiState(serverMessage = "Down Sunday", messageDraft = "Down Sunday")
+        assertFalse("unchanged", stored.canSaveMessage())
+        assertFalse("the same once trimmed", stored.copy(messageDraft = " Down Sunday\u00a0").canSaveMessage())
+        assertTrue("changed", stored.copy(messageDraft = "Up Sunday").canSaveMessage())
+        assertTrue("refused text still names the rule on Save", stored.copy(messageDraft = "a\nb").canSaveMessage())
+        assertTrue(stored.canClearMessage())
+
+        val none = AdminUiState(serverMessage = "", messageDraft = "")
+        assertFalse(none.canSaveMessage())
+        assertFalse("blank is no message", none.copy(messageDraft = "  \u200b").canSaveMessage())
+        assertTrue(none.copy(messageDraft = "typed").canSaveMessage())
+        assertFalse("nothing stored, nothing to clear", none.copy(messageDraft = "typed").canClearMessage())
+
+        val oldServer = AdminUiState(serverMessage = null, messageDraft = "x")
+        assertFalse(oldServer.canSaveMessage())
+        assertFalse(oldServer.canClearMessage())
     }
 }
