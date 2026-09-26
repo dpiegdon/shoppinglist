@@ -1,0 +1,12 @@
+{
+  "body": "SyncEngine.reportCollaboratorChanges (T-304 item 4, as I specified it) skips pulled items whose last_touched_by is the server account id of ANY other account on this phone with the same server URL. Meant for 'my own edit made under my other login on this phone', it also drops that account's edits made anywhere else: with accounts A and B on one server, B editing on the web never notifies A. Reproduced by reading; the maintainer sees no notifications at all with exactly that setup. Fix: the criterion is the DEVICE, not the account. An item is our own edit when its most recently updated field clock's updated_by equals this device's id (DeviceIdProvider); everything else with last_touched_by != this account's id is foreign and reported. Rewrite the T-304 test: an edit by the other account made elsewhere IS reported; an edit pushed from this device under the other account is not. Also add a diagnostics line to Settings \u2192 Diagnostics on both the decision and the gates, so a silent phone can be explained: 'Last change check: <time>, <n> foreign items pulled, <posted|no permission|notifications off|app in foreground|list muted|first sync>' (device-local, nine locales).",
+  "created_at": "2026-09-26T18:29:58+00:00",
+  "id": "T-318",
+  "labels": [
+    "android",
+    "bug"
+  ],
+  "priority": 1,
+  "title": "Android: collaborator-change notifications suppress every edit by another account on this phone, even edits made on the web",
+  "updated_at": "2026-09-26T18:29:58+00:00"
+}
