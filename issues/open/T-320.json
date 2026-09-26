@@ -1,6 +1,9 @@
 {
   "body": "The class is Tuppu's WorkManager job; in logcat 'SyncWorker' reads like a system component. Rename the class, file, tests, Hilt worker binding and the log TAG to TuppuSyncWorker. WorkManager persists requests by class name: an upgraded phone still holds a periodic request naming the old class and would never run it again. So the periodic request must be re-enqueued with ExistingPeriodicWorkPolicy.UPDATE (or CANCEL_AND_REENQUEUE) once \u2014 check what SyncScheduler uses today and either switch the policy or bump the unique work name. Test: the scheduler's request names the new class; a Robolectric WorkManager test that an existing request under the old class name is replaced.",
   "created_at": "2026-09-26T18:49:01+00:00",
+  "deps": [
+    "T-319"
+  ],
   "id": "T-320",
   "labels": [
     "android",
