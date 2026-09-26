@@ -169,6 +169,8 @@ export const es: Catalog = {
   "settings.changePassword": "Cambiar contraseña",
   "settings.currentPassword": "Contraseña actual",
   "settings.newPassword": "Contraseña nueva",
+  "settings.newPasswordAgain": "Contraseña nueva (repetir)",
+  "settings.passwordsDoNotMatch": "Las contraseñas no coinciden.",
   "settings.passwordChanged": "Contraseña cambiada",
   "settings.changeEmail": "Cambiar correo electrónico",
   "settings.newEmail": "Nuevo correo electrónico",

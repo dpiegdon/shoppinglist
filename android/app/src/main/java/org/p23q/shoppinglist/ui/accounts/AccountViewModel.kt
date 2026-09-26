@@ -55,6 +55,13 @@ data class AccountUiState(
     val sessions: List<SessionDto> = emptyList(),
     val currentPassword: String = "",
     val newPassword: String = "",
+    /**
+     * The new password typed a second time (T-313), compared here only: the request still carries
+     * the one new password. [newPasswordMismatch] is set when they differ on submit, and typing in
+     * either field clears it.
+     */
+    val newPasswordAgain: String = "",
+    val newPasswordMismatch: Boolean = false,
     val newEmail: String = "",
     val changeEmailPassword: String = "",
     val deleteAccountPassword: String = "",
@@ -148,7 +155,11 @@ class AccountViewModel @Inject constructor(
 
     fun onCurrentPasswordChange(value: String) = _uiState.update { it.copy(currentPassword = value, errorMessage = null) }
 
-    fun onNewPasswordChange(value: String) = _uiState.update { it.copy(newPassword = value, errorMessage = null) }
+    fun onNewPasswordChange(value: String) =
+        _uiState.update { it.copy(newPassword = value, newPasswordMismatch = false, errorMessage = null) }
+
+    fun onNewPasswordAgainChange(value: String) =
+        _uiState.update { it.copy(newPasswordAgain = value, newPasswordMismatch = false, errorMessage = null) }
 
     fun onNewEmailChange(value: String) = _uiState.update { it.copy(newEmail = value, errorMessage = null) }
 
@@ -214,11 +225,15 @@ class AccountViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_fields_required)) }
             return null
         }
+        if (state.newPassword != state.newPasswordAgain) {
+            _uiState.update { it.copy(newPasswordMismatch = true) }
+            return null
+        }
         return viewModelScope.launch {
             try {
                 api().changePassword(ChangePasswordRequest(state.currentPassword, state.newPassword))
                 _uiState.update {
-                    it.copy(currentPassword = "", newPassword = "", errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_password_changed))
+                    it.copy(currentPassword = "", newPassword = "", newPasswordAgain = "", errorMessage = null, infoMessage = UiText.res(R.string.settings_msg_password_changed))
                 }
             } catch (e: UnauthorizedException) {
                 _uiState.update { it.copy(errorMessage = UiText.res(R.string.settings_msg_password_incorrect)) }

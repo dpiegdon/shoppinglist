@@ -173,6 +173,8 @@ export const zhHans: Catalog = {
   "settings.changePassword": "修改密码",
   "settings.currentPassword": "当前密码",
   "settings.newPassword": "新密码",
+  "settings.newPasswordAgain": "新密码（再次输入）",
+  "settings.passwordsDoNotMatch": "两次输入的密码不一致。",
   "settings.passwordChanged": "密码已修改",
   "settings.changeEmail": "修改邮箱",
   "settings.newEmail": "新邮箱",

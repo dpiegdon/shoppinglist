@@ -62,6 +62,10 @@ export default function SettingsPage() {
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  // Typed twice so a slip of the finger does not lock the user out (T-313). Checked here only: the
+  // request still carries the one new password.
+  const [newPasswordAgain, setNewPasswordAgain] = useState("");
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
   const passwordStatus = useFormStatus();
 
   const [emailPassword, setEmailPassword] = useState("");
@@ -121,10 +125,15 @@ export default function SettingsPage() {
 
   async function handlePasswordSave(e: FormEvent) {
     e.preventDefault();
+    if (newPassword !== newPasswordAgain) {
+      setPasswordMismatch(true);
+      return;
+    }
     await passwordStatus.run(async () => {
       await api.changePassword({ current_password: currentPassword, new_password: newPassword });
       setCurrentPassword("");
       setNewPassword("");
+      setNewPasswordAgain("");
     }, { invalid_credentials: "settings.passwordIncorrect" });
   }
 
@@ -219,8 +228,30 @@ export default function SettingsPage() {
               type="password"
               minLength={8}
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setPasswordMismatch(false);
+              }}
             />
+          </div>
+          <div className="form-field">
+            <label htmlFor="new-password-again">{t("settings.newPasswordAgain")}</label>
+            <input
+              id="new-password-again"
+              type="password"
+              value={newPasswordAgain}
+              aria-invalid={passwordMismatch ? true : undefined}
+              aria-describedby={passwordMismatch ? "new-password-again-error" : undefined}
+              onChange={(e) => {
+                setNewPasswordAgain(e.target.value);
+                setPasswordMismatch(false);
+              }}
+            />
+            {passwordMismatch && (
+              <p id="new-password-again-error" className="error-text" role="alert">
+                {t("settings.passwordsDoNotMatch")}
+              </p>
+            )}
           </div>
           {passwordStatus.error && <p className="error-text">{passwordStatus.error}</p>}
           {passwordStatus.ok && <p className="muted">{t("settings.passwordChanged")}</p>}

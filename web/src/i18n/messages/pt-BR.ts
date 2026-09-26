@@ -172,6 +172,8 @@ export const ptBR: Catalog = {
   "settings.changePassword": "Alterar senha",
   "settings.currentPassword": "Senha atual",
   "settings.newPassword": "Nova senha",
+  "settings.newPasswordAgain": "Nova senha (de novo)",
+  "settings.passwordsDoNotMatch": "As senhas não coincidem.",
   "settings.passwordChanged": "Senha alterada",
   "settings.changeEmail": "Alterar e-mail",
   "settings.newEmail": "Novo e-mail",

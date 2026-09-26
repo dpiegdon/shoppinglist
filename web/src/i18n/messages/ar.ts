@@ -175,6 +175,8 @@ export const ar: Catalog = {
   "settings.changePassword": "تغيير كلمة المرور",
   "settings.currentPassword": "كلمة المرور الحالية",
   "settings.newPassword": "كلمة المرور الجديدة",
+  "settings.newPasswordAgain": "كلمة المرور الجديدة (مرة أخرى)",
+  "settings.passwordsDoNotMatch": "كلمتا المرور غير متطابقتين.",
   "settings.passwordChanged": "تم تغيير كلمة المرور",
   "settings.changeEmail": "تغيير البريد الإلكتروني",
   "settings.newEmail": "البريد الإلكتروني الجديد",

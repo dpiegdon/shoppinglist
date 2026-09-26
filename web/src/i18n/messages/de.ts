@@ -174,6 +174,8 @@ export const de: Catalog = {
   "settings.changePassword": "Passwort ändern",
   "settings.currentPassword": "Aktuelles Passwort",
   "settings.newPassword": "Neues Passwort",
+  "settings.newPasswordAgain": "Neues Passwort (wiederholen)",
+  "settings.passwordsDoNotMatch": "Die Passwörter stimmen nicht überein.",
   "settings.passwordChanged": "Passwort geändert",
   "settings.changeEmail": "E-Mail ändern",
   "settings.newEmail": "Neue E-Mail",

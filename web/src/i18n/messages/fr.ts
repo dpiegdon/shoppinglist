@@ -171,6 +171,8 @@ export const fr: Catalog = {
   "settings.changePassword": "Changer le mot de passe",
   "settings.currentPassword": "Mot de passe actuel",
   "settings.newPassword": "Nouveau mot de passe",
+  "settings.newPasswordAgain": "Nouveau mot de passe (confirmation)",
+  "settings.passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
   "settings.passwordChanged": "Mot de passe modifié",
   "settings.changeEmail": "Changer l'e-mail",
   "settings.newEmail": "Nouvel e-mail",

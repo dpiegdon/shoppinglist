@@ -15,6 +15,7 @@ vi.mock("../api/client", async () => {
     getSettings: vi.fn(),
     updateSettings: vi.fn(),
     listSessions: vi.fn(),
+    changePassword: vi.fn(),
   };
 });
 
@@ -223,5 +224,62 @@ describe("SettingsPage keeps account preferences only (T-224)", () => {
     expect(screen.queryByText(/version/i)).not.toBeInTheDocument();
     expect(screen.queryByText(en["about.tagline"])).not.toBeInTheDocument();
     expect(screen.queryByText(en["about.license"])).not.toBeInTheDocument();
+  });
+});
+
+describe("SettingsPage asks for the new password twice (T-313)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getToken).mockReturnValue(null);
+    vi.mocked(api.getSettings).mockReturnValue(new Promise(() => {}));
+    vi.mocked(api.listSessions).mockResolvedValue({ sessions: [] });
+    vi.mocked(api.changePassword).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  async function fillPasswords(current: string, next: string, again: string) {
+    await userEvent.type(screen.getByLabelText(en["settings.currentPassword"]), current);
+    await userEvent.type(screen.getByLabelText(en["settings.newPassword"]), next);
+    await userEvent.type(screen.getByLabelText(en["settings.newPasswordAgain"]), again);
+  }
+
+  const submit = () => userEvent.click(screen.getByRole("button", { name: en["settings.changePassword"] }));
+
+  it("sends nothing when the two differ, says so at the repeat field, and clears that on typing", async () => {
+    renderSettingsPage();
+    await fillPasswords("oldpassword", "newpassword1", "newpassword2");
+
+    await submit();
+
+    expect(api.changePassword).not.toHaveBeenCalled();
+    const again = screen.getByLabelText(en["settings.newPasswordAgain"]);
+    expect(again).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("The passwords do not match.");
+    expect(again).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+
+    // Editing either new-password field takes the complaint away.
+    await userEvent.type(again, "x");
+    expect(screen.queryByText("The passwords do not match.")).not.toBeInTheDocument();
+    await submit();
+    expect(screen.getByText("The passwords do not match.")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(en["settings.newPassword"]), "x");
+    expect(screen.queryByText("The passwords do not match.")).not.toBeInTheDocument();
+    expect(api.changePassword).not.toHaveBeenCalled();
+  });
+
+  it("sends the one new password as before when the two match", async () => {
+    renderSettingsPage();
+    await fillPasswords("oldpassword", "newpassword1", "newpassword1");
+
+    await submit();
+
+    await waitFor(() =>
+      expect(api.changePassword).toHaveBeenCalledWith({ current_password: "oldpassword", new_password: "newpassword1" }),
+    );
+    expect(screen.queryByText("The passwords do not match.")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(en["settings.newPasswordAgain"])).toHaveValue(""));
   });
 });

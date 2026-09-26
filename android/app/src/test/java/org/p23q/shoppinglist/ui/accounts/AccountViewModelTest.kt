@@ -9,7 +9,10 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -237,6 +240,7 @@ class AccountViewModelTest {
         val viewModel = newViewModel()
         viewModel.onCurrentPasswordChange("wrong")
         viewModel.onNewPasswordChange("newpass123")
+        viewModel.onNewPasswordAgainChange("newpass123")
 
         viewModel.changePassword()?.join()
 
@@ -249,13 +253,59 @@ class AccountViewModelTest {
         val viewModel = newViewModel()
         viewModel.onCurrentPasswordChange("hunter2")
         viewModel.onNewPasswordChange("newpass123")
+        viewModel.onNewPasswordAgainChange("newpass123")
 
         viewModel.changePassword()?.join()
 
         assertEquals("", viewModel.uiState.value.currentPassword)
         assertEquals("", viewModel.uiState.value.newPassword)
+        assertEquals("", viewModel.uiState.value.newPasswordAgain)
         assertNull(viewModel.uiState.value.errorMessage)
         assertNotNull(viewModel.uiState.value.infoMessage)
+    }
+
+    @Test
+    fun `changePassword with two different new passwords sends nothing and flags the repeat field (T-313)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.onCurrentPasswordChange("hunter2")
+        viewModel.onNewPasswordChange("newpass123")
+        viewModel.onNewPasswordAgainChange("newpass124")
+        val before = server.requestCount
+
+        assertNull(viewModel.changePassword())
+        runCurrent()
+
+        assertEquals(before, server.requestCount)
+        assertTrue(viewModel.uiState.value.newPasswordMismatch)
+        // Typing in either field takes the complaint away.
+        viewModel.onNewPasswordAgainChange("newpass12")
+        assertFalse(viewModel.uiState.value.newPasswordMismatch)
+        assertNull(viewModel.changePassword())
+        assertTrue(viewModel.uiState.value.newPasswordMismatch)
+        viewModel.onNewPasswordChange("newpass12")
+        assertFalse(viewModel.uiState.value.newPasswordMismatch)
+        assertEquals(before, server.requestCount)
+    }
+
+    @Test
+    fun `changePassword with matching new passwords sends the one new password as before (T-313)`() = runTest(mainDispatcherRule.dispatcher) {
+        server.enqueue(MockResponse().setResponseCode(204))
+        val viewModel = newViewModel()
+        viewModel.onCurrentPasswordChange("hunter2")
+        viewModel.onNewPasswordChange("newpass123")
+        viewModel.onNewPasswordAgainChange("newpass123")
+
+        viewModel.changePassword()!!.join()
+
+        val request = generateSequence { server.takeRequest(1, java.util.concurrent.TimeUnit.SECONDS) }
+            .first { it.path?.endsWith("/account/change-password") == true }
+        // The repeat never leaves the phone: the body is exactly what it was before.
+        assertEquals(
+            mapOf("current_password" to "hunter2", "new_password" to "newpass123"),
+            kotlinx.serialization.json.Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+                .mapValues { it.value.jsonPrimitive.content },
+        )
+        assertFalse(viewModel.uiState.value.newPasswordMismatch)
     }
 
     @Test

@@ -168,6 +168,20 @@ fun AccountScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedTextField(
+                value = state.newPasswordAgain,
+                onValueChange = viewModel::onNewPasswordAgainChange,
+                label = { Text(stringResource(R.string.settings_new_password_again)) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                isError = state.newPasswordMismatch,
+                supportingText = if (state.newPasswordMismatch) {
+                    { Text(stringResource(R.string.settings_msg_passwords_do_not_match)) }
+                } else {
+                    null
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
             Button(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
             Spacer(Modifier.height(16.dp))
 

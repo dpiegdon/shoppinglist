@@ -174,6 +174,8 @@
     <string name="settings_change_password">修改密码</string>
     <string name="settings_current_password">当前密码</string>
     <string name="settings_new_password">新密码</string>
+    <string name="settings_new_password_again">新密码（再次输入）</string>
+    <string name="settings_msg_passwords_do_not_match">两次输入的密码不一致。</string>
     <string name="settings_confirm_password">确认密码</string>
     <string name="settings_change_email">修改邮箱</string>
     <string name="settings_new_email">新邮箱</string>

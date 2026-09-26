@@ -174,6 +174,8 @@ export const ja: Catalog = {
   "settings.changePassword": "パスワードを変更",
   "settings.currentPassword": "現在のパスワード",
   "settings.newPassword": "新しいパスワード",
+  "settings.newPasswordAgain": "新しいパスワード（確認）",
+  "settings.passwordsDoNotMatch": "パスワードが一致しません。",
   "settings.passwordChanged": "パスワードを変更しました",
   "settings.changeEmail": "メールアドレスを変更",
   "settings.newEmail": "新しいメールアドレス",

@@ -174,6 +174,8 @@
     <string name="settings_change_password">Passwort ändern</string>
     <string name="settings_current_password">Aktuelles Passwort</string>
     <string name="settings_new_password">Neues Passwort</string>
+    <string name="settings_new_password_again">Neues Passwort (wiederholen)</string>
+    <string name="settings_msg_passwords_do_not_match">Die Passwörter stimmen nicht überein.</string>
     <string name="settings_confirm_password">Passwort bestätigen</string>
     <string name="settings_change_email">E-Mail ändern</string>
     <string name="settings_new_email">Neue E-Mail</string>

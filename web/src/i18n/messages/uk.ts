@@ -173,6 +173,8 @@ export const uk: Catalog = {
   "settings.changePassword": "Змінити пароль",
   "settings.currentPassword": "Поточний пароль",
   "settings.newPassword": "Новий пароль",
+  "settings.newPasswordAgain": "Новий пароль (ще раз)",
+  "settings.passwordsDoNotMatch": "Паролі не збігаються.",
   "settings.passwordChanged": "Пароль змінено",
   "settings.changeEmail": "Змінити електронну пошту",
   "settings.newEmail": "Нова електронна пошта",

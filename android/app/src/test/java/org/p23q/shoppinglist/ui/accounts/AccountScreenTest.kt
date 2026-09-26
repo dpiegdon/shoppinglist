@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
@@ -55,12 +56,19 @@ class AccountScreenTest {
 
     private var sessionsJson = """{"sessions": []}"""
 
+    /** Bodies of the change-password requests the server saw (T-313). */
+    private val passwordChanges = java.util.concurrent.CopyOnWriteArrayList<String>()
+
     @Before
     fun setUp() {
         server = MockWebServer()
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = when {
                 request.path?.endsWith("/account/sessions") == true -> MockResponse().setResponseCode(200).setBody(sessionsJson)
+                request.path?.endsWith("/account/change-password") == true -> {
+                    passwordChanges.add(request.body.readUtf8())
+                    MockResponse().setResponseCode(204)
+                }
                 request.method == "PATCH" ->
                     MockResponse().setResponseCode(200).setBody("""{"default_currency": "EUR", "initials": "XY"}""")
                 request.path?.endsWith("/settings") == true ->
@@ -126,6 +134,34 @@ class AccountScreenTest {
             composeTestRule.waitForIdle()
             viewModel.uiState.value.initials == "XY"
         }
+    }
+
+    @Test
+    fun `the new password is typed twice, and two that differ send nothing and say so at the repeat (T-313)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        awaitLoads(viewModel)
+
+        composeTestRule.onNodeWithText("Current password").performScrollTo().performTextInput("hunter2")
+        composeTestRule.onNodeWithText("New password").performScrollTo().performTextInput("newpass123")
+        composeTestRule.onNodeWithText("New password (again)").performScrollTo().performTextInput("newpass124")
+        // The section's heading is the first "Change password", its button the second.
+        composeTestRule.onAllNodesWithText("Change password")[1].performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("The passwords do not match.").assertExists()
+        assertEquals(emptyList<String>(), passwordChanges.toList())
+
+        // Fixing the repeat clears the complaint, and the change then goes out.
+        composeTestRule.onNodeWithText("New password (again)").performScrollTo().performTextReplacement("newpass123")
+        composeTestRule.onNodeWithText("The passwords do not match.").assertDoesNotExist()
+        composeTestRule.onAllNodesWithText("Change password")[1].performScrollTo().performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            passwordChanges.isNotEmpty()
+        }
+        assertEquals(1, passwordChanges.size)
+        assertTrue(passwordChanges.single(), passwordChanges.single().contains("newpass123"))
     }
 
     @Test

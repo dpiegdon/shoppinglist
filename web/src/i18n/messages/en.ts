@@ -215,6 +215,8 @@ export const en = {
   "settings.changePassword": "Change password",
   "settings.currentPassword": "Current password",
   "settings.newPassword": "New password",
+  "settings.newPasswordAgain": "New password (again)",
+  "settings.passwordsDoNotMatch": "The passwords do not match.",
   "settings.passwordChanged": "Password changed",
   "settings.changeEmail": "Change email",
   "settings.newEmail": "New email",

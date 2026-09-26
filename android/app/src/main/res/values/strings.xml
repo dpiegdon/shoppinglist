@@ -218,6 +218,8 @@
     <string name="settings_change_password">Change password</string>
     <string name="settings_current_password">Current password</string>
     <string name="settings_new_password">New password</string>
+    <string name="settings_new_password_again">New password (again)</string>
+    <string name="settings_msg_passwords_do_not_match">The passwords do not match.</string>
     <string name="settings_confirm_password">Confirm password</string>
     <string name="settings_change_email">Change email</string>
     <string name="settings_new_email">New email</string>
