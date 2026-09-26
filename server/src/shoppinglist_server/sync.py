@@ -26,6 +26,7 @@ import time
 from . import auth
 from . import db as db_module
 from .errors import ApiError
+from .request_body import has_lone_surrogate
 
 STATUS_VALUES = {"backlog", "todo", "checked"}
 
@@ -607,6 +608,9 @@ def _parse_row(obj, keys, tsby, validate, device_id):
     # isn't identifiable, so no row_id detail can help a client quarantine it.
     if not isinstance(row_id, str) or not row_id.strip():
         raise ApiError(422, "invalid_row", "Change id must be a non-empty string.")
+    if has_lone_surrogate(row_id):
+        # No row_id detail: an id that is not valid Unicode cannot be echoed back reliably.
+        raise ApiError(422, "invalid_row", "Change id must be valid Unicode.")
     if len(row_id) > ID_MAX_LENGTH:
         raise ApiError(
             422,
@@ -643,6 +647,9 @@ def _parse_row(obj, keys, tsby, validate, device_id):
         if key not in keys:
             continue  # forward-compatible: ignore unknown fields
         try:
+            if has_lone_surrogate(clock):
+                # Anywhere in the clock: the value, a nested map key, updated_by (T-316).
+                raise ApiError(422, "invalid_field", f"Field '{key}' must be valid Unicode.")
             value, ts, by = _parse_clock(key, clock, device_id)
             validate(key, value)
         except ApiError as exc:
@@ -1122,7 +1129,7 @@ def _apply_item(conn, account_id, device_id, obj):
             )
         # A mis-typed list_id (dict/list/…) would crash at the SQL bind below; reject it
         # with the row-scoped 422 the quarantine flow needs (T-85).
-        if not isinstance(list_id, str):
+        if not isinstance(list_id, str) or has_lone_surrogate(list_id):
             raise ApiError(
                 422,
                 "invalid_row",

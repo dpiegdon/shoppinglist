@@ -1215,3 +1215,111 @@ def test_pushed_list_row_for_a_list_not_a_member_of_is_quarantinable_and_does_no
     delta_a = _sync(client, token_a, cursor=0, device_id="devA", full_lists=["list-a"]).get_json()
     victim = next(lst for lst in delta_a["changes"]["lists"] if lst["id"] == "list-a")
     assert victim["fields"]["name"]["value"] == "Alice's list"
+
+
+# ---- lone surrogates (T-316) --------------------------------------------------
+# "\ud800" is legal JSON but not text: SQLite fails to bind it. Refused per row, naming the row
+# and field, so the client quarantines that row instead of retrying its whole push forever.
+
+
+def _raw_sync(client, token, body):
+    return client.post(
+        "/api/v1/sync", data=body, content_type="application/json", headers=_auth(token)
+    )
+
+
+_BAD = "\\ud800"
+
+
+@pytest.mark.parametrize(
+    "field_json",
+    [
+        f'"name": {{"value": "Milk{_BAD}", "updated_at": 5, "updated_by": "devA"}}',
+        f'"name": {{"value": "Milk", "updated_at": 5, "updated_by": "dev{_BAD}"}}',
+        f'"stores": {{"value": ["ok", "sh{_BAD}op"], "updated_at": 5, "updated_by": "devA"}}',
+        f'"note": {{"value": "x", "updated_at": 5, "updated_by": "devA", "extra{_BAD}": 1}}',
+    ],
+)
+def test_sync_lone_surrogate_in_a_field_422_with_row_and_field(client, field_json):
+    token = _register_and_login(client)
+    _seed_list(client, token)
+    field = field_json.split('"', 2)[1]
+    fields = field_json
+    if field != "name":
+        fields = '"name": {"value": "Milk", "updated_at": 5, "updated_by": "devA"}, ' + fields
+    body = (
+        '{"cursor": 0, "device_id": "devA", "changes": {"items": ['
+        f'{{"id": "item-1", "list_id": "list-1", "fields": {{{fields}}}}}]}}}}'
+    )
+    resp = _raw_sync(client, token, body)
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_field"
+    assert resp.get_json()["row_id"] == "item-1"
+    assert resp.get_json()["field"] == field
+
+
+def test_sync_lone_surrogate_in_a_list_field_422_with_row_and_field(client):
+    token = _register_and_login(client)
+    body = (
+        '{"cursor": 0, "device_id": "devA", "changes": {"lists": [{"id": "list-1", "fields": '
+        f'{{"name": {{"value": "Groc{_BAD}", "updated_at": 5, "updated_by": "devA"}}}}}}]}}}}'
+    )
+    resp = _raw_sync(client, token, body)
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_field"
+    assert resp.get_json()["row_id"] == "list-1"
+    assert resp.get_json()["field"] == "name"
+
+
+def test_sync_lone_surrogate_in_an_item_list_id_422_with_row_id(client):
+    token = _register_and_login(client)
+    body = (
+        '{"cursor": 0, "device_id": "devA", "changes": {"items": [{"id": "item-1", '
+        f'"list_id": "l{_BAD}", "fields": {{"name": {{"value": "Milk", "updated_at": 5, '
+        '"updated_by": "devA"}}}]}}'
+    )
+    resp = _raw_sync(client, token, body)
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_row"
+    assert resp.get_json()["row_id"] == "item-1"
+
+
+def test_sync_lone_surrogate_in_a_row_id_422_invalid_row(client):
+    token = _register_and_login(client)
+    body = (
+        f'{{"cursor": 0, "device_id": "devA", "changes": {{"lists": [{{"id": "l{_BAD}", '
+        '"fields": {"name": {"value": "Groceries", "updated_at": 5, "updated_by": "devA"}}}]}}'
+    )
+    resp = _raw_sync(client, token, body)
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_row"
+
+
+@pytest.mark.parametrize(
+    "top_level,code",
+    [
+        (f'"device_id": "dev{_BAD}"', "invalid_device_id"),
+        (f'"full_lists": ["l{_BAD}"]', "invalid_full_lists"),
+    ],
+)
+def test_sync_lone_surrogate_in_the_request_itself_422(client, top_level, code):
+    token = _register_and_login(client)
+    resp = _raw_sync(client, token, f'{{"cursor": 0, {top_level}}}')
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == code
+
+
+def test_sync_an_unknown_field_with_a_lone_surrogate_is_still_ignored(client):
+    # Forward-compatible: a field this server does not know is never stored, so never checked.
+    token = _register_and_login(client)
+    body = (
+        '{"cursor": 0, "device_id": "devA", "changes": {"lists": [{"id": "list-1", "fields": '
+        '{"name": {"value": "Groceries", "updated_at": 5, "updated_by": "devA"}, '
+        f'"future": {{"value": "x{_BAD}", "updated_at": 5, "updated_by": "devA"}}}}}}]}}}}'
+    )
+    assert _raw_sync(client, token, body).status_code == 200

@@ -4,7 +4,7 @@ from .. import get_db, server_settings
 from .. import sync as sync_engine
 from ..auth import authed
 from ..errors import ApiError
-from ..request_body import json_body
+from ..request_body import has_lone_surrogate, json_body
 
 
 def _touched_list_ids(conn, changes):
@@ -39,7 +39,9 @@ def register_routes(bp):
     @bp.route("/sync", methods=["POST"])
     @authed
     def sync_view():
-        data = json_body()
+        # Strings are checked here and per row in sync_engine, not wholesale by json_body (T-316):
+        # a lone surrogate in one row's field must name that row, so the client can quarantine it.
+        data = json_body(strings_checked_by_route=True)
         cursor = data.get("cursor")
         # Bounded above too: the cursor binds into SQL, and anything past SQLite's
         # signed int64 range raises OverflowError at bind time (T-85).
@@ -51,10 +53,14 @@ def register_routes(bp):
         ):
             raise ApiError(422, "invalid_cursor", "cursor must be a non-negative integer.")
         device_id = data.get("device_id") or ""
-        if not isinstance(device_id, str):
+        if not isinstance(device_id, str) or has_lone_surrogate(device_id):
             raise ApiError(422, "invalid_device_id", "device_id must be a string.")
         full_lists = data.get("full_lists") or []
-        if not isinstance(full_lists, list) or not all(isinstance(x, str) for x in full_lists):
+        if (
+            not isinstance(full_lists, list)
+            or not all(isinstance(x, str) for x in full_lists)
+            or has_lone_surrogate(full_lists)
+        ):
             raise ApiError(422, "invalid_full_lists", "full_lists must be a list of strings.")
         # Deduplicated before the cap (T-237): a repeated id costs delta another snapshot query
         # pair and adds nothing, since the response merges rows by id. dict.fromkeys keeps

@@ -1,9 +1,15 @@
 """Admin users + runtime server settings (T-107)."""
 
+import json
+from pathlib import Path
+
+import pytest
 from flask import Flask
 
 from shoppinglist_server import boot, create_blueprint
 from shoppinglist_server import db as db_module
+from shoppinglist_server import server_settings
+from shoppinglist_server.errors import ApiError
 
 PW = "password123"
 ADMIN_EMAIL = "boss@example.com"
@@ -469,3 +475,92 @@ def test_server_message_audit_records_the_length_never_the_text(tmp_path, caplog
     assert all("Secret" not in m for m in messages)
     # A message-only PUT does not claim the registration toggle changed.
     assert not any("event=admin.registration_toggled" in m for m in messages)
+
+
+# ---- the message rule and the single transaction (T-316) --------------------
+
+
+def test_a_lone_surrogate_in_the_message_is_invalid_message_and_applies_nothing(tmp_path):
+    client, token = _admin_client(tmp_path)
+
+    resp = client.put(
+        "/api/v1/admin/server-settings",
+        data='{"allow_registration": false, "message": "a\\ud800b"}',
+        content_type="application/json",
+        headers=_bearer(token),
+    )
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_message"
+    assert client.get("/api/v1/registration-status").get_json() == {
+        "allow_registration": True,
+        "message": None,
+    }
+
+
+def test_a_busy_database_on_the_second_write_applies_neither_setting(tmp_path, monkeypatch):
+    # One transaction (T-316): the toggle used to be committed before the message write failed,
+    # so a 503 server_busy — "nothing happened, retry" — had in fact half-applied the request.
+    import sqlite3
+
+    from shoppinglist_server import server_settings
+
+    client, token = _admin_client(tmp_path)
+    _put_settings(client, token, {"message": "Before"})
+
+    def locked(conn, text):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(server_settings, "set_message", locked)
+    resp = _put_settings(client, token, {"allow_registration": False, "message": "After"})
+    assert resp.status_code == 503
+    assert resp.get_json()["error"] == "server_busy"
+    monkeypatch.undo()
+    assert client.get("/api/v1/registration-status").get_json() == {
+        "allow_registration": True,
+        "message": "Before",
+    }
+
+
+# ---- the server message rule, from the table all three implementations read (T-316) --------
+# shared-test-cases/server-message.json pins the rule for the server, the web client and the
+# Android app alike; a case changed there must change all three.
+
+TABLE = Path(__file__).resolve().parents[2] / "shared-test-cases" / "server-message.json"
+CASES = json.loads(TABLE.read_text(encoding="utf-8"))["cases"]
+
+
+def test_the_table_is_not_empty():
+    assert len(CASES) >= 20
+
+
+@pytest.mark.parametrize("case", CASES, ids=[c["name"] for c in CASES])
+def test_validate_message_follows_the_table(case):
+    expected = case["result"]
+    if "error" in expected:
+        with pytest.raises(ApiError) as exc:
+            server_settings.validate_message(case["input"])
+        assert exc.value.code == expected["error"]
+    else:
+        stored = server_settings.validate_message(case["input"])
+        # Stored as '' when there is none; the wire's null.
+        assert (stored or None) == expected["message"]
+
+
+def test_the_admin_endpoint_follows_the_table(tmp_path):
+    client, token = _admin_client(tmp_path)
+    for case in CASES:
+        _put = client.put(
+            "/api/v1/admin/server-settings",
+            # json.dumps writes a lone surrogate as its \\u escape, which is what a client sends.
+            data=json.dumps({"message": case["input"]}),
+            content_type="application/json",
+            headers=_bearer(token),
+        )
+        expected = case["result"]
+        if "error" in expected:
+            assert _put.status_code == 422, case["name"]
+            assert _put.get_json()["error"] == expected["error"], case["name"]
+        else:
+            assert _put.status_code == 200, case["name"]
+            status = client.get("/api/v1/registration-status").get_json()
+            assert status["message"] == expected["message"], case["name"]

@@ -316,3 +316,41 @@ def test_admin_delete_user_field_types(tmp_path, bad):
         headers=_bearer(token),
     )
     _assert_not_a_crash(resp)
+
+
+# ---- bodies that parse but cannot be used (T-316) ---------------------------
+
+
+def test_deeply_nested_json_is_422_not_500(client):
+    # 50 000 brackets parse into a RecursionError, which silent=True never caught.
+    body = "[" * 50_000 + "]" * 50_000
+    resp = _send(client, "POST", "/api/v1/login", body)
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        '{"email": "a\\ud800@example.com", "password": "password123"}',
+        '{"email": "a@example.com", "password": "pass\\udfffword"}',
+        '{"email": "a@example.com", "password": "password123", "\\ud800": 1}',
+    ],
+)
+def test_a_lone_surrogate_anywhere_is_422_not_500(client, body):
+    # Legal JSON, but not text: SQLite and the password hash fail on the first encode.
+    resp = _send(client, "POST", "/api/v1/register", body)
+
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "invalid_request"
+
+
+def test_a_surrogate_pair_is_one_character_and_accepted(client):
+    body = '{"email": "pair@example.com", "password": "password123\\ud83d\\ude00"}'
+    assert _send(client, "POST", "/api/v1/register", body).status_code == 201
+    resp = client.post(
+        "/api/v1/login",
+        json={"email": "pair@example.com", "password": "password123\U0001f600"},
+    )
+    assert resp.status_code == 200

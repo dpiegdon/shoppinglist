@@ -34,8 +34,11 @@ def register_routes(bp):
     @admin_required
     def admin_set_server_settings_view():
         # Partial (T-315): each setting is optional, a missing one stays as it is, and at least
-        # one must be present. Both are validated before either is written.
-        data = json_body()
+        # one must be present. Both are validated before either is written, and both are written
+        # in one transaction (T-316), so any failure — a 503 server_busy included — leaves both
+        # as they were. The message's strings are checked by validate_message, so a lone
+        # surrogate answers invalid_message rather than json_body's invalid_request.
+        data = json_body(strings_checked_by_route=True)
         if "allow_registration" not in data and "message" not in data:
             raise ApiError(422, "invalid_request", "Send allow_registration, message, or both.")
         allow: bool | None = None
@@ -50,20 +53,21 @@ def register_routes(bp):
         if allow is not None:
             # Runtime override only — resets to the config default on restart (T-107).
             server_settings.set_registration_override(conn, allow)
+        if message is not None:
+            # Durable (T-315).
+            server_settings.set_message(conn, message)
+        conn.commit()
+        account_id = g.shoppinglist_account.id
+        if allow is not None:
             audit.record(
-                "admin.registration_toggled",
-                account_id=g.shoppinglist_account.id,
-                allow_registration=allow,
+                "admin.registration_toggled", account_id=account_id, allow_registration=allow
             )
         if message is not None:
-            # Durable (T-315). The audit log gets the length only, never the text.
-            server_settings.set_message(conn, message)
+            # The audit log gets the length only, never the text.
             if message:
-                audit.record(
-                    "admin.message_set", account_id=g.shoppinglist_account.id, length=len(message)
-                )
+                audit.record("admin.message_set", account_id=account_id, length=len(message))
             else:
-                audit.record("admin.message_cleared", account_id=g.shoppinglist_account.id)
+                audit.record("admin.message_cleared", account_id=account_id)
         return jsonify(_server_settings_body(conn)), 200
 
     @bp.route("/admin/users/<account_id>/reset-password", methods=["POST"])

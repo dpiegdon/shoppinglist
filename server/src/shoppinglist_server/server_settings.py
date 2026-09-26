@@ -40,11 +40,11 @@ def effective_allow_registration(conn: sqlite3.Connection, config_default: bool)
 
 
 def set_registration_override(conn: sqlite3.Connection, allow: bool) -> None:
+    """Does not commit: the caller owns the transaction (T-316)."""
     conn.execute(
         "UPDATE server_runtime SET registration_override = ?, boot_id = ? WHERE id = 1",
         (1 if allow else 0, boot.current_boot_id()),
     )
-    conn.commit()
 
 
 def get_message(conn: sqlite3.Connection) -> str:
@@ -53,22 +53,46 @@ def get_message(conn: sqlite3.Connection) -> str:
     return "" if row is None or row["message"] is None else row["message"]
 
 
+# The message rule (T-316), pinned for the server and both clients by
+# shared-test-cases/server-message.json. Trimmed from both ends: tab, LF, CR, space and every Zs.
+# Refused anywhere: any Cc, the line and paragraph separators (Zl, Zp), the bidi embeddings and
+# overrides U+202A-U+202E (they can reorder the rest of the page), and an unpaired surrogate (not
+# text at all). Isolates, ZWJ/ZWNJ and the marks stay: scripts need them. Nothing but Cf and Zs
+# left means no message.
+_TRIM_CHARS = frozenset("\t\n\r ")
+_REFUSED_CATEGORIES = frozenset({"Cc", "Zl", "Zp", "Cs"})
+_REFUSED_CHARS = frozenset("\u202a\u202b\u202c\u202d\u202e")
+
+
+def _trimmed(c: str) -> bool:
+    return c in _TRIM_CHARS or unicodedata.category(c) == "Zs"
+
+
 def validate_message(value) -> str:
-    """The message as it will be stored: trimmed, at most `MAX_MESSAGE_CHARS` characters, one
-    line. `422 invalid_message` otherwise. Any other text, links included, is allowed; clients
-    show it as plain text and never make it clickable."""
+    """The message as it will be stored, `''` for none, by the rule above; otherwise
+    `422 invalid_message`. Any other text, links included, is allowed; clients show it as plain
+    text and never make it clickable."""
     if not isinstance(value, str):
         raise ApiError(422, "invalid_message", "message must be a string.")
-    text = value.strip()
-    if len(text) > MAX_MESSAGE_CHARS or any(unicodedata.category(c) == "Cc" for c in text):
+    start, end = 0, len(value)
+    while start < end and _trimmed(value[start]):
+        start += 1
+    while end > start and _trimmed(value[end - 1]):
+        end -= 1
+    text = value[start:end]
+    if len(text) > MAX_MESSAGE_CHARS or any(
+        c in _REFUSED_CHARS or unicodedata.category(c) in _REFUSED_CATEGORIES for c in text
+    ):
         raise ApiError(
             422,
             "invalid_message",
             f"The message must be one line of at most {MAX_MESSAGE_CHARS} characters.",
         )
+    if all(unicodedata.category(c) in ("Cf", "Zs") for c in text):
+        return ""
     return text
 
 
 def set_message(conn: sqlite3.Connection, text: str) -> None:
+    """Does not commit: the caller owns the transaction (T-316)."""
     conn.execute("UPDATE server_runtime SET message = ? WHERE id = 1", (text,))
-    conn.commit()
