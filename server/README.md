@@ -497,6 +497,16 @@ should avoid double-setting):
   write lock throughout, so an unbounded one stalls every other write.
 - **Write contention** answers `503 server_busy` + `Retry-After`, not an opaque
   500, so a client knows retrying is worthwhile.
+- **JSON errors under the API prefix** — an unknown path is `404 not_found`, a
+  wrong method `405 method_not_allowed` (with `Allow`), and an unhandled fault
+  `500 internal_error` without details, never Flask's HTML pages or the web
+  client's index. All three are scoped to this blueprint: a co-mounted service's
+  routing errors and crashes stay its own. With `url_prefix` empty (the API at
+  the domain root) there is no prefix to scope the 404/405 to, and Flask's own
+  answer stands.
+- **Malformed text** — a lone UTF-16 surrogate in any request string, or JSON
+  nested too deeply to parse, is a `422`, not a 500 (on `/sync` naming the row
+  and field).
 - **`Cache-Control: no-store`** on every response except the ones that chose
   their own caching (hashed assets, the APK, the SPA index).
 

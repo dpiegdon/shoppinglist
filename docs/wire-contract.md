@@ -33,8 +33,21 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
 - **Congestion.** Any endpoint may answer `503 server_busy` with `Retry-After`
   when the database is momentarily locked by another writer. It is always safe to
   retry — nothing was applied.
-- **Input caps.** `email` ≤ 254 bytes and may not contain `:`; `password` ≤ 320
-  bytes (≥ 8); `device_label` ≤ 128 bytes. Over-cap values are `422`.
+- **Strings** are valid Unicode: every string in a request body is a sequence of
+  Unicode scalar values. JSON can spell a lone UTF-16 surrogate (`"\ud800"`);
+  such a string is refused with `422` — on `/sync` as `invalid_field` naming the
+  row and field (see "Sync"), in the server message as `invalid_message`, and
+  anywhere else as `invalid_request`. A body nested too deeply to parse is
+  `422 invalid_request` too.
+- **Input caps** count characters (Unicode code points), not bytes: an emoji
+  outside the Basic Multilingual Plane is one character. `email` ≤ 254 and may
+  not contain `:`; `password` ≤ 320 (≥ 8); `device_label` ≤ 128. Over-cap values
+  are `422`.
+- **Unknown paths.** Any path under the API root that no endpoint takes is
+  `404 not_found`; an endpoint called with a method it does not take is
+  `405 method_not_allowed` with an `Allow` header. Both are the JSON envelope
+  (after the protocol check, like every API request). An unhandled server fault
+  is `500 internal_error`, the envelope with no details.
 
 ## Protocol version
 
@@ -47,8 +60,9 @@ the same number).
 | The client sends | The server answers |
 |---|---|
 | nothing (every client built before 3.0.0) | `426 client_outdated` |
-| anything but a plain positive integer (`abc`, `3.0`, `-1`, `0`, an empty value) | `426 client_outdated` |
+| anything but a plain positive integer of ASCII digits (`abc`, `3.0`, `-1`, `0`, an empty value) | `426 client_outdated` |
 | a number below the server's | `426 client_outdated` |
+| more than 9 digits | `426 client_outdated` |
 | the server's number, or a higher one | the request is served normally |
 
 The refusal is the standard envelope plus the server's version:
@@ -353,8 +367,9 @@ nulling it later, is refused too.
 | `POST /login` | `{"email", "password", "device_label"?, "platform"?}` | `200 {"token", "account_id", "email", "is_admin"}` |
 | `POST /logout` | — | `204` |
 
-`device_label` is optional; an absent or null one is stored as `null` and shown
-blank wherever a session lists it (`GET /account/sessions`). `platform` is
+`device_label` is optional; an absent or null one is stored as `null`, and a
+client shows "Unknown device" wherever a session lists it
+(`GET /account/sessions`). `platform` is
 optional and selects the session's inactivity window; absent for older clients,
 which fall back to the long default. `is_admin` is derived from the instance's
 static `admin_emails` config and is never stored.
@@ -417,6 +432,9 @@ real sync path.
 `GET /lists/{id}/members` returns a uniform `403 not_a_member` whether or not the
 list exists, so a non-member cannot probe for existence. `initials` is resolved
 server-side so clients rendering the last-touched-by badge need no second lookup.
+Its `invites` are the list's live ones — not used, revoked or expired — oldest
+first: an expired invite can no longer be redeemed, so it is left out, as on
+`GET /invites/pending`.
 
 `GET /invites/pending` is the caller's inbox: every invite addressed to the
 account's email (compared case-insensitively) that `POST /invites/redeem` would
@@ -488,8 +506,8 @@ all live rows of any `full_lists`, plus the new cursor.
   keep syncing the rest, and retry it once the user edits it.
 - **Per-field input caps.** Neither client enforces these; a pushed value over
   its cap is refused (`422`, naming the `row_id` and `field`) rather than
-  silently truncated. Caps are on the raw value, in characters/bytes as
-  applicable:
+  silently truncated. Caps are on the raw value, in characters (code
+  points):
 
   | Field(s) | Cap |
   |---|---|
@@ -534,16 +552,30 @@ The server settings are two:
 - `message` (string, `""` when none) is the **server message** every client
   shows on its login page and above the lists: a scheduled downtime, "this
   server is full, please use another", and the like. It is durable and survives
-  a restart. The server trims it; after trimming it is at most 200 characters
-  and contains no control character (Unicode category Cc: no `\n`, `\r`, tab),
-  otherwise `422 invalid_message`. Anything else is allowed, links included:
-  clients show it as plain text and never make it clickable. `""` (or only
-  whitespace) clears it. The audit log records `admin.message_set` with the
-  length only, never the text, and `admin.message_cleared`.
+  a restart. The rule, which the server and both clients apply alike and
+  `shared-test-cases/server-message.json` pins:
+  1. Trim U+0009 (tab), U+000A, U+000D, U+0020 and every space separator (Zs,
+     e.g. U+00A0) from both ends — nothing else; a vertical tab, a form feed or a
+     line separator at an end is refused by step 2, not trimmed.
+  2. Refuse (`422 invalid_message`) any control character (Cc, so `\n`, `\r` and
+     tab inside the text too), U+2028 (Zl), U+2029 (Zp), the bidi embeddings and
+     overrides U+202A–U+202E, and any unpaired surrogate.
+  3. Count code points: more than 200 is refused.
+  4. If nothing but format characters (Cf) and space separators (Zs) remains,
+     the message is empty: it clears (`""` here, `null` on
+     `/registration-status` and `/sync`).
+
+  Everything else is allowed: the bidi isolates U+2066–U+2069, ZWJ/ZWNJ,
+  LRM/RLM and a byte-order mark stay as sent, and so do
+  links, which clients show as plain text and never make clickable. The audit log
+  records `admin.message_set` with the length only, never the text, and
+  `admin.message_cleared`.
 
 The `PUT` is partial: a key it leaves out keeps its current value, and a body
-with neither is `422 invalid_request`. Both keys are validated before either is
-written. Both responses carry both current values. The admin console's
+with neither is `422 invalid_request`, and so is an `allow_registration` that is
+not a JSON boolean. Both keys are validated before either is written, and both
+are written in one transaction: any error, `503 server_busy` included, applies
+neither. Both responses carry both current values. The admin console's
 registration toggle sends only `allow_registration`, its message field only
 `message`.
 The reset-password response carries the newly generated password, shown once to
@@ -690,6 +722,8 @@ share URL has no API segment and the web client must boot from the root.
 
 `/api/v1/*`, `/invite/<token>`, and `/shoppinglist.apk` all rank above the SPA
 catch-all — Werkzeug sorts routes by rule specificity, not registration order.
+Under the API root nothing reaches the web client: an unknown path is the JSON
+`404 not_found`, never the SPA page.
 
 ## Invite token format
 
@@ -730,23 +764,26 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 401 | `invalid_credentials` | Login with a wrong email or password — one answer for both. |
 | 403 | `invalid_credentials` | A re-entered password is wrong (account and admin operations that ask for one). |
 | 403 | `registration_disabled` | `POST /register` on an instance with registration off. |
-| 403 | `not_a_member` | A list the caller is not on, whether or not it exists — on a read (`GET /lists/{id}/members`, `full_lists` in `/sync`) or a vote. Never on a pushed row; see `unknown_list` below. |
+| 403 | `not_a_member` | A list the caller is not on, whether or not it exists — on a read (`GET /lists/{id}/members`, `full_lists` in `/sync`), a vote, inviting (`POST /lists/{id}/invites`), withdrawing an invite (`DELETE /invites/{id}`) or leaving (`POST /lists/{id}/leave`). Never on a pushed row; see `unknown_list` below. |
 | 403 | `not_admin` | An admin endpoint, called by someone who is not. |
 | 403 | `cannot_delete_self`, `cannot_delete_admin` | See "Admin". |
 | 404 | `account_not_found`, `session_not_found`, `invite_not_found` | The id names nothing. |
+| 404 | `not_found` | No endpoint under the API root takes this path. See "Conventions". |
 | 404 | `no_app_package` | Carries `protocol`, the server's `PROTOCOL_VERSION`. See "App package". |
+| 405 | `method_not_allowed` | The endpoint does not take this method; `Allow` names the ones it does. |
 | 409 | `email_taken` | Registering or changing to an address already in use. |
 | 409 | `invite_email_mismatch`, `invite_expired`, `invite_revoked`, `invite_used` | Redeeming an invite that is for someone else, too old, withdrawn, or already used. |
 | 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list". |
 | 410 | `full_resync_required` | See "Sync". |
 | 413 | `payload_too_large` | The request body is over the size cap (4 MB by default, `max_content_length`). |
-| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers a body that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`) — on any route that takes one. |
-| 422 | `invalid_message` | `PUT /admin/server-settings` `message` is not a string, or after trimming is over 200 characters or contains a control character. See "Admin". |
+| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers, on any route that takes a body, one that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`), one nested too deeply to parse, and one with a lone surrogate in any string (outside `/sync` and the server message; see "Conventions"); and on `PUT /admin/server-settings` an `allow_registration` that is not a boolean. |
+| 422 | `invalid_message` | `PUT /admin/server-settings` `message` is not a string or breaks the message rule: after trimming it holds a control character, a line or paragraph separator, a bidi embedding or override, or an unpaired surrogate, or is over 200 code points. See "Admin". |
 | 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
-| 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
+| 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole — a lone surrogate in `device_id` or a `full_lists` entry included. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
-| 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id`; or (`unknown_list`, on either an item's `list_id` or a LIST row's own id) names a list the caller cannot write to. |
-| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. `invalid_expense` covers every rule on a ledger entry: its `type` (one of `expense`, `income`, `transfer`, or absent for `expense`), the transfer's one sender and one different recipient, the positive amounts, the two maps summing alike, the date, the participants, and an entry on a list that is not a ledger. |
+| 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id` (a lone surrogate in the id makes it unusable, so that answer carries no `row_id`); or (`unknown_list`, on either an item's `list_id` or a LIST row's own id) names a list the caller cannot write to. |
+| 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). `invalid_field` also answers a lone surrogate in any string of a known field's clock — its value, a key inside it, or `updated_by`. A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. `invalid_expense` covers every rule on a ledger entry: its `type` (one of `expense`, `income`, `transfer`, or absent for `expense`), the transfer's one sender and one different recipient, the positive amounts, the two maps summing alike, the date, the participants, and an entry on a list that is not a ledger. |
 | 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
 | 426 | `client_outdated` | The request declared no `X-Client-Protocol`, a malformed one, or a version below the server's. Carries the server's `protocol`. See "Protocol version". |
+| 500 | `internal_error` | An unhandled server fault. No details; safe to report, not to retry blindly. |
 | 503 | `server_busy` | See "Conventions". Always safe to retry. |
