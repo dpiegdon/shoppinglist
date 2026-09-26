@@ -523,9 +523,11 @@ class SyncEngine @Inject constructor(
 
     /**
      * Detects rows in this pull that were last touched by a DIFFERENT account and reports them
-     * (T-65). Account-scoped, never device-scoped: a user's own second device must not
-     * self-notify, and neither must an edit by another account signed in on this phone to the
-     * same server. Deliberately silent when: this pass started from cursor 0 (initial hydration /
+     * (T-65). A row is nobody else's when this account touched it last (on any device, so a
+     * user's second device does not self-notify), or when its newest field clock was written by
+     * this device (T-318): that is an edit made here under another account signed in on this
+     * phone. The criterion is the device, not the other account, whose edits made anywhere else
+     * are reported. Deliberately silent when: this pass started from cursor 0 (initial hydration /
      * full resync — everything would look "new"), our own account id is unknown (pre-T-65
      * session — can't distinguish, so don't guess), or a row's last_touched_by is null (pre-T-64
      * row never re-touched). Reports RAW detections; pref filtering lives in the notifier impl.
@@ -534,12 +536,10 @@ class SyncEngine @Inject constructor(
         if (requestCursor == 0L) return
         val account = registry.get(accountId) ?: return
         val myAccountId = account.accountId ?: return
-        // Another login on this phone to the same server is this phone too: its own edit, pulled
-        // by this account from a list both share, is nobody else's (T-304).
-        val ownOnThisPhone = registry.snapshot()
-            .filter { it.id != accountId && it.isServer && it.serverUrl == account.serverUrl }
-            .mapNotNullTo(mutableSetOf(myAccountId)) { it.accountId }
-        val foreign = pulledItems.filter { it.lastTouchedBy != null && it.lastTouchedBy !in ownOnThisPhone }
+        val thisDevice = deviceIdProvider.get()
+        val foreign = pulledItems.filter {
+            it.lastTouchedBy != null && it.lastTouchedBy != myAccountId && it.newestClockDevice() != thisDevice
+        }
         if (foreign.isEmpty()) return
         val changes = foreign.groupBy { it.listId }.mapNotNull { (listServerId, items) ->
             // Resolved AFTER the merge loops, so a list first seen in this same pull is found.
@@ -553,6 +553,11 @@ class SyncEngine @Inject constructor(
         }
         notifier.notifyCollaboratorChanges(changes)
     }
+}
+
+/** The device that wrote this item's most recently updated field (T-318). */
+private fun ItemDto.newestClockDevice(): String = with(fields) {
+    listOf(name, category, stores, quantity, price, note, status, expense, deleted).maxBy { it.updatedAt }.updatedBy
 }
 
 /** [listServerId] is the server id of the item's list. */

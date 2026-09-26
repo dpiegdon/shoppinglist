@@ -617,21 +617,30 @@ class SyncEngineTest {
 
     // --- Collaborator-change detection (T-65) -----------------------------------------------
 
-    /** Wire-shaped item JSON, with the account-scoped top-level last_touched_by (T-64). */
-    private fun itemJson(id: String, listId: String, name: String, lastTouchedBy: String?): String {
+    /**
+     * Wire-shaped item JSON, with the account-scoped top-level last_touched_by (T-64). Every field
+     * clock is at 2000 by [device], except the ones in [newer], each at 3000 by its own device.
+     */
+    private fun itemJson(
+        id: String,
+        listId: String,
+        name: String,
+        lastTouchedBy: String?,
+        device: String = "other-device",
+        newer: Map<String, String> = emptyMap(),
+    ): String {
         val touchedBy = lastTouchedBy?.let { "\"$it\"" } ?: "null"
-        return """
-            {"id": "$id", "list_id": "$listId", "created_at": 2000, "last_touched_by": $touchedBy, "fields": {
-              "name": {"value": "$name", "updated_at": 2000, "updated_by": "other-device"},
-              "category": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
-              "stores": {"value": [], "updated_at": 2000, "updated_by": "other-device"},
-              "quantity": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
-              "price": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
-              "note": {"value": null, "updated_at": 2000, "updated_by": "other-device"},
-              "status": {"value": "todo", "updated_at": 2000, "updated_by": "other-device"},
-              "deleted": {"value": false, "updated_at": 2000, "updated_by": "other-device"}
-            }}
-        """.trimIndent()
+        fun clock(field: String, value: String): String {
+            val by = newer[field] ?: device
+            val at = if (field in newer) 3000 else 2000
+            return """"$field": {"value": $value, "updated_at": $at, "updated_by": "$by"}"""
+        }
+        val fields = listOf(
+            clock("name", "\"$name\""), clock("category", "null"), clock("stores", "[]"),
+            clock("quantity", "null"), clock("price", "null"), clock("note", "null"),
+            clock("status", "\"todo\""), clock("deleted", "false"),
+        ).joinToString(", ")
+        return """{"id": "$id", "list_id": "$listId", "created_at": 2000, "last_touched_by": $touchedBy, "fields": {$fields}}"""
     }
 
     private fun listJson(id: String, name: String): String = """
@@ -672,22 +681,31 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `an edit by another account on this phone and the same server is not reported (T-304)`() = runTest {
+    fun `another account's edit made elsewhere is reported, one pushed from this device is not (T-318)`() = runTest {
         pointAtServer()
         setOwnAccount("acc-me")
         setCursor(5)
-        // Signed out, so only the first account syncs; both still name their server-side account.
+        // A second login on this phone to the same server; signed out, so only the first syncs.
         accounts.add(server.url("/").toString(), id = "mate", token = null, accountId = "acc-mate")
-        // The same server-side id on another server is someone else there.
-        accounts.add("https://elsewhere.example.test/", id = "far", token = null, accountId = "acc-far")
+        val thisDevice = serverConfig.deviceId()
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(
                 syncResponseJson(
                     cursor = 6,
                     lists = listOf(listJson(id = "list-1", name = "Groceries")),
                     items = listOf(
+                        // The other account, on the web: reported.
                         itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-mate"),
-                        itemJson(id = "i2", listId = "list-1", name = "Eggs", lastTouchedBy = "acc-far"),
+                        // The other account, on this phone: its newest clock is this device's.
+                        itemJson(
+                            id = "i2", listId = "list-1", name = "Eggs", lastTouchedBy = "acc-mate",
+                            newer = mapOf("name" to thisDevice),
+                        ),
+                        // Written here once, edited elsewhere since: the newest clock decides.
+                        itemJson(
+                            id = "i3", listId = "list-1", name = "Bread", lastTouchedBy = "acc-mate",
+                            device = thisDevice, newer = mapOf("note" to "web-device"),
+                        ),
                     ),
                 ),
             ),
@@ -695,7 +713,7 @@ class SyncEngineTest {
 
         syncEngine.syncNow()
 
-        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 1)), notifier.calls.single())
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 2)), notifier.calls.single())
     }
 
     @Test
