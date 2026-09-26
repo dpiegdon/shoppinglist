@@ -159,7 +159,7 @@
     <string name="update_check_action">Buscar actualización</string>
     <string name="action_update">Actualizar</string>
     <string name="action_skip">Omitir</string>
-    <string name="settings_language">Idioma</string>
+    <string name="settings_language">Idioma (Language)</string>
     <string name="settings_account">Cuenta</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_theme_system">Sistema</string>

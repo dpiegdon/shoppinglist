@@ -162,7 +162,7 @@ export const ptBR: Catalog = {
   "list.showChecked": "Mostrar concluídos",
   "list.addItem": "Adicionar item",
 
-  "settings.language": "Idioma",
+  "settings.language": "Idioma (Language)",
   "settings.title": "Configurações",
   "settings.defaultCurrency": "Moeda padrão",
   "settings.currentlyCached": "Em cache agora: {currency}",

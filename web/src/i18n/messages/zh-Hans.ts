@@ -163,7 +163,7 @@ export const zhHans: Catalog = {
   "list.showChecked": "显示已完成",
   "list.addItem": "添加物品",
 
-  "settings.language": "语言",
+  "settings.language": "语言 (Language)",
   "settings.title": "设置",
   "settings.defaultCurrency": "默认货币",
   "settings.currentlyCached": "当前缓存：{currency}",

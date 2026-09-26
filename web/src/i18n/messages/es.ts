@@ -159,7 +159,7 @@ export const es: Catalog = {
   "list.showChecked": "Mostrar completados",
   "list.addItem": "Añadir artículo",
 
-  "settings.language": "Idioma",
+  "settings.language": "Idioma (Language)",
   "settings.title": "Ajustes",
   "settings.defaultCurrency": "Moneda predeterminada",
   "settings.currentlyCached": "En caché ahora: {currency}",

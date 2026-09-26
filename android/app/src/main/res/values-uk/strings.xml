@@ -159,7 +159,7 @@
     <string name="update_check_action">Перевірити оновлення</string>
     <string name="action_update">Оновити</string>
     <string name="action_skip">Пропустити</string>
-    <string name="settings_language">Мова</string>
+    <string name="settings_language">Мова (Language)</string>
     <string name="settings_account">Обліковий запис</string>
     <string name="settings_theme">Тема</string>
     <string name="settings_theme_system">Системна</string>

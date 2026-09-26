@@ -164,7 +164,7 @@ export const ja: Catalog = {
   "list.showChecked": "完了済みを表示",
   "list.addItem": "アイテムを追加",
 
-  "settings.language": "言語",
+  "settings.language": "言語 (Language)",
   "settings.title": "設定",
   "settings.defaultCurrency": "デフォルトの通貨",
   "settings.currentlyCached": "現在のキャッシュ：{currency}",

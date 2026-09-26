@@ -165,7 +165,7 @@ export const ar: Catalog = {
   "list.showChecked": "إظهار المكتملة",
   "list.addItem": "إضافة عنصر",
 
-  "settings.language": "اللغة",
+  "settings.language": "اللغة (Language)",
   "settings.title": "الإعدادات",
   "settings.defaultCurrency": "العملة الافتراضية",
   "settings.currentlyCached": "المخزَّن حاليًا: {currency}",

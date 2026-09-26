@@ -163,7 +163,7 @@ export const uk: Catalog = {
   "list.showChecked": "Показати виконані",
   "list.addItem": "Додати товар",
 
-  "settings.language": "Мова",
+  "settings.language": "Мова (Language)",
   "settings.title": "Налаштування",
   "settings.defaultCurrency": "Валюта за замовчуванням",
   "settings.currentlyCached": "Зараз у кеші: {currency}",

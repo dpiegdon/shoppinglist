@@ -164,7 +164,7 @@ export const de: Catalog = {
   "list.showChecked": "Erledigte anzeigen",
   "list.addItem": "Artikel hinzufügen",
 
-  "settings.language": "Sprache",
+  "settings.language": "Sprache (Language)",
   "settings.title": "Einstellungen",
   "settings.defaultCurrency": "Standardwährung",
   "settings.currentlyCached": "Aktuell zwischengespeichert: {currency}",

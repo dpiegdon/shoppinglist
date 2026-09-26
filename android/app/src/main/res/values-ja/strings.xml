@@ -159,7 +159,7 @@
     <string name="update_check_action">更新を確認</string>
     <string name="action_update">更新</string>
     <string name="action_skip">スキップ</string>
-    <string name="settings_language">言語</string>
+    <string name="settings_language">言語 (Language)</string>
     <string name="settings_account">アカウント</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_theme_system">システムに合わせる</string>

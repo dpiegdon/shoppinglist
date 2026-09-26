@@ -161,7 +161,7 @@ export const fr: Catalog = {
   "list.showChecked": "Afficher les articles faits",
   "list.addItem": "Ajouter un article",
 
-  "settings.language": "Langue",
+  "settings.language": "Langue (Language)",
   "settings.title": "Paramètres",
   "settings.defaultCurrency": "Devise par défaut",
   "settings.currentlyCached": "En cache actuellement : {currency}",
