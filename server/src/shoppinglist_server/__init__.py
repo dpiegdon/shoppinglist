@@ -2,7 +2,7 @@ import sqlite3
 from urllib.parse import urlsplit
 
 from flask import Blueprint, current_app, g, jsonify, request
-from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.exceptions import HTTPException, InternalServerError, RequestEntityTooLarge
 
 from . import audit
 from . import db as db_module
@@ -256,6 +256,10 @@ def create_blueprint(
     bp.register_error_handler(ApiError, _handle_api_error)
     bp.register_error_handler(RequestEntityTooLarge, _handle_payload_too_large)
     bp.register_error_handler(sqlite3.OperationalError, _handle_db_unavailable)
+    # An unhandled exception in one of our routes — or a handler above re-raising one — answers
+    # the JSON envelope, never Flask's HTML page (T-316). No details: the traceback goes to the
+    # log, not to the client.
+    bp.register_error_handler(InternalServerError, _handle_internal_error)
 
     @bp.after_request
     def _housekeeping(response):
@@ -324,7 +328,83 @@ def create_blueprint(
     register_sync_routes(bp)
     register_admin_routes(bp)
 
+    if bp.url_prefix and bp.url_prefix.strip("/"):
+        _register_unknown_api_path(bp)
+
     return bp
+
+
+# Every method a route of ours might take; HEAD comes with GET, OPTIONS with any.
+_ROUTABLE_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
+_UNKNOWN_API_PATH_ENDPOINT = "unknown_api_path"
+
+
+def _allowed_methods(unknown_endpoint: str) -> list[str]:
+    """The methods the API routes take at this request's path, as an `Allow` header lists them;
+    empty when none does. Asked of the URL map itself, so it cannot drift from the real routes,
+    and blind to the unknown-path route, which takes every method at every path."""
+    adapter = current_app.url_map.bind_to_environ(request.environ)
+    allowed = set()
+    for method in _ROUTABLE_METHODS:
+        try:
+            endpoint, _ = adapter.match(request.path, method=method)
+        except HTTPException:
+            continue
+        if endpoint != unknown_endpoint:
+            allowed.add(method)
+    if not allowed:
+        return []
+    if "GET" in allowed:
+        allowed.add("HEAD")
+    return sorted(allowed | {"OPTIONS"})
+
+
+def _register_unknown_api_path(bp: Blueprint) -> None:
+    """A JSON 404 or 405 for anything under the API prefix that no API route takes (T-316).
+
+    Routing errors never reach a blueprint's error handlers — Flask has not picked a blueprint
+    yet when the URL fails to match — and an app-wide handler would rewrite a co-mounted
+    service's errors too (T-250). So the prefix gets its own least-specific route instead: every
+    real API rule has more static segments and ranks above it, and it ranks above the web
+    client's site-root catch-all, which otherwise answered an unknown API path with index.html
+    and 200. Being one of our routes, it gets the protocol gate, the security headers and the
+    JSON envelope like any other. With no prefix (the API at the domain root) there is nothing
+    to scope it to, so it is not registered.
+    """
+    unknown_endpoint = f"{bp.name}.{_UNKNOWN_API_PATH_ENDPOINT}"
+    methods = [*_ROUTABLE_METHODS, "OPTIONS"]
+
+    # OPTIONS is handled by the view, not by Flask's automatic answer, so an OPTIONS for an
+    # unknown path is a 404 like any other method.
+    @bp.route(
+        "/",
+        defaults={"path": ""},
+        methods=methods,
+        strict_slashes=False,
+        provide_automatic_options=False,
+    )
+    @bp.route("/<path:path>", methods=methods, provide_automatic_options=False)
+    def unknown_api_path(path):
+        allowed = _allowed_methods(unknown_endpoint)
+        if not allowed:
+            raise ApiError(404, "not_found", "No such API endpoint.")
+        response = jsonify(
+            {"error": "method_not_allowed", "message": "This endpoint does not take this method."}
+        )
+        response.headers["Allow"] = ", ".join(allowed)
+        return response, 405
+
+    assert unknown_api_path.__name__ == _UNKNOWN_API_PATH_ENDPOINT
+
+    @bp.after_request
+    def _truthful_allow(response):
+        # Flask's automatic OPTIONS answer on a real route lists every method of every rule that
+        # matches the path — this route's too, which takes them all. List only the real ones.
+        if request.method == "OPTIONS" and request.endpoint != unknown_endpoint:
+            allowed = _allowed_methods(unknown_endpoint)
+            if allowed:
+                response.headers["Allow"] = ", ".join(allowed)
+        return response
 
 
 def _handle_api_error(err: ApiError):
@@ -372,6 +452,15 @@ def _handle_db_unavailable(err: sqlite3.OperationalError):
     )
     response.headers["Retry-After"] = "2"
     return response, 503
+
+
+def _handle_internal_error(err: InternalServerError):
+    # Flask has already logged the original exception (err.original_exception) with its
+    # traceback; the client gets the envelope and nothing that could leak internals.
+    return (
+        jsonify({"error": "internal_error", "message": "Something went wrong on the server."}),
+        500,
+    )
 
 
 def _add_security_headers(response):

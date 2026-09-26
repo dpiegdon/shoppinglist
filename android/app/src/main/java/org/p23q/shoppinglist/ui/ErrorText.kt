@@ -65,6 +65,12 @@ object ErrorText {
         // screen is what the user actually deals with, but a code the server can answer to any
         // request belongs in the table rather than falling back to "something went wrong".
         "client_outdated" to UiText.res(R.string.api_error_client_outdated),
+        // An unknown path or a wrong method under the API prefix (T-316): this build asked for
+        // something the server does not have, most likely because the server is older.
+        "not_found" to UiText.res(R.string.api_error_not_found),
+        "method_not_allowed" to UiText.res(R.string.api_error_method_not_allowed),
+        // An unhandled server fault (T-316): nothing the user can fix, so the generic sentence.
+        "internal_error" to UiText.res(R.string.api_error_internal_error),
     )
 
     /**

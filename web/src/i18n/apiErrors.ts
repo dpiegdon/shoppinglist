@@ -59,6 +59,12 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   // it — the client reloads, and then the full-page notice takes over — but a code the server can
   // answer to any request belongs in the table rather than falling back to "something went wrong".
   client_outdated: "apiError.clientOutdated",
+  // An unknown path or a wrong method under the API prefix (T-316): this client asked for
+  // something the server does not have, most likely because the server is older.
+  not_found: "apiError.notFound",
+  method_not_allowed: "apiError.methodNotAllowed",
+  // An unhandled server fault (T-316): nothing the user can fix, so the generic sentence.
+  internal_error: "apiError.internalError",
 };
 
 /**
