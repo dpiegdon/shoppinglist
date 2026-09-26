@@ -188,7 +188,7 @@ export interface RegistrationStatus {
   message?: string | null;
 }
 
-/** The server message's rule, mirrored from the server (T-315): trimmed, at most this many characters. */
+/** The server message's cap in code points (T-315); the whole rule is lib/serverMessage.ts (T-316). */
 export const SERVER_MESSAGE_MAX_LENGTH = 200;
 
 export interface Session {
