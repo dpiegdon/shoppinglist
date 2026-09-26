@@ -28,6 +28,7 @@ class LoginScreenTest {
 
     private class NoopAuthRepository(
         private val registrationAllowed: Boolean = true,
+        private val serverMessage: String? = null,
         private val onLogin: () -> Unit = {},
     ) : AuthRepository {
         override suspend fun register(serverUrl: String, email: String, password: String, allowSelfSignedCerts: Boolean) {}
@@ -36,7 +37,7 @@ class LoginScreenTest {
             return ""
         }
         override suspend fun removeAccount(accountId: String) {}
-        override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = registrationAllowed
+        override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean) = org.p23q.shoppinglist.core.api.RegistrationStatusResponse(registrationAllowed, serverMessage)
         override fun lastOpenedListId(): String? = null
     }
 
@@ -89,6 +90,28 @@ class LoginScreenTest {
 
         composeTestRule.onNodeWithText("Registration is disabled on this server.").assertExists()
         composeTestRule.onNodeWithText("New here? Register").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `the confirmed server's message shows under the address, as plain text with no link (T-315)`() {
+        val serverConfig = org.p23q.shoppinglist.data.FakeLastServerAddress(url = "https://lists.example.com/")
+        val message = "Full, please use https://other.example.com instead"
+        val viewModel = LoginViewModel(
+            NoopAuthRepository(serverMessage = message),
+            KnownAccounts { emptyList() },
+            serverConfig,
+            org.p23q.shoppinglist.data.PendingInviteHolder(),
+            org.p23q.shoppinglist.data.sync.FakeSyncTrigger(),
+        )
+
+        composeTestRule.setContent {
+            LoginScreen(onLoginSuccess = {}, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        val node = composeTestRule.onNodeWithTag("login-server-message", useUnmergedTree = true)
+        node.assertTextEquals(message)
+        assertNoLinks(node)
     }
 
     private fun submitAgainst(repository: AuthRepository, onDownload: (String) -> Unit = {}) {
@@ -177,5 +200,16 @@ class LoginScreenTest {
         composeTestRule.onNodeWithTag("login-cuneiform", useUnmergedTree = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("New here? Register").assertExists()
         composeTestRule.onNodeWithText("Log in").assertExists()
+    }
+}
+
+/** The node's text carries no link and no URL annotation: nothing in it is tappable (T-315). */
+internal fun assertNoLinks(node: androidx.compose.ui.test.SemanticsNodeInteraction) {
+    val texts = node.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text]
+    assertEquals(1, texts.size)
+    for (text in texts) {
+        assertEquals("link annotations", emptyList<Any>(), text.getLinkAnnotations(0, text.length))
+        @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+        assertEquals("URL annotations", emptyList<Any>(), text.getUrlAnnotations(0, text.length))
     }
 }

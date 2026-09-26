@@ -256,6 +256,14 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+/** Adds accounts.serverMessage (T-315): the server's one-line message as the last sync carried
+ *  it, so the overview shows it offline. Null (none) for every existing account until it syncs. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE accounts ADD COLUMN serverMessage TEXT")
+    }
+}
+
 /** Room's own SQL, from core/schemas/…/10.json. */
 private const val CREATE_LISTS_10 =
     "CREATE TABLE IF NOT EXISTS `lists` (`localId` TEXT NOT NULL, `serverId` TEXT NOT NULL, " +
@@ -315,7 +323,7 @@ object DatabaseModule {
         Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10,
+                MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10, MIGRATION_10_11,
             )
             .build()
 

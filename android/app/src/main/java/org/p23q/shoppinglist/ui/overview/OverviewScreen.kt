@@ -54,6 +54,7 @@ import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.ui.ServerMessage
 import org.p23q.shoppinglist.ui.SyncStatusBar
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.accountName
@@ -107,7 +108,7 @@ fun OverviewScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 val sections = state.sections
-                val hasBanner = sections.any { accountBanner(it.account) != null }
+                val hasBanner = sections.any { accountBanner(it.account) != null || it.account.serverMessage != null }
                 if (state.lists.isEmpty() && state.invites.isEmpty() && !hasBanner) {
                     // Scrollable so the pull gesture still fires with no lists to scroll.
                     Box(
@@ -128,6 +129,16 @@ fun OverviewScreen(
                             if (state.several) {
                                 item(key = "account-" + account.id) {
                                     AccountHeader(account, first = index == 0)
+                                }
+                            }
+                            // The server's message (T-315): at the top, or under the account's heading.
+                            account.serverMessage?.let { message ->
+                                item(key = "server-message-" + account.id) {
+                                    ServerMessage(
+                                        message,
+                                        tag = "server-message-" + account.id,
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                    )
                                 }
                             }
                             accountBanner(account)?.let { banner ->

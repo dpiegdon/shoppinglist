@@ -88,6 +88,7 @@ class AppDbMigrationTest {
     private val migrations = listOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
         MIGRATION_7_8, Migration8To9(FakeLegacySession()), MIGRATION_9_10,
+        MIGRATION_10_11,
     )
 
     private fun execWithArgs(connection: SQLiteConnection, sql: String, bindArgs: Array<*>) {
@@ -564,7 +565,7 @@ class AppDbMigrationTest {
     // ---- 9 to 10: phone-local ids (T-299) ----------------------------------------------
 
     /** The schema this build's database declares; the newest exported schema. */
-    private val LATEST = 10
+    private val LATEST = 11
 
     /** A version-9 database: [seedV8]'s list and item, owned by the migrated signed-in account. */
     private fun seedV9(connection: SQLiteConnection, orphans: Boolean = false) {
@@ -753,8 +754,8 @@ class AppDbMigrationTest {
     }
 
     @Test
-    fun `migrating 1 to 10 lands on the same schema and keeps the rows`() {
-        val connection = openFresh("v1-to-10")
+    fun `migrating 1 to the latest version lands on the same schema and keeps the rows`() {
+        val connection = openFresh("v1-to-latest")
         try {
             seedV1(connection)
             runMigrations(connection, from = 1, to = LATEST)
@@ -766,6 +767,28 @@ class AppDbMigrationTest {
             assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE localId = 'l1'"))
             assertEquals("l1", readText(connection, "SELECT listLocalId FROM items WHERE localId = 'i1'"))
             assertEquals(readText(connection, "SELECT id FROM accounts"), readText(connection, "SELECT accountId FROM items"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 10 to 11 adds the server message, none for every account, and keeps the rows (T-315)`() {
+        val connection = openFresh("v10")
+        try {
+            seedV9(connection)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+            MIGRATION_10_11.migrate(supportFacade(connection))
+
+            for (table in listOf("accounts", "lists", "items")) {
+                assertEquals(table, expectedColumns(table, 11), actualColumns(connection, table))
+                assertEquals(table, expectedIndices(table, 11), actualIndices(connection, table))
+                assertEquals(table, expectedForeignKeys(table, 11), actualForeignKeys(connection, table))
+            }
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM accounts"))
+            assertNull(readText(connection, "SELECT serverMessage FROM accounts"))
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE localId = 'l1'"))
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM items"))
         } finally {
             connection.close()
         }

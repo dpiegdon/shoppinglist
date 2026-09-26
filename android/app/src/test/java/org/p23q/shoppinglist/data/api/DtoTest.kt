@@ -15,6 +15,9 @@ import org.p23q.shoppinglist.core.api.SyncChanges
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.api.SyncResponse
 import org.p23q.shoppinglist.core.api.UpdateSettingsRequest
+import org.p23q.shoppinglist.core.api.RegistrationStatusResponse
+import org.p23q.shoppinglist.core.api.ServerSettingsDto
+import org.p23q.shoppinglist.core.api.ServerSettingsUpdate
 
 /**
  * DTO shapes are checked against fully-expanded fixtures of the Wire Contract's Item/List
@@ -224,5 +227,34 @@ class DtoTest {
 
         assertEquals("full_resync_required", envelope.error)
         assertEquals("cursor is stale", envelope.message)
+    }
+
+    // T-315: PUT /admin/server-settings is partial. Through the app's real Json, a setting the
+    // request does not name is left out of the body, so the server leaves it unchanged.
+    @Test
+    fun `ServerSettingsUpdate sends only the setting it names (T-315)`() {
+        val appJson = JsonModule.provideJson()
+
+        assertEquals("""{"message":""}""", appJson.encodeToString(ServerSettingsUpdate.serializer(), ServerSettingsUpdate(message = "")))
+        assertEquals(
+            """{"allow_registration":false}""",
+            appJson.encodeToString(ServerSettingsUpdate.serializer(), ServerSettingsUpdate(allowRegistration = false)),
+        )
+    }
+
+    @Test
+    fun `the server message decodes from each endpoint, and its absence is none (T-315)`() {
+        val sync = json.decodeFromString<SyncResponse>(
+            """{"cursor": 3, "changes": {"lists": [], "items": []}, "server_message": "Down Sunday"}""",
+        )
+        assertEquals("Down Sunday", sync.serverMessage)
+        assertEquals(null, json.decodeFromString<SyncResponse>("""{"cursor": 3, "changes": {"lists": [], "items": []}}""").serverMessage)
+
+        assertEquals("Hi", json.decodeFromString<RegistrationStatusResponse>("""{"allow_registration": true, "message": "Hi"}""").message)
+        assertEquals(null, json.decodeFromString<RegistrationStatusResponse>("""{"allow_registration": true, "message": null}""").message)
+        assertEquals(null, json.decodeFromString<RegistrationStatusResponse>("""{"allow_registration": false}""").message)
+
+        assertEquals("Hi", json.decodeFromString<ServerSettingsDto>("""{"allow_registration": true, "message": "Hi"}""").message)
+        assertEquals("", json.decodeFromString<ServerSettingsDto>("""{"allow_registration": true}""").message)
     }
 }

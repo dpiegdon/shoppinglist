@@ -1002,6 +1002,34 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `each account keeps the server message of its own server's last sync response (T-315)`() = withSecondServer { other ->
+        pointAtServer()
+        secondAccount(other)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(
+            """{"cursor": 7, "changes": {"lists": [], "items": []}, "server_message": "Down Sunday 10:00"}""",
+        ))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(
+            """{"cursor": 8, "changes": {"lists": [], "items": []}, "server_message": null}""",
+        ))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertEquals("Down Sunday 10:00", accounts.registry.get(TEST_ACCOUNT_ID)!!.serverMessage)
+        assertNull(accounts.registry.get("second")!!.serverMessage)
+
+        // The next answer replaces it; one without the field (an older server) clears it.
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        other.enqueue(MockResponse().setResponseCode(200).setBody(
+            """{"cursor": 9, "changes": {"lists": [], "items": []}, "server_message": "Full, please use another"}""",
+        ))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertNull(accounts.registry.get(TEST_ACCOUNT_ID)!!.serverMessage)
+        assertEquals("Full, please use another", accounts.registry.get("second")!!.serverMessage)
+    }
+
+    @Test
     fun `one account failing does not stop the next, and the result is the worst of them`() = withSecondServer { other ->
         pointAtServer()
         secondAccount(other)

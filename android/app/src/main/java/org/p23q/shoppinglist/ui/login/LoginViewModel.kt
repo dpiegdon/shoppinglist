@@ -75,6 +75,11 @@ data class LoginUiState(
      *  up-front check says otherwise, so a slow or failed check never blocks registering. */
     val registrationAllowed: Boolean = true,
     /**
+     * The confirmed server's one-line message (T-315), from the same up-front check; null when it
+     * has none or has not answered. Shown, never stored: the account row keeps the synced one.
+     */
+    val serverMessage: String? = null,
+    /**
      * The app package the server offers, set with the "app too old" message (T-298): the server
      * speaks a newer protocol than this build, so an update is the only way in.
      */
@@ -160,8 +165,9 @@ class LoginViewModel @Inject constructor(
 
     /**
      * Asks the form's server up front whether it is accepting new accounts (T-276), matching the
-     * web login page. Best-effort — see [AuthRepository.registrationAllowed] — so any failure just
-     * leaves the toggle enabled rather than surfacing an error nobody asked about.
+     * web login page, and for its server message (T-315). Best-effort — see
+     * [AuthRepository.registrationStatus] — so any failure just leaves the toggle enabled and shows
+     * no message, rather than surfacing an error nobody asked about.
      *
      * Only for an address the user has confirmed, by submitting it on this device (T-287): never
      * the default on a fresh install, and never an address an invite prefilled (T-300) until the
@@ -172,12 +178,16 @@ class LoginViewModel @Inject constructor(
         val url = _uiState.value.serverUrl
         val confirmed = serverConfig.lastServerUrl() ?: return@launch
         if (!sameServer(url, confirmed)) return@launch
-        val allowed = runCatching {
-            authRepository.registrationAllowed(url, _uiState.value.allowSelfSignedCerts)
-        }.getOrDefault(true)
+        val status = runCatching {
+            authRepository.registrationStatus(url, _uiState.value.allowSelfSignedCerts)
+        }.getOrNull()
+        val allowed = status?.allowRegistration ?: true
+        val message = status?.message?.takeIf { it.isNotBlank() }
         registrationCheckedUrl = url
         // Unless the user has typed another address meanwhile: the answer is not about that one.
-        _uiState.update { if (sameServer(it.serverUrl, url)) it.copy(registrationAllowed = allowed) else it }
+        _uiState.update {
+            if (sameServer(it.serverUrl, url)) it.copy(registrationAllowed = allowed, serverMessage = message) else it
+        }
     }
 
     private companion object {
@@ -202,6 +212,7 @@ class LoginViewModel @Inject constructor(
                 downloadUrl = null,
                 // The answer was about another address.
                 registrationAllowed = it.registrationAllowed || registrationCheckedUrl?.let { url -> !sameServer(value, url) } == true,
+                serverMessage = it.serverMessage.takeIf { registrationCheckedUrl?.let { url -> sameServer(value, url) } == true },
             )
         }
     }

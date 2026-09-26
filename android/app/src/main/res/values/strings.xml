@@ -14,6 +14,7 @@
     <!-- generic actions, reused across screens -->
     <string name="action_cancel">Cancel</string>
     <string name="action_ok">OK</string>
+    <string name="action_clear">Clear</string>
     <string name="action_save">Save</string>
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
@@ -299,6 +300,9 @@
     <string name="admin_registration">Registration</string>
     <string name="admin_allow_new_accounts">Allow new accounts</string>
     <string name="admin_registration_help">Runtime override — resets to the server\'s configured default on restart.</string>
+    <string name="admin_server_message">Server message</string>
+    <string name="admin_server_message_help">One line, shown to everyone on the login page and above their lists.</string>
+    <string name="admin_server_message_invalid">The message must be one line of at most 200 characters.</string>
     <string name="admin_is_admin_suffix"> (admin)</string>
     <string name="admin_users">Users</string>
     <string name="admin_show_users">Show registered users</string>

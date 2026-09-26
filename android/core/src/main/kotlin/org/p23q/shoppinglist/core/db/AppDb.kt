@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [AccountEntity::class, ListEntity::class, ItemEntity::class],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 abstract class AppDb : RoomDatabase() {

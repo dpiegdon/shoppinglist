@@ -46,6 +46,11 @@ data class AccountEntity(
     val allowSelfSignedCerts: Boolean = false,
     /** The user's order of accounts; lower first. */
     val sortOrder: Int = 0,
+    /**
+     * The server's one-line message (T-315), as the last `/sync` response carried it; null when
+     * none. Kept so the overview shows it offline.
+     */
+    val serverMessage: String? = null,
 ) {
     val isServer: Boolean get() = kind == KIND_SERVER
 

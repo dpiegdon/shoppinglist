@@ -8,7 +8,11 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTextReplacement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.AnnotatedString
@@ -30,10 +34,13 @@ import org.junit.runner.RunWith
 import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.testApi
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 
+/** Tall enough for the whole console, the server message field included (T-315). */
 @RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w411dp-h891dp")
 class AdminScreenTest {
 
     @get:Rule
@@ -225,6 +232,66 @@ class AdminScreenTest {
         assertEquals(listOf("NEWpw123456"), copied)
         composeTestRule.onNodeWithText("Copied!").assertExists()
 
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `the server message field shows the current text, checks it inline, and Save and Clear send it (T-315)`() = runBlocking<Unit> {
+        val puts = CopyOnWriteArrayList<String>()
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val path = request.path ?: ""
+                return when {
+                    request.method == "GET" && path.endsWith("/admin/server-settings") ->
+                        MockResponse().setResponseCode(200).setBody("""{"allow_registration":true,"message":"Down Sunday"}""")
+                    request.method == "PUT" && path.endsWith("/admin/server-settings") -> {
+                        val body = request.body.readUtf8()
+                        puts.add(body)
+                        val sent = Json.parseToJsonElement(body).jsonObject["message"]!!.jsonPrimitive.content
+                        MockResponse().setResponseCode(200).setBody("""{"allow_registration":true,"message":"$sent"}""")
+                    }
+                    else -> MockResponse().setResponseCode(404)
+                }
+            }
+        }
+        server.start()
+        val serverConfig = TestServerAddress()
+        serverConfig.setServerUrl(server.url("/").toString())
+        val viewModel = AdminViewModel(
+            testApi(Json { ignoreUnknownKeys = true }, token = { "tok" }) { serverConfig.url },
+            serverAccountId = "admin-1",
+        )
+        composeTestRule.setContent { AdminScreen(viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.serverMessage != null
+        }
+
+        composeTestRule.onNodeWithText("Server message").assertExists()
+        composeTestRule.onNodeWithText("Down Sunday").assertExists()
+        composeTestRule.onNodeWithText("One line, shown to everyone on the login page and above their lists.").assertExists()
+
+        // Over 200 characters: the rule's sentence at the field, and nothing sent.
+        composeTestRule.onNodeWithTag("admin-server-message").performTextReplacement("x".repeat(201))
+        composeTestRule.onNodeWithTag("admin-server-message-save").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("The message must be one line of at most 200 characters.").assertExists()
+        assertEquals(emptyList<String>(), puts)
+
+        composeTestRule.onNodeWithTag("admin-server-message").performTextReplacement("Full, use another")
+        composeTestRule.onNodeWithTag("admin-server-message-save").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.serverMessage == "Full, use another"
+        }
+        composeTestRule.onNodeWithTag("admin-server-message-clear").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.serverMessage == ""
+        }
+
+        assertEquals(listOf("""{"message":"Full, use another"}""", """{"message":""}"""), puts.toList())
         viewModel.viewModelScope.cancel()
     }
 }

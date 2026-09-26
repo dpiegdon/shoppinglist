@@ -132,8 +132,32 @@ data class AdminUserDto(
 @Serializable
 data class AdminUsersResponse(val users: List<AdminUserDto>)
 
+/**
+ * GET and PUT /admin/server-settings: both current values. [message] is the one-line server
+ * message every client shows (T-315); "" when none.
+ */
 @Serializable
-data class ServerSettingsDto(@SerialName("allow_registration") val allowRegistration: Boolean)
+data class ServerSettingsDto(
+    @SerialName("allow_registration") val allowRegistration: Boolean,
+    val message: String = "",
+)
+
+/**
+ * PUT /admin/server-settings is partial (T-315): a null field is left out of the wire (this app's
+ * Json has encodeDefaults=false) and the server leaves that setting unchanged. At least one is set.
+ */
+@Serializable
+data class ServerSettingsUpdate(
+    @SerialName("allow_registration") val allowRegistration: Boolean? = null,
+    val message: String? = null,
+)
+
+/** GET /registration-status (T-276): unauthenticated; [message] is the server message, null when none (T-315). */
+@Serializable
+data class RegistrationStatusResponse(
+    @SerialName("allow_registration") val allowRegistration: Boolean,
+    val message: String? = null,
+)
 
 /** Step-up: the ADMIN's own password, for a destructive admin action. */
 @Serializable
@@ -265,6 +289,8 @@ data class SyncRequest(
 data class SyncResponse(
     val cursor: Long,
     val changes: SyncChanges,
+    /** The server message (T-315), on every response; null when none, or from a server before it. */
+    @SerialName("server_message") val serverMessage: String? = null,
 )
 
 /**

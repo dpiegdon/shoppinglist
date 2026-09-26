@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -258,6 +260,57 @@ class OverviewScreenTest {
         composeTestRule.onNodeWithText("Hardware").assertExists()
         composeTestRule.onAllNodesWithTag("account-header-${local.id}").assertCountEquals(0)
         composeTestRule.onAllNodesWithText("On this phone").assertCountEquals(0)
+    }
+
+    // ---- the server message (T-315) ----------------------------------------------------
+
+    private fun top(tag: String) =
+        composeTestRule.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot().top
+
+    private fun topOfText(text: String) =
+        composeTestRule.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot().top
+
+    @Test
+    fun `one account shows its server's message above the lists, as plain text (T-315)`() = runBlocking<Unit> {
+        val message = "Maintenance Sunday, see https://status.example.com"
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverMessage = message) }
+        show()
+
+        val node = composeTestRule.onNodeWithTag("server-message-$TEST_ACCOUNT_ID", useUnmergedTree = true)
+        node.assertTextEquals(message)
+        org.p23q.shoppinglist.ui.login.assertNoLinks(node)
+        assertTrue("above the lists", top("server-message-$TEST_ACCOUNT_ID") < topOfText("Groceries"))
+    }
+
+    @Test
+    fun `with several accounts each server's message sits under that account's heading (T-315)`() = runBlocking<Unit> {
+        addWorkAccount()
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverMessage = "Home is moving") }
+        accounts.registry.update("work") { it.copy(serverMessage = "Work is full") }
+        show()
+
+        composeTestRule.onNodeWithTag("server-message-$TEST_ACCOUNT_ID", useUnmergedTree = true).assertTextEquals("Home is moving")
+        composeTestRule.onNodeWithTag("server-message-work", useUnmergedTree = true).assertTextEquals("Work is full")
+        val home = top("account-header-$TEST_ACCOUNT_ID")
+        val work = top("account-header-work")
+        val (first, second) = if (home < work) TEST_ACCOUNT_ID to "work" else "work" to TEST_ACCOUNT_ID
+        val firstList = if (first == "work") "Office supplies" else "Groceries"
+        val secondList = if (second == "work") "Office supplies" else "Groceries"
+        assertTrue(top("account-header-$first") < top("server-message-$first"))
+        assertTrue(top("server-message-$first") < topOfText(firstList))
+        assertTrue(topOfText(firstList) < top("account-header-$second"))
+        assertTrue(top("account-header-$second") < top("server-message-$second"))
+        assertTrue(top("server-message-$second") < topOfText(secondList))
+    }
+
+    @Test
+    fun `an account whose server has no message shows none (T-315)`() = runBlocking<Unit> {
+        addWorkAccount()
+        accounts.registry.update("work") { it.copy(serverMessage = "Work is full") }
+        show()
+
+        composeTestRule.onAllNodesWithTag("server-message-$TEST_ACCOUNT_ID", useUnmergedTree = true).assertCountEquals(0)
+        composeTestRule.onAllNodesWithTag("server-message-work", useUnmergedTree = true).assertCountEquals(1)
     }
 }
 

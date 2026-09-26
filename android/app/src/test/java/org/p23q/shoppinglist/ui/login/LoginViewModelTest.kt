@@ -32,6 +32,7 @@ class LoginViewModelTest {
         private val onLogin: suspend (String, String) -> Unit = { _, _ -> },
         private val lastOpened: String? = null,
         private val registrationAllowed: Boolean = true,
+        private val serverMessage: String? = null,
     ) : AuthRepository {
         var registerCalled = false
         var loginCalled = false
@@ -56,9 +57,9 @@ class LoginViewModelTest {
 
         override suspend fun removeAccount(accountId: String) {}
 
-        override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean {
+        override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean): org.p23q.shoppinglist.core.api.RegistrationStatusResponse {
             registrationChecks++
-            return registrationAllowed
+            return org.p23q.shoppinglist.core.api.RegistrationStatusResponse(registrationAllowed, serverMessage)
         }
 
         override fun lastOpenedListId(): String? = lastOpened
@@ -213,6 +214,34 @@ class LoginViewModelTest {
         val state = viewModel.uiState.first { !it.registrationAllowed }
 
         assertFalse(state.registrationAllowed)
+    }
+
+    @Test
+    fun `the confirmed server's message comes with the registration check, and goes with another address (T-315)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            saveServerUrl("https://lists.example.com/")
+            val repo = FakeAuthRepository(serverMessage = "Down Sunday 10:00")
+            val viewModel = LoginViewModel(repo, noAccount(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+            assertEquals("Down Sunday 10:00", viewModel.uiState.first { it.serverMessage != null }.serverMessage)
+
+            // Another address: the message was about the old one.
+            viewModel.onServerUrlChange("https://other.example.com/")
+            assertNull(viewModel.uiState.value.serverMessage)
+            // Back to the confirmed one: it is said again.
+            viewModel.onServerUrlChange("https://lists.example.com/")
+            viewModel.refreshRegistrationStatus().join()
+            assertEquals("Down Sunday 10:00", viewModel.uiState.value.serverMessage)
+        }
+
+    @Test
+    fun `a server with no message, or one that cannot answer, shows none (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
+        saveServerUrl("https://lists.example.com/")
+        val viewModel = LoginViewModel(FakeAuthRepository(serverMessage = ""), noAccount(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+
+        viewModel.refreshRegistrationStatus().join()
+
+        assertNull(viewModel.uiState.value.serverMessage)
     }
 
     @Test

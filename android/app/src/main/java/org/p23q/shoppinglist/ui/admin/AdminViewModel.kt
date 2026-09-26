@@ -17,7 +17,7 @@ import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.api.AdminPasswordRequest
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.core.api.ApiException
-import org.p23q.shoppinglist.core.api.ServerSettingsDto
+import org.p23q.shoppinglist.core.api.ServerSettingsUpdate
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
@@ -29,6 +29,12 @@ data class AdminUiState(
     val users: List<AdminUserDto>? = null,
     /** null = not loaded yet. */
     val allowRegistration: Boolean? = null,
+    /** The server message as the server holds it (T-315), "" for none; null = not loaded yet. */
+    val serverMessage: String? = null,
+    /** What the message field holds; the loaded message until the admin types. */
+    val messageDraft: String = "",
+    /** Complaint shown AT the message field: the one-line rule, before anything is sent, or the server's 422. */
+    val messageError: UiText? = null,
     /** The admin's own password, entered once for step-up on reset/delete (T-107). */
     val password: String = "",
     /**
@@ -78,7 +84,14 @@ class AdminViewModel internal constructor(
     fun loadSettings(): Job = viewModelScope.launch {
         try {
             val settings = api().adminGetServerSettings()
-            _uiState.update { it.copy(allowRegistration = settings.allowRegistration, error = null) }
+            _uiState.update {
+                it.copy(
+                    allowRegistration = settings.allowRegistration,
+                    serverMessage = settings.message,
+                    messageDraft = settings.message,
+                    error = null,
+                )
+            }
         } catch (e: ApiException) {
             _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
         } catch (e: IOException) {
@@ -120,10 +133,49 @@ class AdminViewModel internal constructor(
         val current = _uiState.value.allowRegistration ?: return null
         return viewModelScope.launch {
             try {
-                val result = api().adminSetServerSettings(ServerSettingsDto(!current))
+                // The toggle sends only its own setting; the message is left as it is (T-315).
+                val result = api().adminSetServerSettings(ServerSettingsUpdate(allowRegistration = !current))
                 _uiState.update { it.copy(allowRegistration = result.allowRegistration, error = null) }
             } catch (e: ApiException) {
                 _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_update_failed)) }
+            } catch (e: IOException) {
+                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
+            }
+        }
+    }
+
+    fun onMessageChange(value: String) = _uiState.update { it.copy(messageDraft = value, messageError = null) }
+
+    /** Saves the field's text as the server message (T-315); checked here first, as the server checks it. */
+    fun saveMessage(): Job? = sendMessage(_uiState.value.messageDraft.trim())
+
+    /** Clear is saving "": no message. */
+    fun clearMessage(): Job? = sendMessage("")
+
+    private fun sendMessage(message: String): Job? {
+        if (_uiState.value.serverMessage == null) return null
+        if (!isValidServerMessage(message)) {
+            _uiState.update { it.copy(messageError = UiText.res(R.string.admin_server_message_invalid)) }
+            return null
+        }
+        return viewModelScope.launch {
+            try {
+                val result = api().adminSetServerSettings(ServerSettingsUpdate(message = message))
+                _uiState.update {
+                    it.copy(
+                        allowRegistration = result.allowRegistration,
+                        serverMessage = result.message,
+                        messageDraft = result.message,
+                        messageError = null,
+                        error = null,
+                    )
+                }
+            } catch (e: ApiException) {
+                if (e.code == "invalid_message") {
+                    _uiState.update { it.copy(messageError = UiText.res(R.string.admin_server_message_invalid)) }
+                } else {
+                    _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_update_failed)) }
+                }
             } catch (e: IOException) {
                 _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
             }
@@ -164,6 +216,17 @@ class AdminViewModel internal constructor(
         }
     }
 }
+
+/**
+ * The server's rule for its message (T-315), applied to the already trimmed text: at most
+ * [SERVER_MESSAGE_MAX] characters (code points, as the server counts them) and one line, with no
+ * control character at all (Unicode category Cc). "" is valid: no message.
+ */
+internal fun isValidServerMessage(trimmed: String): Boolean =
+    trimmed.codePointCount(0, trimmed.length) <= SERVER_MESSAGE_MAX &&
+        trimmed.codePoints().noneMatch { Character.getType(it) == Character.CONTROL.toInt() }
+
+internal const val SERVER_MESSAGE_MAX = 200
 
 /** A server URL as the admin console's app bar shows it: `p23q.org/shopping`, no scheme or final slash. */
 internal fun serverShown(serverUrl: String): String = serverUrl.substringAfter("://").removeSuffix("/")

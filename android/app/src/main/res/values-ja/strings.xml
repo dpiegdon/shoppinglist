@@ -12,6 +12,7 @@
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_ok">OK</string>
+    <string name="action_clear">クリア</string>
     <string name="action_save">保存</string>
     <string name="action_add">追加</string>
     <string name="action_delete">削除</string>
@@ -238,6 +239,9 @@
     <string name="admin_registration">新規登録</string>
     <string name="admin_allow_new_accounts">新規アカウントを許可</string>
     <string name="admin_registration_help">一時的な上書きです — 再起動するとサーバーの設定値に戻ります。</string>
+    <string name="admin_server_message">サーバーメッセージ</string>
+    <string name="admin_server_message_help">1行。ログインページと各自のリストの上に、全員に表示されます。</string>
+    <string name="admin_server_message_invalid">メッセージは200文字以内の1行にしてください。</string>
     <string name="admin_is_admin_suffix">（管理者）</string>
     <string name="admin_users">ユーザー</string>
     <string name="admin_show_users">登録済みユーザーを表示</string>

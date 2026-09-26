@@ -12,6 +12,7 @@
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_ok">حسنًا</string>
+    <string name="action_clear">مسح</string>
     <string name="action_save">حفظ</string>
     <string name="action_add">إضافة</string>
     <string name="action_delete">حذف</string>
@@ -238,6 +239,9 @@
     <string name="admin_registration">التسجيل</string>
     <string name="admin_allow_new_accounts">السماح بحسابات جديدة</string>
     <string name="admin_registration_help">تجاوز مؤقت — يعود إلى الإعداد الافتراضي للخادم عند إعادة التشغيل.</string>
+    <string name="admin_server_message">رسالة الخادم</string>
+    <string name="admin_server_message_help">سطر واحد يظهر للجميع في صفحة تسجيل الدخول وفوق قوائمهم.</string>
+    <string name="admin_server_message_invalid">يجب أن تكون الرسالة سطرًا واحدًا لا يتجاوز 200 حرف.</string>
     <string name="admin_is_admin_suffix"> (مسؤول)</string>
     <string name="admin_users">المستخدمون</string>
     <string name="admin_show_users">إظهار المستخدمين المسجّلين</string>

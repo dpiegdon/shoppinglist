@@ -42,6 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.ServerMessage
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.LocalAreaNote
@@ -129,6 +130,11 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
         )
+        // The confirmed server's message (T-315), under the address it is about.
+        state.serverMessage?.let { message ->
+            Spacer(Modifier.height(8.dp))
+            ServerMessage(message, tag = "login-server-message")
+        }
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(

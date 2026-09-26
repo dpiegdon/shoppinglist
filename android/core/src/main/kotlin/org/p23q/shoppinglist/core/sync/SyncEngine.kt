@@ -375,7 +375,10 @@ class SyncEngine @Inject constructor(
         // The pull that follows a re-base is this one: what it did not bring back is gone.
         rebasedLocalIds.remove(accountId)
 
-        registry.update(accountId) { it.copy(syncCursor = response.cursor) }
+        // The server message rides on every response (T-315); kept on the row so it shows offline.
+        // A server that predates it sends none, which clears whatever an older answer left.
+        val serverMessage = response.serverMessage?.takeIf { it.isNotBlank() }
+        registry.update(accountId) { it.copy(syncCursor = response.cursor, serverMessage = serverMessage) }
 
         ensureAccountId(accountId)
         ensureServerProtocol(accountId)

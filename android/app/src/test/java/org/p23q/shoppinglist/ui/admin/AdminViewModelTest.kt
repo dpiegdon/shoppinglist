@@ -5,6 +5,11 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -171,5 +176,128 @@ class AdminViewModelTest {
     fun `the console's server is shown as host and path`() {
         assertEquals("p23q.org/shopping", serverShown("https://p23q.org/shopping/"))
         assertEquals("lists.example.test", serverShown("https://lists.example.test/"))
+    }
+
+    // ---- the server message (T-315) ----------------------------------------------------
+
+    /**
+     * A server holding [message] and the registration flag: a PUT changes only what it names, as
+     * the partial endpoint does, and answers both. [refuse] answers every PUT with that 422 code.
+     * Every PUT body is recorded.
+     */
+    private fun settingsServer(message: String = "", refuse: String? = null): MutableList<String> {
+        val puts = java.util.concurrent.CopyOnWriteArrayList<String>()
+        var allow = true
+        var current = message
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val path = request.path ?: ""
+                if (!path.endsWith("/admin/server-settings")) return MockResponse().setResponseCode(404)
+                if (request.method == "PUT") {
+                    val body = request.body.readUtf8()
+                    puts += body
+                    if (refuse != null) {
+                        return MockResponse().setResponseCode(422).setBody("""{"error":"$refuse","message":"no"}""")
+                    }
+                    val sent = Json.parseToJsonElement(body).jsonObject
+                    sent["allow_registration"]?.let { allow = it.jsonPrimitive.boolean }
+                    sent["message"]?.let { current = it.jsonPrimitive.content }
+                }
+                val out = buildJsonObject {
+                    put("allow_registration", allow)
+                    put("message", current)
+                }
+                return MockResponse().setResponseCode(200).setBody(out.toString())
+            }
+        }
+        return puts
+    }
+
+    @Test
+    fun `the console loads the server message into its field (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
+        settingsServer(message = "Down Sunday")
+        val viewModel = newViewModel()
+
+        val state = viewModel.uiState.first { it.allowRegistration != null }
+
+        assertEquals("Down Sunday", state.serverMessage)
+        assertEquals("Down Sunday", state.messageDraft)
+    }
+
+    @Test
+    fun `Save sends only the trimmed message, and the toggle only the flag (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
+        val puts = settingsServer()
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+
+        viewModel.onMessageChange("  Full, please use https://other.example  ")
+        viewModel.saveMessage()!!.join()
+        viewModel.toggleRegistration()!!.join()
+
+        assertEquals(
+            listOf("""{"message":"Full, please use https://other.example"}""", """{"allow_registration":false}"""),
+            puts,
+        )
+        val state = viewModel.uiState.value
+        assertEquals("Full, please use https://other.example", state.serverMessage)
+        assertEquals("the toggle leaves the message alone", "Full, please use https://other.example", state.messageDraft)
+        assertEquals(false, state.allowRegistration)
+    }
+
+    @Test
+    fun `Clear saves an empty message (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
+        val puts = settingsServer(message = "Down Sunday")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+
+        viewModel.clearMessage()!!.join()
+
+        assertEquals(listOf("""{"message":""}"""), puts)
+        assertEquals("", viewModel.uiState.value.serverMessage)
+        assertEquals("", viewModel.uiState.value.messageDraft)
+    }
+
+    @Test
+    fun `a message of two lines or over 200 characters is refused at the field and not sent (T-315)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val puts = settingsServer()
+            val viewModel = newViewModel()
+            viewModel.uiState.first { it.allowRegistration != null }
+
+            for (bad in listOf("one\ntwo", "tab\there", "x".repeat(201))) {
+                viewModel.onMessageChange(bad)
+                assertEquals(bad, null, viewModel.saveMessage())
+                assertEquals(bad, UiText.res(R.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
+            }
+            // Typing clears the complaint; 200 characters (and spaces trimmed off) is allowed.
+            viewModel.onMessageChange(" " + "x".repeat(200) + " ")
+            assertEquals(null, viewModel.uiState.value.messageError)
+            viewModel.saveMessage()!!.join()
+
+            assertEquals(1, puts.size)
+            assertEquals(null, viewModel.uiState.value.messageError)
+        }
+
+    @Test
+    fun `the server's invalid_message shows the same sentence at the field (T-315)`() = runTest(mainDispatcherRule.dispatcher) {
+        settingsServer(refuse = "invalid_message")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+
+        viewModel.onMessageChange("fine here")
+        viewModel.saveMessage()!!.join()
+
+        assertEquals(UiText.res(R.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
+        assertEquals("", viewModel.uiState.value.serverMessage)
+    }
+
+    @Test
+    fun `the message rule counts characters as the server does (T-315)`() {
+        assertTrue(isValidServerMessage(""))
+        assertTrue("an emoji is one character", isValidServerMessage("\uD83D\uDE00".repeat(200)))
+        assertFalse(isValidServerMessage("\uD83D\uDE00".repeat(201)))
+        assertFalse(isValidServerMessage("a\rb"))
+        assertFalse(isValidServerMessage("a\u0007b"))
+        assertTrue("other Unicode is fine", isValidServerMessage("Wartung · 10–12 Uhr ✓"))
     }
 }

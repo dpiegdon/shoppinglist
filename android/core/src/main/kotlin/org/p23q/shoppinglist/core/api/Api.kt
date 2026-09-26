@@ -48,11 +48,11 @@ interface Api {
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
     /**
-     * Whether this server currently accepts new accounts (T-276). Unauthenticated, same shape as
-     * the admin server-settings endpoint ({"allow_registration"}), so it reuses [ServerSettingsDto].
+     * Whether this server currently accepts new accounts (T-276), and its server message (T-315).
+     * Unauthenticated.
      */
     @GET("api/v1/registration-status")
-    suspend fun registrationStatus(): ServerSettingsDto
+    suspend fun registrationStatus(): RegistrationStatusResponse
 
     /** Agree to close an expenses list (T-157); it closes when the last current member agrees. */
     @POST("api/v1/lists/{listId}/close-votes")
@@ -132,7 +132,7 @@ interface Api {
     suspend fun adminGetServerSettings(): ServerSettingsDto
 
     @PUT("api/v1/admin/server-settings")
-    suspend fun adminSetServerSettings(@Body body: ServerSettingsDto): ServerSettingsDto
+    suspend fun adminSetServerSettings(@Body body: ServerSettingsUpdate): ServerSettingsDto
 
     @POST("api/v1/admin/users/{id}/reset-password")
     suspend fun adminResetPassword(

@@ -12,6 +12,7 @@
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Скасувати</string>
     <string name="action_ok">Гаразд</string>
+    <string name="action_clear">Очистити</string>
     <string name="action_save">Зберегти</string>
     <string name="action_add">Додати</string>
     <string name="action_delete">Видалити</string>
@@ -238,6 +239,9 @@
     <string name="admin_registration">Реєстрація</string>
     <string name="admin_allow_new_accounts">Дозволити нові облікові записи</string>
     <string name="admin_registration_help">Тимчасове перевизначення — після перезапуску повертається до налаштованого значення.</string>
+    <string name="admin_server_message">Повідомлення сервера</string>
+    <string name="admin_server_message_help">Один рядок, який усі бачать на сторінці входу та над своїми списками.</string>
+    <string name="admin_server_message_invalid">Повідомлення має бути одним рядком до 200 символів.</string>
     <string name="admin_is_admin_suffix"> (адмін)</string>
     <string name="admin_users">Користувачі</string>
     <string name="admin_show_users">Показати зареєстрованих користувачів</string>

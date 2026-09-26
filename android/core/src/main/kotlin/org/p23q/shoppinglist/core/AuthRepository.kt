@@ -11,6 +11,7 @@ import org.p23q.shoppinglist.core.api.LoginRequest
 import org.p23q.shoppinglist.core.api.MIN_SERVER_PROTOCOL
 import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.p23q.shoppinglist.core.api.RegisterRequest
+import org.p23q.shoppinglist.core.api.RegistrationStatusResponse
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import kotlinx.coroutines.CancellationException
@@ -119,12 +120,13 @@ interface AuthRepository {
     suspend fun removeAccount(accountId: String)
 
     /**
-     * Whether the server at [serverUrl] currently accepts new accounts (T-276), checked up front on
-     * the login screen — mirroring the web client, which asks before the user fills in the whole
-     * form. Best-effort: a network failure or a server too old to answer must not block someone
-     * who can register, so callers should treat a thrown exception the same as `true`.
+     * `/registration-status` of the server at [serverUrl]: whether it currently accepts new
+     * accounts (T-276) and its server message (T-315), checked up front on the login screen —
+     * mirroring the web client, which asks before the user fills in the whole form. Best-effort: a
+     * network failure or a server too old to answer must not block someone who can register, so
+     * callers should treat a thrown exception as "allowed, no message". Nothing is stored.
      */
-    suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean = false): Boolean
+    suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean = false): RegistrationStatusResponse
 
     fun lastOpenedListId(): String?
 }
@@ -291,8 +293,8 @@ class AuthRepositoryImpl(
         return protocol
     }
 
-    override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean =
-        sessions.unbound(normalizeServerUrl(serverUrl), allowSelfSignedCerts).registrationStatus().allowRegistration
+    override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean): RegistrationStatusResponse =
+        sessions.unbound(normalizeServerUrl(serverUrl), allowSelfSignedCerts).registrationStatus()
 
     override suspend fun removeAccount(accountId: String) {
         // Under the account's lock, so no sync of it is between its request and its merge.

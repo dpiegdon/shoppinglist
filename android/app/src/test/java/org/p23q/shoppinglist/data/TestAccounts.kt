@@ -181,7 +181,7 @@ open class RecordingAuthRepository : AuthRepository {
         removed += accountId
     }
 
-    override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean = true
+    override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean) = org.p23q.shoppinglist.core.api.RegistrationStatusResponse(allowRegistration = true)
 
     override fun lastOpenedListId(): String? = null
 }

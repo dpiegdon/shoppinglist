@@ -12,6 +12,7 @@
     <string name="app_name">Tuppu</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_ok">Aceptar</string>
+    <string name="action_clear">Borrar</string>
     <string name="action_save">Guardar</string>
     <string name="action_add">Añadir</string>
     <string name="action_delete">Eliminar</string>
@@ -238,6 +239,9 @@
     <string name="admin_registration">Registro</string>
     <string name="admin_allow_new_accounts">Permitir cuentas nuevas</string>
     <string name="admin_registration_help">Cambio temporal — vuelve al valor configurado al reiniciar.</string>
+    <string name="admin_server_message">Mensaje del servidor</string>
+    <string name="admin_server_message_help">Una línea, visible para todos en la página de inicio de sesión y encima de sus listas.</string>
+    <string name="admin_server_message_invalid">El mensaje debe ser una sola línea de 200 caracteres como máximo.</string>
     <string name="admin_is_admin_suffix"> (admin)</string>
     <string name="admin_users">Usuarios</string>
     <string name="admin_show_users">Mostrar usuarios registrados</string>

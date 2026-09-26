@@ -47,9 +47,9 @@ class LoginModesTest {
         /** The addresses asked whether they accept new accounts. */
         val registrationChecks = mutableListOf<String>()
 
-        override suspend fun registrationAllowed(serverUrl: String, allowSelfSignedCerts: Boolean): Boolean {
+        override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean): org.p23q.shoppinglist.core.api.RegistrationStatusResponse {
             registrationChecks += serverUrl
-            return true
+            return org.p23q.shoppinglist.core.api.RegistrationStatusResponse(allowRegistration = true)
         }
 
         override fun lastOpenedListId(): String? = "list-42"
