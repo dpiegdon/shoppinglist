@@ -1,0 +1,13 @@
+{
+  "body": "Android's admin page resets a user's password on one tap with no confirmation, and the new password is shown as plain non-selectable text, so it cannot be copied to send to the user. The web confirms only deletions and shows the password as text. Both clients: (1) a confirmation dialog naming the user before the reset ('Reset the password of {email}? Their current password stops working at once.', Cancel / Reset), in the same shape as the delete confirmation; (2) the result shows the new password in a selectable monospace text (Android: SelectionContainer) with a Copy button beside it that puts it on the clipboard (Android: LocalClipboardManager; web: navigator.clipboard) and briefly says 'Copied.' Strings in nine locales on each client with identical English so crossClient pairs them; reuse an existing 'Copy' string if one exists. Tests: the confirm dialog gates the request (no request without confirming; mutation check), the Copy button writes the password to the clipboard (Android: a fake ClipboardManager via CompositionLocalProvider; web: a mocked navigator.clipboard).",
+  "created_at": "2026-09-26T14:22:49+00:00",
+  "id": "T-313",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Server admin: confirm before resetting a user's password; the new password is selectable and has a Copy button (both clients)",
+  "updated_at": "2026-09-26T14:22:49+00:00"
+}
