@@ -1,6 +1,9 @@
 {
   "body": "Decided with the maintainer on 2026-09-26. Invites appear in the overview's inbox on a sync (T-233/T-234) but nothing is posted. Add a notification per new pending invite: title names the list, text names the inviter's email and the account it was sent to when there are several accounts; tapping opens the overview (the invite section). 'New' = an invite id not seen before on this device (a device-local set of seen ids, pruned with the invite's expiry). Fetched where the overview fetches them today; since the app must not poll more, piggyback on the background sync: after each account's successful sync in SyncWorker, ask that account's /invites/pending (one small request per account per 15 minutes) and post for unseen ones. Gates, like collaborator changes: never while the app is in the foreground (the inbox is on screen), the new global switch 'Invitations' in Settings under Notifications (default ON, its own permission prompt reuse), the notification permission. Its own notification channel 'Invitations'. Strings in nine locales (Android only; web shows the inbox). Tests: unseen vs seen, the switch, the foreground gate, tap routing, the seen-set pruning. Depends on T-318's diagnostics line: extend it to say 'invite notification posted/\u2026' as well.",
   "created_at": "2026-09-26T18:41:11+00:00",
+  "deps": [
+    "T-318"
+  ],
   "id": "T-319",
   "labels": [
     "android",
