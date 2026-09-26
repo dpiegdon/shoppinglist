@@ -796,3 +796,45 @@ def test_pending_invites_http_then_join_with_the_token(client):
         "invites": []
     }
     assert client.get("/api/v1/invites/pending").status_code == 401
+
+
+def test_members_lists_live_invites_only_like_pending(app, client):
+    # An expired invite cannot be redeemed, so it is not pending on GET /members either — the
+    # same rule as GET /invites/pending (T-316).
+    from shoppinglist_server import db as db_module
+
+    owner_token = _register_and_login_http(client, "owner9@example.com")
+    _sync_http(
+        client,
+        owner_token,
+        {
+            "lists": [
+                {
+                    "id": "list-h9",
+                    "fields": {
+                        "name": {"value": "Groceries", "updated_at": 100, "updated_by": "dev"}
+                    },
+                }
+            ]
+        },
+    )
+    ids = {}
+    for email in ("live9@example.com", "expired9@example.com"):
+        resp = client.post(
+            "/api/v1/lists/list-h9/invites",
+            json={"invited_email": email},
+            headers=_auth(owner_token),
+        )
+        ids[email] = resp.get_json()["invite_id"]
+    database_path = app.extensions["shoppinglist_server"]["shoppinglist_server"]["database_path"]
+    conn = db_module.connect(database_path)
+    conn.execute(
+        "UPDATE invites SET expires_at = ? WHERE id = ?",
+        (auth.now_ms() - 1, ids["expired9@example.com"]),
+    )
+    conn.commit()
+    conn.close()
+
+    resp = client.get("/api/v1/lists/list-h9/members", headers=_auth(owner_token))
+    assert resp.status_code == 200
+    assert [i["invited_email"] for i in resp.get_json()["invites"]] == ["live9@example.com"]

@@ -3,7 +3,7 @@ import json
 from flask import g, jsonify
 
 from .. import accounts, audit, closing, get_db, invites
-from ..auth import authed
+from ..auth import authed, now_ms
 from ..errors import ApiError
 
 
@@ -70,9 +70,11 @@ def register_routes(bp):
             }
             for row in conn.execute(
                 "SELECT id, invited_email, expires_at FROM invites "
-                "WHERE list_id = ? AND revoked = 0 AND used_at IS NULL "
+                # Live ones only, the same rule as GET /invites/pending (T-316): an expired invite
+                # can no longer be redeemed, so it is no longer pending.
+                "WHERE list_id = ? AND revoked = 0 AND used_at IS NULL AND expires_at > ? "
                 "ORDER BY created_at",
-                (list_id,),
+                (list_id, now_ms()),
             )
         ]
         return jsonify({"members": members, "invites": pending_invites}), 200
