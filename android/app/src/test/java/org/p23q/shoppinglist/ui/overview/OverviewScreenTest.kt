@@ -133,9 +133,9 @@ class OverviewScreenTest {
         composeTestRule.onNodeWithTag("account-header-work").assertExists()
         composeTestRule.onNodeWithText(server.url("/work/").toString()).assertExists()
         composeTestRule.onNodeWithText("Office supplies").assertExists()
-        // Header and card marker, per account.
-        composeTestRule.onAllNodesWithText("me@example.com").assertCountEquals(2)
-        composeTestRule.onAllNodesWithText("me@work.example").assertCountEquals(2)
+        // The heading names the account once; the cards do not repeat it.
+        composeTestRule.onAllNodesWithText("me@example.com").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("me@work.example").assertCountEquals(1)
     }
 
     @Test
@@ -241,7 +241,6 @@ class OverviewScreenTest {
 
         composeTestRule.onNodeWithTag("account-header-${local.id}").assertExists()
         composeTestRule.onNodeWithText("On this phone").assertExists()
-        composeTestRule.onNodeWithText(LOCAL_AREA_GLYPH).assertExists()
         // Added before the work account, so it comes before it.
         val headers = listOf(TEST_ACCOUNT_ID, local.id, "work").map { id ->
             composeTestRule.onNodeWithTag("account-header-$id").fetchSemanticsNode().positionInRoot.y
@@ -258,7 +257,6 @@ class OverviewScreenTest {
 
         composeTestRule.onNodeWithText("Hardware").assertExists()
         composeTestRule.onAllNodesWithTag("account-header-${local.id}").assertCountEquals(0)
-        composeTestRule.onAllNodesWithText(LOCAL_AREA_GLYPH).assertCountEquals(0)
         composeTestRule.onAllNodesWithText("On this phone").assertCountEquals(0)
     }
 }

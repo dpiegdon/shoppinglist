@@ -122,7 +122,7 @@ fun OverviewScreen(
                         contentPadding = PaddingValues(16.dp),
                     ) {
                         // One section per account (T-292). With a single account it has no header
-                        // and its cards no marker: the screen is the one-account overview it was.
+                        // the screen is the one-account overview it was.
                         sections.forEachIndexed { index, section ->
                             val account = section.account
                             if (state.several) {
@@ -155,7 +155,6 @@ fun OverviewScreen(
                             items(section.lists, key = { it.localId }) { list ->
                                 ListCard(
                                     list = list,
-                                    accountMarker = accountMarker(account).takeIf { state.several },
                                     summary = state.expenseSummaries[list.localId],
                                     openCount = state.openCounts[list.localId] ?: 0,
                                     onClick = { onOpenList(list.localId) },
@@ -351,12 +350,6 @@ internal fun NewListDialog(
     )
 }
 
-/** The phone glyph that marks a card of the local area among several accounts (T-293). */
-internal const val LOCAL_AREA_GLYPH = "📱"
-
-/** What a card says of its account with several: the email, or the local area's phone glyph. */
-private fun accountMarker(account: AccountEntity): String? = if (account.isServer) account.email else LOCAL_AREA_GLYPH
-
 /** What an account's section says above its lists, if anything (T-292): signed out, or app too old. */
 private fun accountBanner(account: AccountEntity): Int? = when {
     !account.isServer -> null
@@ -456,11 +449,10 @@ private fun AccountBanner(text: String, onClick: (() -> Unit)?) {
     }
 }
 
-/** One list on the overview: kind, name (and, with several accounts, its account), then its figures. */
+/** One list on the overview: kind, name, then its figures. Its account is the section heading's. */
 @Composable
 private fun ListCard(
     list: ListEntity,
-    accountMarker: String?,
     summary: ExpenseSummary?,
     openCount: Int,
     onClick: () -> Unit,
@@ -479,18 +471,7 @@ private fun ListCard(
                 text = ListKind.icon(list.kind.value),
                 modifier = Modifier.padding(end = 8.dp),
             )
-            if (accountMarker == null) {
-                Text(text = list.name.value, modifier = Modifier.weight(1f))
-            } else {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = list.name.value)
-                    Text(
-                        text = accountMarker,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            Text(text = list.name.value, modifier = Modifier.weight(1f))
             if (summary != null) {
                 // What has been spent, and where this account stands —
                 // an expenses list has no open items to count (T-154).
