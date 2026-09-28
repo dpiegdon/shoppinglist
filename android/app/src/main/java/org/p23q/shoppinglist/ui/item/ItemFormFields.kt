@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui.item
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -169,9 +170,30 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
 
     // The due date (T-323), on a checklist only. A date an item of another kind already has stays
     // in the state and is saved back untouched, like the shopping fields on a checklist.
-    if (state.showDueDate) {
+    // An account whose server drops the field (T-327) is offered none; a date the item already
+    // has is shown, not changed.
+    if (state.showDueDate && state.dueDatesSupported) {
         Spacer(Modifier.height(4.dp))
         DueRow(due = state.due, onDueChange = viewModel::onDueChange)
+    } else if (state.showDueDate && state.due != null) {
+        Spacer(Modifier.height(4.dp))
+        ReadOnlyDueRow(due = state.due)
+    }
+}
+
+/** The item's due date on an account whose server does not keep one (T-327), with the reason. */
+@Composable
+private fun ReadOnlyDueRow(due: String) {
+    Column(modifier = Modifier.fillMaxWidth().testTag("item-due-row")) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.item_due), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(AppFormat.calendarDate(due, appLocale()), style = MaterialTheme.typography.bodyLarge)
+        }
+        Text(
+            stringResource(R.string.item_due_needs_server),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

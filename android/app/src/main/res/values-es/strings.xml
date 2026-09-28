@@ -101,6 +101,7 @@
     <string name="item_due_clear">Sin fecha límite</string>
     <string name="item_due_overdue">Vencido</string>
     <string name="item_due_today">Vence hoy</string>
+    <string name="item_due_needs_server">Las fechas límite requieren el servidor 3.5.0</string>
     <string name="item_status">Estado</string>
     <string name="item_add">Añadir artículo</string>
     <string name="item_edit">Editar artículo</string>

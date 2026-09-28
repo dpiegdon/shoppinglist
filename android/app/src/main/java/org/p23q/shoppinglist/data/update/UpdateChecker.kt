@@ -115,8 +115,16 @@ class UpdateChecker @Inject constructor(
         val answers = byServer.values.mapNotNull { accounts ->
             val answer = fetchFrom(accounts.first()) ?: return@mapNotNull null
             // A server that says no protocol has not forgotten it: what is stored stays (T-304).
-            answer.protocol?.let { protocol ->
-                accounts.forEach { account -> registry.update(account.id) { it.copy(serverProtocol = protocol) } }
+            // Its release likewise (T-327), which gates the due date.
+            if (answer.protocol != null || answer.version != null) {
+                accounts.forEach { account ->
+                    registry.update(account.id) {
+                        it.copy(
+                            serverProtocol = answer.protocol ?: it.serverProtocol,
+                            serverVersion = answer.version ?: it.serverVersion,
+                        )
+                    }
+                }
             }
             answer.response
         }
@@ -126,8 +134,8 @@ class UpdateChecker @Inject constructor(
         return parseable.maxWithOrNull { a, b -> compareVersions(a.version, b.version)!! } ?: answers.firstOrNull()
     }
 
-    /** What a server said: its protocol, and the package it offers, if it carries one. */
-    private class Answer(val protocol: Int?, val response: AppVersionResponse?)
+    /** What a server said: its protocol and release, and the package it offers, if it carries one. */
+    private class Answer(val protocol: Int?, val version: String?, val response: AppVersionResponse?)
 
     /**
      * Asks [account]'s server, with no token: the endpoint needs none, and a request that carries
@@ -135,11 +143,11 @@ class UpdateChecker @Inject constructor(
      */
     private suspend fun fetchFrom(account: AccountEntity): Answer? = try {
         val response = sessions.unbound(account.serverUrl!!, account.allowSelfSignedCerts).appVersion()
-        Answer(response.protocol, response)
+        Answer(response.protocol, response.version, response)
     } catch (e: ApiException) {
         // A server without a package still says its protocol (T-297); any other non-2xx, and a
         // 404 without one from a server predating the endpoint, is not an answer.
-        e.protocol?.takeIf { e.httpStatus == 404 }?.let { Answer(it, null) }
+        e.protocol?.takeIf { e.httpStatus == 404 }?.let { Answer(it, e.version, null) }
     } catch (e: IOException) {
         // Couldn't ask: the network, a certificate.
         null

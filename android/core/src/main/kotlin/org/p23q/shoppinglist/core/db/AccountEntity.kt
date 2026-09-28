@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.core.db
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import org.p23q.shoppinglist.core.update.compareVersions
 
 /**
  * One account this device holds lists for: an account on some server, or (later) a device-local
@@ -51,11 +52,31 @@ data class AccountEntity(
      * none. Kept so the overview shows it offline.
      */
     val serverMessage: String? = null,
+    /**
+     * The server's release (T-327), as `/app-version` last said it (the `no_app_package` 404
+     * included); null until a server that knows its release has answered.
+     */
+    val serverVersion: String? = null,
+    /** A pull of this account brought an item carrying the `due` field (T-327). Never cleared. */
+    val dueDatesSeen: Boolean = false,
 ) {
     val isServer: Boolean get() = kind == KIND_SERVER
+
+    /**
+     * Whether this account's items can have a due date (T-327): always in the local area, which
+     * syncs nowhere; on a server account when its release is known to be [DUE_DATES_SINCE] or
+     * newer, or a pulled item carried the field. A server before that drops the field, so a date
+     * set there would stay on this phone alone.
+     */
+    val supportsDueDates: Boolean
+        get() = !isServer || dueDatesSeen ||
+            serverVersion?.let { compareVersions(it, DUE_DATES_SINCE) }?.let { it >= 0 } == true
 
     companion object {
         const val KIND_SERVER = "server"
         const val KIND_LOCAL = "local"
+
+        /** The first server release that keeps an item's due date (T-323). */
+        const val DUE_DATES_SINCE = "3.5.0"
     }
 }

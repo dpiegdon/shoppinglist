@@ -101,6 +101,7 @@
     <string name="item_due_clear">无截止日期</string>
     <string name="item_due_overdue">已逾期</string>
     <string name="item_due_today">今天截止</string>
+    <string name="item_due_needs_server">截止日期需要服务器 3.5.0</string>
     <string name="item_status">状态</string>
     <string name="item_add">添加物品</string>
     <string name="item_edit">编辑物品</string>

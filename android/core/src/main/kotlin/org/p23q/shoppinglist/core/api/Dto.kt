@@ -95,6 +95,8 @@ data class ErrorEnvelope(
     @SerialName("account_id") val accountId: String? = null,
     /** The server's protocol version, on a `no_app_package` 404 from `/app-version` (T-297). */
     val protocol: Int? = null,
+    /** The server's release, on a `no_app_package` 404 from a server that knows it (T-327). */
+    val version: String? = null,
 )
 
 @Serializable

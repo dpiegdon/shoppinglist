@@ -4,7 +4,11 @@ import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -34,6 +38,9 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class EditItemDialogTest {
+    /** An account whose server keeps due dates (T-327), as the due-date tests need. */
+    private val dueDatesAccount = testAccount().copy(serverVersion = "3.5.0")
+
 
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -107,7 +114,7 @@ class EditItemDialogTest {
     @Test
     fun `a checklist item shows its due date on one row, and the cross clears it (T-323)`() = runBlocking<Unit> {
         val db = database()
-        db.insertTestAccount()
+        db.insertTestAccount(dueDatesAccount)
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -136,7 +143,7 @@ class EditItemDialogTest {
     @Test
     fun `a shopping list's item has no due row, even with a due date stored (T-323)`() = runBlocking<Unit> {
         val db = database()
-        db.insertTestAccount()
+        db.insertTestAccount(dueDatesAccount)
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -151,6 +158,36 @@ class EditItemDialogTest {
         composeTestRule.onNodeWithText("Milk").assertExists()
         composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
         composeTestRule.onNodeWithText("Oct 3, 2026").assertDoesNotExist()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `on an account whose server drops due dates the item's date is shown read-only, with the reason (T-327)`() = runBlocking<Unit> {
+        val db = database()
+        db.insertTestAccount(testAccount().copy(serverVersion = "3.4.0"))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val dated = itemsRepo.createItem(listId, "Water plants")
+        itemsRepo.setDue(dated, "2026-10-03")
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+        var itemId by mutableStateOf(dated)
+
+        composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("item-due-row").performScrollTo()
+        composeTestRule.onNodeWithText("Oct 3, 2026").assertExists()
+        composeTestRule.onNodeWithText("Due dates need server 3.5.0").assertExists()
+        composeTestRule.onAllNodesWithTag("item-due-pick").assertCountEquals(0)
+        composeTestRule.onAllNodesWithTag("item-due-clear").assertCountEquals(0)
+
+        // Without a date there is nothing to show, and nothing is offered.
+        itemId = itemsRepo.createItem(listId, "Sweep")
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Sweep").assertExists()
+        composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

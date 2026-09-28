@@ -30,6 +30,8 @@ open class ApiException(
      * 404 from `/app-version` does (T-297).
      */
     val protocol: Int? = null,
+    /** The server's release, which the `no_app_package` 404 also carries (T-327). */
+    val version: String? = null,
 ) : IOException(message)
 
 /** 401 responses always mean the caller must re-authenticate. */

@@ -114,7 +114,8 @@ interface and `:app` implements it and binds it in Hilt:
   its account lock. The local area is never synced, and its dirty rows count
   in no account's pending figure. After an account's first successful sync
   in a process, a server whose protocol the account does not hold yet is asked
-  `/app-version` once, with no token, and the answer is stored. Every successful
+  `/app-version` once, with no token, and the answer is stored. A pull that
+  brings an item carrying the `due` field sets the account's `dueDatesSeen`. Every successful
   response's `server_message` goes onto the account row (`serverMessage`, null for none), which
   the overview shows, offline too. `SyncStatus.state` is the worst of the
   accounts, `SyncStatus.accounts` each one; a signed-out or outdated account
@@ -125,6 +126,12 @@ interface and `:app` implements it and binds it in Hilt:
   the notifier's to decide. An account whose request fails is left out; with
   none answering, the notifier is not called. `:app` runs it after each
   background sync.
+- `AccountEntity.supportsDueDates` says whether an account's items can have a
+  due date: always in the local area; on a server account when `serverVersion`
+  (the release `/app-version` named at the floor check, the update check or the
+  protocol ask after a sync, its `404` included) is 3.5.0 or newer, or
+  `dueDatesSeen` is set. An older server drops the field, so the item form
+  offers none there, and shows a date an item already has read-only.
 - `ListKind.choices(serverAccount)` is the kinds a list of an account can have:
   no ledger in the local area. `ListsRepo.create` throws for another kind, and
   `setKind` returns false instead of converting. `ListsRepo.duplicate(listId,

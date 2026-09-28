@@ -158,7 +158,7 @@ class AuthRepositoryImpl(
         expect: LoginExpectation,
     ): String {
         val url = normalizeServerUrl(serverUrl)
-        val protocol = checkServerProtocol(url, allowSelfSignedCerts)
+        val answer = checkServerProtocol(url, allowSelfSignedCerts)
         val response = sessions.unbound(url, allowSelfSignedCerts)
             .login(LoginRequest(email, password, deviceName, PLATFORM))
 
@@ -217,7 +217,8 @@ class AuthRepositoryImpl(
                     isAdmin = response.isAdmin,
                     signedIn = true,
                     syncCursor = 0,
-                    serverProtocol = protocol ?: it.serverProtocol,
+                    serverProtocol = answer?.protocol ?: it.serverProtocol,
+                    serverVersion = answer?.version ?: it.serverVersion,
                     allowSelfSignedCerts = allowSelfSignedCerts,
                 )
             }
@@ -231,7 +232,8 @@ class AuthRepositoryImpl(
                     isAdmin = response.isAdmin,
                     label = serverLabel(url),
                     signedIn = true,
-                    serverProtocol = protocol,
+                    serverProtocol = answer?.protocol,
+                    serverVersion = answer?.version,
                     allowSelfSignedCerts = allowSelfSignedCerts,
                 ),
             )
@@ -274,15 +276,21 @@ class AuthRepositoryImpl(
      * Tuppu server at all; either way nothing this build can sign in to. Any other failure is not
      * an answer and propagates as it is (offline, a bad certificate, a server error), for the
      * login screen to report as it reports every other.
+     *
+     * The answer's release is kept too (T-327), for what is gated on it rather than on the
+     * protocol: the due date.
      */
-    private suspend fun checkServerProtocol(url: String, allowSelfSignedCerts: Boolean): Int? {
+    private suspend fun checkServerProtocol(url: String, allowSelfSignedCerts: Boolean): ServerAnswer? {
         val known = registry.load().filter { it.serverUrl == url }.mapNotNull { it.serverProtocol }.maxOrNull()
         if (known != null && known in MIN_SERVER_PROTOCOL..PROTOCOL_VERSION) return null
         var downloadUrl: String? = null
+        var version: String? = null
         val protocol = try {
-            sessions.unbound(url, allowSelfSignedCerts).appVersion().also { downloadUrl = it.downloadUrl }.protocol
+            sessions.unbound(url, allowSelfSignedCerts).appVersion()
+                .also { downloadUrl = it.downloadUrl; version = it.version }.protocol
         } catch (e: ApiException) {
             if (e.httpStatus != 404) throw e
+            version = e.version
             e.protocol ?: throw NotATuppuServerException(e)
         } catch (e: SerializationException) {
             // A 200 that is not the endpoint's JSON.
@@ -290,8 +298,11 @@ class AuthRepositoryImpl(
         }
         if (protocol == null || protocol < MIN_SERVER_PROTOCOL) throw ServerTooOldException(protocol)
         if (protocol > PROTOCOL_VERSION) throw AppTooOldException(protocol, downloadUrl)
-        return protocol
+        return ServerAnswer(protocol, version)
     }
+
+    /** What `/app-version` said: the server's protocol, and its release where it names one. */
+    private class ServerAnswer(val protocol: Int, val version: String?)
 
     override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean): RegistrationStatusResponse =
         sessions.unbound(normalizeServerUrl(serverUrl), allowSelfSignedCerts).registrationStatus()

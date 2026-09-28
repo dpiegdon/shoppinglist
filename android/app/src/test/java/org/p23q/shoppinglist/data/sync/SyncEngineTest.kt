@@ -1859,4 +1859,69 @@ class SyncEngineTest {
         assertFalse(kept.dirty)
         assertFalse(item("never")!!.dirty)
     }
+
+    // ---- whether the account's server keeps due dates (T-327) --------------------------
+
+    @Test
+    fun `a pulled item that carries the due field marks the account as keeping due dates (T-327)`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 2,
+                    lists = emptyList(),
+                    items = listOf(
+                        itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = null,
+                            due = """{"value": null, "updated_at": 0, "updated_by": ""}"""),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.dueDatesSeen)
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.supportsDueDates)
+    }
+
+    @Test
+    fun `a pull whose items carry no due field leaves the account without due dates (T-327)`() = runTest {
+        pointAtServer()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 2,
+                    lists = emptyList(),
+                    items = listOf(itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = null)),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.dueDatesSeen)
+        assertFalse(accounts.registry.get(TEST_ACCOUNT_ID)!!.supportsDueDates)
+    }
+
+    @Test
+    fun `the server's release is stored beside its protocol, from the 200 and from the 404 (T-327)`() = runTest {
+        pointAtServer()
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = null) }
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"version": "3.5.0", "download_url": "https://x/a.apk", "protocol": 3}"""))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        assertEquals("3.5.0", accounts.registry.get(TEST_ACCOUNT_ID)!!.serverVersion)
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.supportsDueDates)
+
+        accounts.add(server.url("/").toString(), id = "bare", accountId = "acc-bare", serverProtocol = null)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(emptyPull))
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "no_app_package", "message": "none", "protocol": 3, "version": "3.6.1"}"""))
+
+        assertTrue(syncEngine.syncAccount("bare") is SyncResult.Success)
+
+        assertEquals("3.6.1", accounts.registry.get("bare")!!.serverVersion)
+        assertEquals(3, accounts.registry.get("bare")!!.serverProtocol)
+    }
 }

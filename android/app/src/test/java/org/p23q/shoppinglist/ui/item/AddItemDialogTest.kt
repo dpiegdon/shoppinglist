@@ -4,6 +4,7 @@ import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.insertTestAccount
+import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.runtime.getValue
@@ -11,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -37,6 +39,9 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class AddItemDialogTest {
+    /** An account whose server keeps due dates (T-327), as the due-date tests need. */
+    private val dueDatesAccount = testAccount().copy(serverVersion = "3.5.0")
+
 
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -119,7 +124,7 @@ class AddItemDialogTest {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        db.insertTestAccount()
+        db.insertTestAccount(dueDatesAccount)
         val deviceId = DeviceIdProvider { "device-1" }
         val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
@@ -138,6 +143,27 @@ class AddItemDialogTest {
         listId = shopping
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `the add dialog offers no due row on an account whose server drops due dates (T-327)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+
+        composeTestRule.setContent { AddItemDialog(listId = checklist, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
+        composeTestRule.onAllNodesWithContentDescription("Due").assertCountEquals(0)
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

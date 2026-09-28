@@ -179,6 +179,25 @@ class AuthRepositoryTest {
         assertTrue(accounts.registry.get(id)!!.signedIn)
     }
 
+    /** T-327: the release gates the due date, so the floor check keeps it with the protocol. */
+    @Test
+    fun `the floor check stores the server's release, from the 200 and from the 404`() = runTest {
+        enqueueLogin(accountId = "acc-1")
+        val first = repository.login(url, "milk@example.com", "hunter2")
+        assertEquals("1.0.0", accounts.registry.get(first)!!.serverVersion)
+
+        val other = server.url("/other/").toString()
+        server.enqueue(
+            MockResponse().setResponseCode(404)
+                .setBody("""{"error": "no_app_package", "message": "none", "protocol": $MIN_SERVER_PROTOCOL, "version": "3.5.0"}"""),
+        )
+        enqueueLogin(accountId = "acc-2", askFloor = false)
+        val second = repository.login(other, "milk@example.com", "hunter2")
+
+        assertEquals("3.5.0", accounts.registry.get(second)!!.serverVersion)
+        assertTrue(accounts.registry.get(second)!!.supportsDueDates)
+    }
+
     @Test
     fun `a server without an app package below the floor is refused`() = runTest {
         server.enqueue(noAppPackage(MIN_SERVER_PROTOCOL - 1))

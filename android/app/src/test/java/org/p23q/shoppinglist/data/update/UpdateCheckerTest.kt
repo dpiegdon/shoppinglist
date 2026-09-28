@@ -376,6 +376,24 @@ class UpdateCheckerTest {
         assertEquals(5, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
     }
 
+    /** T-327: the release gates the due date, so every answer stores it beside the protocol. */
+    @Test
+    fun `each answer stores the server's release, the 404 included`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"version": "3.5.0", "download_url": "https://example.com/a.apk", "protocol": 3}"""),
+        )
+        checker.checkNow(currentVersion = "1.11.0")
+        assertEquals("3.5.0", accounts.db.accountDao().all().single().serverVersion)
+
+        server.enqueue(
+            MockResponse().setResponseCode(404)
+                .setBody("""{"error": "no_app_package", "message": "none", "protocol": 3, "version": "3.6.0"}"""),
+        )
+        checker.checkForced(currentVersion = "1.11.0")
+        assertEquals("3.6.0", accounts.registry.get(TEST_ACCOUNT_ID)!!.serverVersion)
+    }
+
     /** T-298: the endpoint needs no token, and a check must never sign anybody out. */
     @Test
     fun `the check carries no token, so a 401 there signs nobody out`() = runTest {

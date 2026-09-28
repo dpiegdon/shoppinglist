@@ -101,6 +101,7 @@
     <string name="item_due_clear">Sem prazo</string>
     <string name="item_due_overdue">Atrasado</string>
     <string name="item_due_today">Vence hoje</string>
+    <string name="item_due_needs_server">Prazos exigem o servidor 3.5.0</string>
     <string name="item_status">Status</string>
     <string name="item_add">Adicionar item</string>
     <string name="item_edit">Editar item</string>

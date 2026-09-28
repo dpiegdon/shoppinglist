@@ -365,6 +365,11 @@ class SyncEngine @Inject constructor(
                 listDao.upsert(mergeList(local, dto, accountId, localId = local?.localId ?: newListLocalId(accountId, dto.id)))
             }
         }
+        // A server that keeps due dates sends the field on every item (T-327): the first one that
+        // carries it unlocks them for the account, whatever the server's release is said to be.
+        if (registry.get(accountId)?.dueDatesSeen == false && response.changes.items.any { it.fields.due != null }) {
+            registry.update(accountId) { it.copy(dueDatesSeen = true) }
+        }
         for (dto in response.changes.items) {
             appDb.inTransaction {
                 val local = itemDao.getByServerId(accountId, dto.id)
@@ -501,12 +506,15 @@ class SyncEngine @Inject constructor(
         val account = registry.get(accountId) ?: return
         if (account.serverProtocol != null || accountId in protocolAsked) return
         val url = account.serverUrl ?: return
+        var version: String? = null
         val protocol = try {
-            sessions.unbound(url, account.allowSelfSignedCerts).appVersion().protocol
+            sessions.unbound(url, account.allowSelfSignedCerts).appVersion().also { version = it.version }.protocol
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiException) {
-            // A server without a package says its protocol in the 404 (T-297).
+            // A server without a package says its protocol in the 404 (T-297), and its release
+            // (T-327), which is kept as the update check keeps it.
+            if (e.httpStatus == 404) version = e.version
             e.protocol?.takeIf { e.httpStatus == 404 }
         } catch (e: IOException) {
             return
@@ -515,7 +523,11 @@ class SyncEngine @Inject constructor(
             null
         }
         protocolAsked.add(accountId)
-        if (protocol != null) registry.update(accountId) { it.copy(serverProtocol = protocol) }
+        if (protocol != null || version != null) {
+            registry.update(accountId) {
+                it.copy(serverProtocol = protocol ?: it.serverProtocol, serverVersion = version ?: it.serverVersion)
+            }
+        }
     }
 
     /** The accounts [ensureServerProtocol] has had an answer for in this process. */

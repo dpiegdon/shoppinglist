@@ -53,6 +53,11 @@ data class ItemFormUiState(
     val due: String? = null,
     /** True on a checklist only (T-323): the form offers the due date there. */
     val showDueDate: Boolean = false,
+    /**
+     * The list's account keeps due dates (T-327, [org.p23q.shoppinglist.core.db.AccountEntity.supportsDueDates]).
+     * Without it the form offers no due date, and shows one the item already has read-only.
+     */
+    val dueDatesSupported: Boolean = false,
     val status: Status = Status.TODO,
     /**
      * The server refused this row's last push and it is parked on the device (T-210), with the code
@@ -162,8 +167,13 @@ class ItemFormViewModel @Inject constructor(
 
     private fun loadListKind() = viewModelScope.launch {
         val kind = listsRepo.getById(listId)?.kind?.value
+        val dueDatesSupported = listAccounts.accountOf(listId)?.supportsDueDates == true
         _uiState.update {
-            it.copy(showShoppingFields = ListKind.showsShoppingFields(kind), showDueDate = ListKind.showsDueDate(kind))
+            it.copy(
+                showShoppingFields = ListKind.showsShoppingFields(kind),
+                showDueDate = ListKind.showsDueDate(kind),
+                dueDatesSupported = dueDatesSupported,
+            )
         }
     }
 

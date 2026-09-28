@@ -602,6 +602,23 @@ class ItemFormViewModelTest {
     }
 
     @Test
+    fun `the due date is supported by the list's account only when its server keeps it (T-327)`() = runTest(mainDispatcherRule.dispatcher) {
+        db.insertTestAccount(testAccount(id = "new", accountId = "acct-new", serverUrl = "https://new.example.test/").copy(serverVersion = "3.5.0"))
+        val old = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val current = listsRepo.create("new", "Chores", kind = ListKind.CHECKLIST)
+        val viewModel = newViewModel()
+
+        viewModel.startAdd(old)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.showDueDate)
+        assertFalse(viewModel.uiState.value.dueDatesSupported)
+
+        viewModel.startAdd(current)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.dueDatesSupported)
+    }
+
+    @Test
     fun `a due date set on add is saved, and clearing it on edit saves none (T-323)`() = runTest(mainDispatcherRule.dispatcher) {
         val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
         val viewModel = newViewModel()
