@@ -67,10 +67,16 @@ class NotificationPrefsStoreTest {
     }
 
     @Test
-    fun `an invite is new only the first time it is listed (T-319)`() = runTest {
-        assertEquals(setOf("i1", "i2"), store.markInvitesSeen(mapOf("i1" to 5_000L, "i2" to 6_000L), now = 1_000))
-        assertEquals(setOf("i3"), store.markInvitesSeen(mapOf("i1" to 5_000L, "i3" to 7_000L), now = 2_000))
-        assertEquals(emptySet<String>(), store.markInvitesSeen(mapOf("i2" to 6_000L), now = 3_000))
+    fun `an invite is unseen until it is marked seen, and asking does not mark it (T-322)`() = runTest {
+        assertEquals(setOf("i1", "i2"), store.unseenInvites(listOf("i1", "i2"), now = 1_000))
+        // Asking again: still unseen, since only showing an invite marks it.
+        assertEquals(setOf("i1", "i2"), store.unseenInvites(listOf("i1", "i2"), now = 1_000))
+
+        store.markInvitesSeen(mapOf("i1" to 5_000L), now = 2_000)
+
+        assertEquals(setOf("i2", "i3"), store.unseenInvites(listOf("i1", "i2", "i3"), now = 3_000))
+        // Past its expiry a seen id no longer counts.
+        assertEquals(setOf("i1"), store.unseenInvites(listOf("i1"), now = 6_000))
     }
 
     @Test

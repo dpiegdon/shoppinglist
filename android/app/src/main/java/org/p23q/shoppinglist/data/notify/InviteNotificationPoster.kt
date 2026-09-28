@@ -56,10 +56,10 @@ abstract class InviteNotifierModule {
  * Posts the invites that are new to this phone (T-319) as ONE notification per check: a single
  * invite names its list and who sent it, several are counted and their lists named. A fixed id
  * means a newer check's notification replaces an older unread one; tapping opens the overview,
- * where the invites wait. Every listed invite counts as seen from here on, whether or not it was
- * posted, so an invite already on screen or switched off is never announced later. Gates, in order:
- * app foregrounded (the overview's inbox is on screen), the Invitations switch (Settings), the
- * notification permission. Each check records what decided it, for Settings → Diagnostics.
+ * where the invites wait. An invite counts as seen only once it was shown (T-322): posted here, or
+ * rendered in the overview's inbox ([org.p23q.shoppinglist.ui.overview.OverviewViewModel]). One a
+ * gate stopped stays unseen, so a later check announces it. Gates, in order: app foregrounded, the
+ * Invitations switch (Settings), the notification permission. Each check records what decided it, for Settings → Diagnostics.
  */
 @Singleton
 class InviteNotificationPoster @Inject constructor(
@@ -75,7 +75,7 @@ class InviteNotificationPoster @Inject constructor(
     @SuppressLint("MissingPermission")
     override suspend fun notifyPendingInvites(invites: List<PendingInvite>) {
         val now = System.currentTimeMillis()
-        val unseenIds = prefs.markInvitesSeen(invites.associate { it.id to it.expiresAt }, now)
+        val unseenIds = prefs.unseenInvites(invites.map { it.id }, now)
         val fresh = invites.filter { it.id in unseenIds }.distinctBy { it.id }
         val stoppedBy = when {
             fresh.isEmpty() -> InviteCheckOutcome.NOTHING_NEW
@@ -84,7 +84,11 @@ class InviteNotificationPoster @Inject constructor(
             !canPost() -> InviteCheckOutcome.NO_PERMISSION
             else -> null
         }
-        if (stoppedBy != null) return record(now, fresh.size, stoppedBy)
+        if (stoppedBy != null) {
+            // Nothing shown, so nothing marked; the expired seen ids are still pruned.
+            prefs.markInvitesSeen(emptyMap(), now)
+            return record(now, fresh.size, stoppedBy)
+        }
 
         // A localized context (T-111): this runs outside composition.
         val strings = localizedContext(context, localePreferences.effective.first())
@@ -124,6 +128,7 @@ class InviteNotificationPoster @Inject constructor(
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
+        prefs.markInvitesSeen(fresh.associate { it.id to it.expiresAt }, now)
         record(now, fresh.size, InviteCheckOutcome.POSTED)
     }
 

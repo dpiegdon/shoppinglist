@@ -136,7 +136,14 @@ class InviteNotificationPosterTest {
     }
 
     @Test
-    fun `with the app in the foreground nothing is posted, and the invites count as seen`() = runTest {
+    fun `a posted invite counts as seen`() = runTest {
+        poster.notifyPendingInvites(listOf(invite("i1", "Groceries")))
+
+        assertEquals(setOf("i1"), prefs.seenInvites.first().keys)
+    }
+
+    @Test
+    fun `with the app in the foreground nothing is posted, and a later background check announces the invite (T-322)`() = runTest {
         foreground.isForeground = true
         prefs.setInviteNotificationsEnabled(false)
 
@@ -145,15 +152,17 @@ class InviteNotificationPosterTest {
         assertTrue(posted().isEmpty())
         // The first gate in order wins.
         assertEquals(InviteCheckOutcome.FOREGROUND to 1, recorded())
+        assertTrue(prefs.seenInvites.first().isEmpty())
 
         foreground.isForeground = false
         prefs.setInviteNotificationsEnabled(true)
         poster.notifyPendingInvites(listOf(invite("i1", "Groceries")))
-        assertTrue(posted().isEmpty())
+        assertEquals("Groceries", posted().single().title())
+        assertEquals(InviteCheckOutcome.POSTED to 1, recorded())
     }
 
     @Test
-    fun `the Invitations switch off stops it, and the collaborator switch does not`() = runTest {
+    fun `the Invitations switch off stops it and leaves the invite unseen, and the collaborator switch does not stop it`() = runTest {
         prefs.setInviteNotificationsEnabled(false)
         poster.notifyPendingInvites(listOf(invite("i1", "Groceries")))
         assertTrue(posted().isEmpty())
@@ -161,18 +170,40 @@ class InviteNotificationPosterTest {
 
         prefs.setInviteNotificationsEnabled(true)
         prefs.setNotificationsEnabled(false)
-        poster.notifyPendingInvites(listOf(invite("i2", "Hardware")))
-        assertEquals("Hardware", posted().single().title())
+        poster.notifyPendingInvites(listOf(invite("i1", "Groceries"), invite("i2", "Hardware")))
+        assertEquals("Invitations: 2", posted().single().title())
     }
 
     @Test
-    fun `a missing permission stops it`() = runTest {
+    fun `a missing permission stops it and leaves the invite unseen`() = runTest {
         shadowOf(context as Application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
 
         poster.notifyPendingInvites(listOf(invite("i1", "Groceries")))
 
         assertTrue(posted().isEmpty())
         assertEquals(InviteCheckOutcome.NO_PERMISSION to 1, recorded())
+        assertTrue(prefs.seenInvites.first().isEmpty())
+    }
+
+    @Test
+    fun `an invite the overview rendered is not announced (T-322)`() = runTest {
+        // What OverviewViewModel does once the inbox has loaded.
+        prefs.markInvitesSeen(mapOf("i1" to later), now = System.currentTimeMillis())
+
+        poster.notifyPendingInvites(listOf(invite("i1", "Groceries")))
+
+        assertTrue(posted().isEmpty())
+        assertEquals(InviteCheckOutcome.NOTHING_NEW to 0, recorded())
+    }
+
+    @Test
+    fun `a check that posts nothing still forgets the expired seen invites`() = runTest {
+        prefs.markInvitesSeen(mapOf("old" to 1_000L, "i1" to later), now = 0)
+        foreground.isForeground = true
+
+        poster.notifyPendingInvites(listOf(invite("i2", "Hardware")))
+
+        assertEquals(setOf("i1"), prefs.seenInvites.first().keys)
     }
 
     @Test

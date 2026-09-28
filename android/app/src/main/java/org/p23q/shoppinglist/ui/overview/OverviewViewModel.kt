@@ -25,6 +25,7 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.overviewOrder
 import org.p23q.shoppinglist.ui.redeem.InviteJoin
@@ -123,6 +124,7 @@ class OverviewViewModel @Inject constructor(
     private val lastOpened: LastOpenedListStore,
     private val syncer: Syncer,
     syncStatus: SyncStatus,
+    private val notificationPrefs: NotificationPrefsStore,
 ) : ViewModel() {
 
     private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo)
@@ -312,6 +314,9 @@ class OverviewViewModel @Inject constructor(
             val live = stored.filterTo(mutableSetOf()) { id -> invites.any { it.id == id } }
             if (live != stored) setIgnored(accountId, live)
             _uiState.update { it.copy(invitesByAccount = it.invitesByAccount + (accountId to invites)) }
+            // Rendered in the inbox, ignored ones greyed: shown, so a notification would only
+            // repeat them (T-322).
+            notificationPrefs.markInvitesSeen(invites.associate { it.id to it.expiresAt }, System.currentTimeMillis())
         } catch (e: ApiException) {
             // A server without the endpoint, or a session that just ended: the same as offline —
             // nothing to show, nothing to say. ApiException must be caught before IOException,

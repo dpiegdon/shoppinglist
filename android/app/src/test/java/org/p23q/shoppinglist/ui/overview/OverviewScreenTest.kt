@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -48,9 +49,11 @@ import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 /** The overview by account (T-292): one account is the old screen; several get sections. */
 @RunWith(RobolectricTestRunner::class)
@@ -107,6 +110,11 @@ class OverviewScreenTest {
             accounts.secrets,
             Syncer { SyncResult.Success(0, 0, 0, 0) },
             SyncStatus(),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("overview_screen_notif", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
         ).also(viewModels::add)
         composeTestRule.setContent {
             OverviewScreen(onOpenList = {}, onSignIn = onSignIn, onCheckForUpdate = onCheckForUpdate, viewModel = viewModel)

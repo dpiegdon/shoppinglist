@@ -17,6 +17,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
 import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
@@ -107,20 +108,29 @@ class NotificationPrefsStore @Inject constructor(
     }
 
     /**
-     * Records the invites the servers listed ([expiresAtById], epoch milliseconds) as seen on this
-     * phone and returns the ids among them that had not been seen before (T-319). In the same
-     * edit, forgets every seen id whose invite expired before [now], so the set holds only
-     * invites that could still be listed and cannot grow without bound. An id is not forgotten
-     * merely for being absent from one answer: that account's request may have failed.
+     * The ids among [ids] that have not been shown on this phone yet (T-319, T-322): neither
+     * posted in a notification nor rendered in the overview's inbox. Reads only; a seen id whose
+     * invite expired before [now] no longer counts.
      */
-    suspend fun markInvitesSeen(expiresAtById: Map<String, Long>, now: Long): Set<String> {
-        var unseen: Set<String> = emptySet()
+    suspend fun unseenInvites(ids: Collection<String>, now: Long): Set<String> {
+        val seen = decodeSeen(dataStore.data.first()[SEEN_INVITES_KEY].orEmpty()).filterValues { it >= now }
+        return ids.toSet() - seen.keys
+    }
+
+    /**
+     * Records invites as shown on this phone ([expiresAtById], epoch milliseconds), once a
+     * notification posted them or the overview's inbox rendered them (T-322): only an invite the
+     * user could see counts as seen, so one that met the foreground gate, the switch or a missing
+     * permission is still announced by a later check. In the same edit, forgets every seen id
+     * whose invite expired before [now], so the set holds only invites that could still be listed
+     * and cannot grow without bound. An id is not forgotten merely for being absent from one
+     * answer: that account's request may have failed.
+     */
+    suspend fun markInvitesSeen(expiresAtById: Map<String, Long>, now: Long) {
         dataStore.edit { prefs ->
             val seen = decodeSeen(prefs[SEEN_INVITES_KEY].orEmpty()).filterValues { it >= now }
-            unseen = expiresAtById.keys - seen.keys
             prefs[SEEN_INVITES_KEY] = encodeSeen(seen + expiresAtById)
         }
-        return unseen
     }
 
     /** The seen invite ids with their expiry (T-319), for tests and diagnostics. */

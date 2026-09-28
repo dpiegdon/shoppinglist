@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.overview
 
+import android.Manifest
+import android.app.Application
+import android.app.NotificationManager
 import org.p23q.shoppinglist.data.runCurrentOn
 import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
@@ -7,6 +10,7 @@ import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.account.AccountRegistry
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -38,10 +42,18 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.notify.InviteNotificationPoster
+import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.data.AppForegroundState
+import org.p23q.shoppinglist.data.LocalePreferenceStore
+import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
+import org.p23q.shoppinglist.core.sync.PendingInvite
+import org.robolectric.Shadows.shadowOf
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.overviewOrder
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class OverviewViewModelTest {
@@ -61,6 +73,7 @@ class OverviewViewModelTest {
     private val syncedFullLists = mutableListOf<List<String>>()
     private lateinit var viewModel: OverviewViewModel
     private lateinit var server: MockWebServer
+    private lateinit var notificationPrefs: NotificationPrefsStore
 
     /** What the fake server answers to the inbox and redeem requests (T-233); tests reassign these. */
     private var inboxJson = """{"invites": []}"""
@@ -91,6 +104,8 @@ class OverviewViewModelTest {
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
         syncStatus = SyncStatus()
+        val prefsFile = File.createTempFile("overview_vm_notif", ".preferences_pb").apply { deleteOnExit() }
+        notificationPrefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { prefsFile })
         viewModel = newViewModel()
     }
 
@@ -114,7 +129,7 @@ class OverviewViewModelTest {
                 return syncNow(listOf(serverListId))
             }
         }
-        return OverviewViewModel(listsRepo, itemsRepo, accounts.registry, accounts.sessions, accounts.secrets, syncer, syncStatus)
+        return OverviewViewModel(listsRepo, itemsRepo, accounts.registry, accounts.sessions, accounts.secrets, syncer, syncStatus, notificationPrefs)
             .also(viewModels::add)
     }
 
@@ -341,6 +356,32 @@ class OverviewViewModelTest {
         assertEquals(listOf("Camping", "Chores"), state.invites.map { it.listName })
         assertEquals("AL", state.invites.first().invitedByInitials)
         assertEquals(setOf("b"), state.ignoredInviteIds[TEST_ACCOUNT_ID])
+    }
+
+    @Test
+    fun `invites rendered in the inbox count as seen, so the next check stays quiet (T-322)`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}, ${inviteJson("b", "Chores")}]}"""
+        setIgnored(setOf("b"))
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        shadowOf(context).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        val localeFile = File.createTempFile("overview_vm_locale", ".preferences_pb").apply { deleteOnExit() }
+        val poster = InviteNotificationPoster(
+            context,
+            notificationPrefs,
+            AppForegroundState(),
+            LocalePreferenceStore(PreferenceDataStoreFactory.create { localeFile }),
+            accounts.registry,
+        )
+
+        newViewModel().uiState.first { it.invites.isNotEmpty() }
+        // The ignored one is shown too, greyed.
+        notificationPrefs.seenInvites.first { it.keys == setOf("a", "b") }
+
+        poster.notifyPendingInvites(
+            listOf("a", "b").map { PendingInvite(TEST_ACCOUNT_ID, it, "List $it", "AL", System.currentTimeMillis() + 86_400_000L) },
+        )
+        assertTrue(shadowOf(context.getSystemService(NotificationManager::class.java)).allNotifications.isEmpty())
+        assertEquals(InviteCheckOutcome.NOTHING_NEW, notificationPrefs.lastInviteCheck.first()?.outcome)
     }
 
     @Test
