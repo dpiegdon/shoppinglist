@@ -66,6 +66,7 @@ ITEM_FIELD_META = [
     ("quantity", "quantity_ts", "quantity_by"),
     ("price", "price_ts", "price_by"),
     ("note", "note_ts", "note_by"),
+    ("due", "due_ts", "due_by"),
     ("status", "status_ts", "status_by"),
     ("expense", "expense_ts", "expense_by"),
     ("deleted", "deleted_ts", "deleted_by"),
@@ -136,6 +137,8 @@ CURRENCY_LABEL_MAX_LENGTH = 32
 # Entries per share map of one expense. Real lists have a handful of members; this only blocks bloat.
 EXPENSE_SHARES_MAX = 200
 EXPENSE_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+# An item's due date (T-323), matched with fullmatch so a trailing newline cannot pass.
+DUE_DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 # The three kinds of entry an expenses list (a ledger) holds. The sign lives in the type, never in
 # the amounts — everything on the wire stays a positive decimal — so an entry is structurally
@@ -422,6 +425,21 @@ def _validate_deleted(value):
         raise ApiError(422, "invalid_field", "deleted must be a boolean.")
 
 
+def _validate_due(value):
+    # A calendar date and nothing else (T-323): exactly 'YYYY-MM-DD' in ASCII digits, and one that
+    # exists. The shape check comes first because fromisoformat alone also accepts other ISO forms
+    # ('20260928', '2026-W39-1') that clients do not read.
+    if value is None:
+        return
+    if isinstance(value, str) and DUE_DATE_RE.fullmatch(value):
+        try:
+            datetime.date.fromisoformat(value)
+            return
+        except ValueError:
+            pass
+    raise ApiError(422, "invalid_field", "due must be null or a calendar date YYYY-MM-DD.")
+
+
 def _validate_item_field(key, value):
     if key == "name":
         # Empty/null keeps the established invalid_name code; a wrong type is a new invalid_field.
@@ -434,6 +452,8 @@ def _validate_item_field(key, value):
         _require_str(key, value, QUANTITY_MAX_LENGTH, nullable=True)
     elif key == "note":
         _require_str(key, value, ITEM_NOTE_MAX_LENGTH, nullable=True)
+    elif key == "due":
+        _validate_due(value)
     elif key == "stores":
         _require_str_list(key, value, nullable=True)
     elif key == "status":
@@ -822,6 +842,9 @@ def _new_item_columns(item_id, list_id, created_at, fields, account_id):
         "note": None,
         "note_ts": 0,
         "note_by": "",
+        "due": None,
+        "due_ts": 0,
+        "due_by": "",
         "status": "todo",
         "status_ts": 0,
         "status_by": "",

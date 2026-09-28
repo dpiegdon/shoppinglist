@@ -1,4 +1,6 @@
+import re
 import sqlite3
+from importlib import resources
 
 import pytest
 
@@ -527,5 +529,63 @@ def test_fresh_schema_and_migration_10_agree_on_the_server_runtime_columns(tmp_p
 
     assert _columns(fresh) == _columns(migrated)
     assert fresh.execute("SELECT message FROM server_runtime WHERE id = 1").fetchone()[0] == ""
+    fresh.close()
+    migrated.close()
+
+
+def _pre_t323_schema(conn):
+    """The whole schema as it was before migration 11 (T-323): schema.sql without the item's due
+    columns, the comment above them and the comma that joined them to the table."""
+    schema_sql = resources.files("shoppinglist_server").joinpath("schema.sql").read_text()
+    pre, count = re.subn(
+        r"(deleted_by TEXT NOT NULL DEFAULT ''),\s*(?:--[^\n]*\n\s*)*"
+        r"due TEXT,\s*due_ts INTEGER NOT NULL DEFAULT 0,\s*due_by TEXT NOT NULL DEFAULT ''",
+        r"\1",
+        schema_sql,
+    )
+    assert count == 1
+    conn.row_factory = sqlite3.Row
+    conn.executescript(pre)
+    assert "due" not in {row["name"] for row in conn.execute("PRAGMA table_info(items)")}
+
+
+def test_migration_11_gives_existing_items_no_due_date(tmp_path):
+    """An item stored before T-323 comes out of the migration with a null due date and a zero
+    clock, so any client's first write of the field wins."""
+    conn = sqlite3.connect(str(tmp_path / "pre_t323.db"))
+    _pre_t323_schema(conn)
+    _insert_list(conn)
+    _insert_item(conn, "item-1", "list-1", "Milk", change_seq=1)
+    conn.commit()
+
+    for statement in dict(migrations_module.MIGRATIONS)[11]:
+        conn.execute(statement)
+    conn.commit()
+
+    row = conn.execute("SELECT * FROM items WHERE id = 'item-1'").fetchone()
+    assert (row["name"], row["due"], row["due_ts"], row["due_by"]) == ("Milk", None, 0, "")
+    conn.close()
+
+
+def test_fresh_schema_and_migration_11_agree_on_the_items_columns(tmp_path):
+    """schema.sql and the migration must produce the same end state (see the
+    migrations.py docstring) — column names, order, types, NOT NULL and DEFAULT."""
+    fresh = db_module.connect(str(tmp_path / "fresh_t323.db"))
+    db_module.init_db(fresh)
+
+    migrated = sqlite3.connect(str(tmp_path / "migrated_t323.db"))
+    _pre_t323_schema(migrated)
+    for statement in dict(migrations_module.MIGRATIONS)[11]:
+        migrated.execute(statement)
+    migrated.commit()
+
+    def _columns(conn):
+        return [
+            (row["name"], row["type"], row["notnull"], row["dflt_value"])
+            for row in conn.execute("PRAGMA table_info(items)").fetchall()
+        ]
+
+    assert [name for name, *_ in _columns(fresh)][-3:] == ["due", "due_ts", "due_by"]
+    assert _columns(fresh) == _columns(migrated)
     fresh.close()
     migrated.close()

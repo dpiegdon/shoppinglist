@@ -109,6 +109,8 @@ client simply ignores — a new optional response field, an endpoint it never ca
 — do not bump it. The server message (`message` on `/registration-status` and
 `/admin/server-settings`, `server_message` on `/sync`, and the partial `PUT
 /admin/server-settings`) is such an additive change and left the protocol at 3.
+So is an item's `due` date: an older client ignores the field, and since a push
+carries clocks only for the fields a client knows, it never overwrites it.
 The protocol version never exceeds the release's major version,
 and a major release with no wire change leaves the protocol alone. `release.sh`
 refuses a release that breaks either rule.
@@ -173,6 +175,7 @@ Appears in `POST /sync` payloads; the server always returns full row state.
     "quantity": {"value": "2l", "...": "..."},
     "price":    {"value": {"amount": "1.99", "currency": "EUR"}, "...": "..."},
     "note":     {"value": "the ripe ones", "...": "..."},
+    "due":      {"value": "2026-10-01", "...": "..."},
     "status":   {"value": "todo", "...": "..."},
     "expense":  {"value": null, "...": "..."},
     "deleted":  {"value": false, "...": "..."}
@@ -182,6 +185,13 @@ Appears in `POST /sync` payloads; the server always returns full row state.
 ```
 
 - `category` / `quantity` / `note` are string-or-null.
+- `due` is `null` (no due date) or a calendar date `"YYYY-MM-DD"`: exactly ten
+  characters, ASCII digits, a day that exists, no time and no zone. Anything
+  else — `"2026-02-30"`, `"20261001"`, `"2026-10-01T00:00"`, a number — is
+  `422 invalid_field` naming the `row_id` and `field`. It is passive: the server
+  never acts on it, and it sorts nothing. The server accepts it on every list
+  kind; the clients offer it on checklists only, and an item keeps a due date it
+  already has when its list changes kind.
 - `stores` is an array of strings — the **whole array** is one LWW field.
 - `price` is `null` or `{"amount": "<decimal-string>", "currency": "<ISO-4217>"|null}`,
   also one LWW field.
@@ -195,7 +205,7 @@ Appears in `POST /sync` payloads; the server always returns full row state.
   post-migration edit. Clients use it to attribute changes to a collaborator.
 
 Optional fields may be **absent from a request** (send clocks only for fields you
-changed); **responses always carry all 9 fields**.
+changed); **responses always carry all 10 fields**.
 
 `created_at` may be **omitted or null** on a pushed item; the server stamps the
 request time instead. It never changes once stored. It plays no role in

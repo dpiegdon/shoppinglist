@@ -132,6 +132,14 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "ALTER TABLE server_runtime ADD COLUMN message TEXT NOT NULL DEFAULT ''",
         ],
     ),  # T-315: the admin-set server message (durable, '' = none)
+    (
+        11,
+        [
+            "ALTER TABLE items ADD COLUMN due TEXT",
+            "ALTER TABLE items ADD COLUMN due_ts INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE items ADD COLUMN due_by TEXT NOT NULL DEFAULT ''",
+        ],
+    ),  # T-323: an item's optional due date
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

@@ -158,7 +158,14 @@ CREATE TABLE IF NOT EXISTS items (
 
     deleted INTEGER NOT NULL DEFAULT 0,
     deleted_ts INTEGER NOT NULL DEFAULT 0,
-    deleted_by TEXT NOT NULL DEFAULT ''
+    deleted_by TEXT NOT NULL DEFAULT '',
+
+    -- An optional, passive due date (T-323): a calendar date 'YYYY-MM-DD', no time, no zone;
+    -- NULL = none. Last so a fresh schema matches the ADD COLUMNs of migration 11 column for
+    -- column.
+    due TEXT,
+    due_ts INTEGER NOT NULL DEFAULT 0,
+    due_by TEXT NOT NULL DEFAULT ''
 );
 -- Live (non-deleted) item names are unique per list, case-insensitively;
 -- deleted rows are excluded so a name can be reused after deletion (Spec S3/S4).
