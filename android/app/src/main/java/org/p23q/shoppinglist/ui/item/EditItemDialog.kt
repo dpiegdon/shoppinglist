@@ -24,7 +24,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -48,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Notes (List view): the row edit icon / a long-press opens this — every field including name,
  *  plus delete. Full-screen (T-80) rather than a floating AlertDialog: no tap-outside-to-cancel
@@ -71,8 +71,8 @@ fun EditItemDialog(
             onDismissRequest = viewModel::cancelDelete,
             title = { Text(stringResource(R.string.item_delete_title)) },
             text = { Text(stringResource(R.string.item_delete_body, state.name)) },
-            confirmButton = { TextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
-            dismissButton = { TextButton(onClick = viewModel::cancelDelete) { Text(stringResource(R.string.action_cancel)) } },
+            confirmButton = { TuppuTextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelDelete) { Text(stringResource(R.string.action_cancel)) } },
         )
     } else {
         Dialog(

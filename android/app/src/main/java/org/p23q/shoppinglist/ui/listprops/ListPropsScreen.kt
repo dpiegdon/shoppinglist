@@ -26,7 +26,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +59,7 @@ import org.p23q.shoppinglist.ui.dragReorderHandle
 import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
 fun ListPropsScreen(
@@ -284,11 +284,11 @@ fun ListPropsScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmLeave) {
+                TuppuTextButton(onClick = viewModel::confirmLeave) {
                     Text(stringResource(if (local) R.string.action_delete else R.string.action_leave))
                 }
             },
-            dismissButton = { TextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 
@@ -304,8 +304,8 @@ fun ListPropsScreen(
             onDismissRequest = viewModel::cancelCategoryMerge,
             title = { Text(UiText.res(R.string.listprops_merge_confirm_title, pending.targetName).asString()) },
             text = { Text(stringResource(R.string.listprops_merge_confirm_body)) },
-            confirmButton = { TextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
-            dismissButton = { TextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
+            confirmButton = { TuppuTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -330,7 +330,7 @@ private fun CopyToDialog(targets: List<AccountEntity>, onPick: (accountId: Strin
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+        confirmButton = { TuppuTextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 

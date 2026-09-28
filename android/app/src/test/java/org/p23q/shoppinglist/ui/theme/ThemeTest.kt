@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class ThemeTest {
 
@@ -119,5 +120,30 @@ class ThemeTest {
         // catches a hex edited here without opening the web's index.css.
         assertEquals(Color(0xFF15803D), BalancePositiveLight)
         assertEquals(Color(0xFF4ADE80), BalancePositiveDark)
+    }
+
+    /** The app's own sources, read from app/, the directory the tests run in. */
+    private fun uiSources(): List<File> =
+        File("src/main/java/org/p23q/shoppinglist").walkTopDown().filter { it.extension == "kt" }.toList()
+
+    @Test
+    fun `every text button is the theme's, whose label is readable (T-327)`() {
+        val sources = uiSources()
+        assertTrue("the sources are found", sources.size > 50)
+        val offenders = sources.filter { it.name != "Theme.kt" && "import androidx.compose.material3.TextButton" in it.readText() }
+        assertEquals("Material's TextButton labels in the accent; use TuppuTextButton", emptyList<String>(), offenders.map { it.name })
+    }
+
+    @Test
+    fun `no text is drawn in the accent, which is too light to read on white (T-327)`() {
+        // The accent fills things (buttons, the add button, the sync dot); text in its colour is
+        // accentText, or the muted grey for a confirmation.
+        val allowed = Regex("""containerColor = MaterialTheme\.colorScheme\.primary|else -> MaterialTheme\.colorScheme\.primary""")
+        val offenders = uiSources().flatMap { file ->
+            file.readLines().mapIndexedNotNull { at, line ->
+                if (Regex("""colorScheme\.primary\b""").containsMatchIn(line) && !allowed.containsMatchIn(line)) "${file.name}:${at + 1}" else null
+            }
+        }
+        assertEquals(emptyList<String>(), offenders)
     }
 }

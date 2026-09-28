@@ -160,7 +160,8 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(8.dp))
         Button(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
-        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.primary) }
+        // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
+        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 

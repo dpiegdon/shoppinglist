@@ -26,7 +26,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +61,7 @@ import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.ui.theme.accentText
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -354,10 +354,10 @@ internal fun NewListDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onCreate) { Text(stringResource(R.string.action_create)) }
+            TuppuTextButton(onClick = onCreate) { Text(stringResource(R.string.action_create)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TuppuTextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }

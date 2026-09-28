@@ -175,7 +175,11 @@ Beside them sit the neutral greys for muted text, borders and the secondary
 surface of cards, dialogs and the drawer. `Theme.kt` builds the Material light
 and dark schemes from these values and sets every slot, so nothing falls back
 to Material's baseline: the background and surface are flat, elevation adds no
-tint, and text in the highlighted colour reads `colorScheme.accentText`. No
+tint, and text in the highlighted colour reads `colorScheme.accentText`. Text
+is never drawn in the accent, which is too light to read on white: every text
+button, a dialog's confirm and dismiss included, is `TuppuTextButton`, whose
+label is the highlighted text, and a confirmation ("Password changed.") is the
+muted grey, as on the web. No
 other file under `ui/` names a colour value apart from the meaning colours:
 the error red, the balance green (`BalancePositive…` in `Theme.kt`) and the
 admin screen's registration switch. There is no wallpaper-based (dynamic)

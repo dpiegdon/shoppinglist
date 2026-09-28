@@ -19,7 +19,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +44,7 @@ import org.p23q.shoppinglist.core.api.AdminUserDto
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Green track when registration is on, red when it's denied (T-112). */
 private val RegistrationOnColor = Color(0xFF2E7D32)
@@ -120,7 +120,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 ) {
                     Text(stringResource(R.string.action_save))
                 }
-                TextButton(
+                TuppuTextButton(
                     onClick = { viewModel.clearMessage() },
                     enabled = state.canClearMessage(),
                     modifier = Modifier.testTag("admin-server-message-clear"),
@@ -195,14 +195,14 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             title = { Text(stringResource(R.string.admin_reset_user_title)) },
             text = { Text(stringResource(R.string.admin_reset_user_body, user.email)) },
             confirmButton = {
-                TextButton(onClick = {
+                TuppuTextButton(onClick = {
                     viewModel.resetPassword(user)
                     pendingReset = null
                 }) {
                     Text(stringResource(R.string.action_reset))
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingReset = null }) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = { pendingReset = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 
@@ -212,14 +212,14 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             title = { Text(stringResource(R.string.admin_delete_user_title)) },
             text = { Text(stringResource(R.string.admin_delete_user_body, user.email)) },
             confirmButton = {
-                TextButton(onClick = {
+                TuppuTextButton(onClick = {
                     viewModel.deleteUser(user)
                     pendingDelete = null
                 }) {
                     Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

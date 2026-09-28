@@ -20,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +49,7 @@ import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
 fun LoginScreen(
@@ -157,7 +157,7 @@ fun LoginScreen(
             // Enter on the password field submits, so a returning user never has to reach for the button.
             keyboardActions = KeyboardActions(onDone = { viewModel.submit() }),
             trailingIcon = {
-                TextButton(onClick = { passwordVisible = !passwordVisible }) {
+                TuppuTextButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(if (passwordVisible) stringResource(R.string.action_hide) else stringResource(R.string.action_show))
                 }
             },

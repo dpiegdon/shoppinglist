@@ -25,7 +25,6 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,6 +45,7 @@ import org.p23q.shoppinglist.ui.asString
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Category/stores/quantity/price/note/due fields shared by [AddItemDialog] and [EditItemDialog]. */
 @Composable
@@ -212,7 +212,7 @@ private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         if (due != null) {
-            TextButton(onClick = { isPicking = true }, modifier = Modifier.testTag("item-due-pick")) {
+            TuppuTextButton(onClick = { isPicking = true }, modifier = Modifier.testTag("item-due-pick")) {
                 Text(AppFormat.calendarDate(due, appLocale()))
             }
             IconButton(onClick = { onDueChange(null) }, modifier = Modifier.testTag("item-due-clear")) {
@@ -237,7 +237,7 @@ private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
             onDismissRequest = { isPicking = false },
             confirmButton = {
                 LocalizedOverlay {
-                    TextButton(onClick = {
+                    TuppuTextButton(onClick = {
                         pickerState.selectedDateMillis?.let { millis ->
                             onDueChange(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString())
                         }
@@ -247,7 +247,7 @@ private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
             },
             dismissButton = {
                 LocalizedOverlay {
-                    TextButton(onClick = { isPicking = false }) { Text(stringResource(R.string.action_cancel)) }
+                    TuppuTextButton(onClick = { isPicking = false }) { Text(stringResource(R.string.action_cancel)) }
                 }
             },
         ) {

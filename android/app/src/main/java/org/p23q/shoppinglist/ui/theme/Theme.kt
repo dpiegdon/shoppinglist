@@ -1,14 +1,19 @@
 package org.p23q.shoppinglist.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -108,6 +113,26 @@ fun brandColorScheme(variant: ThemeVariant): ColorScheme = when (variant) {
  * `primary`, which in the light scheme is too light to read on white.
  */
 val ColorScheme.accentText: Color get() = tertiary
+
+/**
+ * A text button's colours: its label in [accentText] (T-327). Material draws it in `primary`, the
+ * accent, which on white reads at 2.9:1, and Material 3 has no theme slot for it.
+ */
+@Composable
+fun textButtonColors(): ButtonColors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.accentText)
+
+/**
+ * The app's text button: Material's, with [textButtonColors]. Every text button is this one, the
+ * dialogs' confirm and dismiss buttons included; ThemeTest fails on a Material `TextButton` used
+ * anywhere else.
+ */
+@Composable
+fun TuppuTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) = TextButton(onClick = onClick, modifier = modifier, enabled = enabled, colors = textButtonColors(), content = content)
 
 // The green a credit is written in (T-241): a fixed light/dark pair rather than a colour-scheme
 // slot, because it carries a meaning — red owed, green owing to you — and a meaning is not a brand

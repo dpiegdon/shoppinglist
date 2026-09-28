@@ -38,7 +38,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +75,7 @@ import org.p23q.shoppinglist.ui.dangerButtonColors
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
  * Add or edit one ledger entry (T-154, T-245). Full-screen with a fixed action bar for the same
@@ -302,7 +302,7 @@ fun ExpenseDialog(
                     onDismissRequest = { isPickingDate = false },
                     confirmButton = {
                         LocalizedOverlay {
-                            TextButton(onClick = {
+                            TuppuTextButton(onClick = {
                                 pickerState.selectedDateMillis?.let { millis ->
                                     viewModel.onDateChange(
                                         Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString(),
@@ -314,7 +314,7 @@ fun ExpenseDialog(
                     },
                     dismissButton = {
                         LocalizedOverlay {
-                            TextButton(onClick = { isPickingDate = false }) { Text(stringResource(R.string.action_cancel)) }
+                            TuppuTextButton(onClick = { isPickingDate = false }) { Text(stringResource(R.string.action_cancel)) }
                         }
                     },
                 ) {
@@ -328,12 +328,12 @@ fun ExpenseDialog(
                     title = { Text(stringResource(R.string.expense_delete_title)) },
                     text = { Text(stringResource(R.string.expense_delete_body)) },
                     confirmButton = {
-                        TextButton(onClick = { viewModel.confirmDelete() }) {
+                        TuppuTextButton(onClick = { viewModel.confirmDelete() }) {
                             Text(stringResource(R.string.action_delete))
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = viewModel::cancelDelete) {
+                        TuppuTextButton(onClick = viewModel::cancelDelete) {
                             Text(stringResource(R.string.action_cancel))
                         }
                     },

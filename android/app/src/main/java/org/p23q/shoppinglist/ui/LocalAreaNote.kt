@@ -1,7 +1,6 @@
 package org.p23q.shoppinglist.ui
 
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -9,6 +8,7 @@ import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.data.accountLine
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
  * The one-time note shown when the local area is created (T-293): what its lists can and cannot
@@ -21,7 +21,7 @@ fun LocalAreaNote(onDismiss: () -> Unit) {
         title = { Text(stringResource(R.string.local_area_note_title)) },
         text = { Text(stringResource(R.string.local_area_note_body)) },
         confirmButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.testTag(LOCAL_AREA_NOTE_OK_TAG)) {
+            TuppuTextButton(onClick = onDismiss, modifier = Modifier.testTag(LOCAL_AREA_NOTE_OK_TAG)) {
                 Text(stringResource(R.string.action_ok))
             }
         },

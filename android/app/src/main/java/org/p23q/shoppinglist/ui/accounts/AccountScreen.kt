@@ -18,7 +18,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +40,7 @@ import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.settings.formatLastSeen
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
  * One account (T-292): what used to be the account half of Settings, for this account alone, and
@@ -206,7 +206,8 @@ fun AccountScreen(
         }
 
         state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
-        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.primary) }
+        // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
+        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Spacer(Modifier.height(16.dp))
 
         if (!signedOut) {
@@ -284,11 +285,11 @@ fun AccountScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmRemove() }, modifier = Modifier.testTag("account-remove-confirm")) {
+                TuppuTextButton(onClick = { viewModel.confirmRemove() }, modifier = Modifier.testTag("account-remove-confirm")) {
                     Text(stringResource(R.string.account_remove_confirm))
                 }
             },
-            dismissButton = { TextButton(onClick = viewModel::cancelRemove) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelRemove) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 
@@ -310,8 +311,8 @@ fun AccountScreen(
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
-            dismissButton = { TextButton(onClick = viewModel::cancelDeleteAccount) { Text(stringResource(R.string.action_cancel)) } },
+            confirmButton = { TuppuTextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelDeleteAccount) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

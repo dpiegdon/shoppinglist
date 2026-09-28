@@ -160,7 +160,7 @@ fun AboutScreen(
                     updateLine,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (updateStatus is UpdateStatus.Available) {
-                        MaterialTheme.colorScheme.primary
+                        MaterialTheme.colorScheme.accentText
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },

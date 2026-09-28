@@ -35,7 +35,6 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -95,6 +94,7 @@ import org.p23q.shoppinglist.ui.settings.SettingsScreen
 import org.p23q.shoppinglist.ui.update.UpdateRequiredScreen
 import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.p23q.shoppinglist.ui.update.UpdateViewModel
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Route patterns and builders for [ShoppingListNavHost]. */
 object Routes {
@@ -604,7 +604,7 @@ fun ShoppingListNavHost(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { updateViewModel.dismissCheckNotice() }) { Text(stringResource(R.string.action_ok)) }
+                TuppuTextButton(onClick = { updateViewModel.dismissCheckNotice() }) { Text(stringResource(R.string.action_ok)) }
             },
         )
     }
@@ -620,14 +620,14 @@ fun ShoppingListNavHost(
                 Text(stringResource(R.string.update_available_body, update.version, BuildConfig.VERSION_NAME))
             },
             confirmButton = {
-                TextButton(onClick = {
+                TuppuTextButton(onClick = {
                     openDownload(context, update.downloadUrl)
                     updateViewModel.dismiss()
                 }) { Text(stringResource(R.string.action_update)) }
             },
             dismissButton = {
                 // "Skip", not "Later": declining is final for this version.
-                TextButton(onClick = { updateViewModel.dismiss() }) {
+                TuppuTextButton(onClick = { updateViewModel.dismiss() }) {
                     Text(stringResource(R.string.action_skip))
                 }
             },
@@ -873,7 +873,7 @@ private fun AdminChooserDialog(accounts: List<AccountEntity>, onChoose: (String)
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+        dismissButton = { TuppuTextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
