@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-09-28T21:39:03+00:00", "kind": "created", "ref": "main@dd77e94f", "text": "Vendored gittoc resynced to upstream v0.9.0"}
 {"actor": "user", "at": "2026-09-28T21:41:15+00:00", "kind": "note", "ref": "main@ac8b09e2", "text": "Vendored copy at v0.9.0 (upstream 0ad3b5a); upstream's own test suite passes against the vendored copy (run with the server venv's pytest); git toc fsck clean; no migration of the gittoc branch needed."}
 {"actor": "user", "at": "2026-09-28T21:41:15+00:00", "kind": "closed", "ref": "main@ac8b09e2", "text": ""}
+{"actor": "user", "at": "2026-09-28T21:41:43+00:00", "kind": "note", "ref": "main@ac8b09e2", "text": "Upstream's test suite against the vendored copy: 184 passed, 2 failed \u2014 both TestSetupScript cases assert that AGENTS.md exists in the tree, which the vendored copy leaves out on purpose; the setup script's refusal and its message pass. No fix needed."}
