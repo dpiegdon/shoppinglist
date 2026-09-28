@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-28T21:39:03+00:00", "kind": "created", "ref": "main@dd77e94f", "text": "Vendored gittoc resynced to upstream v0.9.0"}
+{"actor": "user", "at": "2026-09-28T21:41:15+00:00", "kind": "note", "ref": "main@ac8b09e2", "text": "Vendored copy at v0.9.0 (upstream 0ad3b5a); upstream's own test suite passes against the vendored copy (run with the server venv's pytest); git toc fsck clean; no migration of the gittoc branch needed."}
