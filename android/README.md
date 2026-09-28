@@ -156,6 +156,33 @@ offered for copying, and `ListsRepo.duplicate` refuses to copy one into another
 account. Removing a server account says that a list to keep can be copied to
 another account first, or to this phone when the local area is there.
 
+## Theme
+
+The app has one colour scheme, in a light and a dark version that follow the
+system setting or the choice in Settings. It is held in one file,
+`app/src/main/java/org/p23q/shoppinglist/ui/theme/BrandColors.kt`, one value
+per role:
+
+| role | light | dark |
+|---|---|---|
+| background | `#FFFFFF` | `#000000` |
+| foreground (text) | `#1A1A1E` | `#F2F2F4` |
+| accent (buttons, checkmarks, switches, the selected state) | `#5A97FF` | `#5A97FF` |
+| highlighted text (links, the "due today" date, group headings, the open-item count) | `#126BFF` | `#5A97FF` |
+| text on the accent | `#FFFFFF` | `#0B1220` |
+
+Beside them sit the neutral greys for muted text, borders and the secondary
+surface of cards, dialogs and the drawer. `Theme.kt` builds the Material light
+and dark schemes from these values and sets every slot, so nothing falls back
+to Material's baseline: the background and surface are flat, elevation adds no
+tint, and text in the highlighted colour reads `colorScheme.accentText`. No
+other file under `ui/` names a colour value apart from the meaning colours:
+the error red, the balance green (`BalancePositive…` in `Theme.kt`) and the
+admin screen's registration switch. There is no wallpaper-based (dynamic)
+colour. The web client holds the same five roles as tokens in
+`web/src/index.css`, and a web test reads `BrandColors.kt` and fails when the
+two differ, so change both together.
+
 ## Installing on a phone
 
 minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.
