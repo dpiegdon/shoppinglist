@@ -1,0 +1,1 @@
+{"actor": "user", "at": "2026-09-28T19:36:34+00:00", "kind": "created", "ref": "main@e009abfa", "text": "Server: property-based fuzzing of every JSON endpoint (Hypothesis): never a 500, always the error envelope"}

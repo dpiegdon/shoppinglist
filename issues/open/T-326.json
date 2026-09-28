@@ -1,0 +1,12 @@
+{
+  "body": "The lone-surrogate 500 (T-316) was found by hand; a generator finds the class. Add Hypothesis to the server's dev dependencies and a test module that, for each endpoint that takes a body (/register, /login, /settings PATCH, /account/*, /lists/*, /invites/*, /sync, /admin/server-settings, /admin/users/*), sends generated bodies: arbitrary JSON (any type, nesting, unicode incl. surrogates/control/format chars, huge strings, numbers at int64 bounds, booleans, null) and schema-shaped bodies with one field mutated; asserts status < 500, the {error, message} envelope on every non-2xx, Cache-Control: no-store, and for /sync that a 422 names row_id whenever a row was at fault. Also a stateful test (Hypothesis RuleBasedStateMachine) for /sync: two devices pushing generated field clocks, asserting the field-level LWW invariants (a stale write never wins, the cursor is monotonic, a full pull equals the merged state). Keep runtime under ~60 s in the gate (Hypothesis settings profile; a longer 'thorough' profile selectable by env var, documented in server/README.md). Every real 500 or invariant break found is fixed in the same pass, each with its own regression test, and listed in the report.",
+  "created_at": "2026-09-28T19:36:34+00:00",
+  "id": "T-326",
+  "labels": [
+    "server",
+    "reliability"
+  ],
+  "priority": 2,
+  "title": "Server: property-based fuzzing of every JSON endpoint (Hypothesis): never a 500, always the error envelope",
+  "updated_at": "2026-09-28T19:36:34+00:00"
+}
