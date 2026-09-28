@@ -655,3 +655,26 @@ def test_any_path_id_gets_a_contract_answer(world, method, path, role, bases, se
 
 def _percent(c):
     return "".join(f"%{byte:02X}" for byte in c.encode("utf-8", "surrogatepass"))
+
+
+@pytest.mark.parametrize(("method", "path", "role", "bases"), ENDPOINTS, ids=ENDPOINT_IDS)
+@_SHALLOW
+@given(data=st.data())
+def test_a_bent_path_gets_a_contract_answer(world, method, path, role, bases, data):
+    """The path itself, bent: a slash doubled or added, a character spliced in anywhere. Every
+    answer under the prefix is still ours — the doubled slash once got Werkzeug's HTML 308."""
+    world.restore()
+    full = f"/api/v1{_fill(path, world)}"
+    index = data.draw(st.integers(1, len(full)), label="at")
+    insert = data.draw(
+        st.sampled_from(["/", "//", "/.", "/..", "%2F", "%00", "%0A"]) | _TEXT, label="insert"
+    )
+    quoted = "".join(
+        c if c.isascii() and (c.isalnum() or c in "-_.~/%") else _percent(c) for c in insert
+    )
+    bent = full[:index] + quoted + full[index:]
+    if not bent.startswith("/api/v1/"):
+        return  # no longer under the prefix, so no longer ours to answer
+    body = _fill(bases[0], world) if bases else None
+    response = world.client.open(bent, method=method, json=body, headers=_auth(world.token(role)))
+    check_response(response, bent, body)

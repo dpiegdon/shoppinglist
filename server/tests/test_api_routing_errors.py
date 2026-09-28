@@ -74,9 +74,15 @@ def test_an_unknown_api_path_is_a_json_404(tmp_path, serve_web_client, method, p
         ("DELETE", "/api/v1//invites/abc"),
         ("POST", "/api/v1/lists/abc//leave"),
         ("GET", "/api/v1///registration-status"),
+        # And a newline anywhere in the part no endpoint takes: `path`'s `.` stops at one.
+        ("POST", "/api/v1/%0Alogout"),
+        ("GET", "/api/v1/nope%0A"),
+        ("GET", "/api/v1/%0A"),
     ],
 )
-def test_a_doubled_slash_under_the_prefix_is_a_json_404(tmp_path, serve_web_client, method, path):
+def test_a_doubled_slash_or_a_newline_under_the_prefix_is_a_json_404(
+    tmp_path, serve_web_client, method, path
+):
     client = _app(tmp_path, serve_web_client=serve_web_client).test_client()
 
     resp = client.open(path, method=method)

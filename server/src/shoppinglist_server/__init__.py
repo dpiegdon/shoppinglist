@@ -346,9 +346,12 @@ class _AnyPathConverter(PathConverter):
     the slashes, and was answered with its HTML 308 redirect, without our headers. With this the
     unknown-path route matches such a path as it stands, which Werkzeug prefers to merging, so
     it gets the JSON 404 like any path no endpoint takes. The app's own slash merging is left as
-    it is, for a co-mounted service's routes (T-250)."""
+    it is, for a co-mounted service's routes (T-250).
 
-    regex = ".+?"
+    Any character, the newline too: `path`'s `.` stops at one, so `/api/v1/x%0A` was Flask's HTML
+    404 as well."""
+
+    regex = "[\\s\\S]+?"
     # Stated, not inferred: Werkzeug derives it from whether the regex mentions "/", and this one
     # does not, which would confine it to a single segment.
     part_isolating = False

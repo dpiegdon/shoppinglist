@@ -44,8 +44,9 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
   not contain `:`; `password` ≤ 320 (≥ 8); `device_label` ≤ 128. Over-cap values
   are `422`.
 - **Unknown paths.** Any path under the API root that no endpoint takes is
-  `404 not_found` — one with a doubled slash (`/api/v1//sync`) included, which
-  is not merged into a real endpoint's path or redirected; an endpoint called with a method it does not take is
+  `404 not_found` — one with a doubled slash (`/api/v1//sync`) or a newline in
+  it included; a doubled slash is not merged into a real endpoint's path or
+  redirected; an endpoint called with a method it does not take is
   `405 method_not_allowed` with an `Allow` header. Both are the JSON envelope
   (after the protocol check, like every API request). An unhandled server fault
   is `500 internal_error`, the envelope with no details.
