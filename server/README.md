@@ -143,7 +143,7 @@ instances, and the CLI's instance-selection behavior).
 | `DATABASE_PATH` / `database_path` | SQLite file path. Created (with schema) by `init-db`; the parent directory must exist and be writable. |
 | `INVITE_HMAC_KEY` / `invite_hmac_key` | The signing key for invite tokens — see below. |
 | `BASE_URL` / `base_url` | The absolute public URL clients reach this server at (scheme + host, plus any mount path; a trailing `/` is tolerated). Used to build the invite **share URLs** (`<base_url>/invite/<token>`) and the landing page's open-in-app link — get it wrong and invite links point somewhere unreachable. |
-| `admin_emails` | Argument only. The instance's admins, matched case-insensitively against the logged-in account's email on every request — the only way to grant admin, so no API call can escalate privilege. Admins get the Server admin screen on both clients: registration on/off (until restart), a one-line server message every client shows on the login page and above the lists (kept across restarts), reset a user's password, delete a user. |
+| `admin_emails` | Argument only. The instance's admins, matched against the logged-in account's email on every request by the same Unicode case folding as login (see the wire contract's Auth section) — the only way to grant admin, so no API call can escalate privilege. Admins get the Server admin screen on both clients: registration on/off (until restart), a one-line server message every client shows on the login page and above the lists (kept across restarts), reset a user's password, delete a user. |
 | `max_content_length` | Argument only: the request-body cap, in bytes, of **this blueprint's own routes** (default **4 MB**, so a host is protected without proxy tuning). It is applied per request and nothing else: the host app's `MAX_CONTENT_LENGTH` is neither written nor read, so a co-mounted service keeps its own limit (or none) and a host that raises its own limit does not loosen this one. Oversized requests get a `413 payload_too_large` JSON error. Needs Flask 3.1 or newer. |
 | `SECRET_KEY` | Read by the dev `app.py` only, as ordinary Flask hygiene. The blueprint itself never uses Flask sessions or cookies (auth is bearer tokens), so it does not depend on this value. |
 
@@ -256,6 +256,19 @@ again, rather than replacing them one at a time. A **major** upgrade also raises
 the protocol version (see above), so every installed app has to be updated with
 it; until it is, it is answered `426 client_outdated` and pointed at the
 download.
+
+A migration can also refuse. Schema version 12 compares e-mail addresses by
+Unicode case folding, where older versions compared only ASCII letters
+case-insensitively, so a database may hold two accounts that are now one
+address (`É@example.com` and `é@example.com`). The migration will not choose
+between them: it rolls back and every connection fails with an error naming
+each colliding group, until an operator resolves them by hand. Stop the server,
+then with the `sqlite3` shell give all but one account of each group a different
+address (`UPDATE accounts SET email = 'e.old@example.com' WHERE id = '…';`, the
+ids from `SELECT id, email, created_at FROM accounts WHERE email IN (…);`),
+or reinstall the previous wheel (the refused migration left the database at the
+old version) and delete the surplus accounts from the admin screen. Then start
+the new version again and the migration runs.
 
 ## Running the dev server
 

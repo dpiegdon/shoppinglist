@@ -392,6 +392,18 @@ static `admin_emails` config and is never stored.
 `POST /register` returns `403 registration_disabled` when registration is
 disabled for the instance.
 
+**E-mail addresses** compare case-insensitively by full Unicode case folding:
+two addresses are the same when they are equal after surrounding whitespace is
+dropped, NFC normalisation, case folding and NFC again. `É@example.com`,
+`é@example.com` and `É@EXAMPLE.COM` are one address, and so are
+`straße@example.com` and `STRASSE@example.com`; dotless `ı` stays apart from `i`,
+as default folding has it. The one rule applies everywhere an address is
+compared: registration and `POST /account/change-email` (`409 email_taken`),
+`POST /login`, the `admin_emails` config, `POST /invites/redeem` and
+`GET /invites/pending`. The address is stored and shown as it was typed — in the
+login response, rosters, members, invites and the admin list — never in its
+folded form.
+
 `GET /registration-status` is unauthenticated. Its `message` is the server
 message an admin set (see "Admin"), or `null` when there is none; the login page
 shows it once the server address is confirmed. A client shows it as plain text
@@ -452,7 +464,7 @@ first: an expired invite can no longer be redeemed, so it is left out, as on
 `GET /invites/pending`.
 
 `GET /invites/pending` is the caller's inbox: every invite addressed to the
-account's email (compared case-insensitively) that `POST /invites/redeem` would
+account's email (compared by the folding described under "Auth") that `POST /invites/redeem` would
 still accept — not used, revoked or expired, on a list that exists and is not
 closed — and whose list the caller is not already on. Each entry carries the
 invite's own `token`, so joining from the overview is an ordinary redeem; the
@@ -549,7 +561,7 @@ The destructive two re-verify the calling admin's **own** password (step-up).
 
 | Endpoint | Request body | Success response |
 |---|---|---|
-| `GET /admin/users` | — | `200 {"users": [{"id", "email", "created_at", "session_count", "is_admin"}]}`, by email, case-insensitively |
+| `GET /admin/users` | — | `200 {"users": [{"id", "email", "created_at", "session_count", "is_admin"}]}`, by folded email (see "Auth") |
 | `GET /admin/server-settings` | — | `200 {"allow_registration", "message"}` |
 | `PUT /admin/server-settings` | `{"allow_registration"?, "message"?}`, at least one | `200 {"allow_registration", "message"}` |
 | `POST /admin/users/{account_id}/reset-password` | `{"password"}` | `200 {"password"}` |
