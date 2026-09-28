@@ -1,0 +1,13 @@
+{
+  "body": "A visual regression net for the Compose UI: Roborazzi records PNGs of the main screens under Robolectric's native graphics mode on the JVM (no device), and the gate compares them. Screens, each in light and dark: start/login, overview with one account and with several (sections, banners, invites), a shopping list with items (checked, quantities, stores), a checklist with due dates (past/today/future/checked), a ledger with entries and the balances view, list properties (categories, roster, copy picker), the item dialog, Accounts and the Account screen, Settings, the admin console, About. Deterministic data and a fixed 'today'. Recorded images are committed under android/app/src/test/screenshots (or Roborazzi's default), the compare task runs in verify-all.sh with a tolerance for antialiasing, and a documented ./gradlew task re-records. README: how to record and how to read a failure. Constraint: the dependency must resolve once online, after which the gate's --offline run works; verify-all's online fallback covers a cold cache.",
+  "created_at": "2026-09-28T19:36:34+00:00",
+  "id": "T-325",
+  "labels": [
+    "android",
+    "chore",
+    "reliability"
+  ],
+  "priority": 3,
+  "title": "Android: screenshot tests of the main screens in both themes (Roborazzi under Robolectric), run by the gate",
+  "updated_at": "2026-09-28T19:36:34+00:00"
+}
