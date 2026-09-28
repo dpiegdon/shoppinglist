@@ -1,0 +1,14 @@
+{
+  "body": "Three items from the maintainer's device after 3.4.0.\n\n1. **Invite notifications never arrive in practice.** InviteNotificationPoster marks every invite in an answer as seen BEFORE evaluating the gates, and TuppuSyncWorker runs the check on every trigger (periodic, after each local edit, on foreground). An invite pending while the app is open is therefore marked seen with outcome 'app in foreground' and is never announced by a later background check. Fix: an invite counts as seen only when it was shown: (a) the poster marks seen only the invites it actually POSTED, and (b) the overview marks seen the invites it rendered in the inbox (OverviewViewModel after loadInvites succeeds, through the same NotificationPrefsStore.markInvitesSeen). Under any other outcome (foreground, switch off, no permission) nothing is marked, so the next background check announces it. Keep the expiry pruning. Tests: a foreground check leaves the invite unseen and a later background check posts it; the overview rendering it marks it seen and the next check stays quiet; posted marks seen.\n2. **A joined invite lingers in the inbox until the next sync.** On both clients remove the invite from the displayed list the moment the join succeeds (Android OverviewViewModel.joinInvite \u2192 drop it from state.invites; web OverviewPage.joinInvite \u2192 setInvites without it). Ignoring already updates at once; joining must too. Tests on both.\n3. **'Duplicate' \u2192 'Duplicate list'** in list properties on both clients (Android action_duplicate, web action.duplicate, nine locales each, translations identical across clients: e.g. de 'Liste duplizieren', fr 'Dupliquer la liste', es 'Duplicar lista', pt-BR 'Duplicar lista', uk '\u0414\u0443\u0431\u043b\u044e\u0432\u0430\u0442\u0438 \u0441\u043f\u0438\u0441\u043e\u043a', ar '\u062a\u0643\u0631\u0627\u0631 \u0627\u0644\u0642\u0627\u0626\u0645\u0629', ja '\u30ea\u30b9\u30c8\u3092\u8907\u88fd', zh-Hans '\u590d\u5236\u5217\u8868'). Check whether the key is used anywhere else where 'list' would be wrong; if so, add a new key for the list-properties button instead of changing the shared one.",
+  "created_at": "2026-09-28T17:52:55+00:00",
+  "id": "T-322",
+  "labels": [
+    "android",
+    "web",
+    "bug",
+    "ux"
+  ],
+  "priority": 1,
+  "title": "Invite notifications swallowed while the app is open; a joined invite lingers until the next sync; 'Duplicate' reads 'Duplicate list'",
+  "updated_at": "2026-09-28T17:52:55+00:00"
+}
