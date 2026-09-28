@@ -92,6 +92,8 @@ fun ListScreen(
     onOpenRegistry: () -> Unit = {},
     onOpenListProps: () -> Unit = {},
     viewModel: ListViewModel = hiltViewModel(),
+    /** Today's date, what the due dates are read against: a seam for the screenshot tests. */
+    currentDate: () -> LocalDate = LocalDate::now,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -107,11 +109,11 @@ fun ListScreen(
     }
     // What the due dates are read against (T-323): taken again on every return to the screen and
     // each minute while it is up, so a list left open over midnight turns its dates over.
-    var today by remember { mutableStateOf(LocalDate.now().toString()) }
+    var today by remember { mutableStateOf(currentDate().toString()) }
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
-                today = LocalDate.now().toString()
+                today = currentDate().toString()
                 delay(60_000)
             }
         }

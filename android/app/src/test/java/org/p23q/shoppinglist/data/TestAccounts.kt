@@ -119,11 +119,15 @@ fun testApi(
  * The account wiring the app builds in Hilt, over a test database: registry, secrets, sessions
  * and the sync status.
  */
-class TestAccounts(val db: AppDb, val json: Json = Json { ignoreUnknownKeys = true }) {
+class TestAccounts(
+    val db: AppDb,
+    val json: Json = Json { ignoreUnknownKeys = true },
+    apiFactory: org.p23q.shoppinglist.core.account.ApiFactory = RetrofitApiFactory(json),
+) {
     val secrets = FakeSecretStore()
     val registry = AccountRegistry(db)
     val syncStatus = SyncStatus()
-    val sessions = AccountSessions(registry, secrets, RetrofitApiFactory(json), json, syncStatus)
+    val sessions = AccountSessions(registry, secrets, apiFactory, json, syncStatus)
 
     /** Adds a signed-in account on [serverUrl] with [token]. */
     suspend fun add(

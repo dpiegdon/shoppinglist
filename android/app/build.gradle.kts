@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.roborazzi)
 }
 
 // Release signing (T-49): credentials live in android/keystore.properties next to the gitignored
@@ -147,6 +148,10 @@ dependencies {
     // HeldCertificate / HandshakeCertificates for the self-signed-cert TLS tests that verify the
     // debug bypass connects and the release no-op still rejects untrusted certs.
     testImplementation(libs.okhttp.tls)
+    // Screenshot tests (T-325): Roborazzi captures Compose screens under Robolectric's native
+    // graphics; see "Screenshot tests" in ../README.md.
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -181,4 +186,10 @@ tasks.withType<Test>().configureEach {
             languageVersion.set(JavaLanguageVersion.of(21))
         },
     )
+}
+
+// Screenshot tests (T-325). The reference PNGs are committed next to the tests; a comparison's
+// actual and diff images land in build/outputs/roborazzi. See "Screenshot tests" in ../README.md.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }
