@@ -51,3 +51,15 @@ your source changes.
   `apiErrors.ts`, which translates server errors by their code.
   `crossClient.test.ts` fails if a string shared with the Android app reads
   differently there, in any language.
+- `src/index.css` — the colour scheme, as custom properties at the top, light in
+  `:root` and dark under `prefers-color-scheme: dark`. No other file names a
+  colour. Five tokens carry the brand and match Android's `BrandColors.kt`:
+  `--color-bg` (flat white / black), `--color-text`, `--color-accent` (buttons,
+  checkmarks, switches, the selected state; `#5a97ff` in both themes),
+  `--color-accent-strong` (links, the due-today date, emphasised text:
+  `#126bff` light, `#5a97ff` dark) and `--color-accent-text` (text on the
+  accent). Muted text, borders and surfaces are neutral greys; danger, the
+  positive balance, the checked item and the registration switch keep their
+  meaning colours. `lib/brandColors.test.ts` reads `BrandColors.kt` and fails if
+  the two clients' values differ, or if a colour is written outside
+  `index.css`.
