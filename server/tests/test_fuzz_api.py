@@ -395,14 +395,14 @@ RAW_BODIES = st.one_of(
 )
 
 
-# Mostly escaped: raw surrogate bytes are not UTF-8, so the whole body fails to parse, which is one
-# path only.
+# Mostly escaped; the raw form reaches the same code, so it needs fewer examples.
 _ASCII_ONLY = st.sampled_from([True, True, True, False])
 
 
 def _encode(value, ascii_only):
     """JSON bytes for a value. With `ascii_only` a lone surrogate is escaped (`"\\ud800"`), which
-    is valid JSON; without, it goes out as the raw (and not valid UTF-8) CESU-8 bytes."""
+    is valid JSON; without, it goes out as raw CESU-8 bytes, which are not valid UTF-8 but which
+    the server's parser decodes all the same (see `_as_the_server_reads`)."""
     return json.dumps(value, ensure_ascii=ascii_only).encode("utf-8", "surrogatepass")
 
 
@@ -557,7 +557,20 @@ def check_response(response, path, body):
         assert any(not _has_usable_id(row) for row in rows), (envelope, rows)
 
 
+def _as_the_server_reads(data):
+    """The body as the server decodes it, or None where it cannot. Not the Python value it was
+    encoded from: a surrogate PAIR in a Python string goes out as two escapes and comes back as
+    one astral character, so the ids a check compares must be read from the wire. Read as the
+    server reads it, too: `json.loads` on bytes decodes them with `surrogatepass`, so a raw
+    (CESU-8) surrogate arrives as the same lone surrogate an escaped one does."""
+    try:
+        return json.loads(data)
+    except (ValueError, RecursionError):
+        return None
+
+
 def _send(world, method, path_template, role, data):
+    """Send `data` and return the path, the response, and the body as the server read it."""
     world.restore()
     path = _fill(path_template, world)
     response = world.client.open(
@@ -567,7 +580,7 @@ def _send(world, method, path_template, role, data):
         content_type="application/json",
         headers=_auth(world.token(role)),
     )
-    return path, response
+    return path, response, _as_the_server_reads(data)
 
 
 # ---- the tests -------------------------------------------------------------------------------
@@ -583,16 +596,16 @@ _SHALLOW = settings(max_examples=max(1, _PROFILE_EXAMPLES // 2))
 @_SHALLOW
 @given(body=JSON_VALUES, ascii_only=_ASCII_ONLY)
 def test_any_json_body_gets_a_contract_answer(world, method, path, role, bases, body, ascii_only):
-    sent_path, response = _send(world, method, path, role, _encode(body, ascii_only))
-    check_response(response, sent_path, body)
+    sent_path, response, read = _send(world, method, path, role, _encode(body, ascii_only))
+    check_response(response, sent_path, read)
 
 
 @pytest.mark.parametrize(("method", "path", "role", "bases"), ENDPOINTS, ids=ENDPOINT_IDS)
 @_SHALLOW
 @given(raw=RAW_BODIES)
 def test_any_raw_body_gets_a_contract_answer(world, method, path, role, bases, raw):
-    sent_path, response = _send(world, method, path, role, raw)
-    check_response(response, sent_path, None)
+    sent_path, response, read = _send(world, method, path, role, raw)
+    check_response(response, sent_path, read)
 
 
 _WITH_BODIES = [endpoint for endpoint in ENDPOINTS if endpoint[3] is not None]
@@ -610,8 +623,8 @@ def test_a_realistic_body_with_one_change_gets_a_contract_answer(
 ):
     base = _fill(data.draw(st.sampled_from(bases)), world)
     body = data.draw(_mutated(base))
-    sent_path, response = _send(world, method, path, role, _encode(body, ascii_only))
-    check_response(response, sent_path, body)
+    sent_path, response, read = _send(world, method, path, role, _encode(body, ascii_only))
+    check_response(response, sent_path, read)
 
 
 @pytest.mark.parametrize(("method", "path", "role", "bases"), ENDPOINTS, ids=ENDPOINT_IDS)
