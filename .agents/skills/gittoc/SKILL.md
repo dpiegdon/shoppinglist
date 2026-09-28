@@ -4,8 +4,8 @@ description: Git-repository-specific ticket system. Use when work spans multiple
 license: MIT. LICENSE.txt has complete terms.
 compatibility: Requires python 3.9+ and git.
 metadata:
-  author: codeberg.org/dpiegdon/gittoc
-  version: "0.8.0"
+  author: github.com/dpiegdon/gittoc
+  version: "0.9.0"
 ---
 
 # Gittoc

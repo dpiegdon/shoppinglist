@@ -132,6 +132,177 @@ class TestInitAndRemote(GittocTestBase):
         self.assertFalse(remote_status["remote_branch_exists"])
 
 
+class TestSetupScript(GittocTestBase):
+    """End-to-end tests for the vendored-install script ``scripts/setup``.
+
+    The script deletes dev-only files (including ``.git``) from the gittoc
+    directory it lives in, so every test works on a throwaway copy of this
+    repository's tree with a *fake* ``.git`` directory standing in for a
+    fresh ``git clone``.
+    """
+
+    VENDOR_REL = Path(".agents") / "skills" / "gittoc"
+
+    def vendor_tree(self, target: Path) -> Path:
+        """Copy the gittoc source tree to target with a fake .git directory."""
+        shutil.copytree(
+            ROOT.parent,
+            target,
+            ignore=shutil.ignore_patterns(
+                ".git", ".claude", "dev", "__pycache__", ".pytest_cache", "*.swp"
+            ),
+        )
+        (target / ".git").mkdir()
+        (target / ".git" / "MARKER").write_text("fake clone\n", encoding="utf-8")
+        return target
+
+    def run_setup(
+        self, gittoc_dir: Path, cwd: Path, env: dict[str, str] | None = None
+    ) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [str(gittoc_dir / "scripts" / "setup")],
+            cwd=str(cwd),
+            text=True,
+            capture_output=True,
+            check=False,
+            env=env,
+        )
+
+    def test_vendored_install(self) -> None:
+        gittoc_dir = self.vendor_tree(self.repo / self.VENDOR_REL)
+        proc = self.run_setup(gittoc_dir, self.repo)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        # dev-only files are gone, the vendored tool itself is intact
+        self.assertFalse((gittoc_dir / ".git").exists())
+        self.assertFalse((gittoc_dir / "AGENTS.md").exists())
+        self.assertTrue((gittoc_dir / "scripts" / "gittoc").exists())
+        # the host repo's own .git is untouched
+        self.assertTrue((self.repo / ".git").is_dir())
+        alias = subprocess.run(
+            ["git", "config", "alias.toc"],
+            cwd=self.repo,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(alias, f"!./{self.VENDOR_REL.as_posix()}/scripts/gittoc")
+        link = self.repo / ".claude" / "skills" / "gittoc"
+        self.assertTrue(link.is_symlink())
+        self.assertTrue((link / "SKILL.md").exists())
+        # the tracker was initialized and works through the alias
+        out = subprocess.run(
+            ["git", "toc", "summary"],
+            cwd=self.repo,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout
+        self.assertIn("open=0", out)
+        # idempotent: a second run succeeds and changes nothing
+        proc = self.run_setup(gittoc_dir, self.repo)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_works_without_gnu_realpath(self) -> None:
+        """setup must not depend on GNU `realpath --relative-to` (T-172)."""
+        shim_dir = Path(self.tempdir.name) / "bsd-bin"
+        shim_dir.mkdir()
+        shim = shim_dir / "realpath"
+        shim.write_text(
+            "#!/bin/sh\necho 'realpath: illegal option -- -' >&2\nexit 1\n",
+            encoding="utf-8",
+        )
+        shim.chmod(0o755)
+        env = dict(os.environ)
+        env["PATH"] = f"{shim_dir}{os.pathsep}{env.get('PATH', '')}"
+        gittoc_dir = self.vendor_tree(self.repo / self.VENDOR_REL)
+        proc = self.run_setup(gittoc_dir, self.repo, env=env)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        alias = subprocess.run(
+            ["git", "config", "alias.toc"],
+            cwd=self.repo,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(alias, f"!./{self.VENDOR_REL.as_posix()}/scripts/gittoc")
+        link = self.repo / ".claude" / "skills" / "gittoc"
+        self.assertTrue((link / "SKILL.md").exists())
+
+    def git_init_commit(self, path: Path) -> None:
+        """Turn path into a real single-branch repository with one commit."""
+        for args in (
+            ["init", "-q", "-b", "main"],
+            ["config", "user.email", "t@example.com"],
+            ["config", "user.name", "tester"],
+            ["add", "."],
+            ["commit", "-q", "--allow-empty", "-m", "clone"],
+        ):
+            subprocess.run(["git", *args], cwd=path, check=True, capture_output=True)
+
+    def test_refuses_to_run_inside_gittoc_checkout(self) -> None:
+        """Running setup in a gittoc dev checkout must not delete its .git (T-164)."""
+        dev = self.vendor_tree(self.repo / self.VENDOR_REL)
+        shutil.rmtree(dev / ".git")
+        self.git_init_commit(dev)
+        # the tracker branch marks a checkout that is being worked in
+        subprocess.run(
+            ["git", "branch", "gittoc"], cwd=dev, check=True, capture_output=True
+        )
+        for cwd in (dev, dev / "scripts", self.repo):
+            proc = self.run_setup(dev, cwd)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("looks like a development checkout", proc.stderr)
+            self.assertTrue((dev / ".git").is_dir())
+            self.assertTrue((dev / "AGENTS.md").exists())
+        subprocess.run(["git", "status"], cwd=dev, check=True, capture_output=True)
+        # uncommitted changes alone are enough to refuse
+        dev2 = Path(self.tempdir.name) / "dirty"
+        shutil.copytree(dev, dev2, symlinks=True)
+        subprocess.run(
+            ["git", "branch", "-D", "gittoc"], cwd=dev2, check=True, capture_output=True
+        )
+        (dev2 / "SKILL.md").write_text("edited\n", encoding="utf-8")
+        host2 = Path(self.tempdir.name) / "host2"
+        host2.mkdir()
+        self.git_init_commit(host2)
+        shutil.move(str(dev2), str(host2 / "gittoc"))
+        proc = self.run_setup(host2 / "gittoc", host2)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("looks like a development checkout", proc.stderr)
+        self.assertTrue((host2 / "gittoc" / ".git").is_dir())
+
+    def test_fresh_clone_installs_from_inside_it(self) -> None:
+        """A pristine vendored clone still has its own .git; setup run from
+        inside it must install into the host, not refuse (T-178)."""
+        clone = self.vendor_tree(self.repo / self.VENDOR_REL)
+        shutil.rmtree(clone / ".git")
+        self.git_init_commit(clone)
+        proc = self.run_setup(clone, clone)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse((clone / ".git").exists())
+        self.assertTrue((self.repo / ".git").is_dir())
+        alias = subprocess.run(
+            ["git", "config", "alias.toc"],
+            cwd=self.repo,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(alias, f"!./{self.VENDOR_REL.as_posix()}/scripts/gittoc")
+
+    def test_refuses_outside_git_repo(self) -> None:
+        plain = Path(self.tempdir.name) / "plain"
+        plain.mkdir()
+        gittoc_dir = self.vendor_tree(plain / "gittoc")
+        env = dict(os.environ)
+        env["GIT_CEILING_DIRECTORIES"] = self.tempdir.name
+        proc = self.run_setup(gittoc_dir, plain, env=env)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("not inside a git repository", proc.stderr)
+        self.assertTrue((gittoc_dir / ".git" / "MARKER").exists())
+        self.assertTrue((gittoc_dir / "AGENTS.md").exists())
+
+
 class TestCreateAndList(GittocTestBase):
     def test_create_issues(self) -> None:
         run(["init"], self.repo)
@@ -156,6 +327,39 @@ class TestCreateAndList(GittocTestBase):
         # T-2 should NOT be ready (blocked by T-1)
         ready_out = run(["unblocked", "--format", "compact"], self.repo)
         self.assertNotIn("T-2", ready_out)
+
+    def test_create_with_deps_is_one_commit_with_dependency_event(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "Blocker task"], self.repo)
+        run(["new", "Dependent task", "-d", "T-1"], self.repo)
+        log = subprocess.run(
+            ["git", "-C", str(self.repo / ".git" / "gittoc"), "log", "--format=%s"],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.splitlines()
+        self.assertEqual(len([s for s in log if "T-2" in s]), 1)
+        data = json.loads(run(["show", "T-2", "-a", "-f", "json"], self.repo))
+        kinds = [(e["kind"], e["text"]) for e in data["history"]]
+        self.assertEqual(kinds, [("created", "Dependent task"), ("dependency", "T-1")])
+
+    def test_create_with_missing_dep_creates_nothing(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "Blocker task"], self.repo)
+        result = run_fail(["new", "Dependent task", "-d", "T-999"], self.repo)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("issue not found: T-999", result.stderr)
+        self.assertEqual(result.stdout.strip(), "")
+        self.assertNotIn("T-2", run(["list", "-a"], self.repo))
+        tracker_status = subprocess.run(
+            ["git", "-C", str(self.repo / ".git" / "gittoc"), "status", "--short"],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(tracker_status, "")
+        # Re-running with a valid dep mints T-2, not a duplicate-skipping T-3.
+        self.assertEqual(run(["new", "Dependent task", "-d", "T-1"], self.repo), "T-2")
 
     def test_list_alias_and_compact(self) -> None:
         run(["init"], self.repo)
@@ -244,6 +448,20 @@ class TestDependenciesAndReady(GittocTestBase):
         shown = json.loads(run(["show", issue2, "-f", "json"], self.repo))
         self.assertNotIn("deps", shown)
 
+    def test_dependency_event_text_is_deduplicated_everywhere(self) -> None:
+        """`new -d` and `dep` record the same, deduplicated event text (T-181)."""
+        run(["init"], self.repo)
+        run(["new", "a"], self.repo)
+        run(["new", "b"], self.repo)
+        run(["new", "c", "-d", "T-2,T-1,T-2"], self.repo)
+        run(["new", "d"], self.repo)
+        run(["dep", "T-4", "T-2,T-1,T-2"], self.repo)
+        for issue_id in ("T-3", "T-4"):
+            shown = json.loads(run(["show", issue_id, "-a", "-f", "json"], self.repo))
+            texts = [e["text"] for e in shown["history"] if e["kind"] == "dependency"]
+            self.assertEqual(texts, ["T-2 T-1"], issue_id)
+            self.assertEqual(shown["deps"], ["T-1", "T-2"], issue_id)
+
     def test_remove_nonexistent_dep_fails(self) -> None:
         run(["init"], self.repo)
         issue1 = run(["new", "A"], self.repo)
@@ -267,6 +485,62 @@ class TestDependenciesAndReady(GittocTestBase):
         # Should not crash; T-1 depends on T-2 would still be a cycle.
         with self.assertRaises(subprocess.CalledProcessError):
             run(["dep", issue1, issue2], self.repo)
+
+    def _inject_dangling_dep(self, issue_id: str, missing: str = "T-999") -> None:
+        """Hand-edit an open issue so it depends on a non-existent ticket."""
+        path = self.repo / ".git" / "gittoc" / "issues" / "open" / f"{issue_id}.json"
+        data = json.loads(path.read_text())
+        data["deps"] = [missing]
+        path.write_text(json.dumps(data, indent=2))
+
+    def test_dangling_dep_does_not_abort_read_commands(self) -> None:
+        """A dep with no issue file must not crash list/summary/unblocked/resume."""
+        run(["init"], self.repo)
+        issue1 = run(["new", "Broken", "-p", "1"], self.repo)
+        issue2 = run(["new", "Fine", "-p", "2"], self.repo)
+        self._inject_dangling_dep(issue1)
+
+        proc = subprocess.run(
+            [str(CLI), "list"],
+            cwd=str(self.repo),
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        self.assertIn(issue1, proc.stdout)
+        self.assertIn(issue2, proc.stdout)
+        # one warning naming both the referencing ticket and the missing dep
+        self.assertEqual(proc.stderr.count("warning:"), 1)
+        self.assertIn(f"{issue1} depends on T-999", proc.stderr)
+        self.assertIn("fsck", proc.stderr)
+
+        summary = json.loads(run(["summary", "-f", "json"], self.repo))
+        self.assertEqual(summary["open"], 2)
+        self.assertEqual(summary["ready"], 1)
+
+        ready = run(["unblocked"], self.repo)
+        self.assertIn(issue2, ready)
+        self.assertNotIn(issue1, ready)
+
+        resumed = json.loads(run(["resume", "-f", "json"], self.repo))
+        self.assertEqual(resumed["id"], issue2)
+
+        # fsck still reports the dangling dependency as an error
+        fsck = run_fail(["fsck"], self.repo)
+        self.assertNotEqual(fsck.returncode, 0)
+        self.assertIn("dangling dependency on T-999", fsck.stdout + fsck.stderr)
+
+    def test_dangling_dep_blocks_claim_with_clear_message(self) -> None:
+        run(["init"], self.repo)
+        issue1 = run(["new", "Broken"], self.repo)
+        self._inject_dangling_dep(issue1)
+        proc = run_fail(["claim", issue1, "--owner", "tester"], self.repo)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("cannot claim non-ready issue", proc.stderr)
+        self.assertIn(f"{issue1} depends on T-999", proc.stderr)
+        # claiming an unrelated healthy ticket still works
+        issue2 = run(["new", "Fine"], self.repo)
+        run(["claim", issue2, "--owner", "tester"], self.repo)
 
 
 class TestClaimWorkflow(GittocTestBase):
@@ -458,6 +732,37 @@ class TestNotesAndHistory(GittocTestBase):
         self.assertIn("labels: bug", text)
         self.assertIn("tester: A note", text)
 
+    def test_non_object_and_kindless_event_lines_do_not_crash(self) -> None:
+        """A valid-JSON non-object or a kind-less entry must be tolerated by
+        list/show/resume (fsck still reports it)."""
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["note", "T-1", "real note"], self.repo)
+        event_path = (
+            self.repo / ".git" / "gittoc" / "issues" / "open" / "T-1.events.jsonl"
+        )
+        with event_path.open("a", encoding="utf-8") as handle:
+            handle.write("[]\n")
+            handle.write('{"at":"2024-01-01T00:00:00+00:00","text":"no kind"}\n')
+        proc = run_fail(["list"], self.repo)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("notes=1", proc.stdout)
+        self.assertIn("skipping non-object event", proc.stderr)
+        self.assertNotIn("Traceback", proc.stderr)
+        notes = json.loads(run(["show", "T-1", "-n", "-f", "json"], self.repo))
+        self.assertEqual(notes["notes_count"], 1)
+        self.assertEqual(len(notes["recent_notes"]), 1)
+        self.assertEqual(notes["recent_notes"][0]["text"], "real note")
+        # the kind-less entry stays in history but is not counted as a note
+        shown = json.loads(run(["show", "T-1", "-a", "-f", "json"], self.repo))
+        self.assertTrue(any(e.get("text") == "no kind" for e in shown["history"]))
+        self.assertIn("T-1", run(["resume", "T-1"], self.repo))
+        self.assertIn("T-1", run(["show", "T-1", "-a"], self.repo))
+        fsck = run_fail(["fsck"], self.repo)
+        self.assertNotEqual(fsck.returncode, 0)
+        self.assertIn("event entry must be a JSON object", fsck.stdout)
+        self.assertIn("missing event field 'kind'", fsck.stdout)
+
 
 class TestShowAndResume(GittocTestBase):
     def test_show_alias(self) -> None:
@@ -521,6 +826,83 @@ class TestUpdate(GittocTestBase):
         run(["update", "T-1", "--state", "blocked"], self.repo)
         summary = run(["summary"], self.repo)
         self.assertIn("blocked=1", summary)
+
+    def _history_kinds(self, issue_id: str) -> list[str]:
+        shown = json.loads(run(["show", issue_id, "-a", "-f", "json"], self.repo))
+        return [entry["kind"] for entry in shown["history"]]
+
+    def test_update_state_closed_records_closed_event(self) -> None:
+        """`update --state closed` must leave the same audit trail as `close`."""
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["update", "T-1", "--state", "closed", "-p", "1"], self.repo)
+        self.assertEqual(self._history_kinds("T-1"), ["created", "closed"])
+        self.assertIn("Close issue T-1", run(["log"], self.repo))
+        self.assertIn("closed=1", run(["summary"], self.repo))
+
+    def test_noop_close_and_reclaim_keep_their_event_kind(self) -> None:
+        """Closing a closed ticket or re-claiming by the same owner still records
+        the requested kind, not a bare 'updated' event (T-176)."""
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["close", "T-1"], self.repo)
+        run(["close", "T-1"], self.repo)
+        self.assertEqual(self._history_kinds("T-1"), ["created", "closed", "closed"])
+        run(["new", "Other"], self.repo)
+        run(["claim", "T-2", "--owner", "alice"], self.repo)
+        run(["claim", "T-2", "--owner", "alice"], self.repo)
+        self.assertEqual(self._history_kinds("T-2"), ["created", "claimed", "claimed"])
+        log = run(["log"], self.repo)
+        self.assertEqual(log.count("Claim issue T-2 for alice"), 2)
+        self.assertNotIn("Update issue T-2", log)
+
+    def test_close_with_field_edits_keeps_event_text(self) -> None:
+        """`update --state closed` plus field edits records both (T-177)."""
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["update", "T-1", "--state", "closed", "--title", "Renamed"], self.repo)
+        shown = json.loads(run(["show", "T-1", "-a", "-f", "json"], self.repo))
+        closed = [e for e in shown["history"] if e["kind"] == "closed"]
+        self.assertEqual(len(closed), 1)
+        self.assertEqual(closed[0]["text"], "fields updated")
+        # a plain close still has empty text
+        run(["new", "Other"], self.repo)
+        run(["close", "T-2"], self.repo)
+        shown = json.loads(run(["show", "T-2", "-a", "-f", "json"], self.repo))
+        closed = [e for e in shown["history"] if e["kind"] == "closed"]
+        self.assertEqual(closed[0]["text"], "")
+
+    def test_update_state_rejected_records_rejected_event(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["update", "T-1", "--state", "rejected"], self.repo)
+        self.assertEqual(self._history_kinds("T-1"), ["created", "rejected"])
+        self.assertIn("Reject issue T-1", run(["log"], self.repo))
+
+    def test_update_state_claimed_records_claimed_event(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["update", "T-1", "--state", "claimed", "--owner", "tester"], self.repo)
+        shown = json.loads(run(["show", "T-1", "-a", "-f", "json"], self.repo))
+        claimed = [e for e in shown["history"] if e["kind"] == "claimed"]
+        self.assertEqual(len(claimed), 1)
+        self.assertEqual(claimed[0]["text"], "tester")
+        self.assertIn("Claim issue T-1 for tester", run(["log"], self.repo))
+
+    def test_update_field_only_records_updated_event(self) -> None:
+        """Field edits without a requested state stay 'updated', even on a closed
+        ticket; an explicit --state closed records 'closed' like `close` does."""
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["close", "T-1"], self.repo)
+        run(["update", "T-1", "--title", "Renamed"], self.repo)
+        run(["update", "T-1", "--state", "closed", "-p", "2"], self.repo)
+        self.assertEqual(
+            self._history_kinds("T-1"), ["created", "closed", "updated", "closed"]
+        )
+        log = run(["log"], self.repo)
+        self.assertEqual(log.count("Close issue T-1"), 2)
+        self.assertEqual(log.count("Update issue T-1"), 1)
 
     def test_update_alias(self) -> None:
         """The 'up' alias maps to the 'update' command."""
@@ -603,6 +985,108 @@ class TestWorktreeIntegrity(GittocTestBase):
             check=True,
         ).stdout
         self.assertIn(str(self.repo), worktree_entry)
+
+
+class TestStaleTracker(GittocTestBase):
+    """Optimistic locking: a lost race never leaves partial state in the worktree."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        run(["init"], self.repo)
+        run(["new", "host issue"], self.repo)
+        self.checkout = self.repo / ".git" / "gittoc"
+        tracker_mod = import_lib("tracker")
+        self.StaleTrackerError = tracker_mod.StaleTrackerError
+        self.tracker = tracker_mod.Tracker(self.repo, self.checkout)
+
+    def tracker_git(self, *args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(self.checkout), *args],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+
+    def event_texts(self, state: str = "open") -> list[str]:
+        path = self.checkout / "issues" / state / "T-1.events.jsonl"
+        if not path.exists():
+            return []
+        return [
+            json.loads(line)["text"]
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
+    def test_stale_detected_before_anything_is_written(self) -> None:
+        # Another process commits between open() and our write.
+        run(["note", "T-1", "theirs"], self.repo)
+        with self.assertRaises(self.StaleTrackerError):
+            self.tracker.add_note("T-1", "mine")
+        self.assertEqual(self.tracker_git("status", "--porcelain"), "")
+        self.assertEqual(self.event_texts(), ["host issue", "theirs"])
+        # The advised re-run applies the note exactly once.
+        run(["note", "T-1", "mine"], self.repo)
+        self.assertEqual(self.event_texts(), ["host issue", "theirs", "mine"])
+
+    def _commit_between_write_and_commit(self) -> None:
+        """Make the tracker move under us after our files are written."""
+        original = self.tracker.events.append
+
+        def append_then_race(*args, **kwargs):
+            original(*args, **kwargs)
+            self.tracker_git("commit", "-q", "--allow-empty", "-m", "other writer")
+
+        self.tracker.events.append = append_then_race  # type: ignore[method-assign]
+
+    def test_lost_race_after_note_write_is_rolled_back(self) -> None:
+        self._commit_between_write_and_commit()
+        with self.assertRaises(self.StaleTrackerError):
+            self.tracker.add_note("T-1", "mine")
+        self.assertEqual(self.tracker_git("status", "--porcelain"), "")
+        self.assertEqual(self.event_texts(), ["host issue"])
+        # A later unrelated commit must not sweep in a leftover note line.
+        run(["note", "T-1", "later"], self.repo)
+        self.assertEqual(self.event_texts(), ["host issue", "later"])
+
+    def test_commit_stages_only_own_paths(self) -> None:
+        """Another writer's uncommitted files must not be swept into our commit (T-174)."""
+        stray = self.checkout / "issues" / "open" / "T-9.json"
+        stray.write_text('{"id": "T-9", "title": "in flight", "created_at": "x"}\n')
+        run(["note", "T-1", "mine"], self.repo)
+        committed = self.tracker_git("show", "--name-only", "--format=", "HEAD")
+        self.assertEqual(committed.splitlines(), ["issues/open/T-1.events.jsonl"])
+        self.assertEqual(
+            self.tracker_git("status", "--porcelain"), "?? issues/open/T-9.json"
+        )
+
+    def test_discard_pending_handles_staged_but_uncommitted_path(self) -> None:
+        """A path in the index but not in HEAD is removed, not checked out (T-175)."""
+        new_file = self.checkout / "issues" / "open" / "T-7.json"
+        self.tracker.begin_write(new_file)
+        new_file.write_text('{"id": "T-7", "title": "x", "created_at": "x"}\n')
+        self.tracker_git("add", "--", "issues/open/T-7.json")
+        self.tracker.discard_pending()
+        self.assertFalse(new_file.exists())
+
+    def test_lost_race_after_state_move_is_rolled_back(self) -> None:
+        self._commit_between_write_and_commit()
+        with self.assertRaises(self.StaleTrackerError):
+            self.tracker.update_issue("T-1", state="blocked")
+        self.assertEqual(self.tracker_git("status", "--porcelain"), "")
+        issues = self.checkout / "issues"
+        self.assertTrue((issues / "open" / "T-1.json").exists())
+        self.assertTrue((issues / "open" / "T-1.events.jsonl").exists())
+        self.assertFalse((issues / "blocked" / "T-1.json").exists())
+        self.assertFalse((issues / "blocked" / "T-1.events.jsonl").exists())
+        self.assertEqual(self.event_texts(), ["host issue"])
+
+    def test_lost_race_after_create_is_rolled_back(self) -> None:
+        self._commit_between_write_and_commit()
+        with self.assertRaises(self.StaleTrackerError):
+            self.tracker.create_issue("ghost", "", [], 3)
+        self.assertEqual(self.tracker_git("status", "--porcelain"), "")
+        self.assertFalse((self.checkout / "issues" / "open" / "T-2.json").exists())
+        self.assertEqual(run(["new", "real"], self.repo), "T-2")
 
 
 class TestExternalWorktree(GittocTestBase):
@@ -1091,6 +1575,30 @@ class TestAutoPush(GittocTestBase):
         self.assertEqual(proc.returncode, 0)
         self.assertIn("warning", proc.stderr)
         self.assertIn("T-2", proc.stdout)
+
+    def test_new_validates_before_auto_pull(self) -> None:
+        """A doomed `new` must fail on validation without touching the remote (T-179)."""
+        self.init_with_remote()
+        subprocess.run(
+            ["git", "config", "gittoc.autopush", "true"],
+            cwd=self.repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "remote", "set-url", "origin", "/nonexistent/path"],
+            cwd=self.repo,
+            check=True,
+            capture_output=True,
+        )
+        proc = run_fail(["new", "   "], self.repo)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("title must not be empty", proc.stderr)
+        self.assertNotIn("auto-pull", proc.stderr)
+        proc = run_fail(["new", "ok", "-d", "bogus"], self.repo)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("invalid issue id", proc.stderr)
+        self.assertNotIn("auto-pull", proc.stderr)
 
     def test_auto_pull_merge_conflict_aborts_mutation(self) -> None:
         """A merge conflict during auto-pull must abort before any local write."""
@@ -2253,6 +2761,32 @@ class TestFileAndStdinInput(GittocTestBase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("empty", proc.stderr)
 
+    def test_empty_inline_note_rejected(self) -> None:
+        for text in ("", "   \t"):
+            proc = run_fail(["note", "T-1", text], self.repo)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("empty", proc.stderr)
+        proc = run_fail(["note", "T-1", "-F", "-"], self.repo, stdin="  \n")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("empty", proc.stderr)
+        data = json.loads(run(["show", "T-1", "-n", "-f", "json"], self.repo))
+        self.assertEqual(data["notes_count"], 0)
+
+    def test_empty_title_rejected(self) -> None:
+        for title in ("", "   "):
+            proc = run_fail(["new", title], self.repo)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("title must not be empty", proc.stderr)
+            proc = run_fail(["update", "T-1", "-t", title], self.repo)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("title must not be empty", proc.stderr)
+        self.assertEqual(run(["list", "-f", "json"], self.repo).count('"id"'), 1)
+        data = json.loads(run(["show", "T-1", "-f", "json"], self.repo))
+        self.assertEqual(data["title"], "host issue")
+        # an empty body is still allowed on new and update
+        new_id = run(["new", "empty body", "-b", ""], self.repo)
+        run(["update", new_id, "-b", ""], self.repo)
+
     def test_update_clear_body_with_empty_file(self) -> None:
         run(["update", "T-1", "-b", "has body"], self.repo)
         empty = self.repo / "empty.txt"
@@ -2268,6 +2802,36 @@ class TestFileAndStdinInput(GittocTestBase):
         notes = data["recent_notes"]
         self.assertEqual(notes[0]["text"], "one trailing")
         self.assertEqual(notes[1]["text"], "two trailing\n")
+
+    def _run_with_git_prefix(self, args: list[str], prefix: str) -> None:
+        """Run the CLI the way the `git toc` alias does: cwd at the repo
+        top-level with GIT_PREFIX naming the invoking subdirectory."""
+        env = {**__import__("os").environ, "GIT_PREFIX": prefix}
+        subprocess.run(
+            [str(CLI), *args],
+            cwd=str(self.repo),
+            text=True,
+            capture_output=True,
+            check=True,
+            env=env,
+        )
+
+    def test_relative_file_resolved_against_git_prefix(self) -> None:
+        sub = self.repo / "sub"
+        sub.mkdir()
+        (sub / "body.md").write_text("from subdir", encoding="utf-8")
+        # a same-named file at the top-level must NOT be picked up
+        (self.repo / "body.md").write_text("from top-level", encoding="utf-8")
+        self._run_with_git_prefix(["note", "T-1", "-F", "body.md"], "sub/")
+        data = json.loads(run(["show", "T-1", "-n", "-f", "json"], self.repo))
+        self.assertEqual(data["recent_notes"][0]["text"], "from subdir")
+
+    def test_absolute_file_unaffected_by_git_prefix(self) -> None:
+        abs_file = self.repo / "abs.md"
+        abs_file.write_text("absolute", encoding="utf-8")
+        self._run_with_git_prefix(["note", "T-1", "-F", str(abs_file)], "sub/")
+        data = json.loads(run(["show", "T-1", "-n", "-f", "json"], self.repo))
+        self.assertEqual(data["recent_notes"][0]["text"], "absolute")
 
     def test_shell_metacharacters_roundtrip(self) -> None:
         payload = "see `type IS NOT 'x'` and $(whoami); cost $5 and ! history"
@@ -2301,6 +2865,25 @@ class TestEventRef(GittocTestBase):
         run(["note", "T-1", "a note", "--actor", "dev"], self.repo)
         notes = run(["show", "T-1", "-n"], self.repo)
         self.assertRegex(notes, r"note#1 \([0-9a-f]+\) dev: a note")
+
+    def test_ref_on_branch_containing_at_sign_is_live(self) -> None:
+        """A branch name with '@' must not corrupt the surfaced commit hash."""
+        subprocess.run(
+            ["git", "checkout", "-q", "-b", "release@2024"],
+            cwd=self.repo,
+            check=True,
+            capture_output=True,
+        )
+        run(["init"], self.repo)
+        run(["new", "Task"], self.repo)
+        run(["note", "T-1", "a note", "--actor", "dev"], self.repo)
+        shown = json.loads(run(["show", "T-1", "-a", "-f", "json"], self.repo))
+        self.assertTrue(
+            all(e["ref"].startswith("release@2024@") for e in shown["history"])
+        )
+        notes = run(["show", "T-1", "-n"], self.repo)
+        self.assertRegex(notes, r"note#1 \([0-9a-f]+\) dev: a note")
+        self.assertNotIn("?)", notes)
 
     def test_missing_objects_detects_orphan(self) -> None:
         run(["init"], self.repo)
@@ -2342,6 +2925,9 @@ class TestRenderUnit(unittest.TestCase):
         self.assertEqual(common.ref_short_hash("main@abc1234"), "abc1234")
         self.assertEqual(common.ref_short_hash("abc1234"), "abc1234")
         self.assertEqual(common.ref_short_hash(""), "")
+        # branch names may contain "@"; only the last one separates the hash
+        self.assertEqual(common.ref_short_hash("release@2024@abc1234"), "abc1234")
+        self.assertEqual(common.ref_short_hash("a@b@c@abc1234"), "abc1234")
 
     def test_live_ref_rendered_without_marker(self) -> None:
         render = import_lib("render")

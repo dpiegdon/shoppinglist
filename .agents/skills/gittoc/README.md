@@ -30,6 +30,11 @@ echo '.agents/skills/gittoc/' >> .git/info/exclude
 The tool stays local to your checkout — invisible to git, never pushed. Each
 collaborator who wants gittoc installs it themselves the same way.
 
+`setup` strips the vendored clone of its own `.git` and dev-only files. It
+refuses to run on anything that is not a pristine clone (local branches,
+uncommitted changes or stashes), so it cannot destroy a checkout you are
+developing gittoc in.
+
 
 ## Repository
 
@@ -61,6 +66,7 @@ few older and newer ideas:
 - [`nitwit`](https://github.com/lukedupin/nitwit): CLI-first, offline, git-native ticket workflow with strong “tickets belong with the code” instincts
 - [`beads`](https://github.com/steveyegge/beads): agent-oriented task graph ideas such as ready work, dependencies, claims, and durable multi-session context
 - [`pearls`](https://github.com/mrorigo/pearls): a lightweight Git-native distributed issue tracker for agentic workflows, with a nearby problem statement from a different implementation direction
+- [`git-bug`](https://github.com/git-bug/git-bug): the most complete distributed git-native bug tracker; bugs and identities are stored as operation logs in raw git objects (operation-based CRDTs ordered by Lamport clocks), so concurrent edits merge without conflicts, and it ships a CLI, terminal UI, web UI and bridges to GitHub, GitLab, Jira and Launchpad. `gittoc` takes the opposite trade-offs: plain JSON on a branch you can `cat`, ordinary git merges, and dependency/ready/claim semantics for agents instead of UIs and bridges
 
 The design goal here is roughly:
 

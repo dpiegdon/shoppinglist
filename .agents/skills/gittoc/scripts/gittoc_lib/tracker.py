@@ -29,6 +29,7 @@ from .common import (
     run_git,
     validate_issue_id,
     validate_priority,
+    validate_title,
 )
 from .event_log import EventLog
 from .models import Issue
@@ -48,6 +49,9 @@ class Tracker:
         self.checkout = checkout
         self.base_head = self.head()
         self._state_cache: dict[str, str] = {}
+        # Worktree paths written by the in-flight mutation (see begin_write).
+        self._pending: list[Path] = []
+        self._warned_missing_deps: set[tuple[str, str]] = set()
         self.events = EventLog(self)
         self.remote = RemoteSync(self)
 
@@ -206,6 +210,50 @@ class Tracker:
                 "tracker changed during this command; re-run your command to retry"
             )
 
+    def begin_write(self, *paths: Path) -> None:
+        """Gate a worktree write: check staleness first, then record the paths.
+
+        Every writer (issue JSON, event log) calls this before touching disk.
+        The staleness check runs before the *first* write of a mutation, so a
+        tracker that another process committed to since ``open()`` is detected
+        before anything lands in the shared worktree. The recorded paths are
+        the only ones ``commit_if_needed`` stages, and they let it roll the
+        mutation back if the final pre-commit check loses the race.
+        """
+        if not self._pending:
+            self.ensure_not_stale()
+        self._pending.extend(paths)
+
+    def discard_pending(self) -> None:
+        """Restore every path recorded by begin_write to its HEAD content.
+
+        Paths present in HEAD are checked out from it (which also recreates
+        files the mutation deleted or moved); paths absent from HEAD, even if
+        staged, are removed. Only the
+        paths this mutation touched are reverted, so another writer's
+        uncommitted files in the shared worktree are left alone.
+        """
+        rel = self._pending_rel()
+        self._pending.clear()
+        if not rel:
+            return
+        # Decide "tracked" against HEAD, not the index: a path another process
+        # staged but has not committed is absent from HEAD, and checking it
+        # out from HEAD would fail. Such paths are simply removed.
+        listed = run_git(
+            ["ls-tree", "--name-only", "HEAD", "--", *rel], cwd=self.checkout
+        ).stdout
+        tracked = {line for line in listed.splitlines() if line}
+        restore = [r for r in rel if r in tracked]
+        if restore:
+            run_git(["checkout", "-q", "HEAD", "--", *restore], cwd=self.checkout)
+        for r in rel:
+            if r not in tracked:
+                target = self.checkout / r
+                if target.exists():
+                    target.unlink()
+        self._state_cache.clear()
+
     def issues_root(self) -> Path:
         """Return the path to the issues root directory in the tracker worktree."""
         return self.checkout / ISSUES_ROOT
@@ -223,30 +271,54 @@ class Tracker:
         return self.state_dir(state) / f"{validate_issue_id(issue_id)}.json"
 
     def find_issue_path(self, issue_id: str) -> Path:
-        """Search all state directories and return the path where the issue lives."""
+        """Return the path where the issue lives, or exit if it does not exist."""
         issue_id = validate_issue_id(issue_id)
-        for state in STATE_ORDER:
-            path = self.issue_path(issue_id, state)
-            if path.exists():
-                return path
-        raise SystemExit(f"issue not found: {issue_id}")
+        state = self._issue_state(issue_id)
+        if state is None:
+            raise SystemExit(f"issue not found: {issue_id}")
+        return self.issue_path(issue_id, state)
+
+    def _pending_rel(self) -> list[str]:
+        """Return the unique worktree-relative paths recorded by begin_write."""
+        return [
+            str(path.relative_to(self.checkout))
+            for path in dict.fromkeys(self._pending)
+        ]
 
     def commit_if_needed(self, message: str, actor: str | None = None) -> None:
-        """Stage and commit any pending changes to the issues tree, if any exist."""
-        proc = run_git(["status", "--porcelain", "--", "issues"], cwd=self.checkout)
-        if not proc.stdout.strip():
+        """Stage and commit the paths this mutation wrote, if any changed.
+
+        Only the paths recorded by ``begin_write`` are staged. The shared
+        worktree may hold another process's not-yet-committed files, and
+        staging the whole ``issues`` tree would sweep those into this commit
+        under the wrong message and actor.
+        """
+        rel = self._pending_rel()
+        if not rel:
             return
-        self.ensure_not_stale()
-        run_git(["add", "issues"], cwd=self.checkout)
+        proc = run_git(["status", "--porcelain", "--", *rel], cwd=self.checkout)
+        if not proc.stdout.strip():
+            self._pending.clear()
+            return
+        try:
+            self.ensure_not_stale()
+        except StaleTrackerError:
+            # Lost the race after writing: undo our files so the next writer
+            # (or our own re-run) does not sweep them into an unrelated commit.
+            self.discard_pending()
+            raise
+        run_git(["add", "-A", "--", *rel], cwd=self.checkout)
         commit_actor = actor or default_owner()
         run_git(
             ["commit", "-q", "-m", f"{message} ({commit_actor})"], cwd=self.checkout
         )
         self.base_head = self.head()
+        self._pending.clear()
 
     def write_issue(self, issue: Issue, previous_path: Path | None = None) -> Path:
         """Write the issue JSON to disk, removing the old path if it has moved."""
         path = self.issue_path(issue.issue_id, issue.state)
+        self.begin_write(*(p for p in (path, previous_path) if p is not None))
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             json.dumps(issue.to_record(), indent=2, sort_keys=True) + "\n",
@@ -346,34 +418,51 @@ class Tracker:
         labels: list[str],
         priority: int,
         state: str = "open",
+        deps: list[str] | None = None,
     ) -> Issue:
-        """Create a new issue, write it to disk, append a created event, and commit."""
+        """Create a new issue, write it to disk, append a created event, and commit.
+
+        Dependencies are validated (every id must exist) before anything is
+        written, so an invalid ``-d`` aborts without persisting a ticket. A
+        brand-new issue has no dependents yet, so it cannot close a cycle. The
+        issue and its deps land in one commit; the event log still records the
+        same ``dependency`` event ``set_dependencies`` would have written.
+        """
+        priority = validate_priority(priority)
+        resolved_deps = self._resolve_deps(deps or [])
         timestamp = now_utc()
         issue = Issue(
             issue_id=self.next_issue_id(),
-            title=title,
+            title=validate_title(title),
             body=body,
-            deps=(),
+            deps=tuple(sorted(resolved_deps, key=issue_number)),
             labels=tuple(labels),
             owner="",
-            priority=validate_priority(priority),
+            priority=priority,
             created_at=timestamp,
             updated_at=timestamp,
             state=state,
         )
         self.write_issue(issue)
         self.events.append(issue, "created", issue.title)
+        if resolved_deps:
+            self.events.append(issue, "dependency", " ".join(resolved_deps))
         self.commit_if_needed(f"Add issue {issue.issue_id}: {issue.title}")
         return issue
 
-    def _issue_state(self, issue_id: str) -> str:
-        """Return the state of an issue, using cache when available."""
+    def _issue_state(self, issue_id: str) -> str | None:
+        """Return the state of an issue, or None if no issue file exists.
+
+        Uses the state cache when available. A missing issue is *not* cached,
+        so a file created later in the same process is still found.
+        """
         if issue_id in self._state_cache:
             return self._state_cache[issue_id]
-        path = self.find_issue_path(issue_id)
-        state = path.parent.name
-        self._state_cache[issue_id] = state
-        return state
+        for state in STATE_ORDER:
+            if self.issue_path(issue_id, state).exists():
+                self._state_cache[issue_id] = state
+                return state
+        return None
 
     def _build_state_cache(self) -> None:
         """Populate the state cache from all issue files on disk."""
@@ -382,14 +471,34 @@ class Tracker:
                 if not path.name.endswith(EVENT_SUFFIX):
                     self._state_cache[path.stem] = state
 
-    def dependency_closed(self, issue_id: str) -> bool:
-        """Return True if the named dependency issue is in a terminal state."""
-        return self._issue_state(issue_id) in TERMINAL_STATES
+    def dependency_closed(self, issue_id: str, dep_id: str) -> bool:
+        """Return True if *dep_id*, a dependency of *issue_id*, is in a terminal state.
+
+        A dependency with no issue file (after a bad merge or hand edit) is
+        treated as unresolved so the referencing issue is never reported as
+        ready; one warning per (issue, dep) pair is printed to stderr instead
+        of aborting every read command that touches readiness. ``fsck``
+        reports the same condition as a dangling dependency.
+        """
+        state = self._issue_state(dep_id)
+        if state is None:
+            key = (issue_id, dep_id)
+            if key not in self._warned_missing_deps:
+                self._warned_missing_deps.add(key)
+                print(
+                    col.warn(
+                        f"warning: {issue_id} depends on {dep_id}, which does "
+                        "not exist; treating as unresolved (run `gittoc fsck`)"
+                    ),
+                    file=sys.stderr,
+                )
+            return False
+        return state in TERMINAL_STATES
 
     def ready(self, issue: Issue) -> bool:
         """Return True if the issue is open and all its dependencies are closed."""
         return issue.state == "open" and all(
-            self.dependency_closed(dep_id) for dep_id in issue.deps
+            self.dependency_closed(issue.issue_id, dep_id) for dep_id in issue.deps
         )
 
     def ensure_claimable(self, issue: Issue) -> None:
@@ -425,9 +534,7 @@ class Tracker:
             if current in seen:
                 continue
             seen.add(current)
-            try:
-                current_issue, _ = self.load_issue(current)
-            except SystemExit:
+            if self._issue_state(current) is None:
                 # Referenced dep does not exist; treat as a leaf node.
                 print(
                     col.warn(
@@ -437,6 +544,7 @@ class Tracker:
                     file=sys.stderr,
                 )
                 continue
+            current_issue, _ = self.load_issue(current)
             stack.extend(current_issue.deps)
         return False
 
@@ -496,12 +604,18 @@ class Tracker:
         owner: str | None = None,
         labels: list[str] | None = None,
         priority: int | None = None,
-        message: str | None = None,
-        event_kind: str = "updated",
         event_text: str = "",
         event_actor: str | None = None,
     ) -> Issue:
-        """Apply one or more field changes to an issue and commit the result."""
+        """Apply one or more field changes to an issue and commit the result.
+
+        The event kind and commit message follow the *state transition*, not
+        the calling command: moving to ``closed``/``rejected``/``claimed``
+        records that kind (with the matching commit message) whether it came
+        from ``close``/``reject``/``claim`` or from ``update --state``, so the
+        audit trail cannot be bypassed. Any other change records ``updated``
+        with *event_text*.
+        """
         issue, path = self.load_issue(issue_id)
         target_state = issue.state if state is None else state
         if target_state == "claimed":
@@ -541,7 +655,7 @@ class Tracker:
             resolved_owner = default_owner()
         updated = replace(
             issue,
-            title=issue.title if title is None else title,
+            title=issue.title if title is None else validate_title(title),
             body=issue.body if body is None else body,
             state=target_state,
             owner=resolved_owner,
@@ -551,41 +665,85 @@ class Tracker:
             ),
             updated_at=now_utc(),
         )
+        event_kind, event_text, message = self._transition_event(
+            issue, updated, state, event_text
+        )
         self.events.move_file(updated.issue_id, updated.state, path)
         self.write_issue(updated, previous_path=path)
         self.events.append(updated, event_kind, event_text, actor=event_actor)
-        self.commit_if_needed(
-            message or f"Update issue {updated.issue_id}", actor=event_actor
-        )
+        self.commit_if_needed(message, actor=event_actor)
         return updated
+
+    @staticmethod
+    def _transition_event(
+        before: Issue, after: Issue, requested_state: str | None, event_text: str
+    ) -> tuple[str, str, str]:
+        """Return (event kind, event text, commit message) for an issue change.
+
+        An explicitly requested ``closed``/``rejected``/``claimed`` state gets
+        its own kind and commit message even when the issue was already in
+        that state, so ``close``, ``reject`` and a same-owner re-``claim``
+        keep recording what was asked for. A (re-)claim records the owner as
+        the event text, mirroring the ``claim`` command, and an owner change
+        on a claimed issue counts as a claim. Everything else is a plain
+        ``updated`` event.
+        """
+        issue_id = after.issue_id
+        # Field edits made alongside a terminal transition must stay visible
+        # in the event log, so keep the caller's text when any changed.
+        fields_changed = any(
+            getattr(before, field) != getattr(after, field)
+            for field in ("title", "body", "labels", "priority")
+        )
+        text = event_text if fields_changed else ""
+        if requested_state == "closed":
+            return "closed", text, f"Close issue {issue_id}"
+        if requested_state == "rejected":
+            return "rejected", text, f"Reject issue {issue_id}"
+        if requested_state == "claimed" or (
+            after.state == "claimed" and after.owner != before.owner
+        ):
+            return "claimed", after.owner, f"Claim issue {issue_id} for {after.owner}"
+        return "updated", event_text, f"Update issue {issue_id}"
 
     def reject_issue(self, issue_id: str, *, actor: str | None = None) -> Issue:
         """Move an issue to the rejected state (won't-do / abandoned)."""
-        return self.update_issue(
-            issue_id,
-            state="rejected",
-            message=f"Reject issue {issue_id}",
-            event_kind="rejected",
-            event_actor=actor,
-        )
+        return self.update_issue(issue_id, state="rejected", event_actor=actor)
+
+    def _resolve_deps(
+        self, dep_ids: list[str], *, issue_id: str | None = None
+    ) -> list[str]:
+        """Validate dependency ids and return them unique, in input order.
+
+        Every id must be well-formed and name an existing issue. When
+        *issue_id* names the issue receiving the dependencies, ids that would
+        close a cycle are rejected too (a brand-new issue has no dependents,
+        so ``create_issue`` passes none). Both ``create_issue`` and
+        ``set_dependencies`` go through here so the rules and the recorded
+        event text stay identical.
+        """
+        resolved: list[str] = []
+        for dep_id in dep_ids:
+            dep = validate_issue_id(dep_id)
+            self.find_issue_path(dep)
+            if issue_id is not None and self._would_introduce_cycle(issue_id, dep):
+                raise SystemExit(
+                    f"dependency would introduce a cycle: {issue_id} -> {dep}"
+                )
+            if dep not in resolved:
+                resolved.append(dep)
+        return resolved
 
     def set_dependencies(self, issue_id: str, dep_ids: list[str]) -> Issue:
         """Add blocking dependencies to an issue, rejecting cycles."""
         issue, path = self.load_issue(issue_id)
-        deps = set(issue.deps)
-        for dep_id in dep_ids:
-            dep = validate_issue_id(dep_id)
-            self.find_issue_path(dep)
-            if self._would_introduce_cycle(issue.issue_id, dep):
-                raise SystemExit(
-                    f"dependency would introduce a cycle: {issue.issue_id} -> {dep}"
-                )
-            deps.add(dep)
+        new_deps = self._resolve_deps(dep_ids, issue_id=issue.issue_id)
+        deps = set(issue.deps) | set(new_deps)
         updated = replace(
             issue, deps=tuple(sorted(deps, key=issue_number)), updated_at=now_utc()
         )
         self.write_issue(updated, previous_path=path)
-        self.events.append(updated, "dependency", " ".join(dep_ids))
+        self.events.append(updated, "dependency", " ".join(new_deps))
         self.commit_if_needed(f"Add dependencies to {updated.issue_id}")
         return updated
 

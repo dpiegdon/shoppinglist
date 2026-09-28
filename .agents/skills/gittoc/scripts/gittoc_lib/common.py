@@ -105,6 +105,13 @@ def validate_priority(priority: int) -> int:
     return priority
 
 
+def validate_title(title: str) -> str:
+    """Raise SystemExit if title is empty or whitespace-only, otherwise return it."""
+    if not title.strip():
+        raise SystemExit("title must not be empty")
+    return title
+
+
 def parse_state(value: str | None) -> str | None:
     """Return state unchanged if valid, None if value is None; raise SystemExit if invalid."""
     if value is None:
@@ -202,7 +209,9 @@ def ref_short_hash(ref: str) -> str:
     """
     if not ref:
         return ""
-    return ref.split("@", 1)[1] if "@" in ref else ref
+    # Branch names may themselves contain "@" (only "@{" is forbidden), so
+    # the hash is whatever follows the *last* separator.
+    return ref.rsplit("@", 1)[-1]
 
 
 def missing_objects(repo: Path, candidates: Iterable[str]) -> set[str]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +22,7 @@ from .common import (
     ref_short_hash,
     run_git,
     validate_issue_id,
+    validate_title,
 )
 from .remote_sync import RemotePushPullError
 from .render import print_issues, render_show_text
@@ -112,17 +114,23 @@ def resolve_text_input(
     if inline is not None and file_arg is not None:
         raise SystemExit(f"provide {what} inline or with -F, not both")
     if file_arg is None:
+        if inline is not None and not allow_empty and not inline.strip():
+            raise SystemExit(f"{what} is empty")
         return inline
     if file_arg == "-":
         text = sys.stdin.read()
     else:
+        # Under the `git toc` alias, git runs us from the repo top-level and
+        # exports the invoking subdirectory as GIT_PREFIX; a relative path
+        # must be resolved against that, not against our cwd.
+        file_path = Path(os.environ.get("GIT_PREFIX", "")) / file_arg
         try:
-            text = Path(file_arg).read_text(encoding="utf-8")
+            text = file_path.read_text(encoding="utf-8")
         except OSError as exc:
             raise SystemExit(f"cannot read {what} from {file_arg}: {exc}") from exc
     if text.endswith("\n"):
         text = text[:-1]
-    if not allow_empty and not text:
+    if not allow_empty and not text.strip():
         raise SystemExit(f"{what} is empty")
     return text
 
@@ -253,15 +261,16 @@ def cmd_push(args: argparse.Namespace) -> int:
 
 def cmd_new(args: argparse.Namespace) -> int:
     """Create a new issue and optionally add dependencies."""
+    # Cheap validation first: with autopush enabled, opening the tracker
+    # fetches and merges, which a doomed invocation should not pay for.
+    title = validate_title(args.title)
     body = resolve_text_input(args.body, args.file, what="body", allow_empty=True)
+    deps = parse_issue_ids(args.dep)
     tracker = Tracker.open()
     _auto_pull(tracker)
     issue = tracker.create_issue(
-        args.title, body or "", parse_labels(args.label), args.priority
+        title, body or "", parse_labels(args.label), args.priority, deps=deps
     )
-    deps = parse_issue_ids(args.dep)
-    if deps:
-        tracker.set_dependencies(issue.issue_id, deps)
     print(issue.issue_id)
     _auto_push(tracker)
     return 0
@@ -316,13 +325,7 @@ def cmd_claim(args: argparse.Namespace) -> int:
     for issue_id in issue_ids:
         issues.append(
             tracker.update_issue(
-                issue_id,
-                state="claimed",
-                owner=owner,
-                message=f"Claim issue {issue_id} for {owner}",
-                event_kind="claimed",
-                event_text=owner,
-                event_actor=owner,
+                issue_id, state="claimed", owner=owner, event_actor=owner
             )
         )
     print_issues(issues, tracker, args.format)
@@ -556,13 +559,7 @@ def cmd_close(args: argparse.Namespace) -> int:
     tracker = Tracker.open()
     _auto_pull(tracker)
     actor = args.actor or default_owner()
-    issue = tracker.update_issue(
-        args.issue_id,
-        state="closed",
-        message=f"Close issue {args.issue_id}",
-        event_kind="closed",
-        event_actor=actor,
-    )
+    issue = tracker.update_issue(args.issue_id, state="closed", event_actor=actor)
     print_issues([issue], tracker, args.format)
     _auto_push(tracker)
     return 0

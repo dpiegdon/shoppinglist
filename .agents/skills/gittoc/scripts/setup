@@ -12,7 +12,35 @@
 #   --autopush    enable auto-push/pull on every mutating command
 #                 (git config gittoc.autopush true)
 
-GITTOC_DIR="$(cd "$(dirname "$0")/../" && pwd)"
+GITTOC_DIR="$(cd "$(dirname "$0")/../" && pwd -P)"
+
+# Resolve the host repository from the gittoc directory's *parent*, not from
+# the caller's cwd: a freshly cloned vendored copy still carries its own .git,
+# which would otherwise shadow the host when setup is run from inside it.
+if ! GIT_ROOTDIR="$(git -C "$GITTOC_DIR/.." rev-parse --show-toplevel 2>/dev/null)"; then
+	echo "error: $GITTOC_DIR is not inside a git repository; vendor gittoc into the host repo first" >&2
+	exit 1
+fi
+
+# Refuse to strip a development checkout. A vendored clone is pristine: one
+# local branch, clean tree, no stash. A checkout someone works in has a local
+# 'gittoc' tracker branch, extra branches, uncommitted changes or stashes, and
+# deleting its .git would destroy that work.
+if [ "$(git -C "$GITTOC_DIR" rev-parse --show-toplevel 2>/dev/null)" = "$GITTOC_DIR" ]; then
+	if git -C "$GITTOC_DIR" show-ref --verify --quiet refs/heads/gittoc \
+		|| [ -n "$(git -C "$GITTOC_DIR" status --porcelain 2>/dev/null)" ] \
+		|| [ "$(git -C "$GITTOC_DIR" branch --list 2>/dev/null | grep -c .)" -gt 1 ] \
+		|| [ -n "$(git -C "$GITTOC_DIR" stash list 2>/dev/null)" ]; then
+		echo "error: $GITTOC_DIR looks like a development checkout (local branches, uncommitted changes or stashes)" >&2
+		echo "       refusing to delete its .git; setup is for pristine vendored clones" >&2
+		exit 1
+	fi
+fi
+
+# Both paths are physical (pwd -P / rev-parse) and GITTOC_DIR is below
+# GIT_ROOTDIR, so plain POSIX prefix stripping gives the relative path
+# without GNU-only `realpath --relative-to` (absent on macOS/BSD).
+GITTOC_DIR_REL="${GITTOC_DIR#"$GIT_ROOTDIR"/}"
 
 # remove unneeded files that may befuddle agents or users
 # (scripts/dev is the dev-only lint/test pipeline + its venv; installs don't need it)
@@ -21,10 +49,6 @@ for F in AGENTS.md .git assets/gittoc_logo.png scripts/dev .isort.cfg; do
 		rm -Rf "$GITTOC_DIR/$F"
 	fi
 done
-
-# identify paths in relation to parent git repo
-GIT_ROOTDIR="$(git rev-parse --show-toplevel)"
-GITTOC_DIR_REL="$(realpath --relative-to="$GIT_ROOTDIR" "$GITTOC_DIR")"
 
 # create `git toc` alias
 git config alias.toc >/dev/null 2>&1 || git config alias.toc "!./$GITTOC_DIR_REL/scripts/gittoc"
