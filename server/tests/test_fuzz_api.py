@@ -283,39 +283,61 @@ def _fill(template, world):
 # Characters that have broken or could break something: controls, the NUL, format characters
 # (zero-width, bidi overrides, BOM), line and paragraph separators, the colon the invite token is
 # delimited by, '@' and '.', and the lone surrogates JSON can spell but Python cannot encode.
-_AWKWARD = "\x00\x01\x1f\x7f\n\r\t​‍‮⁦﻿   :@. "
-_CHARACTERS = st.one_of(
-    st.characters(),
-    # Lone surrogates, drawn directly: st.characters() leaves category Cs out by default.
-    st.integers(0xD800, 0xDFFF).map(chr),
-    st.sampled_from(_AWKWARD),
-)
-_TEXT = st.text(_CHARACTERS, max_size=10)
+_AWKWARD = "\x00\x01\x1f\x7f\n\r\t\u200b\u200d\u202e\u2066\ufeff\u2028\u2029\u00a0:@. "
+_PLAIN_CHARACTERS = st.one_of(st.characters(), st.sampled_from(_AWKWARD))
+# Lone surrogates, drawn directly: st.characters() leaves category Cs out by default.
+_SURROGATES = st.integers(0xD800, 0xDFFF).map(chr)
+_CHARACTERS = st.one_of(_PLAIN_CHARACTERS, _SURROGATES)
+# One string in four may hold a surrogate. More, and most bodies would stop at json_body's
+# surrogate check before any route saw them.
 # Strings just under, at and over every documented cap, in one-, two- and four-byte characters.
 _CAPS = [3, 8, 16, 17, 32, 33, 127, 128, 129, 200, 201, 254, 255, 320, 321, 500, 501, 5000, 5001]
-_HUGE_TEXT = st.builds(
-    lambda unit, n: (unit * n)[:n],
-    st.sampled_from(["a", "é", "\U0001f600", "\ud800", "a@b.co", " "]),
-    st.sampled_from(_CAPS + [70_000]),
-)
 _INT64 = 2**63
 _EDGE_INTS = st.sampled_from(
     [0, 1, -1, 2**31 - 1, 2**31, 2**53, _INT64 - 1, _INT64, -_INT64, -_INT64 - 1, 2**64, 10**40]
 )
-_LEAVES = st.one_of(
-    st.none(),
-    st.booleans(),
-    st.integers(),
-    _EDGE_INTS,
-    st.floats(),  # NaN and ±Infinity included: Python's json writes and reads them
-    _TEXT,
-    _HUGE_TEXT,
+
+
+def _json_values(characters, units):
+    """Any JSON value, its strings drawn from `characters`, its long strings repeat `units`."""
+    text = st.text(characters, max_size=10)
+    huge = st.builds(
+        lambda unit, n: (unit * n)[:n], st.sampled_from(units), st.sampled_from(_CAPS + [70_000])
+    )
+    leaves = st.one_of(
+        st.none(),
+        st.booleans(),
+        st.integers(),
+        _EDGE_INTS,
+        st.floats(),  # NaN and ±Infinity included: Python's json writes and reads them
+        text,
+        huge,
+    )
+    return st.recursive(
+        leaves,
+        lambda children: st.lists(children, max_size=4)
+        | st.dictionaries(text | huge, children, max_size=4),
+        max_leaves=12,
+    )
+
+
+_UNITS = ["a", "\u00e9", "\U0001f600", "a@b.co", " "]
+_PLAIN_JSON = _json_values(_PLAIN_CHARACTERS, _UNITS)
+# One value in four may hold a surrogate somewhere. More, and most bodies would stop at
+# json_body's surrogate check before any route saw them.
+JSON_VALUES = st.one_of(
+    _PLAIN_JSON, _PLAIN_JSON, _PLAIN_JSON, _json_values(_CHARACTERS, [*_UNITS, "\ud800"])
 )
-JSON_VALUES = st.recursive(
-    _LEAVES,
-    lambda children: st.lists(children, max_size=4)
-    | st.dictionaries(st.one_of(_TEXT, _HUGE_TEXT), children, max_size=4),
-    max_leaves=12,
+_TEXT = st.one_of(
+    st.text(_PLAIN_CHARACTERS, max_size=10),
+    st.text(_PLAIN_CHARACTERS, max_size=10),
+    st.text(_PLAIN_CHARACTERS, max_size=10),
+    st.text(_CHARACTERS, max_size=10),
+)
+_HUGE_TEXT = st.builds(
+    lambda unit, n: (unit * n)[:n],
+    st.sampled_from([*_UNITS, "\ud800"]),
+    st.sampled_from(_CAPS + [70_000]),
 )
 
 
@@ -379,7 +401,8 @@ def _near_string(draw, value):
     that is otherwise valid is what gets past each route's shape checks to the code behind them —
     the SQL bind, the hash, the token — which is where T-316's surrogate did its damage."""
     index = draw(st.integers(0, len(value)))
-    awkward = draw(st.text(_CHARACTERS, min_size=1, max_size=3))
+    plain = st.text(_PLAIN_CHARACTERS, min_size=1, max_size=3)
+    awkward = draw(st.one_of(plain, plain, plain, st.text(_SURROGATES, min_size=1, max_size=2)))
     cap = draw(st.sampled_from(_CAPS))
     inserted = value[:index] + awkward + value[index:]
     return draw(
@@ -424,7 +447,12 @@ def _mutated(draw, base):
     value at all), a key or entry removed, or a key or entry added. Keys added are mostly ones
     the schema knows, so they land where they matter."""
     body = copy.deepcopy(base)
-    path = draw(st.sampled_from(list(_paths(body))[1:]))
+    path = draw(st.sampled_from(list(_paths(body))))
+    if not path:
+        # The root only gains a key: every other field stays as valid as it was, so the route's
+        # success path is reached too, with something extra riding along.
+        body[draw(st.sampled_from(_known_keys(base)) | _TEXT)] = draw(JSON_VALUES)
+        return body
     parent = body
     for key in path[:-1]:
         parent = parent[key]

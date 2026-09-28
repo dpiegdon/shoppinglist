@@ -407,11 +407,14 @@ their inputs:
   500, carry `Cache-Control: no-store`, be the `{"error", "message"}` envelope
   when it is not a 2xx, and on `/sync` name the `row_id` of a pushed row
   whenever a row was at fault.
-- `tests/test_fuzz_sync_lww.py` is a state machine: two devices on one shared
-  list push generated field clocks and pull, in any order. After every step a
-  full pull equals the merged state the field-level last-write-wins rule
-  predicts, no cursor has moved backwards, and a device's incremental pulls
-  hold exactly what the full pull holds.
+- `tests/test_fuzz_sync_lww.py` is a state machine: two devices on a shared
+  list and a shared expenses ledger push generated field clocks, pull and vote
+  to close the ledger, in any order. After every step a full pull equals the
+  merged state the field-level last-write-wins rule predicts, no cursor has
+  moved backwards, and a device's incremental pulls hold exactly what the full
+  pull holds. A push is refused exactly when the ledger's rules say so — only
+  for a write that would win, except on a closed list — naming that row, and
+  leaves nothing of its batch behind.
 
 Both run in the ordinary `pytest` run under the `ci` profile: a modest number of
 examples, a fixed seed so a run is repeatable, and together about a minute. For
