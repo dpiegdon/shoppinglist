@@ -148,7 +148,7 @@ export default function LoginPage() {
         )}
         {apkAvailable && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.75rem", marginBottom: 0, fontSize: "0.85rem" }}>
-            <a href={apkUrl()} style={{ color: "var(--color-accent)" }}>
+            <a href={apkUrl()} style={{ color: "var(--color-accent-strong)" }}>
               {t("login.getAndroidApp")}
             </a>
           </p>

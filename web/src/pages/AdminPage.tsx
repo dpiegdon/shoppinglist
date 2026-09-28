@@ -38,7 +38,7 @@ function ToggleSwitch({
         flexShrink: 0,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
-        background: checked ? "#2e7d32" : "var(--color-danger)",
+        background: checked ? "var(--color-switch-on)" : "var(--color-danger)",
         transition: "background 0.15s",
       }}
     >
@@ -52,7 +52,7 @@ function ToggleSwitch({
           width: "1.2rem",
           height: "1.2rem",
           borderRadius: "50%",
-          background: "#fff",
+          background: "var(--color-switch-knob)",
           transition: "inset-inline-start 0.15s",
         }}
       />

@@ -437,7 +437,7 @@ describe("ListPage due dates (T-323)", () => {
 
     expect(dueOf("Taxes")!.style.color).toBe("var(--color-danger)");
     expect(dueOf("Taxes")!.textContent).toBe(`Overdue ${shortDate(offset(-1), "en", today)}`);
-    expect(dueOf("Call mum")!.style.color).toBe("var(--color-accent)");
+    expect(dueOf("Call mum")!.style.color).toBe("var(--color-accent-strong)");
     expect(dueOf("Call mum")!.textContent).toBe(`Due today ${shortDate(today, "en", today)}`);
     expect(dueOf("Passport")!.style.color).toBe("var(--color-text-muted)");
     expect(dueOf("Passport")!.textContent).toBe(shortDate(offset(3), "en", today));

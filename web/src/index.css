@@ -1,30 +1,50 @@
+/* The colour scheme (T-324): every colour on the page is one of these tokens, so a change of scheme
+   is an edit here and nowhere else. Five roles carry the brand and match Android's BrandColors.kt
+   value for value (lib/brandColors.test.ts reads both):
+     --color-bg            background, flat white / black
+     --color-text          foreground, the text
+     --color-accent        buttons, checkmarks, switches, the selected state
+     --color-accent-strong highlighted text: links, the "due today" date, emphasised text
+     --color-accent-text   text drawn ON the accent
+   Muted text, borders and secondary surfaces are neutral greys. The meaning colours (danger, the
+   positive balance, the checked item, registration on) are fixed by what they mean, not by the
+   brand. The logo keeps its own gradient in favicon.svg. */
 :root {
   --color-bg: #ffffff;
   --color-surface: #f7f7f8;
   --color-border: #e2e2e5;
   --color-text: #1a1a1e;
   --color-text-muted: #6b6b73;
-  --color-accent: #2563eb;
+  --color-accent: #5a97ff;
+  --color-accent-strong: #126bff;
   --color-accent-text: #ffffff;
   --color-danger: #dc2626;
   --color-danger-bg: #fef2f2;
+  --color-danger-text: #ffffff;
   /* Money that carries meaning reads by its standard colour: red owed, green owing to you (T-241).
      Kept in step with Android's BalancePositive pair; lib/balanceColors.test.ts pins them together. */
   --color-positive: #15803d;
   --color-checked: #dc2626;
+  /* The admin's registration switch: green on, the danger red off, a white knob (as AdminScreen.kt). */
+  --color-switch-on: #2e7d32;
+  --color-switch-knob: #ffffff;
+  --color-scrim: rgba(0, 0, 0, 0.4);
   --radius: 0.5rem;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
   color-scheme: light;
+  /* Native checkboxes and radios take the accent too. */
+  accent-color: var(--color-accent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #16161a;
+    --color-bg: #000000;
     --color-surface: #1e1e23;
     --color-border: #2f2f36;
     --color-text: #f2f2f4;
     --color-text-muted: #9a9aa2;
-    --color-accent: #5b8def;
+    --color-accent: #5a97ff;
+    --color-accent-strong: #5a97ff;
     --color-accent-text: #0b1220;
     --color-danger: #f87171;
     --color-danger-bg: #2a1414;
@@ -58,7 +78,7 @@ body {
 }
 
 a {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
 }
 
 button {
@@ -132,7 +152,7 @@ textarea:focus {
 
 .btn-danger {
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-danger-text);
 }
 
 .btn-sm {
@@ -295,7 +315,7 @@ textarea:focus {
 /* Group headings inside a list — categories, dates (T-183): coloured and centred, as the app
    draws them. */
 .group-heading {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
   text-align: center;
   font-size: 0.9rem;
   font-weight: 600;
@@ -377,7 +397,7 @@ textarea:focus {
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--color-scrim);
   display: flex;
   align-items: center;
   justify-content: center;

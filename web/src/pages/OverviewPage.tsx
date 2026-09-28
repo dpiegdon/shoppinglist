@@ -314,7 +314,7 @@ export default function OverviewPage() {
               {openCount > 0 && (
                 <span
                   style={{
-                    color: "var(--color-accent)",
+                    color: "var(--color-accent-strong)",
                     fontWeight: 700,
                     marginInlineStart: isExpenses(listKind(list)) ? "0.5rem" : undefined,
                   }}

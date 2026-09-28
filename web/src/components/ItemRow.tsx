@@ -43,14 +43,14 @@ export default function ItemRow({
   const price = itemFieldValue(item, "price");
   const due = showDue ? itemFieldValue(item, "due") ?? null : null;
   const todayDate = today ?? todayIsoDate();
-  // Colour is the date's only emphasis (T-323): the error colour once past, the accent on the day,
+  // Colour is the date's only emphasis (T-323): the error colour once past, the highlighted-text accent on the day,
   // muted otherwise, and muted whatever it is once the item is checked off.
   const dueStanding = due && !checked ? dueState(due, todayDate) : "upcoming";
   const dueColor =
     dueStanding === "overdue"
       ? "var(--color-danger)"
       : dueStanding === "today"
-        ? "var(--color-accent)"
+        ? "var(--color-accent-strong)"
         : "var(--color-text-muted)";
   const dueDescription =
     dueStanding === "overdue" ? t("item.overdue") : dueStanding === "today" ? t("item.dueToday") : null;
