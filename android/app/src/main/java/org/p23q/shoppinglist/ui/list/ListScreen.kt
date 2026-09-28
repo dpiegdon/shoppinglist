@@ -82,6 +82,7 @@ import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.shortDate
 import java.time.LocalDate
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.accentText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -217,7 +218,7 @@ fun ListScreen(
                         Text(
                             text = group.category ?: CategoryCanon.UNCATEGORIZED_LABEL,
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.accentText,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                         )
@@ -403,8 +404,9 @@ private fun ItemRow(
 
 /**
  * An item's due date as a sidenote (T-323): short, small and muted, with colour its only emphasis:
- * the error colour once it is past, the primary colour on the day, muted otherwise, and muted on a
- * checked item whatever the date. What the colour says is also its accessibility description.
+ * the error colour once it is past, the highlighted text colour on the day, muted otherwise, and
+ * muted on a checked item whatever the date. What the colour says is also its accessibility
+ * description.
  */
 @Composable
 private fun DueDateText(due: String, today: String, isChecked: Boolean) {
@@ -412,7 +414,7 @@ private fun DueDateText(due: String, today: String, isChecked: Boolean) {
     val color = when {
         isChecked -> MaterialTheme.colorScheme.onSurfaceVariant
         state == DueState.OVERDUE -> MaterialTheme.colorScheme.error
-        state == DueState.TODAY -> MaterialTheme.colorScheme.primary
+        state == DueState.TODAY -> MaterialTheme.colorScheme.accentText
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val text = shortDate(due, appLocale(), today)
@@ -440,14 +442,14 @@ private fun AuthorBadge(member: MemberDto) {
     Box(
         modifier = Modifier
             .size(24.dp)
-            .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
+            .background(MaterialTheme.colorScheme.outlineVariant, CircleShape)
             .semantics { contentDescription = touchedByDescription },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = member.initials,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

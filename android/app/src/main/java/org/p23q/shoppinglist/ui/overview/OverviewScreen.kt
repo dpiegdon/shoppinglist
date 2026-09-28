@@ -61,6 +61,7 @@ import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
+import org.p23q.shoppinglist.ui.theme.accentText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -518,7 +519,7 @@ private fun ListCard(
                 Text(
                     text = openCount.toString(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.accentText,
                 )
             }
         }

@@ -6,7 +6,6 @@ import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -51,6 +50,11 @@ import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.shortDate
+import org.p23q.shoppinglist.ui.theme.AccentTextLight
+import org.p23q.shoppinglist.ui.theme.MutedLight
+import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
+import org.p23q.shoppinglist.ui.theme.ThemeVariant
+import org.p23q.shoppinglist.ui.theme.brandColorScheme
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.time.LocalDate
@@ -548,7 +552,7 @@ class ListScreenTest {
     }
 
     @Test
-    fun `a checklist row shows its due date, red when past, primary today, muted ahead and when checked (T-323)`() = runBlocking<Unit> {
+    fun `a checklist row shows its due date, red when past, highlighted today, muted ahead and when checked (T-323)`() = runBlocking<Unit> {
         val today = LocalDate.now()
         val past = today.minusDays(1).toString()
         val checkedPast = today.minusDays(2).toString()
@@ -562,16 +566,22 @@ class ListScreenTest {
         }
         viewModel.toggleShowChecked()
 
-        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.setContent {
+            ShoppingListTheme(darkTheme = false) {
+                ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel)
+            }
+        }
         composeTestRule.waitForIdle()
 
         val iso = today.toString()
         fun text(date: String) = shortDate(date, Locale.getDefault(), iso)
-        val scheme = lightColorScheme()
+        // Under the app's own theme: today is the highlighted text colour (T-324), readable on
+        // white, not the lighter accent the buttons are drawn in.
+        val scheme = brandColorScheme(ThemeVariant.LIGHT)
         assertEquals(scheme.error, textStyleOf(text(past), useUnmergedTree = true).color)
-        assertEquals(scheme.primary, textStyleOf(text(iso), useUnmergedTree = true).color)
-        assertEquals(scheme.onSurfaceVariant, textStyleOf(text(ahead), useUnmergedTree = true).color)
-        assertEquals(scheme.onSurfaceVariant, textStyleOf(text(checkedPast), useUnmergedTree = true).color)
+        assertEquals(AccentTextLight, textStyleOf(text(iso), useUnmergedTree = true).color)
+        assertEquals(MutedLight, textStyleOf(text(ahead), useUnmergedTree = true).color)
+        assertEquals(MutedLight, textStyleOf(text(checkedPast), useUnmergedTree = true).color)
         // One date per item that has one, and the words only as what TalkBack hears.
         composeTestRule.onAllNodesWithTag("item-due", useUnmergedTree = true).assertCountEquals(4)
         composeTestRule.onNodeWithContentDescription("${text(past)}, Overdue", useUnmergedTree = true).assertExists()

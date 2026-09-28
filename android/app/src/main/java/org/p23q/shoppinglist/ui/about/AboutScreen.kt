@@ -38,6 +38,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.update.UpdateStatus
+import org.p23q.shoppinglist.ui.theme.accentText
 
 /** Where the sources live; the web's AboutPage links the same address (T-311). */
 const val SOURCE_CODE_URL = "https://github.com/dpiegdon/shoppinglist"
@@ -174,7 +175,7 @@ fun AboutScreen(
         // a narrow screen or a long translation, centred either way.
         val smallPrint = MaterialTheme.typography.bodySmall
         val smallPrintColor = MaterialTheme.colorScheme.onSurfaceVariant
-        val linkColor = MaterialTheme.colorScheme.primary
+        val linkColor = MaterialTheme.colorScheme.accentText
         val sourceCode = stringResource(R.string.about_source_code)
         FlowRow(
             horizontalArrangement = Arrangement.Center,

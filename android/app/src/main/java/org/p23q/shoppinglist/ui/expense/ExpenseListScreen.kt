@@ -57,6 +57,7 @@ import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
+import org.p23q.shoppinglist.ui.theme.accentText
 
 /**
  * A ledger (T-154, T-245): what was spent, taken in and settled — by whom, for whom.
@@ -213,7 +214,7 @@ fun ExpenseListScreen(
                                 // In the app's language, as the closed banner is (T-180).
                                 text = AppFormat.calendarDate(date, appLocale()),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.accentText,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                             )

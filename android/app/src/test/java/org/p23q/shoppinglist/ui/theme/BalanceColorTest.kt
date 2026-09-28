@@ -34,16 +34,17 @@ class BalanceColorTest {
     )
 
     /** One composition under the theme, reporting the colours a balance row would be given. */
-    private fun render(darkTheme: Boolean, dynamicColor: Boolean = false): Rendered {
+    private fun render(darkTheme: Boolean): Rendered {
         lateinit var rendered: Rendered
         composeTestRule.setContent {
-            ShoppingListTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
+            ShoppingListTheme(darkTheme = darkTheme) {
                 rendered = Rendered(
                     credit = balanceColor(1),
                     debt = balanceColor(-1),
                     square = balanceColor(0),
                     background = MaterialTheme.colorScheme.background,
-                    surface = MaterialTheme.colorScheme.surface,
+                    // A card: the neutral secondary surface, the background being flat (T-324).
+                    surface = MaterialTheme.colorScheme.surfaceContainerHighest,
                     error = MaterialTheme.colorScheme.error,
                     onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant,
                     primary = MaterialTheme.colorScheme.primary,
@@ -112,12 +113,5 @@ class BalanceColorTest {
         assertReadable("dark green on a card", rendered.credit, rendered.surface)
         assertReadable("dark red on the background", rendered.debt, rendered.background)
         assertReadable("dark red on a card", rendered.debt, rendered.surface)
-    }
-
-    @Test
-    fun `the green does not follow the wallpaper when dynamic colour is on`() {
-        val rendered = render(darkTheme = false, dynamicColor = true)
-
-        assertEquals(BalancePositiveLight, rendered.credit)
     }
 }
