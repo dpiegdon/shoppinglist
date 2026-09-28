@@ -575,9 +575,22 @@ class SyncEngine @Inject constructor(
     }
 }
 
-/** The device that wrote this item's most recently updated field (T-318). */
-private fun ItemDto.newestClockDevice(): String = with(fields) {
-    listOfNotNull(name, category, stores, quantity, price, note, status, expense, due, deleted).maxBy { it.updatedAt }.updatedBy
+/**
+ * The `updated_by` literals the server writes on a tombstone it created itself (the wire contract's
+ * "Field clock"): a same-name merge, a list orphaned by its last member, a deleted list's items.
+ * No device wrote them.
+ */
+private val SERVER_CLOCK_WRITERS = setOf("server-merge", "server-orphan", "server-list-delete")
+
+/**
+ * The device that wrote this item's most recently updated field (T-318), or null when only the
+ * server did. The server's own clocks are skipped (T-327): a merge or a list-delete cascade is
+ * newer than the edit it carries, and would otherwise hide that this device made it.
+ */
+private fun ItemDto.newestClockDevice(): String? = with(fields) {
+    listOfNotNull(name, category, stores, quantity, price, note, status, expense, due, deleted)
+        .filter { it.updatedBy !in SERVER_CLOCK_WRITERS }
+        .maxByOrNull { it.updatedAt }?.updatedBy
 }
 
 /** [listServerId] is the server id of the item's list. */

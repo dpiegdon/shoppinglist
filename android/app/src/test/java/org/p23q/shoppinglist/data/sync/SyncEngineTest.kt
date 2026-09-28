@@ -635,6 +635,8 @@ class SyncEngineTest {
         newer: Map<String, String> = emptyMap(),
         /** The `due` field's clock as JSON, or null to leave the field out (T-323). */
         due: String? = null,
+        /** The `deleted` field's clock as JSON, in place of the one [device] and [newer] give. */
+        deleted: String? = null,
     ): String {
         val touchedBy = lastTouchedBy?.let { "\"$it\"" } ?: "null"
         fun clock(field: String, value: String): String {
@@ -645,7 +647,7 @@ class SyncEngineTest {
         val fields = listOf(
             clock("name", "\"$name\""), clock("category", "null"), clock("stores", "[]"),
             clock("quantity", "null"), clock("price", "null"), clock("note", "null"),
-            clock("status", "\"todo\""), clock("deleted", "false"),
+            clock("status", "\"todo\""), deleted?.let { """"deleted": $it""" } ?: clock("deleted", "false"),
         ).plus(listOfNotNull(due?.let { """"due": $it""" })).joinToString(", ")
         return """{"id": "$id", "list_id": "$listId", "created_at": 2000, "last_touched_by": $touchedBy, "fields": {$fields}}"""
     }
@@ -721,6 +723,82 @@ class SyncEngineTest {
         syncEngine.syncNow()
 
         assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 2)), notifier.calls.single())
+    }
+
+    @Test
+    fun `the server's own clocks do not make this device's edit look foreign (T-327)`() = runTest {
+        pointAtServer()
+        setOwnAccount("acc-me")
+        setCursor(5)
+        accounts.add(server.url("/").toString(), id = "mate", token = null, accountId = "acc-mate")
+        val thisDevice = serverConfig.deviceId()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(
+                        // The survivor of a same-name merge: renamed here under the other account,
+                        // then rewritten by the merge with a newer server clock on `deleted`.
+                        itemJson(
+                            id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-mate",
+                            newer = mapOf("name" to thisDevice),
+                            deleted = """{"value": false, "updated_at": 4000, "updated_by": "server-merge"}""",
+                        ),
+                        // An item of a list deleted here under the other account, tombstoned by the cascade.
+                        itemJson(
+                            id = "i2", listId = "list-1", name = "Eggs", lastTouchedBy = "acc-mate",
+                            device = thisDevice,
+                            deleted = """{"value": true, "updated_at": 4000, "updated_by": "server-list-delete"}""",
+                        ),
+                        // Orphaned when the last member left.
+                        itemJson(
+                            id = "i3", listId = "list-1", name = "Tea", lastTouchedBy = "acc-mate",
+                            device = thisDevice,
+                            deleted = """{"value": true, "updated_at": 4000, "updated_by": "server-orphan"}""",
+                        ),
+                        // Edited on the web by the other account, then merged: still foreign.
+                        itemJson(
+                            id = "i4", listId = "list-1", name = "Bread", lastTouchedBy = "acc-mate",
+                            device = thisDevice, newer = mapOf("note" to "web-device"),
+                            deleted = """{"value": false, "updated_at": 4000, "updated_by": "server-merge"}""",
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 1)), notifier.calls.single())
+    }
+
+    @Test
+    fun `a delete made elsewhere counts in the self-edit filter, so this device's note, deleted on the web, is reported (T-327)`() = runTest {
+        pointAtServer()
+        setOwnAccount("acc-me")
+        setCursor(5)
+        accounts.add(server.url("/").toString(), id = "mate", token = null, accountId = "acc-mate")
+        val thisDevice = serverConfig.deviceId()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 6,
+                    lists = listOf(listJson(id = "list-1", name = "Groceries")),
+                    items = listOf(
+                        itemJson(
+                            id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = "acc-mate",
+                            device = thisDevice, newer = mapOf("note" to thisDevice),
+                            deleted = """{"value": true, "updated_at": 5000, "updated_by": "web-device"}""",
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        assertEquals(listOf(CollaboratorChange(TEST_ACCOUNT_ID, localId("list-1"), "Groceries", 1)), notifier.calls.single())
     }
 
     @Test
