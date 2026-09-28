@@ -28,6 +28,13 @@ data class ItemFieldsDto(
      * below, so this app still decodes items from a server too old to send it at all.
      */
     val expense: FieldClock<org.p23q.shoppinglist.core.Expense?> = FieldClock(null, 0, ""),
+    /**
+     * The due date (T-323), `YYYY-MM-DD` inside, or null inside for none. The field itself is
+     * absent (null here) where the wire says "unchanged": a server older than the field sends
+     * none, and an item whose due date was never set pushes none. Absent is not "no due date",
+     * so a pull without it leaves the local due date and its clock alone.
+     */
+    val due: FieldClock<String?>? = null,
     val deleted: FieldClock<Boolean>,
 )
 

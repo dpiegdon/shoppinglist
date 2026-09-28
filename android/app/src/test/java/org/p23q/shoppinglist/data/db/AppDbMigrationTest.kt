@@ -88,7 +88,7 @@ class AppDbMigrationTest {
     private val migrations = listOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
         MIGRATION_7_8, Migration8To9(FakeLegacySession()), MIGRATION_9_10,
-        MIGRATION_10_11,
+        MIGRATION_10_11, MIGRATION_11_12,
     )
 
     private fun execWithArgs(connection: SQLiteConnection, sql: String, bindArgs: Array<*>) {
@@ -565,7 +565,7 @@ class AppDbMigrationTest {
     // ---- 9 to 10: phone-local ids (T-299) ----------------------------------------------
 
     /** The schema this build's database declares; the newest exported schema. */
-    private val LATEST = 11
+    private val LATEST = 12
 
     /** A version-9 database: [seedV8]'s list and item, owned by the migrated signed-in account. */
     private fun seedV9(connection: SQLiteConnection, orphans: Boolean = false) {
@@ -789,6 +789,30 @@ class AppDbMigrationTest {
             assertNull(readText(connection, "SELECT serverMessage FROM accounts"))
             assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE localId = 'l1'"))
             assertEquals(1L, count(connection, "SELECT COUNT(*) FROM items"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 11 to 12 adds the due date, none on the never-set clock, and keeps the items (T-323)`() {
+        val connection = openFresh("v11")
+        try {
+            seedV9(connection)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+            MIGRATION_10_11.migrate(supportFacade(connection))
+            MIGRATION_11_12.migrate(supportFacade(connection))
+
+            for (table in listOf("accounts", "lists", "items")) {
+                assertEquals(table, expectedColumns(table, 12), actualColumns(connection, table))
+                assertEquals(table, expectedIndices(table, 12), actualIndices(connection, table))
+                assertEquals(table, expectedForeignKeys(table, 12), actualForeignKeys(connection, table))
+            }
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM items"))
+            assertNull(readText(connection, "SELECT due_value FROM items"))
+            assertEquals(0L, readLong(connection, "SELECT due_updatedAt FROM items"))
+            assertEquals("", readText(connection, "SELECT due_updatedBy FROM items"))
+            assertEquals("Milk", readText(connection, "SELECT name_value FROM items"))
         } finally {
             connection.close()
         }

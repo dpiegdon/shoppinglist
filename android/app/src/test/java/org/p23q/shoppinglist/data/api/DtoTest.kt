@@ -114,6 +114,32 @@ class DtoTest {
     }
 
     @Test
+    fun `ItemDto carries the due date both ways, and an absent due stays absent (T-323)`() {
+        val withDue = itemJson.replace(
+            "\"deleted\":  {",
+            "\"due\":      {\"value\": \"2026-10-03\", \"updated_at\": 1751970000001, \"updated_by\": \"dev-b\"},\n            \"deleted\":  {",
+        )
+        val item = json.decodeFromString<ItemDto>(withDue)
+        assertEquals("2026-10-03", item.fields.due?.value)
+        assertEquals(1751970000001L, item.fields.due?.updatedAt)
+        assertEquals("dev-b", item.fields.due?.updatedBy)
+        val app = JsonModule.provideJson()
+        assertEquals(parseToJsonElement(withDue), parseToJsonElement(app.encodeToString(ItemDto.serializer(), item)))
+
+        // A cleared due date is a present field whose value is null, not an absent one.
+        val cleared = withDue.replace("\"2026-10-03\"", "null")
+        val clearedItem = json.decodeFromString<ItemDto>(cleared)
+        assertTrue(clearedItem.fields.due != null)
+        assertEquals(null, clearedItem.fields.due?.value)
+        assertEquals(parseToJsonElement(cleared), parseToJsonElement(app.encodeToString(ItemDto.serializer(), clearedItem)))
+
+        // No due on the wire (an older server): decoded as absent, and re-encoded without the key.
+        val without = json.decodeFromString<ItemDto>(itemJson)
+        assertEquals(null, without.fields.due)
+        assertFalse("\"due\"" in app.encodeToString(ItemDto.serializer(), without))
+    }
+
+    @Test
     fun `ListDto round-trips through encode-decode byte for byte as a JSON tree`() {
         val list = json.decodeFromString<ListDto>(listJson)
 

@@ -264,6 +264,16 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
+/** Adds items.due_* (T-323), the due date's LWW triple: none, on the never-set clock, for every
+ *  existing item, which a push therefore leaves out. */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE items ADD COLUMN due_value TEXT")
+        db.execSQL("ALTER TABLE items ADD COLUMN due_updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE items ADD COLUMN due_updatedBy TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 /** Room's own SQL, from core/schemas/…/10.json. */
 private const val CREATE_LISTS_10 =
     "CREATE TABLE IF NOT EXISTS `lists` (`localId` TEXT NOT NULL, `serverId` TEXT NOT NULL, " +
@@ -324,6 +334,7 @@ object DatabaseModule {
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
                 MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10, MIGRATION_10_11,
+                MIGRATION_11_12,
             )
             .build()
 

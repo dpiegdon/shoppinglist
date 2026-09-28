@@ -565,7 +565,7 @@ class SyncEngine @Inject constructor(
 
 /** The device that wrote this item's most recently updated field (T-318). */
 private fun ItemDto.newestClockDevice(): String = with(fields) {
-    listOf(name, category, stores, quantity, price, note, status, expense, deleted).maxBy { it.updatedAt }.updatedBy
+    listOfNotNull(name, category, stores, quantity, price, note, status, expense, due, deleted).maxBy { it.updatedAt }.updatedBy
 }
 
 /** [listServerId] is the server id of the item's list. */
@@ -584,6 +584,8 @@ private fun ItemEntity.toDto(listServerId: String): ItemDto = ItemDto(
         // The stored expense is decoded with the lenient AppJson, as everywhere else (T-205): with
         // Json.Default an unknown key would throw here and take the whole push down with it.
         expense = FieldClock(expense.value?.let { AppJson.decodeFromString<Expense>(it) }, expense.updatedAt, expense.updatedBy),
+        // Never set (clock 0): left out, the wire's "unchanged", so a new item says nothing about it.
+        due = if (due.updatedAt == 0L) null else FieldClock(due.value, due.updatedAt, due.updatedBy),
         deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
     ),
 )
@@ -650,6 +652,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, li
             note = remote.fields.note.value.toLwwOptional(remote.fields.note.updatedBy, remote.fields.note.updatedAt),
             status = remote.fields.status.value.toLww(remote.fields.status.updatedBy, remote.fields.status.updatedAt),
             expense = expenseRemote.value.toLwwOptional(expenseRemote.updatedBy, expenseRemote.updatedAt),
+            due = remote.fields.due?.let { it.value.toLwwOptional(it.updatedBy, it.updatedAt) } ?: LwwOptionalString(null, 0, ""),
             deleted = remote.fields.deleted.value.toLww(remote.fields.deleted.updatedBy, remote.fields.deleted.updatedAt),
             dirty = false,
             lastTouchedByAccountId = remote.lastTouchedBy,
@@ -664,9 +667,12 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, li
     val note = mergeField(local.note.value, local.note.updatedAt, local.note.updatedBy, remote.fields.note)
     val status = mergeField(local.status.value, local.status.updatedAt, local.status.updatedBy, remote.fields.status)
     val expense = mergeField(local.expense.value, local.expense.updatedAt, local.expense.updatedBy, expenseRemote)
+    // Absent on the wire (a server older than the field) is "unchanged": the local due date stays,
+    // and does not keep the row dirty, since that server would never acknowledge it.
+    val due = mergeField(local.due.value, local.due.updatedAt, local.due.updatedBy, remote.fields.due ?: FieldClock(local.due.value, local.due.updatedAt, local.due.updatedBy))
     val deleted = mergeField(local.deleted.value, local.deleted.updatedAt, local.deleted.updatedBy, remote.fields.deleted)
     val mergedDirty = name.dirty || category.dirty || stores.dirty || quantity.dirty || price.dirty ||
-        note.dirty || status.dirty || expense.dirty || deleted.dirty
+        note.dirty || status.dirty || expense.dirty || due.dirty || deleted.dirty
     val stillBlocked = local.syncBlocked && mergedDirty
 
     return ItemEntity(
@@ -683,6 +689,7 @@ private fun mergeItem(local: ItemEntity?, remote: ItemDto, accountId: String, li
         note = LwwOptionalString(note.value, note.updatedAt, note.updatedBy),
         status = LwwString(status.value, status.updatedAt, status.updatedBy),
         expense = LwwOptionalString(expense.value, expense.updatedAt, expense.updatedBy),
+        due = LwwOptionalString(due.value, due.updatedAt, due.updatedBy),
         deleted = LwwBoolean(deleted.value, deleted.updatedAt, deleted.updatedBy),
         dirty = mergedDirty,
         // A quarantined row stays quarantined only while it still has unpushed local state; once a

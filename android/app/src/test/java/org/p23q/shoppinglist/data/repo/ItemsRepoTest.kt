@@ -357,6 +357,37 @@ class ItemsRepoTest {
     }
 
     @Test
+    fun `setDue stamps the due date's own clock, and clearing it stamps a null (T-323)`() = runTest {
+        val itemId = repo.createItem(listId = "list-1", name = "Milk")
+        assertEquals("a new item has no due date, on the never-set clock", 0L, repo.getById(itemId)!!.due.updatedAt)
+
+        repo.setDue(itemId, "2026-10-03")
+        val set = repo.getById(itemId)!!
+        assertEquals("2026-10-03", set.due.value)
+        assertEquals("device-1", set.due.updatedBy)
+        assertTrue(set.due.updatedAt > 0)
+        assertTrue(set.dirty)
+
+        repo.setDue(itemId, null)
+        val cleared = repo.getById(itemId)!!
+        assertEquals(null, cleared.due.value)
+        assertTrue(cleared.due.updatedAt >= set.due.updatedAt)
+    }
+
+    @Test
+    fun `duplicateForList carries a due date along, and leaves none unset (T-323)`() = runTest {
+        repo.setDue(repo.createItem("list-1", "Milk"), "2026-10-03")
+        repo.createItem("list-1", "Bread")
+
+        repo.duplicateForList(sourceListId = "list-1", targetListId = "list-2")
+
+        val copies = repo.itemsForList("list-2").first().associateBy { it.name.value }
+        assertEquals("2026-10-03", copies.getValue("Milk").due.value)
+        assertEquals(null, copies.getValue("Bread").due.value)
+        assertEquals(0L, copies.getValue("Bread").due.updatedAt)
+    }
+
+    @Test
     fun `duplicateForList with nothing to copy returns zero and schedules no sync`() = runTest {
         val before = syncTrigger.scheduleCount
 

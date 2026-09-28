@@ -633,6 +633,8 @@ class SyncEngineTest {
         lastTouchedBy: String?,
         device: String = "other-device",
         newer: Map<String, String> = emptyMap(),
+        /** The `due` field's clock as JSON, or null to leave the field out (T-323). */
+        due: String? = null,
     ): String {
         val touchedBy = lastTouchedBy?.let { "\"$it\"" } ?: "null"
         fun clock(field: String, value: String): String {
@@ -644,7 +646,7 @@ class SyncEngineTest {
             clock("name", "\"$name\""), clock("category", "null"), clock("stores", "[]"),
             clock("quantity", "null"), clock("price", "null"), clock("note", "null"),
             clock("status", "\"todo\""), clock("deleted", "false"),
-        ).joinToString(", ")
+        ).plus(listOfNotNull(due?.let { """"due": $it""" })).joinToString(", ")
         return """{"id": "$id", "list_id": "$listId", "created_at": 2000, "last_touched_by": $touchedBy, "fields": {$fields}}"""
     }
 
@@ -1765,5 +1767,96 @@ class SyncEngineTest {
         assertNotNull(state.lastSyncAt)
         assertNull(state.lastError)
         assertEquals(1, state.pendingCount)
+    }
+
+    @Test
+    fun `a pulled due date lands on a new row and replaces an older local one (T-323)`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("i-old", "Milk", dirty = false, at = 1_000L).copy(due = "2026-01-01".toLwwOptional("this-device", 1_000L)))
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 2,
+                    lists = emptyList(),
+                    items = listOf(
+                        itemJson(id = "i-new", listId = "list-1", name = "Bread", lastTouchedBy = null,
+                            due = """{"value": "2026-10-03", "updated_at": 2000, "updated_by": "other-device"}"""),
+                        itemJson(id = "i-old", listId = "list-1", name = "Milk", lastTouchedBy = null,
+                            due = """{"value": null, "updated_at": 2000, "updated_by": "other-device"}"""),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        val fresh = item("i-new")!!
+        assertEquals("2026-10-03", fresh.due.value)
+        assertEquals(2000L, fresh.due.updatedAt)
+        assertEquals("other-device", fresh.due.updatedBy)
+        val cleared = item("i-old")!!
+        assertNull(cleared.due.value)
+        assertEquals(2000L, cleared.due.updatedAt)
+        assertFalse(cleared.dirty)
+    }
+
+    @Test
+    fun `a local due date newer than the server's is pushed, wins the merge and stays dirty (T-323)`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("i1", "Milk", dirty = true, at = 1_000L).copy(due = "2026-10-05".toLwwOptional("this-device", 5_000L)))
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                syncResponseJson(
+                    cursor = 2,
+                    lists = emptyList(),
+                    items = listOf(
+                        itemJson(id = "i1", listId = "list-1", name = "Milk", lastTouchedBy = null,
+                            due = """{"value": "2026-10-01", "updated_at": 2000, "updated_by": "other-device"}"""),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        val pushed = Json.decodeFromString<SyncRequest>(server.takeRequest().body.readUtf8()).changes.items.single()
+        assertEquals("2026-10-05", pushed.fields.due?.value)
+        assertEquals(5_000L, pushed.fields.due?.updatedAt)
+        val stored = item("i1")!!
+        assertEquals("2026-10-05", stored.due.value)
+        assertTrue(stored.dirty)
+    }
+
+    @Test
+    fun `an item whose due date was never set pushes no due, and a pull without one keeps the local date (T-323)`() = runTest {
+        pointAtServer()
+        db.itemDao().upsert(dummyItem("never", "Bread", dirty = true, at = 2_000L))
+        db.itemDao().upsert(dummyItem("set", "Milk", dirty = true, at = 2_000L).copy(due = "2026-10-05".toLwwOptional("this-device", 2_000L)))
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                // A server older than the field: it echoes both items, neither with a due date.
+                syncResponseJson(
+                    cursor = 2,
+                    lists = emptyList(),
+                    items = listOf(
+                        itemJson(id = "never", listId = "list-1", name = "Bread", lastTouchedBy = null, device = "this-device"),
+                        itemJson(id = "set", listId = "list-1", name = "Milk", lastTouchedBy = null, device = "this-device"),
+                    ),
+                ),
+            ),
+        )
+
+        syncEngine.syncNow()
+
+        val body = server.takeRequest().body.readUtf8()
+        val pushed = Json.decodeFromString<SyncRequest>(body).changes.items.associateBy { it.id }
+        assertNull(pushed.getValue("never").fields.due)
+        assertEquals("2026-10-05", pushed.getValue("set").fields.due?.value)
+        val kept = item("set")!!
+        assertEquals("2026-10-05", kept.due.value)
+        assertEquals(2_000L, kept.due.updatedAt)
+        // The old server never acknowledges the field, so it must not hold the row dirty forever.
+        assertFalse(kept.dirty)
+        assertFalse(item("never")!!.dirty)
     }
 }

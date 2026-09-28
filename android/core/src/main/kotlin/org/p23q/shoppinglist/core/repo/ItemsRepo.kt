@@ -10,6 +10,7 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.api.AppJson
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemEntity
+import org.p23q.shoppinglist.core.db.LwwOptionalString
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
@@ -244,6 +245,10 @@ class ItemsRepo @Inject constructor(
     suspend fun setNote(itemId: String, note: String?) =
         updateField(itemId) { it.copy(note = note.toLwwOptional(deviceId.get())) }
 
+    /** The due date (T-323): a calendar date `YYYY-MM-DD`, or null for none. */
+    suspend fun setDue(itemId: String, due: String?) =
+        updateField(itemId) { it.copy(due = due.toLwwOptional(deviceId.get())) }
+
     /** Tombstone: [ItemEntity.deleted] flips true, the row itself is retained for sync/undo. */
     suspend fun delete(itemId: String) = updateField(itemId) { it.copy(deleted = true.toLww(deviceId.get())) }
 
@@ -276,6 +281,8 @@ class ItemsRepo @Inject constructor(
                         note = source.note.value.toLwwOptional(by, now),
                         status = source.status.value.toLww(by, now),
                         expense = source.expense.value.toLwwOptional(by, now),
+                        // No due date stays at the never-set clock, so the copy pushes no `due`.
+                        due = source.due.value?.toLwwOptional(by, now) ?: LwwOptionalString(null, 0, ""),
                         deleted = false.toLww(by, now),
                         dirty = true,
                     ),

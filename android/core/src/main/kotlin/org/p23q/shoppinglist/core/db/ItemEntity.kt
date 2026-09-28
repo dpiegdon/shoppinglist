@@ -41,6 +41,14 @@ data class ItemEntity(
      * Non-null exactly on the items of an expenses list.
      */
     @Embedded(prefix = "expense_") val expense: LwwOptionalString = LwwOptionalString(null, 0, ""),
+    /**
+     * The item's due date (T-323), a calendar date `YYYY-MM-DD` with no time or zone, or null for
+     * none. Passive: nothing fires when it is reached. Offered on a checklist only, but kept on
+     * every kind, so a list switched back to a checklist shows it again. The clock defaults to 0,
+     * "never set", which the push leaves out of the item: such a row sends no `due` at all, the
+     * wire's "unchanged".
+     */
+    @Embedded(prefix = "due_") val due: LwwOptionalString = LwwOptionalString(null, 0, ""),
     @Embedded(prefix = "deleted_") val deleted: LwwBoolean,
     val dirty: Boolean,
     /**
