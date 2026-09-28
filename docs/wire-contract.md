@@ -111,6 +111,9 @@ client simply ignores — a new optional response field, an endpoint it never ca
 /admin/server-settings`) is such an additive change and left the protocol at 3.
 So is an item's `due` date: an older client ignores the field, and since a push
 carries clocks only for the fields a client knows, it never overwrites it.
+A client tells whether a server supports `due` per account: the server's release
+(`version` from `/app-version`, the `404` included) is 3.5.0 or newer, or an item
+it pulled from that server carried the `due` key, with any value.
 The protocol version never exceeds the release's major version,
 and a major release with no wire change leaves the protocol alone. `release.sh`
 refuses a release that breaks either rule.
@@ -631,10 +634,11 @@ tell it.
 `serve_android_apk` is off, no APK is packaged, or the server is running from a
 source checkout with no installed package version to report. That `404` still
 carries `protocol` in its error envelope, since the protocol belongs to the
-server rather than to the app package:
+server rather than to the app package, and, when the server knows its installed
+release, `version`, which a client reads to tell what the server supports:
 
 ```json
-{"error": "no_app_package", "message": "...", "protocol": 3}
+{"error": "no_app_package", "message": "...", "protocol": 3, "version": "3.5.0"}
 ```
 
 For an update check a `404` means "no update information", whatever its body.
@@ -779,7 +783,7 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 403 | `cannot_delete_self`, `cannot_delete_admin` | See "Admin". |
 | 404 | `account_not_found`, `session_not_found`, `invite_not_found` | The id names nothing. |
 | 404 | `not_found` | No endpoint under the API root takes this path. See "Conventions". |
-| 404 | `no_app_package` | Carries `protocol`, the server's `PROTOCOL_VERSION`. See "App package". |
+| 404 | `no_app_package` | Carries `protocol`, the server's `PROTOCOL_VERSION`, and `version` where the server knows its release. See "App package". |
 | 405 | `method_not_allowed` | The endpoint does not take this method; `Allow` names the ones it does. |
 | 409 | `email_taken` | Registering or changing to an address already in use. |
 | 409 | `invite_email_mismatch`, `invite_expired`, `invite_revoked`, `invite_used` | Redeeming an invite that is for someone else, too old, withdrawn, or already used. |

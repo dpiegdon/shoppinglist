@@ -19,7 +19,10 @@ client_outdated` everywhere else finds its update here, and reads this server's
 no APK packaged, or a source checkout). That 404 still carries `protocol` (T-297):
 the protocol is a property of the server, not of the app package, and a client
 asks for it before it signs in. A 404 without `protocol` is what a server from
-before this endpoint answers, so that is how a client tells the two apart.
+before this endpoint answers, so that is how a client tells the two apart. The
+404 of an installed server without an APK also carries `version` (T-327), the
+server's release, which is how a client tells whether it supports a feature
+added in a release without a protocol bump (an item's `due` date).
 """
 
 from importlib.metadata import PackageNotFoundError, version
@@ -40,19 +43,26 @@ def register_routes(bp):
     @bp.route("/app-version", methods=["GET"])
     def app_version_view():
         config = get_config()
+        try:
+            pkg_version = version("shoppinglist-server")
+        except PackageNotFoundError:
+            pkg_version = None
         # Resolved per request, not at registration: the APK route is registered from
         # @bp.record_once, which runs AFTER this blueprint's routes are defined, so at
         # definition time there is nothing to ask yet.
         if not config.get("serve_android_apk", True) or not apk_present():
+            # The server's own release, where it knows one (T-327): additive, like
+            # `protocol`, so a client can tell what this server supports without an APK.
+            details: dict[str, object] = dict(_PROTOCOL)
+            if pkg_version is not None:
+                details["version"] = pkg_version
             raise ApiError(
                 404,
                 "no_app_package",
                 "This server does not carry an Android app package.",
-                details=_PROTOCOL,
+                details=details,
             )
-        try:
-            pkg_version = version("shoppinglist-server")
-        except PackageNotFoundError:
+        if pkg_version is None:
             # Running from a source checkout rather than an installed wheel. Report no
             # version rather than a fake one: a client can't compare against "unknown",
             # and inventing a value here could push a spurious update prompt.
@@ -61,7 +71,7 @@ def register_routes(bp):
                 "no_app_package",
                 "This server cannot determine its app package version.",
                 details=_PROTOCOL,
-            ) from None
+            )
         return (
             jsonify(
                 {

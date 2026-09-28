@@ -109,3 +109,27 @@ def test_absolute_url_follows_a_subpath_mount(tmp_path):
 
     assert body["download_url"] == "http://testserver/shopping/shoppinglist.apk"
     assert client.get("/shopping/shoppinglist.apk").status_code == 200
+
+
+def test_the_no_apk_404_also_answers_the_server_version(tmp_path):
+    client = _app(tmp_path, serve_android_apk=False).test_client()
+
+    body = client.get("/api/v1/app-version").get_json()
+
+    # A client tells from the release whether the server supports a feature added
+    # without a protocol bump, such as an item's due date (T-327). Additive.
+    assert body["version"] == version("shoppinglist-server")
+    assert list(body)[:2] == ["error", "message"]
+
+
+def test_the_source_checkout_404_names_no_version(client, monkeypatch):
+    from shoppinglist_server.routes import app_version as app_version_module
+
+    def _not_installed(_name):
+        raise PackageNotFoundError(_name)
+
+    monkeypatch.setattr(app_version_module, "version", _not_installed)
+
+    body = client.get("/api/v1/app-version").get_json()
+
+    assert "version" not in body
