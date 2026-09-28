@@ -125,7 +125,7 @@ interface and `:app` implements it and binds it in Hilt:
   of all of them together, to `InviteNotifier`; which are new to the phone is
   the notifier's to decide. An account whose request fails is left out; with
   none answering, the notifier is not called. `:app` runs it after each
-  background sync.
+  background sync, except while the app is in the foreground.
 - `AccountEntity.supportsDueDates` says whether an account's items can have a
   due date: always in the local area; on a server account when `serverVersion`
   (the release `/app-version` named at the floor check, the update check or the

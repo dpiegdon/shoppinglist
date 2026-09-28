@@ -105,10 +105,10 @@ and, tapped, asks the servers for one whatever the automatic check is set to,
 as its row on the Accounts screen does with *Check for update*: a newer app is
 offered with the usual prompt, and otherwise a dialog says none was found.
 Each account's pending invites are fetched from its own server and shown in its
-section, as soon as the account is signed in. After each background sync, every account whose
-sync succeeded is asked for its pending invites once more, and an invite this phone has not shown
+section, as soon as the account is signed in. After each background sync that runs while the
+app is not in the foreground, every account whose sync succeeded is asked for its pending invites once more, and an invite this phone has not shown
 before is posted as a notification in its own *Invitations* channel (one per check, however many
-are new; tapping it opens the overview). It stays silent while the app is in the foreground,
+are new; tapping it opens the overview). It stays silent
 under Settings' *Invitations* switch (on by default) and without the notification permission;
 an invite counts as seen only once it was shown, posted or rendered in the overview's inbox, so
 one a gate stopped is announced by a later check. The phone forgets a seen invite once it has expired. Settings →

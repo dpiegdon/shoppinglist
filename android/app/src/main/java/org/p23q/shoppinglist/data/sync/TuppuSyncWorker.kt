@@ -7,8 +7,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.CancellationException
-import org.p23q.shoppinglist.core.sync.InviteChecker
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
@@ -19,7 +17,7 @@ class TuppuSyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val syncEngine: SyncEngine,
     private val notificationPrefs: NotificationPrefsStore,
-    private val inviteChecker: InviteChecker,
+    private val inviteCheck: BackgroundInviteCheck,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         // Record that background work actually ran (T-112): surfaced in Settings → Diagnostics and
@@ -30,15 +28,8 @@ class TuppuSyncWorker @AssistedInject constructor(
         val result = syncEngine.syncNow()
         // New invites are noticed here rather than by polling (T-319): one small request per
         // account whose sync just succeeded, whatever the overall result — one account failing
-        // must not cost another its invites.
-        try {
-            inviteChecker.check()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // The sync's own result decides the retry; a failed invite check waits for the next run.
-            Log.w(TAG, "Invite check failed", e)
-        }
+        // must not cost another its invites. Not while the app is in the foreground (T-327).
+        inviteCheck.run()
         return when (result) {
             is SyncResult.Success -> Result.success()
             // Unauthorized needs the user to re-login, not a retry; LoginViewModel/UI surfaces that
