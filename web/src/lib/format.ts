@@ -73,6 +73,39 @@ export function formatCalendarDate(isoDate: string, locale: string): string {
   );
 }
 
+/** Today's local calendar date as YYYY-MM-DD: the day the user is living in, not UTC's. */
+export function todayIsoDate(now: Date = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * A due date as a sidenote (T-323): "Sep 17" / "17. Sept." — the year only when it is not the
+ * current one ("Jan 5, 2027"). [today] is YYYY-MM-DD, passed in so the caller decides what today
+ * is. Like [formatCalendarDate], formatted as a UTC midnight in UTC.
+ */
+export function shortDate(isoDate: string, locale: string, today: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return isoDate;
+  const sameYear = today.slice(0, 4) === isoDate.slice(0, 4);
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    timeZone: "UTC",
+  }).format(Date.UTC(year, month - 1, day));
+}
+
+/** Where a due date stands against [today] (both YYYY-MM-DD, so they compare as strings). */
+export type DueState = "overdue" | "today" | "upcoming";
+
+export function dueState(isoDate: string, today: string): DueState {
+  if (isoDate < today) return "overdue";
+  if (isoDate === today) return "today";
+  return "upcoming";
+}
+
 /** The day a moment falls on, locally, in the same style as [formatCalendarDate]. */
 export function formatDay(epochMillis: number, locale: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(epochMillis);
@@ -89,6 +122,7 @@ export function useFormat() {
       signedNumber: (cents: number) => formatNumber(cents, locale, "exceptZero"),
       date: (isoDate: string) => formatCalendarDate(isoDate, locale),
       day: (epochMillis: number) => formatDay(epochMillis, locale),
+      shortDate: (isoDate: string, today: string) => shortDate(isoDate, locale, today),
     }),
     [locale],
   );

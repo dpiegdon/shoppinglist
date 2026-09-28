@@ -55,6 +55,8 @@ export interface ItemFields {
   quantity: FieldClock<string | null>;
   price: FieldClock<Price | null>;
   note: FieldClock<string | null>;
+  /** Calendar date YYYY-MM-DD, or null for none (T-323). Passive: shown, never acted on. */
+  due: FieldClock<string | null>;
   status: FieldClock<ItemStatus>;
   /** Null except on an `expenses` list, where every item has one. */
   expense: FieldClock<Expense | null>;

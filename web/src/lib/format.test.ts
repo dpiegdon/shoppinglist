@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   balanceColor,
+  dueState,
   formatCalendarDate,
   formatDay,
   formatMoney,
   formatNumber,
   formatSignedMoney,
+  shortDate,
+  todayIsoDate,
 } from "./format";
 
 // Intl output varies in its spaces between ICU versions (a no-break space in one, a narrow one in
@@ -91,5 +94,32 @@ describe("balance colours (T-182, T-241)", () => {
     expect(balanceColor(0)).toBe("var(--color-text-muted)");
     expect(balanceColor(1)).toBe("var(--color-positive)");
     expect(balanceColor(-1)).toBe("var(--color-danger)");
+  });
+});
+
+describe("a due date's short form (T-323)", () => {
+  it("leaves out the year when it is the current one", () => {
+    expect(shortDate("2026-09-17", "en", "2026-09-28")).toBe("Sep 17");
+    expect(shortDate("2026-01-05", "de", "2026-09-28")).toBe("5. Jan.");
+  });
+
+  it("keeps the year when it is another one", () => {
+    expect(shortDate("2027-01-05", "en", "2026-09-28")).toBe("Jan 5, 2027");
+    expect(shortDate("2025-12-31", "de", "2026-09-28")).toBe("31. Dez. 2025");
+  });
+
+  it("never moves the date a day early", () => {
+    expect(shortDate("2026-03-01", "en", "2026-09-28")).toBe("Mar 1");
+  });
+
+  it("reads before today as overdue, today as today, after as upcoming", () => {
+    expect(dueState("2026-09-27", "2026-09-28")).toBe("overdue");
+    expect(dueState("2025-12-31", "2026-01-01")).toBe("overdue");
+    expect(dueState("2026-09-28", "2026-09-28")).toBe("today");
+    expect(dueState("2026-09-29", "2026-09-28")).toBe("upcoming");
+  });
+
+  it("takes today from the local calendar", () => {
+    expect(todayIsoDate(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
   });
 });
