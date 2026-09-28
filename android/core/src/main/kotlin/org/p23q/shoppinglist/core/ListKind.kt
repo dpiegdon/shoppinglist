@@ -43,6 +43,12 @@ object ListKind {
     /** Whether the shopping-only item fields (stores, quantity, price) are shown for this kind. */
     fun showsShoppingFields(kind: String?): Boolean = of(kind) == SHOPPING
 
+    /**
+     * Whether items offer a due date (T-323): on a checklist only. A due date on an item of
+     * another kind stays stored, merely not shown, like the shopping fields on a checklist.
+     */
+    fun showsDueDate(kind: String?): Boolean = of(kind) == CHECKLIST
+
     /** Overview glyph — a cart for shopping, a check for a checklist, a banknote for expenses. */
     fun icon(kind: String?): String = when (of(kind)) {
         CHECKLIST -> "✓"
