@@ -432,6 +432,22 @@ describe("OverviewPage pending invites", () => {
     expect(localStorage.getItem(LAST_LIST_STORAGE_KEY)).toBe("list-a");
   });
 
+  it("drops a joined invite from the section as soon as the join succeeds", async () => {
+    vi.mocked(api.redeemInvite).mockResolvedValue({ list_id: "list-a" });
+    renderOverview();
+    await screen.findByRole("heading", { name: "Invitations" });
+    // The joined list's pull never finishes, so the page stays on the overview.
+    vi.mocked(api.sync).mockImplementation((request) =>
+      request.full_lists.includes("list-a") ? new Promise(() => {}) : Promise.resolve(syncResponse("list-1")),
+    );
+
+    await userEvent.click(within(screen.getByText("Camping").closest<HTMLElement>(".card")!).getByRole("button", { name: "Join" }));
+
+    await waitFor(() => expect(screen.queryByText("Camping")).not.toBeInTheDocument());
+    expect(screen.getByText("Chores")).toBeInTheDocument();
+    expect(screen.queryByText("list screen")).not.toBeInTheDocument();
+  });
+
   it("says why a join failed, in the server's words, and re-reads the inbox", async () => {
     vi.mocked(api.redeemInvite).mockRejectedValue(new api.ApiError(409, "invite_revoked", "revoked"));
     renderOverview();

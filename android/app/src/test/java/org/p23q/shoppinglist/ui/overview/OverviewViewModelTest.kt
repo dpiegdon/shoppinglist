@@ -429,6 +429,18 @@ class OverviewViewModelTest {
     }
 
     @Test
+    fun `a joined invite leaves the section at once, before the inbox is read again`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}, ${inviteJson("b", "Chores")}]}"""
+        val viewModel = newViewModel()
+        val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.first { it.id == "a" }
+
+        viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
+
+        assertEquals(listOf("b"), viewModel.uiState.value.invites.map { it.id })
+        assertEquals(listOf("b"), viewModel.uiState.value.sections.single().invites.map { it.id })
+    }
+
+    @Test
     fun `a join whose list the sync did not bring opens nothing and says so`() = runTest(mainDispatcherRule.dispatcher) {
         inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
         pullBringsFullLists = false

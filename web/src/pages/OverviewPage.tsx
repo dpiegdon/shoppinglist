@@ -117,6 +117,8 @@ export default function OverviewPage() {
     try {
       // The same path as a pasted link: redeem, pull the list's full state, open it.
       const { list_id } = await api.redeemInvite(invite.token);
+      // Joined: the invite is used, so it leaves the section now, not at the next inbox read.
+      setInvites((current) => current.filter((other) => other.id !== invite.id));
       await push({}, [list_id]);
       safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
       navigate(`/list/${list_id}`);

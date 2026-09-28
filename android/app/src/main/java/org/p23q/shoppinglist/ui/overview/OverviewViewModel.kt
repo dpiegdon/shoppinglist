@@ -343,7 +343,15 @@ class OverviewViewModel @Inject constructor(
     fun joinInvite(accountId: String, invite: InviteForMeDto): Job = viewModelScope.launch {
         _uiState.update { it.copy(joiningInviteId = invite.id, inviteError = null, inviteErrorAccountId = accountId) }
         when (val result = joiner.join(accountId, invite.token)) {
-            is InviteJoin.Joined -> _uiState.update { it.copy(joiningInviteId = null, joinedListId = result.listId) }
+            // Joined: the invite is used, so it leaves the section now, not at the next inbox read.
+            is InviteJoin.Joined -> _uiState.update { state ->
+                val remaining = state.invitesByAccount[accountId].orEmpty().filter { it.id != invite.id }
+                state.copy(
+                    joiningInviteId = null,
+                    joinedListId = result.listId,
+                    invitesByAccount = state.invitesByAccount + (accountId to remaining),
+                )
+            }
             is InviteJoin.Failed -> {
                 _uiState.update { it.copy(joiningInviteId = null, inviteError = result.message) }
                 if (result.refused) loadInvites() // a used, withdrawn or expired invite drops out of the section
