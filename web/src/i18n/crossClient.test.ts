@@ -98,6 +98,8 @@ const ONE_SIDED: Record<string, string> = {
   // T-304: where you delete your own account differs by client.
   "apiError.cannotDeleteSelf": "the web deletes your own account in Settings; Android does it on that account's page (api_error_cannot_delete_self)",
   api_error_cannot_delete_self: "the web's apiError.cannotDeleteSelf, naming the account's page instead of Settings",
+  // T-327: the web always runs against the server it ships with, so it never lacks due dates.
+  item_due_needs_server: "Android's item form on an account whose server is older than the due date; the web ships with its server",
 };
 
 describe("the two clients say the same thing (T-148)", () => {
