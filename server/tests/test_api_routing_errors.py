@@ -60,6 +60,47 @@ def test_an_unknown_api_path_is_a_json_404(tmp_path, serve_web_client, method, p
     _assert_ours(resp)
 
 
+# Found by the path fuzz of T-326: a doubled slash under the prefix. Werkzeug merges slashes by
+# default, so a path that matched a real route once merged answered its HTML 308 redirect, without
+# our headers; and one the SPA's catch-all took whole (`<path:>` may hold `//`, while our own
+# unknown-path route's `<path:>` may not start with `/`) answered index.html with 200.
+@pytest.mark.parametrize("serve_web_client", [True, False])
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("POST", "/api/v1//sync"),
+        ("POST", "/api/v1//login"),
+        ("GET", "/api/v1//lists"),
+        ("DELETE", "/api/v1//invites/abc"),
+        ("POST", "/api/v1/lists/abc//leave"),
+        ("GET", "/api/v1///registration-status"),
+    ],
+)
+def test_a_doubled_slash_under_the_prefix_is_a_json_404(tmp_path, serve_web_client, method, path):
+    client = _app(tmp_path, serve_web_client=serve_web_client).test_client()
+
+    resp = client.open(path, method=method)
+
+    assert resp.status_code == 404
+    assert resp.get_json()["error"] == "not_found"
+    _assert_ours(resp)
+
+
+def test_a_co_mounted_service_keeps_its_own_slash_merging(tmp_path):
+    app = _app(tmp_path, serve_web_client=False)
+    other = Blueprint("other", __name__, url_prefix="/other")
+
+    @other.route("/thing", methods=["POST"])
+    def thing():
+        return "ok"
+
+    app.register_blueprint(other)
+
+    resp = app.test_client().post("/other//thing")
+    assert resp.status_code == 308
+    assert resp.headers["Location"].endswith("/other/thing")
+
+
 @pytest.mark.parametrize(
     "method,path,allow",
     [

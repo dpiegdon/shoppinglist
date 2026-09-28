@@ -3,6 +3,7 @@ from urllib.parse import urlsplit
 
 from flask import Blueprint, current_app, g, jsonify, request
 from werkzeug.exceptions import HTTPException, InternalServerError, RequestEntityTooLarge
+from werkzeug.routing import PathConverter
 
 from . import audit
 from . import db as db_module
@@ -119,6 +120,8 @@ def create_blueprint(
     @bp.record_once
     def _record(setup_state):
         app = setup_state.app
+        # Before any of this blueprint's rules is added: the unknown-path route below uses it.
+        app.url_map.converters.setdefault(_ANY_PATH_CONVERTER, _AnyPathConverter)
         # Keyed by blueprint name, NOT a single flat slot: get_config() below
         # resolves the caller's own instance via request.blueprint at request
         # time, so multiple mounted instances never see each other's config
@@ -334,6 +337,26 @@ def create_blueprint(
     return bp
 
 
+class _AnyPathConverter(PathConverter):
+    """`path`, but one that may also start with a slash (T-326).
+
+    Werkzeug's own refuses a leading `/`, so a doubled slash under the prefix escaped the
+    unknown-path route. `GET /api/v1//lists` then reached the web client's catch-all and was
+    answered index.html with 200; `POST /api/v1//sync` matched `/sync` once Werkzeug had merged
+    the slashes, and was answered with its HTML 308 redirect, without our headers. With this the
+    unknown-path route matches such a path as it stands, which Werkzeug prefers to merging, so
+    it gets the JSON 404 like any path no endpoint takes. The app's own slash merging is left as
+    it is, for a co-mounted service's routes (T-250)."""
+
+    regex = ".+?"
+    # Stated, not inferred: Werkzeug derives it from whether the regex mentions "/", and this one
+    # does not, which would confine it to a single segment.
+    part_isolating = False
+
+
+_ANY_PATH_CONVERTER = "shoppinglist_any_path"
+
+
 # Every method a route of ours might take; HEAD comes with GET, OPTIONS with any.
 _ROUTABLE_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 _UNKNOWN_API_PATH_ENDPOINT = "unknown_api_path"
@@ -383,7 +406,7 @@ def _register_unknown_api_path(bp: Blueprint) -> None:
         strict_slashes=False,
         provide_automatic_options=False,
     )
-    @bp.route("/<path:path>", methods=methods, provide_automatic_options=False)
+    @bp.route(f"/<{_ANY_PATH_CONVERTER}:path>", methods=methods, provide_automatic_options=False)
     def unknown_api_path(path):
         allowed = _allowed_methods(unknown_endpoint)
         if not allowed:
