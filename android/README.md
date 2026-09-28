@@ -182,7 +182,8 @@ label is the highlighted text, and a confirmation ("Password changed.") is the
 muted grey, as on the web. No
 other file under `ui/` names a colour value apart from the meaning colours:
 the error red, the balance green (`BalancePositive…` in `Theme.kt`) and the
-admin screen's registration switch. There is no wallpaper-based (dynamic)
+admin screen's registration switch (`RegistrationSwitch…`, beside it), which a
+test pins to the web's tokens. There is no wallpaper-based (dynamic)
 colour. The web client holds the same five roles as tokens in
 `web/src/index.css`, and a web test reads `BrandColors.kt` and fails when the
 two differ, so change both together.

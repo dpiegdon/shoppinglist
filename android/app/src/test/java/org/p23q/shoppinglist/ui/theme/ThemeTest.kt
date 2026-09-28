@@ -146,4 +146,23 @@ class ThemeTest {
         }
         assertEquals(emptyList<String>(), offenders)
     }
+
+    @Test
+    fun `the registration switch's meaning colours are the web's (T-327)`() {
+        // The web's --color-switch-on and --color-switch-knob; web/src/lib/brandColors.test.ts
+        // reads Theme.kt and fails if the two drift apart.
+        assertEquals(Color(0xFF2E7D32), RegistrationSwitchOn)
+        assertEquals(Color(0xFFFFFFFF), RegistrationSwitchKnob)
+    }
+
+    @Test
+    fun `no colour value is named outside the theme (T-327)`() {
+        val literal = Regex("""Color\(0x|Color\.(White|Black|Red|Green|Blue|Gray|DarkGray|LightGray|Yellow|Cyan|Magenta)\b""")
+        val offenders = uiSources().filter { "/ui/theme/" !in it.invariantSeparatorsPath }.flatMap { file ->
+            file.readLines().mapIndexedNotNull { at, line ->
+                if (literal.containsMatchIn(line.substringBefore("//"))) "${file.name}:${at + 1}" else null
+            }
+        }
+        assertEquals(emptyList<String>(), offenders)
+    }
 }

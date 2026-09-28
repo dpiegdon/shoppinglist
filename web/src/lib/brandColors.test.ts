@@ -19,6 +19,10 @@ const BRAND_KT = readFileSync(
   path.join(HERE, "../../../android/app/src/main/java/org/p23q/shoppinglist/ui/theme/BrandColors.kt"),
   "utf8",
 );
+const THEME_KT = readFileSync(
+  path.join(HERE, "../../../android/app/src/main/java/org/p23q/shoppinglist/ui/theme/Theme.kt"),
+  "utf8",
+);
 
 /** CSS with its comments blanked out, newlines kept, so a commented-out token or colour is not read. */
 function withoutCssComments(text: string): string {
@@ -169,6 +173,16 @@ describe("the colour scheme", () => {
         expect(tokens.get(token), `${token} (${theme})`).toBe(SCHEME[token][theme]);
       }
     }
+  });
+
+  it("gives the registration switch the same meaning colours as Android's Theme.kt, in both themes", () => {
+    // A meaning colour, not a brand one: the same values light and dark (T-327).
+    for (const theme of ["light", "dark"] as const) {
+      const tokens = cssTokens(theme);
+      expect(tokens.get("--color-switch-on"), `--color-switch-on (${theme})`).toBe(kotlinColor("RegistrationSwitchOn", THEME_KT));
+      expect(tokens.get("--color-switch-knob"), `--color-switch-knob (${theme})`).toBe(kotlinColor("RegistrationSwitchKnob", THEME_KT));
+    }
+    expect(kotlinColor("RegistrationSwitchOn", THEME_KT)).toBe("#2e7d32");
   });
 
   it("keeps highlighted text legible on the background, in both themes", () => {

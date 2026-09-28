@@ -142,6 +142,12 @@ fun TuppuTextButton(
 val BalancePositiveLight = Color(0xFF15803D)
 val BalancePositiveDark = Color(0xFF4ADE80)
 
+// The admin's registration switch (T-112): a green track when new accounts are allowed, the error
+// red when not, and a white knob, the same in both themes. Meaning colours too; the web's
+// --color-switch-on and --color-switch-knob, which web/src/lib/brandColors.test.ts pins to these.
+val RegistrationSwitchOn = Color(0xFF2E7D32)
+val RegistrationSwitchKnob = Color(0xFFFFFFFF)
+
 /** The green for the theme being rendered. */
 fun positiveBalanceColor(variant: ThemeVariant): Color = when (variant) {
     ThemeVariant.DARK -> BalancePositiveDark

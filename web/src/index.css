@@ -25,7 +25,8 @@
      Kept in step with Android's BalancePositive pair; lib/balanceColors.test.ts pins them together. */
   --color-positive: #15803d;
   --color-checked: #dc2626;
-  /* The admin's registration switch: green on, the danger red off, a white knob (as AdminScreen.kt). */
+  /* The admin's registration switch: green on, the danger red off, a white knob. Kept in step with
+     Android's RegistrationSwitch pair in Theme.kt; lib/brandColors.test.ts pins them together. */
   --color-switch-on: #2e7d32;
   --color-switch-knob: #ffffff;
   --color-scrim: rgba(0, 0, 0, 0.4);

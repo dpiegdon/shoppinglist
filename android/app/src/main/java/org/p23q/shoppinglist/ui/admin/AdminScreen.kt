@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -44,10 +43,9 @@ import org.p23q.shoppinglist.core.api.AdminUserDto
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.RegistrationSwitchKnob
+import org.p23q.shoppinglist.ui.theme.RegistrationSwitchOn
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
-
-/** Green track when registration is on, red when it's denied (T-112). */
-private val RegistrationOnColor = Color(0xFF2E7D32)
 
 @Composable
 fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
@@ -84,10 +82,11 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 checked = state.allowRegistration == true,
                 onCheckedChange = { viewModel.toggleRegistration() },
                 enabled = state.allowRegistration != null,
+                // Green track when registration is on, red when it's denied (T-112).
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = RegistrationOnColor,
-                    uncheckedThumbColor = Color.White,
+                    checkedThumbColor = RegistrationSwitchKnob,
+                    checkedTrackColor = RegistrationSwitchOn,
+                    uncheckedThumbColor = RegistrationSwitchKnob,
                     uncheckedTrackColor = MaterialTheme.colorScheme.error,
                 ),
             )
