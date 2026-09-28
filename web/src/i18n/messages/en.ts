@@ -91,6 +91,10 @@ export const en = {
   "item.price": "Price",
   "item.currency": "Currency",
   "item.note": "Note",
+  "item.due": "Due",
+  "item.noDueDate": "No due date",
+  "item.overdue": "Overdue",
+  "item.dueToday": "Due today",
   "item.statusLabel": "Status",
   // The ONE canonical wording for the three item states, matching the Android client word for
   // word (T-124). The wire values stay the English identifiers backlog/todo/checked (see

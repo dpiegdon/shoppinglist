@@ -326,6 +326,7 @@ export default function ListPropsPage() {
             ...fieldPatch(deviceId, "quantity", itemFieldValue(item, "quantity") ?? null),
             ...fieldPatch(deviceId, "price", itemFieldValue(item, "price") ?? null),
             ...fieldPatch(deviceId, "note", itemFieldValue(item, "note") ?? null),
+            ...fieldPatch(deviceId, "due", itemFieldValue(item, "due") ?? null),
             ...fieldPatch(deviceId, "status", itemFieldValue(item, "status") ?? "todo"),
           },
         })),

@@ -11,7 +11,7 @@ import {
   distinctCanonicalStores,
   planCategoryRename,
 } from "../lib/categories";
-import { listKind, showsShoppingFields } from "../lib/listKind";
+import { listKind, showsDueDate, showsShoppingFields } from "../lib/listKind";
 import ItemRow from "../components/ItemRow";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
@@ -64,6 +64,8 @@ export default function ListPage() {
   const categoryOrder = list ? listFieldValue(list, "category_order") ?? [] : [];
   // Checklists hide the shopping-only item fields (T-110).
   const showShopping = showsShoppingFields(listKind(list));
+  // Checklists alone offer and show a due date (T-323).
+  const showDue = showsDueDate(listKind(list));
   const groups = useMemo(
     () => (list ? groupVisibleItems(listItems, categoryOrder, showChecked) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,6 +165,7 @@ export default function ListPage() {
           )
         : {}),
       ...(changed.has("note") ? fieldPatch(deviceId, "note", values.note || null) : {}),
+      ...(changed.has("due") ? fieldPatch(deviceId, "due", values.due || null) : {}),
       ...(changed.has("status") ? fieldPatch(deviceId, "status", values.status) : {}),
     };
   }
@@ -332,6 +335,7 @@ export default function ListPage() {
                 item={item}
                 defaultCurrency={defaultCurrency}
                 showShoppingFields={showShopping}
+                showDue={showDue}
                 authorMember={
                   members.length >= 2 ? members.find((m) => m.account_id === item.last_touched_by) : undefined
                 }
@@ -344,7 +348,7 @@ export default function ListPage() {
             {exitingItems
               .filter((item) => categoryKey(itemFieldValue(item, "category") ?? "") === group.key)
               .map((item) => (
-                <ItemRow key={item.id} item={item} showShoppingFields={showShopping} exiting
+                <ItemRow key={item.id} item={item} showShoppingFields={showShopping} showDue={showDue} exiting
                   onToggle={() => {}} onEdit={() => {}} />
               ))}
           </div>
@@ -402,6 +406,7 @@ export default function ListPage() {
           categorySuggestions={categorySuggestions}
           storeSuggestions={storeSuggestions}
           showShoppingFields={showShopping}
+          showDue={showDue}
           editingItem={dialogItem === "new" ? undefined : dialogItem}
           defaultCurrency={defaultCurrency}
           onClose={() => setDialogItem(null)}

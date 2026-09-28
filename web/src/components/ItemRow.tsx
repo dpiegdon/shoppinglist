@@ -1,6 +1,6 @@
 import type { ItemObject, Member } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
-import { useFormat } from "../lib/format";
+import { dueState, todayIsoDate, useFormat } from "../lib/format";
 import { toCents } from "../lib/expenses";
 import { useT } from "../i18n";
 
@@ -11,6 +11,10 @@ interface ItemRowProps {
   authorMember?: Member;
   /** False on a checklist (T-110): hides the quantity/price detail line. */
   showShoppingFields?: boolean;
+  /** True on a checklist (T-323): shows the item's due date, if it has one, at the trailing edge. */
+  showDue?: boolean;
+  /** Today as YYYY-MM-DD, for a test to pin; the local calendar day otherwise. */
+  today?: string;
   /** The account's currency, shown for a price that has none of its own — as the app does (T-187). */
   defaultCurrency?: string | null;
   /** True while this row is animating away after being checked off (T-128). The row is already
@@ -24,6 +28,8 @@ export default function ItemRow({
   item,
   authorMember,
   showShoppingFields = true,
+  showDue = false,
+  today,
   defaultCurrency = null,
   exiting = false,
   onToggle,
@@ -35,6 +41,19 @@ export default function ItemRow({
   const category = itemFieldValue(item, "category");
   const quantity = itemFieldValue(item, "quantity");
   const price = itemFieldValue(item, "price");
+  const due = showDue ? itemFieldValue(item, "due") ?? null : null;
+  const todayDate = today ?? todayIsoDate();
+  // Colour is the date's only emphasis (T-323): the error colour once past, the accent on the day,
+  // muted otherwise, and muted whatever it is once the item is checked off.
+  const dueStanding = due && !checked ? dueState(due, todayDate) : "upcoming";
+  const dueColor =
+    dueStanding === "overdue"
+      ? "var(--color-danger)"
+      : dueStanding === "today"
+        ? "var(--color-accent)"
+        : "var(--color-text-muted)";
+  const dueDescription =
+    dueStanding === "overdue" ? t("item.overdue") : dueStanding === "today" ? t("item.dueToday") : null;
 
   // Suppressed on a checklist (T-110) — a converted list can still hold quantity/price, and showing
   // values the dialog won't let you edit would be confusing. The data itself is untouched.
@@ -93,6 +112,17 @@ export default function ItemRow({
         {details && <div className="muted" dir="auto" style={{ fontSize: "0.85rem" }}>{details}</div>}
         {!category && null}
       </div>
+      {/* A sidenote (T-323): on the name's line, never wrapping it — the name truncates first. */}
+      {due && (
+        <span
+          data-testid="item-due"
+          title={dueDescription ?? undefined}
+          style={{ fontSize: "0.8rem", whiteSpace: "nowrap", flexShrink: 0, color: dueColor }}
+        >
+          {dueDescription && <span className="visually-hidden">{dueDescription} </span>}
+          {fmt.shortDate(due, todayDate)}
+        </span>
+      )}
       {authorMember && (
         <span
           title={t("list.lastTouchedBy", { email: authorMember.email })}

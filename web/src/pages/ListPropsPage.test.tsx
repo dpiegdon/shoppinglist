@@ -190,6 +190,7 @@ describe("ListPropsPage duplicate list (T-63)", () => {
         quantity: clock("2l"),
         price: clock(null),
         note: clock(null),
+        due: clock("2026-10-04"),
         status: clock<ItemStatus>("todo"),
         deleted: clock(deleted),
       },
@@ -234,6 +235,8 @@ describe("ListPropsPage duplicate list (T-63)", () => {
       expect(pushedItems[0].list_id).toBe(pushedLists[0].id);
       expect(pushedItems[0].fields.name?.value).toBe("Milk");
       expect(pushedItems[0].fields.status?.value).toBe("todo");
+      // The due date travels with the copy like every other item field (T-323).
+      expect(pushedItems[0].fields.due?.value).toBe("2026-10-04");
     });
 
     await screen.findByText("Groceries (Copy)");

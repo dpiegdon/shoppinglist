@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isExpenses, listKind, listKindIcon, listKindLabelKey, showsShoppingFields } from "./listKind";
+import { isExpenses, listKind, listKindIcon, listKindLabelKey, showsDueDate, showsShoppingFields } from "./listKind";
 import type { ListObject } from "../api/contract";
 
 function list(kind?: string): ListObject {
@@ -24,6 +24,12 @@ describe("listKind (T-110)", () => {
   it("reads an explicit kind", () => {
     expect(listKind(list("checklist"))).toBe("checklist");
     expect(listKind(list("shopping"))).toBe("shopping");
+  });
+
+  it("only checklists offer a due date (T-323)", () => {
+    expect(showsDueDate("checklist")).toBe(true);
+    expect(showsDueDate("shopping")).toBe(false);
+    expect(showsDueDate("expenses")).toBe(false);
   });
 
   it("only shopping lists show the shopping-only fields", () => {

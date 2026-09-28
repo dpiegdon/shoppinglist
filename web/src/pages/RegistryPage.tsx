@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { distinctCanonicalCategories, distinctCanonicalStores } from "../lib/categories";
-import { listKind, showsShoppingFields } from "../lib/listKind";
+import { listKind, showsDueDate, showsShoppingFields } from "../lib/listKind";
 import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { ItemObject } from "../api/contract";
@@ -87,6 +87,7 @@ export default function RegistryPage() {
                 )
               : {}),
             ...(changed.has("note") ? fieldPatch(deviceId, "note", values.note || null) : {}),
+            ...(changed.has("due") ? fieldPatch(deviceId, "due", values.due || null) : {}),
             ...(changed.has("status") ? fieldPatch(deviceId, "status", values.status) : {}),
           },
         },
@@ -148,6 +149,7 @@ export default function RegistryPage() {
           categorySuggestions={categorySuggestions}
           storeSuggestions={storeSuggestions}
           showShoppingFields={showsShoppingFields(listKind(list))}
+          showDue={showsDueDate(listKind(list))}
           editingItem={editingItem}
           defaultCurrency={defaultCurrency}
           onClose={() => setEditingItem(null)}

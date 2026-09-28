@@ -335,6 +335,19 @@ textarea:focus {
   color: var(--color-text-muted);
 }
 
+/* Read by a screen reader, not drawn: what a colour alone says to a sighted reader (T-323). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* The admin's server message (T-315): a slim neutral line, deliberately not the error style — it
    informs, it isn't something that went wrong. Plain text; a long link wraps instead of overflowing. */
 .info-banner {

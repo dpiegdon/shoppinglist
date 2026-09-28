@@ -7,7 +7,7 @@ import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
 
 /** The item fields the dialog can push, as LWW keys (matches the `fieldPatch` keys the pages spread). */
-export type ItemChangedField = "name" | "category" | "stores" | "quantity" | "price" | "note" | "status";
+export type ItemChangedField = "name" | "category" | "stores" | "quantity" | "price" | "note" | "due" | "status";
 
 export interface ItemDialogSaveValues {
   itemId: string;
@@ -18,6 +18,8 @@ export interface ItemDialogSaveValues {
   priceAmount: string;
   priceCurrency: string;
   note: string;
+  /** YYYY-MM-DD, or "" for no due date (T-323). */
+  due: string;
   status: ItemStatus;
   /**
    * The fields whose normalized value actually differs from the snapshot the form was seeded with
@@ -58,6 +60,7 @@ interface NormalizedValues {
   quantity: string | null;
   price: Price | null;
   note: string | null;
+  due: string | null;
   status: ItemStatus;
 }
 
@@ -70,6 +73,7 @@ function snapshotOf(item: ItemObject): NormalizedValues {
     quantity: (itemFieldValue(item, "quantity") ?? "").trim() || null,
     price,
     note: (itemFieldValue(item, "note") ?? "").trim() || null,
+    due: itemFieldValue(item, "due") || null,
     status: itemFieldValue(item, "status") ?? "todo",
   };
 }
@@ -88,6 +92,7 @@ function computeChangedFields(current: NormalizedValues, snapshot: ItemObject | 
     if (current.quantity) changed.add("quantity");
     if (current.price) changed.add("price");
     if (current.note) changed.add("note");
+    if (current.due) changed.add("due");
     changed.add("status");
     return changed;
   }
@@ -98,6 +103,7 @@ function computeChangedFields(current: NormalizedValues, snapshot: ItemObject | 
   if (!optEqual(current.quantity, base.quantity)) changed.add("quantity");
   if (!priceEqual(current.price, base.price)) changed.add("price");
   if (!optEqual(current.note, base.note)) changed.add("note");
+  if (!optEqual(current.due, base.due)) changed.add("due");
   if (current.status !== base.status) changed.add("status");
   return changed;
 }
@@ -116,6 +122,11 @@ interface ItemDialogProps {
    * held (e.g. after converting a shopping list), they're just not rendered or edited here.
    */
   showShoppingFields?: boolean;
+  /**
+   * Whether to offer the due date (T-323): true on a checklist only. Hidden elsewhere with the
+   * same rule as the shopping fields: whatever the item holds is kept, not rendered or edited.
+   */
+  showDue?: boolean;
   /** Present for edit mode; absent for add mode. */
   editingItem?: ItemObject;
   defaultCurrency: string;
@@ -133,6 +144,7 @@ function emptyValues(defaultCurrency: string): Omit<ItemDialogSaveValues, "itemI
     priceAmount: "",
     priceCurrency: defaultCurrency,
     note: "",
+    due: "",
   };
 }
 
@@ -146,6 +158,7 @@ function valuesFromItem(item: ItemObject): Omit<ItemDialogSaveValues, "itemId" |
     priceAmount: price?.amount ?? "",
     priceCurrency: price?.currency ?? "",
     note: itemFieldValue(item, "note") ?? "",
+    due: itemFieldValue(item, "due") ?? "",
   };
 }
 
@@ -154,6 +167,7 @@ export default function ItemDialog({
   categorySuggestions = [],
   storeSuggestions = [],
   showShoppingFields = true,
+  showDue = false,
   editingItem,
   defaultCurrency,
   onClose,
@@ -237,6 +251,7 @@ export default function ItemDialog({
           ? { amount: next.priceAmount, currency: next.priceCurrency || null }
           : null,
         note: next.note || null,
+        due: next.due || null,
         status: "todo",
       },
       item,
@@ -380,6 +395,7 @@ export default function ItemDialog({
           quantity: quantity || null,
           price: normalizedAmount ? { amount: normalizedAmount, currency: normalizedCurrency } : null,
           note: note || null,
+          due: values.due || null,
           status,
         },
         snapshot,
@@ -393,6 +409,7 @@ export default function ItemDialog({
         priceAmount: normalizedAmount ?? "",
         priceCurrency: normalizedCurrency ?? "",
         note,
+        due: values.due,
         status,
         changedFields,
       });
@@ -625,6 +642,33 @@ export default function ItemDialog({
           onChange={(e) => setValues((v) => ({ ...v, note: e.target.value }))}
         />
       </div>
+
+      {/* The due date (T-323): a checklist only, and one compact row — label, date, clear. */}
+      {showDue && (
+        <div className="form-field" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <label htmlFor="item-due" style={{ margin: 0 }}>
+            {t("item.due")}
+          </label>
+          <input
+            id="item-due"
+            type="date"
+            value={values.due}
+            onChange={(e) => setValues((v) => ({ ...v, due: e.target.value }))}
+            style={{ width: "auto", flex: "0 1 auto", minWidth: 0 }}
+          />
+          {values.due && (
+            <button
+              type="button"
+              className="btn-icon"
+              aria-label={t("item.noDueDate")}
+              title={t("item.noDueDate")}
+              onClick={() => setValues((v) => ({ ...v, due: "" }))}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
 
       {isEdit && (
         <div className="form-field">

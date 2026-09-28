@@ -21,6 +21,14 @@ export function showsShoppingFields(kind: ListKind): boolean {
   return kind === "shopping";
 }
 
+/**
+ * Whether an item's due date is offered and shown (T-323): on a checklist only. The date stays
+ * stored on any other kind, merely hidden, like the shopping fields on a checklist.
+ */
+export function showsDueDate(kind: ListKind): boolean {
+  return kind === "checklist";
+}
+
 /** Whether this list holds expenses rather than things to buy (T-155). */
 export function isExpenses(kind: ListKind): boolean {
   return kind === "expenses";

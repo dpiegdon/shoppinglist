@@ -1,10 +1,11 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ListPage from "./ListPage";
 import { SyncProvider } from "../hooks/SyncContext";
 import * as api from "../api/client";
+import { shortDate, todayIsoDate } from "../lib/format";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
@@ -374,5 +375,129 @@ describe("ListPage last-touched-by indicator (T-64)", () => {
 
     await screen.findByText("Milk");
     expect(screen.queryByLabelText(/Last touched by/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ListPage due dates (T-323)", () => {
+  const today = todayIsoDate();
+  const offset = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return todayIsoDate(d);
+  };
+
+  function withDue(item: ReturnType<typeof itemObj>, due: string | null) {
+    return { ...item, fields: { ...item.fields, due: clock(due) } };
+  }
+
+  function mountWith(kind: "shopping" | "checklist") {
+    // An earlier test may have left the session's show-checked toggle on.
+    sessionStorage.clear();
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [{ ...listObj(), fields: { ...listObj().fields, kind: clock(kind) } }],
+        items: [
+          withDue(itemObj("item-1", "Taxes", "todo"), offset(-1)),
+          withDue(itemObj("item-2", "Call mum", "todo"), today),
+          withDue(itemObj("item-3", "Passport", "todo"), offset(3)),
+          withDue(itemObj("item-4", "Invoice", "checked"), offset(-1)),
+          withDue(itemObj("item-5", "Plants", "todo"), null),
+        ],
+      },
+    });
+    return renderListPage();
+  }
+
+  function dueOf(name: string) {
+    const row = screen.getByText(name).closest(".row") as HTMLElement;
+    return row.querySelector<HTMLElement>("[data-testid=item-due]");
+  }
+
+  function pushedItems() {
+    return vi
+      .mocked(api.sync)
+      .mock.calls.map((c) => c[0])
+      .flatMap((req) => req.changes.items ?? []);
+  }
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("shows the date at the row's end, coloured by where it stands, on a checklist", async () => {
+    mountWith("checklist");
+    await screen.findByText("Taxes");
+    await userEvent.click(screen.getByRole("button", { name: "Show checked" }));
+    await screen.findByText("Invoice");
+
+    expect(dueOf("Taxes")!.style.color).toBe("var(--color-danger)");
+    expect(dueOf("Taxes")!.textContent).toBe(`Overdue ${shortDate(offset(-1), "en", today)}`);
+    expect(dueOf("Call mum")!.style.color).toBe("var(--color-accent)");
+    expect(dueOf("Call mum")!.textContent).toBe(`Due today ${shortDate(today, "en", today)}`);
+    expect(dueOf("Passport")!.style.color).toBe("var(--color-text-muted)");
+    expect(dueOf("Passport")!.textContent).toBe(shortDate(offset(3), "en", today));
+    // Checked: muted whatever the date, and not described as overdue.
+    expect(dueOf("Invoice")!.style.color).toBe("var(--color-text-muted)");
+    expect(dueOf("Invoice")!.textContent).toBe(shortDate(offset(-1), "en", today));
+    expect(dueOf("Plants")).toBeNull();
+  });
+
+  it("sets and clears a due date from the checklist's item dialog", async () => {
+    mountWith("checklist");
+    await screen.findByText("Plants");
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Plants" }));
+    fireEvent.change(screen.getByLabelText("Due"), { target: { value: "2026-10-04" } });
+    await userEvent.click(screen.getByText("Save"));
+    let pushed = pushedItems();
+    expect(pushed).toHaveLength(1);
+    expect(Object.keys(pushed[0].fields)).toEqual(["due"]);
+    expect(pushed[0].fields.due!.value).toBe("2026-10-04");
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Passport" }));
+    expect(screen.getByLabelText("Due")).toHaveValue(offset(3));
+    await userEvent.click(screen.getByRole("button", { name: "No due date" }));
+    expect(screen.getByLabelText("Due")).toHaveValue("");
+    await userEvent.click(screen.getByText("Save"));
+    pushed = pushedItems();
+    expect(pushed).toHaveLength(2);
+    expect(pushed[1].id).toBe("item-3");
+    expect(Object.keys(pushed[1].fields)).toEqual(["due"]);
+    expect(pushed[1].fields.due!.value).toBeNull();
+  });
+
+  it("adds a new item with a due date on a checklist", async () => {
+    mountWith("checklist");
+    await screen.findByText("Plants");
+
+    await userEvent.click(screen.getByRole("button", { name: "Add item" }));
+    await userEvent.type(screen.getByLabelText("Name"), "Dentist");
+    fireEvent.change(screen.getByLabelText("Due"), { target: { value: "2026-11-02" } });
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const pushed = pushedItems();
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0].fields.due!.value).toBe("2026-11-02");
+  });
+
+  it("hides the date on a shopping list and keeps it through an edit there", async () => {
+    mountWith("shopping");
+    await screen.findByText("Taxes");
+
+    expect(dueOf("Taxes")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Edit Taxes" }));
+    expect(screen.queryByLabelText("Due")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Note"), "by Friday");
+    await userEvent.click(screen.getByText("Save"));
+
+    const pushed = pushedItems();
+    expect(pushed).toHaveLength(1);
+    // Only the note: the stored due date is neither cleared nor re-stamped.
+    expect(Object.keys(pushed[0].fields)).toEqual(["note"]);
   });
 });

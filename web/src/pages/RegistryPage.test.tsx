@@ -1,4 +1,4 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -114,5 +114,47 @@ describe("RegistryPage item dialog autocomplete", () => {
 
     expect(await screen.findByLabelText("Stores")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rewe" })).toBeInTheDocument();
+  });
+});
+
+describe("RegistryPage due date (T-323)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  function mountWith(kind: "shopping" | "checklist") {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [{ ...listObj(), fields: { ...listObj().fields, kind: clock(kind) } }],
+        items: [itemObj("item-1", "Passport")],
+      },
+    });
+    renderRegistryPage();
+  }
+
+  it("sets a due date when editing a checklist's item from here", async () => {
+    mountWith("checklist");
+    await userEvent.click(await screen.findByText("Passport"));
+    fireEvent.change(await screen.findByLabelText("Due"), { target: { value: "2026-12-01" } });
+    await userEvent.click(screen.getByText("Save"));
+
+    const pushed = vi
+      .mocked(api.sync)
+      .mock.calls.flatMap((c) => c[0].changes.items ?? []);
+    expect(pushed).toHaveLength(1);
+    expect(Object.keys(pushed[0].fields)).toEqual(["due"]);
+    expect(pushed[0].fields.due!.value).toBe("2026-12-01");
+  });
+
+  it("does not offer it on a shopping list", async () => {
+    mountWith("shopping");
+    await userEvent.click(await screen.findByText("Passport"));
+    expect(await screen.findByLabelText("Note")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Due")).not.toBeInTheDocument();
   });
 });
