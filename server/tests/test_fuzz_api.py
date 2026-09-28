@@ -141,6 +141,34 @@ class World:
         # The fuzzed pushes re-send the same rows at a later clock, so they win and exercise the
         # write paths rather than all being discarded as stale.
         self.base_sync = _retimed(self.base_sync, 2_000)
+        # A second push whose new item collides, case-insensitively, with the stored "Milk" and
+        # whose rename of that one lands on "Bread": both same-name merge paths, under mutation.
+        self.merge_sync = {
+            "cursor": 0,
+            "device_id": "dev-other",
+            "changes": {
+                "items": [
+                    {
+                        "id": "item-bread",
+                        "list_id": LIST_ID,
+                        "fields": {"name": _clock("Bread", 3_000)},
+                    },
+                    {
+                        "id": "item-duplicate",
+                        "list_id": LIST_ID,
+                        "created_at": 500,
+                        "fields": {
+                            "name": _clock("MILK", 3_000, "dev-other"),
+                            "status": _clock("checked", 3_000, "dev-other"),
+                        },
+                    },
+                    {
+                        "id": ITEM_ID,
+                        "fields": {"name": _clock("bread", 3_001, "dev-other")},
+                    },
+                ]
+            },
+        }
         response = self.post(
             f"/lists/{LIST_ID}/invites", self.user_token, {"invited_email": ADMIN_EMAIL}
         )
@@ -240,7 +268,7 @@ ENDPOINTS = [
     ("POST", "/lists/{list_id}/leave", "user", None),
     ("DELETE", "/invites/{invite_id}", "user", None),
     ("POST", "/invites/redeem", "admin", [{"token": "{invite_token}"}]),
-    ("POST", "/sync", "user", ["{base_sync}"]),
+    ("POST", "/sync", "user", ["{base_sync}", "{merge_sync}"]),
     (
         "PUT",
         "/admin/server-settings",
@@ -269,6 +297,8 @@ def _fill(template, world):
     }
     if template == "{base_sync}":
         return copy.deepcopy(world.base_sync)
+    if template == "{merge_sync}":
+        return copy.deepcopy(world.merge_sync)
     if isinstance(template, str):
         return template.format(**names)
     if isinstance(template, dict):
