@@ -46,6 +46,13 @@ data class ItemFormUiState(
     val priceCurrency: String = "",
     val currencyError: UiText? = null,
     val note: String = "",
+    /**
+     * The due date (T-323), `YYYY-MM-DD`, or null for none. Held whatever the list's kind, so an
+     * item's date survives an edit on a list that does not show it ([showDueDate]).
+     */
+    val due: String? = null,
+    /** True on a checklist only (T-323): the form offers the due date there. */
+    val showDueDate: Boolean = false,
     val status: Status = Status.TODO,
     /**
      * The server refused this row's last push and it is parked on the device (T-210), with the code
@@ -132,6 +139,7 @@ class ItemFormViewModel @Inject constructor(
             priceAmount = price?.amount ?: "",
             priceCurrency = price?.currency ?: listAccounts.accountOf(item.listLocalId)?.defaultCurrency ?: "",
             note = item.note.value ?: "",
+            due = item.due.value,
             status = Status.fromWireValue(item.status.value),
             isBlocked = item.syncBlocked,
             blockedCode = item.syncBlockedCode,
@@ -154,7 +162,9 @@ class ItemFormViewModel @Inject constructor(
 
     private fun loadListKind() = viewModelScope.launch {
         val kind = listsRepo.getById(listId)?.kind?.value
-        _uiState.update { it.copy(showShoppingFields = ListKind.showsShoppingFields(kind)) }
+        _uiState.update {
+            it.copy(showShoppingFields = ListKind.showsShoppingFields(kind), showDueDate = ListKind.showsDueDate(kind))
+        }
     }
 
     private fun loadCategorySuggestions() = viewModelScope.launch {
@@ -229,6 +239,9 @@ class ItemFormViewModel @Inject constructor(
 
     fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
 
+    /** [value] is a calendar date `YYYY-MM-DD`, or null to clear the due date (T-323). */
+    fun onDueChange(value: String?) = _uiState.update { it.copy(due = value) }
+
     fun onStatusChange(status: Status) = _uiState.update { it.copy(status = status) }
 
     /**
@@ -257,6 +270,7 @@ class ItemFormViewModel @Inject constructor(
                 priceAmount = price?.amount ?: "",
                 priceCurrency = price?.currency ?: it.priceCurrency,
                 note = item.note.value ?: "",
+                due = item.due.value,
                 status = Status.TODO,
             )
         }
@@ -315,6 +329,9 @@ class ItemFormViewModel @Inject constructor(
                 itemsRepo.setQuantity(targetId, quantity)
                 itemsRepo.setPrice(targetId, amount = normalizedAmount, currency = currency)
                 itemsRepo.setNote(targetId, note)
+                // Only a date is written: a new row without one stays on the never-set clock and
+                // pushes no `due` at all.
+                if (state.due != null) itemsRepo.setDue(targetId, state.due)
             } else {
                 // Existing row (edit or adopt): stamp a fresh LWW clock only on fields whose value
                 // actually differs from the snapshot the form was seeded with, so an untouched field
@@ -343,6 +360,7 @@ class ItemFormViewModel @Inject constructor(
                     itemsRepo.setPrice(targetId, amount = normalizedAmount, currency = currency)
                 }
                 if (snap == null || note != snap.note) itemsRepo.setNote(targetId, note)
+                if (snap == null || state.due != snap.due) itemsRepo.setDue(targetId, state.due)
             }
             _uiState.update { it.copy(nameError = null, isSaved = true, itemId = targetId) }
         }
@@ -376,6 +394,7 @@ class ItemFormViewModel @Inject constructor(
             priceAmount = amount,
             priceCurrency = if (amount != null) currency else null,
             note = state.note.trim().ifBlank { null },
+            due = state.due,
             status = state.status,
         )
     }
@@ -394,6 +413,7 @@ private data class ItemSnapshot(
     val priceAmount: String?,
     val priceCurrency: String?,
     val note: String?,
+    val due: String?,
     val status: Status,
 )
 

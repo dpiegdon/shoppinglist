@@ -97,6 +97,10 @@
     <string name="item_price">Prix</string>
     <string name="item_currency">Devise</string>
     <string name="item_note">Note</string>
+    <string name="item_due">Échéance</string>
+    <string name="item_due_clear">Aucune échéance</string>
+    <string name="item_due_overdue">En retard</string>
+    <string name="item_due_today">Échéance aujourd\'hui</string>
     <string name="item_status">Statut</string>
     <string name="item_add">Ajouter un article</string>
     <string name="item_edit">Modifier l\'article</string>

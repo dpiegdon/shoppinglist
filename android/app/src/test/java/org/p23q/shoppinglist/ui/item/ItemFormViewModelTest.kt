@@ -11,6 +11,7 @@ import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -30,6 +31,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -582,4 +584,82 @@ class ItemFormViewModelTest {
         assertEquals("seed-device", saved.note.updatedBy)
         assertFalse(saved.dirty)
     }
+
+    @Test
+    fun `the due date is offered on a checklist only (T-323)`() = runTest(mainDispatcherRule.dispatcher) {
+        val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val ledger = listsRepo.create(TEST_ACCOUNT_ID, "Trip", kind = ListKind.EXPENSES, currency = "EUR")
+        val viewModel = newViewModel()
+
+        viewModel.startAdd(checklist)
+        assertTrue(viewModel.uiState.first { it.showDueDate }.showDueDate)
+        viewModel.startAdd(listId)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.showDueDate)
+        viewModel.startAdd(ledger)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.showDueDate)
+    }
+
+    @Test
+    fun `a due date set on add is saved, and clearing it on edit saves none (T-323)`() = runTest(mainDispatcherRule.dispatcher) {
+        val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val viewModel = newViewModel()
+        viewModel.startAdd(checklist)
+        viewModel.onNameChange("Water plants")
+        viewModel.onDueChange("2026-10-03")
+        viewModel.save()?.join()
+        val itemId = itemsRepo.searchRegistry(checklist, "Water plants").first().single().localId
+        assertEquals("2026-10-03", itemsRepo.getById(itemId)!!.due.value)
+
+        val editor = newViewModel()
+        editor.startEdit(itemId).join()
+        assertEquals("2026-10-03", editor.uiState.value.due)
+        editor.onDueChange(null)
+        editor.save()?.join()
+
+        val cleared = itemsRepo.getById(itemId)!!
+        assertNull(cleared.due.value)
+        assertEquals("device-1", cleared.due.updatedBy)
+    }
+
+    @Test
+    fun `an item added without a due date leaves the field on its never-set clock (T-323)`() = runTest(mainDispatcherRule.dispatcher) {
+        val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val viewModel = newViewModel()
+        viewModel.startAdd(checklist)
+        viewModel.onNameChange("Sweep")
+        viewModel.save()?.join()
+
+        val created = itemsRepo.searchRegistry(checklist, "Sweep").first().single()
+        assertNull(created.due.value)
+        assertEquals(0L, created.due.updatedAt)
+    }
+
+    @Test
+    fun `a due date survives an edit while the list is a shopping list, and shows again as a checklist (T-323)`() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+            val seed = seedRepo("seed-device")
+            val itemId = seed.createItem(checklist, "Water plants")
+            seed.setDue(itemId, "2026-10-03")
+            listsRepo.setKind(checklist, ListKind.SHOPPING)
+
+            val editor = newViewModel()
+            editor.startEdit(itemId).join()
+            advanceUntilIdle()
+            assertFalse(editor.uiState.value.showDueDate)
+            editor.onNoteChange("the big ones")
+            editor.save()?.join()
+            val saved = itemsRepo.getById(itemId)!!
+            assertEquals("2026-10-03", saved.due.value)
+            assertEquals("seed-device", saved.due.updatedBy)
+
+            listsRepo.setKind(checklist, ListKind.CHECKLIST)
+            val again = newViewModel()
+            again.startEdit(itemId).join()
+            advanceUntilIdle()
+            assertTrue(again.uiState.value.showDueDate)
+            assertEquals("2026-10-03", again.uiState.value.due)
+        }
 }

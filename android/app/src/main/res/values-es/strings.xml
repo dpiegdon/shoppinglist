@@ -97,6 +97,10 @@
     <string name="item_price">Precio</string>
     <string name="item_currency">Moneda</string>
     <string name="item_note">Nota</string>
+    <string name="item_due">Vence</string>
+    <string name="item_due_clear">Sin fecha límite</string>
+    <string name="item_due_overdue">Vencido</string>
+    <string name="item_due_today">Vence hoy</string>
     <string name="item_status">Estado</string>
     <string name="item_add">Añadir artículo</string>
     <string name="item_edit">Editar artículo</string>

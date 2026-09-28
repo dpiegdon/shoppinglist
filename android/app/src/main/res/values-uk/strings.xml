@@ -97,6 +97,10 @@
     <string name="item_price">Ціна</string>
     <string name="item_currency">Валюта</string>
     <string name="item_note">Нотатка</string>
+    <string name="item_due">Термін</string>
+    <string name="item_due_clear">Без терміну</string>
+    <string name="item_due_overdue">Прострочено</string>
+    <string name="item_due_today">Термін сьогодні</string>
     <string name="item_status">Статус</string>
     <string name="item_add">Додати товар</string>
     <string name="item_edit">Редагувати товар</string>

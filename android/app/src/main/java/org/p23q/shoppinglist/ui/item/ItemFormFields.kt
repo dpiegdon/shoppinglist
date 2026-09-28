@@ -13,23 +13,40 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.ui.LocalizedOverlay
+import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
-/** Category/stores/quantity/price/note fields shared by [AddItemDialog] and [EditItemDialog]. */
+/** Category/stores/quantity/price/note/due fields shared by [AddItemDialog] and [EditItemDialog]. */
 @Composable
 internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel) {
     OutlinedTextField(
@@ -149,4 +166,70 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         label = { Text(stringResource(R.string.item_note)) },
         modifier = Modifier.fillMaxWidth(),
     )
+
+    // The due date (T-323), on a checklist only. A date an item of another kind already has stays
+    // in the state and is saved back untouched, like the shopping fields on a checklist.
+    if (state.showDueDate) {
+        Spacer(Modifier.height(4.dp))
+        DueRow(due = state.due, onDueChange = viewModel::onDueChange)
+    }
+}
+
+/**
+ * One compact line: the label, the date (or a calendar button while there is none) opening the
+ * ledger's date picker, and a clear button once there is one.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
+    var isPicking by remember { mutableStateOf(false) }
+    val label = stringResource(R.string.item_due)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().testTag("item-due-row"),
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (due != null) {
+            TextButton(onClick = { isPicking = true }, modifier = Modifier.testTag("item-due-pick")) {
+                Text(AppFormat.calendarDate(due, appLocale()))
+            }
+            IconButton(onClick = { onDueChange(null) }, modifier = Modifier.testTag("item-due-clear")) {
+                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.item_due_clear))
+            }
+        } else {
+            IconButton(onClick = { isPicking = true }, modifier = Modifier.testTag("item-due-pick")) {
+                Icon(imageVector = Icons.Default.DateRange, contentDescription = label)
+            }
+        }
+    }
+
+    if (isPicking) {
+        // As the expense form's (T-185): calendar dates, so the picker works at UTC midnight both
+        // ways and no time zone can move the chosen day.
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = due?.let {
+                runCatching { LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull()
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { isPicking = false },
+            confirmButton = {
+                LocalizedOverlay {
+                    TextButton(onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            onDueChange(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString())
+                        }
+                        isPicking = false
+                    }) { Text(stringResource(R.string.action_ok)) }
+                }
+            },
+            dismissButton = {
+                LocalizedOverlay {
+                    TextButton(onClick = { isPicking = false }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            },
+        ) {
+            LocalizedOverlay { DatePicker(state = pickerState) }
+        }
+    }
 }

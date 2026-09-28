@@ -47,6 +47,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,14 +68,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
+import org.p23q.shoppinglist.core.DueDate
+import org.p23q.shoppinglist.core.DueState
 import org.p23q.shoppinglist.core.api.MemberDto
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.shortDate
+import java.time.LocalDate
 import org.p23q.shoppinglist.ui.asString
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +102,17 @@ fun ListScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.liveSyncLoop()
+        }
+    }
+    // What the due dates are read against (T-323): taken again on every return to the screen and
+    // each minute while it is up, so a list left open over midnight turns its dates over.
+    var today by remember { mutableStateOf(LocalDate.now().toString()) }
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                today = LocalDate.now().toString()
+                delay(60_000)
+            }
         }
     }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -207,6 +225,8 @@ fun ListScreen(
                     itemsIndexed(group.items, key = { _, it -> it.localId }) { itemIndex, item ->
                         ItemRow(
                             showShoppingFields = state.showShoppingFields,
+                            showDueDate = state.showDueDate,
+                            today = today,
                             item = item,
                             exiting = item.localId in state.exitingItemIds,
                             defaultCurrency = state.defaultCurrency,
@@ -249,6 +269,10 @@ fun ListScreen(
 private fun ItemRow(
     /** False on a checklist (T-110): suppresses the quantity/price detail line. */
     showShoppingFields: Boolean,
+    /** True on a checklist only (T-323): the item's due date, if any, at the row's trailing edge. */
+    showDueDate: Boolean,
+    /** Today's calendar date, `YYYY-MM-DD`, which the due date is read against. */
+    today: String,
     item: ItemEntity,
     defaultCurrency: String?,
     authorMember: MemberDto?,
@@ -291,6 +315,10 @@ private fun ItemRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.name.value,
+                    // One line: whatever sits at the trailing edge (the due date, the badge) never
+                    // pushes the name onto a second line; the name is what gives way.
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     style = if (isChecked) {
                         // Theme-aware (was a hardcoded Color.Red with poor dark-theme contrast — T-40).
                         // The strike itself now spans the whole row (below), not just this text.
@@ -344,6 +372,11 @@ private fun ItemRow(
                     }
                 }
             }
+            val due = item.due.value
+            if (showDueDate && due != null) {
+                DueDateText(due = due, today = today, isChecked = isChecked)
+                Spacer(Modifier.width(4.dp))
+            }
             if (authorMember != null) {
                 AuthorBadge(authorMember)
                 Spacer(Modifier.width(4.dp))
@@ -366,6 +399,37 @@ private fun ItemRow(
         }
     }
     }
+}
+
+/**
+ * An item's due date as a sidenote (T-323): short, small and muted, with colour its only emphasis:
+ * the error colour once it is past, the primary colour on the day, muted otherwise, and muted on a
+ * checked item whatever the date. What the colour says is also its accessibility description.
+ */
+@Composable
+private fun DueDateText(due: String, today: String, isChecked: Boolean) {
+    val state = DueDate.state(due, today)
+    val color = when {
+        isChecked -> MaterialTheme.colorScheme.onSurfaceVariant
+        state == DueState.OVERDUE -> MaterialTheme.colorScheme.error
+        state == DueState.TODAY -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val text = shortDate(due, appLocale(), today)
+    val meaning = when (state) {
+        DueState.OVERDUE -> stringResource(R.string.item_due_overdue)
+        DueState.TODAY -> stringResource(R.string.item_due_today)
+        DueState.UPCOMING -> null
+    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge.let { it.copy(color = color, fontSize = it.fontSize * 0.8f) },
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier
+            .testTag("item-due")
+            .semantics { contentDescription = if (meaning != null) "$text, $meaning" else text },
+    )
 }
 
 /** Small initials circle for "who last touched this" (T-64); the full email rides as the

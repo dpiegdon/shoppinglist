@@ -97,6 +97,10 @@
     <string name="item_price">价格</string>
     <string name="item_currency">货币</string>
     <string name="item_note">备注</string>
+    <string name="item_due">截止</string>
+    <string name="item_due_clear">无截止日期</string>
+    <string name="item_due_overdue">已逾期</string>
+    <string name="item_due_today">今天截止</string>
     <string name="item_status">状态</string>
     <string name="item_add">添加物品</string>
     <string name="item_edit">编辑物品</string>

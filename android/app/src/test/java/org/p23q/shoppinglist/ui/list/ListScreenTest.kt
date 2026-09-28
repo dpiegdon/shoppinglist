@@ -6,6 +6,7 @@ import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -32,11 +33,13 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -47,8 +50,11 @@ import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.shortDate
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.time.LocalDate
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 class ListScreenTest {
@@ -59,7 +65,8 @@ class ListScreenTest {
     private lateinit var server: MockWebServer
     private lateinit var serverUrl: String
 
-    private fun textStyleOf(text: String) = composeTestRule.onNodeWithText(text).fetchSemanticsNode().let { node ->
+    private fun textStyleOf(text: String, useUnmergedTree: Boolean = false) =
+        composeTestRule.onNodeWithText(text, useUnmergedTree = useUnmergedTree).fetchSemanticsNode().let { node ->
         val results = mutableListOf<TextLayoutResult>()
         node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
         results.first().layoutInput.style
@@ -510,6 +517,84 @@ class ListScreenTest {
         composeTestRule.onNodeWithText("Show checked").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithTag("show-checked-mark", useUnmergedTree = true).assertCountEquals(if (wasOn) 0 else 1)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    private suspend fun dueScreen(kind: String, seed: suspend (ItemsRepo, String) -> Unit): Pair<AppDb, ListViewModel> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount(serverUrl = serverUrl))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = kind)
+        seed(itemsRepo, listId)
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            testListAccounts(db, listsRepo),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_due", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+        )
+        return db to viewModel
+    }
+
+    @Test
+    fun `a checklist row shows its due date, red when past, primary today, muted ahead and when checked (T-323)`() = runBlocking<Unit> {
+        val today = LocalDate.now()
+        val past = today.minusDays(1).toString()
+        val checkedPast = today.minusDays(2).toString()
+        val ahead = today.plusDays(3).toString()
+        val (db, viewModel) = dueScreen(ListKind.CHECKLIST) { items, listId ->
+            items.setDue(items.createItem(listId, "Late"), past)
+            items.setDue(items.createItem(listId, "Now"), today.toString())
+            items.setDue(items.createItem(listId, "Later"), ahead)
+            items.setDue(items.createItem(listId, "Done", status = Status.CHECKED), checkedPast)
+            items.createItem(listId, "Whenever")
+        }
+        viewModel.toggleShowChecked()
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        val iso = today.toString()
+        fun text(date: String) = shortDate(date, Locale.getDefault(), iso)
+        val scheme = lightColorScheme()
+        assertEquals(scheme.error, textStyleOf(text(past), useUnmergedTree = true).color)
+        assertEquals(scheme.primary, textStyleOf(text(iso), useUnmergedTree = true).color)
+        assertEquals(scheme.onSurfaceVariant, textStyleOf(text(ahead), useUnmergedTree = true).color)
+        assertEquals(scheme.onSurfaceVariant, textStyleOf(text(checkedPast), useUnmergedTree = true).color)
+        // One date per item that has one, and the words only as what TalkBack hears.
+        composeTestRule.onAllNodesWithTag("item-due", useUnmergedTree = true).assertCountEquals(4)
+        composeTestRule.onNodeWithContentDescription("${text(past)}, Overdue", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithContentDescription("${text(iso)}, Due today", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Overdue").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Due today").assertDoesNotExist()
+        // Small: a fifth under the name's size, never larger or bolder.
+        assertTrue(textStyleOf(text(ahead), useUnmergedTree = true).fontSize < textStyleOf("Later", useUnmergedTree = true).fontSize)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `a shopping list row shows no due date, though the item keeps one (T-323)`() = runBlocking<Unit> {
+        val due = LocalDate.now().minusDays(1).toString()
+        val (db, viewModel) = dueScreen(ListKind.SHOPPING) { items, listId ->
+            items.setDue(items.createItem(listId, "Milk"), due)
+        }
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Milk").assertIsDisplayed()
+        composeTestRule.onAllNodesWithTag("item-due", useUnmergedTree = true).assertCountEquals(0)
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

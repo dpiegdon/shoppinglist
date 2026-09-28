@@ -42,6 +42,8 @@ data class ListUiState(
     val listName: String = "",
     /** False on a checklist (T-110): hides the quantity/price detail line on each row. */
     val showShoppingFields: Boolean = true,
+    /** True on a checklist only (T-323): each row shows its item's due date, if it has one. */
+    val showDueDate: Boolean = false,
     val groups: List<ItemGroup> = emptyList(),
     val showChecked: Boolean = false,
     val defaultCurrency: String? = null,
@@ -115,7 +117,10 @@ class ListViewModel @Inject constructor(
                 val showShopping = ListKind.showsShoppingFields(list?.kind?.value)
                 todoItems = items.filter { it.status.value == Status.TODO.wireValue }
                 checkedItems = items.filter { it.status.value == Status.CHECKED.wireValue }
-                _uiState.update { it.copy(listName = list?.name?.value ?: "", showShoppingFields = showShopping) }
+                val showDue = ListKind.showsDueDate(list?.kind?.value)
+                _uiState.update {
+                    it.copy(listName = list?.name?.value ?: "", showShoppingFields = showShopping, showDueDate = showDue)
+                }
                 regroup()
             }
         }

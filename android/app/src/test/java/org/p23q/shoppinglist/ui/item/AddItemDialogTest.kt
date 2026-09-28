@@ -1,10 +1,19 @@
 package org.p23q.shoppinglist.ui.item
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.closeWhenIdle
+import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -18,6 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
@@ -101,5 +111,33 @@ class AddItemDialogTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Name").assertIsFocused()
+    }
+
+    @Test
+    fun `the add dialog offers an empty due row on a checklist and none on a shopping list (T-323)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val checklist = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val shopping = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+        var listId by mutableStateOf(checklist)
+
+        composeTestRule.setContent { AddItemDialog(listId = listId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("item-due-row").assertExists()
+        composeTestRule.onNodeWithContentDescription("Due").assertExists()
+        composeTestRule.onNodeWithContentDescription("No due date").assertDoesNotExist()
+
+        listId = shopping
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

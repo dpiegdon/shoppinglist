@@ -5,7 +5,11 @@ import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testListAccounts
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -15,11 +19,13 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
@@ -90,6 +96,61 @@ class EditItemDialogTest {
 
         composeTestRule.onNodeWithText("Not saved to the list").assertExists()
         composeTestRule.onNodeWithText("That price isn't valid").assertExists()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    private fun database(): AppDb = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+        .setDriver(BundledSQLiteDriver())
+        .setQueryCoroutineContext(Dispatchers.Unconfined)
+        .build()
+
+    @Test
+    fun `a checklist item shows its due date on one row, and the cross clears it (T-323)`() = runBlocking<Unit> {
+        val db = database()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        val itemId = itemsRepo.createItem(listId, "Water plants")
+        itemsRepo.setDue(itemId, "2026-10-03")
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+
+        composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("item-due-row").performScrollTo()
+        composeTestRule.onNodeWithText("Due").assertExists()
+        composeTestRule.onNodeWithText("Oct 3, 2026").assertExists()
+        composeTestRule.onNodeWithContentDescription("No due date").performClick()
+        composeTestRule.waitForIdle()
+
+        assertNull(viewModel.uiState.value.due)
+        composeTestRule.onNodeWithText("Oct 3, 2026").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("No due date").assertDoesNotExist()
+        // Empty again: the calendar button that opens the picker, named by the label.
+        composeTestRule.onNodeWithContentDescription("Due").assertExists()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `a shopping list's item has no due row, even with a due date stored (T-323)`() = runBlocking<Unit> {
+        val db = database()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        itemsRepo.setDue(itemId, "2026-10-03")
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+
+        composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Milk").assertExists()
+        composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
+        composeTestRule.onNodeWithText("Oct 3, 2026").assertDoesNotExist()
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }
