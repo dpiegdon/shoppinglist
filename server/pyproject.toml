@@ -40,6 +40,9 @@ dev = [
     "isort==9.0.1",
     "ruff==0.16.8",
     "ty==0.0.83",
+    # Property-based fuzzing of the API (T-326). Pinned exactly like the lint stack: a new release
+    # can change which examples a derandomized run draws, and the gate must not move on its own.
+    "hypothesis==6.168.3",
 ]
 
 [build-system]

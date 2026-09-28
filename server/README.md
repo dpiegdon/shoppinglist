@@ -396,6 +396,37 @@ pytest -v
 invite and redeem, concurrent offline edits, convergence, both members leaving,
 and the tombstone purge.
 
+### Fuzzing
+
+Two suites use [Hypothesis](https://hypothesis.readthedocs.io/) to generate
+their inputs:
+
+- `tests/test_fuzz_api.py` sends every endpoint that takes a body (and every id
+  in a path) arbitrary JSON, bytes that are not JSON, and realistic bodies with
+  one value changed, removed or added at any depth. Every answer must be below
+  500, carry `Cache-Control: no-store`, be the `{"error", "message"}` envelope
+  when it is not a 2xx, and on `/sync` name the `row_id` of a pushed row
+  whenever a row was at fault.
+- `tests/test_fuzz_sync_lww.py` is a state machine: two devices on one shared
+  list push generated field clocks and pull, in any order. After every step a
+  full pull equals the merged state the field-level last-write-wins rule
+  predicts, no cursor has moved backwards, and a device's incremental pulls
+  hold exactly what the full pull holds.
+
+Both run in the ordinary `pytest` run under the `ci` profile: a modest number of
+examples, a fixed seed so a run is repeatable, and together about a minute. For
+a deliberate hunt, select the `thorough` profile, which draws many times more
+examples from a fresh seed each run and keeps the failures it finds in
+`.hypothesis/` so the next run tries them first:
+
+```bash
+HYPOTHESIS_PROFILE=thorough pytest tests/test_fuzz_api.py tests/test_fuzz_sync_lww.py
+```
+
+A failure prints the smallest input Hypothesis could shrink it to. Fix it with a
+plain regression test that pins that input, next to the other tests of that
+endpoint.
+
 ### Linting and formatting
 
 Four tools, all installed by the `dev` extra and all configured in

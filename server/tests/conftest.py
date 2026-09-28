@@ -1,11 +1,43 @@
+import os
+
 import pytest
 from flask import Flask
 from flask.testing import FlaskClient
+from hypothesis import HealthCheck, settings
 
 from shoppinglist_server import create_blueprint
 from shoppinglist_server import db as db_module
 from shoppinglist_server.cli import shoppinglist_cli
 from shoppinglist_server.protocol import PROTOCOL_HEADER, PROTOCOL_VERSION
+
+# Hypothesis profiles for the fuzz suites (T-326). `ci` is what the gate runs: few enough examples to
+# stay within about a minute, derandomized so the gate never goes red on a draw it has not seen
+# before, and without the example database, so nothing is written into the tree. `thorough` is for
+# a deliberate hunt (`HYPOTHESIS_PROFILE=thorough`, see server/README.md): many more examples, a
+# fresh random seed each run, and the database under server/.hypothesis/ so a failure it found is
+# replayed first next time.
+_FUZZ_HEALTH_CHECKS = [
+    HealthCheck.too_slow,
+    HealthCheck.data_too_large,
+    HealthCheck.filter_too_much,
+]
+settings.register_profile(
+    "ci",
+    max_examples=40,
+    deadline=None,
+    derandomize=True,
+    database=None,
+    print_blob=True,
+    suppress_health_check=_FUZZ_HEALTH_CHECKS,
+)
+settings.register_profile(
+    "thorough",
+    max_examples=2000,
+    deadline=None,
+    print_blob=True,
+    suppress_health_check=_FUZZ_HEALTH_CHECKS,
+)
+settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "ci"))
 
 # Header name as WSGI spells it, for environ_base below.
 _PROTOCOL_ENVIRON_KEY = f"HTTP_{PROTOCOL_HEADER.upper().replace('-', '_')}"
@@ -85,3 +117,27 @@ def client(app):
 @pytest.fixture
 def cli_runner(app):
     return app.test_cli_runner()
+
+
+@pytest.fixture(scope="module")
+def fast_password_hashing():
+    """Swap scrypt for a single pbkdf2 round, for a whole module (T-326).
+
+    A fuzz run sends thousands of requests, and every one that reaches a password check (a login
+    with any string password, a confirmation password, a registration) costs scrypt's ~200 ms —
+    the unknown-address login included, by design (T-115). What the fuzz suites test is how the
+    server answers, not how hard its hash is, so they hash cheaply. `check_password_hash` reads
+    the method from the stored hash, so only the three places that make a hash need replacing.
+    """
+    from werkzeug.security import generate_password_hash
+
+    from shoppinglist_server import accounts, auth
+
+    def cheap(password, *_args, **_kwargs):
+        return generate_password_hash(password, method="pbkdf2:sha256:1")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(auth, "generate_password_hash", cheap)
+        mp.setattr(accounts, "generate_password_hash", cheap)
+        mp.setattr(auth, "_TIMING_EQUALIZER_HASH", cheap("not-a-secret"))
+        yield
