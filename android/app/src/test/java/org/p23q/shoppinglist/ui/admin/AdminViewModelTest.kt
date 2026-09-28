@@ -154,6 +154,40 @@ class AdminViewModelTest {
         }
 
     @Test
+    fun `a reset that fails clears the previous reset's password from the screen (T-327)`() = runTest(mainDispatcherRule.dispatcher) {
+        var resets = 0
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val path = request.path ?: ""
+                return when {
+                    path.endsWith("/admin/users") -> MockResponse().setResponseCode(200).setBody(usersJson)
+                    path.endsWith("/admin/server-settings") ->
+                        MockResponse().setResponseCode(200).setBody("""{"allow_registration":true}""")
+                    path.endsWith("/reset-password") && resets++ == 0 ->
+                        MockResponse().setResponseCode(200).setBody("""{"password":"first-new-pw"}""")
+                    path.endsWith("/reset-password") ->
+                        MockResponse().setResponseCode(500).setBody("""{"error":"internal","message":"boom"}""")
+                    else -> MockResponse().setResponseCode(404)
+                }
+            }
+        }
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.allowRegistration != null }
+        viewModel.loadUsers().join()
+        val victim = viewModel.uiState.value.users!!.first { it.id == "user-2" }
+        viewModel.onPasswordChange("adminpw")
+
+        viewModel.resetPassword(victim)?.join()
+        assertEquals("first-new-pw", viewModel.uiState.value.resetPassword)
+        assertEquals("u@example.com", viewModel.uiState.value.resetEmail)
+
+        viewModel.resetPassword(victim)?.join()
+        assertEquals(null, viewModel.uiState.value.resetPassword)
+        assertEquals(null, viewModel.uiState.value.resetEmail)
+        assertTrue(viewModel.uiState.value.error != null)
+    }
+
+    @Test
     fun `deleteUser requires the step-up password and removes the row`() = runTest(mainDispatcherRule.dispatcher) {
         route()
         val viewModel = newViewModel()

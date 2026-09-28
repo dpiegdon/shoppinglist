@@ -198,6 +198,9 @@ class AdminViewModel internal constructor(
     fun resetPassword(user: AdminUserDto): Job? {
         if (!requirePassword()) return null
         val pw = _uiState.value.password
+        // The previous reset's password goes as this one starts, as on the web (T-327): a reset
+        // that fails must not leave another user's password on screen beside its error.
+        _uiState.update { it.copy(resetEmail = null, resetPassword = null) }
         return viewModelScope.launch {
             try {
                 val result = api().adminResetPassword(user.id, AdminPasswordRequest(pw))
