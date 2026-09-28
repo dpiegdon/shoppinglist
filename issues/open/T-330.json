@@ -1,0 +1,13 @@
+{
+  "body": "Due dates on checklist items (T-323, gated per account T-327), the shared colour scheme (T-324), invite fixes (T-322), the review follow-ups since 3.2.0 (T-327), server fuzzing and routing fixes (T-326), e-mail Unicode folding with migration 12 (T-328), screenshot tests (T-325), gittoc 0.9.0 (T-329). Protocol stays 3; the due field and the 404 version are additive. Server first: migration 12 refuses on case-only duplicate accounts.",
+  "created_at": "2026-09-28T21:59:04+00:00",
+  "id": "T-330",
+  "labels": [
+    "android",
+    "web",
+    "server"
+  ],
+  "priority": 1,
+  "title": "Release 3.5.0",
+  "updated_at": "2026-09-28T21:59:04+00:00"
+}
