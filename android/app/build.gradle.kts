@@ -186,6 +186,14 @@ tasks.withType<Test>().configureEach {
             languageVersion.set(JavaLanguageVersion.of(21))
         },
     )
+    // The screenshot tests need Robolectric's native graphics, which has no Linux/aarch64 build
+    // (see src/test/resources/robolectric.properties): it fails while the test's sandbox starts,
+    // before any assumption in the test could skip it. On such a host they are left out, and
+    // verifyRoborazziDebug has nothing to compare.
+    if (System.getProperty("os.name") == "Linux" && System.getProperty("os.arch") == "aarch64") {
+        filter { excludeTestsMatching("org.p23q.shoppinglist.ui.screenshots.*") }
+        doFirst { logger.warn("Linux/aarch64: the screenshot tests are skipped (no native graphics for Robolectric here)") }
+    }
 }
 
 // Screenshot tests (T-325). The reference PNGs are committed next to the tests; a comparison's

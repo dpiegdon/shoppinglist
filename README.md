@@ -82,8 +82,8 @@ your own server, see [`android/README.md`](android/README.md).
 ## Testing
 
 `./verify-all.sh` runs every suite (server lint and pytest, web vitest, tsc and
-lint, a server wheel build and smoke test, Android debug and release unit tests
-and lint), fastest first, and stops at the first failure. The server lint stage
+lint, a server wheel build and smoke test, Android debug and release unit tests,
+the Android screenshot comparison and lint), fastest first, and stops at the first failure. The server lint stage
 only checks; `cd server && .venv/bin/isort . && .venv/bin/black .` fixes the
 layout. The Android stage needs a JDK, from `JAVA_HOME` or the `PATH`, and also
 runs `testReleaseUnitTest`, the only variant that compiles the release source

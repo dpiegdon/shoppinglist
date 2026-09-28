@@ -139,9 +139,12 @@ android_check() (
   # bypass is proven absent (see android/README.md). It does not minify or need
   # signing, so it belongs in the gate rather than release.sh, unlike assembleRelease.
   # :core:test runs the data layer's plain-JVM suite (android/core).
+  # :app:verifyRoborazziDebug compares the screenshot tests' captures with the
+  # committed images in android/app/src/test/screenshots (T-325); it runs them as
+  # part of testDebugUnitTest, so it costs no second test run.
   local log
   log=$(mktemp)
-  if ./gradlew :core:test :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
+  if ./gradlew :core:test :app:testDebugUnitTest :app:verifyRoborazziDebug :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
     rm -f "$log"
     return 0
   fi
@@ -149,7 +152,7 @@ android_check() (
     rm -f "$log"
     echo
     echo "=== android: Gradle cache is cold; rerunning online ==="
-    ./gradlew :core:test :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug
+    ./gradlew :core:test :app:testDebugUnitTest :app:verifyRoborazziDebug :app:testReleaseUnitTest :app:lintDebug
   else
     rm -f "$log"
     return 1

@@ -31,6 +31,19 @@ def test_the_release_variant_unit_tests_run():
     assert android_check.count(":app:testReleaseUnitTest") >= 2
 
 
+def test_the_android_screenshots_are_compared():
+    """The screenshot tests (T-325) only compare with their reference images when Roborazzi's
+    verify task is in the build; a plain testDebugUnitTest runs them without comparing."""
+    src = _text()
+    android_check = src[
+        src.index("android_check() (") : src.index("# `./verify-all.sh --preflight`")
+    ]
+    runs = [line for line in android_check.splitlines() if "./gradlew " in line]
+    # both the offline attempt and the online retry
+    assert len(runs) >= 2
+    assert all(":app:verifyRoborazziDebug" in line for line in runs)
+
+
 def test_the_wheel_is_built_and_smoke_tested_in_the_gate():
     src = _text()
     assert "wheel_check" in src

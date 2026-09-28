@@ -183,6 +183,56 @@ colour. The web client holds the same five roles as tokens in
 `web/src/index.css`, and a web test reads `BrandColors.kt` and fails when the
 two differ, so change both together.
 
+## Screenshot tests
+
+[Roborazzi](https://github.com/takahirom/roborazzi) takes pictures of the main
+screens on the JVM, under Robolectric's native graphics mode, with no device or
+emulator. The tests are in
+`app/src/test/java/org/p23q/shoppinglist/ui/screenshots/`, one class per group
+of screens, each run twice, light and dark. The reference images are committed
+in `app/src/test/screenshots/` as `<screen>-light.png` and `<screen>-dark.png`:
+the start screen, the overview with one account and with several, a shopping
+list, a checklist with due dates, the item dialog, a ledger and its balances,
+list properties and its "Copy to" picker, Accounts, an Account screen,
+Settings, the admin console and About. A screen is 411 × 891 dp at 1× density;
+list properties and the Account screen are taller, so they show whole.
+
+The data is fixed: an in-memory database filled by the test, and a fake server
+(`FakeServer` in `ScreenshotSupport.kt`) that answers the API in-process, so the
+accounts show readable addresses rather than a test server's port. Today is
+`SCREENSHOT_TODAY` (17 September 2026), passed to the list screen's
+`currentDate`. A relative time ("2 min ago", "expires in 3 d") is set half a unit
+past the value it shows, so it reads the same however long the run takes. About
+reports version 1.2.3, whatever `versionName` is, so a release does not change
+it. Robolectric draws text with its own fonts, which look a little different from
+a phone's but are the same on every run.
+
+```bash
+./gradlew :app:verifyRoborazziDebug   # compare with the committed images (the gate runs this)
+./gradlew :app:recordRoborazziDebug   # write new reference images
+./gradlew :app:recordRoborazziDebug --tests '*screenshots.ListShotsTest*'   # just one class
+```
+
+A plain `testDebugUnitTest` runs the screenshot tests without comparing
+anything. `verifyRoborazziDebug` runs them within `testDebugUnitTest`, so the
+gate pays for no second run. A pixel counts as changed when its colour moved by
+more than 1 % (antialiasing and blending), and a shot fails when more than
+0.1 % of its pixels changed (about 370 on a phone screen, less than one short
+word). Both numbers are `SCREENSHOT_OPTIONS` in `ScreenshotSupport.kt`.
+
+When a comparison fails, the test fails with "Roborazzi: …/<screen>-<theme>.png
+is changed", and `app/build/outputs/roborazzi/` holds
+`<screen>-<theme>_actual.png`, what the screen looks like now, and
+`<screen>-<theme>_compare.png`: the reference on the left, the capture on the
+right, and between them only the pixels that differ, in red. The report at
+`app/build/reports/roborazzi/debug/index.html` shows them all. If the change is wanted,
+record again, look at the new images (`git diff --stat` names them), and commit
+them with the change. If it is not, the change broke the screen.
+
+Robolectric's native graphics has no Linux/aarch64 build, so on such a host
+(a Raspberry Pi) `app/build.gradle.kts` leaves the screenshot tests out and
+`verifyRoborazziDebug` compares nothing. Record on an x86_64 host.
+
 ## Installing on a phone
 
 minSdk is 26, so any phone running **Android 8.0 (Oreo) or newer** works.

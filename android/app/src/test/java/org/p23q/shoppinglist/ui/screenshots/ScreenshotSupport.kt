@@ -48,7 +48,6 @@ import org.p23q.shoppinglist.ui.SyncStatusViewModel
 import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
 import java.io.File
 import java.time.LocalDate
-import java.time.ZoneId
 
 /** Where the reference images live, relative to the module (a test's working directory). */
 const val SCREENSHOT_DIR = "src/test/screenshots"
@@ -69,9 +68,6 @@ val SCREENSHOT_OPTIONS = RoborazziOptions(
 
 /** The date every screenshot takes as today, whatever the calendar says. */
 val SCREENSHOT_TODAY: LocalDate = LocalDate.of(2026, 9, 17)
-
-/** Epoch milliseconds of [date] at noon, for timestamps a screen shows as a date. */
-fun noonOf(date: LocalDate): Long = date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 const val DAY_MS = 24 * 60 * 60 * 1000L
 
