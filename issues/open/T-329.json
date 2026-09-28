@@ -1,0 +1,11 @@
+{
+  "body": "Upstream github.com/dpiegdon/gittoc tagged v0.9.0 (0ad3b5a): bug fixes to the CLI (dependency validation before creating an issue, staleness check and rollback on a lost race, staging only the written paths, event-kind fixes, -F paths under the alias, dangling deps tolerated, setup hardening) and its tests; no tracker data-format change, so the gittoc branch needs no migration. Resync the vendored copy file for file, leaving out upstream's dev tooling as before (.isort.cfg, AGENTS.md, scripts/dev/, assets/gittoc_logo.png).",
+  "created_at": "2026-09-28T21:39:03+00:00",
+  "id": "T-329",
+  "labels": [
+    "chore"
+  ],
+  "priority": 3,
+  "title": "Vendored gittoc resynced to upstream v0.9.0",
+  "updated_at": "2026-09-28T21:39:03+00:00"
+}
