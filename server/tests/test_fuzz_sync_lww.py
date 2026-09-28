@@ -405,6 +405,8 @@ class SyncLww(RuleBasedStateMachine):
                 names = draw(st.sets(st.sampled_from(choices)))
                 if ("items", row_id) not in known:
                     names.add("name")  # creating an item requires one
+                    if on_ledger and draw(st.integers(0, 4), label="without expense"):
+                        names.add("expense")  # and an entry one, which is left out now and then
                 fields = {
                     name: (_item_name(row_id, draw) if name == "name" else draw(values[name]))
                     for name in names
@@ -457,9 +459,18 @@ class SyncLww(RuleBasedStateMachine):
         self.cursors[device] = 0
         self._synced(device, self.world.sync(device, 0))
 
-    @rule(device=st.sampled_from(DEVICES), agree=st.booleans())
-    def vote(self, device, agree):
-        """Agree to close the ledger, or withdraw; it closes when both have agreed."""
+    @rule(device=st.sampled_from(DEVICES), agree=st.booleans(), close=st.integers(0, 3))
+    def vote(self, device, agree, close):
+        """Agree to close the ledger, or withdraw; it closes when both have agreed. The closing
+        vote is cast only one time in four: a closed ledger refuses everything, and the rules
+        worth exploring are those of an open one with a voter on it."""
+        if (
+            agree
+            and not self.closed
+            and self.voters | {self.account[device]} == set(self.account.values())
+        ):
+            if close:
+                return
         response = self.world.client.open(
             f"/api/v1/lists/{LEDGER_ID}/close-votes",
             method="POST" if agree else "DELETE",
