@@ -126,7 +126,7 @@ export const es: Catalog = {
   "action.join": "Unirse",
   "action.ignore": "Ignorar",
   "action.create": "Crear",
-  "action.duplicate": "Duplicar",
+  "action.duplicate": "Duplicar lista",
   "action.add": "Añadir",
   "action.copy": "Copiar",
   "action.copied": "¡Copiado!",

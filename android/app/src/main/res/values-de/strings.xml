@@ -30,7 +30,7 @@
     <string name="action_invite">Einladen</string>
     <string name="action_join">Beitreten</string>
     <string name="action_ignore">Ignorieren</string>
-    <string name="action_duplicate">Duplizieren</string>
+    <string name="action_duplicate">Liste duplizieren</string>
     <string name="listprops_copy_to">Kopieren nach</string>
     <string name="list_copy_suffix">(Kopie)</string>
     <string name="action_unsubscribe">Abbestellen</string>

@@ -237,7 +237,7 @@ class ListPropsScreenTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Duplicate").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Duplicate list").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         assertEquals(true, duplicatedListId != null && duplicatedListId != listId)
@@ -280,7 +280,7 @@ class ListPropsScreenTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Duplizieren").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Liste duplizieren").performScrollTo().performClick()
         composeTestRule.waitUntil(timeoutMillis = 5_000) { duplicatedListId != null }
 
         assertEquals("Groceries (Kopie)", listsRepo.getById(duplicatedListId!!)!!.name.value)
@@ -323,7 +323,7 @@ class ListPropsScreenTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Duplicate").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Duplicate list").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Copy to").assertIsDisplayed()

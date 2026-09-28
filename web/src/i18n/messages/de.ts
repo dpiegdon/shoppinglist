@@ -131,7 +131,7 @@ export const de: Catalog = {
   "action.join": "Beitreten",
   "action.ignore": "Ignorieren",
   "action.create": "Erstellen",
-  "action.duplicate": "Duplizieren",
+  "action.duplicate": "Liste duplizieren",
   "action.add": "Hinzufügen",
   "action.copy": "Kopieren",
   "action.copied": "Kopiert!",

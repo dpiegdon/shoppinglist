@@ -208,7 +208,7 @@ describe("ListPropsPage duplicate list (T-63)", () => {
     });
 
     await renderListPropsPageViaListPage();
-    await screen.findByRole("button", { name: "Duplicate" });
+    await screen.findByRole("button", { name: "Duplicate list" });
 
     // Echo back whatever was pushed, like a real server round-trip - lets the test learn the
     // client-generated new list id rather than having to predict crypto.randomUUID()'s output.
@@ -217,7 +217,7 @@ describe("ListPropsPage duplicate list (T-63)", () => {
       changes: { lists: req.changes.lists ?? [], items: req.changes.items ?? [] },
     }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Duplicate list" }));
 
     await waitFor(() => {
       const call = vi.mocked(api.sync).mock.calls[1][0];
@@ -246,10 +246,10 @@ describe("ListPropsPage duplicate list (T-63)", () => {
     });
 
     await renderListPropsPageViaListPage();
-    await screen.findByRole("button", { name: "Duplicate" });
+    await screen.findByRole("button", { name: "Duplicate list" });
 
     vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
-    await userEvent.click(screen.getByRole("button", { name: "Duplicate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Duplicate list" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
     // Still on the source list's properties page — it never navigated to a half-made copy.

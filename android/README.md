@@ -143,7 +143,7 @@ none. While it is on the phone, servers that all need a newer app do not block
 the app: each outdated account's section says so instead.
 
 A list never moves between accounts, but it can be copied into another. List
-properties' *Duplicate* makes the copy at once when the phone holds one account;
+properties' *Duplicate list* makes the copy at once when the phone holds one account;
 with several it asks *Copy to*, listing the list's own account first and then the
 others in the overview's order. The copy is a new list in
 the chosen account, with fresh ids and field clocks, the name suffixed

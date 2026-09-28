@@ -128,7 +128,7 @@ export const fr: Catalog = {
   "action.join": "Rejoindre",
   "action.ignore": "Ignorer",
   "action.create": "Créer",
-  "action.duplicate": "Dupliquer",
+  "action.duplicate": "Dupliquer la liste",
   "action.add": "Ajouter",
   "action.copy": "Copier",
   "action.copied": "Copié !",

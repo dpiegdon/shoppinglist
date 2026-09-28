@@ -129,7 +129,7 @@ export const ptBR: Catalog = {
   "action.join": "Entrar",
   "action.ignore": "Ignorar",
   "action.create": "Criar",
-  "action.duplicate": "Duplicar",
+  "action.duplicate": "Duplicar lista",
   "action.add": "Adicionar",
   "action.copy": "Copiar",
   "action.copied": "Copiado!",

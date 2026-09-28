@@ -130,7 +130,7 @@ export const uk: Catalog = {
   "action.join": "Приєднатися",
   "action.ignore": "Ігнорувати",
   "action.create": "Створити",
-  "action.duplicate": "Дублювати",
+  "action.duplicate": "Дублювати список",
   "action.add": "Додати",
   "action.copy": "Копіювати",
   "action.copied": "Скопійовано!",

@@ -131,7 +131,7 @@ export const ja: Catalog = {
   "action.join": "参加",
   "action.ignore": "無視",
   "action.create": "作成",
-  "action.duplicate": "複製",
+  "action.duplicate": "リストを複製",
   "action.add": "追加",
   "action.copy": "コピー",
   "action.copied": "コピーしました！",

@@ -164,7 +164,7 @@ export const en = {
   "action.join": "Join",
   "action.ignore": "Ignore",
   "action.create": "Create",
-  "action.duplicate": "Duplicate",
+  "action.duplicate": "Duplicate list",
   "action.add": "Add",
   "action.copy": "Copy",
   "action.copied": "Copied!",

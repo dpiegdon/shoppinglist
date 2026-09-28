@@ -130,7 +130,7 @@ export const zhHans: Catalog = {
   "action.join": "加入",
   "action.ignore": "忽略",
   "action.create": "创建",
-  "action.duplicate": "复制",
+  "action.duplicate": "复制列表",
   "action.add": "添加",
   "action.copy": "复制",
   "action.copied": "已复制！",

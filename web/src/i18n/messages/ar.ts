@@ -132,7 +132,7 @@ export const ar: Catalog = {
   "action.join": "انضمام",
   "action.ignore": "تجاهل",
   "action.create": "إنشاء",
-  "action.duplicate": "تكرار",
+  "action.duplicate": "تكرار القائمة",
   "action.add": "إضافة",
   "action.copy": "نسخ",
   "action.copied": "تم النسخ!",
