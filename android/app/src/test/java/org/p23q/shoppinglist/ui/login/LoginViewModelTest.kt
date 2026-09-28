@@ -245,6 +245,28 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `a failed first sign-in asks the address it confirmed for its message (T-327)`() = runTest(mainDispatcherRule.dispatcher) {
+        val repo = FakeAuthRepository(onLogin = { _, _ -> throw java.io.IOException("offline") }, serverMessage = "Moving to a new host")
+        val viewModel = LoginViewModel(repo, noAccount(), serverConfig, org.p23q.shoppinglist.data.PendingInviteHolder(), org.p23q.shoppinglist.data.sync.FakeSyncTrigger())
+        viewModel.uiState.first { it.serverUrl.isNotBlank() }
+        advanceUntilIdle()
+        assertEquals(0, repo.registrationChecks)
+        viewModel.onServerUrlChange("https://lists.example.com/")
+        viewModel.onEmailChange("me@example.com")
+        viewModel.onPasswordChange("hunter2")
+
+        viewModel.submit()?.join()
+
+        assertEquals(1, repo.registrationChecks)
+        assertEquals("Moving to a new host", viewModel.uiState.value.serverMessage)
+        assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.errorMessage)
+
+        // The same address again: answered already, not asked twice.
+        viewModel.submit()?.join()
+        assertEquals(1, repo.registrationChecks)
+    }
+
+    @Test
     fun `a fresh install contacts no server before the first login (T-287)`() = runTest(mainDispatcherRule.dispatcher) {
         val knownAccounts = noAccount() // nothing saved: first run
         val repo = FakeAuthRepository(registrationAllowed = false)

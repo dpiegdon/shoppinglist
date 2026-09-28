@@ -161,6 +161,9 @@ class LoginViewModel @Inject constructor(
             // this check would have given, one screen later.
             if (savedUrl != null) refreshRegistrationStatus()
         }
+        // A re-sign-in's server is the account's own, so it is confirmed already: its message is
+        // shown there too (T-327). The registration toggle stays hidden in this mode.
+        else if (!resignInAccount.serverUrl.isNullOrBlank()) refreshRegistrationStatus()
     }
 
     /**
@@ -172,12 +175,13 @@ class LoginViewModel @Inject constructor(
      * Only for an address the user has confirmed, by submitting it on this device (T-287): never
      * the default on a fresh install, and never an address an invite prefilled (T-300) until the
      * user has submitted it. The form's own address, not the last typed one, which an invite for
-     * another server has replaced in the field.
+     * another server has replaced in the field. A re-sign-in's account's own server counts as
+     * confirmed (T-327).
      */
     fun refreshRegistrationStatus(): Job = viewModelScope.launch {
         val url = _uiState.value.serverUrl
-        val confirmed = serverConfig.lastServerUrl() ?: return@launch
-        if (!sameServer(url, confirmed)) return@launch
+        val ownServer = resignInAccount?.serverUrl?.let { sameServer(url, it) } == true
+        if (!ownServer && serverConfig.lastServerUrl()?.let { sameServer(url, it) } != true) return@launch
         val status = runCatching {
             authRepository.registrationStatus(url, _uiState.value.allowSelfSignedCerts)
         }.getOrNull()
@@ -304,6 +308,11 @@ class LoginViewModel @Inject constructor(
                 }
             } catch (e: IOException) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
+            }
+            // The attempt confirmed an address that has not answered yet: ask it now, as the next
+            // visit would, so its message shows beside the error (T-327).
+            if (!_uiState.value.loginSucceeded && registrationCheckedUrl?.let { sameServer(it, state.serverUrl) } != true) {
+                refreshRegistrationStatus().join()
             }
         }
     }

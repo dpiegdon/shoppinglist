@@ -33,7 +33,11 @@ class LoginModesTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private class Repo(private val signsInAs: String, private val refusal: Exception? = null) : RecordingAuthRepository() {
+    private class Repo(
+        private val signsInAs: String,
+        private val refusal: Exception? = null,
+        private val message: String? = null,
+    ) : RecordingAuthRepository() {
         var loginUrl: String? = null
         var expected: LoginExpectation? = null
 
@@ -49,7 +53,7 @@ class LoginModesTest {
 
         override suspend fun registrationStatus(serverUrl: String, allowSelfSignedCerts: Boolean): org.p23q.shoppinglist.core.api.RegistrationStatusResponse {
             registrationChecks += serverUrl
-            return org.p23q.shoppinglist.core.api.RegistrationStatusResponse(allowRegistration = true)
+            return org.p23q.shoppinglist.core.api.RegistrationStatusResponse(allowRegistration = true, message = message)
         }
 
         override fun lastOpenedListId(): String? = "list-42"
@@ -159,6 +163,15 @@ class LoginModesTest {
         assertTrue(viewModel.uiState.value.loginSucceeded)
         assertEquals(LoginExpectation.Account("stage"), repo.expected)
         assertNull(viewModel.startDestinationAfterLogin())
+    }
+
+    @Test
+    fun `re-sign-in shows the message of the account's own server, not of the last typed one (T-327)`() = runTest(mainDispatcherRule.dispatcher) {
+        val repo = Repo(signsInAs = "stage", message = "Down Sunday 10:00")
+        val viewModel = viewModel(repo, Routes.LOGIN_MODE_ARG to LoginMode.RESIGNIN.arg, Routes.ACCOUNT_ID_ARG to "stage")
+
+        assertEquals("Down Sunday 10:00", viewModel.uiState.first { it.serverMessage != null }.serverMessage)
+        assertEquals(listOf("https://lists.example.test/stage/"), repo.registrationChecks)
     }
 
     @Test
