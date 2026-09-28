@@ -1,0 +1,12 @@
+{
+  "body": "Found by the fuzzing pass (T-326), left out of its scope. The accounts unique index uses SQLite's ASCII-only lower(), so '\u00c9@x.co' and '\u00e9@x.co' can both register; invites.redeem matches the invited address with Python's full-Unicode .lower(), so both accounts can redeem the same invite, while pending_for uses SQLite lower() and offers it only to the exact-case account. Decide one folding (store a Python-casefolded email_normalized column, unique, used by every lookup; or restrict addresses to ASCII at registration, which the caps section could state) and document it in the wire contract. Non-ASCII local parts are rare; low priority.",
+  "created_at": "2026-09-28T21:22:56+00:00",
+  "id": "T-328",
+  "labels": [
+    "server",
+    "bug"
+  ],
+  "priority": 4,
+  "title": "Server: e-mail case folding differs between SQLite (ASCII lower) and Python (Unicode lower) outside ASCII",
+  "updated_at": "2026-09-28T21:22:56+00:00"
+}
