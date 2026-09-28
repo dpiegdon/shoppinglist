@@ -7,6 +7,7 @@ from werkzeug.routing import PathConverter
 
 from . import audit
 from . import db as db_module
+from .emails import normalize_email
 from .errors import ApiError
 from .protocol import PROTOCOL_HEADER, PROTOCOL_VERSION, client_is_current
 
@@ -82,7 +83,7 @@ def create_blueprint(
     non-durable: this config value reasserts on restart.
 
     `admin_emails` (T-107) is the ONLY way to grant admin — a static list, matched
-    case-insensitively against the logged-in account's email, checked live. No API
+    against the logged-in account's email by the same folding as login, checked live. No API
     path can set it, so there is no privilege-escalation route. Admins get the
     server-settings tab (registration toggle, reset a user's password, delete a
     user).
@@ -110,10 +111,10 @@ def create_blueprint(
         # Read at request time by routes/app_version.py: the APK route is registered from
         # record_once, too late for the blueprint's own routes to branch on it (T-135).
         "serve_android_apk": serve_android_apk,
-        # Pre-normalized (lower + strip, blanks dropped) so the live admin check is a plain set
-        # membership on the account's lowercased email (T-107).
+        # Pre-normalized (normalize_email, blanks dropped) so the live admin check is a plain
+        # set membership on the account's normalised email (T-107, T-328).
         "admin_emails": frozenset(
-            e.strip().lower() for e in (admin_emails or []) if e and e.strip()
+            normalize_email(e) for e in (admin_emails or []) if e and e.strip()
         ),
     }
 

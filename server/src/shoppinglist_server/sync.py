@@ -336,7 +336,7 @@ def _rosters(conn, list_ids) -> dict:
         "JOIN accounts ON accounts.id = memberships.account_id "
         "LEFT JOIN account_settings ON account_settings.account_id = accounts.id "
         f"WHERE memberships.list_id IN ({placeholders}) "
-        "ORDER BY memberships.joined_at, lower(accounts.email), accounts.id",
+        "ORDER BY memberships.joined_at, accounts.email_normalized, accounts.id",
         list(rosters),
     ):
         rosters[row["list_id"]].append(

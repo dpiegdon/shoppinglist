@@ -6,6 +6,7 @@ import string
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import auth, invites
+from .emails import normalize_email
 from .errors import ApiError
 
 CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
@@ -16,6 +17,8 @@ INITIALS_MAX_LENGTH = 3
 # Lives in auth (T-157): the sync engine needs it for the roster it serves, and importing accounts
 # from there would close a cycle once accounts reaches back into the closing rules.
 resolve_initials = auth.resolve_initials
+
+__all__ = ["normalize_email", "resolve_initials"]
 
 
 def _require_password(conn: sqlite3.Connection, account_id: str, password: str | None) -> None:
@@ -66,6 +69,7 @@ def change_email(
 ) -> None:
     _require_password(conn, account_id, password)
     auth.validate_email(new_email)
+    assert isinstance(new_email, str)  # validate_email narrows it; the helper is untyped
     # Pending invites bound to the old address stop matching automatically:
     # redemption always compares against the account's *current* email (S6).
     try:
@@ -73,8 +77,8 @@ def change_email(
         # from now on, so the invite inbox offers it nothing that was minted for
         # that address earlier (T-234).
         conn.execute(
-            "UPDATE accounts SET email = ?, email_set_at = ? WHERE id = ?",
-            (new_email, auth.now_ms(), account_id),
+            "UPDATE accounts SET email = ?, email_normalized = ?, email_set_at = ? WHERE id = ?",
+            (new_email, normalize_email(new_email), auth.now_ms(), account_id),
         )
     except sqlite3.IntegrityError as exc:
         raise ApiError(409, "email_taken", "An account with this email already exists.") from exc
@@ -255,13 +259,14 @@ def list_all_accounts(conn: sqlite3.Connection, admin_emails) -> list:
 
     Ordered by email, case-insensitively, so the list reads alphabetically and an admin can find
     someone by name (T-221); registration order told them nothing. Sorted here rather than in each
-    client, so the two agree for free. `lower(email)` is the expression idx_accounts_email_lower
-    already indexes, so this reuses that index instead of asking for a second one."""
+    client, so the two agree for free. `email_normalized` is the folded form every lookup uses
+    (T-328) and idx_accounts_email_normalized already indexes it, so this reuses that index
+    instead of asking for a second one."""
     rows = conn.execute(
         "SELECT accounts.id AS id, accounts.email AS email, accounts.created_at AS created_at, "
         "COUNT(auth_tokens.id) AS session_count "
         "FROM accounts LEFT JOIN auth_tokens ON auth_tokens.account_id = accounts.id "
-        "GROUP BY accounts.id ORDER BY lower(accounts.email)"
+        "GROUP BY accounts.id ORDER BY accounts.email_normalized"
     ).fetchall()
     return [
         {
@@ -293,7 +298,9 @@ def _reset_password_for(conn: sqlite3.Connection, account_id: str) -> str:
 
 def reset_password(conn: sqlite3.Connection, email: str) -> str:
     """Operator CLI reset by email (T-92)."""
-    row = conn.execute("SELECT id FROM accounts WHERE lower(email) = lower(?)", (email,)).fetchone()
+    row = conn.execute(
+        "SELECT id FROM accounts WHERE email_normalized = ?", (normalize_email(email),)
+    ).fetchone()
     if row is None:
         raise ApiError(404, "account_not_found", "No account with this email exists.")
     return _reset_password_for(conn, row["id"])

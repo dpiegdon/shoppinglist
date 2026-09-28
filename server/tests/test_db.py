@@ -315,7 +315,7 @@ def test_migration_3_backfills_idle_ttl_by_device_label(tmp_path):
 
     sql_statements = dict(migrations_module.MIGRATIONS)[3]
     for statement in sql_statements:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     ttls = {
@@ -369,7 +369,7 @@ def test_migration_8_adds_the_housekeeping_bookkeeping_columns(tmp_path):
     conn.commit()
 
     for statement in dict(migrations_module.MIGRATIONS)[8]:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     meta = conn.execute("SELECT * FROM meta WHERE id = 1").fetchone()
@@ -402,7 +402,7 @@ def test_fresh_schema_and_migration_8_agree_on_the_housekeeping_columns(tmp_path
     # schema has it too, so both have to run for the end states to match.
     for version in (8, 10):
         for statement in dict(migrations_module.MIGRATIONS)[version]:
-            migrated.execute(statement)
+            migrations_module.run_step(migrated, statement)
     migrated.commit()
 
     def _columns(conn, table):
@@ -437,7 +437,7 @@ def test_migration_9_backfills_email_set_at_from_created_at(tmp_path):
     conn.commit()
 
     for statement in dict(migrations_module.MIGRATIONS)[9]:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     assert {
@@ -459,8 +459,12 @@ def test_fresh_schema_and_migration_9_agree_on_the_accounts_columns(tmp_path):
         "CREATE TABLE accounts (id TEXT PRIMARY KEY, email TEXT NOT NULL, "
         "password_hash TEXT NOT NULL, created_at INTEGER NOT NULL)"
     )
-    for statement in dict(migrations_module.MIGRATIONS)[9]:
-        migrated.execute(statement)
+    # Migration 12 (T-328) adds accounts.email_normalized after this one, and needs the invites
+    # table it also extends; the fresh schema has the column, so both have to run.
+    migrated.execute("CREATE TABLE invites (id TEXT PRIMARY KEY, invited_email TEXT NOT NULL)")
+    for version in (9, 12):
+        for statement in dict(migrations_module.MIGRATIONS)[version]:
+            migrations_module.run_step(migrated, statement)
     migrated.commit()
 
     def _columns(conn):
@@ -495,7 +499,7 @@ def test_migration_10_adds_an_empty_server_message(tmp_path):
     conn.commit()
 
     for statement in dict(migrations_module.MIGRATIONS)[10]:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     row = conn.execute("SELECT * FROM server_runtime WHERE id = 1").fetchone()
@@ -518,7 +522,7 @@ def test_fresh_schema_and_migration_10_agree_on_the_server_runtime_columns(tmp_p
     migrated.row_factory = sqlite3.Row
     _pre_t315_server_runtime(migrated)
     for statement in dict(migrations_module.MIGRATIONS)[10]:
-        migrated.execute(statement)
+        migrations_module.run_step(migrated, statement)
     migrated.commit()
 
     def _columns(conn):
@@ -559,7 +563,7 @@ def test_migration_11_gives_existing_items_no_due_date(tmp_path):
     conn.commit()
 
     for statement in dict(migrations_module.MIGRATIONS)[11]:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     row = conn.execute("SELECT * FROM items WHERE id = 'item-1'").fetchone()
@@ -576,7 +580,7 @@ def test_fresh_schema_and_migration_11_agree_on_the_items_columns(tmp_path):
     migrated = sqlite3.connect(str(tmp_path / "migrated_t323.db"))
     _pre_t323_schema(migrated)
     for statement in dict(migrations_module.MIGRATIONS)[11]:
-        migrated.execute(statement)
+        migrations_module.run_step(migrated, statement)
     migrated.commit()
 
     def _columns(conn):

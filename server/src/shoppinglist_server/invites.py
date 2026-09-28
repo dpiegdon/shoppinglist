@@ -10,6 +10,7 @@ from hashlib import sha256
 
 from . import db as db_module
 from .auth import EMAIL_RE, now_ms, resolve_initials
+from .emails import normalize_email
 from .errors import ApiError
 
 INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000  # fixed 7 days; never client-supplied
@@ -111,9 +112,18 @@ def mint(
     token = _encode_token(key, invite_id, list_id, invited_email, expires_at)
 
     conn.execute(
-        "INSERT INTO invites (id, list_id, invited_email, created_by, created_at, expires_at, revoked, used_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, 0, NULL)",
-        (invite_id, list_id, invited_email, created_by, now, expires_at),
+        "INSERT INTO invites (id, list_id, invited_email, invited_email_normalized, created_by, "
+        "created_at, expires_at, revoked, used_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL)",
+        (
+            invite_id,
+            list_id,
+            invited_email,
+            normalize_email(invited_email),
+            created_by,
+            now,
+            expires_at,
+        ),
     )
     return {
         "invite_id": invite_id,
@@ -133,10 +143,11 @@ def revoke(conn, account_id: str, invite_id: str) -> None:
 
 
 def redeem(conn, key: bytes, account, token: str | None) -> str:
-    invite_id, _token_list_id, invited_email, expires_at = decode_token(key, token)
+    invite_id, _token_list_id, _token_email, expires_at = decode_token(key, token)
 
     row = conn.execute(
-        "SELECT list_id, revoked, used_at FROM invites WHERE id = ?", (invite_id,)
+        "SELECT list_id, invited_email_normalized, revoked, used_at FROM invites WHERE id = ?",
+        (invite_id,),
     ).fetchone()
     if row is None:
         raise ApiError(400, "invalid_token", "Invite not found.")
@@ -147,7 +158,10 @@ def redeem(conn, key: bytes, account, token: str | None) -> str:
     # authoritative by construction, so reading it here makes that question moot.
     list_id = row["list_id"]
 
-    if account.email.lower() != invited_email.lower():
+    # The same rule, and the same stored form, as the invite inbox below (T-328). The row's folded
+    # address rather than the token's: the token is signed from the row, so they agree, and the
+    # row is authoritative for the same reason as the list above.
+    if normalize_email(account.email) != row["invited_email_normalized"]:
         raise ApiError(
             409, "invite_email_mismatch", "This invite is bound to a different email address."
         )
@@ -202,7 +216,8 @@ def pending_for(conn, key: bytes, account) -> list[dict]:
         # invite listed, not silently disappear from the invitee's inbox. resolve_initials
         # already handles a null initials value.
         "LEFT JOIN account_settings AS inviter_settings ON inviter_settings.account_id = inviter.id "
-        "WHERE lower(invites.invited_email) = lower(?) "
+        # One folding for every comparison of an address (T-328), the same one redeem applies.
+        "WHERE invites.invited_email_normalized = me.email_normalized "
         # The address has to predate the invite, or the invite is not this account's (T-234).
         "AND me.email_set_at < invites.created_at "
         "AND invites.revoked = 0 AND invites.used_at IS NULL AND invites.expires_at > ? "
@@ -210,7 +225,7 @@ def pending_for(conn, key: bytes, account) -> list[dict]:
         "AND NOT EXISTS (SELECT 1 FROM memberships "
         "WHERE memberships.list_id = lists.id AND memberships.account_id = ?) "
         "ORDER BY invites.created_at",
-        (account.id, account.email, now_ms(), account.id),
+        (account.id, now_ms(), account.id),
     ).fetchall()
     return [
         {

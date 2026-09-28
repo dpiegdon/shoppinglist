@@ -803,7 +803,7 @@ def test_migration_7_adds_closed_at_and_the_close_votes_table(tmp_path):
     conn.commit()
 
     for statement in dict(migrations_module.MIGRATIONS)[7]:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     # An existing list arrives open, which is the only safe default: closing is a decision the
@@ -846,7 +846,7 @@ def test_fresh_schema_and_migration_7_build_the_same_close_votes_table(db_conn, 
     migrated.execute("CREATE TABLE accounts (id TEXT PRIMARY KEY)")
     migrated.execute("CREATE TABLE lists (id TEXT PRIMARY KEY)")
     for statement in dict(migrations_module.MIGRATIONS)[7]:
-        migrated.execute(statement)
+        migrations_module.run_step(migrated, statement)
 
     # schema.sql and the migration must land on the same shape — an upgraded database and a fresh
     # one are the same database as far as every query in the server is concerned.

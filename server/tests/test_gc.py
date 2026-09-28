@@ -684,8 +684,9 @@ def _make_session(conn, label, last_seen_at, idle_ttl_ms):
 
     account_id = str(uuid.uuid4())
     conn.execute(
-        "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-        (account_id, f"{label}@example.com", "x", NOW),
+        "INSERT INTO accounts (id, email, email_normalized, password_hash, created_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (account_id, f"{label}@example.com", f"{label}@example.com", "x", NOW),
     )
     conn.execute(
         "INSERT INTO auth_tokens "

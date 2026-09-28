@@ -42,8 +42,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute("BEGIN IMMEDIATE")
         try:
             if version > conn.execute("PRAGMA user_version").fetchone()[0]:
-                for stmt in statements:
-                    conn.execute(stmt)
+                for step in statements:
+                    migrations_module.run_step(conn, step)
                 conn.execute(f"PRAGMA user_version = {version}")
         except Exception:
             conn.rollback()

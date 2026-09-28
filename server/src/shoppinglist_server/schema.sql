@@ -10,9 +10,15 @@ CREATE TABLE IF NOT EXISTS accounts (
     -- claimed afterwards by registering it or by renaming an account onto it.
     -- The DEFAULT is what migration 9 needed to add the column to an existing
     -- table; both writers pass a value explicitly.
-    email_set_at INTEGER NOT NULL DEFAULT 0
+    email_set_at INTEGER NOT NULL DEFAULT 0,
+    -- The address as every comparison sees it (T-328): emails.normalize_email
+    -- of `email` (NFC, Unicode case folding, NFC), written with it by every
+    -- writer. `email` keeps the typed form, which is what is shown. The DEFAULT
+    -- is what migration 12 needed to add the column to an existing table; a
+    -- writer that forgot the column would collide on the unique index below.
+    email_normalized TEXT NOT NULL DEFAULT ''
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email_lower ON accounts (lower(email));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email_normalized ON accounts (email_normalized);
 
 CREATE TABLE IF NOT EXISTS auth_tokens (
     id TEXT PRIMARY KEY,
@@ -186,9 +192,13 @@ CREATE TABLE IF NOT EXISTS invites (
     created_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL,
     revoked INTEGER NOT NULL DEFAULT 0,
-    used_at INTEGER
+    used_at INTEGER,
+    -- emails.normalize_email of invited_email (T-328): what redeem and the
+    -- invite inbox compare against the account's email_normalized.
+    invited_email_normalized TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_invites_list ON invites (list_id);
+CREATE INDEX IF NOT EXISTS idx_invites_email_normalized ON invites (invited_email_normalized);
 
 -- Single-row table: monotonic change_seq counter driving sync cursors (Spec S6),
 -- plus tombstone GC bookkeeping (Spec S6/S8).

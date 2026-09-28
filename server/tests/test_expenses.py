@@ -719,7 +719,7 @@ def test_migration_6_adds_the_columns_and_rebuilds_the_name_index(tmp_path):
     conn.commit()
 
     for statement in dict(migrations_module.MIGRATIONS)[6]:
-        conn.execute(statement)
+        migrations_module.run_step(conn, statement)
     conn.commit()
 
     assert conn.execute("SELECT currency, currency_ts, currency_by FROM lists").fetchone()[1] == 0
@@ -748,8 +748,8 @@ def test_fresh_schema_and_migration_6_build_the_same_name_index(db_conn, tmp_pat
     migrated.execute("CREATE TABLE lists (id TEXT)")
     statements = dict(migrations_module.MIGRATIONS)[6]
     for statement in statements:
-        if "ADD COLUMN expense TEXT" not in statement:
-            migrated.execute(statement)
+        if not (isinstance(statement, str) and "ADD COLUMN expense TEXT" in statement):
+            migrations_module.run_step(migrated, statement)
 
     assert index_sql(migrated) == index_sql(db_conn)
     migrated.close()

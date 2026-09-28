@@ -12,14 +12,77 @@ Adding a schema change: update schema.sql (so a fresh install gets the new
 column directly) AND append a migration here (so an existing install gets it
 too) — the two must produce the same end state. Never edit or remove an
 already-released migration's SQL; add a new one instead.
+
+A step is normally one SQL statement. It can instead be a function of the
+connection, for a backfill SQLite cannot express (Unicode case folding, T-328);
+it runs inside the same transaction, and raising from it refuses the migration
+just as a failing statement does.
 """
 
-# (version, [sql statements]) — statements run individually via conn.execute(), in order,
+import sqlite3
+from collections.abc import Callable
+
+from .emails import normalize_email
+
+
+class MigrationRefused(RuntimeError):
+    """A migration found data it cannot carry forward without an operator's decision.
+
+    Raised from a step, so the migration rolls back and user_version stays where it was: every
+    connection refuses again, loudly, until the data is fixed by hand (server/README.md, Upgrading).
+    """
+
+
+def _backfill_normalized_emails(conn: sqlite3.Connection) -> None:
+    """Migration 12 (T-328): fill the folded address columns, or refuse if two accounts collide.
+
+    Before T-328 uniqueness was SQLite's ASCII-only lower(), so 'É@x.co' and 'é@x.co' could both
+    register. After folding they are one address, and the new unique index cannot hold both. Which
+    one keeps it is not for the server to decide — each is a real account with lists and sessions —
+    so this names every colliding group and stops.
+    """
+    groups: dict[str, list[str]] = {}
+    for (email,) in conn.execute("SELECT email FROM accounts ORDER BY created_at, id"):
+        groups.setdefault(normalize_email(email), []).append(email)
+    collisions = [emails for emails in groups.values() if len(emails) > 1]
+    if collisions:
+        listed = "; ".join(" and ".join(repr(e) for e in emails) for emails in collisions)
+        raise MigrationRefused(
+            "Cannot upgrade the database to schema version 12: these accounts' e-mail addresses "
+            f"are the same address under Unicode case folding: {listed}. Change or delete all but "
+            "one account of each group by hand (see server/README.md, Upgrading), then restart."
+        )
+    for account_id, email in conn.execute("SELECT id, email FROM accounts").fetchall():
+        conn.execute(
+            "UPDATE accounts SET email_normalized = ? WHERE id = ?",
+            (normalize_email(email), account_id),
+        )
+    for invite_id, invited_email in conn.execute(
+        "SELECT id, invited_email FROM invites"
+    ).fetchall():
+        conn.execute(
+            "UPDATE invites SET invited_email_normalized = ? WHERE id = ?",
+            (normalize_email(invited_email), invite_id),
+        )
+
+
+Step = str | Callable[[sqlite3.Connection], None]
+
+
+def run_step(conn: sqlite3.Connection, step: Step) -> None:
+    """Apply one migration step: execute a statement, or call a backfill function."""
+    if callable(step):
+        step(conn)
+    else:
+        conn.execute(step)
+
+
+# (version, [steps]) — steps run individually via run_step(), in order,
 # inside one explicit BEGIN IMMEDIATE per migration (all-or-nothing: a failure rolls back
 # that migration's statements, DDL included, and PRAGMA user_version is not advanced, so
 # the next connection retries the migration from a clean schema). The write lock also
 # means two workers upgrading the same file at once cannot both run these statements.
-MIGRATIONS: list[tuple[int, list[str]]] = [
+MIGRATIONS: list[tuple[int, list[Step]]] = [
     (
         1,
         [
@@ -140,6 +203,20 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
             "ALTER TABLE items ADD COLUMN due_by TEXT NOT NULL DEFAULT ''",
         ],
     ),  # T-323: an item's optional due date
+    (
+        12,
+        [
+            # The DEFAULTs only exist because SQLite cannot add a NOT NULL column
+            # without one; the backfill replaces every value before the unique
+            # index is built, and schema.sql carries the same defaults.
+            "ALTER TABLE accounts ADD COLUMN email_normalized TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE invites ADD COLUMN invited_email_normalized TEXT NOT NULL DEFAULT ''",
+            _backfill_normalized_emails,
+            "DROP INDEX IF EXISTS idx_accounts_email_lower",
+            "CREATE UNIQUE INDEX idx_accounts_email_normalized ON accounts (email_normalized)",
+            "CREATE INDEX idx_invites_email_normalized ON invites (invited_email_normalized)",
+        ],
+    ),  # T-328: one Unicode case folding for e-mail addresses
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

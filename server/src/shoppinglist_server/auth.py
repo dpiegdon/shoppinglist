@@ -11,6 +11,7 @@ from flask import g, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import get_config, get_db
+from .emails import normalize_email
 from .errors import ApiError
 
 DEFAULT_CURRENCY = "EUR"
@@ -164,18 +165,22 @@ def register(conn: sqlite3.Connection, email: str | None, password: str | None) 
 
     account_id = str(uuid.uuid4())
     now = now_ms()
-    # validate_password above rejects anything that is not a str, so this is narrowed by then —
-    # but it is an untyped helper, so the narrowing is invisible to a type checker.
+    # validate_email/validate_password above reject anything that is not a str, so both are
+    # narrowed by then — but they are untyped helpers, so the narrowing is invisible to a type
+    # checker.
+    assert isinstance(email, str)
     assert isinstance(password, str)
     password_hash = generate_password_hash(password)
 
     try:
         conn.execute(
-            "INSERT INTO accounts (id, email, password_hash, created_at, email_set_at) "
-            "VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO accounts "
+            "(id, email, email_normalized, password_hash, created_at, email_set_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             # The address is held from this instant on, which is what the invite
-            # inbox compares an invite's age against (T-234).
-            (account_id, email, password_hash, now, now),
+            # inbox compares an invite's age against (T-234). The unique index on
+            # email_normalized is what refuses a second spelling of it (T-328).
+            (account_id, email, normalize_email(email), password_hash, now, now),
         )
     except sqlite3.IntegrityError as exc:
         raise ApiError(409, "email_taken", "An account with this email already exists.") from exc
@@ -205,8 +210,8 @@ def login(
     validate_device_label(device_label)
 
     row = conn.execute(
-        "SELECT id, password_hash FROM accounts WHERE lower(email) = lower(?)",
-        (email,),
+        "SELECT id, password_hash FROM accounts WHERE email_normalized = ?",
+        (normalize_email(email),),
     ).fetchone()
     if row is None:
         # Hash against a throwaway digest so an unknown address costs the same scrypt work as a
@@ -308,9 +313,9 @@ def authed(view_func):
 
 def is_admin_email(email, admin_emails) -> bool:
     """Admin identity (T-107): membership in the instance's static admin_emails set, matched
-    case-insensitively (login/uniqueness are already case-insensitive). Config is the ONLY source;
-    no API path can grant it."""
-    return isinstance(email, str) and email.strip().lower() in admin_emails
+    by normalize_email, the same rule as login and uniqueness (T-328); create_blueprint normalises
+    the configured set the same way. Config is the ONLY source; no API path can grant it."""
+    return isinstance(email, str) and normalize_email(email) in admin_emails
 
 
 def admin_required(view_func):

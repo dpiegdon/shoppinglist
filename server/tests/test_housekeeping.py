@@ -67,8 +67,9 @@ def _without_foreign_keys(conn):
 
 def _account(conn, account_id):
     conn.execute(
-        "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
-        (account_id, f"{account_id}@example.com", "x", NOW),
+        "INSERT INTO accounts (id, email, email_normalized, password_hash, created_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (account_id, f"{account_id}@example.com", f"{account_id}@example.com", "x", NOW),
     )
 
 
