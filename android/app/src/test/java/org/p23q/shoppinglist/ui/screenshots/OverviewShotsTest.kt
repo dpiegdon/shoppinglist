@@ -29,8 +29,6 @@ class OverviewShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
         fun themes() = ShotTheme.both()
-
-        private const val DAY_MS = 24 * 60 * 60 * 1000L
     }
 
     private suspend fun homeLists() {

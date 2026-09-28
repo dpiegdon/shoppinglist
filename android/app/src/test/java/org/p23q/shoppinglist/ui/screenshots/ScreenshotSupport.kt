@@ -73,6 +73,15 @@ val SCREENSHOT_TODAY: LocalDate = LocalDate.of(2026, 9, 17)
 /** Epoch milliseconds of [date] at noon, for timestamps a screen shows as a date. */
 fun noonOf(date: LocalDate): Long = date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
+const val DAY_MS = 24 * 60 * 60 * 1000L
+
+/** The people on the shared lists: this phone's account first. */
+val ROSTER = listOf(
+    Triple("acct-sam", "sam@example.org", "SA"),
+    Triple("acct-alex", "alex@example.org", "AL"),
+    Triple("acct-robin", "robin@example.org", "RO"),
+)
+
 /** The light or the dark theme, as one run of a parameterized screenshot class takes it. */
 enum class ShotTheme(val dark: Boolean) {
     LIGHT(false),
@@ -153,6 +162,17 @@ abstract class ScreenshotTest(protected val theme: ShotTheme) {
     @After
     fun closeDatabase() {
         if (::db.isInitialized) closeWhenIdle(db, ::idleMainLooper, viewModels, registry = if (::accounts.isInitialized) accounts.registry else null)
+    }
+
+    /** The roster a list's server reports for [ROSTER], with one invite still open. */
+    protected fun rosterJson(): String {
+        // Half a day past three days, so it reads "3 d" however long the run takes.
+        val expires = System.currentTimeMillis() + 3 * DAY_MS + DAY_MS / 2
+        val members = ROSTER.mapIndexed { i, (id, email, initials) ->
+            """{"account_id": "$id", "email": "$email", "initials": "$initials", "joined_at": ${i + 1}}"""
+        }
+        return """{"members": [${members.joinToString()}],
+            "invites": [{"id": "inv-1", "invited_email": "kim@example.org", "expires_at": $expires}]}"""
     }
 
     /** Gives [listId] the roster [members], each as (server account id, email, initials). */
