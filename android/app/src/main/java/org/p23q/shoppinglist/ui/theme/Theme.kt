@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ButtonColors
@@ -12,12 +15,15 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 
 /** Which colour scheme [ShoppingListTheme] renders: the brand scheme, light or dark. */
 enum class ThemeVariant { LIGHT, DARK }
@@ -174,6 +180,7 @@ fun ShoppingListTheme(
     content: @Composable () -> Unit,
 ) {
     val variant = themeVariant(darkTheme)
+    SystemBarIcons(darkTheme)
     CompositionLocalProvider(LocalPositiveBalanceColor provides positiveBalanceColor(variant)) {
         MaterialTheme(
             colorScheme = brandColorScheme(variant),
@@ -182,3 +189,29 @@ fun ShoppingListTheme(
         )
     }
 }
+
+/**
+ * The status- and navigation-bar icons in the colour the app's theme needs, not the phone's.
+ * enableEdgeToEdge() picks them from the phone's dark-mode setting, so with the app on Light and the
+ * phone on Dark they were white on the flat white background, and black on black the other way.
+ */
+@Composable
+private fun SystemBarIcons(darkTheme: Boolean) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    SideEffect {
+        val window = view.context.findActivity()?.window ?: return@SideEffect
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+}
+
+/** The activity behind a possibly wrapped context (LocalizedContent wraps it for the locale). */
+internal tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
