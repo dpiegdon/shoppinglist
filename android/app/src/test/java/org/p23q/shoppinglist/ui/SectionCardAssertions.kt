@@ -11,7 +11,6 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.p23q.shoppinglist.ui.theme.ThemeVariant
 import org.p23q.shoppinglist.ui.theme.brandColorScheme
@@ -35,11 +34,13 @@ private fun ComposeContentTestRule.titleColor(title: String) =
         results.first().layoutInput.style.color
     }
 
-/** Each of [titles] heads a plain section card: no border, the title not in the error colour. */
+/** Each of [titles] heads a plain section card: no border, the title in the plain text colour. */
 fun ComposeContentTestRule.assertPlainSectionCards(vararg titles: String) = titles.forEach { title ->
     sectionCard(title).performScrollTo()
     assertNull(title, sectionCard(title).fetchSemanticsNode().config.getOrElseNullable(SectionCardBorder) { null })
-    assertNotEquals(title, sectionTestScheme.error, titleColor(title))
+    // Not the accent: the card's default content colour would be (the scheme's tertiaryContainer
+    // shares the surface colour).
+    assertEquals(title, sectionTestScheme.onSurface, titleColor(title))
 }
 
 /** [title] heads the danger card: a border and a title both in the error colour, as the web's. */

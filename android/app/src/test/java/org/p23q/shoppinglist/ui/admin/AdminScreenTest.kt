@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.admin
 
+import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.ui.assertPlainSectionCards
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ClipboardManager
@@ -156,10 +157,12 @@ class AdminScreenTest {
             serverAccountId = "admin-1",
         )
         composeTestRule.setContent {
-            if (clipboard == null) {
-                AdminScreen(viewModel = viewModel)
-            } else {
-                CompositionLocalProvider(LocalClipboardManager provides clipboard) { AdminScreen(viewModel = viewModel) }
+            InBrandColors {
+                if (clipboard == null) {
+                    AdminScreen(viewModel = viewModel)
+                } else {
+                    CompositionLocalProvider(LocalClipboardManager provides clipboard) { AdminScreen(viewModel = viewModel) }
+                }
             }
         }
         composeTestRule.onNodeWithText("Show registered users").performClick()

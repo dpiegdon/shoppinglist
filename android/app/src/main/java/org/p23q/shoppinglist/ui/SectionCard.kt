@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +40,12 @@ fun SectionCard(
 ) {
     val border = if (danger) BorderStroke(1.dp, MaterialTheme.colorScheme.error) else null
     Card(
+        // Plain text colour: the default content colour for this container resolves to the accent
+        // text, since the scheme's tertiaryContainer is the same surface colour.
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
         border = border,
         modifier = modifier
             .fillMaxWidth()
