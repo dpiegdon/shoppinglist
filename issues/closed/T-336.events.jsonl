@@ -2,3 +2,4 @@
 {"actor": "user", "at": "2026-09-29T20:04:24+00:00", "kind": "updated", "ref": "main@c0e2cafc", "text": "fields updated"}
 {"actor": "user", "at": "2026-09-29T20:04:24+00:00", "kind": "note", "ref": "main@c0e2cafc", "text": "Scope cut by the maintainer: the web keeps following the system's dark mode; no theme switch on the web. Only item (1) remains."}
 {"actor": "user", "at": "2026-09-29T20:49:00+00:00", "kind": "note", "ref": "main@65b8d38a", "text": "On main (65b8d38a), full gate green: SectionCard for Settings, Account (server and local) and Admin; danger zone bordered and titled in red; Language picker and account header stay bare as on the web. Found: Android card text defaulted to the accent (tertiaryContainer == surface); fixed per card here, theme-wide in T-337."}
+{"actor": "user", "at": "2026-09-29T20:49:00+00:00", "kind": "closed", "ref": "main@65b8d38a", "text": ""}
