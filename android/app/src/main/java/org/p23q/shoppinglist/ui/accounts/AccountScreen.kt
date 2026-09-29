@@ -35,6 +35,7 @@ import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
@@ -72,194 +73,201 @@ fun AccountScreen(
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text(account?.let { accountName(it) }.orEmpty(), style = MaterialTheme.typography.titleMedium)
-        account?.serverUrl?.let {
-            Text(stringResource(R.string.settings_server, it), style = MaterialTheme.typography.bodySmall)
-        }
-        when (account?.status()) {
-            // The overview's banner, here too (T-300).
-            AccountStatus.SIGNED_OUT -> Surface(
-                onClick = onSignIn,
-                color = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("account-sign-in"),
-            ) {
-                Text(
-                    stringResource(R.string.overview_account_signed_out),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                )
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // The account itself heads the screen, bare, as the web's e-mail line does.
+        Column {
+            Text(account?.let { accountName(it) }.orEmpty(), style = MaterialTheme.typography.titleMedium)
+            account?.serverUrl?.let {
+                Text(stringResource(R.string.settings_server, it), style = MaterialTheme.typography.bodySmall)
             }
-            AccountStatus.OUTDATED -> {
-                Text(stringResource(R.string.accounts_state_outdated), color = MaterialTheme.colorScheme.error)
-                Text(stringResource(R.string.accounts_outdated_help), style = MaterialTheme.typography.bodySmall)
+            when (account?.status()) {
+                // The overview's banner, here too (T-300).
+                AccountStatus.SIGNED_OUT -> Surface(
+                    onClick = onSignIn,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("account-sign-in"),
+                ) {
+                    Text(
+                        stringResource(R.string.overview_account_signed_out),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+                AccountStatus.OUTDATED -> {
+                    Text(stringResource(R.string.accounts_state_outdated), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.accounts_outdated_help), style = MaterialTheme.typography.bodySmall)
+                }
+                else -> Unit
             }
-            else -> Unit
         }
-        Spacer(Modifier.height(16.dp))
 
         if (!signedOut) {
-            Text(stringResource(R.string.settings_default_currency), style = MaterialTheme.typography.titleMedium)
-            var currencyInput by remember(state.defaultCurrency) { mutableStateOf(state.defaultCurrency) }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = currencyInput,
-                    onValueChange = { currencyInput = it },
-                    label = { Text(stringResource(R.string.settings_currency)) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(8.dp))
-                TuppuButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
+            SectionCard(stringResource(R.string.settings_default_currency)) {
+                var currencyInput by remember(state.defaultCurrency) { mutableStateOf(state.defaultCurrency) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = currencyInput,
+                        onValueChange = { currencyInput = it },
+                        label = { Text(stringResource(R.string.settings_currency)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TuppuButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
+                }
             }
-            Spacer(Modifier.height(16.dp))
 
             // Shown as a small badge on shared-list item rows so collaborators can see who last
             // touched an item (T-64); defaults to the email's initials until customized here.
-            Text(stringResource(R.string.settings_display_initials), style = MaterialTheme.typography.titleMedium)
-            var initialsInput by remember(state.initials) { mutableStateOf(state.initials ?: "") }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = initialsInput,
-                    onValueChange = { initialsInput = it },
-                    label = { Text(stringResource(R.string.settings_initials)) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(8.dp))
-                TuppuButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
+            SectionCard(stringResource(R.string.settings_display_initials)) {
+                var initialsInput by remember(state.initials) { mutableStateOf(state.initials ?: "") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = initialsInput,
+                        onValueChange = { initialsInput = it },
+                        label = { Text(stringResource(R.string.settings_initials)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TuppuButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
+                }
             }
-            Spacer(Modifier.height(16.dp))
         }
 
         // Developer-only escape hatch for a self-signed dev server, per account: present only in
         // debug builds, and release builds ignore the flag even if set (DevCertTrust).
         if (BuildConfig.DEBUG) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_trust_self_signed), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.settings_trust_self_signed_help), style = MaterialTheme.typography.bodySmall)
+            SectionCard(stringResource(R.string.settings_trust_self_signed)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        stringResource(R.string.settings_trust_self_signed_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = account?.allowSelfSignedCerts ?: false,
+                        onCheckedChange = { viewModel.setAllowSelfSignedCerts(it) },
+                    )
                 }
-                Switch(
-                    checked = account?.allowSelfSignedCerts ?: false,
-                    onCheckedChange = { viewModel.setAllowSelfSignedCerts(it) },
-                )
             }
-            Spacer(Modifier.height(16.dp))
         }
 
         if (!signedOut) {
-            Text(stringResource(R.string.settings_change_password), style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = state.currentPassword,
-                onValueChange = viewModel::onCurrentPasswordChange,
-                label = { Text(stringResource(R.string.settings_current_password)) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.newPassword,
-                onValueChange = viewModel::onNewPasswordChange,
-                label = { Text(stringResource(R.string.settings_new_password)) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.newPasswordAgain,
-                onValueChange = viewModel::onNewPasswordAgainChange,
-                label = { Text(stringResource(R.string.settings_new_password_again)) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                isError = state.newPasswordMismatch,
-                supportingText = if (state.newPasswordMismatch) {
-                    { Text(stringResource(R.string.settings_msg_passwords_do_not_match)) }
-                } else {
-                    null
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TuppuButton(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
-            Spacer(Modifier.height(16.dp))
+            SectionCard(stringResource(R.string.settings_change_password)) {
+                OutlinedTextField(
+                    value = state.currentPassword,
+                    onValueChange = viewModel::onCurrentPasswordChange,
+                    label = { Text(stringResource(R.string.settings_current_password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.newPassword,
+                    onValueChange = viewModel::onNewPasswordChange,
+                    label = { Text(stringResource(R.string.settings_new_password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.newPasswordAgain,
+                    onValueChange = viewModel::onNewPasswordAgainChange,
+                    label = { Text(stringResource(R.string.settings_new_password_again)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = state.newPasswordMismatch,
+                    supportingText = if (state.newPasswordMismatch) {
+                        { Text(stringResource(R.string.settings_msg_passwords_do_not_match)) }
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TuppuButton(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
+            }
 
-            Text(stringResource(R.string.settings_change_email), style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = state.newEmail,
-                onValueChange = viewModel::onNewEmailChange,
-                label = { Text(stringResource(R.string.settings_new_email)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.changeEmailPassword,
-                onValueChange = viewModel::onChangeEmailPasswordChange,
-                label = { Text(stringResource(R.string.settings_password)) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TuppuButton(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
-            Spacer(Modifier.height(16.dp))
+            SectionCard(stringResource(R.string.settings_change_email)) {
+                OutlinedTextField(
+                    value = state.newEmail,
+                    onValueChange = viewModel::onNewEmailChange,
+                    label = { Text(stringResource(R.string.settings_new_email)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = state.changeEmailPassword,
+                    onValueChange = viewModel::onChangeEmailPasswordChange,
+                    label = { Text(stringResource(R.string.settings_password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TuppuButton(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
+            }
         }
 
         state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
         // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
         state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        Spacer(Modifier.height(16.dp))
 
         if (!signedOut) {
-            Text(stringResource(R.string.settings_sessions), style = MaterialTheme.typography.titleMedium)
-            state.sessions.forEach { session ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        val label = session.deviceLabel ?: stringResource(R.string.settings_unknown_device)
-                        Text(if (session.current) "$label ${stringResource(R.string.settings_this_device)}" else label)
-                        // The current session is active by definition — this request is it. Its stored
-                        // lastSeenAt would read as up to 15 minutes stale (auth.LAST_SEEN_REFRESH_MS).
-                        Text(
-                            if (session.current) {
-                                stringResource(R.string.last_seen_active_now)
-                            } else {
-                                formatLastSeen(session.lastSeenAt).asString()
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (!session.current) {
-                        TuppuButton(
-                            onClick = { viewModel.revokeSession(session.id) },
-                            colors = dangerButtonColors(),
-                            contentPadding = CompactButtonPadding,
-                        ) { Text(stringResource(R.string.action_revoke)) }
+            SectionCard(stringResource(R.string.settings_sessions)) {
+                state.sessions.forEach { session ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            val label = session.deviceLabel ?: stringResource(R.string.settings_unknown_device)
+                            Text(if (session.current) "$label ${stringResource(R.string.settings_this_device)}" else label)
+                            // The current session is active by definition — this request is it. Its stored
+                            // lastSeenAt would read as up to 15 minutes stale (auth.LAST_SEEN_REFRESH_MS).
+                            Text(
+                                if (session.current) {
+                                    stringResource(R.string.last_seen_active_now)
+                                } else {
+                                    formatLastSeen(session.lastSeenAt).asString()
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (!session.current) {
+                            TuppuButton(
+                                onClick = { viewModel.revokeSession(session.id) },
+                                colors = dangerButtonColors(),
+                                contentPadding = CompactButtonPadding,
+                            ) { Text(stringResource(R.string.action_revoke)) }
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
         }
 
-        Text(stringResource(R.string.settings_danger_zone), style = MaterialTheme.typography.titleMedium)
-        // Removing only affects this phone, so it is the quieter of the two.
-        OutlinedButton(
-            onClick = { viewModel.requestRemove() },
-            modifier = Modifier.fillMaxWidth().testTag("account-remove"),
-        ) { Text(stringResource(R.string.account_remove)) }
-        // Filled red (T-112): deleting on the server is final. Confirmation still gates it. Only
-        // with a session: the server would refuse it with 401, read as a wrong password (T-300).
-        if (!signedOut) {
-            Spacer(Modifier.height(8.dp))
-            TuppuButton(
-                onClick = viewModel::requestDeleteAccount,
-                colors = dangerButtonColors(),
-                modifier = Modifier.fillMaxWidth().testTag("account-delete"),
-            ) { Text(stringResource(R.string.account_delete_on_server)) }
+        SectionCard(stringResource(R.string.settings_danger_zone), danger = true) {
+            // Removing only affects this phone, so it is the quieter of the two.
+            OutlinedButton(
+                onClick = { viewModel.requestRemove() },
+                modifier = Modifier.fillMaxWidth().testTag("account-remove"),
+            ) { Text(stringResource(R.string.account_remove)) }
+            // Filled red (T-112): deleting on the server is final. Confirmation still gates it. Only
+            // with a session: the server would refuse it with 401, read as a wrong password (T-300).
+            if (!signedOut) {
+                Spacer(Modifier.height(8.dp))
+                TuppuButton(
+                    onClick = viewModel::requestDeleteAccount,
+                    colors = dangerButtonColors(),
+                    modifier = Modifier.fillMaxWidth().testTag("account-delete"),
+                ) { Text(stringResource(R.string.account_delete_on_server)) }
+            }
         }
     }
 
@@ -323,28 +331,30 @@ fun AccountScreen(
  */
 @Composable
 private fun LocalAreaAccount(state: AccountUiState, onRemove: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text(stringResource(R.string.accounts_state_local), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.local_area_note_body), style = MaterialTheme.typography.bodyMedium)
-        state.listCount?.let { count ->
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.account_local_list_count, count), style = MaterialTheme.typography.bodyMedium)
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        SectionCard(stringResource(R.string.accounts_state_local)) {
+            Text(stringResource(R.string.local_area_note_body), style = MaterialTheme.typography.bodyMedium)
+            state.listCount?.let { count ->
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.account_local_list_count, count), style = MaterialTheme.typography.bodyMedium)
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.settings_danger_zone), style = MaterialTheme.typography.titleMedium)
-        OutlinedButton(
-            onClick = onRemove,
-            enabled = state.listCount == 0,
-            modifier = Modifier.fillMaxWidth().testTag("account-remove"),
-        ) { Text(stringResource(R.string.account_remove)) }
-        if ((state.listCount ?: 0) > 0 || state.removeBlocked) {
-            Text(
-                stringResource(R.string.account_remove_local_blocked),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        SectionCard(stringResource(R.string.settings_danger_zone), danger = true) {
+            OutlinedButton(
+                onClick = onRemove,
+                enabled = state.listCount == 0,
+                modifier = Modifier.fillMaxWidth().testTag("account-remove"),
+            ) { Text(stringResource(R.string.account_remove)) }
+            if ((state.listCount ?: 0) > 0 || state.removeBlocked) {
+                Text(
+                    stringResource(R.string.account_remove_local_blocked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
-

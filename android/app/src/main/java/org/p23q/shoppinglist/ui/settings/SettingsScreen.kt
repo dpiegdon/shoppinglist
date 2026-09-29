@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +37,7 @@ import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.deviceLocale
 import org.p23q.shoppinglist.ui.LanguagePicker
+import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 
@@ -65,103 +67,107 @@ fun SettingsScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // Bare, as on the web: the picker carries its own label.
         LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
-        Spacer(Modifier.height(16.dp))
 
-        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
-        Row {
-            ThemePreference.entries.forEach { pref ->
-                FilterChip(
-                    selected = state.theme == pref,
-                    onClick = { viewModel.setTheme(pref) },
-                    label = { Text(pref.label()) },
-                    modifier = Modifier.padding(end = 4.dp),
-                )
+        SectionCard(stringResource(R.string.settings_theme)) {
+            Row {
+                ThemePreference.entries.forEach { pref ->
+                    FilterChip(
+                        selected = state.theme == pref,
+                        onClick = { viewModel.setTheme(pref) },
+                        label = { Text(pref.label()) },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
             }
         }
-        Spacer(Modifier.height(16.dp))
 
         // Collaborator-change notifications (T-65); mute individual lists in their list properties.
         // Only server accounts have collaborators, so a phone with none has nothing to notify of.
         if (state.hasServerAccount) {
-            Text(stringResource(R.string.settings_notifications), style = MaterialTheme.typography.titleMedium)
-            val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_collaborator_changes))
-                    Text(
-                        stringResource(R.string.settings_collaborator_changes_help),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            SectionCard(stringResource(R.string.settings_notifications)) {
+                val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_collaborator_changes))
+                        Text(
+                            stringResource(R.string.settings_collaborator_changes_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = state.notificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            viewModel.setNotificationsEnabled(enabled)
+                            // API 33+ needs the runtime permission; requested on enable (not cold start) per T-65.
+                            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
                     )
                 }
-                Switch(
-                    checked = state.notificationsEnabled,
-                    onCheckedChange = { enabled ->
-                        viewModel.setNotificationsEnabled(enabled)
-                        // API 33+ needs the runtime permission; requested on enable (not cold start) per T-65.
-                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    },
-                )
-            }
-            // Invite notifications (T-319): their own switch, sharing the permission request.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_invitations))
-                    Text(
-                        stringResource(R.string.settings_invitations_help),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Invite notifications (T-319): their own switch, sharing the permission request.
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_invitations))
+                        Text(
+                            stringResource(R.string.settings_invitations_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = state.inviteNotificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            viewModel.setInviteNotificationsEnabled(enabled)
+                            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
+                        modifier = Modifier.testTag("invite-notifications-switch"),
                     )
                 }
-                Switch(
-                    checked = state.inviteNotificationsEnabled,
-                    onCheckedChange = { enabled ->
-                        viewModel.setInviteNotificationsEnabled(enabled)
-                        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    },
-                    modifier = Modifier.testTag("invite-notifications-switch"),
-                )
             }
-            Spacer(Modifier.height(16.dp))
         }
 
         // No telemetry service (T-50) — this is purely local, opt-in, and manual: the crash log
         // never leaves the device unless the user explicitly shares it here.
-        Text(stringResource(R.string.settings_diagnostics), style = MaterialTheme.typography.titleMedium)
-        // On-device way to check that background sync (WorkManager) actually runs (T-112) — if this
-        // stays "never" while the app is closed, the OS is likely killing background work (battery
-        // optimization / Doze), which is also why collaborator-change notifications wouldn't fire.
-        // The local area never syncs, so without a server account there is no background sync.
-        if (state.hasServerAccount) {
-            Text(
-                stringResource(R.string.settings_last_background_sync, state.lastBackgroundSyncText.asString()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // Which gate decided the last collaborator-change check (T-318), so a phone that never
-            // notifies can say whether nothing foreign arrived or what held the notification back.
-            Text(
-                state.lastChangeCheckText.asString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // And of the last invite check (T-319), run after each background sync.
-            Text(
-                state.lastInviteCheckText.asString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        SectionCard(stringResource(R.string.settings_diagnostics)) {
+            // On-device way to check that background sync (WorkManager) actually runs (T-112) — if this
+            // stays "never" while the app is closed, the OS is likely killing background work (battery
+            // optimization / Doze), which is also why collaborator-change notifications wouldn't fire.
+            // The local area never syncs, so without a server account there is no background sync.
+            if (state.hasServerAccount) {
+                Text(
+                    stringResource(R.string.settings_last_background_sync, state.lastBackgroundSyncText.asString()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Which gate decided the last collaborator-change check (T-318), so a phone that never
+                // notifies can say whether nothing foreign arrived or what held the notification back.
+                Text(
+                    state.lastChangeCheckText.asString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // And of the last invite check (T-319), run after each background sync.
+                Text(
+                    state.lastInviteCheckText.asString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            TuppuButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
+            // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
+            state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
-        Spacer(Modifier.height(8.dp))
-        TuppuButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
-        // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
-        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 

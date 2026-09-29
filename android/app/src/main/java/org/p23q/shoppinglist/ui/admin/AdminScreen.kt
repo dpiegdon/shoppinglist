@@ -40,6 +40,7 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.theme.RegistrationSwitchKnob
@@ -58,132 +59,131 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        state.error?.let {
-            Text(it.asString(), color = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.height(8.dp))
-        }
+        state.error?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
 
-        Text(stringResource(R.string.admin_registration), style = MaterialTheme.typography.titleMedium)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.admin_allow_new_accounts))
-                Text(
-                    stringResource(R.string.admin_registration_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(
-                checked = state.allowRegistration == true,
-                onCheckedChange = { viewModel.toggleRegistration() },
-                enabled = state.allowRegistration != null,
-                // Green track when registration is on, red when it's denied (T-112).
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = RegistrationSwitchKnob,
-                    checkedTrackColor = RegistrationSwitchOn,
-                    uncheckedThumbColor = RegistrationSwitchKnob,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.error,
-                ),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-
-        // The server message (T-315): one line every client shows, saved on its own. Only when the
-        // server has one to show: an older server would refuse a request that sets only it.
-        if (state.serverMessage != null) {
-            OutlinedTextField(
-                value = state.messageDraft,
-                onValueChange = viewModel::onMessageChange,
-                label = { Text(stringResource(R.string.admin_server_message)) },
-                singleLine = true,
-                isError = state.messageError != null,
-                supportingText = {
-                    Text(state.messageError?.asString() ?: stringResource(R.string.admin_server_message_help))
-                },
-                modifier = Modifier.fillMaxWidth().testTag("admin-server-message"),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Save, then Clear, at the start of the row, as on the web (T-316).
-                TuppuButton(
-                    onClick = { viewModel.saveMessage() },
-                    enabled = state.canSaveMessage(),
-                    modifier = Modifier.testTag("admin-server-message-save"),
-                ) {
-                    Text(stringResource(R.string.action_save))
-                }
-                TuppuTextButton(
-                    onClick = { viewModel.clearMessage() },
-                    enabled = state.canClearMessage(),
-                    modifier = Modifier.testTag("admin-server-message-clear"),
-                ) {
-                    Text(stringResource(R.string.action_clear))
-                }
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-
-        Text(stringResource(R.string.admin_users), style = MaterialTheme.typography.titleMedium)
-        // One screen, not a submenu (T-221): the console is small, and a second navigation step on
-        // both clients would buy nothing. The list is simply not fetched until asked for.
-        val users = state.users
-        if (users == null) {
-            TuppuButton(onClick = { viewModel.loadUsers() }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.admin_show_users))
-            }
-        } else {
+        SectionCard(stringResource(R.string.admin_registration)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    stringResource(R.string.admin_user_count, users.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.admin_allow_new_accounts))
+                    Text(
+                        stringResource(R.string.admin_registration_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.allowRegistration == true,
+                    onCheckedChange = { viewModel.toggleRegistration() },
+                    enabled = state.allowRegistration != null,
+                    // Green track when registration is on, red when it's denied (T-112).
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = RegistrationSwitchKnob,
+                        checkedTrackColor = RegistrationSwitchOn,
+                        uncheckedThumbColor = RegistrationSwitchKnob,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.error,
+                    ),
                 )
-                TuppuButton(onClick = { viewModel.loadUsers() }, contentPadding = CompactButtonPadding) {
-                    Text(stringResource(R.string.action_refresh))
+            }
+
+            // The server message (T-315): one line every client shows, saved on its own. Only when the
+            // server has one to show: an older server would refuse a request that sets only it.
+            if (state.serverMessage != null) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = state.messageDraft,
+                    onValueChange = viewModel::onMessageChange,
+                    label = { Text(stringResource(R.string.admin_server_message)) },
+                    singleLine = true,
+                    isError = state.messageError != null,
+                    supportingText = {
+                        Text(state.messageError?.asString() ?: stringResource(R.string.admin_server_message_help))
+                    },
+                    modifier = Modifier.fillMaxWidth().testTag("admin-server-message"),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // Save, then Clear, at the start of the row, as on the web (T-316).
+                    TuppuButton(
+                        onClick = { viewModel.saveMessage() },
+                        enabled = state.canSaveMessage(),
+                        modifier = Modifier.testTag("admin-server-message-save"),
+                    ) {
+                        Text(stringResource(R.string.action_save))
+                    }
+                    TuppuTextButton(
+                        onClick = { viewModel.clearMessage() },
+                        enabled = state.canClearMessage(),
+                        modifier = Modifier.testTag("admin-server-message-clear"),
+                    ) {
+                        Text(stringResource(R.string.action_clear))
+                    }
                 }
             }
-            OutlinedTextField(
-                value = state.password,
-                onValueChange = viewModel::onPasswordChange,
-                label = { Text(stringResource(R.string.admin_your_password)) },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                isError = state.passwordError != null,
-                supportingText = state.passwordError?.let { { Text(it.asString()) } },
-                modifier = Modifier.fillMaxWidth(),
-            )
+        }
 
-            if (state.resetPassword != null) {
+        SectionCard(stringResource(R.string.admin_users)) {
+            // One screen, not a submenu (T-221): the console is small, and a second navigation step on
+            // both clients would buy nothing. The list is simply not fetched until asked for.
+            val users = state.users
+            if (users == null) {
+                TuppuButton(onClick = { viewModel.loadUsers() }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.admin_show_users))
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.admin_user_count, users.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TuppuButton(onClick = { viewModel.loadUsers() }, contentPadding = CompactButtonPadding) {
+                        Text(stringResource(R.string.action_refresh))
+                    }
+                }
+                OutlinedTextField(
+                    value = state.password,
+                    onValueChange = viewModel::onPasswordChange,
+                    label = { Text(stringResource(R.string.admin_your_password)) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    isError = state.passwordError != null,
+                    supportingText = state.passwordError?.let { { Text(it.asString()) } },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                if (state.resetPassword != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.admin_new_password_for, state.resetEmail ?: ""),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    ResetPasswordRow(state.resetPassword!!)
+                }
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(R.string.admin_new_password_for, state.resetEmail ?: ""),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                ResetPasswordRow(state.resetPassword!!)
-            }
-            Spacer(Modifier.height(8.dp))
 
-            users.forEach { user ->
-                UserRow(
-                    user = user,
-                    deletable = !user.isAdmin && user.id != state.currentAccountId,
-                    // The password is checked before the confirmation opens, as for a deletion (T-113).
-                    onReset = { if (viewModel.requirePassword()) pendingReset = user },
-                    onDelete = { if (viewModel.requirePassword()) pendingDelete = user },
-                )
-                HorizontalDivider()
+                users.forEach { user ->
+                    UserRow(
+                        user = user,
+                        deletable = !user.isAdmin && user.id != state.currentAccountId,
+                        // The password is checked before the confirmation opens, as for a deletion (T-113).
+                        onReset = { if (viewModel.requirePassword()) pendingReset = user },
+                        onDelete = { if (viewModel.requirePassword()) pendingDelete = user },
+                    )
+                    HorizontalDivider()
+                }
             }
         }
     }
