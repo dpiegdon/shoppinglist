@@ -1,0 +1,13 @@
+{
+  "body": "Two gaps the maintainer found. (1) The web's Settings and Admin pages put each section in a card (.card, 1rem padding, the delete-account card bordered and titled in the danger colour); Android's Settings, Account and Admin screens show the same sections as bare headings. Wrap each Android section in the same card the overview uses (surfaceContainerHighest, the web's --color-surface), 16dp padding, 16dp gap, the section title inside the card; the delete-account/danger-zone card with a 1dp error-coloured border and an error-coloured title. (2) The web has never had a theme choice; it follows prefers-color-scheme only. Add a 'Theme' section to the web Settings with System / Light / Dark (same strings and order as Android's settings_theme*, nine locales, identical English so crossClient pairs them), stored per browser in safeLocalStorage (like the language), applied as data-theme=\"light\"|\"dark\" on <html> (none for System) before first paint (index.html inline script or main.tsx before render) so there is no flash; index.css gets the dark palette under :root:not([data-theme=\"light\"]) inside the prefers-color-scheme media query AND under :root[data-theme=\"dark\"], with color-scheme set accordingly; the brandColors parity test's cssTokens reader must still read the dark block. Tests on both clients; Android screenshots re-recorded.",
+  "created_at": "2026-09-29T20:04:07+00:00",
+  "id": "T-336",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Settings parity: Android's Settings, Account and Admin sections in cards as on the web; the web gets the System/Light/Dark theme switch Android has",
+  "updated_at": "2026-09-29T20:04:07+00:00"
+}
