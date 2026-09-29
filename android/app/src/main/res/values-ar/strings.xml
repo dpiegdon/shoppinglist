@@ -126,6 +126,8 @@
     <string name="update_required_unavailable">لا يوفّر أيٌّ من خوادمك تطبيقًا أحدث. اطلب تحديثًا ممن يديرها.</string>
     <string name="action_retry">إعادة المحاولة</string>
     <string name="listprops_list_name">اسم القائمة</string>
+    <string name="listprops_list">القائمة</string>
+    <string name="listprops_actions">إجراءات</string>
     <string name="listprops_type">النوع</string>
     <string name="listprops_kind_checklist">العناصر لها اسم وفئة وملاحظة.</string>
     <string name="listprops_kind_shopping">العناصر لها أيضًا متاجر وكمية وسعر.</string>

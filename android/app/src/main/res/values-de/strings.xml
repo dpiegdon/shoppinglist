@@ -126,6 +126,8 @@
     <string name="update_required_unavailable">Keiner deiner Server bietet eine neuere App an. Bitte die Betreiber um ein Update.</string>
     <string name="action_retry">Erneut versuchen</string>
     <string name="listprops_list_name">Listenname</string>
+    <string name="listprops_list">Liste</string>
+    <string name="listprops_actions">Aktionen</string>
     <string name="listprops_type">Typ</string>
     <string name="listprops_kind_checklist">Artikel haben Name, Kategorie und Notiz.</string>
     <string name="listprops_kind_shopping">Artikel haben zusätzlich Geschäfte, Menge und Preis.</string>

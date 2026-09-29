@@ -126,6 +126,8 @@
     <string name="update_required_unavailable">你的服务器都没有更新的应用可供下载。请向管理服务器的人索取更新。</string>
     <string name="action_retry">重试</string>
     <string name="listprops_list_name">清单名称</string>
+    <string name="listprops_list">清单</string>
+    <string name="listprops_actions">操作</string>
     <string name="listprops_type">类型</string>
     <string name="listprops_kind_checklist">物品包含名称、分类和备注。</string>
     <string name="listprops_kind_shopping">物品还包含商店、数量和价格。</string>

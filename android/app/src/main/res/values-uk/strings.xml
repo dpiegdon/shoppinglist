@@ -126,6 +126,8 @@
     <string name="update_required_unavailable">Жоден із твоїх серверів не пропонує новішого застосунку. Попроси оновлення в тих, хто їх адмініструє.</string>
     <string name="action_retry">Спробувати ще раз</string>
     <string name="listprops_list_name">Назва списку</string>
+    <string name="listprops_list">Список</string>
+    <string name="listprops_actions">Дії</string>
     <string name="listprops_type">Тип</string>
     <string name="listprops_kind_checklist">Товари мають назву, категорію та нотатку.</string>
     <string name="listprops_kind_shopping">Товари також мають магазини, кількість і ціну.</string>

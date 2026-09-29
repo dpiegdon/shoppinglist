@@ -1,6 +1,14 @@
 package org.p23q.shoppinglist.ui.listprops
 
 import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.ui.InBrandColors
+import org.p23q.shoppinglist.ui.assertDangerSectionCard
+import org.p23q.shoppinglist.ui.assertInSectionCard
+import org.p23q.shoppinglist.ui.assertPlainSectionCards
+import org.p23q.shoppinglist.ui.assertSectionCardOrder
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
@@ -105,7 +113,7 @@ class ListPropsScreenTest {
         composeTestRule.onNodeWithText("Groceries").assertExists()
         composeTestRule.onNodeWithText("dairy").assertExists()
 
-        composeTestRule.onNodeWithText("Leave list").performScrollTo().performClick()
+        composeTestRule.onNode(hasText("Leave list") and hasClickAction()).performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Leave this list?").assertExists()
@@ -374,7 +382,8 @@ class ListPropsScreenTest {
             Syncer { SyncResult.Success(0, 0, 0, 0) },
         )
 
-        composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
+        composeTestRule.setContent { InBrandColors { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) } }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.local != null }
         composeTestRule.waitForIdle()
         return db to viewModel
     }
@@ -437,12 +446,106 @@ class ListPropsScreenTest {
         composeTestRule.onNodeWithText("Notify about changes to this list").assertDoesNotExist()
         composeTestRule.onNodeWithText("Leave list").assertDoesNotExist()
 
-        composeTestRule.onNodeWithText("Delete list").performScrollTo().performClick()
+        composeTestRule.onNode(hasText("Delete list") and hasClickAction()).performScrollTo().performClick()
         composeTestRule.onNodeWithText("Delete this list?").assertExists()
         composeTestRule.onNodeWithText("Delete").performClick()
         composeTestRule.waitUntil(timeoutMillis = 5_000) { left }
 
         assertEquals(null, listsRepo.getById(listId))
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `a shopping list's sections sit in cards in the order both clients share, Clear checked last in the List card (T-337)`() = runBlocking<Unit> {
+        server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}"""))
+
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount(serverUrl = server.url("/").toString()))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        itemsRepo.createItem(listId, "Milk", Status.CHECKED)
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+
+        composeTestRule.setContent { InBrandColors { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) } }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            viewModel.uiState.value.local != null && viewModel.uiState.value.checkedCount == 1
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.assertSectionCardOrder(
+            "List", "Categories", "Notes", "Shared with", "Notifications", "Actions", "Leave list",
+        )
+        composeTestRule.assertPlainSectionCards("List", "Categories", "Notes", "Shared with", "Notifications", "Actions")
+        composeTestRule.assertDangerSectionCard("Leave list")
+        composeTestRule.assertInSectionCard("List", "Clear checked (1)")
+        composeTestRule.assertInSectionCard("List", "Type")
+        composeTestRule.assertInSectionCard("Actions", "Duplicate list")
+        composeTestRule.onNodeWithText("Closing").assertDoesNotExist()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `a ledger's sections sit in cards with Closing directly above Leave, and no Actions (T-337)`() = runBlocking<Unit> {
+        val (db, viewModel) = showExpenseSettings(closeVotes = emptyList())
+
+        composeTestRule.assertSectionCardOrder("List", "Notes", "Shared with", "Notifications", "Closing", "Leave list")
+        composeTestRule.assertPlainSectionCards("List", "Notes", "Shared with", "Notifications", "Closing")
+        composeTestRule.assertDangerSectionCard("Leave list")
+        composeTestRule.assertInSectionCard("Leave list", "A ledger can only be left once it is closed.")
+        composeTestRule.onNodeWithText("Categories").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Actions").assertDoesNotExist()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `a list in the local area keeps the same cards, its Shared with saying it cannot be, and Delete in the danger card (T-337)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.accountDao().insert(org.p23q.shoppinglist.ui.accounts.localAccountRow("on-phone"))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create("on-phone", "Hardware")
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_screen_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+
+        composeTestRule.setContent { InBrandColors { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) } }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.local != null }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.assertSectionCardOrder("List", "Categories", "Notes", "Shared with", "Actions", "Delete list")
+        composeTestRule.assertInSectionCard("Shared with", "Lists on this phone cannot be shared.")
+        composeTestRule.assertDangerSectionCard("Delete list")
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

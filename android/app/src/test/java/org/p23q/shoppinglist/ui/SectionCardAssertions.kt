@@ -49,3 +49,21 @@ fun ComposeContentTestRule.assertDangerSectionCard(title: String) {
     assertEquals(sectionTestScheme.error, sectionCard(title).fetchSemanticsNode().config.getOrElseNullable(SectionCardBorder) { null })
     assertEquals(sectionTestScheme.error, titleColor(title))
 }
+
+/**
+ * The section cards headed by [titles] stand one below the other in exactly this order (T-337).
+ * By their laid-out positions, which a scrolled column keeps for the cards off screen too.
+ */
+fun ComposeContentTestRule.assertSectionCardOrder(vararg titles: String) {
+    val tops = titles.map { title -> sectionCard(title).fetchSemanticsNode().positionInRoot.y }
+    assertEquals(titles.toList(), titles.zip(tops).sortedBy { it.second }.map { it.first })
+    assertEquals("two cards at one height", tops.size, tops.toSet().size)
+}
+
+/** Something showing [text] sits inside the section card headed by [title] (T-337). */
+fun ComposeContentTestRule.assertInSectionCard(title: String, text: String) {
+    onNode(
+        hasText(text) and hasAnyAncestor(hasTestTag("section-card") and hasAnyDescendant(hasText(title))),
+        useUnmergedTree = true,
+    ).assertExists()
+}

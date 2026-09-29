@@ -160,6 +160,8 @@
 
     <!-- list properties -->
     <string name="listprops_list_name">List name</string>
+    <string name="listprops_list">List</string>
+    <string name="listprops_actions">Actions</string>
     <string name="listprops_type">Type</string>
     <string name="listprops_kind_checklist">Items have a name, category and note.</string>
     <string name="listprops_kind_shopping">Items also have stores, quantity and price.</string>
