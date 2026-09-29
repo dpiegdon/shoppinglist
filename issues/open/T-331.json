@@ -1,0 +1,12 @@
+{
+  "body": "enableEdgeToEdge() sets the system bar icon appearance from the phone's own dark-mode setting. With the app on Light and the phone on Dark the status bar icons are white on the now flat white background, and black on black the other way round (T-324 removed the tinted surface that hid it). Fix: ShoppingListTheme sets WindowInsetsControllerCompat.isAppearanceLightStatusBars/NavigationBars from the theme it renders, on every change. Robolectric test for both combinations; screenshots unaffected.",
+  "created_at": "2026-09-29T19:24:34+00:00",
+  "id": "T-331",
+  "labels": [
+    "android",
+    "bug"
+  ],
+  "priority": 1,
+  "title": "Android: status-bar and navigation-bar icons follow the app's theme, not the phone's (invisible on the flat backgrounds)",
+  "updated_at": "2026-09-29T19:24:34+00:00"
+}
