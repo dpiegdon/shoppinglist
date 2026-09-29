@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.admin
 
+import org.p23q.shoppinglist.ui.assertPlainSectionCards
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -113,6 +114,14 @@ class AdminScreenTest {
         composeTestRule.onNodeWithText("Your password (for reset/delete)").assertExists()
         composeTestRule.onNodeWithText("Refresh").assertExists()
 
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `registration and users each sit in a card, as on the web (T-336)`() = runBlocking<Unit> {
+        val viewModel = openConsoleWithUsers()
+
+        composeTestRule.assertPlainSectionCards("Registration", "Users")
         viewModel.viewModelScope.cancel()
     }
 

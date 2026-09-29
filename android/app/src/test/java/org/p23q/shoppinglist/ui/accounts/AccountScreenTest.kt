@@ -1,5 +1,8 @@
 package org.p23q.shoppinglist.ui.accounts
 
+import org.p23q.shoppinglist.ui.assertDangerSectionCard
+import org.p23q.shoppinglist.ui.assertPlainSectionCards
+import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.assertIsEnabled
@@ -119,6 +122,23 @@ class AccountScreenTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Confirm password").assertExists()
         assertEquals(null, gone)
+    }
+
+    @Test
+    fun `each section sits in its own card, the danger zone bordered and titled in red, as on the web (T-336)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { InBrandColors { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) } }
+        awaitLoads(viewModel)
+
+        composeTestRule.assertPlainSectionCards(
+            "Default currency",
+            "Displayed initials",
+            "Change password",
+            "Change email",
+            "Sessions",
+        )
+        composeTestRule.assertDangerSectionCard("Danger zone")
     }
 
     @Test
@@ -319,6 +339,21 @@ class AccountScreenTest {
         composeTestRule.onNodeWithText("Change password").assertDoesNotExist()
         composeTestRule.onNodeWithTag("account-delete").assertDoesNotExist()
         assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `the local area's explanation and its removal sit in cards, the removal's bordered in red (T-336)`() = runBlocking<Unit> {
+        val local = accounts.registry.addLocal()!!
+        val viewModel = newViewModel(local.id)
+
+        composeTestRule.setContent { InBrandColors { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) } }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.listCount != null
+        }
+
+        composeTestRule.assertPlainSectionCards("On this phone")
+        composeTestRule.assertDangerSectionCard("Danger zone")
     }
 
     @Test

@@ -1,5 +1,7 @@
 package org.p23q.shoppinglist.ui.settings
 
+import org.p23q.shoppinglist.ui.assertPlainSectionCards
+import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.closeWhenIdle
 import androidx.compose.ui.test.assertCountEquals
@@ -115,6 +117,17 @@ class SettingsScreenTest {
         // The whole App-updates block and the version line are on About.
         composeTestRule.onNodeWithText("App updates").assertDoesNotExist()
         composeTestRule.onAllNodesWithText("Version", substring = true).assertCountEquals(0)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `each section sits in its own card, as on the web (T-336)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { InBrandColors { SettingsScreen(viewModel = viewModel) } }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.assertPlainSectionCards("Theme", "Notifications", "Diagnostics")
         viewModel.viewModelScope.cancel()
     }
 
