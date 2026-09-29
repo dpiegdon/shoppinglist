@@ -90,6 +90,8 @@ export const ptBR: Catalog = {
   "item.currencyInvalid": "Use um código de 3 letras como EUR",
 
   "listProps.title": "Propriedades da lista",
+  "listProps.list": "Lista",
+  "listProps.actions": "Ações",
   "listProps.name": "Nome",
   "listProps.type": "Tipo",
   "listProps.kind.checklist": "Os itens têm nome, categoria e observação.",

@@ -393,8 +393,12 @@ export default function ListPropsPage() {
         </p>
       )}
 
-      <section style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.name")}</h2>
+      {/* The sections sit in cards, as in Settings and on Android, in one order on both clients
+          (T-337): the list itself, its categories, notes, who it is shared with, closing a ledger,
+          the actions, and last, in red, leaving it. */}
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.list")}</h2>
+        <h3 style={{ fontSize: "0.9rem", margin: "0 0 0.5rem" }}>{t("listProps.name")}</h3>
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
           <input value={name} onChange={(e) => setName(e.target.value)} disabled={lockedByVote} style={{ flex: 1 }} />
           <button type="submit" className="btn" disabled={savingName || lockedByVote}>
@@ -406,10 +410,8 @@ export default function ListPropsPage() {
             {nameError}
           </p>
         )}
-      </section>
 
-      <section style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.type")}</h2>
+        <h3 style={{ fontSize: "0.9rem", margin: "1rem 0 0.5rem" }}>{t("listProps.type")}</h3>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
             <div>{t(listKindLabelKey(listKind(list)))}</div>
@@ -446,28 +448,29 @@ export default function ListPropsPage() {
             {kindError}
           </p>
         )}
+
+        {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only
+            shown when there's something to clear; the last thing in the List card, directly under
+            the type (T-337). */}
+        {!isExpenses(listKind(list)) && allChecked.length > 0 && (
+          <>
+            <h3 style={{ fontSize: "0.9rem", margin: "1rem 0 0.5rem" }}>{t("listProps.clearChecked")}</h3>
+            <p className="muted" style={{ margin: "0 0 0.6rem" }}>
+              {t("listProps.clearCheckedHelp")}
+            </p>
+            <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
+              {t("listProps.clearCheckedCount", { count: allChecked.length })}
+            </button>
+            {clearCheckedError && (
+              <p className="error-text" role="alert">
+                {clearCheckedError}
+              </p>
+            )}
+          </>
+        )}
       </section>
 
-      {/* Relocated here from the list screen (T-75): too easy to hit by accident there. Only shown
-          when there's something to clear. */}
-      {!isExpenses(listKind(list)) && allChecked.length > 0 && (
-        <section style={{ marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.clearChecked")}</h2>
-          <p className="muted" style={{ margin: "0 0 0.6rem" }}>
-            {t("listProps.clearCheckedHelp")}
-          </p>
-          <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
-            {t("listProps.clearCheckedCount", { count: allChecked.length })}
-          </button>
-          {clearCheckedError && (
-            <p className="error-text" role="alert">
-              {clearCheckedError}
-            </p>
-          )}
-        </section>
-      )}
-
-      <section style={{ marginBottom: "1.5rem", display: isExpenses(listKind(list)) ? "none" : undefined }}>
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem", display: isExpenses(listKind(list)) ? "none" : undefined }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
         <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
           {t("listProps.categoriesHelp")}
@@ -564,7 +567,7 @@ export default function ListPropsPage() {
       </section>
 
       {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
-      <section style={{ marginBottom: "1.5rem" }}>
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.notes")}</h2>
         <form onSubmit={saveNotes} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <textarea
@@ -586,7 +589,7 @@ export default function ListPropsPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: "1.5rem" }}>
+      <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.members")}</h2>
         {membersError && <p className="error-text">{membersError}</p>}
         {members && (
@@ -660,7 +663,7 @@ export default function ListPropsPage() {
       {/* Closing sits directly above Leave (T-169): they are two stages of one thing — agree to
           close, then, once closed, leave. */}
       {isExpenses(listKind(list)) && (
-        <section style={{ marginBottom: "1.5rem" }}>
+        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("expense.closing")}</h2>
           <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
             {t("expense.closingHelp")}
@@ -677,37 +680,45 @@ export default function ListPropsPage() {
       )}
 
       {/* Not offered for expenses (T-155): a copy of a shared ledger, with the same debts owed to
-          nobody in particular, is never what someone means. */}
+          nobody in particular, is never what someone means. So a ledger has no Actions card, and
+          Closing stands directly above Leave. */}
       {!isExpenses(listKind(list)) && (
-        <button type="button" className="btn" onClick={handleDuplicate} style={{ width: "100%", marginBottom: "0.75rem" }}>
-          {t("action.duplicate")}
+        <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.actions")}</h2>
+          <button type="button" className="btn" onClick={handleDuplicate} style={{ width: "100%" }}>
+            {t("action.duplicate")}
+          </button>
+          {duplicateError && (
+            <p className="error-text" role="alert">
+              {duplicateError}
+            </p>
+          )}
+        </section>
+      )}
+
+      <section className="card" style={{ padding: "1rem", borderColor: "var(--color-danger)" }}>
+        <h2 style={{ fontSize: "1rem", marginTop: 0, color: "var(--color-danger)" }}>{t("listProps.leaveList")}</h2>
+        {/* An open expenses list cannot be left (T-157): the server refuses it, and saying why
+            here beats letting the button fail. */}
+        <button
+          type="button"
+          className="btn btn-danger"
+          disabled={isExpenses(listKind(list)) && (list.closed_at ?? null) === null}
+          onClick={handleLeave}
+        >
+          {t("listProps.leaveList")}
         </button>
-      )}
-      {/* An open expenses list cannot be left (T-157): the server refuses it, and saying why
-          here beats letting the button fail. */}
-      <button
-        type="button"
-        className="btn btn-danger"
-        disabled={isExpenses(listKind(list)) && (list.closed_at ?? null) === null}
-        onClick={handleLeave}
-      >
-        {t("listProps.leaveList")}
-      </button>
-      {isExpenses(listKind(list)) && (list.closed_at ?? null) === null && (
-        <p className="muted" style={{ fontSize: "0.8rem", marginTop: "0.4rem" }}>
-          {t("listProps.leaveBlocked")}
-        </p>
-      )}
-      {duplicateError && (
-        <p className="error-text" role="alert">
-          {duplicateError}
-        </p>
-      )}
-      {leaveError && (
-        <p className="error-text" role="alert">
-          {leaveError}
-        </p>
-      )}
+        {isExpenses(listKind(list)) && (list.closed_at ?? null) === null && (
+          <p className="muted" style={{ fontSize: "0.8rem", margin: "0.4rem 0 0" }}>
+            {t("listProps.leaveBlocked")}
+          </p>
+        )}
+        {leaveError && (
+          <p className="error-text" role="alert">
+            {leaveError}
+          </p>
+        )}
+      </section>
     </main>
   );
 }

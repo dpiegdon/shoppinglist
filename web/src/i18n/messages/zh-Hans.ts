@@ -91,6 +91,8 @@ export const zhHans: Catalog = {
   "item.currencyInvalid": "请使用类似 EUR 的 3 位代码",
 
   "listProps.title": "清单属性",
+  "listProps.list": "清单",
+  "listProps.actions": "操作",
   "listProps.name": "名称",
   "listProps.type": "类型",
   "listProps.kind.checklist": "物品包含名称、分类和备注。",

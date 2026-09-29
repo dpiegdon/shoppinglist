@@ -93,6 +93,8 @@ export const ar: Catalog = {
   "item.currencyInvalid": "استخدم رمزًا من 3 أحرف مثل EUR",
 
   "listProps.title": "خصائص القائمة",
+  "listProps.list": "القائمة",
+  "listProps.actions": "إجراءات",
   "listProps.name": "الاسم",
   "listProps.type": "النوع",
   "listProps.kind.checklist": "العناصر لها اسم وفئة وملاحظة.",

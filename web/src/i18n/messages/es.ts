@@ -87,6 +87,8 @@ export const es: Catalog = {
   "item.currencyInvalid": "Usa un código de 3 letras como EUR",
 
   "listProps.title": "Propiedades de la lista",
+  "listProps.list": "Lista",
+  "listProps.actions": "Acciones",
   "listProps.name": "Nombre",
   "listProps.type": "Tipo",
   "listProps.kind.checklist": "Los artículos tienen nombre, categoría y nota.",

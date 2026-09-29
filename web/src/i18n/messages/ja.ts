@@ -92,6 +92,8 @@ export const ja: Catalog = {
   "item.currencyInvalid": "EUR のような 3 文字のコードを使用してください",
 
   "listProps.title": "リストのプロパティ",
+  "listProps.list": "リスト",
+  "listProps.actions": "操作",
   "listProps.name": "名前",
   "listProps.type": "種類",
   "listProps.kind.checklist": "アイテムには名前、カテゴリ、メモがあります。",

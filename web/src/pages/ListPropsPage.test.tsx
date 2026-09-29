@@ -685,3 +685,96 @@ describe("category merge confirmation goes through the catalog (T-270)", () => {
     });
   });
 });
+
+describe("ListPropsPage sections in cards, in the order both clients share (T-337)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  function renderProperties() {
+    render(
+      <MemoryRouter initialEntries={["/list/list-1/properties"]}>
+        <AuthProvider>
+          <SyncProvider>
+            <Routes>
+              <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+            </Routes>
+          </SyncProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  /** The visible section titles, top to bottom, each checked to head a card. */
+  function cardTitles() {
+    const titles = screen.getAllByRole("heading", { level: 2 });
+    for (const title of titles) expect(title.closest("section")).toHaveClass("card");
+    return titles.map((title) => title.textContent);
+  }
+
+  function checkedItem() {
+    return {
+      id: "item-1",
+      list_id: "list-1",
+      created_at: 0,
+      fields: {
+        name: clock("Milk"),
+        category: clock(null),
+        stores: clock([]),
+        quantity: clock(null),
+        price: clock(null),
+        note: clock(null),
+        status: clock<ItemStatus>("checked"),
+        deleted: clock(false),
+      },
+    };
+  }
+
+  it("a shopping list: List (Clear checked last in it), Categories, Notes, Members, Actions, then Leave in a red card", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items: [checkedItem()] } });
+    renderProperties();
+
+    const clear = await screen.findByRole("button", { name: "Clear checked (1)" });
+    expect(cardTitles()).toEqual(["List", "Categories", "Notes", "Members", "Actions", "Leave list"]);
+
+    const listCard = screen.getByRole("heading", { name: "List", level: 2 }).closest("section")!;
+    expect(clear.closest("section")).toBe(listCard);
+    // The last thing in the List card, under the type.
+    expect(listCard.lastElementChild).toContainElement(clear);
+    expect(within(listCard).getByRole("heading", { name: "Type" })).toBeInTheDocument();
+
+    const actions = screen.getByRole("heading", { name: "Actions", level: 2 }).closest("section")!;
+    expect(within(actions).getByRole("button", { name: "Duplicate list" })).toBeInTheDocument();
+
+    const leaveTitle = screen.getByRole("heading", { name: "Leave list", level: 2 });
+    const leaveCard = leaveTitle.closest("section")!;
+    expect(leaveCard.style.borderColor).toBe("var(--color-danger)");
+    expect(leaveTitle.style.color).toBe("var(--color-danger)");
+    expect(within(leaveCard).getByRole("button", { name: "Leave list" })).toBeInTheDocument();
+    // Plain cards carry no danger border.
+    for (const title of ["List", "Categories", "Notes", "Members", "Actions"]) {
+      expect(screen.getByRole("heading", { name: title, level: 2 }).closest("section")!.style.borderColor).toBe("");
+    }
+  });
+
+  it("a ledger: no categories or actions, and Closing directly above Leave", async () => {
+    const ledger = listObj(null, "expenses");
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [{ ...ledger, fields: { ...ledger.fields, currency: clock("EUR") } }], items: [] },
+    });
+    renderProperties();
+
+    await screen.findByRole("heading", { name: "Closing", level: 2 });
+    expect(cardTitles()).toEqual(["List", "Notes", "Members", "Closing", "Leave list"]);
+    const leaveCard = screen.getByRole("heading", { name: "Leave list", level: 2 }).closest("section")!;
+    expect(within(leaveCard).getByText("A ledger can only be left once it is closed.")).toBeInTheDocument();
+  });
+});

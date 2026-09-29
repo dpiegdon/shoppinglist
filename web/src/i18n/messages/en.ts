@@ -120,6 +120,8 @@ export const en = {
 
   // ---- list properties ----
   "listProps.title": "List properties",
+  "listProps.list": "List",
+  "listProps.actions": "Actions",
   "listProps.name": "Name",
   "listProps.type": "Type",
   "listProps.kind.checklist": "Items have a name, category and note.",

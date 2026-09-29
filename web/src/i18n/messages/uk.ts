@@ -91,6 +91,8 @@ export const uk: Catalog = {
   "item.currencyInvalid": "Використай 3-літерний код, наприклад EUR",
 
   "listProps.title": "Властивості списку",
+  "listProps.list": "Список",
+  "listProps.actions": "Дії",
   "listProps.name": "Назва",
   "listProps.type": "Тип",
   "listProps.kind.checklist": "Товари мають назву, категорію та нотатку.",
