@@ -1,0 +1,13 @@
+{
+  "body": "The kind icons (\ud83d\uded2, \u2713, \ud83d\udcb6) differ in width, so the names after them start at different positions. Give the icon a fixed-width, centred slot on list cards and invitation cards: web a .kind-icon class (inline-block, 1.5em, centred, no shrink), Android a shared KindIcon composable 28dp wide with centred text. Same across all account sections.",
+  "created_at": "2026-09-29T19:34:52+00:00",
+  "id": "T-332",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Overview: the list-kind icon sits in a fixed-width column so list names align (both clients)",
+  "updated_at": "2026-09-29T19:34:52+00:00"
+}
