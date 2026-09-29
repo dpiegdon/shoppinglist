@@ -1,0 +1,12 @@
+{
+  "body": "The admin console's server-message Save is disabled until the text changes: on the web it shows as the accent button at opacity 0.5, on Android as Material's flat grey. Add TuppuButton in Theme.kt (like TuppuTextButton) whose disabled container is the enabled container at 50 % alpha and whose content keeps its colour, use it for every filled Button on Android (danger buttons included via dangerButtonColors, which gets the same disabled rule), and pin it: ThemeTest checks no Material Button import outside Theme.kt, and a test on the disabled colours.",
+  "created_at": "2026-09-29T19:56:36+00:00",
+  "id": "T-334",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Android: a disabled filled button looks like the web's, the button's own colour at half strength, not Material's grey",
+  "updated_at": "2026-09-29T19:56:36+00:00"
+}
