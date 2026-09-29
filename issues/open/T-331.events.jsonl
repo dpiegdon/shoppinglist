@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-29T19:24:34+00:00", "kind": "created", "ref": "main@790fb49d", "text": "Android: status-bar and navigation-bar icons follow the app's theme, not the phone's (invisible on the flat backgrounds)"}
+{"actor": "user", "at": "2026-09-29T19:34:51+00:00", "kind": "note", "ref": "main@edbe112f", "text": "Fixed in edbe112f, full gate green; SystemBarIconsTest covers both combinations starting from enableEdgeToEdge (both fail without the fix)."}
