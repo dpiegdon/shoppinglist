@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.theme
 
+import androidx.compose.material3.contentColorFor
 import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -81,6 +82,16 @@ class ThemeTest {
             ThemeVariant.DARK, BackgroundDark, ForegroundDark, AccentDark, AccentTextDark,
             OnAccentDark, MutedDark, BorderDark, SurfaceDark,
         )
+    }
+
+    @Test
+    fun `a card writes in the plain text colour, not the accent (T-337)`() {
+        // A Material Card's default colours: surfaceContainerHighest, and the content colour
+        // contentColorFor picks for it. tertiaryContainer shares that surface and is matched first.
+        for (variant in ThemeVariant.entries) {
+            val scheme = brandColorScheme(variant)
+            assertEquals("$variant", scheme.onSurface, scheme.contentColorFor(scheme.surfaceContainerHighest))
+        }
     }
 
     /** WCAG 2.1 relative luminance. */

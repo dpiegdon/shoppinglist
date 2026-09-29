@@ -39,7 +39,10 @@ fun themeVariant(darkTheme: Boolean): ThemeVariant = if (darkTheme) ThemeVariant
 // - cards, dialogs, the drawer and menus sit on the neutral secondary surface;
 // - the selected state (secondaryContainer: the drawer's current entry, a selected chip) is the
 //   accent, as on the web;
-// - tertiary is the highlighted text, read through [accentText].
+// - tertiary is the highlighted text, read through [accentText]. tertiaryContainer is the card
+//   surface, and Material's contentColorFor matches it before surfaceContainerHighest, so its
+//   onTertiaryContainer is the plain text: every card writes in plain text, not the accent
+//   (T-337).
 // The reds (T-333): a meaning colour, not a brand one — errors, overdue dates, the fill of every
 // button that destroys something. The same values are the web's --color-danger, --color-danger-text
 // and --color-danger-bg; web/src/lib/brandColors.test.ts reads them here and fails on drift.
@@ -63,7 +66,7 @@ private val LightColors = lightColorScheme(
     tertiary = AccentTextLight,
     onTertiary = BackgroundLight,
     tertiaryContainer = SurfaceLight,
-    onTertiaryContainer = AccentTextLight,
+    onTertiaryContainer = ForegroundLight,
     background = BackgroundLight,
     onBackground = ForegroundLight,
     surface = BackgroundLight,
@@ -101,7 +104,7 @@ private val DarkColors = darkColorScheme(
     tertiary = AccentTextDark,
     onTertiary = BackgroundDark,
     tertiaryContainer = SurfaceDark,
-    onTertiaryContainer = AccentTextDark,
+    onTertiaryContainer = ForegroundDark,
     background = BackgroundDark,
     onBackground = ForegroundDark,
     surface = BackgroundDark,

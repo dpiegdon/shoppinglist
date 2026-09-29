@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,9 +25,9 @@ val SectionCardBorder = SemanticsPropertyKey<Color>("SectionCardBorder")
 private var SemanticsPropertyReceiver.sectionCardBorder by SectionCardBorder
 
 /**
- * One section of the Settings, Account or Admin screen, in a card as the web shows it (its
- * `.card` with 1rem padding and the title inside). The overview's card colour (the web's
- * `--color-surface`). A [danger] section, the web's delete-account card, has a 1dp border and its
+ * One section of the Settings, Account, Admin or list-properties screen, in a card as the web shows it (its
+ * `.card` with 1rem padding and the title inside), in Material's default card colours: the
+ * overview's card surface (the web's `--color-surface`) and the plain text colour. A [danger] section, the web's delete-account card, has a 1dp border and its
  * title in the error colour.
  */
 @Composable
@@ -40,12 +39,6 @@ fun SectionCard(
 ) {
     val border = if (danger) BorderStroke(1.dp, MaterialTheme.colorScheme.error) else null
     Card(
-        // Plain text colour: the default content colour for this container resolves to the accent
-        // text, since the scheme's tertiaryContainer is the same surface colour.
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
         border = border,
         modifier = modifier
             .fillMaxWidth()
