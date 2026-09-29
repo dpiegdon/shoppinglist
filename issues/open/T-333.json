@@ -1,0 +1,13 @@
+{
+  "body": "Android kept Material's default error reds (#B3261E light, #F2B8B5 dark, which reads mauve) while the web uses #DC2626 / #F87171; overdue dates and delete buttons looked washed out next to the web. Pin Android's error, onError, errorContainer and onErrorContainer to the web's --color-danger, --color-danger-text, --color-danger-bg in both themes, and extend the parity test to them. Also trim the T-332 kind-icon slot to the widest icon (Android 22dp, web 1.25em) so names start about where shopping lists always did.",
+  "created_at": "2026-09-29T19:52:27+00:00",
+  "id": "T-333",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "Android: the reds are the web's (error/delete buttons/overdue), and the kind-icon slot trimmed to just fit",
+  "updated_at": "2026-09-29T19:52:27+00:00"
+}
