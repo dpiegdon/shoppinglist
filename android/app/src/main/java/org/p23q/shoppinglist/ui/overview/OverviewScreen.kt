@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -37,9 +37,10 @@ import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,13 +56,13 @@ import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.ServerMessage
 import org.p23q.shoppinglist.ui.SyncStatusBar
-import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.accountName
+import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
-import org.p23q.shoppinglist.ui.theme.accentText
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
+import org.p23q.shoppinglist.ui.theme.accentText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -479,10 +480,7 @@ private fun ListCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = ListKind.icon(list.kind.value),
-                modifier = Modifier.padding(end = 8.dp),
-            )
+            KindIcon(list.kind.value)
             Text(text = list.name.value, modifier = Modifier.weight(1f))
             if (summary != null) {
                 // What has been spent, and where this account stands —
@@ -569,7 +567,7 @@ private fun InviteCard(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = ListKind.icon(invite.listKind), modifier = Modifier.padding(end = 8.dp))
+            KindIcon(invite.listKind)
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = invite.listName)
                 Text(
@@ -592,3 +590,14 @@ private fun InviteCard(
         }
     }
 }
+
+/** The list-kind icon in a fixed-width slot, so list names line up whatever the icon's width (T-332). */
+@Composable
+internal fun KindIcon(kind: String?) {
+    Text(
+        text = ListKind.icon(kind),
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(end = 8.dp).width(28.dp).testTag("kind-icon"),
+    )
+}
+

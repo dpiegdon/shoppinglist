@@ -474,3 +474,11 @@ html[dir="rtl"] .item-exiting {
     display: none;
   }
 }
+
+/* The list-kind icon in a fixed-width slot, so list names line up whatever the icon's width (T-332). */
+.kind-icon {
+  display: inline-block;
+  flex: none;
+  width: 1.5em;
+  text-align: center;
+}

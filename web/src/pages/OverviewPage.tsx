@@ -245,7 +245,7 @@ export default function OverviewPage() {
         className="card"
         style={{ padding: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
       >
-        <span aria-label={kindLabel} title={kindLabel}>
+        <span className="kind-icon" aria-label={kindLabel} title={kindLabel}>
           {listKindIcon(invite.list_kind)}
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
@@ -304,7 +304,11 @@ export default function OverviewPage() {
                 gap: "0.5rem",
               }}
             >
-              <span aria-label={t(listKindLabelKey(listKind(list)))} title={t(listKindLabelKey(listKind(list)))}>
+              <span
+                className="kind-icon"
+                aria-label={t(listKindLabelKey(listKind(list)))}
+                title={t(listKindLabelKey(listKind(list)))}
+              >
                 {listKindIcon(listKind(list))}
               </span>
               <span dir="auto" style={{ flex: 1, minWidth: 0 }}>{listFieldValue(list, "name")}</span>

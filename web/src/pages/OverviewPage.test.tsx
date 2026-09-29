@@ -180,6 +180,14 @@ describe("OverviewPage with expenses lists", () => {
     expect(screen.getByText("1")).toBeInTheDocument();
   });
 
+  it("puts the kind icon in its fixed-width slot, so list names line up (T-332)", async () => {
+    renderOverview();
+
+    const name = await screen.findByText("Trip");
+    const icon = name.previousElementSibling;
+    expect(icon).toHaveClass("kind-icon");
+  });
+
   it("counts a ledger's income against what it spent", async () => {
     const clock = <T,>(value: T) => ({ value, updated_at: 1, updated_by: "dev" });
     const response = expensesSyncResponse();

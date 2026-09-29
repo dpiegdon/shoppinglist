@@ -38,6 +38,7 @@ import org.p23q.shoppinglist.core.db.AccountEntity
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.p23q.shoppinglist.core.ListKind
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
@@ -123,6 +124,20 @@ class OverviewScreenTest {
             viewModel.uiState.value.lists.isNotEmpty() && viewModel.uiState.value.accounts.isNotEmpty()
         }
         composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `list names start at the same edge whatever the kind icon (T-332)`() = runBlocking<Unit> {
+        listsRepo.create(TEST_ACCOUNT_ID, "Chores", kind = ListKind.CHECKLIST)
+        listsRepo.create(TEST_ACCOUNT_ID, "Trip", kind = ListKind.EXPENSES, currency = "EUR")
+        show()
+
+        val lefts = listOf("Groceries", "Chores", "Trip").map { name ->
+            composeTestRule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.left
+        }
+        assertEquals("names aligned: $lefts", 1, lefts.toSet().size)
+        composeTestRule.onAllNodesWithTag("kind-icon", useUnmergedTree = true).fetchSemanticsNodes()
+            .map { it.boundsInRoot.width }.toSet().let { assertEquals("one icon width", 1, it.size) }
     }
 
     @Test
