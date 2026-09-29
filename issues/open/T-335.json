@@ -1,0 +1,12 @@
+{
+  "body": "The web shows 'N of M agreed to close \u2026 [Agree to close]' and 'Closed on \u2026' in a card box; Android drew them bare. Wrap both in the overview's card style with the web's spacing. Test: the card exists when votes are cast and when closed.",
+  "created_at": "2026-09-29T20:00:35+00:00",
+  "id": "T-335",
+  "labels": [
+    "android",
+    "ux"
+  ],
+  "priority": 3,
+  "title": "Android: the ledger's close-vote line sits in a card, as on the web",
+  "updated_at": "2026-09-29T20:00:35+00:00"
+}
