@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +60,7 @@ import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 import org.p23q.shoppinglist.ui.theme.accentText
 
@@ -584,7 +584,7 @@ private fun InviteCard(
                 }
                 Spacer(Modifier.width(4.dp))
             }
-            Button(onClick = onJoin, enabled = !busy, contentPadding = CompactButtonPadding) {
+            TuppuButton(onClick = onJoin, enabled = !busy, contentPadding = CompactButtonPadding) {
                 Text(stringResource(R.string.action_join))
             }
         }
@@ -597,7 +597,8 @@ internal fun KindIcon(kind: String?) {
     Text(
         text = ListKind.icon(kind),
         textAlign = TextAlign.Center,
-        modifier = Modifier.padding(end = 8.dp).width(28.dp).testTag("kind-icon"),
+        modifier = Modifier.padding(end = 8.dp).width(22.dp).testTag("kind-icon"),
     )
 }
+
 

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -26,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
  * App Link entry point: a tapped `https://<server>/invite/<token>` link lands here and redeems
@@ -74,7 +74,7 @@ fun RedeemScreen(
             error != null -> {
                 Text(error.asString(), color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                TuppuButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
             }
             state.choices.isNotEmpty() -> {
                 Text(stringResource(R.string.redeem_choose_account), style = MaterialTheme.typography.titleMedium)
@@ -88,7 +88,7 @@ fun RedeemScreen(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                TuppuButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
             }
             else -> {
                 CircularProgressIndicator()
@@ -119,3 +119,4 @@ internal fun InviteAccountLines(account: AccountEntity) {
         }
     }
 }
+

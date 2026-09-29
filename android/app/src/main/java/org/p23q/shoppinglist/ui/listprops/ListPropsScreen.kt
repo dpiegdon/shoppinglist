@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,11 +53,12 @@ import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.accountLineText
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.dragReorderHandle
 import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
-import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
@@ -112,7 +112,7 @@ fun ListPropsScreen(
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
-            Button(onClick = { viewModel.saveName() }, enabled = !lockedByVote) {
+            TuppuButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote) {
                 Text(stringResource(R.string.action_save))
             }
         }
@@ -169,7 +169,7 @@ fun ListPropsScreen(
         // every checked item to backlog. A proper filled red button (T-82), matching the web
         // version's btn-danger; only shown when there's something to clear.
         if (state.checkedCount > 0) {
-            Button(
+            TuppuButton(
                 onClick = { viewModel.clearChecked() },
                 colors = dangerButtonColors(),
             ) {
@@ -191,7 +191,7 @@ fun ListPropsScreen(
                 onMoveDown = viewModel::moveCategoryDown,
                 onRename = { index, newName -> viewModel.renameCategory(index, newName) },
             )
-            Button(onClick = { viewModel.saveCategoryOrder() }, modifier = Modifier.fillMaxWidth()) {
+            TuppuButton(onClick = { viewModel.saveCategoryOrder() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.listprops_save_order))
             }
             Spacer(Modifier.height(16.dp))
@@ -209,7 +209,7 @@ fun ListPropsScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { viewModel.saveNotes() }, enabled = !lockedByVote, modifier = Modifier.fillMaxWidth()) {
+        TuppuButton(onClick = { viewModel.saveNotes() }, enabled = !lockedByVote, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.listprops_save_notes))
         }
         Spacer(Modifier.height(16.dp))
@@ -234,7 +234,7 @@ fun ListPropsScreen(
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
         if (!isExpenses) {
-            Button(onClick = { viewModel.requestDuplicate(copySuffix) }, modifier = Modifier.fillMaxWidth()) {
+            TuppuButton(onClick = { viewModel.requestDuplicate(copySuffix) }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.action_duplicate))
             }
         }
@@ -250,7 +250,7 @@ fun ListPropsScreen(
         // An open expenses list cannot be left (T-157) — saying why beats a button that fails.
         // A local list is deleted instead: it exists on this phone alone (T-293).
         val leaveBlocked = isExpenses && state.closedAt == null
-        Button(
+        TuppuButton(
             onClick = viewModel::requestLeave,
             enabled = !leaveBlocked,
             colors = dangerButtonColors(),
@@ -366,7 +366,7 @@ private fun SharingSections(state: ListPropsUiState, viewModel: ListPropsViewMod
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.listprops_invite_pending, invite.invitedEmail))
-            Button(
+            TuppuButton(
                 onClick = { viewModel.revokeInvite(invite.id) },
                 colors = dangerButtonColors(),
                 contentPadding = CompactButtonPadding,
@@ -384,7 +384,7 @@ private fun SharingSections(state: ListPropsUiState, viewModel: ListPropsViewMod
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(8.dp))
-        Button(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
+        TuppuButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
     }
 }
 
@@ -413,7 +413,7 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Button(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
+            TuppuButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
                 Text(
                     stringResource(
                         if (state.myAccountId in state.closeVotes) {
@@ -464,7 +464,7 @@ private fun CategoryOrderList(
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(8.dp))
-                        Button(
+                        TuppuButton(
                             onClick = {
                                 onRename(currentCategories.indexOf(category), draftName)
                                 editingCategory = null
@@ -502,3 +502,4 @@ private fun CategoryOrderList(
         }
     }
 }
+

@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.expense
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,7 +30,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.accentText
 
 /**
@@ -417,41 +419,55 @@ internal fun balanceColor(cents: Long) = when {
 @Composable
 private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit) {
     if (state.isClosed) {
-        Text(
-            text = stringResource(
-                R.string.expense_closed_on,
-                AppFormat.day(state.closedAt ?: 0L, appLocale()),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        )
+        VoteCard {
+            Text(
+                text = stringResource(
+                    R.string.expense_closed_on,
+                    AppFormat.day(state.closedAt ?: 0L, appLocale()),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         return
     }
     if (state.closeVotes.isEmpty()) return
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                stringResource(R.string.expense_agree_count, state.closeVotes.size, state.members.size),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            state.voteError?.let {
+    VoteCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    it.asString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    stringResource(R.string.expense_agree_count, state.closeVotes.size, state.members.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                state.voteError?.let {
+                    Text(
+                        it.asString(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+            TuppuButton(onClick = onToggleVote, enabled = !state.isVoting) {
+                Text(
+                    stringResource(
+                        if (state.iHaveVoted) R.string.expense_withdraw_vote else R.string.expense_agree_to_close,
+                    ),
                 )
             }
         }
-        Button(onClick = onToggleVote, enabled = !state.isVoting) {
-            Text(
-                stringResource(
-                    if (state.iHaveVoted) R.string.expense_withdraw_vote else R.string.expense_agree_to_close,
-                ),
-            )
-        }
     }
 }
+
+/** The close-vote line in a card, as the web shows it (T-335). */
+@Composable
+private fun VoteCard(content: @Composable () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("close-vote-card")) {
+        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) { content() }
+    }
+}
+
+

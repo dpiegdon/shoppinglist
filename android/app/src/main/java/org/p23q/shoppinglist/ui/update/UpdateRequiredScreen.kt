@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.update.AvailableUpdate
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
  * The blocking notice shown while this app is too old for its server (T-240).
@@ -85,7 +85,7 @@ fun UpdateRequiredScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                 )
-                Button(
+                TuppuButton(
                     // Only with an update actually in hand: the button exists to open its URL.
                     onClick = { update?.let(onDownload) },
                     enabled = update != null,
@@ -100,7 +100,7 @@ fun UpdateRequiredScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                 )
-                Button(
+                TuppuButton(
                     onClick = onRetry,
                     modifier = Modifier.padding(top = 16.dp).testTag("update-required-retry"),
                 ) {
@@ -110,3 +110,4 @@ fun UpdateRequiredScreen(
         }
     }
 }
+

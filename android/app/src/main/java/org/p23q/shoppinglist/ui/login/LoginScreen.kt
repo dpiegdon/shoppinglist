@@ -14,9 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -32,6 +31,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -41,14 +41,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.ServerMessage
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.ui.asString
-import org.p23q.shoppinglist.ui.LocalAreaNote
-import org.p23q.shoppinglist.ui.Routes
-import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
+import org.p23q.shoppinglist.ui.LanguagePicker
+import org.p23q.shoppinglist.ui.LocalAreaNote
+import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.ServerMessage
+import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
@@ -179,7 +179,7 @@ fun LoginScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-        Button(
+        TuppuButton(
             onClick = viewModel::submit,
             enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth(),
@@ -251,3 +251,4 @@ fun LoginScreen(
         }
     }
 }
+

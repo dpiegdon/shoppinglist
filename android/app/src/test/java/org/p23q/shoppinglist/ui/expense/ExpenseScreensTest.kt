@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -416,6 +417,16 @@ class ExpenseScreensTest {
 
         composeTestRule.onNodeWithText("$me@example.com pays Former member 1").assertIsDisplayed()
         composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the close-vote line sits in a card, as on the web (T-335)`() = runBlocking<Unit> {
+        setClosing(closeVotes = listOf(other))
+
+        showEntries()
+
+        composeTestRule.onNodeWithTag("close-vote-card").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Votes to close: 1 of 2", substring = true).assertIsDisplayed()
     }
 
     @Test

@@ -14,12 +14,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.time.LocalDate
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.Expense
@@ -27,7 +27,7 @@ import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.appLocale
-import java.time.LocalDate
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
  * Who is up and who is down on a ledger (T-154), and below it who should pay whom to make it all
@@ -160,7 +160,7 @@ fun BalancesContent(
                         if (state.canRecord(transfer)) {
                             val amount = ExpenseMath.fromCents(transfer.cents)
                             Spacer(Modifier.width(8.dp))
-                            Button(
+                            TuppuButton(
                                 contentPadding = CompactButtonPadding,
                                 onClick = {
                                     onReimburse(
@@ -192,3 +192,4 @@ fun BalancesContent(
         }
     }
 }
+

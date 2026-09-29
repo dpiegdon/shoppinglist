@@ -18,7 +18,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,18 +25,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.data.ThemePreference
 import java.io.File
-import org.p23q.shoppinglist.ui.asString
-import androidx.compose.ui.res.stringResource
 import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.core.AppLocale
+import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.deviceLocale
+import org.p23q.shoppinglist.ui.LanguagePicker
+import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 @Composable
 fun SettingsScreen(
@@ -159,7 +159,7 @@ fun SettingsScreen(
             )
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
+        TuppuButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
         // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
         state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
@@ -176,3 +176,4 @@ private fun ThemePreference.label(): String = when (this) {
     ThemePreference.LIGHT -> stringResource(R.string.settings_theme_light)
     ThemePreference.DARK -> stringResource(R.string.settings_theme_dark)
 }
+

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,9 +36,10 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.accountName
-import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.settings.formatLastSeen
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
@@ -112,7 +112,7 @@ fun AccountScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
+                TuppuButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
             }
             Spacer(Modifier.height(16.dp))
 
@@ -129,7 +129,7 @@ fun AccountScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
+                TuppuButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -182,7 +182,7 @@ fun AccountScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
+            TuppuButton(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
             Spacer(Modifier.height(16.dp))
 
             Text(stringResource(R.string.settings_change_email), style = MaterialTheme.typography.titleMedium)
@@ -201,7 +201,7 @@ fun AccountScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
+            TuppuButton(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
             Spacer(Modifier.height(16.dp))
         }
 
@@ -234,7 +234,7 @@ fun AccountScreen(
                         )
                     }
                     if (!session.current) {
-                        Button(
+                        TuppuButton(
                             onClick = { viewModel.revokeSession(session.id) },
                             colors = dangerButtonColors(),
                             contentPadding = CompactButtonPadding,
@@ -255,7 +255,7 @@ fun AccountScreen(
         // with a session: the server would refuse it with 401, read as a wrong password (T-300).
         if (!signedOut) {
             Spacer(Modifier.height(8.dp))
-            Button(
+            TuppuButton(
                 onClick = viewModel::requestDeleteAccount,
                 colors = dangerButtonColors(),
                 modifier = Modifier.fillMaxWidth().testTag("account-delete"),
@@ -347,3 +347,4 @@ private fun LocalAreaAccount(state: AccountUiState, onRemove: () -> Unit) {
         }
     }
 }
+

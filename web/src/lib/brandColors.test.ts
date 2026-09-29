@@ -184,6 +184,17 @@ describe("the colour scheme", () => {
     }
     expect(kotlinColor("RegistrationSwitchOn", THEME_KT)).toBe("#2e7d32");
   });
+  it("gives the reds the same values as Android's Theme.kt, in both themes (T-333)", () => {
+    // Meaning colours: errors, overdue dates, the fill of a button that destroys something.
+    for (const theme of ["light", "dark"] as const) {
+      const tokens = cssTokens(theme);
+      const suffix = theme === "light" ? "Light" : "Dark";
+      expect(tokens.get("--color-danger"), `--color-danger (${theme})`).toBe(kotlinColor(`Error${suffix}`, THEME_KT));
+      expect(tokens.get("--color-danger-text"), `--color-danger-text (${theme})`).toBe(kotlinColor(`OnError${suffix}`, THEME_KT));
+      expect(tokens.get("--color-danger-bg"), `--color-danger-bg (${theme})`).toBe(kotlinColor(`ErrorContainer${suffix}`, THEME_KT));
+    }
+  });
+
 
   it("keeps highlighted text legible on the background, in both themes", () => {
     for (const theme of ["light", "dark"] as const) {

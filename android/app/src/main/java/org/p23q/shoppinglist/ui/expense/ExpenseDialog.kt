@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -62,6 +61,9 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ExpenseMath
@@ -72,9 +74,7 @@ import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.dangerButtonColors
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
@@ -258,7 +258,7 @@ fun ExpenseDialog(
                         )
                         if (state.isEditMode) {
                             Spacer(Modifier.height(16.dp))
-                            Button(onClick = viewModel::requestDelete, enabled = state.canDelete, colors = dangerButtonColors()) {
+                            TuppuButton(onClick = viewModel::requestDelete, enabled = state.canDelete, colors = dangerButtonColors()) {
                                 Text(stringResource(R.string.action_delete))
                             }
                             if (!state.canDelete) {
@@ -282,7 +282,7 @@ fun ExpenseDialog(
                         // An income or a transfer left untitled names itself, and only the screen
                         // can say what that name is in the app's language (T-245).
                         val typeLabel = stringResource(typeLabelOf(state.type))
-                        Button(onClick = { viewModel.save(typeLabel) }, enabled = state.canSave) {
+                        TuppuButton(onClick = { viewModel.save(typeLabel) }, enabled = state.canSave) {
                             Text(stringResource(if (state.isEditMode) R.string.action_save else R.string.action_add))
                         }
                     }
@@ -561,7 +561,7 @@ private fun ShareSection(
                 style = MaterialTheme.typography.bodySmall,
             )
             // The one-tap way out, for when that sum was the intended total all along.
-            Button(onClick = onUseSum, contentPadding = CompactButtonPadding) {
+            TuppuButton(onClick = onUseSum, contentPadding = CompactButtonPadding) {
                 Text(stringResource(R.string.expense_error_use_sum, ExpenseMath.fromCents(sumCents)))
             }
         }
@@ -574,3 +574,4 @@ private fun ShareSection(
         ExpenseMath.DistributeError.TOTAL_NOT_POSITIVE, null -> Unit
     }
 }
+

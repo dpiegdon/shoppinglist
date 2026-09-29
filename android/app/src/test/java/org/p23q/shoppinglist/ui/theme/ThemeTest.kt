@@ -138,7 +138,7 @@ class ThemeTest {
     fun `no text is drawn in the accent, which is too light to read on white (T-327)`() {
         // The accent fills things (buttons, the add button, the sync dot); text in its colour is
         // accentText, or the muted grey for a confirmation.
-        val allowed = Regex("""containerColor = MaterialTheme\.colorScheme\.primary|else -> MaterialTheme\.colorScheme\.primary""")
+        val allowed = Regex("""containerColor(: Color)? = MaterialTheme\.colorScheme\.primary|else -> MaterialTheme\.colorScheme\.primary""")
         val offenders = uiSources().flatMap { file ->
             file.readLines().mapIndexedNotNull { at, line ->
                 if (Regex("""colorScheme\.primary\b""").containsMatchIn(line) && !allowed.containsMatchIn(line)) "${file.name}:${at + 1}" else null
@@ -164,5 +164,23 @@ class ThemeTest {
             }
         }
         assertEquals(emptyList<String>(), offenders)
+    }
+
+    @Test
+    fun `the reds are the web's, in both schemes (T-333)`() {
+        val light = brandColorScheme(ThemeVariant.LIGHT)
+        val dark = brandColorScheme(ThemeVariant.DARK)
+        assertEquals(Color(0xFFDC2626), light.error)
+        assertEquals(Color(0xFFF87171), dark.error)
+        assertEquals(Color(0xFFFFFFFF), light.onError)
+        assertEquals(Color(0xFFFFFFFF), dark.onError)
+        assertEquals(Color(0xFFFEF2F2), light.errorContainer)
+        assertEquals(Color(0xFF2A1414), dark.errorContainer)
+    }
+
+    @Test
+    fun `every filled button is TuppuButton, so a disabled one looks as on the web (T-334)`() {
+        val offenders = uiSources().filter { it.name != "Theme.kt" && Regex("""import androidx\.compose\.material3\.Button$""", RegexOption.MULTILINE).containsMatchIn(it.readText()) }
+        assertEquals("Material's Button greys out when disabled; use TuppuButton", emptyList<String>(), offenders.map { it.name })
     }
 }

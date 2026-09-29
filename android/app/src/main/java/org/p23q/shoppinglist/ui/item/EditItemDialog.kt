@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -38,15 +38,15 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.db.Status
+import org.p23q.shoppinglist.data.db.label
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
-import org.p23q.shoppinglist.core.db.Status
-import org.p23q.shoppinglist.data.db.label
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Notes (List view): the row edit icon / a long-press opens this — every field including name,
@@ -162,7 +162,7 @@ fun EditItemDialog(
                             }
                             Spacer(Modifier.height(8.dp))
 
-                            Button(onClick = viewModel::requestDelete, colors = dangerButtonColors()) {
+                            TuppuButton(onClick = viewModel::requestDelete, colors = dangerButtonColors()) {
                                 Text(stringResource(R.string.action_delete))
                             }
                         }
@@ -175,7 +175,7 @@ fun EditItemDialog(
                         ) {
                             OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                             Spacer(Modifier.width(8.dp))
-                            Button(onClick = viewModel::save) { Text(stringResource(R.string.action_save)) }
+                            TuppuButton(onClick = viewModel::save) { Text(stringResource(R.string.action_save)) }
                         }
                     }
                 }
@@ -183,3 +183,4 @@ fun EditItemDialog(
         }
     }
 }
+

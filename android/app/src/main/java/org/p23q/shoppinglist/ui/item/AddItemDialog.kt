@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,7 +23,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -37,6 +35,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -44,10 +43,10 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /** Notes (Add-item dialog): name suggestions from the registry; picking one adds it to the list
  *  immediately (T-140), while typing a name no suggestion matches creates a new item on Add.
@@ -151,10 +150,11 @@ fun AddItemDialog(
                     ) {
                         OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = viewModel::save) { Text(stringResource(R.string.action_add)) }
+                        TuppuButton(onClick = viewModel::save) { Text(stringResource(R.string.action_add)) }
                     }
                 }
             }
         }
     }
 }
+

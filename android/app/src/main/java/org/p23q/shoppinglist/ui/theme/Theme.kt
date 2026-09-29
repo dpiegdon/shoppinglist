@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
@@ -38,7 +40,16 @@ fun themeVariant(darkTheme: Boolean): ThemeVariant = if (darkTheme) ThemeVariant
 // - the selected state (secondaryContainer: the drawer's current entry, a selected chip) is the
 //   accent, as on the web;
 // - tertiary is the highlighted text, read through [accentText].
-// The error slots keep Material's reds: a meaning colour, not a brand one.
+// The reds (T-333): a meaning colour, not a brand one — errors, overdue dates, the fill of every
+// button that destroys something. The same values are the web's --color-danger, --color-danger-text
+// and --color-danger-bg; web/src/lib/brandColors.test.ts reads them here and fails on drift.
+val ErrorLight = Color(0xFFDC2626)
+val ErrorDark = Color(0xFFF87171)
+val OnErrorLight = Color(0xFFFFFFFF)
+val OnErrorDark = Color(0xFFFFFFFF)
+val ErrorContainerLight = Color(0xFFFEF2F2)
+val ErrorContainerDark = Color(0xFF2A1414)
+
 private val LightColors = lightColorScheme(
     primary = AccentLight,
     onPrimary = OnAccentLight,
@@ -60,6 +71,10 @@ private val LightColors = lightColorScheme(
     surfaceVariant = SurfaceLight,
     onSurfaceVariant = MutedLight,
     surfaceTint = BackgroundLight,
+    error = ErrorLight,
+    onError = OnErrorLight,
+    errorContainer = ErrorContainerLight,
+    onErrorContainer = ErrorLight,
     inverseSurface = ForegroundLight,
     inverseOnSurface = BackgroundLight,
     outline = MutedLight,
@@ -94,6 +109,10 @@ private val DarkColors = darkColorScheme(
     surfaceVariant = SurfaceDark,
     onSurfaceVariant = MutedDark,
     surfaceTint = BackgroundDark,
+    error = ErrorDark,
+    onError = OnErrorDark,
+    errorContainer = ErrorContainerDark,
+    onErrorContainer = ErrorDark,
     inverseSurface = ForegroundDark,
     inverseOnSurface = BackgroundDark,
     outline = MutedDark,
@@ -139,6 +158,33 @@ fun TuppuTextButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) = TextButton(onClick = onClick, modifier = modifier, enabled = enabled, colors = textButtonColors(), content = content)
+
+/**
+ * The app's filled button (T-334). Disabled, it keeps its own colour at half strength, as the web's
+ * `.btn:disabled { opacity: 0.5 }` does, instead of Material's flat grey. Pass `colors` built by
+ * [filledButtonColors] (the default) or `dangerButtonColors()`.
+ */
+@Composable
+fun TuppuButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = filledButtonColors(),
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    content: @Composable RowScope.() -> Unit,
+) = Button(onClick = onClick, modifier = modifier, enabled = enabled, colors = colors, contentPadding = contentPadding, content = content)
+
+/** A filled button's colours in [containerColor]/[contentColor], disabled at half strength (T-334). */
+@Composable
+fun filledButtonColors(
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary,
+): ButtonColors = ButtonDefaults.buttonColors(
+    containerColor = containerColor,
+    contentColor = contentColor,
+    disabledContainerColor = containerColor.copy(alpha = 0.5f),
+    disabledContentColor = contentColor,
+)
 
 // The green a credit is written in (T-241): a fixed light/dark pair rather than a colour-scheme
 // slot, because it carries a meaning — red owed, green owing to you — and a meaning is not a brand
@@ -214,4 +260,5 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
 

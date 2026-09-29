@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -27,8 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -36,15 +36,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
-import org.p23q.shoppinglist.ui.dangerButtonColors
-import org.p23q.shoppinglist.core.api.AdminUserDto
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.theme.RegistrationSwitchKnob
 import org.p23q.shoppinglist.ui.theme.RegistrationSwitchOn
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
@@ -112,7 +112,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 // Save, then Clear, at the start of the row, as on the web (T-316).
-                Button(
+                TuppuButton(
                     onClick = { viewModel.saveMessage() },
                     enabled = state.canSaveMessage(),
                     modifier = Modifier.testTag("admin-server-message-save"),
@@ -135,7 +135,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
         // both clients would buy nothing. The list is simply not fetched until asked for.
         val users = state.users
         if (users == null) {
-            Button(onClick = { viewModel.loadUsers() }, modifier = Modifier.fillMaxWidth()) {
+            TuppuButton(onClick = { viewModel.loadUsers() }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.admin_show_users))
             }
         } else {
@@ -149,7 +149,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Button(onClick = { viewModel.loadUsers() }, contentPadding = CompactButtonPadding) {
+                TuppuButton(onClick = { viewModel.loadUsers() }, contentPadding = CompactButtonPadding) {
                     Text(stringResource(R.string.action_refresh))
                 }
             }
@@ -239,7 +239,7 @@ private fun ResetPasswordRow(password: String) {
             Text(password, style = MaterialTheme.typography.bodyLarge, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.width(8.dp))
-        Button(
+        TuppuButton(
             onClick = {
                 clipboard.setText(AnnotatedString(password))
                 copied = true
@@ -271,12 +271,13 @@ private fun UserRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Button(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_reset)) }
+        TuppuButton(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_reset)) }
         if (deletable) {
             Spacer(Modifier.width(4.dp))
-            Button(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
+            TuppuButton(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
                 Text(stringResource(R.string.action_delete))
             }
         }
     }
 }
+

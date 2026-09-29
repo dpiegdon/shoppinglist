@@ -19,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -27,10 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,6 +44,7 @@ import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.ui.syncRecencyText
+import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
  * Every account on this phone (T-292), in the order the overview shows them: who it is, where, in
@@ -149,7 +149,7 @@ private fun AccountCard(
                         SyncFigures(row, nowMs)
                     }
                     AccountStatus.SIGNED_OUT -> {
-                        Button(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
+                        TuppuButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
                             Text(stringResource(R.string.accounts_state_signed_out))
                         }
                         SyncFigures(row, nowMs)
@@ -165,7 +165,7 @@ private fun AccountCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Button(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}")) {
+                        TuppuButton(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}")) {
                             Text(stringResource(R.string.update_check_action))
                         }
                     }
@@ -211,3 +211,4 @@ private fun SyncFigures(row: AccountRow, nowMs: Long) {
         )
     }
 }
+
