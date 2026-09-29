@@ -1,0 +1,2 @@
+{"actor": "user", "at": "2026-09-29T20:18:33+00:00", "kind": "created", "ref": "main@d6255377", "text": "List properties in cards on both clients, one order: Clear checked first, then List, Categories, Notes, Shared with, Notifications, Closing, Actions, Leave"}
+{"actor": "user", "at": "2026-09-29T20:18:33+00:00", "kind": "dependency", "ref": "main@d6255377", "text": "T-336"}

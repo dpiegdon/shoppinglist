@@ -1,0 +1,16 @@
+{
+  "body": "Decided with the maintainer on 2026-09-29. Both clients' list-properties page groups its sections in the same cards as Settings/Admin (Android: the T-336 SectionCard; web: section.card with 1rem padding and a 1rem h2), in this order, identical on both clients:\n1. Clear checked items (N) \u2014 first, it is among the most used (not on ledgers); keeps its danger styling.\n2. List: name + Save, type selector (with its help text).\n3. Categories: drag order + Save order (not on ledgers).\n4. Notes.\n5. Shared with: members, pending invites, invite by e-mail (the local area's 'only on this phone' text on Android).\n6. Notifications: the per-list switch (Android only).\n7. Closing (ledgers only).\n8. Actions: Duplicate list.\n9. Leave list / Delete list in a card with a danger border and danger title, with the 'can't leave yet' hint.\nToday Android has Duplicate before Closing and the web after; this settles it. No behaviour change. Keep all test tags; tests assert the order on both clients (y positions on Android, DOM order on the web) with a mutation each; Android screenshots re-recorded.",
+  "created_at": "2026-09-29T20:18:33+00:00",
+  "deps": [
+    "T-336"
+  ],
+  "id": "T-337",
+  "labels": [
+    "android",
+    "web",
+    "ux"
+  ],
+  "priority": 2,
+  "title": "List properties in cards on both clients, one order: Clear checked first, then List, Categories, Notes, Shared with, Notifications, Closing, Actions, Leave",
+  "updated_at": "2026-09-29T20:18:33+00:00"
+}
