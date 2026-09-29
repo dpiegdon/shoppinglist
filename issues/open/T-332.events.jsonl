@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-29T19:34:52+00:00", "kind": "created", "ref": "main@edbe112f", "text": "Overview: the list-kind icon sits in a fixed-width column so list names align (both clients)"}
+{"actor": "user", "at": "2026-09-29T19:46:55+00:00", "kind": "note", "ref": "main@c0e2cafc", "text": "Done in c0e2cafc, full gate green: web .kind-icon (1.5em, centred), Android KindIcon (28dp, centred); tests on both fail without the fixed slot; overview screenshots re-recorded."}
