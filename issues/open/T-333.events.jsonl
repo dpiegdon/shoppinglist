@@ -1,1 +1,2 @@
 {"actor": "user", "at": "2026-09-29T19:52:27+00:00", "kind": "created", "ref": "main@c0e2cafc", "text": "Android: the reds are the web's (error/delete buttons/overdue), and the kind-icon slot trimmed to just fit"}
+{"actor": "user", "at": "2026-09-29T20:11:54+00:00", "kind": "note", "ref": "main@d6255377", "text": "Done in d6255377, full gate green; tests fail when reverted."}
