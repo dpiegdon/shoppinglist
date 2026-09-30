@@ -19,7 +19,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,6 +46,7 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 
 /** Notes (Add-item dialog): name suggestions from the registry; picking one adds it to the list
  *  immediately (T-140), while typing a name no suggestion matches creates a new item on Add.
@@ -148,7 +148,7 @@ fun AddItemDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                        TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
                         TuppuButton(onClick = viewModel::save) { Text(stringResource(R.string.action_add)) }
                     }

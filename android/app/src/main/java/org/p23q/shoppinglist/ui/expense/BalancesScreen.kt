@@ -101,6 +101,7 @@ fun BalancesContent(
                                 )
                             },
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Text(

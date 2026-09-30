@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -37,13 +36,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.CompactButtonPadding
+import org.p23q.shoppinglist.ui.ErrorBanner
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.accountName
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.settings.formatLastSeen
+import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
@@ -84,26 +86,19 @@ fun AccountScreen(
         Column {
             Text(account?.let { accountName(it) }.orEmpty(), style = MaterialTheme.typography.titleMedium)
             account?.serverUrl?.let {
-                Text(stringResource(R.string.settings_server, it), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.settings_server, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             when (account?.status()) {
                 // The overview's banner, here too (T-300).
-                AccountStatus.SIGNED_OUT -> Surface(
+                AccountStatus.SIGNED_OUT -> ErrorBanner(
                     onClick = onSignIn,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("account-sign-in"),
+                    modifier = Modifier.padding(top = 8.dp).testTag("account-sign-in"),
                 ) {
-                    Text(
-                        stringResource(R.string.overview_account_signed_out),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
+                    Text(stringResource(R.string.overview_account_signed_out), style = MaterialTheme.typography.bodyMedium)
                 }
                 AccountStatus.OUTDATED -> {
                     Text(stringResource(R.string.accounts_state_outdated), color = MaterialTheme.colorScheme.error)
-                    Text(stringResource(R.string.accounts_outdated_help), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.accounts_outdated_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> Unit
             }
@@ -121,7 +116,7 @@ fun AccountScreen(
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(8.dp))
-                    TuppuButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
+                    TuppuButton(onClick = { viewModel.updateCurrency(currencyInput) }, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_save)) }
                 }
                 SectionMessage(state, AccountSection.CURRENCY)
             }
@@ -139,7 +134,7 @@ fun AccountScreen(
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(8.dp))
-                    TuppuButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
+                    TuppuButton(onClick = { viewModel.updateInitials(initialsInput) }, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_save)) }
                 }
                 SectionMessage(state, AccountSection.INITIALS)
             }
@@ -153,6 +148,7 @@ fun AccountScreen(
                     Text(
                         stringResource(R.string.settings_trust_self_signed_help),
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
                     Switch(
@@ -195,7 +191,7 @@ fun AccountScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                TuppuButton(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
+                TuppuButton(onClick = viewModel::changePassword, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_change_password)) }
                 SectionMessage(state, AccountSection.PASSWORD)
             }
 
@@ -215,7 +211,7 @@ fun AccountScreen(
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                TuppuButton(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
+                TuppuButton(onClick = viewModel::changeEmail, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_change_email)) }
                 SectionMessage(state, AccountSection.EMAIL)
             }
         }
@@ -258,7 +254,7 @@ fun AccountScreen(
 
         SectionCard(stringResource(R.string.settings_danger_zone), danger = true) {
             // Removing only affects this phone, so it is the quieter of the two.
-            OutlinedButton(
+            TuppuOutlinedButton(
                 onClick = { viewModel.requestRemove() },
                 modifier = Modifier.fillMaxWidth().testTag("account-remove"),
             ) { Text(stringResource(R.string.account_remove)) }
@@ -297,7 +293,7 @@ fun AccountScreen(
                 }
             },
             confirmButton = {
-                TuppuTextButton(onClick = { viewModel.confirmRemove() }, modifier = Modifier.testTag("account-remove-confirm")) {
+                DangerTextButton(onClick = { viewModel.confirmRemove() }, modifier = Modifier.testTag("account-remove-confirm")) {
                     Text(stringResource(R.string.account_remove_confirm))
                 }
             },
@@ -325,7 +321,7 @@ fun AccountScreen(
                     SectionMessage(state, AccountSection.DELETE)
                 }
             },
-            confirmButton = { TuppuTextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
+            confirmButton = { DangerTextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
             dismissButton = { TuppuTextButton(onClick = viewModel::cancelDeleteAccount) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
@@ -373,7 +369,7 @@ private fun LocalAreaAccount(state: AccountUiState, onRemove: () -> Unit) {
             }
         }
         SectionCard(stringResource(R.string.settings_danger_zone), danger = true) {
-            OutlinedButton(
+            TuppuOutlinedButton(
                 onClick = onRemove,
                 enabled = state.listCount == 0,
                 modifier = Modifier.fillMaxWidth().testTag("account-remove"),

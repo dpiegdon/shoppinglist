@@ -26,13 +26,8 @@ import org.p23q.shoppinglist.R
 @Composable
 fun BlockedBanner(code: String?, who: String?) {
     val reason = ErrorText.refusal(code, who)?.asString()
-    Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+    ErrorBanner {
+        Column {
             // expense_not_saved, whose English is generic on purpose: "the list" is whichever list
             // this row belongs to, so the item form says it too rather than owning a second string.
             Text(stringResource(R.string.expense_not_saved), style = MaterialTheme.typography.titleSmall)

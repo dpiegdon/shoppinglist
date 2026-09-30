@@ -1,11 +1,5 @@
 package org.p23q.shoppinglist.ui.list
 
-import org.p23q.shoppinglist.data.idleMainLooper
-import org.p23q.shoppinglist.data.closeWhenIdle
-import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
-import org.p23q.shoppinglist.data.insertTestAccount
-import org.p23q.shoppinglist.data.testAccount
-import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -17,21 +11,24 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertWidthIsAtLeast
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
+import java.time.LocalDate
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
@@ -57,7 +54,13 @@ import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.ShowCheckedStore
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.closeWhenIdle
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.shortDate
 import org.p23q.shoppinglist.ui.theme.AccentTextLight
@@ -66,9 +69,6 @@ import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
 import org.p23q.shoppinglist.ui.theme.ThemeVariant
 import org.p23q.shoppinglist.ui.theme.brandColorScheme
 import org.robolectric.RobolectricTestRunner
-import java.io.File
-import java.time.LocalDate
-import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 class ListScreenTest {
@@ -220,6 +220,10 @@ class ListScreenTest {
         // The sync dot moved to the top bar of every screen (T-178); the controls line keeps the rest.
         composeTestRule.onNodeWithContentDescription("Not synced yet").assertDoesNotExist()
         composeTestRule.onNodeWithText("Show checked").assertExists()
+        // Its icon buttons are full 48dp targets (C6, T-343), not shrunk to 40dp.
+        for (label in listOf("All items", "List properties")) {
+            composeTestRule.onNodeWithContentDescription(label).assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
+        }
     }
 
     @Test

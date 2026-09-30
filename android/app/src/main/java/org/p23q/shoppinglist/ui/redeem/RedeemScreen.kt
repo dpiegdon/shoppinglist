@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +24,7 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 
 /**
  * App Link entry point: a tapped `https://<server>/invite/<token>` link lands here and redeems
@@ -74,7 +74,7 @@ fun RedeemScreen(
                 Text(error.asString(), color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
                 // Back is the quiet way out, not the screen's primary action (A21).
-                OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                TuppuOutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
             }
             state.choices.isNotEmpty() -> {
                 Text(stringResource(R.string.redeem_choose_account), style = MaterialTheme.typography.titleMedium)
@@ -87,7 +87,7 @@ fun RedeemScreen(
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                TuppuOutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
             }
             else -> {
                 CircularProgressIndicator()

@@ -36,17 +36,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
-import org.p23q.shoppinglist.core.AppFormat
-import org.p23q.shoppinglist.ui.LocalizedOverlay
-import org.p23q.shoppinglist.ui.appLocale
-import org.p23q.shoppinglist.ui.asString
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.ui.FieldLabel
+import org.p23q.shoppinglist.ui.LocalizedOverlay
+import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Category/stores/quantity/price/note/due fields shared by [AddItemDialog] and [EditItemDialog]. */
@@ -78,7 +79,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     // Shopping-only fields (T-110): a checklist shows just category / note / status. Existing
     // values are preserved, merely not rendered, so converting a list is reversible.
     if (state.showShoppingFields) {
-    Text(stringResource(R.string.item_stores))
+    FieldLabel(stringResource(R.string.item_stores))
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = state.storeInput,

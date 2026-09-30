@@ -15,10 +15,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,10 +43,11 @@ import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
-import org.p23q.shoppinglist.ui.theme.RegistrationSwitchKnob
-import org.p23q.shoppinglist.ui.theme.RegistrationSwitchOn
+import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
+import org.p23q.shoppinglist.ui.theme.registrationSwitchColors
 
 @Composable
 fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
@@ -84,12 +83,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                     onCheckedChange = { viewModel.toggleRegistration() },
                     enabled = state.allowRegistration != null,
                     // Green track when registration is on, red when it's denied (T-112).
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = RegistrationSwitchKnob,
-                        checkedTrackColor = RegistrationSwitchOn,
-                        uncheckedThumbColor = RegistrationSwitchKnob,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.error,
-                    ),
+                    colors = registrationSwitchColors(),
                 )
             }
 
@@ -121,7 +115,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                         Text(stringResource(R.string.action_save))
                     }
                     // A real button, outlined as the web's secondary one (B5).
-                    OutlinedButton(
+                    TuppuOutlinedButton(
                         onClick = { viewModel.clearMessage() },
                         enabled = state.canClearMessage(),
                         modifier = Modifier.testTag("admin-server-message-clear"),
@@ -215,11 +209,11 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
             title = { Text(stringResource(R.string.admin_delete_user_title)) },
             text = { Text(stringResource(R.string.admin_delete_user_body, user.email)) },
             confirmButton = {
-                TuppuTextButton(onClick = {
+                DangerTextButton(onClick = {
                     viewModel.deleteUser(user)
                     pendingDelete = null
                 }) {
-                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = { TuppuTextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } },

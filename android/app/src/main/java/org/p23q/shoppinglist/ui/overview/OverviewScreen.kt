@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -52,6 +51,9 @@ import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.CompactButtonPadding
+import org.p23q.shoppinglist.ui.EmptyState
+import org.p23q.shoppinglist.ui.ErrorBanner
+import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.ServerMessage
 import org.p23q.shoppinglist.ui.SyncStatusBar
@@ -61,6 +63,7 @@ import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 import org.p23q.shoppinglist.ui.theme.accentText
 
@@ -115,11 +118,7 @@ fun OverviewScreen(
                     // Scrollable so the pull gesture still fires with no lists to scroll. Muted and
                     // at the start, the one style every empty state has (T-339), as the web says it.
                     Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        Text(
-                            stringResource(R.string.overview_no_lists),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("overview-empty"),
-                        )
+                        EmptyState(stringResource(R.string.overview_no_lists), modifier = Modifier.testTag("overview-empty"))
                     }
                 } else {
                     LazyColumn(
@@ -160,11 +159,7 @@ fun OverviewScreen(
                             if (section.lists.isEmpty() && (state.several || state.invites.isNotEmpty() || hasBanner)) {
                                 // Only invites (or nothing) to show: say the lists are empty where they would be.
                                 item(key = "no-lists-" + account.id) {
-                                    Text(
-                                        stringResource(R.string.overview_no_lists),
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    EmptyState(stringResource(R.string.overview_no_lists), padding = PaddingValues(vertical = 12.dp))
                                 }
                             }
                             items(section.lists, key = { it.localId }) { list ->
@@ -263,7 +258,7 @@ internal fun NewListDialog(
                 // Which account the list goes to (T-292), only when there is a choice. Fixed for
                 // the list's life: a list never moves between accounts.
                 if (state.several) {
-                    Text(stringResource(R.string.overview_new_list_account), style = MaterialTheme.typography.labelMedium)
+                    FieldLabel(stringResource(R.string.overview_new_list_account))
                     state.accounts.forEach { account ->
                         AccountChoiceRow(
                             account = account,
@@ -290,7 +285,7 @@ internal fun NewListDialog(
                 Spacer(Modifier.height(12.dp))
                 // Kind is chosen up front (T-110) but isn't permanent — list properties can
                 // convert it later, and converting never touches item data.
-                Text(stringResource(R.string.overview_type), style = MaterialTheme.typography.labelMedium)
+                FieldLabel(stringResource(R.string.overview_type))
                 // No ledger in the local area (T-293): its lists are never shared.
                 state.newListKinds.forEach { kind ->
                     Row(
@@ -414,31 +409,8 @@ internal fun AccountHeader(account: AccountEntity, first: Boolean) {
 /** A one-line notice at the top of an account's section; tappable when it offers something. */
 @Composable
 private fun AccountBanner(text: String, onClick: (() -> Unit)?) {
-    val content: @Composable () -> Unit = {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-        )
-    }
-    val modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-    if (onClick != null) {
-        Surface(
-            onClick = onClick,
-            color = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            shape = MaterialTheme.shapes.small,
-            modifier = modifier,
-            content = content,
-        )
-    } else {
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            shape = MaterialTheme.shapes.small,
-            modifier = modifier,
-            content = content,
-        )
+    ErrorBanner(onClick = onClick, modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -529,7 +501,7 @@ internal fun SectionHeading(text: String, tag: String, muted: Boolean = false) {
 
 /** One invite on the overview (T-233): kind, list name, who invited and how long it stands, then Ignore and Join. */
 @Composable
-private fun InviteCard(
+internal fun InviteCard(
     invite: InviteForMeDto,
     nowMs: Long,
     ignored: Boolean,
@@ -544,33 +516,69 @@ private fun InviteCard(
             // Greyed once ignored, as the web does it; the card otherwise reads the same.
             .alpha(if (ignored) 0.6f else 1f),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            KindIcon(invite.listKind)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = invite.listName)
-                Text(
-                    // "From AL · Expires in 5 d", as the web writes it.
-                    text = stringResource(R.string.overview_invite_from, invite.invitedByInitials) +
-                        " · " + formatExpiresIn(invite.expiresAt, nowMs).asString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (!ignored) {
-                OutlinedButton(onClick = onIgnore, enabled = !busy, contentPadding = CompactButtonPadding) {
-                    Text(stringResource(R.string.action_ignore))
+        InviteCardLayout(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("invite-text-${invite.id}")) {
+                KindIcon(invite.listKind)
+                Column {
+                    Text(text = invite.listName)
+                    Text(
+                        // "From AL · Expires in 5 d", as the web writes it.
+                        text = stringResource(R.string.overview_invite_from, invite.invitedByInitials) +
+                            " · " + formatExpiresIn(invite.expiresAt, nowMs).asString(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Spacer(Modifier.width(4.dp))
             }
-            TuppuButton(onClick = onJoin, enabled = !busy, contentPadding = CompactButtonPadding) {
-                Text(stringResource(R.string.action_join))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("invite-buttons-${invite.id}")) {
+                if (!ignored) {
+                    TuppuOutlinedButton(onClick = onIgnore, enabled = !busy, contentPadding = CompactButtonPadding) {
+                        Text(stringResource(R.string.action_ignore))
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
+                TuppuButton(onClick = onJoin, enabled = !busy, contentPadding = CompactButtonPadding) {
+                    Text(stringResource(R.string.action_join))
+                }
             }
         }
     }
 }
+
+/**
+ * The invite card's two parts, the name (with its icon) and the buttons, as the web lays them out
+ * (T-343): side by side while the name keeps at least [InviteNameMinWidth], the web's `flex: 1 1
+ * 12rem`; otherwise the buttons wrap onto a line of their own under it, at the end. A long name on
+ * a narrow screen is never squeezed to a few letters.
+ */
+@Composable
+private fun InviteCardLayout(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val (name, buttons) = measurables
+        val gap = 8.dp.roundToPx()
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val buttonsPlaceable = buttons.measure(loose)
+        val besideWidth = constraints.maxWidth - buttonsPlaceable.width - gap
+        if (besideWidth >= InviteNameMinWidth.roundToPx()) {
+            val namePlaceable = name.measure(loose.copy(maxWidth = besideWidth))
+            val height = maxOf(namePlaceable.height, buttonsPlaceable.height)
+            layout(constraints.maxWidth, height) {
+                namePlaceable.placeRelative(0, (height - namePlaceable.height) / 2)
+                buttonsPlaceable.placeRelative(constraints.maxWidth - buttonsPlaceable.width, (height - buttonsPlaceable.height) / 2)
+            }
+        } else {
+            val namePlaceable = name.measure(loose)
+            val rowGap = 4.dp.roundToPx()
+            layout(constraints.maxWidth, namePlaceable.height + rowGap + buttonsPlaceable.height) {
+                namePlaceable.placeRelative(0, 0)
+                buttonsPlaceable.placeRelative(constraints.maxWidth - buttonsPlaceable.width, namePlaceable.height + rowGap)
+            }
+        }
+    }
+}
+
+/** The web's 12rem basis for the invite's name. */
+private val InviteNameMinWidth = 192.dp
 
 /**
  * The list-kind icon in a slot of a minimum width, so list names line up whatever the icon's width

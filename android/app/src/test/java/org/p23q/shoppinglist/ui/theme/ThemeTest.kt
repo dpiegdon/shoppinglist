@@ -2,10 +2,10 @@ package org.p23q.shoppinglist.ui.theme
 
 import androidx.compose.material3.contentColorFor
 import androidx.compose.ui.graphics.Color
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class ThemeTest {
 
@@ -207,5 +207,40 @@ class ThemeTest {
     fun `every filled button is TuppuButton, so a disabled one looks as on the web (T-334)`() {
         val offenders = uiSources().filter { it.name != "Theme.kt" && Regex("""import androidx\.compose\.material3\.Button$""", RegexOption.MULTILINE).containsMatchIn(it.readText()) }
         assertEquals("Material's Button greys out when disabled; use TuppuButton", emptyList<String>(), offenders.map { it.name })
+    }
+
+    @Test
+    fun `every outlined button is TuppuOutlinedButton, its label in the text colour (T-343)`() {
+        val offenders = uiSources().filter { it.name != "Theme.kt" && Regex("""import androidx\.compose\.material3\.OutlinedButton$""", RegexOption.MULTILINE).containsMatchIn(it.readText()) }
+        assertEquals("Material's OutlinedButton labels in the accent; use TuppuOutlinedButton", emptyList<String>(), offenders.map { it.name })
+    }
+
+    @Test
+    fun `every field-group label is the one muted FieldLabel (A15, T-343)`() {
+        val text = uiSources().joinToString("\n") { it.readText() }
+        val labels = listOf("item_stores", "item_status", "expense_type", "overview_type", "overview_new_list_account", "listprops_type")
+        val missing = labels.filter { "FieldLabel(stringResource(R.string.$it))" !in text }
+        assertEquals("drawn as FieldLabel", emptyList<String>(), missing)
+    }
+
+    @Test
+    fun `a dialog's destructive confirm is drawn in the error colour (T-343)`() {
+        // A confirm button whose label deletes, leaves or removes (or that merges two categories
+        // for good) is a DangerTextButton, never the accent TuppuTextButton. The block runs from
+        // `confirmButton =` to the dismiss button, at most a few hundred characters.
+        val destructive = Regex("""R\.string\.\w*(delete|leave|remove|revoke)\w*|confirmCategoryMerge""")
+        val blocks = uiSources().flatMap { file ->
+            val text = file.readText()
+            Regex("""confirmButton = \{""").findAll(text).map { match ->
+                val rest = text.substring(match.range.first).take(500)
+                val end = rest.indexOf("dismissButton").takeIf { it >= 0 } ?: rest.length
+                val line = text.substring(0, match.range.first).count { it == '\n' } + 1
+                "${file.name}:$line" to rest.substring(0, end)
+            }.toList()
+        }
+        val destructiveBlocks = blocks.filter { (_, block) -> destructive.containsMatchIn(block) }
+        assertTrue("the destructive confirms are found: $destructiveBlocks", destructiveBlocks.size >= 7)
+        val offenders = destructiveBlocks.filter { (_, block) -> "DangerTextButton(" !in block || "TuppuTextButton(" in block }.map { it.first }
+        assertEquals("a destructive confirm must be a DangerTextButton", emptyList<String>(), offenders)
     }
 }

@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.listprops
 
 import android.content.Intent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +22,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -55,18 +53,21 @@ import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.data.label
+import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.CompactButtonPadding
+import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.UiText
-import org.p23q.shoppinglist.ui.accountLineText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.dragReorderHandle
 import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
+import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
@@ -130,7 +131,7 @@ fun ListPropsScreen(
                 )
                 Spacer(Modifier.width(8.dp))
                 // Offered only when there is something to save, and it says so once saved (T-340).
-                TuppuButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote && state.nameChanged) {
+                TuppuButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote && state.nameChanged, contentPadding = CompactButtonPadding) {
                     Text(stringResource(R.string.action_save))
                 }
             }
@@ -139,7 +140,7 @@ fun ListPropsScreen(
 
             // Convert between shopping list and checklist (T-110) — non-destructive, so it's a plain
             // switch rather than a guarded action.
-            Text(stringResource(R.string.listprops_type), style = MaterialTheme.typography.titleSmall)
+            FieldLabel(stringResource(R.string.listprops_type))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -160,6 +161,7 @@ fun ListPropsScreen(
                         Text(
                             stringResource(R.string.expense_currency_value, state.currency),
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -340,7 +342,7 @@ fun ListPropsScreen(
                 )
             },
             confirmButton = {
-                TuppuTextButton(onClick = viewModel::confirmLeave) {
+                DangerTextButton(onClick = viewModel::confirmLeave) {
                     Text(stringResource(if (local) R.string.action_delete else R.string.action_leave))
                 }
             },
@@ -360,7 +362,7 @@ fun ListPropsScreen(
             onDismissRequest = viewModel::cancelCategoryMerge,
             title = { Text(UiText.res(R.string.listprops_merge_confirm_title, pending.targetName).asString()) },
             text = { Text(stringResource(R.string.listprops_merge_confirm_body)) },
-            confirmButton = { TuppuTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
+            confirmButton = { DangerTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
             dismissButton = { TuppuTextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
@@ -374,14 +376,12 @@ private fun CopyToDialog(targets: List<AccountEntity>, onPick: (accountId: Strin
         title = { Text(stringResource(R.string.listprops_copy_to)) },
         text = {
             Column {
+                // The one "which account" row (A7), as the new list and the invite ask it.
                 targets.forEach { account ->
-                    Text(
-                        accountLineText(account),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(account.id) }
-                            .padding(vertical = 12.dp)
-                            .testTag(COPY_TARGET_TAG_PREFIX + account.id),
+                    AccountChoiceRow(
+                        account = account,
+                        onClick = { onPick(account.id) },
+                        modifier = Modifier.testTag(COPY_TARGET_TAG_PREFIX + account.id),
                     )
                 }
             }
@@ -426,7 +426,7 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
-            TuppuButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
+            TuppuButton(onClick = { viewModel.sendInvite() }, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_invite)) }
         }
         ErrorNote(state.sharingError)
     }
@@ -498,7 +498,7 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            TuppuButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting) {
+            TuppuButton(onClick = { viewModel.toggleCloseVote() }, enabled = !state.isVoting, contentPadding = CompactButtonPadding) {
                 Text(
                     stringResource(
                         if (state.myAccountId in state.closeVotes) {
@@ -562,7 +562,7 @@ private fun CategoryOrderList(
                             contentPadding = CompactButtonPadding,
                         ) { Text(stringResource(R.string.action_save)) }
                         Spacer(Modifier.width(4.dp))
-                        OutlinedButton(onClick = { editingCategory = null }, contentPadding = CompactButtonPadding) {
+                        TuppuOutlinedButton(onClick = { editingCategory = null }, contentPadding = CompactButtonPadding) {
                             Text(stringResource(R.string.action_cancel))
                         }
                     }

@@ -29,14 +29,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.db.label
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.EmptyState
 
 @Composable
 fun RegistryScreen(
@@ -79,12 +80,7 @@ fun RegistryScreen(
                 // Said, not left blank, when nothing matches, as the web does (T-342).
                 if (state.items.isEmpty()) {
                     item(key = "empty") {
-                        Text(
-                            stringResource(R.string.registry_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
+                        EmptyState(stringResource(R.string.registry_empty))
                     }
                 }
                 items(state.items, key = { it.localId }) { item ->

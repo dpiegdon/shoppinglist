@@ -55,6 +55,8 @@ import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.AddFab
+import org.p23q.shoppinglist.ui.CompactButtonPadding
+import org.p23q.shoppinglist.ui.EmptyState
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
@@ -178,12 +180,8 @@ fun ExpenseListScreen(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     if (state.rows.isEmpty()) {
                         item(key = "empty") {
-                            Text(
-                                text = stringResource(R.string.expense_empty),
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                            )
+                            // Muted and at the start, as every empty state (A20).
+                            EmptyState(stringResource(R.string.expense_empty), modifier = Modifier.testTag("expense-empty"))
                         }
                     }
                     // Rows arrive newest date first, so grouping keeps that order.
@@ -295,7 +293,7 @@ private fun ExpenseRowView(
             }
             // In the app's reading direction, not guessed from the first name: a transfer's names
             // are isolated, so its arrow reads from sender to recipient in Arabic too (T-342).
-            Text(subLine, style = MaterialTheme.typography.bodySmall.copy(textDirection = layoutTextDirection()))
+            Text(subLine, style = MaterialTheme.typography.bodySmall.copy(textDirection = layoutTextDirection()), color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (refusal != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // The icon carries the "not saved" half for anyone who cannot see the colour,
@@ -498,7 +496,7 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
                     )
                 }
             }
-            TuppuButton(onClick = onToggleVote, enabled = !state.isVoting) {
+            TuppuButton(onClick = onToggleVote, enabled = !state.isVoting, contentPadding = CompactButtonPadding) {
                 Text(
                     stringResource(
                         if (state.iHaveVoted) R.string.expense_withdraw_vote else R.string.expense_agree_to_close,

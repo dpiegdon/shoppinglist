@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,14 +77,17 @@ fun SettingsScreen(
         LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
 
         SectionCard(stringResource(R.string.settings_theme)) {
-            Row {
-                ThemePreference.entries.forEach { pref ->
-                    FilterChip(
+            // An exclusive choice is a segmented control (A8), as the item's status is; a FilterChip
+            // is only for a toggle such as Show checked.
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().testTag("settings-theme")) {
+                ThemePreference.entries.forEachIndexed { index, pref ->
+                    SegmentedButton(
                         selected = state.theme == pref,
                         onClick = { viewModel.setTheme(pref) },
-                        label = { Text(pref.label()) },
-                        modifier = Modifier.padding(end = 4.dp),
-                    )
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = ThemePreference.entries.size),
+                    ) {
+                        Text(pref.label())
+                    }
                 }
             }
         }
@@ -164,7 +169,10 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.height(8.dp))
             }
-            TuppuButton(onClick = viewModel::shareLogs) { Text(stringResource(R.string.settings_share_crash_logs)) }
+            // The card's closing action, full width as every one is (A11).
+            TuppuButton(onClick = viewModel::shareLogs, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.settings_share_crash_logs))
+            }
             // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
             state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }

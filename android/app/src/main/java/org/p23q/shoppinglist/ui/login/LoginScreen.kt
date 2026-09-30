@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -49,6 +48,7 @@ import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ServerMessage
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 @Composable
@@ -170,7 +170,7 @@ fun LoginScreen(
         }
         state.downloadUrl?.let { url ->
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            TuppuOutlinedButton(
                 onClick = { onDownload(url) },
                 modifier = Modifier.fillMaxWidth().testTag("login-download"),
             ) {
@@ -192,7 +192,7 @@ fun LoginScreen(
         // offered to an account signing in again: it exists already.
         if (state.mode != LoginMode.RESIGNIN) {
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            TuppuOutlinedButton(
                 onClick = viewModel::onToggleRegisterMode,
                 enabled = state.registrationAllowed,
                 modifier = Modifier.fillMaxWidth(),
@@ -214,7 +214,7 @@ fun LoginScreen(
         // Only on the start screen: from Accounts, the local area is added there (T-293).
         if (state.mode == LoginMode.START) {
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            TuppuOutlinedButton(
                 onClick = { viewModel.useWithoutAccount() },
                 enabled = !state.isLoading && !state.creatingLocalArea,
                 modifier = Modifier.fillMaxWidth().testTag("login-use-local"),
@@ -243,6 +243,7 @@ fun LoginScreen(
                     Text(
                         stringResource(R.string.login_trust_self_signed_help),
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(

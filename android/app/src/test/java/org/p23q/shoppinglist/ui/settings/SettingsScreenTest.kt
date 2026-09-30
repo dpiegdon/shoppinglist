@@ -1,12 +1,18 @@
 package org.p23q.shoppinglist.ui.settings
 
-import org.p23q.shoppinglist.ui.assertPlainSectionCards
-import org.p23q.shoppinglist.ui.InBrandColors
-import org.p23q.shoppinglist.data.idleMainLooper
-import org.p23q.shoppinglist.data.closeWhenIdle
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -15,34 +21,35 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.data.ThemePreferenceStore
-import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.core.sync.ChangeCheckOutcome
+import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
+import org.p23q.shoppinglist.data.ThemePreferenceStore
+import org.p23q.shoppinglist.data.closeWhenIdle
+import org.p23q.shoppinglist.data.crash.CrashLogWriter
+import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.notify.ChangeCheck
 import org.p23q.shoppinglist.data.notify.InviteCheck
-import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
-import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.onNodeWithTag
-import kotlinx.coroutines.flow.first
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.ui.accounts.accountRow
+import org.p23q.shoppinglist.ui.assertPlainSectionCards
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.io.File
 
 /** The phone's own settings. Everything an account owns is on its Account screen (AccountScreenTest). */
 @RunWith(RobolectricTestRunner::class)
@@ -128,6 +135,40 @@ class SettingsScreenTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.assertPlainSectionCards("Theme", "Notifications", "Diagnostics")
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `the theme is one segmented control, one choice of three, not chips (A8, T-343)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { InBrandColors { SettingsScreen(viewModel = viewModel) } }
+        composeTestRule.waitForIdle()
+
+        // A segment is a radio button of its row; a FilterChip would be a checkbox.
+        for (label in listOf("System", "Light", "Dark")) {
+            composeTestRule.onNodeWithText(label).assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+        }
+        composeTestRule.onNodeWithText("Dark").performClick()
+        // The choice goes through the preference store and comes back as state.
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onNodeWithText("Dark").fetchSemanticsNode().config.getOrElse(SemanticsProperties.Selected) { false }
+        }
+        composeTestRule.onNodeWithText("Dark").assertIsSelected()
+        composeTestRule.onNodeWithText("System").assertIsNotSelected()
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `Share crash logs closes its card, so it spans the card as every terminal action does (A11, T-343)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { InBrandColors { SettingsScreen(viewModel = viewModel) } }
+        composeTestRule.waitForIdle()
+
+        // The screen is 411dp; 16dp of screen padding and 16dp of card padding on each side.
+        val button = composeTestRule.onNodeWithText("Share crash logs").performScrollTo().getBoundsInRoot()
+        assertEquals(347f, (button.right - button.left).value, 1f)
         viewModel.viewModelScope.cancel()
     }
 

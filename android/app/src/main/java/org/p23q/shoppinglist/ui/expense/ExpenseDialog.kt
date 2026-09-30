@@ -30,7 +30,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -70,11 +69,14 @@ import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.CompactButtonPadding
+import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
@@ -253,6 +255,7 @@ fun ExpenseDialog(
                             Text(
                                 stringResource(R.string.expense_solo_hint),
                                 style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -284,7 +287,7 @@ fun ExpenseDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                        TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
                         // An income or a transfer left untitled names itself, and only the screen
                         // can say what that name is in the app's language (T-245).
@@ -335,7 +338,7 @@ fun ExpenseDialog(
                     title = { Text(stringResource(R.string.expense_delete_title)) },
                     text = { Text(stringResource(R.string.expense_delete_body)) },
                     confirmButton = {
-                        TuppuTextButton(onClick = { viewModel.confirmDelete() }) {
+                        DangerTextButton(onClick = { viewModel.confirmDelete() }) {
                             Text(stringResource(R.string.action_delete))
                         }
                     },
@@ -382,7 +385,7 @@ internal fun typeLabelOf(type: ExpenseType): Int = when (type) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TypeSection(type: ExpenseType, canTransfer: Boolean, onChange: (ExpenseType) -> Unit) {
-    Text(stringResource(R.string.expense_type), style = MaterialTheme.typography.titleSmall)
+    FieldLabel(stringResource(R.string.expense_type))
     Spacer(Modifier.height(4.dp))
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         ExpenseType.entries.forEachIndexed { index, option ->
@@ -461,11 +464,7 @@ private fun TransferPicker(
     val enabled = chosen == null || !chosen.isFrozen
 
     Column(modifier = modifier) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        FieldLabel(label)
         Text(
             text = chosen?.let { participantLabel(it) }.orEmpty(),
             style = MaterialTheme.typography.bodyLarge,
@@ -511,7 +510,7 @@ private fun ShareSection(
     onChange: (String, String) -> Unit,
     onUseSum: () -> Unit,
 ) {
-    Text(title, style = MaterialTheme.typography.titleSmall)
+    FieldLabel(title)
     rows.forEach { row ->
         val label = participantLabel(row)
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

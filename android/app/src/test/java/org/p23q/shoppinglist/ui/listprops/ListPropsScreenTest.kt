@@ -1,42 +1,30 @@
 package org.p23q.shoppinglist.ui.listprops
 
-import org.p23q.shoppinglist.data.idleMainLooper
-import org.p23q.shoppinglist.ui.InBrandColors
-import org.p23q.shoppinglist.ui.assertDangerSectionCard
-import org.p23q.shoppinglist.ui.assertInSectionCard
-import org.p23q.shoppinglist.ui.assertPlainSectionCards
-import org.p23q.shoppinglist.ui.assertSectionCardOrder
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
-import org.p23q.shoppinglist.core.db.Status
-import org.p23q.shoppinglist.data.closeWhenIdle
-import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
-import org.p23q.shoppinglist.data.insertTestAccount
-import org.p23q.shoppinglist.data.testAccount
-import org.p23q.shoppinglist.data.testListAccounts
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
-import org.junit.Assert.assertTrue
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -44,6 +32,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,16 +42,27 @@ import org.p23q.shoppinglist.core.api.AuthInterceptor
 import org.p23q.shoppinglist.core.api.ErrorInterceptor
 import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.closeWhenIdle
+import org.p23q.shoppinglist.data.idleMainLooper
+import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.data.testListAccounts
+import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.assertDangerSectionCard
+import org.p23q.shoppinglist.ui.assertInSectionCard
+import org.p23q.shoppinglist.ui.assertPlainSectionCards
+import org.p23q.shoppinglist.ui.assertSectionCardOrder
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class ListPropsScreenTest {
@@ -403,10 +403,11 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("Copy to").assertIsDisplayed()
-        val host = server.url("/").toString().substringAfter("://").trimEnd('/')
-        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + TEST_ACCOUNT_ID).assertTextEquals("me@example.com · $host")
-        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + "work").assertTextEquals("me@work.example · work.example.test")
+        // The one "which account" row (A7): the account, then its server on a second line.
+        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + TEST_ACCOUNT_ID).assertTextEquals("me@example.com", server.url("/").toString())
+        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + "work").assertTextEquals("me@work.example", "https://work.example.test/")
         composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + "on-phone").assertTextEquals("On this phone")
+        composeTestRule.onNodeWithTag(COPY_TARGET_TAG_PREFIX + "work").assertHeightIsAtLeast(48.dp)
         assertEquals("nothing copied before a pick", null, duplicatedListId)
 
         composeTestRule.onNodeWithText("On this phone").performClick()

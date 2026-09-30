@@ -20,7 +20,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -47,11 +46,14 @@ import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.db.label
 import org.p23q.shoppinglist.ui.BlockedBanner
+import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Notes (List view): the row edit icon / a long-press opens this — every field including name,
@@ -77,7 +79,7 @@ fun EditItemDialog(
             onDismissRequest = viewModel::cancelDelete,
             title = { Text(stringResource(R.string.item_delete_title)) },
             text = { Text(stringResource(R.string.item_delete_body, state.name)) },
-            confirmButton = { TuppuTextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
+            confirmButton = { DangerTextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
             dismissButton = { TuppuTextButton(onClick = viewModel::cancelDelete) { Text(stringResource(R.string.action_cancel)) } },
         )
     } else {
@@ -142,7 +144,7 @@ fun EditItemDialog(
                             ItemFormFields(state = state, viewModel = viewModel)
                             Spacer(Modifier.height(8.dp))
 
-                            Text(stringResource(R.string.item_status), style = MaterialTheme.typography.labelMedium)
+                            FieldLabel(stringResource(R.string.item_status))
                             Spacer(Modifier.height(4.dp))
                             // One segmented control (T-339), as every exclusive choice is drawn and as
                             // the web offers it, in the same order: Backlog, Todo, Checked.
@@ -184,7 +186,7 @@ fun EditItemDialog(
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                            TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                             Spacer(Modifier.width(8.dp))
                             TuppuButton(onClick = viewModel::save) { Text(stringResource(R.string.action_save)) }
                         }

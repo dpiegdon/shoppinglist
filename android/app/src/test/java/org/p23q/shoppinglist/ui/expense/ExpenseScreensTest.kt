@@ -1,8 +1,8 @@
 package org.p23q.shoppinglist.ui.expense
 
-import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
-import org.p23q.shoppinglist.data.insertTestAccount
-import org.p23q.shoppinglist.data.testListAccounts
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -14,16 +14,17 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.test.swipeDown
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -46,11 +48,15 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.data.testListAccounts
+import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.sectionTestScheme
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.io.File
 
 /**
  * The expense list and balances screens (T-154).
@@ -198,18 +204,26 @@ class ExpenseScreensTest {
     }
 
     @Test
-    fun `says so when there is nothing on the list yet`() = runBlocking<Unit> {
+    fun `says so when there is nothing on the list yet, muted and at the start as every empty state (A20)`() = runBlocking<Unit> {
         composeTestRule.setContent {
-            ExpenseListScreen(
-                onAddExpense = {},
-                onEditExpense = {},
-                onOpenListProps = {},
-                viewModel = viewModel(),
-            )
+            InBrandColors {
+                ExpenseListScreen(
+                    onAddExpense = {},
+                    onEditExpense = {},
+                    onOpenListProps = {},
+                    viewModel = viewModel(),
+                )
+            }
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("No entries yet. Add one to get started.").assertIsDisplayed()
+        val empty = composeTestRule.onNodeWithText("No entries yet. Add one to get started.")
+        empty.assertIsDisplayed()
+        val results = mutableListOf<TextLayoutResult>()
+        empty.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+        val style = results.first().layoutInput.style
+        assertEquals(sectionTestScheme.onSurfaceVariant, style.color)
+        assertNotEquals(TextAlign.Center, style.textAlign)
     }
 
     @Test

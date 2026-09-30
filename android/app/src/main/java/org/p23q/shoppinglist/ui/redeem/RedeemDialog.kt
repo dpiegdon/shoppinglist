@@ -17,6 +17,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.AccountChoiceRow
+import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
@@ -62,7 +63,7 @@ fun RedeemDialog(
                 // Several accounts could take it (T-292): the user picks which joins.
                 if (state.choices.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
-                    Text(stringResource(R.string.redeem_choose_account), style = MaterialTheme.typography.labelMedium)
+                    FieldLabel(stringResource(R.string.redeem_choose_account))
                     state.choices.forEach { account ->
                         AccountChoiceRow(
                             account = account,

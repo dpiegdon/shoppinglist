@@ -48,8 +48,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -72,6 +72,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import java.time.LocalDate
 import kotlinx.coroutines.delay
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
@@ -81,11 +82,11 @@ import org.p23q.shoppinglist.core.api.MemberDto
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.ui.AddFab
+import org.p23q.shoppinglist.ui.EmptyState
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
-import org.p23q.shoppinglist.ui.shortDate
-import java.time.LocalDate
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.shortDate
 import org.p23q.shoppinglist.ui.theme.accentText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,11 +184,12 @@ fun ListScreen(
                     },
                 )
                 // The sync dot lives in the top bar now, on every screen as on the web (T-178).
+                // Icon buttons as 48dp targets (C6), as the item pencil is; Material draws them at 40dp.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onOpenRegistry, modifier = Modifier.size(40.dp)) {
+                    IconButton(onClick = onOpenRegistry, modifier = Modifier.size(48.dp)) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.nav_registry))
                     }
-                    IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
+                    IconButton(onClick = onOpenListProps, modifier = Modifier.size(48.dp)) {
                         Icon(imageVector = Icons.Default.Settings, contentDescription = stringResource(R.string.nav_list_properties))
                     }
                 }
@@ -202,12 +204,7 @@ fun ListScreen(
                     // Muted and at the start, the one style every empty state has (T-339).
                     if (state.groups.isEmpty()) {
                         item(key = "empty") {
-                            Text(
-                                text = stringResource(R.string.list_empty),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("list-empty"),
-                            )
+                            EmptyState(stringResource(R.string.list_empty), modifier = Modifier.testTag("list-empty"))
                         }
                     }
                     // The uncategorised group's heading (T-339): none when it is the only group, a

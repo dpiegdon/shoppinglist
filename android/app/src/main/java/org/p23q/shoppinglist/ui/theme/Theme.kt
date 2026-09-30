@@ -11,6 +11,9 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -178,6 +181,54 @@ fun TuppuButton(
     content: @Composable RowScope.() -> Unit,
 ) = Button(onClick = onClick, modifier = modifier, enabled = enabled, colors = colors, contentPadding = contentPadding, content = content)
 
+/**
+ * The app's secondary button (T-343): Material's outlined button with its label in the plain text
+ * colour, as the web's `btn-secondary` draws it, where Material would draw it in the accent.
+ * Disabled, the label keeps that colour at half strength, like [TuppuButton]. Every outlined button
+ * is this one; ThemeTest fails on a Material `OutlinedButton` used anywhere else.
+ */
+@Composable
+fun TuppuOutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    content: @Composable RowScope.() -> Unit,
+) = OutlinedButton(
+    onClick = onClick,
+    modifier = modifier,
+    enabled = enabled,
+    colors = outlinedButtonColors(),
+    contentPadding = contentPadding,
+    content = content,
+)
+
+/** An outlined button's colours: the label in the plain text colour, disabled at half strength. */
+@Composable
+fun outlinedButtonColors(): ButtonColors {
+    val text = MaterialTheme.colorScheme.onSurface
+    return ButtonDefaults.outlinedButtonColors(contentColor = text, disabledContentColor = text.copy(alpha = 0.5f))
+}
+
+/**
+ * The confirm button of a dialog that destroys something (delete, leave, remove) (T-343): a text
+ * button like every dialog's, its label in the error colour, the web's danger button in a
+ * confirmation. ThemeTest fails on a dialog whose destructive confirm is drawn in the accent.
+ */
+@Composable
+fun DangerTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) = TextButton(
+    onClick = onClick,
+    modifier = modifier,
+    enabled = enabled,
+    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+    content = content,
+)
+
 /** A filled button's colours in [containerColor]/[contentColor], disabled at half strength (T-334). */
 @Composable
 fun filledButtonColors(
@@ -199,10 +250,24 @@ val BalancePositiveLight = Color(0xFF15803D)
 val BalancePositiveDark = Color(0xFF4ADE80)
 
 // The admin's registration switch (T-112): a green track when new accounts are allowed, the error
-// red when not, and a white knob, the same in both themes. Meaning colours too; the web's
-// --color-switch-on and --color-switch-knob, which web/src/lib/brandColors.test.ts pins to these.
+// red when not; a white knob on the green, and on the red the on-red colour
+// ([registrationSwitchColors]). Meaning colours too; the web's --color-switch-on and
+// --color-switch-knob, which web/src/lib/brandColors.test.ts pins to these.
 val RegistrationSwitchOn = Color(0xFF2E7D32)
 val RegistrationSwitchKnob = Color(0xFFFFFFFF)
+
+/**
+ * The registration switch's colours (T-112): the white knob on the green, and on the red the
+ * scheme's on-red colour (T-343), which in the dark scheme is the near-black a white knob read at
+ * 2.8:1 against.
+ */
+@Composable
+fun registrationSwitchColors(): SwitchColors = SwitchDefaults.colors(
+    checkedThumbColor = RegistrationSwitchKnob,
+    checkedTrackColor = RegistrationSwitchOn,
+    uncheckedThumbColor = MaterialTheme.colorScheme.onError,
+    uncheckedTrackColor = MaterialTheme.colorScheme.error,
+)
 
 /** The green for the theme being rendered. */
 fun positiveBalanceColor(variant: ThemeVariant): Color = when (variant) {

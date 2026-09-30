@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.accounts
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -17,7 +19,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,12 +29,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.DragReorderState
 import org.p23q.shoppinglist.ui.LocalAreaNote
 import org.p23q.shoppinglist.ui.accountName
@@ -45,6 +48,7 @@ import org.p23q.shoppinglist.ui.rememberDragReorderState
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
 import org.p23q.shoppinglist.ui.syncRecencyText
 import org.p23q.shoppinglist.ui.theme.TuppuButton
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 
 /**
  * Every account on this phone (T-292), in the order the overview shows them: who it is, where, in
@@ -94,7 +98,7 @@ fun AccountsScreen(
                 Spacer(Modifier.height(8.dp))
             }
         }
-        OutlinedButton(onClick = onAddAccount, modifier = Modifier.fillMaxWidth().testTag("accounts-add")) {
+        TuppuOutlinedButton(onClick = onAddAccount, modifier = Modifier.fillMaxWidth().testTag("accounts-add")) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.accounts_add))
@@ -102,7 +106,7 @@ fun AccountsScreen(
         // One local area per phone (T-293): offered while there is none.
         if (canAddLocal) {
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { viewModel.addLocal() }, modifier = Modifier.fillMaxWidth().testTag("accounts-add-local")) {
+            TuppuOutlinedButton(onClick = { viewModel.addLocal() }, modifier = Modifier.fillMaxWidth().testTag("accounts-add-local")) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.accounts_add_local))
@@ -141,7 +145,7 @@ private fun AccountCard(
                 // Two lines, email then the full server URL, rather than the stored label: two
                 // accounts on one host (prod and stage) differ only in the path.
                 Text(accountName(account), style = MaterialTheme.typography.titleMedium)
-                account.serverUrl?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                account.serverUrl?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Spacer(Modifier.height(4.dp))
                 when (row.status) {
                     AccountStatus.SIGNED_IN -> {
@@ -156,7 +160,7 @@ private fun AccountCard(
                             color = MaterialTheme.colorScheme.error,
                         )
                         SyncFigures(row, nowMs)
-                        TuppuButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
+                        TuppuButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}"), contentPadding = CompactButtonPadding) {
                             Text(stringResource(R.string.accounts_sign_in))
                         }
                     }
@@ -171,7 +175,7 @@ private fun AccountCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        TuppuButton(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}")) {
+                        TuppuButton(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}"), contentPadding = CompactButtonPadding) {
                             Text(stringResource(R.string.update_check_action))
                         }
                     }
@@ -183,20 +187,25 @@ private fun AccountCard(
             // The arrows' moves stay offered to accessibility services, as actions on the handle.
             val up = stringResource(R.string.accounts_move_up)
             val down = stringResource(R.string.accounts_move_down)
-            Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = stringResource(R.string.listprops_reorder_category, accountName(account)),
+            val handleLabel = stringResource(R.string.listprops_reorder_category, accountName(account))
+            // The whole 48dp box is both the drag target and what TalkBack focuses, as the
+            // category handle's (T-340); the icon inside says nothing of its own.
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
+                    .size(48.dp)
                     .dragReorderHandle(reorder, account.id)
-                    .padding(12.dp)
                     .semantics {
+                        contentDescription = handleLabel
                         customActions = listOfNotNull(
                             CustomAccessibilityAction(up) { onMoveUp(); true }.takeIf { canMoveUp },
                             CustomAccessibilityAction(down) { onMoveDown(); true }.takeIf { canMoveDown },
                         )
                     }
                     .testTag("account-handle-${account.id}"),
-            )
+            ) {
+                Icon(imageVector = Icons.Default.Menu, contentDescription = null)
+            }
         }
     }
 }

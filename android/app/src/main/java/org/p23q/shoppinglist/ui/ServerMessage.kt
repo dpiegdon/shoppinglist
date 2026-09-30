@@ -46,7 +46,7 @@ fun ServerMessage(text: String, tag: String, modifier: Modifier = Modifier) {
             Text(
                 text,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag(tag).padding(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier.testTag(tag).padding(BannerPadding),
             )
         }
     }

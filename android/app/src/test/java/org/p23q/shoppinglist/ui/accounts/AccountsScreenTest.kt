@@ -1,18 +1,19 @@
 package org.p23q.shoppinglist.ui.accounts
 
-import org.p23q.shoppinglist.data.idleMainLooper
-import org.p23q.shoppinglist.data.closeWhenIdle
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
@@ -27,6 +28,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.TestAccounts
+import org.p23q.shoppinglist.data.closeWhenIdle
+import org.p23q.shoppinglist.data.idleMainLooper
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -162,6 +165,10 @@ class AccountsScreenTest {
             .fetchSemanticsNode().config.getOrElse(SemanticsActions.CustomActions) { emptyList() }
         assertEquals(listOf("Move down"), actions("prod").map { it.label })
         assertEquals(listOf("Move up"), actions("stage").map { it.label })
+        // The node TalkBack focuses is the whole 48dp target, not the 24dp icon inside it (T-343).
+        composeTestRule.onNodeWithTag("account-handle-prod", useUnmergedTree = true)
+            .assertWidthIsAtLeast(48.dp)
+            .assertHeightIsAtLeast(48.dp)
 
         composeTestRule.runOnUiThread { actions("prod").single().action() }
         composeTestRule.waitUntil(timeoutMillis = 5_000) {

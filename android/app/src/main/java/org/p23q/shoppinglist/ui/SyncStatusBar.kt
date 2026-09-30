@@ -21,13 +21,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.core.sync.SyncState
+
+/** The attention banner's test tag. */
+internal const val ATTENTION_BANNER_TAG = "attention-banner"
 
 /**
  * The shared sync-health surface (T-47): a quiet recency line ("Synced 5 min ago · 2 pending"), and
@@ -49,16 +53,12 @@ fun SyncStatusBar(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (showAttention && state.blockedCount > 0) {
-            Surface(
+            // Inset and rounded, the one banner shape (A9), not a full-bleed strip.
+            ErrorBanner(
                 onClick = onAttentionClick,
-                color = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp).testTag(ATTENTION_BANNER_TAG),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Warning, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(attentionText(state.blockedCount).asString(), style = MaterialTheme.typography.bodyMedium)
