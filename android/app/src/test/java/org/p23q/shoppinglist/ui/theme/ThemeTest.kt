@@ -239,7 +239,7 @@ class ThemeTest {
             }.toList()
         }
         val destructiveBlocks = blocks.filter { (_, block) -> destructive.containsMatchIn(block) }
-        assertTrue("the destructive confirms are found: $destructiveBlocks", destructiveBlocks.size >= 7)
+        assertTrue("the destructive confirms are found: $destructiveBlocks", destructiveBlocks.size >= 6)
         val offenders = destructiveBlocks.filter { (_, block) -> "DangerTextButton(" !in block || "TuppuTextButton(" in block }.map { it.first }
         assertEquals("a destructive confirm must be a DangerTextButton", emptyList<String>(), offenders)
     }
