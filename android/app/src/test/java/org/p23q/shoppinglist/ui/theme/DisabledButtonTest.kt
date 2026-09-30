@@ -36,9 +36,10 @@ class DisabledButtonTest {
     }
 
     @Test
-    fun `a disabled delete button is the red at half strength, with a white label in the dark`() {
+    fun `a disabled delete button is the red at half strength, with its dark label in the dark`() {
         val (colors, _, red) = colours(dark = true) { dangerButtonColors() }
         assertEquals(red.copy(alpha = 0.5f), colors.disabledContainerColor)
-        assertEquals(Color.White, colors.contentColor)
+        assertEquals(OnErrorDark, colors.contentColor)
+        assertEquals(colors.contentColor, colors.disabledContentColor)
     }
 }
