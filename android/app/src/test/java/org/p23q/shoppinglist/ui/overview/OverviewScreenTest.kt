@@ -303,6 +303,11 @@ class OverviewScreenTest {
         node.assertTextEquals(message)
         org.p23q.shoppinglist.ui.login.assertNoLinks(node)
         assertTrue("above the lists", top("server-message-$TEST_ACCOUNT_ID") < topOfText("Groceries"))
+        // Drawn as the web's info banner (T-339): a muted stripe along its start edge.
+        val stripe = composeTestRule.onNodeWithTag("server-message-$TEST_ACCOUNT_ID-stripe", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        assertTrue("stripe before the text", stripe.right <= composeTestRule
+            .onNodeWithTag("server-message-$TEST_ACCOUNT_ID", useUnmergedTree = true).getUnclippedBoundsInRoot().left)
     }
 
     @Test

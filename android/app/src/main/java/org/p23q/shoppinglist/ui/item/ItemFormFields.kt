@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -110,16 +112,22 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     if (state.stores.isNotEmpty()) {
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             state.stores.forEach { store ->
+                // The whole chip removes the store (T-339): a plain icon rather than an IconButton,
+                // whose 48dp height made these chips taller than the suggestion chips beside them
+                // and left an 18dp-wide target.
                 InputChip(
                     selected = false,
-                    onClick = {},
+                    onClick = { viewModel.removeStore(store) },
                     label = { Text(store) },
                     trailingIcon = {
-                        IconButton(onClick = { viewModel.removeStore(store) }, modifier = Modifier.width(18.dp)) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.item_remove_store, store))
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            // Merged into the chip, so TalkBack says what pressing it does.
+                            contentDescription = stringResource(R.string.item_remove_store, store),
+                            modifier = Modifier.size(InputChipDefaults.IconSize),
+                        )
                     },
-                    modifier = Modifier.padding(end = 4.dp),
+                    modifier = Modifier.padding(end = 4.dp).testTag("store-chip"),
                 )
             }
         }

@@ -6,9 +6,19 @@ import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -605,6 +615,77 @@ class ListScreenTest {
 
         composeTestRule.onNodeWithText("Milk").assertIsDisplayed()
         composeTestRule.onAllNodesWithTag("item-due", useUnmergedTree = true).assertCountEquals(0)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `a row is a checkbox to TalkBack that says whether the item is checked (T-339)`() = runBlocking<Unit> {
+        val (db, viewModel) = dueScreen(ListKind.SHOPPING) { items, listId ->
+            items.createItem(listId, "Milk")
+            items.createItem(listId, "Bread", status = Status.CHECKED)
+        }
+        viewModel.toggleShowChecked()
+
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Milk")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
+        composeTestRule.onNodeWithText("Bread")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.On))
+        // The edit button keeps the full 48dp target.
+        composeTestRule.onAllNodesWithTag("item-edit")[0].assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `the uncategorised group has no heading when it is the only group (T-339)`() = runBlocking<Unit> {
+        val (db, viewModel) = dueScreen(ListKind.SHOPPING) { items, listId ->
+            items.createItem(listId, "Milk")
+        }
+        composeTestRule.setContent { ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Milk").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("group-heading-uncategorized", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("—").assertDoesNotExist()
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `beside other groups the uncategorised heading is muted and read as No category (T-339)`() = runBlocking<Unit> {
+        val (db, viewModel) = dueScreen(ListKind.SHOPPING) { items, listId ->
+            items.createItem(listId, "Milk")
+            items.setCategory(items.createItem(listId, "Soap"), "Bathroom")
+        }
+        composeTestRule.setContent {
+            ShoppingListTheme(darkTheme = false) {
+                ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Bathroom").assertExists()
+        composeTestRule.onNodeWithTag("group-heading-uncategorized", useUnmergedTree = true)
+            .assertContentDescriptionEquals("No category")
+        assertEquals(MutedLight, textStyleOf("—", useUnmergedTree = true).color)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `the quantity and price line is muted, as every secondary line is (T-339)`() = runBlocking<Unit> {
+        val (db, viewModel) = dueScreen(ListKind.SHOPPING) { items, listId ->
+            items.setQuantity(items.createItem(listId, "Milk"), "2 l")
+        }
+        composeTestRule.setContent {
+            ShoppingListTheme(darkTheme = false) {
+                ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel)
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(MutedLight, textStyleOf("2 l", useUnmergedTree = true).color)
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

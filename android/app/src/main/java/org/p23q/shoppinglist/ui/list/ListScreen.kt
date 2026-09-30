@@ -55,8 +55,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -195,34 +199,51 @@ fun ListScreen(
             ) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     // Said, not left blank (T-179), as the expense list and the web do.
+                    // Muted and at the start, the one style every empty state has (T-339).
                     if (state.groups.isEmpty()) {
                         item(key = "empty") {
                             Text(
                                 text = stringResource(R.string.list_empty),
                                 style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("list-empty"),
                             )
                         }
                     }
+                    // The uncategorised group's heading (T-339): none when it is the only group, a
+                    // lone dash says nothing there; otherwise a muted dash that TalkBack reads as
+                    // "No category" rather than as a dash.
+                    val onlyUncategorised = state.groups.size == 1 && state.groups[0].category == null
                     state.groups.forEachIndexed { index, group ->
                     // A distinct sentinel for "uncategorized" (T-263): group.category is null for
                     // that bucket and the canonical category text otherwise, but a user can also
                     // name a category literally "—" (CategoryCanon.UNCATEGORIZED_LABEL, used below
                     // only for display) — keying both on that same dash gave Compose two groups
                     // with the identical key and it crashed with "Key ... was already used".
-                    item(key = group.category?.let { "header-cat:$it" } ?: "header-uncategorized") {
+                    if (!onlyUncategorised) item(key = group.category?.let { "header-cat:$it" } ?: "header-uncategorized") {
                         // A thin divider between categories (not above the first) makes groups easy to
                         // tell apart; the header itself gets a colored accent.
                         if (index > 0) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
+                        val noCategory = stringResource(R.string.list_no_category)
                         Text(
                             text = group.category ?: CategoryCanon.UNCATEGORIZED_LABEL,
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.accentText,
+                            color = if (group.category == null) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.accentText
+                            },
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 3.dp)
+                                .testTag(if (group.category == null) "group-heading-uncategorized" else "group-heading")
+                                .semantics {
+                                    heading()
+                                    if (group.category == null) contentDescription = noCategory
+                                },
                         )
                     }
                     itemsIndexed(group.items, key = { _, it -> it.localId }) { itemIndex, item ->
@@ -305,12 +326,22 @@ private fun ItemRow(
             shrinkVertically(animationSpec = collapse) +
             fadeOut(animationSpec = dim),
     ) {
+    val editLabel = stringResource(R.string.list_edit_item, item.name.value)
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 // Tap toggles done; long-press opens the item editor instead of toggling it (T-79).
-                .combinedClickable(onClick = onToggle, onLongClick = onEdit)
+                // A checkbox to TalkBack (T-339), so it says whether the item is checked, as the web's
+                // role="checkbox" row does.
+                .combinedClickable(
+                    onClick = onToggle,
+                    onLongClick = onEdit,
+                    onLongClickLabel = editLabel,
+                    role = Role.Checkbox,
+                )
+                .semantics { toggleableState = ToggleableState(isChecked) }
+                .testTag("item-row")
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -337,7 +368,13 @@ private fun ItemRow(
                 val detail = if (!showShoppingFields) "" else
                     listOfNotNull(quantity, formatPrice(item, defaultCurrency, appLocale())).joinToString(" · ")
                 if (detail.isNotEmpty()) {
-                    Text(text = detail, style = MaterialTheme.typography.bodySmall)
+                    // Muted, as every secondary line is (T-339).
+                    Text(
+                        text = detail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("item-detail"),
+                    )
                 }
                 item.note.value?.takeIf { it.isNotBlank() }?.let { note ->
                     Text(
@@ -384,8 +421,9 @@ private fun ItemRow(
                 AuthorBadge(authorMember)
                 Spacer(Modifier.width(4.dp))
             }
-            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.list_edit_item, item.name.value))
+            // The full 48dp target (T-339).
+            IconButton(onClick = onEdit, modifier = Modifier.size(48.dp).testTag("item-edit")) {
+                Icon(imageVector = Icons.Default.Edit, contentDescription = editLabel)
             }
         }
         // A per-word LineThrough only crossed the name, leaving quantity/note/icon untouched; one

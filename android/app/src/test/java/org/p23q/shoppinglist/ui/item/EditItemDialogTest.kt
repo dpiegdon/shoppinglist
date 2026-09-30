@@ -9,8 +9,14 @@ import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import org.p23q.shoppinglist.core.db.Status
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -188,6 +194,57 @@ class EditItemDialogTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Sweep").assertExists()
         composeTestRule.onAllNodesWithTag("item-due-row").assertCountEquals(0)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `status is one segmented choice, Backlog then Todo then Checked, as on the web (T-339)`() = runBlocking<Unit> {
+        val db = database()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+
+        composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("item-status").performScrollTo()
+
+        val radio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+        fun left(label: String) =
+            composeTestRule.onNode(hasText(label) and radio).fetchSemanticsNode().boundsInRoot.left
+        assertTrue(left("Backlog") < left("Todo"))
+        assertTrue(left("Todo") < left("Checked"))
+        composeTestRule.onNode(hasText("Todo") and radio).assertIsSelected()
+
+        composeTestRule.onNode(hasText("Backlog") and radio).performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(Status.BACKLOG, viewModel.uiState.value.status)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    @Test
+    fun `pressing anywhere on a store chip removes the store (T-339)`() = runBlocking<Unit> {
+        val db = database()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk")
+        itemsRepo.setStores(itemId, listOf("Aldi"))
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+
+        composeTestRule.setContent { EditItemDialog(itemId = itemId, onDismiss = {}, viewModel = viewModel) }
+        composeTestRule.waitForIdle()
+
+        // The chip says what pressing it does, and the label itself is the target.
+        composeTestRule.onNodeWithContentDescription("Remove Aldi").assertExists()
+        composeTestRule.onNodeWithTag("store-chip").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(emptyList<String>(), viewModel.uiState.value.stores)
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 }

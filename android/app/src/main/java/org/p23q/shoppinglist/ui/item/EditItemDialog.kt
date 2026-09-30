@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.item
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,13 +15,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -53,6 +58,7 @@ import org.p23q.shoppinglist.ui.theme.TuppuTextButton
  *  plus delete. Full-screen (T-80) rather than a floating AlertDialog: no tap-outside-to-cancel
  *  (edits aren't lost by an accidental scrim tap), and a fixed action bar that stays above the
  *  soft keyboard while the field area scrolls underneath it. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditItemDialog(
     itemId: String,
@@ -137,18 +143,23 @@ fun EditItemDialog(
                             Spacer(Modifier.height(8.dp))
 
                             Text(stringResource(R.string.item_status), style = MaterialTheme.typography.labelMedium)
-                            Row {
-                                Status.entries.forEach { status ->
-                                    FilterChip(
+                            Spacer(Modifier.height(4.dp))
+                            // One segmented control (T-339), as every exclusive choice is drawn and as
+                            // the web offers it, in the same order: Backlog, Todo, Checked.
+                            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().testTag("item-status")) {
+                                Status.entries.forEachIndexed { index, status ->
+                                    SegmentedButton(
                                         selected = state.status == status,
                                         onClick = { viewModel.onStatusChange(status) },
+                                        shape = SegmentedButtonDefaults.itemShape(index = index, count = Status.entries.size),
+                                        contentPadding = PaddingValues(horizontal = 8.dp),
+                                    ) {
                                         // The LABEL, not the wire value (T-124). This rendered the raw
                                         // identifier — "backlog", "todo", "checked" — which is exactly
                                         // what Status's docstring says never to surface, and would have
                                         // stayed untranslated English in every language.
-                                        label = { Text(stringResource(status.label)) },
-                                        modifier = Modifier.padding(end = 4.dp),
-                                    )
+                                        Text(stringResource(status.label), style = MaterialTheme.typography.labelMedium)
+                                    }
                                 }
                             }
                             if (state.status == Status.BACKLOG) {

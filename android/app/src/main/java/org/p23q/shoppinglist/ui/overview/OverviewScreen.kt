@@ -1,6 +1,5 @@
 package org.p23q.shoppinglist.ui.overview
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -112,12 +112,14 @@ fun OverviewScreen(
                 val sections = state.sections
                 val hasBanner = sections.any { accountBanner(it.account) != null || it.account.serverMessage != null }
                 if (state.lists.isEmpty() && state.invites.isEmpty() && !hasBanner) {
-                    // Scrollable so the pull gesture still fires with no lists to scroll.
-                    Box(
-                        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(stringResource(R.string.overview_no_lists))
+                    // Scrollable so the pull gesture still fires with no lists to scroll. Muted and
+                    // at the start, the one style every empty state has (T-339), as the web says it.
+                    Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        Text(
+                            stringResource(R.string.overview_no_lists),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth().padding(16.dp).testTag("overview-empty"),
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -470,11 +472,12 @@ private fun ListCard(
     openCount: Int,
     onClick: () -> Unit,
 ) {
+    // The card's own onClick (T-339), so the ripple keeps to its rounded corners.
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable(onClick = onClick),
+            .padding(vertical = 4.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -591,13 +594,16 @@ private fun InviteCard(
     }
 }
 
-/** The list-kind icon in a fixed-width slot, so list names line up whatever the icon's width (T-332). */
+/**
+ * The list-kind icon in a slot of a minimum width, so list names line up whatever the icon's width
+ * (T-332), and a large font scale widens the slot rather than clipping the glyph (T-339).
+ */
 @Composable
 internal fun KindIcon(kind: String?) {
     Text(
         text = ListKind.icon(kind),
         textAlign = TextAlign.Center,
-        modifier = Modifier.padding(end = 8.dp).width(22.dp).testTag("kind-icon"),
+        modifier = Modifier.padding(end = 8.dp).widthIn(min = 22.dp).testTag("kind-icon"),
     )
 }
 
