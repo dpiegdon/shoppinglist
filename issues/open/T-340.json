@@ -1,0 +1,13 @@
+{
+  "body": "Design cleanup, list properties and the category editor (both clients).\nCategory editor unified on Android's model (decision 6): drag + rename + Save order on both; web\ndrops \u2191/\u2193/\u2715/+ and Add category, gains drag with ArrowUp/ArrowDown on the handle; Android drag step\nuses measured row heights (A3), handle padded with TalkBack move actions (A4); identical help\ntext. List type as icon + name + switch on web (decision 7, web P4). Save feedback: Save enabled\nonly when changed, short \"Saved\" in the card, each error inside its card (Android A2, web W6).\nClear checked: help text on both, no duplicate heading (Android B4, web W8). Field labelling\nconsistent (A16), accessible names for name/notes/invite email (web B6), role=alert (web W4),\nRevoke not btn-sm (web W7) and the same confirm behaviour as Android (web B17), back arrow via the\ntranslated link (web B12), pending invites shown the same way on both (Android B9), card terminal\naction width rule (A11) within list properties.",
+  "created_at": "2026-09-30T06:22:24+00:00",
+  "id": "T-340",
+  "labels": [
+    "design",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Design cleanup: list properties and unified category editor",
+  "updated_at": "2026-09-30T06:22:24+00:00"
+}
