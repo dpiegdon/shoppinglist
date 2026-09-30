@@ -1,0 +1,13 @@
+{
+  "body": "Design cleanup, list screen, item rows, item dialog and overview (both clients).\nChecked state announced to screen readers (Android C3: toggleable/stateDescription; web B8:\nrole=checkbox aria-checked, edit button beside not inside). Names in regular weight on web (web\nP2, decision 4). Full-row strike and note line on web (decision 5). Lone \"\u2014\" uncategorised\nheading hidden when it is the only group, muted with a \"No category\" label otherwise (Android A13,\nweb B14). Secondary lines muted (Android A12, list rows). Edit pencil 48dp (C6). ItemRow logical\nmargins for RTL (web B12). Undo toast role=status, reachable, not overlapping (web B10). Store\nchips 32dp, whole chip removes (Android A5). Status as one segmented control ordered like Android\non both (web P3, Android A8 for status, B9 order). Item dialog Delete placed the same on both\n(Android B9). Inline blank-name validation and role=alert/aria wiring in the item dialog (web W4,\nW5). Dialog footer wraps at 360px (web B11). Overview: invite cards wrap (web B11), role=img on\nkind icon (web B7), KindIcon min width not fixed (C7), card ripple follows shape (C10), empty\nstates one muted style (A20), server message banner like the web's info banner (A9, Android B8).\nDead code ItemRow.tsx (W11).",
+  "created_at": "2026-09-30T06:22:24+00:00",
+  "id": "T-339",
+  "labels": [
+    "design",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Design cleanup: list screen, item rows, item dialog, overview",
+  "updated_at": "2026-09-30T06:22:24+00:00"
+}
