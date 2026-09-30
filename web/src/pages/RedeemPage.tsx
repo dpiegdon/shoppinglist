@@ -40,18 +40,14 @@ export default function RedeemPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-      }}
-    >
-      <form onSubmit={handleSubmit} className="card" style={{ padding: "2rem", width: "100%", maxWidth: "26rem" }}>
-        <h1 style={{ fontSize: "1.3rem", marginTop: 0 }}>{t("redeem.title")}</h1>
-        <p className="muted">{t("redeem.hint")}</p>
+    // The standard signed-in page, as Settings and Admin: a heading, then the form in a card.
+    <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
+      <h1 style={{ fontSize: "1.3rem" }}>{t("redeem.title")}</h1>
+      <form onSubmit={handleSubmit} className="card" style={{ padding: "1rem" }}>
+        <p className="muted" style={{ marginTop: 0 }}>
+          {t("redeem.hint")}
+        </p>
+
         <div className="form-field">
           <label htmlFor="invite-token">{t("redeem.code")}</label>
           <textarea

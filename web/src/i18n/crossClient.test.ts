@@ -153,6 +153,18 @@ describe("the two clients say the same thing (T-148)", () => {
     });
   }
 
+  for (const [tag, xml] of LOCALES) {
+    it(`${tag}: no Android string starts or ends with a space aapt would strip`, () => {
+      // aapt drops a value's leading and trailing whitespace unless the value is quoted: " (admin)"
+      // came out as "(admin)", glued to the email before it (T-341).
+      const doc = new DOMParser().parseFromString(xml, "text/xml");
+      const stripped = Array.from(doc.getElementsByTagName("string"))
+        .filter((node) => /^\s|\s$/.test(node.textContent ?? ""))
+        .map((node) => node.getAttribute("name"));
+      expect(stripped, "quote these values to keep their edge spaces").toEqual([]);
+    });
+  }
+
   for (const [tag, xml, catalog] of LOCALES.slice(1)) {
     it(`${tag}: every shared string reads the same on both clients`, () => {
       const android = androidStrings(xml);

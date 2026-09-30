@@ -265,7 +265,7 @@
     <string name="admin_server_message">Повідомлення сервера</string>
     <string name="admin_server_message_help">Один рядок, який усі бачать на сторінці входу та над своїми списками.</string>
     <string name="admin_server_message_invalid">Повідомлення має бути одним рядком не довше 200 символів.</string>
-    <string name="admin_is_admin_suffix"> (адмін)</string>
+    <string name="admin_is_admin_suffix">" (адмін)"</string>
     <string name="admin_users">Користувачі</string>
     <string name="admin_show_users">Показати зареєстрованих користувачів</string>
     <string name="admin_user_count">Зареєстровані користувачі: %1$d</string>
@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">Новий пароль для %1$s — показується один раз, надішли його безпечно:</string>
     <string name="admin_delete_user_title">Видалити користувача?</string>
     <string name="admin_delete_user_body">Назавжди видалити %1$s і всі його дані. Це не можна скасувати.</string>
+    <string name="admin_reset_password">Скинути пароль</string>
     <string name="admin_reset_user_title">Скинути пароль?</string>
     <string name="admin_reset_user_body">Скинути пароль %1$s? Поточний пароль одразу перестане працювати.</string>
     <string name="admin_msg_password_required">Введи свій пароль, щоб скинути або видалити користувача.</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Облікові записи</string>
+    <string name="nav_sync_open_accounts">Відкрити облікові записи</string>
     <string name="accounts_add">Додати обліковий запис</string>
     <string name="accounts_state_signed_in">Вхід виконано</string>
-    <string name="accounts_state_signed_out">Вихід виконано: торкніться, щоб увійти</string>
+    <string name="accounts_state_signed_out">Вихід виконано</string>
+    <string name="accounts_sign_in">Увійти</string>
     <string name="accounts_state_outdated">Застосунок застарий для цього сервера</string>
     <string name="accounts_outdated_help">Синхронізацію з цим сервером призупинено до оновлення застосунку.</string>
     <string name="accounts_state_local">На цьому телефоні</string>

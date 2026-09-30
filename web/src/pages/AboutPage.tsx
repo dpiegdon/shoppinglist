@@ -47,8 +47,10 @@ export default function AboutPage() {
       {/* The name in cuneiform under the heading, with its transliteration beneath (T-225). The
           login screens carry the same sign smaller and without the caption. */}
       <CuneiformName height={64} style={{ margin: "0 auto 0.25rem" }} />
+      {/* For the eye only: the sign above already reads as ṭuppu, so a screen reader hears it once. */}
       <p
         className="muted"
+        aria-hidden="true"
         style={{ textAlign: "center", fontStyle: "italic", fontSize: "0.85rem", marginTop: 0 }}
       >
         {t("about.transliteration")}

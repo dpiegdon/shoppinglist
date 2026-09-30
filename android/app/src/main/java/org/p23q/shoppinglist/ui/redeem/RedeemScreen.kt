@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,8 +23,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.asString
-import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
  * App Link entry point: a tapped `https://<server>/invite/<token>` link lands here and redeems
@@ -74,21 +73,21 @@ fun RedeemScreen(
             error != null -> {
                 Text(error.asString(), color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
-                TuppuButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                // Back is the quiet way out, not the screen's primary action (A21).
+                OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
             }
             state.choices.isNotEmpty() -> {
                 Text(stringResource(R.string.redeem_choose_account), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(16.dp))
                 state.choices.forEach { account ->
-                    OutlinedButton(
+                    AccountChoiceRow(
+                        account = account,
                         onClick = { viewModel.chooseAccount(account.id) },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("redeem-account-" + account.id),
-                    ) {
-                        InviteAccountLines(account)
-                    }
+                        modifier = Modifier.testTag("redeem-account-" + account.id),
+                    )
                 }
                 Spacer(Modifier.height(16.dp))
-                TuppuButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
             }
             else -> {
                 CircularProgressIndicator()

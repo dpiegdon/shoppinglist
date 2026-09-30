@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -23,6 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.ui.assertInSectionCard
 import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -89,8 +92,11 @@ class AboutScreenTest {
             .onNodeWithTag("about-cuneiform", useUnmergedTree = true)
             .assertExists()
             .assertContentDescriptionEquals("ṭuppu")
-        // About, unlike the login screen, also spells the reading out under the sign.
-        composeTestRule.onNodeWithText("ṭuppu").assertExists()
+        // About, unlike the login screen, also spells the reading out under the sign, for the eye
+        // only: TalkBack has the sign's description already and reads the name once (B15).
+        composeTestRule.onNodeWithTag("about-transliteration", useUnmergedTree = true)
+            .assertTextEquals("ṭuppu")
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.HideFromAccessibility))
     }
 
     @Test
@@ -115,7 +121,9 @@ class AboutScreenTest {
         }
 
         composeTestRule.onNodeWithText("App updates").assertExists()
-        composeTestRule.onNodeWithText("Check for updates automatically").assertExists()
+        // In a card like every other section (A17).
+        composeTestRule.assertInSectionCard("App updates", "Check for updates automatically")
+
         // The switch is the only toggleable thing on this screen.
         composeTestRule.onNode(isToggleable()).assertIsOn()
         composeTestRule.onNode(isToggleable()).performClick()

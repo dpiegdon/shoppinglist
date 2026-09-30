@@ -265,7 +265,7 @@
     <string name="admin_server_message">Mensaje del servidor</string>
     <string name="admin_server_message_help">Una línea, visible para todos en la página de inicio de sesión y encima de sus listas.</string>
     <string name="admin_server_message_invalid">El mensaje debe ser una sola línea de 200 caracteres como máximo.</string>
-    <string name="admin_is_admin_suffix"> (admin)</string>
+    <string name="admin_is_admin_suffix">" (admin)"</string>
     <string name="admin_users">Usuarios</string>
     <string name="admin_show_users">Mostrar usuarios registrados</string>
     <string name="admin_user_count">Usuarios registrados: %1$d</string>
@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">Nueva contraseña para %1$s — se muestra una sola vez, envíala de forma segura:</string>
     <string name="admin_delete_user_title">¿Eliminar usuario?</string>
     <string name="admin_delete_user_body">Eliminar permanentemente a %1$s y todos sus datos. Esto no se puede deshacer.</string>
+    <string name="admin_reset_password">Restablecer contraseña</string>
     <string name="admin_reset_user_title">¿Restablecer la contraseña?</string>
     <string name="admin_reset_user_body">¿Restablecer la contraseña de %1$s? Su contraseña actual dejará de funcionar de inmediato.</string>
     <string name="admin_msg_password_required">Introduce tu contraseña para restablecer o eliminar un usuario.</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Cuentas</string>
+    <string name="nav_sync_open_accounts">Abrir cuentas</string>
     <string name="accounts_add">Añadir cuenta</string>
     <string name="accounts_state_signed_in">Sesión iniciada</string>
-    <string name="accounts_state_signed_out">Sesión cerrada: toca para iniciar sesión</string>
+    <string name="accounts_state_signed_out">Sesión cerrada</string>
+    <string name="accounts_sign_in">Iniciar sesión</string>
     <string name="accounts_state_outdated">Aplicación demasiado antigua para este servidor</string>
     <string name="accounts_outdated_help">La sincronización con este servidor está en pausa hasta que se actualice la aplicación.</string>
     <string name="accounts_state_local">En este teléfono</string>

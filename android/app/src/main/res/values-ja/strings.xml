@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">%1$s の新しいパスワード — 一度だけ表示されます。安全な方法で伝えてください：</string>
     <string name="admin_delete_user_title">ユーザーを削除しますか？</string>
     <string name="admin_delete_user_body">%1$s とそのすべてのデータを完全に削除します。元に戻せません。</string>
+    <string name="admin_reset_password">パスワードをリセット</string>
     <string name="admin_reset_user_title">パスワードをリセットしますか？</string>
     <string name="admin_reset_user_body">%1$s のパスワードをリセットしますか？現在のパスワードはすぐに使えなくなります。</string>
     <string name="admin_msg_password_required">ユーザーをリセットまたは削除するには、パスワードを入力してください。</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">アカウント一覧</string>
+    <string name="nav_sync_open_accounts">アカウント一覧を開く</string>
     <string name="accounts_add">アカウントを追加</string>
     <string name="accounts_state_signed_in">ログイン中</string>
-    <string name="accounts_state_signed_out">ログアウト済み：タップしてログイン</string>
+    <string name="accounts_state_signed_out">ログアウト済み</string>
+    <string name="accounts_sign_in">ログイン</string>
     <string name="accounts_state_outdated">このサーバーにはアプリが古すぎます</string>
     <string name="accounts_outdated_help">アプリを更新するまで、このサーバーとの同期は停止しています。</string>
     <string name="accounts_state_local">この端末上</string>

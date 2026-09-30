@@ -2,6 +2,7 @@ package org.p23q.shoppinglist.ui.admin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +15,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -118,7 +120,8 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                     ) {
                         Text(stringResource(R.string.action_save))
                     }
-                    TuppuTextButton(
+                    // A real button, outlined as the web's secondary one (B5).
+                    OutlinedButton(
                         onClick = { viewModel.clearMessage() },
                         enabled = state.canClearMessage(),
                         modifier = Modifier.testTag("admin-server-message-clear"),
@@ -174,7 +177,9 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 }
                 Spacer(Modifier.height(8.dp))
 
-                users.forEach { user ->
+                users.forEachIndexed { index, user ->
+                    // A line between rows only, none dangling under the last (A14).
+                    if (index > 0) HorizontalDivider()
                     UserRow(
                         user = user,
                         deletable = !user.isAdmin && user.id != state.currentAccountId,
@@ -182,7 +187,6 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                         onReset = { if (viewModel.requirePassword()) pendingReset = user },
                         onDelete = { if (viewModel.requirePassword()) pendingDelete = user },
                     )
-                    HorizontalDivider()
                 }
             }
         }
@@ -258,12 +262,15 @@ private fun UserRow(
     onReset: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    // The buttons sit beside the email while they fit, and go under it when they do not: "Reset
+    // password" is long in French, and the row would run past a 360dp card (web B11).
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("admin-user-row"),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.padding(end = 8.dp)) {
             Text(user.email + if (user.isAdmin) stringResource(R.string.admin_is_admin_suffix) else "")
             Text(
                 stringResource(R.string.admin_session_count, user.sessionCount),
@@ -271,11 +278,12 @@ private fun UserRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TuppuButton(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_reset)) }
-        if (deletable) {
-            Spacer(Modifier.width(4.dp))
-            TuppuButton(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
-                Text(stringResource(R.string.action_delete))
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TuppuButton(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.admin_reset_password)) }
+            if (deletable) {
+                TuppuButton(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
+                    Text(stringResource(R.string.action_delete))
+                }
             }
         }
     }

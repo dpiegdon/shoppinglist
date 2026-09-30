@@ -171,6 +171,18 @@ textarea:focus {
   color: var(--color-danger-text);
 }
 
+/* A dialog's confirm and dismiss, as Android's text buttons: no fill, no border. With btn-danger
+   the label turns red instead of the fill. */
+.btn-text {
+  background: transparent;
+  color: var(--color-accent-strong);
+  border-color: transparent;
+}
+
+.btn-text.btn-danger {
+  color: var(--color-danger);
+}
+
 .btn-sm {
   padding: 0.3rem 0.65rem;
   font-size: 0.8rem;

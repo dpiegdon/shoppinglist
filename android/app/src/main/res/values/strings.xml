@@ -326,7 +326,7 @@
     <string name="admin_server_message">Server message</string>
     <string name="admin_server_message_help">One line, shown to everyone on the login page and above their lists.</string>
     <string name="admin_server_message_invalid">The message must be one line of at most 200 characters.</string>
-    <string name="admin_is_admin_suffix"> (admin)</string>
+    <string name="admin_is_admin_suffix">" (admin)"</string>
     <string name="admin_users">Users</string>
     <string name="admin_show_users">Show registered users</string>
     <string name="admin_user_count">Registered users: %1$d</string>
@@ -335,6 +335,7 @@
     <string name="admin_new_password_for">New password for %1$s — shown once, send it securely:</string>
     <string name="admin_delete_user_title">Delete user?</string>
     <string name="admin_delete_user_body">Permanently delete %1$s and all of their data. This can\'t be undone.</string>
+    <string name="admin_reset_password">Reset password</string>
     <string name="admin_reset_user_title">Reset password?</string>
     <string name="admin_reset_user_body">Reset the password of %1$s? Their current password stops working at once.</string>
     <string name="admin_msg_password_required">Enter your password to reset or delete a user.</string>
@@ -460,9 +461,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Accounts</string>
+    <string name="nav_sync_open_accounts">Open accounts</string>
     <string name="accounts_add">Add account</string>
     <string name="accounts_state_signed_in">Signed in</string>
-    <string name="accounts_state_signed_out">Signed out: tap to sign in</string>
+    <string name="accounts_state_signed_out">Signed out</string>
+    <string name="accounts_sign_in">Sign in</string>
     <string name="accounts_state_outdated">App too old for this server</string>
     <string name="accounts_outdated_help">Sync with this server is paused until the app is updated.</string>
     <string name="accounts_state_local">On this phone</string>

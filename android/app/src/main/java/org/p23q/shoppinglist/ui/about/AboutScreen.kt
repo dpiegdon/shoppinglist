@@ -27,6 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
+
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -37,6 +40,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.p23q.shoppinglist.ui.theme.accentText
 
@@ -106,12 +110,16 @@ fun AboutScreen(
                 modifier = Modifier.height(64.dp).align(Alignment.CenterHorizontally).testTag("about-cuneiform"),
             )
             Spacer(Modifier.height(4.dp))
+            // Hidden from TalkBack: the sign above already reads as ṭuppu, once is enough (B15).
             Text(
                 text = stringResource(R.string.about_transliteration),
                 style = MaterialTheme.typography.bodySmall,
                 fontStyle = FontStyle.Italic,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .semantics { hideFromAccessibility() }
+                    .testTag("about-transliteration"),
             )
             Spacer(Modifier.height(16.dp))
 
@@ -133,38 +141,39 @@ fun AboutScreen(
             // App updates (T-135), moved here from settings unchanged (T-224): keeping the app
             // current is about the app, not about the account. Device-local like the notification
             // toggle — whether this phone checks is a property of the phone, so it isn't synced.
-            // Off means no request at all, not a silent check.
-            Text(stringResource(R.string.about_updates), style = MaterialTheme.typography.titleMedium)
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.about_auto_update_check))
+            // Off means no request at all, not a silent check. In a card, as every other section (A17).
+            SectionCard(stringResource(R.string.about_updates)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.about_auto_update_check))
+                        Text(
+                            stringResource(R.string.about_auto_update_check_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = autoCheckEnabled, onCheckedChange = onSetAutoCheckEnabled)
+                }
+                // The answer to the check this screen made when it opened (T-149). Silent while
+                // switched off, which is also when no request was made.
+                val updateLine = when (updateStatus) {
+                    UpdateStatus.Idle -> null
+                    UpdateStatus.Checking -> stringResource(R.string.update_checking)
+                    is UpdateStatus.UpToDate -> stringResource(R.string.update_up_to_date, updateStatus.version)
+                    is UpdateStatus.Available -> stringResource(R.string.update_available_status, updateStatus.version)
+                    UpdateStatus.Failed -> stringResource(R.string.update_check_failed)
+                }
+                if (updateLine != null) {
                     Text(
-                        stringResource(R.string.about_auto_update_check_help),
+                        updateLine,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (updateStatus is UpdateStatus.Available) {
+                            MaterialTheme.colorScheme.accentText
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                     )
                 }
-                Switch(checked = autoCheckEnabled, onCheckedChange = onSetAutoCheckEnabled)
-            }
-            // The answer to the check this screen made when it opened (T-149). Silent while
-            // switched off, which is also when no request was made.
-            val updateLine = when (updateStatus) {
-                UpdateStatus.Idle -> null
-                UpdateStatus.Checking -> stringResource(R.string.update_checking)
-                is UpdateStatus.UpToDate -> stringResource(R.string.update_up_to_date, updateStatus.version)
-                is UpdateStatus.Available -> stringResource(R.string.update_available_status, updateStatus.version)
-                UpdateStatus.Failed -> stringResource(R.string.update_check_failed)
-            }
-            if (updateLine != null) {
-                Text(
-                    updateLine,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (updateStatus is UpdateStatus.Available) {
-                        MaterialTheme.colorScheme.accentText
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
             }
         }
 

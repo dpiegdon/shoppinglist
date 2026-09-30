@@ -31,7 +31,29 @@ function useFormStatus() {
   return { error, ok, run };
 }
 
+/**
+ * A form's outcome inside its card: an error announced at once, a confirmation announced politely
+ * (W4/W6), so a screen reader hears what the Save did.
+ */
+function FormStatusLines({ status, okText }: { status: { error: string | null; ok: boolean }; okText: string }) {
+  return (
+    <>
+      {status.error && (
+        <p className="error-text" role="alert">
+          {status.error}
+        </p>
+      )}
+      {status.ok && (
+        <p className="muted" role="status">
+          {okText}
+        </p>
+      )}
+    </>
+  );
+}
+
 export default function SettingsPage() {
+
   const t = useT();
   useDocumentTitle(t("settings.title"));
   const { account, logout } = useAuth();
@@ -173,9 +195,12 @@ export default function SettingsPage() {
       <p className="muted">{account?.email}</p>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.defaultCurrency")}</h2>
+        <h2 id="settings-currency-title" style={{ fontSize: "1rem", marginTop: 0 }}>
+          {t("settings.defaultCurrency")}
+        </h2>
         <form onSubmit={handleCurrencySave} style={{ display: "flex", gap: "0.5rem" }}>
           <input
+            aria-labelledby="settings-currency-title"
             value={currency}
             maxLength={3}
             onChange={(e) => setCurrency(e.target.value.toUpperCase())}
@@ -185,8 +210,7 @@ export default function SettingsPage() {
             {t("action.save")}
           </button>
         </form>
-        {currencyStatus.error && <p className="error-text">{currencyStatus.error}</p>}
-        {currencyStatus.ok && <p className="muted">{t("common.saved")}</p>}
+        <FormStatusLines status={currencyStatus} okText={t("common.saved")} />
         <p className="muted" style={{ fontSize: "0.8rem" }}>
           {t("settings.currentlyCached", { currency: getCachedDefaultCurrency() })}
         </p>
@@ -195,9 +219,12 @@ export default function SettingsPage() {
       {/* Shown as a small indicator on shared-list item rows so collaborators can see who last
           touched an item (T-64); defaults to the email's initials until customized here. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.initials")}</h2>
+        <h2 id="settings-initials-title" style={{ fontSize: "1rem", marginTop: 0 }}>
+          {t("settings.initials")}
+        </h2>
         <form onSubmit={handleInitialsSave} style={{ display: "flex", gap: "0.5rem" }}>
           <input
+            aria-labelledby="settings-initials-title"
             value={initials ?? ""}
             maxLength={3}
             onChange={(e) => setInitials(e.target.value.toUpperCase())}
@@ -207,8 +234,7 @@ export default function SettingsPage() {
             {t("action.save")}
           </button>
         </form>
-        {initialsStatus.error && <p className="error-text">{initialsStatus.error}</p>}
-        {initialsStatus.ok && <p className="muted">{t("common.saved")}</p>}
+        <FormStatusLines status={initialsStatus} okText={t("common.saved")} />
       </section>
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
@@ -255,8 +281,7 @@ export default function SettingsPage() {
               </p>
             )}
           </div>
-          {passwordStatus.error && <p className="error-text">{passwordStatus.error}</p>}
-          {passwordStatus.ok && <p className="muted">{t("settings.passwordChanged")}</p>}
+          <FormStatusLines status={passwordStatus} okText={t("settings.passwordChanged")} />
           <button type="submit" className="btn">
             {t("settings.changePassword")}
           </button>
@@ -266,6 +291,11 @@ export default function SettingsPage() {
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.changeEmail")}</h2>
         <form onSubmit={handleEmailSave}>
+          {/* The new address first, then the password that confirms it, as on Android. */}
+          <div className="form-field">
+            <label htmlFor="new-email">{t("settings.newEmail")}</label>
+            <input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+          </div>
           <div className="form-field">
             <label htmlFor="email-password">{t("settings.password")}</label>
             <input
@@ -275,12 +305,7 @@ export default function SettingsPage() {
               onChange={(e) => setEmailPassword(e.target.value)}
             />
           </div>
-          <div className="form-field">
-            <label htmlFor="new-email">{t("settings.newEmail")}</label>
-            <input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-          </div>
-          {emailStatus.error && <p className="error-text">{emailStatus.error}</p>}
-          {emailStatus.ok && <p className="muted">{t("settings.emailChanged")}</p>}
+          <FormStatusLines status={emailStatus} okText={t("settings.emailChanged")} />
           <button type="submit" className="btn">
             {t("settings.changeEmail")}
           </button>
@@ -289,7 +314,11 @@ export default function SettingsPage() {
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("settings.sessions")}</h2>
-        {sessionsStatus.error && <p className="error-text">{sessionsStatus.error}</p>}
+        {sessionsStatus.error && (
+          <p className="error-text" role="alert">
+            {sessionsStatus.error}
+          </p>
+        )}
         <ul style={{ listStyle: "none", padding: 0 }}>
           {sessions.map((s) => (
             <li
@@ -312,7 +341,7 @@ export default function SettingsPage() {
                 </span>
               </span>
               {!s.current && (
-                <button type="button" className="btn btn-danger btn-sm" onClick={() => handleRevokeSession(s.id)}>
+                <button type="button" className="btn btn-danger" onClick={() => handleRevokeSession(s.id)}>
                   {t("action.revoke")}
                 </button>
               )}
@@ -333,7 +362,11 @@ export default function SettingsPage() {
               onChange={(e) => setDeletePassword(e.target.value)}
             />
           </div>
-          {deleteStatus.error && <p className="error-text">{deleteStatus.error}</p>}
+          {deleteStatus.error && (
+            <p className="error-text" role="alert">
+              {deleteStatus.error}
+            </p>
+          )}
           <button type="submit" className="btn btn-danger">
             {t("settings.deleteMyAccount")}
           </button>

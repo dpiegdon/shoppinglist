@@ -135,19 +135,26 @@ export default function LoginPage() {
           onClick={() => setMode(mode === "login" ? "register" : "login")}
           className="btn btn-secondary"
           style={{ width: "100%", marginTop: "0.5rem" }}
+          aria-describedby={registrationAllowed ? undefined : "login-registration-disabled"}
         >
           {mode === "login" ? t("login.toggleToRegister") : t("login.toggleToLogin")}
         </button>
+        {/* Why Register is off, right under it rather than past the language picker. */}
+        {!registrationAllowed && (
+          <p
+            id="login-registration-disabled"
+            className="muted"
+            style={{ textAlign: "center", marginTop: "0.25rem", marginBottom: 0, fontSize: "0.85rem" }}
+          >
+            {t("login.registrationDisabled")}
+          </p>
+        )}
         {/* Before login, deliberately: the chooser has to be reachable without an account
             (T-127), which is also why the preference is device-local. */}
         <div style={{ marginTop: "1rem" }}>
           <LanguagePicker id="login-language" />
         </div>
-        {!registrationAllowed && (
-          <p className="muted" style={{ textAlign: "center", marginTop: "0.25rem", marginBottom: 0, fontSize: "0.85rem" }}>
-            {t("login.registrationDisabled")}
-          </p>
-        )}
+
         {apkAvailable && (
           <p className="muted" style={{ textAlign: "center", marginTop: "0.75rem", marginBottom: 0, fontSize: "0.85rem" }}>
             <a href={apkUrl()} style={{ color: "var(--color-accent-strong)" }}>

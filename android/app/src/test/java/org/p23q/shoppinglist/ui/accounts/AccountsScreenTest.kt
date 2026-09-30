@@ -2,6 +2,8 @@ package org.p23q.shoppinglist.ui.accounts
 
 import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.closeWhenIdle
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
@@ -88,7 +90,9 @@ class AccountsScreenTest {
         composeTestRule.onNodeWithText("https://lists.example.test/").assertExists()
         composeTestRule.onNodeWithText("https://lists.example.test/stage/").assertExists()
         composeTestRule.onNodeWithText("Signed in").assertExists()
-        composeTestRule.onNodeWithText("Signed out: tap to sign in").assertExists()
+        // A signed-out row states it, and its button names the action (A6).
+        composeTestRule.onNodeWithText("Signed out").assertExists()
+        composeTestRule.onNode(hasTestTag("account-sign-in-stage") and hasText("Sign in")).assertExists()
         composeTestRule.onNodeWithText("App too old for this server").assertExists()
         composeTestRule.onNodeWithText("Sync with this server is paused until the app is updated.").assertExists()
         composeTestRule.onNodeWithText("On this phone").assertExists()

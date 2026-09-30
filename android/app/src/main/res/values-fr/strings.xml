@@ -265,7 +265,7 @@
     <string name="admin_server_message">Message du serveur</string>
     <string name="admin_server_message_help">Une ligne, affichée à tous sur la page de connexion et au-dessus de leurs listes.</string>
     <string name="admin_server_message_invalid">Le message doit tenir sur une ligne de 200 caractères au plus.</string>
-    <string name="admin_is_admin_suffix"> (admin)</string>
+    <string name="admin_is_admin_suffix">" (admin)"</string>
     <string name="admin_users">Utilisateurs</string>
     <string name="admin_show_users">Afficher les utilisateurs enregistrés</string>
     <string name="admin_user_count">Utilisateurs enregistrés : %1$d</string>
@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">Nouveau mot de passe pour %1$s — affiché une seule fois, transmets-le de façon sécurisée :</string>
     <string name="admin_delete_user_title">Supprimer l\'utilisateur ?</string>
     <string name="admin_delete_user_body">Supprimer définitivement %1$s et toutes ses données. Cette action est irréversible.</string>
+    <string name="admin_reset_password">Réinitialiser le mot de passe</string>
     <string name="admin_reset_user_title">Réinitialiser le mot de passe ?</string>
     <string name="admin_reset_user_body">Réinitialiser le mot de passe de %1$s ? Son mot de passe actuel cessera immédiatement de fonctionner.</string>
     <string name="admin_msg_password_required">Saisis ton mot de passe pour réinitialiser ou supprimer un utilisateur.</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Comptes</string>
+    <string name="nav_sync_open_accounts">Ouvrir les comptes</string>
     <string name="accounts_add">Ajouter un compte</string>
     <string name="accounts_state_signed_in">Connecté</string>
-    <string name="accounts_state_signed_out">Déconnecté : touchez pour vous connecter</string>
+    <string name="accounts_state_signed_out">Déconnecté</string>
+    <string name="accounts_sign_in">Se connecter</string>
     <string name="accounts_state_outdated">Application trop ancienne pour ce serveur</string>
     <string name="accounts_outdated_help">La synchronisation avec ce serveur est suspendue jusqu\'à la mise à jour de l\'application.</string>
     <string name="accounts_state_local">Sur ce téléphone</string>

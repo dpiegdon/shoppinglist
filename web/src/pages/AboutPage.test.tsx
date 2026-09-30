@@ -72,8 +72,9 @@ describe("AboutPage (T-224)", () => {
     expect(sign.tagName.toLowerCase()).toBe("svg"); // inline path, nothing fetched (T-231)
     expect(sign.querySelector("path")).not.toBeNull();
     expect(sign.style.height).toBe("64px");
-    // About, unlike login, also spells the reading out under the sign.
-    expect(screen.getByText(en["about.transliteration"])).toBeInTheDocument();
+    // About, unlike login, also spells the reading out under the sign, for the eye only: the sign
+    // is already named, so a screen reader hears the name once.
+    expect(screen.getByText(en["about.transliteration"])).toHaveAttribute("aria-hidden", "true");
   });
 
   it("shows the version line empty rather than crashing when the server injected no meta tag", () => {

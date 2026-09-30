@@ -1,11 +1,8 @@
 package org.p23q.shoppinglist.ui.redeem
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -19,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
@@ -66,18 +64,12 @@ fun RedeemDialog(
                     Spacer(Modifier.height(12.dp))
                     Text(stringResource(R.string.redeem_choose_account), style = MaterialTheme.typography.labelMedium)
                     state.choices.forEach { account ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !state.isLoading) { viewModel.chooseAccount(account.id) }
-                                .padding(vertical = 8.dp)
-                                .testTag("redeem-account-" + account.id),
-                        ) {
-                            Text(account.email ?: account.label)
-                            account.serverUrl?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
+                        AccountChoiceRow(
+                            account = account,
+                            onClick = { viewModel.chooseAccount(account.id) },
+                            enabled = !state.isLoading,
+                            modifier = Modifier.testTag("redeem-account-" + account.id),
+                        )
                     }
                 }
             }

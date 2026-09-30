@@ -5,6 +5,7 @@ import org.p23q.shoppinglist.ui.assertPlainSectionCards
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
@@ -126,6 +127,17 @@ class AdminScreenTest {
         viewModel.viewModelScope.cancel()
     }
 
+    @Test
+    fun `a user row keeps the space before (admin) and says Reset password, as the web (B6, P7)`() = runBlocking<Unit> {
+        val viewModel = openConsoleWithUsers()
+
+        // aapt strips an unquoted leading space: this once read "boss@example.com(admin)".
+        composeTestRule.onNodeWithText("boss@example.com (admin)").assertExists()
+        composeTestRule.onAllNodesWithText("Reset password").assertCountEquals(2)
+        composeTestRule.onNodeWithText("Reset").assertDoesNotExist()
+        viewModel.viewModelScope.cancel()
+    }
+
     /** Bodies of the reset requests the server saw, in order. */
     private val resetBodies = CopyOnWriteArrayList<String>()
 
@@ -175,8 +187,8 @@ class AdminScreenTest {
 
     private fun dialogButton(label: String) = composeTestRule.onNode(hasText(label) and hasAnyAncestor(isDialog()))
 
-    /** The non-admin's Reset button: the rows are ordered by email, and boss@ comes first. */
-    private fun clickUsersReset() = composeTestRule.onAllNodesWithText("Reset")[1].performClick()
+    /** The non-admin's "Reset password" button: the rows are ordered by email, and boss@ comes first. */
+    private fun clickUsersReset() = composeTestRule.onAllNodesWithText("Reset password")[1].performClick()
 
     private fun resetAndWaitForPassword(viewModel: AdminViewModel) {
         composeTestRule.onNodeWithText("Your password (for reset/delete)").performTextInput("adminpw")

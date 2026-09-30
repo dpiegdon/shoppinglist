@@ -10,6 +10,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -145,8 +149,12 @@ class AppDrawerScaffoldTest {
         addAccount("prod")
         val getNavController = setDrawerContent()
 
-        // A fresh SyncStatus has never synced: the dot says so in its description (T-178).
-        composeTestRule.onNodeWithContentDescription("Not synced yet").performClick()
+        // A fresh SyncStatus has never synced: the dot says so in its description (T-178). It is a
+        // 48dp target and tells TalkBack where a tap goes (C6).
+        val dot = composeTestRule.onNodeWithContentDescription("Not synced yet")
+        assertEquals("Open accounts", dot.fetchSemanticsNode().config[SemanticsActions.OnClick].label)
+        dot.assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+        dot.performClick()
 
         assertEquals(Routes.ACCOUNTS, getNavController().currentBackStackEntry?.destination?.route)
     }
@@ -169,7 +177,7 @@ class AppDrawerScaffoldTest {
     }
 
     @Test
-    fun `with several admin accounts Server admin asks which, each as email and server (T-307)`() {
+    fun `with several admin accounts Server admin asks which, each as email and server (T-307, A7)`() {
         addAccount("boss", isAdmin = true)
         addAccount("prod")
         addAccount("stage", isAdmin = true)
@@ -179,7 +187,8 @@ class AppDrawerScaffoldTest {
         composeTestRule.onNodeWithText("Server admin").performClick()
 
         composeTestRule.onNodeWithText("Administer which server?").assertExists()
-        composeTestRule.onNodeWithTag("admin-account-boss").assertTextEquals("me@example.com · boss.example.test")
+        // One AccountChoiceRow each (A7): the account, then its full server URL.
+        composeTestRule.onNodeWithTag("admin-account-boss").assertTextEquals("me@example.com", "https://boss.example.test/")
         composeTestRule.onNodeWithTag("admin-account-prod").assertDoesNotExist()
         composeTestRule.onNodeWithTag("admin-account-stage").performClick()
 

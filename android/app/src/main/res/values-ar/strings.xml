@@ -265,7 +265,7 @@
     <string name="admin_server_message">رسالة الخادم</string>
     <string name="admin_server_message_help">سطر واحد يظهر للجميع في صفحة تسجيل الدخول وفوق قوائمهم.</string>
     <string name="admin_server_message_invalid">يجب أن تكون الرسالة سطرًا واحدًا لا يتجاوز 200 حرف.</string>
-    <string name="admin_is_admin_suffix"> (مسؤول)</string>
+    <string name="admin_is_admin_suffix">" (مسؤول)"</string>
     <string name="admin_users">المستخدمون</string>
     <string name="admin_show_users">إظهار المستخدمين المسجّلين</string>
     <string name="admin_user_count">المستخدمون المسجّلون: %1$d</string>
@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">كلمة مرور جديدة لـ %1$s — تظهر مرة واحدة، أرسلها بأمان:</string>
     <string name="admin_delete_user_title">حذف المستخدم؟</string>
     <string name="admin_delete_user_body">حذف %1$s وكل بياناته نهائيًا. لا يمكن التراجع عن هذا.</string>
+    <string name="admin_reset_password">إعادة تعيين كلمة المرور</string>
     <string name="admin_reset_user_title">إعادة تعيين كلمة المرور؟</string>
     <string name="admin_reset_user_body">إعادة تعيين كلمة مرور %1$s؟ ستتوقف كلمة المرور الحالية عن العمل فورًا.</string>
     <string name="admin_msg_password_required">أدخل كلمة المرور لإعادة تعيين مستخدم أو حذفه.</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">الحسابات</string>
+    <string name="nav_sync_open_accounts">فتح الحسابات</string>
     <string name="accounts_add">إضافة حساب</string>
     <string name="accounts_state_signed_in">تم تسجيل الدخول</string>
-    <string name="accounts_state_signed_out">تم تسجيل الخروج: انقر لتسجيل الدخول</string>
+    <string name="accounts_state_signed_out">تم تسجيل الخروج</string>
+    <string name="accounts_sign_in">تسجيل الدخول</string>
     <string name="accounts_state_outdated">التطبيق أقدم من أن يعمل مع هذا الخادم</string>
     <string name="accounts_outdated_help">المزامنة مع هذا الخادم متوقفة مؤقتًا حتى يتم تحديث التطبيق.</string>
     <string name="accounts_state_local">على هذا الهاتف</string>

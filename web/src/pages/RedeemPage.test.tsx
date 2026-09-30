@@ -44,4 +44,18 @@ describe("RedeemPage", () => {
     expect(await screen.findByText("list page")).toBeTruthy();
     expect(api.redeemInvite).toHaveBeenCalledWith("abc.def");
   });
+
+  it("is a standard page: the heading above the card, not a login-style card in the middle (W9)", () => {
+    render(
+      <MemoryRouter initialEntries={["/redeem"]}>
+        <SyncProvider>
+          <RedeemPage />
+        </SyncProvider>
+      </MemoryRouter>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Join a list" });
+    expect(heading.closest(".card")).toBeNull();
+    expect(screen.getByRole("main").style.maxWidth).toBe("40rem");
+  });
 });

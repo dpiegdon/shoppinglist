@@ -217,6 +217,34 @@ describe("AdminPage (T-107)", () => {
     expect(api.adminResetPassword).toHaveBeenCalledTimes(1);
   });
 
+  it("draws the confirmations' buttons as text buttons, the delete one red, as Android's (T-341)", async () => {
+    renderAdmin();
+    await showUsers();
+    await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[1]!);
+    for (const button of within(screen.getByRole("dialog")).getAllByRole("button")) {
+      expect(button).toHaveClass("btn-text");
+    }
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveClass("btn-text");
+    expect(within(dialog).getByRole("button", { name: "Delete u@example.com" })).toHaveClass("btn-text", "btn-danger");
+  });
+
+  it("lets a user row wrap at 360px, draws lines only between rows, and keeps Refresh full-size (T-341)", async () => {
+    renderAdmin();
+    await showUsers();
+
+    const rows = screen.getAllByRole("listitem");
+    for (const row of rows) expect(row.style.flexWrap).toBe("wrap");
+    expect(rows[0]!.style.borderTop).toBe("");
+    expect(rows[1]!.style.borderTop).not.toBe("");
+    expect(screen.getByRole("button", { name: "Refresh" })).not.toHaveClass("btn-sm");
+  });
+
   it("asks for the password before it opens the reset confirmation (T-113, T-313)", async () => {
     renderAdmin();
     await showUsers();

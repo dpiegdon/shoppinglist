@@ -235,7 +235,11 @@ export default function AdminPage() {
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <h1 style={{ fontSize: "1.3rem" }}>{t("admin.title")}</h1>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("admin.registration")}</h2>
@@ -317,7 +321,7 @@ export default function AdminPage() {
               <span className="muted" style={{ fontSize: "0.85rem" }}>
                 {t("admin.userCount", { count: users.length })}
               </span>
-              <button type="button" className="btn btn-sm" onClick={loadUsers}>
+              <button type="button" className="btn" onClick={loadUsers}>
                 {t("action.refresh")}
               </button>
             </div>
@@ -361,7 +365,7 @@ export default function AdminPage() {
                   >
                     {resetResult.password}
                   </code>
-                  <button type="button" className="btn btn-sm" onClick={copyResetPassword}>
+                  <button type="button" className="btn" onClick={copyResetPassword}>
                     {passwordCopied ? t("action.copied") : t("action.copy")}
                   </button>
                 </div>
@@ -369,26 +373,29 @@ export default function AdminPage() {
             )}
 
             <ul style={{ listStyle: "none", padding: 0 }}>
-              {users.map((user) => (
+              {users.map((user, index) => (
                 <li
                   key={user.id}
                   style={{
                     display: "flex",
+                    // At 360px the buttons go under the email rather than past the card's edge.
+                    flexWrap: "wrap",
                     justifyContent: "space-between",
                     alignItems: "center",
                     gap: "0.5rem",
                     padding: "0.4rem 0",
-                    borderTop: "1px solid var(--color-border)",
+                    // A line between rows only, none above the first, as on Android.
+                    borderTop: index > 0 ? "1px solid var(--color-border)" : undefined,
                   }}
                 >
-                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                     {user.email}
                     {user.is_admin && <strong> {t("admin.isAdmin")}</strong>}
                     <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
                       {t("admin.sessionCount", { count: user.session_count })}
                     </span>
                   </span>
-                  <span style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+                  <span style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                     <button type="button" className="btn" onClick={() => requestReset(user)}>
                       {t("admin.resetPassword")}
                     </button>
@@ -411,10 +418,10 @@ export default function AdminPage() {
           <h2 id="reset-user-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.resetUserTitle")}</h2>
           <p>{t("admin.resetUserBody", { email: resetTarget.email })}</p>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-            <button type="button" className="btn btn-secondary" onClick={closeResetDialog}>
+            <button type="button" className="btn btn-text" onClick={closeResetDialog}>
               {t("action.cancel")}
             </button>
-            <button type="button" className="btn" onClick={confirmReset}>
+            <button type="button" className="btn btn-text" onClick={confirmReset}>
               {t("action.reset")}
             </button>
           </div>
@@ -428,10 +435,11 @@ export default function AdminPage() {
             {t("admin.deleteUserBody", { email: deleteTarget.email })}
           </p>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-            <button type="button" className="btn btn-secondary" onClick={closeDeleteDialog}>
+            <button type="button" className="btn btn-text" onClick={closeDeleteDialog}>
               {t("action.cancel")}
             </button>
-            <button type="button" className="btn btn-danger" onClick={confirmDelete}>
+            <button type="button" className="btn btn-text btn-danger" onClick={confirmDelete}>
+
               {t("admin.deleteUserConfirm", { email: deleteTarget.email })}
             </button>
           </div>

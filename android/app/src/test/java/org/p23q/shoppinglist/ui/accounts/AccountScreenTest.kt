@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui.accounts
 
 import org.p23q.shoppinglist.ui.assertDangerSectionCard
+import org.p23q.shoppinglist.ui.assertInSectionCard
 import org.p23q.shoppinglist.ui.assertPlainSectionCards
 import org.p23q.shoppinglist.ui.InBrandColors
 import org.p23q.shoppinglist.data.idleMainLooper
@@ -154,6 +155,29 @@ class AccountScreenTest {
             composeTestRule.waitForIdle()
             viewModel.uiState.value.initials == "XY"
         }
+    }
+
+    @Test
+    fun `a save's confirmation and an error show inside the card that caused them (A1)`() = runBlocking<Unit> {
+        val viewModel = newViewModel()
+
+        composeTestRule.setContent { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        awaitLoads(viewModel)
+
+        composeTestRule.onNodeWithText("MI").performScrollTo().performTextReplacement("XY")
+        composeTestRule.onAllNodesWithText("Save")[1].performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.waitForIdle()
+            viewModel.uiState.value.infoMessage != null
+        }
+        composeTestRule.assertInSectionCard("Displayed initials", "Initials updated")
+
+        // An invalid currency: its error in the currency card, and the initials' note gone.
+        composeTestRule.onNodeWithText("EUR").performScrollTo().performTextReplacement("E")
+        composeTestRule.onAllNodesWithText("Save")[0].performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.assertInSectionCard("Default currency", "Enter a valid 3-letter currency code")
+        composeTestRule.onNodeWithText("Initials updated").assertDoesNotExist()
     }
 
     @Test

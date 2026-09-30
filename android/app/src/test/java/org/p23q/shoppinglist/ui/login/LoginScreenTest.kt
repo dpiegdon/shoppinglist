@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.p23q.shoppinglist.core.AppTooOldException
 import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
@@ -90,6 +91,12 @@ class LoginScreenTest {
 
         composeTestRule.onNodeWithText("Registration is disabled on this server.").assertExists()
         composeTestRule.onNodeWithText("New here? Register").assertIsNotEnabled()
+        // Right under the button it explains, above the language picker (C9).
+        val register = composeTestRule.onNodeWithText("New here? Register").fetchSemanticsNode().boundsInRoot
+        val note = composeTestRule.onNodeWithTag("login-registration-disabled").fetchSemanticsNode().boundsInRoot
+        val picker = composeTestRule.onNodeWithTag("language-picker").fetchSemanticsNode().boundsInRoot
+        assertTrue("note under Register", note.top >= register.bottom)
+        assertTrue("note above the language picker", note.bottom <= picker.top)
     }
 
     @Test

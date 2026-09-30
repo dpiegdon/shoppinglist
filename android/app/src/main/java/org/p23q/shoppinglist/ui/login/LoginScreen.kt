@@ -199,6 +199,16 @@ fun LoginScreen(
             ) {
                 Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
             }
+            // Why Register is off, right under it (C9) rather than past the language picker.
+            if (!state.registrationAllowed) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.login_registration_disabled),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).testTag("login-registration-disabled"),
+                )
+            }
         }
 
         // Only on the start screen: from Accounts, the local area is added there (T-293).
@@ -221,14 +231,6 @@ fun LoginScreen(
             LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
         }
 
-        if (!state.registrationAllowed && state.mode != LoginMode.RESIGNIN) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.login_registration_disabled),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
-        }
 
         // Debug-only self-signed-cert opt-in, mirrored from Settings so it's reachable before login —
         // Settings is post-auth, which would otherwise be a bootstrap deadlock for a self-signed

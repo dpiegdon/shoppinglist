@@ -21,9 +21,10 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
+
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -36,6 +37,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +52,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
@@ -692,8 +695,9 @@ internal fun AppDrawerScaffold(
                     if (route != currentRoute) navController.navigate(route)
                 }
 
+                // Mirrored in right-to-left, as a list's bullets are (C8).
                 NavigationDrawerItem(
-                    icon = { Icon(imageVector = Icons.Default.List, contentDescription = null) },
+                    icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_overview)) },
                     selected = currentRoute == Routes.OVERVIEW,
                     onClick = { navigateTo(Routes.OVERVIEW) },
@@ -702,8 +706,9 @@ internal fun AppDrawerScaffold(
                 // Three groups (T-307): where your lists are; getting at more of them (joining one,
                 // the accounts they live in); and the app itself.
                 DrawerDivider(1)
+                // A list someone shared, not a second Overview icon (C8).
                 NavigationDrawerItem(
-                    icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                    icon = { Icon(imageVector = Icons.Default.Share, contentDescription = null) },
                     label = { Text(stringResource(R.string.nav_join_list)) },
                     selected = false,
                     onClick = {
@@ -790,15 +795,17 @@ internal fun AppDrawerScaffold(
                         // The worst of every account; tapping it opens Accounts, where each one
                         // shows its own (T-292).
                         // None with only the local area, which never syncs (T-293).
+                        // A 48dp target that says where a tap goes (C6).
                         if (hasServer) {
                             SyncStatusMarker(
                                 state = syncState,
                                 nowMs = rememberTickingNowMs(),
                                 modifier = Modifier
-                                    .clickable {
+                                    .clickable(onClickLabel = stringResource(R.string.nav_sync_open_accounts), role = Role.Button) {
                                         if (currentRoute != Routes.ACCOUNTS) navController.navigate(Routes.ACCOUNTS)
                                     }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    .minimumInteractiveComponentSize()
+                                    .padding(horizontal = 12.dp),
                             )
                         }
                     },
@@ -852,7 +859,7 @@ private fun NavHostController.openAdmin(accountId: String) {
     if (!showing) navigate(Routes.admin(accountId))
 }
 
-/** Which admin account's console "Server admin" opens, with several (T-307): each as email · server. */
+/** Which admin account's console "Server admin" opens, with several (T-307): one [AccountChoiceRow] each. */
 @Composable
 private fun AdminChooserDialog(accounts: List<AccountEntity>, onChoose: (String) -> Unit, onDismiss: () -> Unit) {
     LocalizedAlertDialog(
@@ -861,13 +868,10 @@ private fun AdminChooserDialog(accounts: List<AccountEntity>, onChoose: (String)
         text = {
             Column {
                 accounts.forEach { account ->
-                    Text(
-                        accountLineText(account),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onChoose(account.id) }
-                            .padding(vertical = 12.dp)
-                            .testTag("admin-account-" + account.id),
+                    AccountChoiceRow(
+                        account = account,
+                        onClick = { onChoose(account.id) },
+                        modifier = Modifier.testTag("admin-account-" + account.id),
                     )
                 }
             }

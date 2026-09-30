@@ -265,7 +265,7 @@
     <string name="admin_server_message">Servernachricht</string>
     <string name="admin_server_message_help">Eine Zeile, die alle auf der Anmeldeseite und über ihren Listen sehen.</string>
     <string name="admin_server_message_invalid">Die Nachricht muss eine Zeile mit höchstens 200 Zeichen sein.</string>
-    <string name="admin_is_admin_suffix"> (Admin)</string>
+    <string name="admin_is_admin_suffix">" (Admin)"</string>
     <string name="admin_users">Benutzer</string>
     <string name="admin_show_users">Registrierte Benutzer anzeigen</string>
     <string name="admin_user_count">Registrierte Benutzer: %1$d</string>
@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">Neues Passwort für %1$s — wird nur einmal angezeigt, sende es sicher:</string>
     <string name="admin_delete_user_title">Benutzer löschen?</string>
     <string name="admin_delete_user_body">%1$s und alle zugehörigen Daten dauerhaft löschen. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="admin_reset_password">Passwort zurücksetzen</string>
     <string name="admin_reset_user_title">Passwort zurücksetzen?</string>
     <string name="admin_reset_user_body">Das Passwort von %1$s zurücksetzen? Das bisherige Passwort funktioniert dann sofort nicht mehr.</string>
     <string name="admin_msg_password_required">Gib dein Passwort ein, um einen Benutzer zurückzusetzen oder zu löschen.</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Konten</string>
+    <string name="nav_sync_open_accounts">Konten öffnen</string>
     <string name="accounts_add">Konto hinzufügen</string>
     <string name="accounts_state_signed_in">Angemeldet</string>
-    <string name="accounts_state_signed_out">Abgemeldet: zum Anmelden tippen</string>
+    <string name="accounts_state_signed_out">Abgemeldet</string>
+    <string name="accounts_sign_in">Anmelden</string>
     <string name="accounts_state_outdated">App zu alt für diesen Server</string>
     <string name="accounts_outdated_help">Die Synchronisierung mit diesem Server ruht, bis die App aktualisiert ist.</string>
     <string name="accounts_state_local">Auf diesem Telefon</string>

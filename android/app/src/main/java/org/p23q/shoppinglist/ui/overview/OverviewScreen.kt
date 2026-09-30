@@ -37,7 +37,6 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +49,7 @@ import org.p23q.shoppinglist.core.api.InviteForMeDto
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.data.label
+import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
@@ -265,23 +265,12 @@ internal fun NewListDialog(
                 if (state.several) {
                     Text(stringResource(R.string.overview_new_list_account), style = MaterialTheme.typography.labelMedium)
                     state.accounts.forEach { account ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = state.newListAccountId == account.id,
-                                    onClick = { onAccountChange(account.id) },
-                                )
-                                .padding(vertical = 4.dp)
-                                .testTag("new-list-account-" + account.id),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = state.newListAccountId == account.id,
-                                onClick = { onAccountChange(account.id) },
-                            )
-                            AccountLines(account)
-                        }
+                        AccountChoiceRow(
+                            account = account,
+                            onClick = { onAccountChange(account.id) },
+                            selected = state.newListAccountId == account.id,
+                            modifier = Modifier.testTag("new-list-account-" + account.id),
+                        )
                     }
                     Spacer(Modifier.height(12.dp))
                 }
@@ -371,17 +360,6 @@ private fun accountBanner(account: AccountEntity): Int? = when {
     account.outdated -> R.string.overview_account_outdated
     !account.signedIn -> R.string.overview_account_signed_out
     else -> null
-}
-
-/** An account as two lines: email, then the server's URL, muted (T-292). */
-@Composable
-private fun AccountLines(account: AccountEntity, emailStyle: TextStyle = MaterialTheme.typography.bodyMedium) {
-    Column {
-        Text(accountName(account), style = emailStyle)
-        account.serverUrl?.let { url ->
-            Text(url, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
 }
 
 /**

@@ -71,8 +71,12 @@ describe("registration disabled by the server (T-61)", () => {
     document.head.appendChild(meta);
     renderLogin(undefined);
 
-    expect(screen.getByRole("button", { name: "Need an account? Register" })).toBeDisabled();
-    expect(screen.getByText("Registration is disabled on this server.")).toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Need an account? Register" });
+    expect(toggle).toBeDisabled();
+    // Right under the button it explains, and read with it (C9).
+    const note = screen.getByText("Registration is disabled on this server.");
+    expect(toggle.nextElementSibling).toBe(note);
+    expect(toggle).toHaveAccessibleDescription("Registration is disabled on this server.");
   });
 
   it("keeps registration available by default", () => {

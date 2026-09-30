@@ -148,11 +148,17 @@ private fun AccountCard(
                         Text(stringResource(R.string.accounts_state_signed_in), style = MaterialTheme.typography.bodyMedium)
                         SyncFigures(row, nowMs)
                     }
+                    // A status line like the other states, and a button that names the action (A6).
                     AccountStatus.SIGNED_OUT -> {
-                        TuppuButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
-                            Text(stringResource(R.string.accounts_state_signed_out))
-                        }
+                        Text(
+                            stringResource(R.string.accounts_state_signed_out),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
                         SyncFigures(row, nowMs)
+                        TuppuButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}")) {
+                            Text(stringResource(R.string.accounts_sign_in))
+                        }
                     }
                     AccountStatus.OUTDATED -> {
                         Text(

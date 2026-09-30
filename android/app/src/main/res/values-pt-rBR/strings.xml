@@ -265,7 +265,7 @@
     <string name="admin_server_message">Mensagem do servidor</string>
     <string name="admin_server_message_help">Uma linha, exibida para todos na página de login e acima das listas.</string>
     <string name="admin_server_message_invalid">A mensagem deve ter uma linha de no máximo 200 caracteres.</string>
-    <string name="admin_is_admin_suffix"> (admin)</string>
+    <string name="admin_is_admin_suffix">" (admin)"</string>
     <string name="admin_users">Usuários</string>
     <string name="admin_show_users">Mostrar usuários registrados</string>
     <string name="admin_user_count">Usuários registrados: %1$d</string>
@@ -274,6 +274,7 @@
     <string name="admin_new_password_for">Nova senha para %1$s — exibida uma única vez, envie com segurança:</string>
     <string name="admin_delete_user_title">Excluir usuário?</string>
     <string name="admin_delete_user_body">Excluir permanentemente %1$s e todos os seus dados. Isso não pode ser desfeito.</string>
+    <string name="admin_reset_password">Redefinir senha</string>
     <string name="admin_reset_user_title">Redefinir senha?</string>
     <string name="admin_reset_user_body">Redefinir a senha de %1$s? A senha atual deixa de funcionar na hora.</string>
     <string name="admin_msg_password_required">Digite sua senha para redefinir ou excluir um usuário.</string>
@@ -396,9 +397,11 @@
 
     <!-- Accounts screens (T-292) -->
     <string name="nav_accounts">Contas</string>
+    <string name="nav_sync_open_accounts">Abrir contas</string>
     <string name="accounts_add">Adicionar conta</string>
     <string name="accounts_state_signed_in">Conectado</string>
-    <string name="accounts_state_signed_out">Desconectado: toque para entrar</string>
+    <string name="accounts_state_signed_out">Desconectado</string>
+    <string name="accounts_sign_in">Entrar</string>
     <string name="accounts_state_outdated">App antigo demais para este servidor</string>
     <string name="accounts_outdated_help">A sincronização com este servidor está pausada até o app ser atualizado.</string>
     <string name="accounts_state_local">Neste telefone</string>

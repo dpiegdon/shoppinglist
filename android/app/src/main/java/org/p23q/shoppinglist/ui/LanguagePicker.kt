@@ -1,12 +1,12 @@
 package org.p23q.shoppinglist.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,8 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppLocale
 
@@ -34,6 +34,7 @@ import org.p23q.shoppinglist.core.AppLocale
  * Stateless: [selected] and [onSelect] are hoisted so this can be previewed and tested without a
  * DataStore, and so both hosts drive it from their own ViewModel.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguagePicker(
     selected: AppLocale,
@@ -42,21 +43,26 @@ fun LanguagePicker(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.settings_language),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = selected.displayName,
-            style = MaterialTheme.typography.bodyLarge,
+    // Looks like the picker it is (C5): an outlined field labelled "Language" with a drop-down
+    // arrow, the label joined to the value, as the web's <select>.
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selected.displayName,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.settings_language)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = true }
-                .padding(vertical = 8.dp),
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .testTag("language-picker"),
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             // The entries are endonyms and so need no translating, but a popup is still its own
             // window (T-131) — this is what carries the layout direction in, so the list reads
             // right-to-left when the app is set to Arabic.

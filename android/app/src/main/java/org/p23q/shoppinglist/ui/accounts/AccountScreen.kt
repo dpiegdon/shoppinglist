@@ -27,6 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -120,6 +123,7 @@ fun AccountScreen(
                     Spacer(Modifier.width(8.dp))
                     TuppuButton(onClick = { viewModel.updateCurrency(currencyInput) }) { Text(stringResource(R.string.action_save)) }
                 }
+                SectionMessage(state, AccountSection.CURRENCY)
             }
 
             // Shown as a small badge on shared-list item rows so collaborators can see who last
@@ -137,6 +141,7 @@ fun AccountScreen(
                     Spacer(Modifier.width(8.dp))
                     TuppuButton(onClick = { viewModel.updateInitials(initialsInput) }) { Text(stringResource(R.string.action_save)) }
                 }
+                SectionMessage(state, AccountSection.INITIALS)
             }
         }
 
@@ -191,6 +196,7 @@ fun AccountScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TuppuButton(onClick = viewModel::changePassword) { Text(stringResource(R.string.settings_change_password)) }
+                SectionMessage(state, AccountSection.PASSWORD)
             }
 
             SectionCard(stringResource(R.string.settings_change_email)) {
@@ -210,12 +216,9 @@ fun AccountScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TuppuButton(onClick = viewModel::changeEmail) { Text(stringResource(R.string.settings_change_email)) }
+                SectionMessage(state, AccountSection.EMAIL)
             }
         }
-
-        state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
-        // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
-        state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
         if (!signedOut) {
             SectionCard(stringResource(R.string.settings_sessions)) {
@@ -249,6 +252,7 @@ fun AccountScreen(
                         }
                     }
                 }
+                SectionMessage(state, AccountSection.SESSIONS)
             }
         }
 
@@ -317,10 +321,36 @@ fun AccountScreen(
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    // The dialog covers the screen, so its failure shows in it.
+                    SectionMessage(state, AccountSection.DELETE)
                 }
             },
             confirmButton = { TuppuTextButton(onClick = viewModel::confirmDeleteAccount) { Text(stringResource(R.string.action_delete)) } },
             dismissButton = { TuppuTextButton(onClick = viewModel::cancelDeleteAccount) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+}
+
+/**
+ * The save or error message of [section], shown inside that card (A1) so it appears next to the
+ * button that caused it, as on the web. An error in the error colour; a confirmation in the muted
+ * grey the web uses.
+ */
+@Composable
+private fun SectionMessage(state: AccountUiState, section: AccountSection) {
+    if (state.messageSection != section) return
+    state.errorMessage?.let {
+        Text(
+            it.asString(),
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
+    state.infoMessage?.let {
+        Text(
+            it.asString(),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
         )
     }
 }

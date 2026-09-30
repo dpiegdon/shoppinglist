@@ -56,6 +56,47 @@ function getInitialsSaveButton() {
   return within(initialsSection()).getByRole("button", { name: en["action.save"] });
 }
 
+describe("SettingsPage forms read and announce like Android's (T-341)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getToken).mockReturnValue(null);
+    vi.mocked(api.listSessions).mockResolvedValue({ sessions: [] });
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "AB" });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("names the currency and initials fields by their card's heading", async () => {
+    renderSettingsPage();
+    expect(screen.getByRole("textbox", { name: en["settings.defaultCurrency"] })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: en["settings.initials"] })).toBeInTheDocument();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("AB"));
+  });
+
+  it("asks for the new email first, then the password, as the app does", async () => {
+    renderSettingsPage();
+    const email = screen.getByLabelText(en["settings.newEmail"]);
+    const password = document.getElementById("email-password") as HTMLElement;
+    expect(email.compareDocumentPosition(password) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("AB"));
+  });
+
+  it("announces a save's confirmation in its card, and a failure as an alert", async () => {
+    vi.mocked(api.updateSettings).mockResolvedValueOnce({ default_currency: "USD", initials: "AB" });
+    renderSettingsPage();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("AB"));
+
+    await userEvent.click(getCurrencySaveButton());
+    await waitFor(() => expect(within(currencySection()).getByRole("status")).toHaveTextContent(en["common.saved"]));
+
+    vi.mocked(api.updateSettings).mockRejectedValueOnce(new Error("offline"));
+    await userEvent.click(getInitialsSaveButton());
+    await waitFor(() => expect(within(initialsSection()).getByRole("alert")).toBeInTheDocument());
+  });
+});
+
 describe("SettingsPage currency save must never write initials (T-101, T-103)", () => {
   beforeEach(() => {
     vi.mocked(api.getToken).mockReturnValue(null);
