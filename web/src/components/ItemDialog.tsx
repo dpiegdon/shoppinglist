@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { ItemObject, ItemStatus, Price } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { ModalDialog } from "./ModalDialog";
+import { useConfirm } from "../hooks/useConfirm";
 import { parseCurrency, parsePriceAmount } from "../lib/priceParse";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
@@ -184,6 +185,7 @@ export default function ItemDialog({
   onDelete,
 }: ItemDialogProps) {
   const t = useT();
+  const [confirmDialog, askConfirm] = useConfirm();
   const isEdit = Boolean(editingItem);
   const [matchedExisting, setMatchedExisting] = useState<ItemObject | null>(editingItem ?? null);
   const [values, setValues] = useState(() =>
@@ -450,14 +452,18 @@ export default function ItemDialog({
    * press, from both the list and the registry (this dialog is shared by both), and with no catch
    * at all — so a rejected push left an unhandled rejection, the dialog open and nothing said.
    * Android confirms from its own item dialog and has no separate undo there, the confirmation
-   * being the safety net; this mirrors that. window.confirm() takes one string, so the title and
-   * body are joined with a blank line while staying two catalog keys, pairing word for word with
-   * Android's item_delete_title/item_delete_body.
+   * being the safety net; this mirrors that, with the same title, body and red Delete.
    */
   async function handleDeleteClick() {
     if (!onDelete || !editingItem) return;
     const name = itemFieldValue(editingItem, "name") ?? "";
-    if (!confirm(`${t("item.deleteTitle")}\n\n${t("item.deleteBody", { name })}`)) return;
+    const confirmed = await askConfirm({
+      title: t("item.deleteTitle"),
+      body: t("item.deleteBody", { name }),
+      confirmLabel: t("action.delete"),
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setSaveError(null);
     try {
@@ -764,6 +770,7 @@ export default function ItemDialog({
           {isEdit ? t("action.save") : t("action.add")}
         </button>
       </div>
+      {confirmDialog}
     </ModalDialog>
   );
 }

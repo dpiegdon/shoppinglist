@@ -412,7 +412,7 @@ export default function OverviewPage() {
               be changed later in list properties, and converting never touches item data. An
               expenses list is the one exception: its kind is fixed for its whole life (T-151). */}
           <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
-            <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
+            <legend className="field-label" style={{ padding: 0 }}>
               {t("overview.type")}
             </legend>
             {(["shopping", "checklist", "expenses"] as const).map((kind) => (

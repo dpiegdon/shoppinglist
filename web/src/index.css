@@ -387,7 +387,7 @@ textarea:focus {
   background: var(--color-bg);
 }
 
-/* One exclusive choice inside a form (T-339), the item dialog's status: the same pill as .segmented,
+/* One exclusive choice inside a form (T-339), the item dialog's status and the expense type: the same pill as .segmented,
    as the app draws it with a segmented button, over native radios so the keyboard and a screen
    reader treat it as the radio group it is. The segments share the row equally. */
 .segmented-choice-field {
@@ -443,6 +443,12 @@ textarea:focus {
 .segmented-choice input:checked + span {
   background: var(--color-accent);
   color: var(--color-accent-text);
+}
+
+/* An option that can't be chosen now, as the expense type's Transfer with one member. */
+.segmented-choice input:disabled + span {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .segmented-choice input:focus-visible + span {
@@ -526,7 +532,10 @@ textarea:focus {
   margin-bottom: 0.9rem;
 }
 
-.form-field label {
+/* One style for every field or field-group label (T-343), as the app's muted labelMedium: a
+   .form-field's own label, and .field-label for a legend or a label that sits outside one. */
+.form-field label,
+.field-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-muted);

@@ -288,7 +288,6 @@ describe("ItemDialog (edit mode)", () => {
   it("prefills existing values and offers delete, guarded by a confirmation (T-277)", async () => {
     const item = registryItem("1", "Milk", "dairy");
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(
       <ItemDialog
         listId="list-1"
@@ -303,16 +302,16 @@ describe("ItemDialog (edit mode)", () => {
 
     expect(screen.getByLabelText("Name")).toHaveValue("Milk");
     await userEvent.click(screen.getByText("Delete"));
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("Delete item?"));
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("“Milk” will be removed from this list."));
+    const confirmation = screen.getByRole("alertdialog", { name: "Delete item?" });
+    expect(confirmation).toHaveAccessibleDescription("“Milk” will be removed from this list.");
+    expect(onDelete).not.toHaveBeenCalled();
+    await userEvent.click(within(confirmation).getByRole("button", { name: "Delete" }));
     expect(onDelete).toHaveBeenCalledWith("1");
-    confirmSpy.mockRestore();
   });
 
   it("does not delete when the confirmation is cancelled (T-277)", async () => {
     const item = registryItem("1", "Milk", "dairy");
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(
       <ItemDialog
         listId="list-1"
@@ -326,17 +325,75 @@ describe("ItemDialog (edit mode)", () => {
     );
 
     await userEvent.click(screen.getByText("Delete"));
-    expect(confirmSpy).toHaveBeenCalled();
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(onDelete).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
+  });
+
+  it("asks in a dialog of its own: Cancel focused, Delete in red, Escape backs out of the confirmation alone (T-343)", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={onClose}
+        onSave={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    const deleteButton = screen.getByText("Delete");
+    await userEvent.click(deleteButton);
+    const confirmation = screen.getByRole("alertdialog");
+    expect(confirmation).toHaveAttribute("aria-modal", "true");
+    const cancel = within(confirmation).getByRole("button", { name: "Cancel" });
+    // The safe answer takes focus, so a stray Enter dismisses rather than deletes.
+    expect(cancel).toHaveFocus();
+    // Text buttons, the destructive one in the error colour.
+    expect(cancel).toHaveClass("btn-text");
+    expect(cancel).not.toHaveClass("btn-danger");
+    expect(within(confirmation).getByRole("button", { name: "Delete" })).toHaveClass("btn-text", "btn-danger");
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    // Escape closed the confirmation, not the item dialog under it, and focus went back to Delete.
+    expect(onClose).not.toHaveBeenCalled();
+    expect(deleteButton).toHaveFocus();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("keeps Tab inside the confirmation, not the item dialog under it (T-343)", async () => {
+    const item = registryItem("1", "Milk", "dairy");
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Delete"));
+    const confirmation = screen.getByRole("alertdialog");
+    await userEvent.tab();
+    expect(within(confirmation).getByRole("button", { name: "Delete" })).toHaveFocus();
+    await userEvent.tab();
+    expect(within(confirmation).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(within(confirmation).getByRole("button", { name: "Delete" })).toHaveFocus();
   });
 
   it("keeps the dialog open and shows the error when delete fails, instead of closing silently (T-266)", async () => {
     const item = registryItem("1", "Milk", "dairy");
     const onDelete = vi.fn().mockRejectedValue(new Error("network down"));
     const onClose = vi.fn();
-    // Past the confirmation (T-277); what this test is about is what happens after it.
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(
       <ItemDialog
         listId="list-1"
@@ -350,11 +407,12 @@ describe("ItemDialog (edit mode)", () => {
     );
 
     await userEvent.click(screen.getByText("Delete"));
+    // Past the confirmation (T-277); what this test is about is what happens after it.
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Delete" }));
 
     expect(onDelete).toHaveBeenCalledWith("1");
     expect(onClose).not.toHaveBeenCalled();
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
-    confirmSpy.mockRestore();
   });
 
   it("does not show suggestions while editing", async () => {

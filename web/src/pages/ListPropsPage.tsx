@@ -22,9 +22,11 @@ import { useT } from "../i18n";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { errorMessage } from "../i18n/apiErrors";
 import { useDragReorder } from "../hooks/useDragReorder";
+import { useConfirm } from "../hooks/useConfirm";
 
 export default function ListPropsPage() {
   const t = useT();
+  const [confirmDialog, askConfirm] = useConfirm();
   const { listId } = useParams<{ listId: string }>();
   const { lists, items, push, deviceId, forgetList, loading } = useSyncContext();
   const { account } = useAuth();
@@ -280,7 +282,13 @@ export default function ListPropsPage() {
   }
 
   async function handleLeave() {
-    if (!confirm(t("listProps.leaveConfirm"))) return;
+    const confirmed = await askConfirm({
+      title: t("listProps.leaveTitle"),
+      body: t("listProps.leaveBody"),
+      confirmLabel: t("action.leave"),
+      destructive: true,
+    });
+    if (!confirmed) return;
     setLeaveError(null);
     try {
       await api.leaveList(id);
@@ -302,7 +310,7 @@ export default function ListPropsPage() {
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       {/* The arrow comes with the translation, so it points back in Arabic too (T-340). */}
       <Link to={`/list/${listId}`} className="muted" style={{ fontSize: "0.85rem" }}>
-        {t("listProps.backToList", { name: listFieldValue(list, "name") ?? "" })}
+        {t("list.backToList", { name: listFieldValue(list, "name") ?? "" })}
       </Link>
       <h1 style={{ fontSize: "1.3rem" }}>{t("listProps.title")}</h1>
 
@@ -319,7 +327,7 @@ export default function ListPropsPage() {
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.list")}</h2>
         {/* A field its card title does not name carries its own label (T-340), as on Android. */}
-        <label htmlFor="list-props-name" style={{ display: "block", fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+        <label htmlFor="list-props-name" className="field-label" style={{ display: "block", margin: "0 0 0.5rem" }}>
           {t("listProps.name")}
         </label>
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
@@ -349,7 +357,7 @@ export default function ListPropsPage() {
           </p>
         )}
 
-        <h3 style={{ fontSize: "0.9rem", margin: "1rem 0 0.5rem" }}>{t("listProps.type")}</h3>
+        <h3 className="field-label" style={{ margin: "1rem 0 0.5rem" }}>{t("listProps.type")}</h3>
         {/* The type's icon and name, and a switch for a checklist, as Android shows it (T-340). */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
@@ -590,6 +598,7 @@ export default function ListPropsPage() {
           </p>
         )}
       </section>
+      {confirmDialog}
     </main>
   );
 }
@@ -613,6 +622,7 @@ function CategoriesCard({
   setCategoryOrder: (order: string[]) => void;
 }) {
   const t = useT();
+  const [confirmDialog, askConfirm] = useConfirm();
   const { push, deviceId } = useSyncContext();
   // The order as the user has moved it, by key, until it is saved; null while nothing has moved.
   const [draft, setDraft] = useState<string[] | null>(null);
@@ -679,7 +689,13 @@ function CategoriesCard({
     if (!to || to === nameOf(fromKey)) return; // blank or unchanged
     const toKey = categoryKey(to);
     if (toKey !== fromKey && canonicalNames.has(toKey)) {
-      if (!confirm(t("listProps.mergeCategoryConfirm", { category: nameOf(toKey) }))) return;
+      // Save, not red, as Android words it: the merge is what the rename asked for.
+      const confirmed = await askConfirm({
+        title: t("listProps.mergeCategoryTitle", { category: nameOf(toKey) }),
+        body: t("listProps.mergeCategoryBody"),
+        confirmLabel: t("action.save"),
+      });
+      if (!confirmed) return;
     }
     const plan = planCategoryRename(
       liveItems.map((i) => ({ id: i.id, category: itemFieldValue(i, "category") ?? "" })),
@@ -821,6 +837,7 @@ function CategoriesCard({
       <p className="visually-hidden" aria-live="polite">
         {announcement}
       </p>
+      {confirmDialog}
     </section>
   );
 }

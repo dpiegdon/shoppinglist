@@ -114,8 +114,7 @@ export const en = {
   // insensitively, on both clients — this is the web's twin of Android's item_msg_duplicate_name.
   "item.duplicateName": "An item named \"{name}\" already exists",
   // Reuses Android's item_delete_title/item_delete_body word for word (T-277): the web used to
-  // delete on the first press, with no confirmation and no undo. confirm() shows both lines at
-  // once, so the two keys stay separate strings — matching Android's — rather than one sentence.
+  // delete on the first press, with no confirmation and no undo. The ConfirmDialog's title and body.
   "item.deleteTitle": "Delete item?",
   "item.deleteBody": "“{name}” will be removed from this list.",
   "item.priceInvalid": "Enter an amount like 1.99",
@@ -123,7 +122,6 @@ export const en = {
 
   // ---- list properties ----
   "listProps.title": "List properties",
-  "listProps.backToList": "← {name}",
   "listProps.list": "List",
   "listProps.actions": "Actions",
   "listProps.name": "List name",
@@ -134,9 +132,9 @@ export const en = {
   "listProps.categoriesHelp": "Drag a handle to set the order items are grouped in, then save the order. ✎ renames a category, fixes its casing or merges it into another.",
   "listProps.noCategories": "No categories yet.",
   // Renaming a category onto another existing one merges them irreversibly (T-270): every item in
-  // both categories ends up in one. Was a hard-coded English confirm() call, the only user-facing
-  // string in the client that bypassed the catalog.
-  "listProps.mergeCategoryConfirm": "Merge into \"{category}\"? Both categories will become one.",
+  // both categories ends up in one. Title and body as Android's listprops_merge_confirm_*.
+  "listProps.mergeCategoryTitle": "Merge into \"{category}\"?",
+  "listProps.mergeCategoryBody": "Both categories will become one.",
   "listProps.copySuffix": "(Copy)",
   // The button carries the count; the help text above it says what it does.
   "listProps.clearCheckedCount": "Clear checked ({count})",
@@ -153,12 +151,14 @@ export const en = {
   "listProps.leaveList": "Leave list",
   "listProps.membersFailed": "Failed to load members.",
   "listProps.inviteFailed": "Couldn't send invite",
-  "listProps.leaveConfirm": "Leave this list? You will lose access to it.",
+  "listProps.leaveTitle": "Leave this list?",
+  "listProps.leaveBody": "You will lose access to it.",
 
   // ---- generic actions ----
   "action.cancel": "Cancel",
   "action.save": "Save",
   "action.delete": "Delete",
+  "action.leave": "Leave",
   "action.refresh": "Refresh",
   "action.revoke": "Revoke",
   "action.undo": "Undo",
@@ -231,6 +231,7 @@ export const en = {
   "settings.deleteAccount": "Delete account",
   "settings.deleteMyAccount": "Delete my account",
   "settings.password": "Password",
+  "settings.deleteAccountTitle": "Delete account?",
   "settings.deleteConfirm": "This permanently deletes your account. Are you sure?",
 
   // ---- about (T-224) ----

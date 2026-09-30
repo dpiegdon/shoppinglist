@@ -4,6 +4,7 @@ import * as api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useT } from "../i18n";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useConfirm } from "../hooks/useConfirm";
 import LanguagePicker from "../components/LanguagePicker";
 import { getCachedDefaultCurrency, setCachedDefaultCurrency, useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { Session } from "../api/contract";
@@ -55,6 +56,7 @@ function FormStatusLines({ status, okText }: { status: { error: string | null; o
 export default function SettingsPage() {
 
   const t = useT();
+  const [confirmDialog, askConfirm] = useConfirm();
   useDocumentTitle(t("settings.title"));
   const { account, logout } = useAuth();
   const navigate = useNavigate();
@@ -179,7 +181,13 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount(e: FormEvent) {
     e.preventDefault();
-    if (!confirm(t("settings.deleteConfirm"))) return;
+    const confirmed = await askConfirm({
+      title: t("settings.deleteAccountTitle"),
+      body: t("settings.deleteConfirm"),
+      confirmLabel: t("action.delete"),
+      destructive: true,
+    });
+    if (!confirmed) return;
     await deleteStatus.run(async () => {
       await api.deleteAccount({ password: deletePassword });
       await logout();
@@ -372,6 +380,7 @@ export default function SettingsPage() {
           </button>
         </form>
       </section>
+      {confirmDialog}
     </main>
   );
 }

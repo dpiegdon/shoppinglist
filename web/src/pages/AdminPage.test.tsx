@@ -103,19 +103,17 @@ describe("AdminPage (T-107)", () => {
     const deleteButton = screen.getByRole("button", { name: "Delete" });
     await userEvent.click(deleteButton);
 
-    const dialog = screen.getByRole("dialog", { name: "Delete user?" });
+    const dialog = screen.getByRole("alertdialog", { name: "Delete user?" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toContainElement(document.activeElement as HTMLElement);
-
-    // Tab from the dialog itself lands on its first button and stays inside from there.
-    await userEvent.tab();
+    // Cancel takes focus on open (T-343), and Tab stays inside from there.
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
     await userEvent.tab();
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
     await userEvent.tab();
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
 
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(deleteButton).toHaveFocus();
     expect(api.adminDeleteUser).not.toHaveBeenCalled();
   });
@@ -183,7 +181,7 @@ describe("AdminPage (T-107)", () => {
     // The first "Reset password" is the admin's own row; use the non-admin user's.
     const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reset" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Reset" }));
 
     expect(await screen.findByText("NEWpw123456")).toBeInTheDocument();
   });
@@ -198,7 +196,7 @@ describe("AdminPage (T-107)", () => {
     await userEvent.click(resetButtons[resetButtons.length - 1]);
 
     // The click opens a confirmation naming the user; nothing is reset yet.
-    const dialog = screen.getByRole("dialog", { name: "Reset password?" });
+    const dialog = screen.getByRole("alertdialog", { name: "Reset password?" });
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(
       within(dialog).getByText("Reset the password of u@example.com? Their current password stops working at once."),
@@ -207,12 +205,12 @@ describe("AdminPage (T-107)", () => {
 
     // Cancel sends nothing.
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(api.adminResetPassword).not.toHaveBeenCalled();
 
     // Confirming does.
     await userEvent.click(resetButtons[resetButtons.length - 1]);
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reset" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Reset" }));
     await waitFor(() => expect(api.adminResetPassword).toHaveBeenCalledWith("user-2", "adminpw"));
     expect(api.adminResetPassword).toHaveBeenCalledTimes(1);
   });
@@ -223,13 +221,13 @@ describe("AdminPage (T-107)", () => {
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
 
     await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[1]!);
-    for (const button of within(screen.getByRole("dialog")).getAllByRole("button")) {
+    for (const button of within(screen.getByRole("alertdialog")).getAllByRole("button")) {
       expect(button).toHaveClass("btn-text");
     }
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    const dialog = screen.getByRole("dialog");
+    const dialog = screen.getByRole("alertdialog");
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveClass("btn-text");
     expect(within(dialog).getByRole("button", { name: "Delete u@example.com" })).toHaveClass("btn-text", "btn-danger");
   });
@@ -252,7 +250,7 @@ describe("AdminPage (T-107)", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[1]!);
 
     expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("copies the new password to the clipboard and says so (T-313)", async () => {
@@ -264,7 +262,7 @@ describe("AdminPage (T-107)", () => {
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
     const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Reset" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Reset" }));
     const shown = await screen.findByText("NEWpw123456");
     // Selectable, in a monospace face, to be read out or pasted exactly.
     expect(shown.tagName).toBe("CODE");

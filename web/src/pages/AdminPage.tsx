@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { ModalDialog } from "../components/ModalDialog";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import ToggleSwitch from "../components/ToggleSwitch";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
@@ -364,36 +364,24 @@ export default function AdminPage() {
       </section>
 
       {resetTarget && (
-        <ModalDialog onClose={closeResetDialog} labelledBy="reset-user-title">
-          <h2 id="reset-user-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.resetUserTitle")}</h2>
-          <p>{t("admin.resetUserBody", { email: resetTarget.email })}</p>
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-            <button type="button" className="btn btn-text" onClick={closeResetDialog}>
-              {t("action.cancel")}
-            </button>
-            <button type="button" className="btn btn-text" onClick={confirmReset}>
-              {t("action.reset")}
-            </button>
-          </div>
-        </ModalDialog>
+        <ConfirmDialog
+          title={t("admin.resetUserTitle")}
+          body={t("admin.resetUserBody", { email: resetTarget.email })}
+          confirmLabel={t("action.reset")}
+          onConfirm={confirmReset}
+          onCancel={closeResetDialog}
+        />
       )}
 
       {deleteTarget && (
-        <ModalDialog onClose={closeDeleteDialog} labelledBy="delete-user-title">
-          <h2 id="delete-user-title" style={{ marginTop: 0, fontSize: "1.1rem" }}>{t("admin.deleteUserTitle")}</h2>
-          <p>
-            {t("admin.deleteUserBody", { email: deleteTarget.email })}
-          </p>
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-            <button type="button" className="btn btn-text" onClick={closeDeleteDialog}>
-              {t("action.cancel")}
-            </button>
-            <button type="button" className="btn btn-text btn-danger" onClick={confirmDelete}>
-
-              {t("admin.deleteUserConfirm", { email: deleteTarget.email })}
-            </button>
-          </div>
-        </ModalDialog>
+        <ConfirmDialog
+          title={t("admin.deleteUserTitle")}
+          body={t("admin.deleteUserBody", { email: deleteTarget.email })}
+          confirmLabel={t("admin.deleteUserConfirm", { email: deleteTarget.email })}
+          destructive
+          onConfirm={confirmDelete}
+          onCancel={closeDeleteDialog}
+        />
       )}
     </main>
   );

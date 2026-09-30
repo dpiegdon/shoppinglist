@@ -3,6 +3,7 @@ import { ApiError } from "../api/client";
 import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { ModalDialog } from "./ModalDialog";
+import { useConfirm } from "../hooks/useConfirm";
 import { todayIsoDate } from "../lib/format";
 import {
   distribute,
@@ -137,6 +138,7 @@ export default function ExpenseDialog({
   onDelete,
 }: ExpenseDialogProps) {
   const t = useT();
+  const [confirmDialog, askConfirm] = useConfirm();
   const isEdit = Boolean(editingItem);
   const stored = editingItem ? itemFieldValue(editingItem, "expense") ?? null : null;
   // What the distributions start from: the expense being edited, else a prefill, else nothing.
@@ -317,7 +319,7 @@ export default function ExpenseDialog({
     const sum = sumOf(state);
     return (
       <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
-        <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
+        <legend className="field-label" style={{ padding: 0 }}>
           {sideLabel(which)}
         </legend>
         {participantIds.map((id) => {
@@ -449,13 +451,17 @@ export default function ExpenseDialog({
    * dialog stayed open with nothing said and the delete silently never happened.
    *
    * Confirms first, as Android does and as the item dialog does: the entry goes for everyone on the
-   * list. window.confirm() takes one string, so the title and body are joined with a blank line
-   * while staying two catalog keys, pairing word for word with Android's expense_delete_title and
-   * expense_delete_body.
+   * list. Same title, body and red Delete as Android's.
    */
   async function handleDeleteClick() {
     if (!onDelete || !editingItem) return;
-    if (!confirm(`${t("expense.deleteTitle")}\n\n${t("expense.deleteBody")}`)) return;
+    const confirmed = await askConfirm({
+      title: t("expense.deleteTitle"),
+      body: t("expense.deleteBody"),
+      confirmLabel: t("action.delete"),
+      destructive: true,
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setSaveError(null);
     try {
@@ -514,14 +520,13 @@ export default function ExpenseDialog({
       )}
 
       {/* What kind of entry this is, before anything else: it decides what the rest of the
-          form means (T-245). */}
-      <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
-        <legend className="muted" style={{ fontSize: "0.85rem", padding: 0 }}>
-          {t("expense.type")}
-        </legend>
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          form means (T-245). The same segmented radio group as the item dialog's status, as the
+          app draws it with a segmented button (T-343). */}
+      <fieldset className="form-field segmented-choice-field">
+        <legend>{t("expense.type")}</legend>
+        <div className="segmented-choice">
           {TYPES.map((option) => (
-            <label key={option} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <label key={option}>
               <input
                 type="radio"
                 name="expense-type"
@@ -530,7 +535,10 @@ export default function ExpenseDialog({
                 disabled={option === "transfer" && !canTransfer}
                 onChange={() => changeType(option)}
               />
-              <span>{t(typeLabelKey(option))}</span>
+              <span>
+                {type === option && <span aria-hidden="true">✓ </span>}
+                {t(typeLabelKey(option))}
+              </span>
             </label>
           ))}
         </div>
@@ -650,6 +658,7 @@ export default function ExpenseDialog({
           </button>
         </div>
       </div>
+      {confirmDialog}
     </ModalDialog>
   );
 }

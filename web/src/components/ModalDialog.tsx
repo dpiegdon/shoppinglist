@@ -10,6 +10,10 @@ interface ModalDialogProps {
   onClose: () => void;
   /** The id of the dialog's own heading, which names it for screen readers. */
   labelledBy: string;
+  /** The id of the text that says what the dialog is about, for a confirmation's body. */
+  describedBy?: string;
+  /** "alertdialog" for a confirmation that interrupts to ask before something happens. */
+  role?: "dialog" | "alertdialog";
   /** A form panel submits like the plain `<form className="dialog">` it replaces. */
   as?: "div" | "form";
   onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
@@ -27,7 +31,15 @@ interface ModalDialogProps {
  * mousedown/mouseup close rule (useOverlayClose, T-272) would both have to be redone, and jsdom has
  * no `showModal()` to test any of it against.
  */
-export function ModalDialog({ onClose, labelledBy, as = "div", onSubmit, children }: ModalDialogProps) {
+export function ModalDialog({
+  onClose,
+  labelledBy,
+  describedBy,
+  role = "dialog",
+  as = "div",
+  onSubmit,
+  children,
+}: ModalDialogProps) {
   const overlay = useOverlayClose(onClose);
   const panelRef = useRef<HTMLElement>(null);
   // Read while rendering, before the commit runs any autoFocus inside the box and moves focus off it.
@@ -44,6 +56,11 @@ export function ModalDialog({ onClose, labelledBy, as = "div", onSubmit, childre
   }, [opener]);
 
   function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
+    // A confirmation opened over another dialog is portalled out of that dialog's DOM but not out
+    // of its React tree, so its keys would bubble on into the dialog underneath, whose Tab wrap
+    // would pull focus back out of the confirmation. The innermost dialog owns these keys; Escape
+    // too, so nothing underneath (the app menu's document listener included) acts on it again.
+    if (e.key === "Escape" || e.key === "Tab") e.stopPropagation();
     // An IME's Escape cancels the composition, not the dialog.
     if (e.key === "Escape" && !e.defaultPrevented && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -71,9 +88,10 @@ export function ModalDialog({ onClose, labelledBy, as = "div", onSubmit, childre
 
   const panelProps = {
     className: "dialog",
-    role: "dialog",
+    role,
     "aria-modal": true,
     "aria-labelledby": labelledBy,
+    "aria-describedby": describedBy,
     tabIndex: -1,
     onKeyDown: handleKeyDown,
     onClick: (e: { stopPropagation: () => void }) => e.stopPropagation(),

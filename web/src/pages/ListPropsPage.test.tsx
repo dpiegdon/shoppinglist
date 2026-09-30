@@ -407,7 +407,6 @@ describe("ListPropsPage leave list (T-268)", () => {
   });
 
   it("forgets the list and its items locally once the server confirms the leave, before any next pull could", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.mocked(api.sync).mockResolvedValueOnce({
       cursor: 1,
       changes: {
@@ -450,6 +449,7 @@ describe("ListPropsPage leave list (T-268)", () => {
     await userEvent.click(screen.getByRole("link", { name: "List properties" }));
 
     await userEvent.click(await screen.findByRole("button", { name: "Leave list" }));
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Leave" }));
 
     expect(await screen.findByText("Lists: 0 Items: 0")).toBeInTheDocument();
     expect(api.leaveList).toHaveBeenCalledWith("list-1");
@@ -459,7 +459,6 @@ describe("ListPropsPage leave list (T-268)", () => {
   });
 
   it("shows an inline error and stays on the list when the leave itself is refused, instead of forgetting it anyway (T-266)", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.mocked(api.sync).mockResolvedValueOnce({
       cursor: 1,
       changes: { lists: [listObj()], items: [] },
@@ -483,6 +482,7 @@ describe("ListPropsPage leave list (T-268)", () => {
     await userEvent.click(screen.getByRole("link", { name: "List properties" }));
 
     await userEvent.click(await screen.findByRole("button", { name: "Leave list" }));
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Leave" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
     // Still on the properties page for this list — it did not navigate away or forget it.
@@ -805,8 +805,6 @@ describe("category merge confirmation goes through the catalog (T-270)", () => {
       cursor: 1,
       changes: { lists: [listWithOrder(["Dairy", "Produce"])], items: [] },
     });
-    // Declines the merge — this test only cares what text confirm() was shown, not the push.
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     render(
       <MemoryRouter initialEntries={["/list/list-1"]}>
@@ -835,8 +833,16 @@ describe("category merge confirmation goes through the catalog (T-270)", () => {
     const renameForm = input.closest("form")!;
     await userEvent.click(within(renameForm).getByRole("button", { name: de["action.save"] }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(de["listProps.mergeCategoryConfirm"]!.replace("{category}", "Dairy"));
-    confirmSpy.mockRestore();
+    const dialog = await screen.findByRole("alertdialog", {
+      name: de["listProps.mergeCategoryTitle"]!.replace("{category}", "Dairy"),
+    });
+    expect(dialog).toHaveTextContent(de["listProps.mergeCategoryBody"]!);
+    // Declining leaves both categories as they were.
+    await userEvent.click(within(dialog).getByRole("button", { name: de["action.cancel"] }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: de["listProps.renameCategory"]!.replace("{category}", "Produce") }),
+    ).toBeInTheDocument();
   });
 
   it("names a copy in the language of whoever makes it (T-302)", async () => {
@@ -937,6 +943,9 @@ describe("ListPropsPage sections in cards, in the order both clients share (T-33
     // The last thing in the List card, under the type.
     expect(listCard.lastElementChild).toContainElement(clear);
     expect(within(listCard).getByRole("heading", { name: "Type" })).toBeInTheDocument();
+    // Its two field labels in the one muted label style (T-343).
+    expect(within(listCard).getByRole("heading", { name: "Type" })).toHaveClass("field-label");
+    expect(within(listCard).getByText("List name")).toHaveClass("field-label");
 
     const actions = screen.getByRole("heading", { name: "Actions", level: 2 }).closest("section")!;
     expect(within(actions).getByRole("button", { name: "Duplicate list" })).toBeInTheDocument();

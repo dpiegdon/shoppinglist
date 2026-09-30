@@ -16,6 +16,7 @@ vi.mock("../api/client", async () => {
     updateSettings: vi.fn(),
     listSessions: vi.fn(),
     changePassword: vi.fn(),
+    deleteAccount: vi.fn(),
   };
 });
 
@@ -94,6 +95,28 @@ describe("SettingsPage forms read and announce like Android's (T-341)", () => {
     vi.mocked(api.updateSettings).mockRejectedValueOnce(new Error("offline"));
     await userEvent.click(getInitialsSaveButton());
     await waitFor(() => expect(within(initialsSection()).getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("asks before deleting the account, in the app's dialog with a red Delete (T-343)", async () => {
+    renderSettingsPage();
+    await waitFor(() => expect(getInitialsInput()).toHaveValue("AB"));
+    await userEvent.type(document.getElementById("delete-password") as HTMLElement, "secret");
+    const deleteButton = screen.getByRole("button", { name: en["settings.deleteMyAccount"] });
+
+    await userEvent.click(deleteButton);
+    let confirmation = screen.getByRole("alertdialog", { name: en["settings.deleteAccountTitle"] });
+    expect(confirmation).toHaveAccessibleDescription(en["settings.deleteConfirm"]);
+    await userEvent.click(within(confirmation).getByRole("button", { name: en["action.cancel"] }));
+    expect(api.deleteAccount).not.toHaveBeenCalled();
+    expect(deleteButton).toHaveFocus();
+
+    vi.mocked(api.deleteAccount).mockRejectedValueOnce(new Error("offline"));
+    await userEvent.click(deleteButton);
+    confirmation = screen.getByRole("alertdialog");
+    const confirm = within(confirmation).getByRole("button", { name: en["action.delete"] });
+    expect(confirm).toHaveClass("btn-text", "btn-danger");
+    await userEvent.click(confirm);
+    expect(api.deleteAccount).toHaveBeenCalledWith({ password: "secret" });
   });
 });
 

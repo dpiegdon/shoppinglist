@@ -289,43 +289,42 @@ describe("expense list screen", () => {
   });
 
   it("confirms, then deletes an expense by tombstoning it", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderAt("/list/list-1");
     await userEvent.click(await screen.findByText("Dinner"));
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    // The same two lines Android's dialog shows (T-342).
-    expect(confirm).toHaveBeenCalledWith("Delete this entry?\n\nIt is removed for everyone on the list.");
+    // The same two lines Android's dialog shows (T-342), and its red Delete (T-343).
+    const confirmation = screen.getByRole("alertdialog", { name: "Delete this entry?" });
+    expect(confirmation).toHaveAccessibleDescription("It is removed for everyone on the list.");
+    const confirmDelete = within(confirmation).getByRole("button", { name: "Delete" });
+    expect(confirmDelete).toHaveClass("btn-text", "btn-danger");
+    await userEvent.click(confirmDelete);
     expect(pushedItem()?.fields.deleted?.value).toBe(true);
-    confirm.mockRestore();
   });
 
   it("deletes nothing when the confirmation is cancelled (T-342)", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     renderAt("/list/list-1");
     await userEvent.click(await screen.findByText("Dinner"));
     const syncsBefore = vi.mocked(api.sync).mock.calls.length;
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
 
-    expect(confirm).toHaveBeenCalledTimes(1);
     expect(vi.mocked(api.sync).mock.calls.length).toBe(syncsBefore);
     // Still open, with the entry still in it.
     expect(screen.getByLabelText("Total (EUR)")).toHaveValue("64.00");
-    confirm.mockRestore();
   });
 
   it("keeps the dialog open and shows the error when delete fails, instead of closing silently (T-266)", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderAt("/list/list-1");
     await userEvent.click(await screen.findByText("Dinner"));
 
     vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Delete" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
     // Still open — its own field, not the list underneath, is what this reaches.
     expect(screen.getByLabelText("Total (EUR)")).toBeInTheDocument();
-    confirm.mockRestore();
   });
 });
 
@@ -993,6 +992,25 @@ describe("the entry dialog knows three types", () => {
     // The expense form is exactly what it was.
     expect(screen.getByText("Paid by")).toBeInTheDocument();
     expect(screen.getByText("For")).toBeInTheDocument();
+  });
+
+  it("draws the type as the item status's segmented radio group, the chosen one ticked, as the app's segmented button (T-343)", async () => {
+    await openAddForm();
+
+    const group = screen.getByRole("group", { name: "Type" });
+    expect(group).toHaveClass("segmented-choice-field");
+    const radios = within(group).getAllByRole("radio");
+    expect(radios[0].closest(".segmented-choice")).not.toBeNull();
+    expect(radios.map((radio) => radio.closest("label")!.textContent)).toEqual(["✓ Expense", "Income", "Transfer"]);
+
+    await userEvent.click(within(group).getByRole("radio", { name: "Income" }));
+    expect(radios.map((radio) => radio.closest("label")!.textContent)).toEqual(["Expense", "✓ Income", "Transfer"]);
+  });
+
+  it("labels its field groups in the one muted label style (T-343)", async () => {
+    await openAddForm();
+    expect(screen.getByText("Paid by")).toHaveClass("field-label");
+    expect(screen.getByText("For")).toHaveClass("field-label");
   });
 
   it("is a modal dialog: named by its heading, focused on open, closed by Escape with focus back on Add entry (T-283)", async () => {
