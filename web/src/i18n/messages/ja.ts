@@ -49,6 +49,8 @@ export const ja: Catalog = {
   "overview.invite.expiresHours": "{count} 時間後に期限切れ",
   "overview.invite.expiresDays": "{count} 日後に期限切れ",
   "list.registry.empty": "アイテムが見つかりません。",
+  "list.registry.deleteItem": "{name} を削除",
+  "list.registry.itemDeleted": "{name} を削除しました",
   "list.categoryFixed": "{category} の表記を修正しました：{count}",
 
   "sync.syncing": "同期中…",
@@ -158,6 +160,7 @@ export const ja: Catalog = {
   "list.notFound": "リストが見つかりません（またはアクセス権がありません）。",
   "list.backToOverview": "概要に戻る",
   "list.allListsLink": "← すべてのリスト",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "すべてのリストに戻る",
   "list.allItems": "すべてのアイテム",
   "list.search": "検索",
@@ -334,4 +337,6 @@ export const ja: Catalog = {
   "apiError.votedToClose": "このリストの締めに同意しているため、変更できません。変更するには同意を取り消してください。",
   "apiError.notAnExpensesList": "帳簿のみ、締めの投票ができます。",
   "expense.deleteBlocked": "この記録は削除できません：金額が確定している人が関わっています。",
+  "expense.deleteTitle": "この記録を削除しますか？",
+  "expense.deleteBody": "リストの全員から削除されます。",
 };

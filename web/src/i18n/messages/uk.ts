@@ -48,6 +48,8 @@ export const uk: Catalog = {
   "overview.invite.expiresHours": "Спливає через {count} год",
   "overview.invite.expiresDays": "Спливає через {count} дн",
   "list.registry.empty": "Товарів не знайдено.",
+  "list.registry.deleteItem": "Видалити {name}",
+  "list.registry.itemDeleted": "{name} видалено",
   "list.categoryFixed": "Регістр виправлено в {category}: {count}",
 
   "sync.syncing": "Синхронізація…",
@@ -157,6 +159,7 @@ export const uk: Catalog = {
   "list.notFound": "Список не знайдено (або ти більше не маєш доступу).",
   "list.backToOverview": "Назад до огляду",
   "list.allListsLink": "← Усі списки",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "Назад до всіх списків",
   "list.allItems": "Усі товари",
   "list.search": "Пошук",
@@ -333,4 +336,6 @@ export const uk: Catalog = {
   "apiError.votedToClose": "Ви погодилися закрити цей список, тому більше не можете його змінювати. Відкличте свою згоду, щоб вносити зміни.",
   "apiError.notAnExpensesList": "Проголосувати за закриття можна лише для книги обліку.",
   "expense.deleteBlocked": "Цей запис не можна видалити: він стосується когось, чиї суми зафіксовано.",
+  "expense.deleteTitle": "Видалити цей запис?",
+  "expense.deleteBody": "Його буде видалено для всіх у списку.",
 };

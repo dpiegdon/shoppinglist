@@ -111,6 +111,7 @@
     <string name="registry_search">検索</string>
     <string name="registry_item_deleted">%1$s を削除しました</string>
     <string name="registry_delete_item">%1$s を削除</string>
+    <string name="registry_empty">アイテムが見つかりません。</string>
     <string name="redeem_title">リストに参加</string>
     <string name="redeem_code">招待コードまたはリンク</string>
     <string name="redeem_joining">リストに参加しています…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">受取人</string>
     <string name="expense_empty">まだ記録がありません。追加して始めましょう。</string>
     <string name="expense_total_spent">純支出</string>
-    <string name="expense_total_spent_value">純支出: %1$s</string>
     <string name="expense_your_balance">あなたの残高</string>
     <string name="expense_paid_and_share">支払い %1$s · 負担 %2$s</string>
     <string name="expense_paid_share_settled">支払い %1$s · 負担 %2$s · 精算 %3$s</string>

@@ -50,6 +50,8 @@ export const ar: Catalog = {
   "overview.invite.expiresHours": "تنتهي خلال {count} س",
   "overview.invite.expiresDays": "تنتهي خلال {count} ي",
   "list.registry.empty": "لم يتم العثور على عناصر.",
+  "list.registry.deleteItem": "حذف {name}",
+  "list.registry.itemDeleted": "تم حذف {name}",
   "list.categoryFixed": "تم تصحيح الأحرف في {category}: {count}",
 
   "sync.syncing": "جارٍ المزامنة…",
@@ -159,6 +161,7 @@ export const ar: Catalog = {
   "list.notFound": "لم يتم العثور على القائمة (أو لم يعد لديك وصول إليها).",
   "list.backToOverview": "العودة إلى النظرة العامة",
   "list.allListsLink": "→ كل القوائم",
+  "list.backToList": "→ {name}",
   "list.backToAllLists": "العودة إلى كل القوائم",
   "list.allItems": "كل العناصر",
   "list.search": "بحث",
@@ -260,7 +263,7 @@ export const ar: Catalog = {
   "expense.forEveryone": "الجميع",
   "expense.rowBy": "دفعها {by} · لصالح {for}",
   "expense.rowReceivedBy": "استلمها {by} · لصالح {for}",
-  "expense.rowTransfer": "{from} → {to}",
+  "expense.rowTransfer": "{from} ← {to}",
   "expense.soloHint": "أنت وحدك في هذه القائمة، فالمبلغ كله لك.",
   "expense.error.aboveTotal": "المبالغ المُدخلة أكبر من الإجمالي.",
   "expense.error.doesNotAddUp": "المبالغ المُدخلة مجموعها {sum} وليس {total}.",
@@ -335,4 +338,6 @@ export const ar: Catalog = {
   "apiError.votedToClose": "لقد وافقت على إغلاق هذه القائمة، لذا لم يعد بإمكانك تغييرها. اسحب موافقتك لإجراء تغييرات.",
   "apiError.notAnExpensesList": "يمكن التصويت على الإغلاق فقط لدفتر الحسابات.",
   "expense.deleteBlocked": "لا يمكن حذف هذا القيد: فهو يخص شخصًا مبالغه ثابتة.",
+  "expense.deleteTitle": "حذف هذا القيد؟",
+  "expense.deleteBody": "سيُحذف لدى جميع أعضاء القائمة.",
 };

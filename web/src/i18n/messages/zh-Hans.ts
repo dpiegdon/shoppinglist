@@ -48,6 +48,8 @@ export const zhHans: Catalog = {
   "overview.invite.expiresHours": "{count} 小时后过期",
   "overview.invite.expiresDays": "{count} 天后过期",
   "list.registry.empty": "未找到物品。",
+  "list.registry.deleteItem": "删除 {name}",
+  "list.registry.itemDeleted": "已删除 {name}",
   "list.categoryFixed": "已修正 {category} 的大小写：{count}",
 
   "sync.syncing": "正在同步…",
@@ -157,6 +159,7 @@ export const zhHans: Catalog = {
   "list.notFound": "未找到清单（或你已无访问权限）。",
   "list.backToOverview": "返回总览",
   "list.allListsLink": "← 所有清单",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "返回所有清单",
   "list.allItems": "所有物品",
   "list.search": "搜索",
@@ -333,4 +336,6 @@ export const zhHans: Catalog = {
   "apiError.votedToClose": "你已同意结算此清单，因此不能再更改它。撤回同意后即可更改。",
   "apiError.notAnExpensesList": "只有账本才能投票结算。",
   "expense.deleteBlocked": "此记录无法删除：它涉及金额已锁定的成员。",
+  "expense.deleteTitle": "删除此记录？",
+  "expense.deleteBody": "清单中的所有人都会看到它被删除。",
 };

@@ -111,6 +111,7 @@
     <string name="registry_search">Пошук</string>
     <string name="registry_item_deleted">%1$s видалено</string>
     <string name="registry_delete_item">Видалити %1$s</string>
+    <string name="registry_empty">Товарів не знайдено.</string>
     <string name="redeem_title">Приєднатися до списку</string>
     <string name="redeem_code">Код або посилання запрошення</string>
     <string name="redeem_joining">Приєднання до списку…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">Кому</string>
     <string name="expense_empty">Записів ще немає. Додайте перший.</string>
     <string name="expense_total_spent">Чисті витрати</string>
-    <string name="expense_total_spent_value">Чисті витрати: %1$s</string>
     <string name="expense_your_balance">Ваш баланс</string>
     <string name="expense_paid_and_share">заплачено %1$s · частка %2$s</string>
     <string name="expense_paid_share_settled">заплачено %1$s · частка %2$s · розрахунки %3$s</string>
@@ -327,7 +327,7 @@
     <string name="expense_currency">Валюта</string>
     <string name="expense_currency_value">Валюта: %1$s</string>
     <string name="expense_delete_title">Видалити цей запис?</string>
-    <string name="expense_delete_body">Її буде видалено для всіх у списку.</string>
+    <string name="expense_delete_body">Його буде видалено для всіх у списку.</string>
     <string name="expense_error_above_total">Введені суми більші за загальну.</string>
     <string name="expense_error_does_not_add_up">Введені суми дають %1$s, а не %2$s.</string>
     <string name="expense_error_use_sum">Зробити загальну суму %1$s</string>

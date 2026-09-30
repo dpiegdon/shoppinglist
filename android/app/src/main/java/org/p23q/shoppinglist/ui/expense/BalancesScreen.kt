@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +26,8 @@ import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.appLocale
+import org.p23q.shoppinglist.ui.bidiIsolate
+import org.p23q.shoppinglist.ui.layoutTextDirection
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
@@ -50,31 +51,21 @@ fun BalancesContent(
     fun label(accountId: String): String =
         state.members.firstOrNull { it.accountId == accountId }?.email ?: participantLabel(accountId, state)
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            stringResource(
-                R.string.expense_total_spent_value,
-                AppFormat.money(state.totalCents, state.currency, appLocale()),
-            ),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        // Where income exists, the net alone hides half the story: say what went out and what came
-        // in (T-245). A ledger with none is exactly as it was.
-        if (state.spent.incomeCents != 0L) {
-            Text(
-                stringResource(
-                    R.string.expense_spent_breakdown,
-                    AppFormat.money(state.spent.expensesCents, state.currency, appLocale()),
-                    AppFormat.money(state.spent.incomeCents, state.currency, appLocale()),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+    // Dividers only between rows, in the colour the entries tab and the lists use (T-342).
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(state.balances, key = { it.accountId }) { balance ->
+    Column(modifier = Modifier.fillMaxSize()) {
+        // The same card as the entries tab (T-342). Where income exists, the net alone hides half
+        // the story: it says what went out and what came in (T-245).
+        LedgerSummaryCard(
+            netCents = state.totalCents,
+            currency = state.currency,
+            breakdown = state.spent,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            itemsIndexed(state.balances, key = { _, balance -> balance.accountId }) { index, balance ->
                 val member = state.members.firstOrNull { it.accountId == balance.accountId }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
@@ -118,7 +109,7 @@ fun BalancesContent(
                         color = balanceColor(balance.balanceCents),
                     )
                 }
-                HorizontalDivider()
+                if (index < state.balances.lastIndex) HorizontalDivider(color = dividerColor)
             }
 
             if (state.showSettleUp) {
@@ -139,18 +130,20 @@ fun BalancesContent(
                 }
                 // Keyed by position: the same pair never appears twice, but the key must stay stable
                 // as the list changes and an index is the simplest thing that does.
-                itemsIndexed(state.transfers, key = { index, _ -> "transfer-$index" }) { _, transfer ->
+                itemsIndexed(state.transfers, key = { index, _ -> "transfer-$index" }) { index, transfer ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // The names isolated and the sentence in the app's reading direction, so it
+                        // reads from payer to payee in Arabic too, whatever script the names are in.
                         Text(
                             text = stringResource(
                                 R.string.expense_transfer,
-                                label(transfer.from),
-                                label(transfer.to),
+                                bidiIsolate(label(transfer.from)),
+                                bidiIsolate(label(transfer.to)),
                             ),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(textDirection = layoutTextDirection()),
                             modifier = Modifier.weight(1f),
                         )
                         Text(
@@ -186,7 +179,7 @@ fun BalancesContent(
                             }
                         }
                     }
-                    HorizontalDivider()
+                    if (index < state.transfers.lastIndex) HorizontalDivider(color = dividerColor)
                 }
             }
         }

@@ -213,6 +213,9 @@ export default function ExpenseDialog({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Add or Save pressed on an untitled expense: said inline under the field, as the new-list dialog
+  // and Android do, rather than by the browser's own "required" bubble. Typing clears it.
+  const [nameMissing, setNameMissing] = useState(false);
 
   /** Who a transfer may name: nobody whose amounts are frozen can be moved onto or off one. */
   const transferCandidates = participantIds.filter((id) => !frozen.has(id));
@@ -382,14 +385,18 @@ export default function ExpenseDialog({
   /** Whether a transfer names two different people, which is the only shape the server takes. */
   const transferOk = transferFrom !== "" && transferTo !== "" && transferFrom !== transferTo;
   const sharesOk = type === "transfer" ? totalCents > 0 && transferOk : byResult.ok && forResult.ok;
-  // An expense still needs a title. An income or a transfer falls back to its own name, because
-  // "Income" is all there is to say about most refunds and making people type it is friction.
-  const titleOk = type !== "expense" || name.trim() !== "";
+  // An expense still needs a title, which handleSubmit asks for inline. An income or a transfer
+  // falls back to its own name, because "Income" is all there is to say about most refunds and
+  // making people type it is friction.
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const title = name.trim() || (type === "expense" ? "" : t(typeLabelKey(type)));
-    if (!title || !sharesOk) return;
+    if (!title) {
+      setNameMissing(true);
+      return;
+    }
+    if (!sharesOk) return;
 
     setSaving(true);
     setSaveError(null);
@@ -440,9 +447,15 @@ export default function ExpenseDialog({
    * Deletes and closes, mirroring handleSubmit's own catch (T-266): `onDelete(id).then(onClose)`
    * used to run with no catch at all, so a rejected push left this as an unhandled rejection — the
    * dialog stayed open with nothing said and the delete silently never happened.
+   *
+   * Confirms first, as Android does and as the item dialog does: the entry goes for everyone on the
+   * list. window.confirm() takes one string, so the title and body are joined with a blank line
+   * while staying two catalog keys, pairing word for word with Android's expense_delete_title and
+   * expense_delete_body.
    */
   async function handleDeleteClick() {
     if (!onDelete || !editingItem) return;
+    if (!confirm(`${t("expense.deleteTitle")}\n\n${t("expense.deleteBody")}`)) return;
     setDeleting(true);
     setSaveError(null);
     try {
@@ -455,7 +468,9 @@ export default function ExpenseDialog({
     }
   }
 
-  const canSave = titleOk && sharesOk && !saving;
+  const canSave = sharesOk && !saving;
+  // Only an expense insists on a title, so switching to Income or Transfer drops the message.
+  const showNameMissing = nameMissing && type === "expense";
 
   /** One side of a transfer. The other side's choice is not on offer: nobody pays themselves. */
   function renderTransferPicker(
@@ -532,11 +547,21 @@ export default function ExpenseDialog({
           id="expense-what"
           autoFocus
           // An income or a transfer names itself when left blank, so only an expense insists.
-          required={type === "expense"}
+          aria-required={type === "expense" ? true : undefined}
+          aria-invalid={showNameMissing ? true : undefined}
+          aria-describedby={showNameMissing ? "expense-what-error" : undefined}
           autoComplete="off"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameMissing(false);
+          }}
         />
+        {showNameMissing && (
+          <p id="expense-what-error" className="error-text" role="alert">
+            {t("overview.nameRequired")}
+          </p>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -548,7 +573,8 @@ export default function ExpenseDialog({
             id="expense-total"
             inputMode="decimal"
             placeholder="0.00"
-            required
+            // Not `required`: a missing total already keeps Add off and is said under the shares.
+            aria-required="true"
             value={totalText}
             onChange={(e) => setTotalText(e.target.value)}
           />
@@ -594,7 +620,8 @@ export default function ExpenseDialog({
         <input id="expense-note" value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
+      {/* Wraps rather than overflowing: Supprimer / Annuler / Enregistrer do not fit 360px. */}
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
         <div>
           {isEdit && onDelete && editingItem && (
             <button
@@ -614,7 +641,7 @@ export default function ExpenseDialog({
             </p>
           )}
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", marginInlineStart: "auto" }}>
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             {t("action.cancel")}
           </button>

@@ -4,6 +4,7 @@ import ExpenseDialog, { type ExpenseSaveValues } from "../components/ExpenseDial
 import AddFab from "../components/AddFab";
 import CloseVoteBanner from "../components/CloseVoteBanner";
 import ExpenseListHeader from "../components/ExpenseListHeader";
+import LedgerSummary from "../components/LedgerSummary";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -20,6 +21,7 @@ import {
 import type { Expense, ItemObject } from "../api/contract";
 import { useT } from "../i18n";
 import { balanceColor, useFormat } from "../lib/format";
+import { bidiIsolate } from "../lib/bidi";
 
 /**
  * An expenses list (T-155): who paid what, for whom. None of the shopping apparatus applies —
@@ -71,7 +73,7 @@ export default function ExpenseListPage() {
   // Not a redirect: `list` is undefined on the first render of every visit (T-146).
   if (!list) {
     return (
-      <main style={{ padding: "1rem" }}>
+      <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
         <p className="muted">{t("list.notFound")}</p>
         <Link to="/">{t("list.backToOverview")}</Link>
       </main>
@@ -104,7 +106,10 @@ export default function ExpenseListPage() {
   function subLine(expense: Expense): string {
     const by = Object.keys(expense.paid_by).map(nameOf).join(", ");
     if (entryType(expense) === "transfer") {
-      return t("expense.rowTransfer", { from: by, to: Object.keys(expense.paid_for).map(nameOf).join(", ") });
+      // Isolated, so the arrow keeps pointing from sender to recipient whatever script the names
+      // are in; the sentence takes the page's direction, and Arabic's arrow points left (T-342).
+      const to = Object.keys(expense.paid_for).map(nameOf).join(", ");
+      return t("expense.rowTransfer", { from: bidiIsolate(by), to: bidiIsolate(to) });
     }
     const key = entryType(expense) === "income" ? "expense.rowReceivedBy" : "expense.rowBy";
     return t(key, { by, for: forWhom(expense) });
@@ -145,35 +150,13 @@ export default function ExpenseListPage() {
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <ExpenseListHeader listId={listId} listName={listFieldValue(list, "name") ?? ""} view="expenses" />
 
-      {/* A summary, no longer the hidden way into balances: the selector above is (T-172). */}
-      <div
-        className="card"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "0.75rem 1rem",
-          margin: "0 0 0.75rem",
-        }}
-      >
-        <span>
-          <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>
-            {t("expense.totalSpent")}
-          </span>
-          {/* Never coloured: what a group spent is not a position anyone is up or down (T-245). */}
-          <strong>{fmt.money(netCents, currency)}</strong>
-        </span>
-        {members.length > 1 && myBalance && (
-          <span style={{ textAlign: "end" }}>
-            <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>
-              {t("expense.yourBalance")}
-            </span>
-            <strong style={{ color: balanceColor(myBalance.balanceCents) }}>
-              {fmt.signedMoney(myBalance.balanceCents, currency)}
-            </strong>
-          </span>
-        )}
-      </div>
+      {/* A summary, no longer the hidden way into balances: the selector above is (T-172). The
+          same card heads the balances tab (T-342). A list of one is always square with itself. */}
+      <LedgerSummary
+        currency={currency}
+        netCents={netCents}
+        myBalanceCents={members.length > 1 && myBalance ? myBalance.balanceCents : null}
+      />
 
       <CloseVoteBanner
         listId={listId}

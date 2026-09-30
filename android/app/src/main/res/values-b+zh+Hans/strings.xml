@@ -111,6 +111,7 @@
     <string name="registry_search">搜索</string>
     <string name="registry_item_deleted">已删除 %1$s</string>
     <string name="registry_delete_item">删除 %1$s</string>
+    <string name="registry_empty">未找到物品。</string>
     <string name="redeem_title">加入清单</string>
     <string name="redeem_code">邀请码或链接</string>
     <string name="redeem_joining">正在加入清单…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">收款方</string>
     <string name="expense_empty">还没有记录。添加一笔开始吧。</string>
     <string name="expense_total_spent">净支出</string>
-    <string name="expense_total_spent_value">净支出: %1$s</string>
     <string name="expense_your_balance">你的余额</string>
     <string name="expense_paid_and_share">已付 %1$s · 分摊 %2$s</string>
     <string name="expense_paid_share_settled">已付 %1$s · 分摊 %2$s · 结算 %3$s</string>

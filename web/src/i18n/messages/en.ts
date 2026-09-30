@@ -59,6 +59,8 @@ export const en = {
   "overview.invite.expiresHours": "Expires in {count} h",
   "overview.invite.expiresDays": "Expires in {count} d",
   "list.registry.empty": "No items found.",
+  "list.registry.deleteItem": "Delete {name}",
+  "list.registry.itemDeleted": "{name} deleted",
   "list.categoryFixed": "Casing fixed in {category}: {count}",
 
   // ---- sync health ----
@@ -198,6 +200,7 @@ export const en = {
   // The arrow is part of the translation rather than the markup so that a right-to-left language
   // can turn it around — "back" points rightward in Arabic.
   "list.allListsLink": "← All lists",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "Back to all lists",
   "list.allItems": "All items",
   "list.search": "Search",
@@ -381,6 +384,8 @@ export const en = {
   "apiError.votedToClose": "You've agreed to close this list, so you can't change it any more. Withdraw your vote to make changes.",
   "apiError.notAnExpensesList": "Only a ledger can be voted closed.",
   "expense.deleteBlocked": "This entry can't be deleted: it involves someone whose amounts are fixed.",
+  "expense.deleteTitle": "Delete this entry?",
+  "expense.deleteBody": "It is removed for everyone on the list.",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -49,6 +49,8 @@ export const de: Catalog = {
   "overview.invite.expiresHours": "Läuft ab in {count} Std",
   "overview.invite.expiresDays": "Läuft ab in {count} T",
   "list.registry.empty": "Keine Artikel gefunden.",
+  "list.registry.deleteItem": "{name} löschen",
+  "list.registry.itemDeleted": "{name} gelöscht",
   "list.categoryFixed": "Schreibweise in {category} korrigiert: {count}",
 
   "sync.syncing": "Wird synchronisiert…",
@@ -158,6 +160,7 @@ export const de: Catalog = {
   "list.notFound": "Liste nicht gefunden (oder du hast keinen Zugriff mehr).",
   "list.backToOverview": "Zurück zur Übersicht",
   "list.allListsLink": "← Alle Listen",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "Zurück zu allen Listen",
   "list.allItems": "Alle Artikel",
   "list.search": "Suchen",
@@ -334,4 +337,6 @@ export const de: Catalog = {
   "apiError.votedToClose": "Du hast dem Abschluss zugestimmt und kannst an dieser Liste nichts mehr ändern. Zieh deine Zustimmung zurück, um etwas zu ändern.",
   "apiError.notAnExpensesList": "Nur ein Kassenbuch kann zum Abschluss abgestimmt werden.",
   "expense.deleteBlocked": "Dieser Eintrag kann nicht gelöscht werden: Er betrifft jemanden, dessen Beträge festgeschrieben sind.",
+  "expense.deleteTitle": "Diesen Eintrag löschen?",
+  "expense.deleteBody": "Er wird für alle auf der Liste entfernt.",
 };

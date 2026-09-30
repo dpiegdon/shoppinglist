@@ -44,6 +44,8 @@ export const es: Catalog = {
   "overview.invite.expiresHours": "Caduca en {count} h",
   "overview.invite.expiresDays": "Caduca en {count} d",
   "list.registry.empty": "No se han encontrado artículos.",
+  "list.registry.deleteItem": "Eliminar {name}",
+  "list.registry.itemDeleted": "{name} eliminado",
   "list.categoryFixed": "Mayúsculas corregidas en {category}: {count}",
 
   "sync.syncing": "Sincronizando…",
@@ -153,6 +155,7 @@ export const es: Catalog = {
   "list.notFound": "Lista no encontrada (o ya no tienes acceso).",
   "list.backToOverview": "Volver al resumen",
   "list.allListsLink": "← Todas las listas",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "Volver a todas las listas",
   "list.allItems": "Todos los artículos",
   "list.search": "Buscar",
@@ -329,4 +332,6 @@ export const es: Catalog = {
   "apiError.votedToClose": "Aceptaste cerrar esta lista, así que ya no puedes cambiarla. Retira tu voto para hacer cambios.",
   "apiError.notAnExpensesList": "Solo se puede votar el cierre de un libro de cuentas.",
   "expense.deleteBlocked": "Este movimiento no se puede eliminar: incluye a alguien cuyos importes están fijados.",
+  "expense.deleteTitle": "¿Eliminar este movimiento?",
+  "expense.deleteBody": "Se elimina para todos los de la lista.",
 };

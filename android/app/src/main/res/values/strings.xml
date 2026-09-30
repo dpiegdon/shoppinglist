@@ -138,6 +138,7 @@
     <string name="registry_search">Search</string>
     <string name="registry_item_deleted">%1$s deleted</string>
     <string name="registry_delete_item">Delete %1$s</string>
+    <string name="registry_empty">No items found.</string>
 
     <!-- redeem an invite -->
     <string name="redeem_title">Join a list</string>
@@ -374,7 +375,6 @@
     <string name="expense_to">To</string>
     <string name="expense_empty">No entries yet. Add one to get started.</string>
     <string name="expense_total_spent">Net spent</string>
-    <string name="expense_total_spent_value">Net spent: %1$s</string>
     <string name="expense_your_balance">Your balance</string>
     <string name="expense_paid_and_share">paid %1$s · share %2$s</string>
     <string name="expense_paid_share_settled">paid %1$s · share %2$s · settled %3$s</string>

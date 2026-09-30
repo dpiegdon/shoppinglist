@@ -165,7 +165,14 @@ fun ExpenseDialog(
                             onValueChange = viewModel::onNameChange,
                             label = { Text(stringResource(R.string.expense_what)) },
                             singleLine = true,
-                            isError = state.nameError,
+                            // Said under the field, as the new-list dialog and the web say it (T-342).
+                            // Only an expense insists on a title, so Income or Transfer drops it.
+                            isError = state.nameError && state.type == ExpenseType.EXPENSE,
+                            supportingText = if (state.nameError && state.type == ExpenseType.EXPENSE) {
+                                { Text(stringResource(R.string.overview_name_required)) }
+                            } else {
+                                null
+                            },
                             modifier = Modifier.fillMaxWidth().focusRequester(nameFocusRequester),
                         )
                         Spacer(Modifier.height(8.dp))

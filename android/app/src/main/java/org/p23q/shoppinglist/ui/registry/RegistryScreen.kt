@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,6 +76,17 @@ fun RegistryScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
+                // Said, not left blank, when nothing matches, as the web does (T-342).
+                if (state.items.isEmpty()) {
+                    item(key = "empty") {
+                        Text(
+                            stringResource(R.string.registry_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
                 items(state.items, key = { it.localId }) { item ->
                     RegistryRow(
                         item = item,
@@ -100,7 +110,14 @@ private fun RegistryRow(item: ItemEntity, onClick: () -> Unit, onDelete: () -> U
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(text = item.name.value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        AssistChip(onClick = onClick, label = { Text(stringResource(Status.fromWireValue(item.status.value).label)) })
+        // Muted text, as the web shows it: a chip looked like a control of its own, yet only opened
+        // the editor the row already opens (T-342).
+        Text(
+            text = stringResource(Status.fromWireValue(item.status.value).label),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 8.dp),
+        )
         Spacer(Modifier.width(4.dp))
         IconButton(onClick = onDelete) {
             Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(R.string.registry_delete_item, item.name.value))

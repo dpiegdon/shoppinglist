@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,6 +58,8 @@ import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.bidiIsolate
+import org.p23q.shoppinglist.ui.layoutTextDirection
 import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.accentText
@@ -115,20 +118,22 @@ fun ExpenseListScreen(
             ) {
                 // Compact (T-174): less padding than Material's default, so the pill stays small. The
                 // check on the active segment stays, as on the web and on Show checked.
+                // A minimum height on each segment, not a fixed one: at large font scales the label
+                // needs more (T-342).
                 SingleChoiceSegmentedButtonRow {
                     SegmentedButton(
                         selected = !showBalances,
                         onClick = { showBalances = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                         contentPadding = PaddingValues(horizontal = 10.dp),
-                        modifier = Modifier.height(32.dp),
+                        modifier = Modifier.heightIn(min = 32.dp),
                     ) { Text(stringResource(R.string.expense_entries), style = MaterialTheme.typography.labelMedium) }
                     SegmentedButton(
                         selected = showBalances,
                         onClick = { showBalances = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                         contentPadding = PaddingValues(horizontal = 10.dp),
-                        modifier = Modifier.height(32.dp),
+                        modifier = Modifier.heightIn(min = 32.dp),
                     ) { Text(stringResource(R.string.expense_balances), style = MaterialTheme.typography.labelMedium) }
                 }
                 IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
@@ -150,38 +155,14 @@ fun ExpenseListScreen(
                 return@Column
             }
 
-            // A summary now, not the way into balances: the selector above is (T-172).
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(
-                            stringResource(R.string.expense_total_spent),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                        Text(
-                            AppFormat.money(state.totalCents, state.currency, appLocale()),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                    // A list of one is always square with itself, so the balance is noise there.
-                    if (state.members.size > 1 && myBalance != null) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                stringResource(R.string.expense_your_balance),
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            Text(
-                                AppFormat.signedMoney(myBalance.balanceCents, state.currency, appLocale()),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = balanceColor(myBalance.balanceCents),
-                            )
-                        }
-                    }
-                }
-            }
+            // A summary now, not the way into balances: the selector above is (T-172). The same card
+            // heads the balances tab (T-342). A list of one is always square with itself, so the
+            // balance is noise there.
+            LedgerSummaryCard(
+                netCents = state.totalCents,
+                currency = state.currency,
+                myBalanceCents = if (state.members.size > 1) myBalance?.balanceCents else null,
+            )
 
             CloseVoteBanner(
                 state = state,
@@ -312,7 +293,9 @@ private fun ExpenseRowView(
                     )
                 }
             }
-            Text(subLine, style = MaterialTheme.typography.bodySmall)
+            // In the app's reading direction, not guessed from the first name: a transfer's names
+            // are isolated, so its arrow reads from sender to recipient in Arabic too (T-342).
+            Text(subLine, style = MaterialTheme.typography.bodySmall.copy(textDirection = layoutTextDirection()))
             if (refusal != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // The icon carries the "not saved" half for anyone who cannot see the colour,
@@ -355,6 +338,68 @@ private fun ExpenseRowView(
     }
 }
 
+/**
+ * The figures at the top of both tabs of a ledger, in one style on both (T-342): a card, a muted
+ * caption over each figure. The web's LedgerSummary draws the same.
+ */
+@Composable
+internal fun LedgerSummaryCard(
+    netCents: Long,
+    currency: String,
+    /** The signed-in member's balance, or null where there is none worth showing. */
+    myBalanceCents: Long? = null,
+    /** What went out and what came in, where income exists: the net alone hides half the story. */
+    breakdown: ExpenseMath.SpentTotals? = null,
+) {
+    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text(
+                        stringResource(R.string.expense_total_spent),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Never coloured: what a group spent is not a position anyone is up or down.
+                    Text(
+                        AppFormat.money(netCents, currency, appLocale()),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                if (myBalanceCents != null) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            stringResource(R.string.expense_your_balance),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            AppFormat.signedMoney(myBalanceCents, currency, appLocale()),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = balanceColor(myBalanceCents),
+                        )
+                    }
+                }
+            }
+            if (breakdown != null && breakdown.incomeCents != 0L) {
+                Text(
+                    stringResource(
+                        R.string.expense_spent_breakdown,
+                        AppFormat.money(breakdown.expensesCents, currency, appLocale()),
+                        AppFormat.money(breakdown.incomeCents, currency, appLocale()),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+    }
+}
+
 /** A member's initials, or a stable "Former member N" for someone who has left (T-152). */
 @Composable
 internal fun participantLabel(accountId: String, state: ExpenseListUiState): String {
@@ -374,10 +419,12 @@ internal fun subLine(expense: Expense, state: ExpenseListUiState): String {
     // a composable context.
     val by = expense.paidBy.keys.map { participantLabel(it, state) }.joinToString(", ")
     return when (ExpenseMath.entryType(expense)) {
+        // Isolated, so the arrow keeps pointing from sender to recipient whatever script the names
+        // are in; Arabic's arrow points left (T-342).
         ExpenseType.TRANSFER -> stringResource(
             R.string.expense_row_transfer,
-            by,
-            expense.paidFor.keys.map { participantLabel(it, state) }.joinToString(", "),
+            bidiIsolate(by),
+            bidiIsolate(expense.paidFor.keys.map { participantLabel(it, state) }.joinToString(", ")),
         )
         ExpenseType.INCOME ->
             stringResource(R.string.expense_row_received_by, by, forWhomLabel(expense, state))

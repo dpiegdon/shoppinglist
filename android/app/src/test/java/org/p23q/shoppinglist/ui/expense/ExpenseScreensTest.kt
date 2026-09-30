@@ -12,7 +12,12 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.swipeDown
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -26,6 +31,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -292,7 +298,8 @@ class ExpenseScreensTest {
             showEntries()
 
             composeTestRule.onNodeWithText("Transfer").assertIsDisplayed()
-            composeTestRule.onNodeWithText("OT → ME").assertIsDisplayed()
+            // The names isolated, so the arrow reads from sender to recipient in any script (T-342).
+            composeTestRule.onNodeWithText("\u2068OT\u2069 → \u2068ME\u2069").assertIsDisplayed()
             // A settlement moves money without the group spending a thing, so the net stays 64.
             composeTestRule.onAllNodesWithText("€64.00").assertCountEquals(2)
             // Plain, not signed: what the group moved is nobody's position.
@@ -310,7 +317,7 @@ class ExpenseScreensTest {
 
         showEntries()
 
-        composeTestRule.onNodeWithText("OT → TH").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\u2068OT\u2069 → \u2068TH\u2069").assertIsDisplayed()
         composeTestRule.onNodeWithText("€17.00").assertIsDisplayed()
         // Nothing signed on that row: my own effect is zero, so it says nothing about me — and no
         // bare zero either, which would be a figure claiming to mean something.
@@ -345,7 +352,9 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("Net spent: €64.00").assertIsDisplayed()
+        // The same card as the entries tab: a caption over the figure (T-342).
+        composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
+        composeTestRule.onNodeWithText("€64.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("$me@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("$other@example.com").assertIsDisplayed()
         composeTestRule.onNodeWithText("paid 64.00 · share 32.00").assertIsDisplayed()
@@ -391,7 +400,7 @@ class ExpenseScreensTest {
         showBalances(onReimburse = { recorded = it })
 
         composeTestRule.onNodeWithText("Settle up").assertIsDisplayed()
-        composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\u2068$other@example.com\u2069 pays \u2068$me@example.com\u2069").assertIsDisplayed()
         // My balance signed (T-241), the transfer plain.
         composeTestRule.onNodeWithText("+€32.00").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("€32.00").assertCountEquals(1)
@@ -415,7 +424,7 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("$me@example.com pays Former member 1").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\u2068$me@example.com\u2069 pays \u2068Former member 1\u2069").assertIsDisplayed()
         composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
     }
 
@@ -436,7 +445,7 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\u2068$other@example.com\u2069 pays \u2068$me@example.com\u2069").assertIsDisplayed()
         composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
     }
 
@@ -447,7 +456,7 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("$other@example.com pays $me@example.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("\u2068$other@example.com\u2069 pays \u2068$me@example.com\u2069").assertIsDisplayed()
         composeTestRule.onNodeWithText("Reimburse").assertDoesNotExist()
     }
 
@@ -473,7 +482,8 @@ class ExpenseScreensTest {
 
         showBalances()
 
-        composeTestRule.onNodeWithText("Net spent: €12.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
+        composeTestRule.onNodeWithText("€12.00").assertIsDisplayed()
         composeTestRule.onNodeWithText("Settle up").assertDoesNotExist()
     }
 
@@ -488,7 +498,8 @@ class ExpenseScreensTest {
         showBalances()
 
         // 64 laid out less 30 taken in, and the settlement counting for nothing.
-        composeTestRule.onNodeWithText("Net spent: €34.00").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Net spent").assertIsDisplayed()
+        composeTestRule.onNodeWithText("€34.00").assertIsDisplayed()
         // The net alone would hide half the story wherever income exists.
         composeTestRule.onNodeWithText("Expenses €64.00 · Income €30.00").assertIsDisplayed()
         // I laid out 64 and took 30 back in; a third of each was mine; and I was paid 17.
@@ -535,6 +546,43 @@ class ExpenseScreensTest {
             ExpenseDialog(listId = listId, itemId = itemId, onDismiss = {}, viewModel = form)
         }
         composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `an untitled expense says so under the field when Add is pressed (T-342)`() = runBlocking<Unit> {
+        showForm()
+        composeTestRule.onNodeWithText("Total (EUR)").performTextInput("12.00")
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Enter a name.").assertDoesNotExist()
+
+        composeTestRule.onNodeWithText("Add").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Enter a name.").assertIsDisplayed()
+        // Only an expense insists: an income names itself, so the message goes.
+        composeTestRule.onNodeWithText("Income").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Enter a name.").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the ledger's tabs grow with the font rather than clipping it (T-342)`() = runBlocking<Unit> {
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
+                ExpenseListScreen(
+                    onAddExpense = {},
+                    onEditExpense = {},
+                    onOpenListProps = {},
+                    viewModel = viewModel(),
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val height = composeTestRule.onNodeWithText("Entries").fetchSemanticsNode().size.height
+        val min = with(composeTestRule.density) { 32.dp.roundToPx() }
+        assertTrue("the Entries tab is $height px at twice the font size", height > min)
     }
 
     @Test

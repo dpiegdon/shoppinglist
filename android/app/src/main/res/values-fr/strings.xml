@@ -111,6 +111,7 @@
     <string name="registry_search">Rechercher</string>
     <string name="registry_item_deleted">%1$s supprimé</string>
     <string name="registry_delete_item">Supprimer %1$s</string>
+    <string name="registry_empty">Aucun article trouvé.</string>
     <string name="redeem_title">Rejoindre une liste</string>
     <string name="redeem_code">Code ou lien d\'invitation</string>
     <string name="redeem_joining">Connexion à la liste…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">À</string>
     <string name="expense_empty">Aucune entrée pour l\'instant. Ajoutez-en une.</string>
     <string name="expense_total_spent">Dépense nette</string>
-    <string name="expense_total_spent_value">Dépense nette : %1$s</string>
     <string name="expense_your_balance">Votre solde</string>
     <string name="expense_paid_and_share">payé %1$s · part %2$s</string>
     <string name="expense_paid_share_settled">payé %1$s · part %2$s · réglé %3$s</string>

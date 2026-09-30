@@ -111,6 +111,7 @@
     <string name="registry_search">بحث</string>
     <string name="registry_item_deleted">تم حذف %1$s</string>
     <string name="registry_delete_item">حذف %1$s</string>
+    <string name="registry_empty">لم يتم العثور على عناصر.</string>
     <string name="redeem_title">الانضمام إلى قائمة</string>
     <string name="redeem_code">رمز الدعوة أو الرابط</string>
     <string name="redeem_joining">جارٍ الانضمام إلى القائمة…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">إلى</string>
     <string name="expense_empty">لا توجد قيود بعد. أضف واحدًا للبدء.</string>
     <string name="expense_total_spent">صافي المصروف</string>
-    <string name="expense_total_spent_value">صافي المصروف: %1$s</string>
     <string name="expense_your_balance">رصيدك</string>
     <string name="expense_paid_and_share">دفع %1$s · حصة %2$s</string>
     <string name="expense_paid_share_settled">دفع %1$s · حصة %2$s · تسوية %3$s</string>
@@ -320,7 +320,7 @@
     <string name="expense_for_everyone">الجميع</string>
     <string name="expense_row_by">دفعها %1$s · لصالح %2$s</string>
     <string name="expense_row_received_by">استلمها %1$s · لصالح %2$s</string>
-    <string name="expense_row_transfer">%1$s → %2$s</string>
+    <string name="expense_row_transfer">%1$s ← %2$s</string>
     <string name="expense_solo_hint">أنت وحدك في هذه القائمة، فالمبلغ كله لك.</string>
     <string name="expense_balances">الأرصدة</string>
     <string name="expense_entries">القيود</string>

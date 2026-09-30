@@ -97,7 +97,7 @@ export default function ListPage() {
   if (!listId) return <Navigate to="/" replace />;
   if (!list) {
     return (
-      <main style={{ padding: "1rem" }}>
+      <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
         <p className="muted">{t("list.notFound")}</p>
         <Link to="/">{t("list.backToOverview")}</Link>
       </main>

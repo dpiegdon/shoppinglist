@@ -288,15 +288,34 @@ describe("expense list screen", () => {
     expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
   });
 
-  it("deletes an expense by tombstoning it", async () => {
+  it("confirms, then deletes an expense by tombstoning it", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderAt("/list/list-1");
     await userEvent.click(await screen.findByText("Dinner"));
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
 
+    // The same two lines Android's dialog shows (T-342).
+    expect(confirm).toHaveBeenCalledWith("Delete this entry?\n\nIt is removed for everyone on the list.");
     expect(pushedItem()?.fields.deleted?.value).toBe(true);
+    confirm.mockRestore();
+  });
+
+  it("deletes nothing when the confirmation is cancelled (T-342)", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderAt("/list/list-1");
+    await userEvent.click(await screen.findByText("Dinner"));
+    const syncsBefore = vi.mocked(api.sync).mock.calls.length;
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(api.sync).mock.calls.length).toBe(syncsBefore);
+    // Still open, with the entry still in it.
+    expect(screen.getByLabelText("Total (EUR)")).toHaveValue("64.00");
+    confirm.mockRestore();
   });
 
   it("keeps the dialog open and shows the error when delete fails, instead of closing silently (T-266)", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderAt("/list/list-1");
     await userEvent.click(await screen.findByText("Dinner"));
 
@@ -306,6 +325,7 @@ describe("expense list screen", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
     // Still open — its own field, not the list underneath, is what this reaches.
     expect(screen.getByLabelText("Total (EUR)")).toBeInTheDocument();
+    confirm.mockRestore();
   });
 });
 
@@ -417,6 +437,27 @@ describe("balances screen", () => {
 
     const mine = (await screen.findByText(`${ME}@example.com`)).closest("div");
     expect(within(mine as HTMLElement).getByText("paid 64.00 · share 42.00")).toBeInTheDocument();
+  });
+
+  it("heads the balances with the same summary card as the entries tab (T-342)", async () => {
+    renderAt("/list/list-1/balances");
+
+    const summary = (await screen.findByText("Net spent")).closest(".card") as HTMLElement;
+    expect(summary).not.toBeNull();
+    // A muted caption over the figure, as on the entries tab; the figure itself is not muted.
+    expect(screen.getByText("Net spent")).toHaveClass("muted");
+    const figure = within(summary).getByText("€84.00");
+    expect(figure.closest(".muted")).toBeNull();
+  });
+
+  it("says it is loading, not that the list is gone, until the first sync lands (T-342)", async () => {
+    vi.mocked(api.sync).mockReset();
+    vi.mocked(api.sync).mockReturnValue(new Promise(() => {}));
+    renderAt("/list/list-1/balances");
+
+    expect(await screen.findByText("Loading…")).toBeInTheDocument();
+    expect(screen.queryByText(/List not found/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Back to overview" })).toBeNull();
   });
 });
 
@@ -795,14 +836,16 @@ describe("settling up", () => {
     expect(await screen.findByText("Settle up")).toBeInTheDocument();
     const section = screen.getByRole("region", { name: "Settle up" });
     expect(within(section).getAllByText(/ pays /).map((node) => node.textContent)).toEqual([
-      `${OTHER}@example.com pays ${ME}@example.com`,
-      `${OTHER}@example.com pays Former member 1`,
+      `\u2068${OTHER}@example.com\u2069 pays \u2068${ME}@example.com\u2069`,
+      `\u2068${OTHER}@example.com\u2069 pays \u2068Former member 1\u2069`,
     ]);
     expect(within(section).getByText("€22.00")).toBeInTheDocument();
     expect(within(section).getByText("€10.00")).toBeInTheDocument();
     // Only the transfer between two current members can be recorded; nobody can settle with
     // someone who has left.
     expect(within(section).getAllByRole("button", { name: "Reimburse" })).toHaveLength(1);
+    // A full-size button, as on Android, not the small one (T-342).
+    expect(within(section).getByRole("button", { name: "Reimburse" })).not.toHaveClass("btn-sm");
   });
 
   it("records a transfer as an ordinary expense through the pre-filled form", async () => {
@@ -1069,8 +1112,20 @@ describe("the entry dialog knows three types", () => {
   it("names a blank income and a blank transfer after their type, but still asks an expense", async () => {
     await openAddForm();
     await userEvent.type(screen.getByLabelText("Total (EUR)"), "12.00");
-    // An expense with no title cannot be saved, as it never could.
-    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    // An expense with no title cannot be saved, as it never could, and says so under the field
+    // rather than in the browser's own bubble (T-342).
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(pushedItem()).toBeUndefined();
+    const what = screen.getByLabelText("What");
+    expect(what).not.toHaveAttribute("required");
+    expect(what).toHaveAttribute("aria-invalid", "true");
+    expect(what).toHaveAccessibleDescription("Enter a name.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a name.");
+
+    // Typing clears it.
+    await userEvent.type(what, "x");
+    expect(screen.queryByText("Enter a name.")).not.toBeInTheDocument();
+    await userEvent.clear(what);
 
     await userEvent.click(screen.getByRole("radio", { name: "Income" }));
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
@@ -1246,7 +1301,7 @@ describe("a ledger's entries on screen", () => {
     expect(await screen.findByText("paid by ME · for everyone")).toBeInTheDocument();
     expect(screen.getByText("received by ME · for everyone")).toBeInTheDocument();
     // A transfer is not "paid by … for …": it is one person handing another the money.
-    expect(screen.getByText("OT → ME")).toBeInTheDocument();
+    expect(screen.getByText("\u2068OT\u2069 → \u2068ME\u2069")).toBeInTheDocument();
   });
 
   it("prefixes an income's total with a plus and leaves every other total plain", async () => {

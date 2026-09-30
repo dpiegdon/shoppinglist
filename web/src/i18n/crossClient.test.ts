@@ -86,10 +86,7 @@ const ONE_SIDED: Record<string, string> = {
   "expense.total": "the web labels the field 'Total' and puts the currency beside it; Android folds it into the label (expense_total_with_currency)",
   expense_total_with_currency: "the web's expense.total, with the currency in the label",
   "expense.error.total": "the web says 'Enter a total.' under the shares; Android leaves TOTAL_NOT_POSITIVE silent and keeps the Save button off",
-  expense_total_spent_value: "one line on Android's balances screen, two stacked labels on the web's",
   expense_currency_value: "list properties reads the currency out on Android, where the web has a labelled field",
-  expense_delete_title: "Android confirms deleting an EXPENSE ENTRY in a dialog; the web's delete button acts at once (unlike an item, T-277)",
-  expense_delete_body: "the body of that same Android-only confirmation",
   // T-270 widened this check to the item.* family too. These three stay one-sided rather than
   // paired or removed:
   "item.saveFailed": "the web shows this after an optimistic push to the server fails inline; Android writes to its local mirror and syncs in the background, so there is no synchronous save failure to report here",

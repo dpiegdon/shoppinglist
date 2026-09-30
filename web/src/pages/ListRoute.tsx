@@ -20,7 +20,7 @@ export default function ListRoute() {
 
   if (!list && loading) {
     return (
-      <main style={{ padding: "1rem" }}>
+      <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
         <p className="muted">{t("common.loading")}</p>
       </main>
     );

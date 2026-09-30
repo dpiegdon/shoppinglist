@@ -47,6 +47,8 @@ export const ptBR: Catalog = {
   "overview.invite.expiresHours": "Expira em {count} h",
   "overview.invite.expiresDays": "Expira em {count} d",
   "list.registry.empty": "Nenhum item encontrado.",
+  "list.registry.deleteItem": "Excluir {name}",
+  "list.registry.itemDeleted": "{name} excluído",
   "list.categoryFixed": "Maiúsculas corrigidas em {category}: {count}",
 
   "sync.syncing": "Sincronizando…",
@@ -156,6 +158,7 @@ export const ptBR: Catalog = {
   "list.notFound": "Lista não encontrada (ou você não tem mais acesso).",
   "list.backToOverview": "Voltar para a visão geral",
   "list.allListsLink": "← Todas as listas",
+  "list.backToList": "← {name}",
   "list.backToAllLists": "Voltar para todas as listas",
   "list.allItems": "Todos os itens",
   "list.search": "Buscar",
@@ -332,4 +335,6 @@ export const ptBR: Catalog = {
   "apiError.votedToClose": "Você concordou em encerrar esta lista, então não pode mais alterá-la. Retire seu voto para fazer alterações.",
   "apiError.notAnExpensesList": "Só é possível votar para encerrar um livro-caixa.",
   "expense.deleteBlocked": "Este lançamento não pode ser excluído: ele envolve alguém cujos valores estão fixados.",
+  "expense.deleteTitle": "Excluir este lançamento?",
+  "expense.deleteBody": "Ele é removido para todos na lista.",
 };

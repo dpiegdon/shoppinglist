@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import ExpenseDialog, { today, type ExpenseSaveValues } from "../components/ExpenseDialog";
 import ExpenseListHeader from "../components/ExpenseListHeader";
+import LedgerSummary from "../components/LedgerSummary";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -17,6 +18,7 @@ import {
 import type { Expense } from "../api/contract";
 import { useT } from "../i18n";
 import { balanceColor, useFormat } from "../lib/format";
+import { bidiIsolate } from "../lib/bidi";
 
 /**
  * Who is up and who is down on an expenses list (T-155), always summing to zero — and below it,
@@ -27,7 +29,7 @@ export default function BalancesPage() {
   const t = useT();
   const fmt = useFormat();
   const { listId } = useParams<{ listId: string }>();
-  const { lists, items, push, deviceId } = useSyncContext();
+  const { lists, items, push, deviceId, loading } = useSyncContext();
   const { account } = useAuth();
   const [recording, setRecording] = useState<Transfer | null>(null);
 
@@ -64,11 +66,13 @@ export default function BalancesPage() {
   const transfers = useMemo(() => settle(balances), [balances]);
 
   if (!listId) return <Navigate to="/" replace />;
+  // Not "not found" while the first sync is still in flight: the web keeps no copy of the lists,
+  // so a reload has none until it lands (T-342), as list properties already does.
   if (!list) {
     return (
-      <main style={{ padding: "1rem" }}>
-        <p className="muted">{t("list.notFound")}</p>
-        <Link to="/">{t("list.backToOverview")}</Link>
+      <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
+        <p className="muted">{loading ? t("common.loading") : t("list.notFound")}</p>
+        {!loading && <Link to="/">{t("list.backToOverview")}</Link>}
       </main>
     );
   }
@@ -123,19 +127,13 @@ export default function BalancesPage() {
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
       <ExpenseListHeader listId={listId} listName={listFieldValue(list, "name") ?? ""} view="balances" />
 
-      <p className="muted" style={{ marginTop: 0, marginBottom: "0.5rem" }}>
-        {t("expense.totalSpent")}: <strong>{fmt.money(spent.netCents, currency)}</strong>
-      </p>
-      {/* Where income exists, the net alone hides half the story: say what went out and what
-          came in (T-245). A ledger with none is exactly as it was. */}
-      {spent.incomeCents !== 0 && (
-        <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
-          {t("expense.spentBreakdown", {
-            spent: fmt.money(spent.expensesCents, currency),
-            income: fmt.money(spent.incomeCents, currency),
-          })}
-        </p>
-      )}
+      {/* The same card as the entries tab (T-342). Where income exists, the net alone hides half
+          the story: it says what went out and what came in (T-245). */}
+      <LedgerSummary
+        currency={currency}
+        netCents={spent.netCents}
+        breakdown={{ expensesCents: spent.expensesCents, incomeCents: spent.incomeCents }}
+      />
 
       <div className="rows">
         {balances.map((balance) => {
@@ -200,14 +198,19 @@ export default function BalancesPage() {
                   className="row"
                   style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.6rem 0.75rem" }}
                 >
-                  <span dir="auto" style={{ flex: 1, minWidth: 0 }}>
-                    {t("expense.transfer", { from: labelFor(transfer.from), to: labelFor(transfer.to) })}
+                  {/* The names isolated and the sentence in the page's direction, so it reads from
+                      payer to payee in Arabic too, whatever script the names are in (T-342). */}
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {t("expense.transfer", {
+                      from: bidiIsolate(labelFor(transfer.from)),
+                      to: bidiIsolate(labelFor(transfer.to)),
+                    })}
                   </span>
                   <strong style={{ whiteSpace: "nowrap" }}>
                     {fmt.money(transfer.cents, currency)}
                   </strong>
                   {canRecord(transfer) && (
-                    <button type="button" className="btn btn-sm" onClick={() => setRecording(transfer)}>
+                    <button type="button" className="btn" onClick={() => setRecording(transfer)}>
                       {t("expense.reimburse")}
                     </button>
                   )}

@@ -703,8 +703,9 @@ class ExpenseFormViewModelTest {
             viewModel.startAdd(listId).join()
             viewModel.onTotalChange("30.00")
 
-            // An expense with no title is still refused, and says so.
-            assertFalse(viewModel.uiState.value.canSave)
+            // An expense with no title is still refused, and says so. Save stays on so that pressing
+            // it can say so (T-342).
+            assertTrue(viewModel.uiState.value.canSave)
             assertNull(viewModel.save("Expense"))
             assertTrue(viewModel.uiState.value.nameError)
 

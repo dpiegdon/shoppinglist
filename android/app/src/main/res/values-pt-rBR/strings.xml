@@ -111,6 +111,7 @@
     <string name="registry_search">Buscar</string>
     <string name="registry_item_deleted">%1$s excluído</string>
     <string name="registry_delete_item">Excluir %1$s</string>
+    <string name="registry_empty">Nenhum item encontrado.</string>
     <string name="redeem_title">Entrar em uma lista</string>
     <string name="redeem_code">Código ou link do convite</string>
     <string name="redeem_joining">Entrando na lista…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">Para</string>
     <string name="expense_empty">Ainda não há lançamentos. Adicione um para começar.</string>
     <string name="expense_total_spent">Gasto líquido</string>
-    <string name="expense_total_spent_value">Gasto líquido: %1$s</string>
     <string name="expense_your_balance">Seu saldo</string>
     <string name="expense_paid_and_share">pagou %1$s · parte %2$s</string>
     <string name="expense_paid_share_settled">pagou %1$s · parte %2$s · acertado %3$s</string>
@@ -327,7 +327,7 @@
     <string name="expense_currency">Moeda</string>
     <string name="expense_currency_value">Moeda: %1$s</string>
     <string name="expense_delete_title">Excluir este lançamento?</string>
-    <string name="expense_delete_body">Ela é removida para todos na lista.</string>
+    <string name="expense_delete_body">Ele é removido para todos na lista.</string>
     <string name="expense_error_above_total">Os valores informados somam mais que o total.</string>
     <string name="expense_error_does_not_add_up">Os valores informados somam %1$s, não %2$s.</string>
     <string name="expense_error_use_sum">Definir o total como %1$s</string>

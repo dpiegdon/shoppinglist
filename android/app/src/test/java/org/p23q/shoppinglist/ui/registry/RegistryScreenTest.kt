@@ -2,6 +2,12 @@ package org.p23q.shoppinglist.ui.registry
 
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.insertTestAccount
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -65,5 +71,37 @@ class RegistryScreenTest {
 
         assertEquals("Milk", viewModel.uiState.value.undoItemName)
         assertEquals(null, editedItemId)
+    }
+
+    @Test
+    fun `the status is muted text, and a search with no match says so (T-342)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        runBlocking { db.insertTestAccount() }
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val viewModel = RegistryViewModel(SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)), itemsRepo)
+
+        composeTestRule.setContent {
+            RegistryScreen(onEditItem = {}, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+
+        // Part of the row, which opens the editor; not a chip of its own that looks like a control.
+        composeTestRule.onNodeWithText("Todo", useUnmergedTree = true).assertExists()
+        composeTestRule
+            .onAllNodes(hasText("Todo") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertCountEquals(0)
+        composeTestRule.onNodeWithText("No items found.").assertDoesNotExist()
+
+        composeTestRule.onNodeWithText("Search").performTextInput("Bread")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("No items found.").assertIsDisplayed()
     }
 }

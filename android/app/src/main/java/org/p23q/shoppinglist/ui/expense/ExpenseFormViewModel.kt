@@ -110,15 +110,16 @@ data class ExpenseFormUiState(
 
     val canSave: Boolean
         get() {
-            // An expense still needs a title; an income or a transfer falls back to its own name,
-            // because "Income" is all there is to say about most refunds (T-245).
-            val titleOk = type != ExpenseType.EXPENSE || name.isNotBlank()
+            // An expense still needs a title, but a blank one does not turn Save off: pressing it says
+            // "Enter a name." under the field, as the new-list dialog and the web do (T-342). An
+            // income or a transfer falls back to its own name, because "Income" is all there is to
+            // say about most refunds (T-245).
             val sharesOk = if (type == ExpenseType.TRANSFER) {
                 totalCents > 0 && isTransferValid
             } else {
                 paidByError == null && paidForError == null
             }
-            return titleOk && sharesOk
+            return sharesOk
         }
 }
 

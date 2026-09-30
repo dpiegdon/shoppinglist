@@ -111,6 +111,7 @@
     <string name="registry_search">Suchen</string>
     <string name="registry_item_deleted">%1$s gelöscht</string>
     <string name="registry_delete_item">%1$s löschen</string>
+    <string name="registry_empty">Keine Artikel gefunden.</string>
     <string name="redeem_title">Liste beitreten</string>
     <string name="redeem_code">Einladungscode oder Link</string>
     <string name="redeem_joining">Liste wird beigetreten…</string>
@@ -311,7 +312,6 @@
     <string name="expense_to">An</string>
     <string name="expense_empty">Noch keine Einträge. Füge einen hinzu.</string>
     <string name="expense_total_spent">Netto ausgegeben</string>
-    <string name="expense_total_spent_value">Netto ausgegeben: %1$s</string>
     <string name="expense_your_balance">Dein Saldo</string>
     <string name="expense_paid_and_share">bezahlt %1$s · Anteil %2$s</string>
     <string name="expense_paid_share_settled">bezahlt %1$s · Anteil %2$s · ausgeglichen %3$s</string>
@@ -327,7 +327,7 @@
     <string name="expense_currency">Währung</string>
     <string name="expense_currency_value">Währung: %1$s</string>
     <string name="expense_delete_title">Diesen Eintrag löschen?</string>
-    <string name="expense_delete_body">Sie wird für alle auf der Liste entfernt.</string>
+    <string name="expense_delete_body">Er wird für alle auf der Liste entfernt.</string>
     <string name="expense_error_above_total">Die eingetragenen Beträge sind zusammen größer als der Gesamtbetrag.</string>
     <string name="expense_error_does_not_add_up">Die eingetragenen Beträge ergeben %1$s, nicht %2$s.</string>
     <string name="expense_error_use_sum">Gesamtbetrag auf %1$s setzen</string>
