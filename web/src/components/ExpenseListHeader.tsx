@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 interface ExpenseListHeaderProps {
   listId: string;
@@ -19,6 +20,7 @@ interface ExpenseListHeaderProps {
  */
 export default function ExpenseListHeader({ listId, listName, view }: ExpenseListHeaderProps) {
   const t = useT();
+  useDocumentTitle(view === "balances" ? t("expense.balances") : null, listName);
   return (
     <>
       <Link to="/" className="muted" style={{ fontSize: "0.85rem" }}>

@@ -18,6 +18,7 @@ import { useAuth } from "../auth/AuthContext";
 import type { Expense, InviteForMe } from "../api/contract";
 import type { ListKind } from "../api/contract";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { byName } from "../lib/nameOrder";
 import { balanceColor, useFormat } from "../lib/format";
 
@@ -53,6 +54,7 @@ export function _resetInitialResumeForTests() {
 
 export default function OverviewPage() {
   const t = useT();
+  useDocumentTitle(t("nav.overview"));
   const fmt = useFormat();
   const { lists, items, loading, push, deviceId, lastSyncAt, serverMessage } = useSyncContext();
   const navigate = useNavigate();

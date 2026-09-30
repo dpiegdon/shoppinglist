@@ -168,8 +168,8 @@ per role:
 | background | `#FFFFFF` | `#000000` |
 | foreground (text) | `#1A1A1E` | `#F2F2F4` |
 | accent (buttons, checkmarks, switches, the selected state) | `#5A97FF` | `#5A97FF` |
-| highlighted text (links, the "due today" date, group headings, the open-item count) | `#126BFF` | `#5A97FF` |
-| text on the accent | `#FFFFFF` | `#0B1220` |
+| highlighted text (links, the "due today" date, group headings, the open-item count) | `#0F62F0` | `#5A97FF` |
+| text on the accent | `#0B1220` | `#0B1220` |
 
 Beside them sit the neutral greys for muted text, borders and the secondary
 surface of cards, dialogs and the drawer. `Theme.kt` builds the Material light

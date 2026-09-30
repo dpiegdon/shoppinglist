@@ -328,6 +328,22 @@ describe("ListPage title navigates to the overview (T-109)", () => {
 
     expect(screen.getByText("Overview page")).toBeInTheDocument();
   });
+
+  it("names the browser tab after the list (T-338)", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    expect(document.title).toBe("Groceries · Tuppu");
+  });
+
+  it("draws All items as a bulleted list, not the menu's ☰ (T-338)", async () => {
+    renderListPage();
+    await screen.findByText("Milk");
+
+    const allItems = screen.getByRole("link", { name: "All items" });
+    expect(allItems.textContent).not.toContain("☰");
+    expect(allItems.querySelector("svg.icon-auto-mirror")).not.toBeNull();
+  });
 });
 
 describe("ListPage last-touched-by indicator (T-64)", () => {

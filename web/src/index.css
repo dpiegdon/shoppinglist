@@ -4,8 +4,9 @@
      --color-bg            background, flat white / black
      --color-text          foreground, the text
      --color-accent        buttons, checkmarks, switches, the selected state
-     --color-accent-strong highlighted text: links, the "due today" date, emphasised text
-     --color-accent-text   text drawn ON the accent
+     --color-accent-strong highlighted text: links, the "due today" date, emphasised text; readable
+                           on the card surface as well as on the background
+     --color-accent-text   text drawn ON the accent, dark in both themes
    Muted text, borders and secondary surfaces are neutral greys. The meaning colours (danger, the
    positive balance, the checked item, registration on) are fixed by what they mean, not by the
    brand. The logo keeps its own gradient in favicon.svg. */
@@ -13,11 +14,14 @@
   --color-bg: #ffffff;
   --color-surface: #f7f7f8;
   --color-border: #e2e2e5;
+  /* A field's outline: at least 3:1 on the background and the card surface, as a control's edge
+     must be, where --color-border is a divider. Android's outline, the muted grey. */
+  --color-input-border: #6b6b73;
   --color-text: #1a1a1e;
   --color-text-muted: #6b6b73;
   --color-accent: #5a97ff;
-  --color-accent-strong: #126bff;
-  --color-accent-text: #ffffff;
+  --color-accent-strong: #0f62f0;
+  --color-accent-text: #0b1220;
   --color-danger: #dc2626;
   --color-danger-bg: #fef2f2;
   --color-danger-text: #ffffff;
@@ -42,6 +46,7 @@
     --color-bg: #000000;
     --color-surface: #1e1e23;
     --color-border: #2f2f36;
+    --color-input-border: #9a9aa2;
     --color-text: #f2f2f4;
     --color-text-muted: #9a9aa2;
     --color-accent: #5a97ff;
@@ -49,6 +54,7 @@
     --color-accent-text: #0b1220;
     --color-danger: #f87171;
     --color-danger-bg: #2a1414;
+    --color-danger-text: #1a0505;
     --color-positive: #4ade80;
     --color-checked: #f87171;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -76,6 +82,14 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+  /* The page reaches under a notch (viewport-fit=cover, for the add button's bottom inset); its
+     content keeps clear of the notch in landscape and of the status bar when installed. */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
+}
+
+/* An icon that points along the line, like Android's AutoMirrored icons: flipped in Arabic. */
+[dir="rtl"] .icon-auto-mirror {
+  transform: scaleX(-1);
 }
 
 a {
@@ -95,7 +109,7 @@ textarea {
   font-size: 1rem;
   color: var(--color-text);
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-input-border);
   border-radius: var(--radius);
   padding: 0.5rem 0.65rem;
   /* Fill the field and allow shrinking — without this, an input's default ~20ch intrinsic width
@@ -123,7 +137,8 @@ fieldset {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--color-accent);
+  /* The highlighted-text colour, not the accent: the ring must read at 3:1 on white and on a card. */
+  outline: 2px solid var(--color-accent-strong);
   outline-offset: -1px;
 }
 
@@ -161,13 +176,21 @@ textarea:focus {
   font-size: 0.8rem;
 }
 
+/* An icon button is a 44px square at least, the smallest target a finger hits reliably (Android's
+   IconButton is 48dp); the glyph stays its own size in the middle. */
 .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   background: transparent;
   color: var(--color-text-muted);
   border: none;
   padding: 0.35rem;
   border-radius: var(--radius);
   line-height: 1;
+  text-decoration: none;
 }
 
 .btn-icon:hover {
@@ -210,9 +233,12 @@ textarea:focus {
 }
 
 .chip-remove {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   background: transparent;
   border: none;
   color: var(--color-text-muted);
@@ -220,6 +246,21 @@ textarea:focus {
   padding: 0 0.15rem;
   line-height: 1;
   font-size: 1rem;
+}
+
+/* Small controls inside a pill keep their size on screen and take a 44px target around it, as
+   Material gives a compact chip or segment a 48dp touch area beyond what it draws. The pseudo
+   element is part of the control, so a tap on it is a tap on the control. */
+.chip-remove::after,
+.segmented a::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  width: 2.75rem;
+  height: 2.75rem;
+  transform: translate(-50%, -50%);
 }
 
 .chip-remove:hover {
@@ -298,9 +339,11 @@ textarea:focus {
   border-radius: 999px;
 }
 
-/* Compact (T-174): small enough to read as a control, not as a second heading. */
+/* Compact (T-174): small enough to read as a control, not as a second heading, with a 44px target
+   beyond what it draws (the ::after above). */
 .segmented a {
-  padding: 0.15rem 0.6rem;
+  position: relative;
+  padding: 0.4rem 0.8rem;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -311,6 +354,25 @@ textarea:focus {
 .segmented a[aria-current="page"] {
   background: var(--color-accent);
   color: var(--color-accent-text);
+}
+
+/* An entry in the app menu: a link or the Log out button, each a full-width 44px row. */
+.menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.6rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1rem;
+  text-align: start;
+  text-decoration: none;
+}
+
+.menu-item:hover {
+  background: var(--color-bg);
 }
 
 /* Group headings inside a list — categories, dates (T-183): coloured and centred, as the app

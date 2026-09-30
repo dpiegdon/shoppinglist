@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import * as api from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import LanguagePicker from "../components/LanguagePicker";
 import { getCachedDefaultCurrency, setCachedDefaultCurrency, useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { Session } from "../api/contract";
@@ -32,6 +33,7 @@ function useFormStatus() {
 
 export default function SettingsPage() {
   const t = useT();
+  useDocumentTitle(t("settings.title"));
   const { account, logout } = useAuth();
   const navigate = useNavigate();
   const currentCurrency = useDefaultCurrency();

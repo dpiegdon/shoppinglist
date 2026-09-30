@@ -1,5 +1,6 @@
 import { appBasename, appVersion } from "../lib/appConfig";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import CuneiformName from "../components/CuneiformName";
 
 /** Where the sources live; Android's AboutScreen links the same address (T-311). */
@@ -15,6 +16,7 @@ const SOURCE_CODE_URL = "https://github.com/dpiegdon/shoppinglist";
  */
 export default function AboutPage() {
   const t = useT();
+  useDocumentTitle();
   // The server injects its package version into index.html (routes/webapp.py); one version number
   // ships the server, this bundle and the APK. Absent in dev — the line then simply reads empty.
   const version = appVersion();

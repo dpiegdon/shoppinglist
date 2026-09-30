@@ -1,4 +1,4 @@
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -73,7 +73,7 @@ describe("AppShell menu (T-220, T-224)", () => {
 
     const entry = screen.getByRole("link", { name: en["nav.about"] });
     expect(entry).toHaveAttribute("href", "/about");
-    const labels = screen.getAllByRole("link").map((el) => el.textContent);
+    const labels = within(screen.getByRole("navigation")).getAllByRole("link").map((el) => el.textContent);
     // The last link in the menu; Log out is a button after it.
     expect(labels[labels.length - 1]).toBe(en["nav.about"]);
     expect(labels.indexOf(en["nav.about"])).toBe(labels.indexOf(en["settings.title"]) + 1);
@@ -102,5 +102,72 @@ describe("AppShell menu (T-220, T-224)", () => {
       en["nav.serverAdmin"],
       en["nav.about"],
     ]);
+  });
+});
+
+describe("AppShell menu from the keyboard (T-338)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  const menuButton = () => screen.getByRole("button", { name: en["nav.menu"] });
+
+  it("puts its first entry in focus when it opens", async () => {
+    renderShell(false);
+    await openMenu();
+
+    expect(screen.getByRole("link", { name: en["nav.overview"] })).toHaveFocus();
+    expect(menuButton()).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("sits right after its button in the page, so Tab goes from ☰ into the menu", async () => {
+    renderShell(false);
+    await openMenu();
+
+    expect(menuButton().nextElementSibling).toBe(screen.getByRole("navigation"));
+  });
+
+  it("closes on Escape and gives focus back to its button", async () => {
+    renderShell(false);
+    await openMenu();
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    expect(menuButton()).toHaveFocus();
+    expect(menuButton()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes on a press outside it", async () => {
+    renderShell(false);
+    await openMenu();
+    await userEvent.click(screen.getByText("Page content"));
+
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  it("stays open while focus moves inside it, and closes when focus leaves it", async () => {
+    renderShell(false);
+    await openMenu();
+    await userEvent.tab();
+    expect(screen.getByRole("link", { name: en["nav.joinList"] })).toHaveFocus();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+
+    // Past Log out, the last entry, focus moves on to the header's Tuppu link.
+    screen.getByRole("button", { name: en["nav.logOut"] }).focus();
+    await userEvent.tab();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  it("toggles shut from its own button", async () => {
+    renderShell(false);
+    await openMenu();
+    await openMenu();
+
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 });

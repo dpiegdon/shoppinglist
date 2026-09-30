@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import AddFab from "../components/AddFab";
+import ListIcon from "../components/ListIcon";
 import * as api from "../api/client";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
@@ -20,6 +21,7 @@ import { useLiveListSync } from "../hooks/useLiveListSync";
 import { useExitingItems } from "../hooks/useExitingItems";
 import type { ItemObject, ItemStatus, Member } from "../api/contract";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { errorMessage } from "../i18n/apiErrors";
 
 export default function ListPage() {
@@ -55,6 +57,7 @@ export default function ListPage() {
   useLiveListSync();
 
   const list = listId ? lists.get(listId) : undefined;
+  useDocumentTitle(list && listFieldValue(list, "name"));
 
   const listItems = useMemo(
     () => (listId ? Array.from(items.values()).filter((i) => i.list_id === listId) : []),
@@ -297,7 +300,7 @@ export default function ListPage() {
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
           <Link to={`/list/${listId}/registry`} className="btn-icon" aria-label={t("list.allItems")} title={t("list.allItems")}>
-            ☰
+            <ListIcon />
           </Link>
           <Link
             to={`/list/${listId}/properties`}

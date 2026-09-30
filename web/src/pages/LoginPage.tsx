@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import * as api from "../api/client";
 import { allowRegistration, appBasename } from "../lib/appConfig";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import LanguagePicker from "../components/LanguagePicker";
 import { errorMessage } from "../i18n/apiErrors";
 import CuneiformName from "../components/CuneiformName";
@@ -13,6 +14,7 @@ const apkUrl = () => `${appBasename()}/shoppinglist.apk`;
 
 export default function LoginPage() {
   const t = useT();
+  useDocumentTitle();
   const { login, register, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

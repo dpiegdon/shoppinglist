@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { ModalDialog } from "../components/ModalDialog";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { errorMessage } from "../i18n/apiErrors";
 import { normalizeServerMessage } from "../lib/serverMessage";
 
@@ -69,6 +70,7 @@ function ToggleSwitch({
  */
 export default function AdminPage() {
   const t = useT();
+  useDocumentTitle(t("admin.title"));
   const { account } = useAuth();
   // null until asked for (T-221): opening the console must not pull every account on an instance
   // with hundreds of them. The registration toggle below is one value, so that still loads on open.

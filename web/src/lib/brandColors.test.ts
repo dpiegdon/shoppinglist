@@ -87,8 +87,9 @@ const SCHEME: Record<string, { light: string; dark: string }> = {
   "--color-bg": { light: "#ffffff", dark: "#000000" },
   "--color-text": { light: "#1a1a1e", dark: "#f2f2f4" },
   "--color-accent": { light: "#5a97ff", dark: "#5a97ff" },
-  "--color-accent-strong": { light: "#126bff", dark: "#5a97ff" },
-  "--color-accent-text": { light: "#ffffff", dark: "#0b1220" },
+  // Dark text on the accent in both themes, and highlighted text dark enough for a card (T-338).
+  "--color-accent-strong": { light: "#0f62f0", dark: "#5a97ff" },
+  "--color-accent-text": { light: "#0b1220", dark: "#0b1220" },
 };
 
 /** WCAG 2.1 relative luminance of a #rrggbb colour. */
@@ -193,14 +194,48 @@ describe("the colour scheme", () => {
       expect(tokens.get("--color-danger-text"), `--color-danger-text (${theme})`).toBe(kotlinColor(`OnError${suffix}`, THEME_KT));
       expect(tokens.get("--color-danger-bg"), `--color-danger-bg (${theme})`).toBe(kotlinColor(`ErrorContainer${suffix}`, THEME_KT));
     }
+    // White on the light red, near-black on the dark one (T-338).
+    expect(cssTokens("light").get("--color-danger-text")).toBe("#ffffff");
+    expect(cssTokens("dark").get("--color-danger-text")).toBe("#1a0505");
+  });
+
+  it("keeps text on the accent and on the red legible, in both themes (T-338)", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const tokens = cssTokens(theme);
+      for (const [ink, paper] of [
+        ["--color-accent-text", "--color-accent"],
+        ["--color-danger-text", "--color-danger"],
+      ]) {
+        const ratio = contrast(tokens.get(ink) as string, tokens.get(paper) as string);
+        expect(ratio, `${ink} on ${paper} (${theme})`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("draws a field's outline and its focus ring at 3:1 on the background and on a card (T-338)", () => {
+    const inputs = withoutCssComments(CSS).match(/input,\s*select,\s*textarea\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(inputs).toContain("border: 1px solid var(--color-input-border);");
+    const focus = withoutCssComments(CSS).match(/input:focus,\s*select:focus,\s*textarea:focus\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(focus).toContain("var(--color-accent-strong)");
+    for (const theme of ["light", "dark"] as const) {
+      const tokens = cssTokens(theme);
+      for (const edge of ["--color-input-border", "--color-accent-strong"]) {
+        for (const paper of ["--color-bg", "--color-surface"]) {
+          const ratio = contrast(tokens.get(edge) as string, tokens.get(paper) as string);
+          expect(ratio, `${edge} on ${paper} (${theme})`).toBeGreaterThanOrEqual(3);
+        }
+      }
+    }
   });
 
 
-  it("keeps highlighted text legible on the background, in both themes", () => {
+  it("keeps highlighted text legible on the background and on a card, in both themes (T-338)", () => {
     for (const theme of ["light", "dark"] as const) {
       const tokens = cssTokens(theme);
-      const ratio = contrast(tokens.get("--color-accent-strong") as string, tokens.get("--color-bg") as string);
-      expect(ratio, `--color-accent-strong on --color-bg (${theme})`).toBeGreaterThanOrEqual(4.5);
+      for (const paper of ["--color-bg", "--color-surface"]) {
+        const ratio = contrast(tokens.get("--color-accent-strong") as string, tokens.get(paper) as string);
+        expect(ratio, `--color-accent-strong on ${paper} (${theme})`).toBeGreaterThanOrEqual(4.5);
+      }
     }
   });
 

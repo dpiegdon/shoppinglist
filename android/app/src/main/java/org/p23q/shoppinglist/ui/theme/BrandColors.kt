@@ -14,8 +14,10 @@ import androidx.compose.ui.graphics.Color
 // - Accent: buttons, checkmarks, switches and the selected state (the drawer's current entry).
 // - AccentText (highlighted text): links, the "due today" date, the category and date headings
 //   in a list, and the open-item count on the overview.
-//   Darker than the accent in the light scheme, where the accent itself is too light to read.
-// - OnAccent: text and icons drawn on the accent.
+//   Darker than the accent in the light scheme, where the accent itself is too light to read, and
+//   dark enough to clear 4.5:1 on the card surface as well as on the background.
+// - OnAccent: text and icons drawn on the accent. Dark in both schemes: white on the light accent
+//   read at 2.9:1.
 //
 // The meaning colours (error red, the balance green, the checked item's red) are not brand colours
 // and live in Theme.kt; the logo keeps its own gradient in the drawable.
@@ -29,10 +31,10 @@ val ForegroundDark = Color(0xFFF2F2F4)
 val AccentLight = Color(0xFF5A97FF)
 val AccentDark = Color(0xFF5A97FF)
 
-val AccentTextLight = Color(0xFF126BFF)
+val AccentTextLight = Color(0xFF0F62F0)
 val AccentTextDark = Color(0xFF5A97FF)
 
-val OnAccentLight = Color(0xFFFFFFFF)
+val OnAccentLight = Color(0xFF0B1220)
 val OnAccentDark = Color(0xFF0B1220)
 
 // Neutral greys, without the purple tint of Material's baseline: muted text, borders and the

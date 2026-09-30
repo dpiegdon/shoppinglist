@@ -12,6 +12,7 @@ import { useAuth } from "../auth/AuthContext";
 import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { compareNames } from "../lib/nameOrder";
 import { errorMessage } from "../i18n/apiErrors";
 
@@ -22,6 +23,7 @@ export default function ListPropsPage() {
   const { account } = useAuth();
   const navigate = useNavigate();
   const list = listId ? lists.get(listId) : undefined;
+  useDocumentTitle(t("listProps.title"), list && listFieldValue(list, "name"));
 
   const [name, setName] = useState(list ? listFieldValue(list, "name") ?? "" : "");
   const [categoryOrder, setCategoryOrder] = useState<string[]>(

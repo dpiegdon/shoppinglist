@@ -57,8 +57,9 @@ your source changes.
   `--color-bg` (flat white / black), `--color-text`, `--color-accent` (buttons,
   checkmarks, switches, the selected state; `#5a97ff` in both themes),
   `--color-accent-strong` (links, the due-today date, emphasised text:
-  `#126bff` light, `#5a97ff` dark) and `--color-accent-text` (text on the
-  accent). Muted text, borders and surfaces are neutral greys; danger, the
+  `#0f62f0` light, `#5a97ff` dark) and `--color-accent-text` (text on the
+  accent, `#0b1220` in both themes). Muted text, borders, field outlines
+  (`--color-input-border`) and surfaces are neutral greys; danger, the
   positive balance, the checked item and the registration switch keep their
   meaning colours. `lib/brandColors.test.ts` reads `BrandColors.kt` and fails if
   the two clients' values differ, or if a colour is written outside

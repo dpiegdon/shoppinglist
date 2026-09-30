@@ -25,9 +25,9 @@ class ThemeTest {
         assertEquals(Color(0xFFF2F2F4), ForegroundDark)
         assertEquals(Color(0xFF5A97FF), AccentLight)
         assertEquals(Color(0xFF5A97FF), AccentDark)
-        assertEquals(Color(0xFF126BFF), AccentTextLight)
+        assertEquals(Color(0xFF0F62F0), AccentTextLight)
         assertEquals(Color(0xFF5A97FF), AccentTextDark)
-        assertEquals(Color(0xFFFFFFFF), OnAccentLight)
+        assertEquals(Color(0xFF0B1220), OnAccentLight)
         assertEquals(Color(0xFF0B1220), OnAccentDark)
     }
 
@@ -114,8 +114,22 @@ class ThemeTest {
         for (variant in ThemeVariant.entries) {
             val scheme = brandColorScheme(variant)
             assertReadable("$variant highlighted text", scheme.accentText, scheme.background)
+            // On cards and dialogs too: the overview's open counts, a dialog's text buttons (T-338).
+            assertReadable("$variant highlighted text on a card", scheme.accentText, scheme.surfaceContainerHigh)
             assertReadable("$variant text", scheme.onBackground, scheme.background)
             assertReadable("$variant muted text", scheme.onSurfaceVariant, scheme.background)
+        }
+    }
+
+    @Test
+    fun `text on the accent and on the red clears WCAG AA, in both schemes (T-338)`() {
+        for (variant in ThemeVariant.entries) {
+            val scheme = brandColorScheme(variant)
+            // Filled buttons and the add button; a selected chip or segment.
+            assertReadable("$variant text on the accent", scheme.onPrimary, scheme.primary)
+            assertReadable("$variant text on the selected state", scheme.onSecondaryContainer, scheme.secondaryContainer)
+            // Every button that destroys something.
+            assertReadable("$variant text on the red", scheme.onError, scheme.error)
         }
     }
 
@@ -184,7 +198,7 @@ class ThemeTest {
         assertEquals(Color(0xFFDC2626), light.error)
         assertEquals(Color(0xFFF87171), dark.error)
         assertEquals(Color(0xFFFFFFFF), light.onError)
-        assertEquals(Color(0xFFFFFFFF), dark.onError)
+        assertEquals(Color(0xFF1A0505), dark.onError)
         assertEquals(Color(0xFFFEF2F2), light.errorContainer)
         assertEquals(Color(0xFF2A1414), dark.errorContainer)
     }

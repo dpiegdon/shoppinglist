@@ -6,10 +6,12 @@ import { extractInviteToken, pastedInvite } from "../lib/inviteToken";
 import { safeLocalStorage } from "../lib/safeStorage";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { errorMessage } from "../i18n/apiErrors";
 
 export default function RedeemPage() {
   const t = useT();
+  useDocumentTitle(t("redeem.title"));
   const [searchParams] = useSearchParams();
   const [token, setToken] = useState(searchParams.get("token") ?? "");
   const [error, setError] = useState<string | null>(null);

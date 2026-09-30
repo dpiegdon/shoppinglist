@@ -8,6 +8,7 @@ import ItemDialog, { type ItemDialogSaveValues } from "../components/ItemDialog"
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import type { ItemObject } from "../api/contract";
 import { useT } from "../i18n";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { byName } from "../lib/nameOrder";
 
 export default function RegistryPage() {
@@ -19,6 +20,7 @@ export default function RegistryPage() {
   const [editingItem, setEditingItem] = useState<ItemObject | null>(null);
 
   const list = listId ? lists.get(listId) : undefined;
+  useDocumentTitle(t("list.allItems"), list && listFieldValue(list, "name"));
 
   const listItems = useMemo(
     () => (listId ? Array.from(items.values()).filter((i) => i.list_id === listId) : []),

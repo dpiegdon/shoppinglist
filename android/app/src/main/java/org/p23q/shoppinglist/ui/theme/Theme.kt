@@ -45,11 +45,12 @@ fun themeVariant(darkTheme: Boolean): ThemeVariant = if (darkTheme) ThemeVariant
 //   (T-337).
 // The reds (T-333): a meaning colour, not a brand one — errors, overdue dates, the fill of every
 // button that destroys something. The same values are the web's --color-danger, --color-danger-text
-// and --color-danger-bg; web/src/lib/brandColors.test.ts reads them here and fails on drift.
+// and --color-danger-bg; web/src/lib/brandColors.test.ts reads them here and fails on drift. Text
+// on the red is white on the light red and near-black on the dark one, where white read at 2.8:1.
 val ErrorLight = Color(0xFFDC2626)
 val ErrorDark = Color(0xFFF87171)
 val OnErrorLight = Color(0xFFFFFFFF)
-val OnErrorDark = Color(0xFFFFFFFF)
+val OnErrorDark = Color(0xFF1A0505)
 val ErrorContainerLight = Color(0xFFFEF2F2)
 val ErrorContainerDark = Color(0xFF2A1414)
 
