@@ -1,0 +1,20 @@
+{
+  "body": "Design cleanup, cross-cutting pass after the per-screen tickets, then screenshots.\nOne ConfirmDialog on ModalDialog for every web confirmation instead of window.confirm (web W2).\nEvery destructive confirm in a dialog drawn in the error colour on both clients (Android A10).\nOutlined/secondary button labels in the text colour on Android like the web's btn-secondary\n(Android B10). Exclusive choices as segmented buttons, FilterChip only for toggles (Android A8,\nTheme). One field-group label style (A15). Remaining secondary lines muted (A12), empty states\none style (A20), banners one shape (A9), full-width vs compact button rule (A11) outside list\nproperties. Copy-to account rows use AccountChoiceRow (A7). Re-record the Roborazzi screenshots.",
+  "created_at": "2026-09-30T06:22:29+00:00",
+  "deps": [
+    "T-338",
+    "T-339",
+    "T-340",
+    "T-341",
+    "T-342"
+  ],
+  "id": "T-343",
+  "labels": [
+    "design",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Design cleanup: cross-cutting pass (confirm dialogs, destructive colours, button and label styles) and screenshots",
+  "updated_at": "2026-09-30T06:22:29+00:00"
+}
