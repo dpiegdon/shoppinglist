@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.admin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -256,13 +257,12 @@ private fun UserRow(
     onReset: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    // The buttons sit beside the email while they fit, and go under it when they do not: "Reset
-    // password" is long in French, and the row would run past a 360dp card (web B11).
-    FlowRow(
+    // The buttons sit beside the email while the whole address fits next to them, and go under it
+    // when it does not: "Reset pwd" is long in some languages, and the row would run past a 360dp
+    // card (web B11). Either way they keep to the end of the row (T-345). A FlowRow squeezed the
+    // address to its longest run of characters rather than wrap once the buttons took the rest.
+    EmailAndButtonsRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("admin-user-row"),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.padding(end = 8.dp)) {
             Text(user.email + if (user.isAdmin) stringResource(R.string.admin_is_admin_suffix) else "")
@@ -272,7 +272,10 @@ private fun UserRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.testTag("admin-user-buttons"),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             TuppuButton(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.admin_reset_password)) }
             if (deletable) {
                 TuppuButton(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
@@ -283,3 +286,34 @@ private fun UserRow(
     }
 }
 
+/**
+ * Two children, the email column and the buttons (T-345): on one line, the email at the start and
+ * the buttons at the end and centred on it, while the email's full width fits beside the buttons;
+ * otherwise the email on a line of its own and the buttons under it, at the end.
+ */
+@Composable
+private fun EmailAndButtonsRow(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val gap = with(LocalDensity.current) { 4.dp.roundToPx() }
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val (emailMeasurable, buttonsMeasurable) = measurables
+        val width = constraints.maxWidth
+        val buttons = buttonsMeasurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val emailFullWidth = emailMeasurable.maxIntrinsicWidth(constraints.maxHeight)
+        if (emailFullWidth + buttons.width <= width) {
+            val email = emailMeasurable.measure(
+                constraints.copy(minWidth = 0, maxWidth = width - buttons.width, minHeight = 0),
+            )
+            val height = maxOf(email.height, buttons.height)
+            layout(width, height) {
+                email.placeRelative(0, (height - email.height) / 2)
+                buttons.placeRelative(width - buttons.width, (height - buttons.height) / 2)
+            }
+        } else {
+            val email = emailMeasurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+            layout(width, email.height + gap + buttons.height) {
+                email.placeRelative(0, 0)
+                buttons.placeRelative(width - buttons.width, email.height + gap)
+            }
+        }
+    }
+}

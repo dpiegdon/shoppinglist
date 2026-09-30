@@ -278,7 +278,7 @@
     <string name="admin_new_password_for">%1$s の新しいパスワード — 一度だけ表示されます。安全な方法で伝えてください：</string>
     <string name="admin_delete_user_title">ユーザーを削除しますか？</string>
     <string name="admin_delete_user_body">%1$s とそのすべてのデータを完全に削除します。元に戻せません。</string>
-    <string name="admin_reset_password">パスワードをリセット</string>
+    <string name="admin_reset_password">パスワード再設定</string>
     <string name="admin_reset_user_title">パスワードをリセットしますか？</string>
     <string name="admin_reset_user_body">%1$s のパスワードをリセットしますか？現在のパスワードはすぐに使えなくなります。</string>
     <string name="admin_msg_password_required">ユーザーをリセットまたは削除するには、パスワードを入力してください。</string>

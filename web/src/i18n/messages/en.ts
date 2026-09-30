@@ -257,7 +257,7 @@ export const en = {
   "admin.userCount": "Registered users: {count}",
   "admin.yourPassword": "Your password (for reset/delete)",
   "admin.deleteUserTitle": "Delete user?",
-  "admin.resetPassword": "Reset password",
+  "admin.resetPassword": "Reset pwd",
   "admin.resetUserTitle": "Reset password?",
   "admin.resetUserBody": "Reset the password of {email}? Their current password stops working at once.",
   "admin.passwordRequired": "Enter your password to reset or delete a user.",

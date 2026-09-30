@@ -209,7 +209,7 @@ export const es: Catalog = {
   "admin.userCount": "Usuarios registrados: {count}",
   "admin.yourPassword": "Tu contraseña (para restablecer o eliminar)",
   "admin.deleteUserTitle": "¿Eliminar usuario?",
-  "admin.resetPassword": "Restablecer contraseña",
+  "admin.resetPassword": "Restablecer clave",
   "admin.resetUserTitle": "¿Restablecer la contraseña?",
   "admin.resetUserBody": "¿Restablecer la contraseña de {email}? Su contraseña actual dejará de funcionar de inmediato.",
   "admin.passwordRequired": "Introduce tu contraseña para restablecer o eliminar un usuario.",

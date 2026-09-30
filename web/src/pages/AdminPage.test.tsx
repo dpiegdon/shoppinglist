@@ -131,11 +131,23 @@ describe("AdminPage (T-107)", () => {
     expect(screen.queryByText("Delete user?")).not.toBeInTheDocument();
   });
 
+  it("keeps a row's buttons at the end, beside the email or under it (T-345)", async () => {
+    renderAdmin();
+    await showUsers();
+
+    const groups = screen.getAllByTestId("admin-user-buttons");
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(group.style.marginInlineStart).toBe("auto");
+      expect(group.style.justifyContent).toBe("flex-end");
+    }
+  });
+
   it("says the password is required for a reset too (T-113)", async () => {
     renderAdmin();
     await showUsers();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset pwd" })[0]!);
 
     expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
     expect(api.adminResetPassword).not.toHaveBeenCalled();
@@ -178,8 +190,8 @@ describe("AdminPage (T-107)", () => {
 
     await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
-    // The first "Reset password" is the admin's own row; use the non-admin user's.
-    const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
+    // The first "Reset pwd" is the admin's own row; use the non-admin user's.
+    const resetButtons = screen.getAllByRole("button", { name: "Reset pwd" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Reset" }));
 
@@ -192,7 +204,7 @@ describe("AdminPage (T-107)", () => {
 
     await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
-    const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
+    const resetButtons = screen.getAllByRole("button", { name: "Reset pwd" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
 
     // The click opens a confirmation naming the user; nothing is reset yet.
@@ -220,7 +232,7 @@ describe("AdminPage (T-107)", () => {
     await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset pwd" })[1]!);
     for (const button of within(screen.getByRole("alertdialog")).getAllByRole("button")) {
       expect(button).toHaveClass("btn-text");
     }
@@ -247,7 +259,7 @@ describe("AdminPage (T-107)", () => {
     renderAdmin();
     await showUsers();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Reset password" })[1]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Reset pwd" })[1]!);
 
     expect(await screen.findByText(/Enter your password/)).toBeInTheDocument();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -260,7 +272,7 @@ describe("AdminPage (T-107)", () => {
 
     await showUsers();
     await userEvent.type(screen.getByLabelText(/Your password/), "adminpw");
-    const resetButtons = screen.getAllByRole("button", { name: "Reset password" });
+    const resetButtons = screen.getAllByRole("button", { name: "Reset pwd" });
     await userEvent.click(resetButtons[resetButtons.length - 1]);
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Reset" }));
     const shown = await screen.findByText("NEWpw123456");

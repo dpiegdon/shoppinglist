@@ -12,6 +12,8 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -40,6 +42,7 @@ import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.data.testApi
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -58,7 +61,7 @@ class AdminScreenTest {
         if (::server.isInitialized) server.shutdown()
     }
 
-    private val usersJson = """
+    private var usersJson = """
         {"users":[
           {"id":"admin-1","email":"boss@example.com","created_at":1,"session_count":1,"is_admin":true},
           {"id":"user-2","email":"u@example.com","created_at":2,"session_count":0,"is_admin":false}
@@ -128,13 +131,39 @@ class AdminScreenTest {
     }
 
     @Test
-    fun `a user row keeps the space before (admin) and says Reset password, as the web (B6, P7)`() = runBlocking<Unit> {
+    fun `a user row keeps the space before (admin) and says Reset pwd, as the web (B6, P7)`() = runBlocking<Unit> {
         val viewModel = openConsoleWithUsers()
 
         // aapt strips an unquoted leading space: this once read "boss@example.com(admin)".
         composeTestRule.onNodeWithText("boss@example.com (admin)").assertExists()
-        composeTestRule.onAllNodesWithText("Reset password").assertCountEquals(2)
+        composeTestRule.onAllNodesWithText("Reset pwd").assertCountEquals(2)
         composeTestRule.onNodeWithText("Reset").assertDoesNotExist()
+        viewModel.viewModelScope.cancel()
+    }
+
+    // Native graphics (T-345): the default mode measures text far narrower than a device does, so a
+    // long address never needed a line of its own.
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a row's buttons keep to the end when a long email pushes them under it (T-345)`() = runBlocking<Unit> {
+        usersJson = """
+            {"users":[
+              {"id":"admin-1","email":"boss@example.com","created_at":1,"session_count":1,"is_admin":true},
+              {"id":"user-2","email":"a.very.long.address.for.someone@subdomain.example.com","created_at":2,"session_count":0,"is_admin":false}
+            ]}
+        """.trimIndent()
+        val viewModel = openConsoleWithUsers()
+
+        val rows = composeTestRule.onAllNodesWithTag("admin-user-row")
+        val buttons = composeTestRule.onAllNodesWithTag("admin-user-buttons")
+        for (index in 0..1) {
+            val row = rows[index].getBoundsInRoot()
+            val end = buttons[index].getBoundsInRoot()
+            assertEquals("row $index: its buttons end where the row ends", row.right.value, end.right.value, 1f)
+        }
+        // The long address really did push its buttons onto a line of their own.
+        val email = composeTestRule.onNodeWithText("a.very.long.address.for.someone@subdomain.example.com").getBoundsInRoot()
+        assertTrue(buttons[1].getBoundsInRoot().top >= email.bottom)
         viewModel.viewModelScope.cancel()
     }
 
@@ -188,7 +217,7 @@ class AdminScreenTest {
     private fun dialogButton(label: String) = composeTestRule.onNode(hasText(label) and hasAnyAncestor(isDialog()))
 
     /** The non-admin's "Reset password" button: the rows are ordered by email, and boss@ comes first. */
-    private fun clickUsersReset() = composeTestRule.onAllNodesWithText("Reset password")[1].performClick()
+    private fun clickUsersReset() = composeTestRule.onAllNodesWithText("Reset pwd")[1].performClick()
 
     private fun resetAndWaitForPassword(viewModel: AdminViewModel) {
         composeTestRule.onNodeWithText("Your password (for reset/delete)").performTextInput("adminpw")

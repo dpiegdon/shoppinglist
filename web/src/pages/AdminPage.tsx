@@ -345,7 +345,11 @@ export default function AdminPage() {
                       {t("admin.sessionCount", { count: user.session_count })}
                     </span>
                   </span>
-                  <span style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                  {/* At the end of the row, beside the email or under it when wrapped (T-345). */}
+                  <span
+                    data-testid="admin-user-buttons"
+                    style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginInlineStart: "auto", justifyContent: "flex-end" }}
+                  >
                     <button type="button" className="btn" onClick={() => requestReset(user)}>
                       {t("admin.resetPassword")}
                     </button>

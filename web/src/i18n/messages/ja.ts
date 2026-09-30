@@ -214,7 +214,7 @@ export const ja: Catalog = {
   "admin.userCount": "登録済みユーザー：{count}",
   "admin.yourPassword": "あなたのパスワード（リセット・削除に必要）",
   "admin.deleteUserTitle": "ユーザーを削除しますか？",
-  "admin.resetPassword": "パスワードをリセット",
+  "admin.resetPassword": "パスワード再設定",
   "admin.resetUserTitle": "パスワードをリセットしますか？",
   "admin.resetUserBody": "{email} のパスワードをリセットしますか？現在のパスワードはすぐに使えなくなります。",
   "admin.passwordRequired": "ユーザーをリセットまたは削除するには、パスワードを入力してください。",

@@ -339,7 +339,7 @@
     <string name="admin_new_password_for">New password for %1$s — shown once, send it securely:</string>
     <string name="admin_delete_user_title">Delete user?</string>
     <string name="admin_delete_user_body">Permanently delete %1$s and all of their data. This can\'t be undone.</string>
-    <string name="admin_reset_password">Reset password</string>
+    <string name="admin_reset_password">Reset pwd</string>
     <string name="admin_reset_user_title">Reset password?</string>
     <string name="admin_reset_user_body">Reset the password of %1$s? Their current password stops working at once.</string>
     <string name="admin_msg_password_required">Enter your password to reset or delete a user.</string>

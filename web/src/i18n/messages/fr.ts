@@ -211,7 +211,7 @@ export const fr: Catalog = {
   "admin.userCount": "Utilisateurs enregistrés : {count}",
   "admin.yourPassword": "Ton mot de passe (pour réinitialiser ou supprimer)",
   "admin.deleteUserTitle": "Supprimer l'utilisateur ?",
-  "admin.resetPassword": "Réinitialiser le mot de passe",
+  "admin.resetPassword": "Réinit. mdp",
   "admin.resetUserTitle": "Réinitialiser le mot de passe ?",
   "admin.resetUserBody": "Réinitialiser le mot de passe de {email} ? Son mot de passe actuel cessera immédiatement de fonctionner.",
   "admin.passwordRequired": "Saisis ton mot de passe pour réinitialiser ou supprimer un utilisateur.",

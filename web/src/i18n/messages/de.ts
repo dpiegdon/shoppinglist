@@ -214,7 +214,7 @@ export const de: Catalog = {
   "admin.userCount": "Registrierte Benutzer: {count}",
   "admin.yourPassword": "Dein Passwort (für Zurücksetzen/Löschen)",
   "admin.deleteUserTitle": "Benutzer löschen?",
-  "admin.resetPassword": "Passwort zurücksetzen",
+  "admin.resetPassword": "PW zurücksetzen",
   "admin.resetUserTitle": "Passwort zurücksetzen?",
   "admin.resetUserBody": "Das Passwort von {email} zurücksetzen? Das bisherige Passwort funktioniert dann sofort nicht mehr.",
   "admin.passwordRequired": "Gib dein Passwort ein, um einen Benutzer zurückzusetzen oder zu löschen.",

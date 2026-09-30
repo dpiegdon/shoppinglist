@@ -278,7 +278,7 @@
     <string name="admin_new_password_for">Nueva contraseña para %1$s — se muestra una sola vez, envíala de forma segura:</string>
     <string name="admin_delete_user_title">¿Eliminar usuario?</string>
     <string name="admin_delete_user_body">Eliminar permanentemente a %1$s y todos sus datos. Esto no se puede deshacer.</string>
-    <string name="admin_reset_password">Restablecer contraseña</string>
+    <string name="admin_reset_password">Restablecer clave</string>
     <string name="admin_reset_user_title">¿Restablecer la contraseña?</string>
     <string name="admin_reset_user_body">¿Restablecer la contraseña de %1$s? Su contraseña actual dejará de funcionar de inmediato.</string>
     <string name="admin_msg_password_required">Introduce tu contraseña para restablecer o eliminar un usuario.</string>

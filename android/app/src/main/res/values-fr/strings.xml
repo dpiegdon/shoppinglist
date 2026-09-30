@@ -278,7 +278,7 @@
     <string name="admin_new_password_for">Nouveau mot de passe pour %1$s — affiché une seule fois, transmets-le de façon sécurisée :</string>
     <string name="admin_delete_user_title">Supprimer l\'utilisateur ?</string>
     <string name="admin_delete_user_body">Supprimer définitivement %1$s et toutes ses données. Cette action est irréversible.</string>
-    <string name="admin_reset_password">Réinitialiser le mot de passe</string>
+    <string name="admin_reset_password">Réinit. mdp</string>
     <string name="admin_reset_user_title">Réinitialiser le mot de passe ?</string>
     <string name="admin_reset_user_body">Réinitialiser le mot de passe de %1$s ? Son mot de passe actuel cessera immédiatement de fonctionner.</string>
     <string name="admin_msg_password_required">Saisis ton mot de passe pour réinitialiser ou supprimer un utilisateur.</string>
