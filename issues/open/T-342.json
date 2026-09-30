@@ -1,0 +1,13 @@
+{
+  "body": "Design cleanup, ledger, expenses, balances and registry (both clients).\nConfirm before deleting an expense entry on web (web W1). Blank-name inline validation and\nrole=alert in the expense dialog (web W4/W5), footer wraps at 360px (web B11). One summary style\nfor net spent on both tabs and both clients (Android A18, web P9). Balances: dividers only between\nrows, one colour (A14); Reimburse not btn-sm (web W7). Ledger tabs with a minimum height, not a\nfixed one (C7). Transfer \"from \u2192 to\" reads right in Arabic (C8, web B12). Registry: empty state\nand status as muted text on Android, row delete parity (A19, Android B7), search label (web B6),\nback arrow from the translated link (web B12), no \"not found\" flash before the first sync on\nregistry and balances (web B13), loading/not-found placeholders within the page width (web W10).",
+  "created_at": "2026-09-30T06:22:25+00:00",
+  "id": "T-342",
+  "labels": [
+    "design",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Design cleanup: ledger, expenses, balances, registry",
+  "updated_at": "2026-09-30T06:22:25+00:00"
+}
