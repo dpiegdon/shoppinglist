@@ -1,0 +1,13 @@
+{
+  "body": "Design cleanup, account, settings, admin, about, login, redeem and navigation (both clients).\nAndroid Account screen: save/error feedback inside each card (A1). \"Signed out\" one wording,\nstatus line + \"Sign in\" button on Accounts (A6). One AccountChoiceRow for new list, admin chooser,\nredeem dialog and redeem screen (A7). About \"App updates\" in a card (A17). Redeem Back outlined\n(A21); web Redeem uses the standard page layout (web W9). Admin: Clear is a real outlined button\n(Android B5, web P7), space before \"(admin)\" (Android B6), \"Reset password\" on both, rows wrap at\n360px (web B11), no trailing divider (A14), dialog buttons as text buttons (web P8), Save/Refresh/\nCopy not btn-sm (web W7). Settings: change-email field order like Android (web P6), save feedback\nand role=alert (web W4/W6), accessible names for currency and initials (web B6), revoke session\nnot btn-sm (web W7). Language picker looks like a picker (C5). Registration-disabled note next to\nRegister (C9). About: transliteration read once (web B15). Nav: RTL-safe icons (C8), sync dot 48dp\nwith an onClickLabel (C6).",
+  "created_at": "2026-09-30T06:22:24+00:00",
+  "id": "T-341",
+  "labels": [
+    "design",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Design cleanup: account, settings, admin, about, login, redeem, navigation",
+  "updated_at": "2026-09-30T06:22:24+00:00"
+}
