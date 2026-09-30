@@ -1,4 +1,4 @@
-import { byCodeUnits } from "./nameOrder";
+import { byCodeUnits, compareNames } from "./nameOrder";
 
 // Category identity is case-insensitive (T-108): "Group" and "group" are one category. Grouping,
 // the settings registry, and the item-dialog autocomplete all key on this. The rule here MUST match
@@ -130,4 +130,20 @@ export function planCategoryRename(
     nextCategoryOrder.length !== categoryOrder.length ||
     nextCategoryOrder.some((entry, i) => entry !== categoryOrder[i]);
   return { itemIds, nextCategoryOrder, orderChanged };
+}
+
+/**
+ * The categories list properties shows, renames and reorders (T-340), exactly as Android builds
+ * it: the clean `category_order` first, in its order, even an entry no item carries any more; then
+ * every other category in use, in name order. Canonical casing throughout. "Save order" saves this
+ * list. Pinned by shared-test-cases/category-canon.json (editor_list), driven by both suites.
+ */
+export function categoryEditorList(rawCategories: string[], categoryOrder: string[]): string[] {
+  const order = normalizeCategoryOrder(categoryOrder);
+  const names = canonicalCategoryNames(rawCategories, order);
+  const orderedKeys = order.map(categoryKey);
+  const rest = Array.from(names.keys())
+    .filter((key) => !orderedKeys.includes(key))
+    .sort((a, b) => compareNames(names.get(a)!, names.get(b)!) || byCodeUnits(a, b));
+  return [...orderedKeys, ...rest].map((key) => names.get(key)!);
 }

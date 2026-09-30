@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,9 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -111,20 +118,23 @@ fun ListPropsScreen(
         val isExpenses = ListKind.isExpenses(state.kind)
 
         SectionCard(stringResource(R.string.listprops_list)) {
-            Text(stringResource(R.string.listprops_list_name), style = MaterialTheme.typography.titleSmall)
+            // A field its card title does not name carries its own label (T-340), as Invite does.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChange,
+                    label = { Text(stringResource(R.string.listprops_list_name)) },
                     singleLine = true,
                     enabled = !lockedByVote,
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
-                TuppuButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote) {
+                // Offered only when there is something to save, and it says so once saved (T-340).
+                TuppuButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote && state.nameChanged) {
                     Text(stringResource(R.string.action_save))
                 }
             }
+            SavedNote(state.nameSaved)
             Spacer(Modifier.height(16.dp))
 
             // Convert between shopping list and checklist (T-110) — non-destructive, so it's a plain
@@ -156,7 +166,10 @@ fun ListPropsScreen(
                 // No switch for an expenses list: the server refuses to convert one in either
                 // direction, because its items have a different shape entirely (T-151).
                 if (!isExpenses) {
+                    // Named, so TalkBack says what "on" means: a checklist (T-340, as on the web).
+                    val checklistLabel = stringResource(ListKind.label(ListKind.CHECKLIST))
                     Switch(
+                        modifier = Modifier.semantics { contentDescription = checklistLabel },
                         checked = state.kind == ListKind.CHECKLIST,
                         onCheckedChange = { checked ->
                             viewModel.setKind(if (checked) ListKind.CHECKLIST else ListKind.SHOPPING)
@@ -178,9 +191,17 @@ fun ListPropsScreen(
             // in the List card, directly under the type (T-337).
             if (state.checkedCount > 0) {
                 Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.listprops_clear_checked_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                // A card's closing action is full width (T-340).
                 TuppuButton(
                     onClick = { viewModel.clearChecked() },
                     colors = dangerButtonColors(),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.listprops_clear_checked, state.checkedCount))
                 }
@@ -194,14 +215,27 @@ fun ListPropsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                CategoryOrderList(
-                    categories = state.categoryOrder,
-                    onMoveUp = viewModel::moveCategoryUp,
-                    onMoveDown = viewModel::moveCategoryDown,
-                    onRename = { index, newName -> viewModel.renameCategory(index, newName) },
-                )
-                TuppuButton(onClick = { viewModel.saveCategoryOrder() }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.listprops_save_order))
+                if (state.categoryOrder.isEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.listprops_no_categories),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    CategoryOrderList(
+                        categories = state.categoryOrder,
+                        onMoveUp = viewModel::moveCategoryUp,
+                        onMoveDown = viewModel::moveCategoryDown,
+                        onRename = { index, newName -> viewModel.renameCategory(index, newName) },
+                    )
+                    TuppuButton(
+                        onClick = { viewModel.saveCategoryOrder() },
+                        enabled = state.orderChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.listprops_save_order))
+                    }
+                    SavedNote(state.orderSaved)
                 }
             }
         }
@@ -218,9 +252,14 @@ fun ListPropsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
-            TuppuButton(onClick = { viewModel.saveNotes() }, enabled = !lockedByVote, modifier = Modifier.fillMaxWidth()) {
+            TuppuButton(
+                onClick = { viewModel.saveNotes() },
+                enabled = !lockedByVote && state.notesChanged,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(stringResource(R.string.listprops_save_notes))
             }
+            SavedNote(state.notesSaved)
         }
 
         // A list in the local area is nobody else's (T-293): no collaborators to hear from, no
@@ -239,7 +278,6 @@ fun ListPropsScreen(
             SharedWithSection(state, viewModel)
             NotificationsSection(state, viewModel)
         }
-        state.errorMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
 
         // Closing an expenses list (T-158): unanimous, and the only way it can later be left. Directly
         // above Leave (T-169): the two are stages of one thing — agree to close, then leave. A
@@ -269,6 +307,7 @@ fun ListPropsScreen(
                 onClick = viewModel::requestLeave,
                 enabled = !leaveBlocked,
                 colors = dangerButtonColors(),
+                modifier = Modifier.fillMaxWidth(),
             ) { Text(leaveLabel) }
             if (leaveBlocked) {
                 Text(
@@ -277,6 +316,7 @@ fun ListPropsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            ErrorNote(state.leaveError)
         }
     }
 
@@ -388,6 +428,32 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
             Spacer(Modifier.width(8.dp))
             TuppuButton(onClick = { viewModel.sendInvite() }) { Text(stringResource(R.string.action_invite)) }
         }
+        ErrorNote(state.sharingError)
+    }
+}
+
+/** "Saved", under the Save it belongs to, once that value is saved and until it is edited (T-340). */
+@Composable
+private fun SavedNote(saved: Boolean) {
+    if (saved) {
+        Text(
+            stringResource(R.string.listprops_saved),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
+}
+
+/** A failure, inside the card whose action failed (T-340). */
+@Composable
+private fun ErrorNote(error: UiText?) {
+    if (error != null) {
+        Text(
+            error.asString(),
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        )
     }
 }
 
@@ -445,9 +511,15 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
             }
         }
     }
+    ErrorNote(state.closingError)
 }
 
-/** The categories in order, each renamable and dragged by its handle to reorder (T-30, [rememberDragReorderState]). */
+/**
+ * The categories in order, each renamable and dragged by its handle to reorder (T-30,
+ * [rememberDragReorderState]). A swap happens once the finger has travelled the neighbour's
+ * measured height (T-340), so the row stays under the finger. The handle is a 48dp target that
+ * also offers Move up and Move down to accessibility services, as the accounts' handles do.
+ */
 @Composable
 private fun CategoryOrderList(
     categories: List<String>,
@@ -455,13 +527,13 @@ private fun CategoryOrderList(
     onMoveDown: (Int) -> Unit,
     onRename: (Int, String) -> Unit,
 ) {
-    val rowHeightPx = with(LocalDensity.current) { 44.dp.toPx() }
     // Moves go through the existing moveCategoryUp/Down edits, so persistence is unchanged.
     val reorder = rememberDragReorderState(
         keys = categories,
         onMove = { from, to -> if (to < from) onMoveUp(from) else onMoveDown(from) },
-        fixedStepPx = rowHeightPx,
     )
+    val up = stringResource(R.string.accounts_move_up)
+    val down = stringResource(R.string.accounts_move_down)
     var editingCategory by remember { mutableStateOf<String?>(null) }
     var draftName by remember { mutableStateOf("") }
     val currentCategories by rememberUpdatedState(categories)
@@ -509,11 +581,25 @@ private fun CategoryOrderList(
                         IconButton(onClick = { editingCategory = category; draftName = category }) {
                             Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.listprops_rename_category, category))
                         }
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = stringResource(R.string.listprops_reorder_category, category),
-                            modifier = Modifier.dragReorderHandle(reorder, category),
-                        )
+                        val index = categories.indexOf(category)
+                        val handleLabel = stringResource(R.string.listprops_reorder_category, category)
+                        // The whole 48dp box is both the drag target and what TalkBack focuses.
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .dragReorderHandle(reorder, category)
+                                .semantics {
+                                    contentDescription = handleLabel
+                                    customActions = listOfNotNull(
+                                        CustomAccessibilityAction(up) { onMoveUp(index); true }.takeIf { index > 0 },
+                                        CustomAccessibilityAction(down) { onMoveDown(index); true }
+                                            .takeIf { index < categories.lastIndex },
+                                    )
+                                },
+                        ) {
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = null)
+                        }
                     }
                 }
             }

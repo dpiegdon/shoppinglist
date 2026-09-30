@@ -5,16 +5,23 @@ import { safeLocalStorage } from "../lib/safeStorage";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { checkedItems } from "../lib/grouping";
-import { canonicalCategoryNames, categoryKey, normalizeCategoryOrder, planCategoryRename } from "../lib/categories";
-import { isExpenses, listKind, listKindLabelKey } from "../lib/listKind";
+import {
+  canonicalCategoryNames,
+  categoryEditorList,
+  categoryKey,
+  normalizeCategoryOrder,
+  planCategoryRename,
+} from "../lib/categories";
+import { isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
 import CloseVoteBanner from "../components/CloseVoteBanner";
+import ToggleSwitch from "../components/ToggleSwitch";
 import { useAuth } from "../auth/AuthContext";
-import type { ItemStatus, ListKind, MembersResponse } from "../api/contract";
+import type { ItemObject, ItemStatus, ListKind, MembersResponse } from "../api/contract";
 import { LAST_LIST_STORAGE_KEY } from "./OverviewPage";
 import { useT } from "../i18n";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { compareNames } from "../lib/nameOrder";
 import { errorMessage } from "../i18n/apiErrors";
+import { useDragReorder } from "../hooks/useDragReorder";
 
 export default function ListPropsPage() {
   const t = useT();
@@ -30,13 +37,18 @@ export default function ListPropsPage() {
     list ? listFieldValue(list, "category_order") ?? [] : [],
   );
   const [notes, setNotes] = useState(list ? listFieldValue(list, "notes") ?? "" : "");
-  const [newCategory, setNewCategory] = useState("");
-  // Inline category rename (T-108): the key being edited + its draft text.
-  const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
-  const [categoryDraft, setCategoryDraft] = useState("");
+  // What the name and notes were when seeded or last saved (T-340): each Save is offered only while
+  // its field differs, and "Saved." shows in its card until the field is edited again. As Android.
+  const [savedName, setSavedName] = useState(list ? (listFieldValue(list, "name") ?? "").trim() : "");
+  const [savedNotes, setSavedNotes] = useState<string | null>(
+    list ? (listFieldValue(list, "notes") ?? "").trim() || null : null,
+  );
+  const [nameSaved, setNameSaved] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
   const [members, setMembers] = useState<MembersResponse | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [membersError, setMembersError] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   // Inline errors for the actions on this page that don't go through a dialog (T-266): a rejected
@@ -45,7 +57,6 @@ export default function ListPropsPage() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [notesError, setNotesError] = useState<string | null>(null);
   const [kindError, setKindError] = useState<string | null>(null);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
   const [clearCheckedError, setClearCheckedError] = useState<string | null>(null);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [leaveError, setLeaveError] = useState<string | null>(null);
@@ -63,8 +74,10 @@ export default function ListPropsPage() {
     if (!list || !listId || seededFor.current === listId) return;
     seededFor.current = listId;
     setName(listFieldValue(list, "name") ?? "");
+    setSavedName((listFieldValue(list, "name") ?? "").trim());
     setCategoryOrder(listFieldValue(list, "category_order") ?? []);
     setNotes(listFieldValue(list, "notes") ?? "");
+    setSavedNotes((listFieldValue(list, "notes") ?? "").trim() || null);
   }, [list, listId]);
 
   useEffect(() => {
@@ -97,35 +110,19 @@ export default function ListPropsPage() {
     (i) => i.list_id === id && !itemFieldValue(i, "deleted"),
   );
   const allChecked = checkedItems(liveItems);
-
-  // The full set of categories in this list (T-108) — everything on an item PLUS anything the
-  // user has explicitly ordered — so casing can be fixed here for any of them, not just ordered
-  // ones. Canonical casing, ordered ones first (in order), the rest alphabetically.
-  // The order as the page shows and saves it (T-212): the stored array may still carry a blank or a
-  // second casing from before categories were case-insensitive; moving by RAW position swapped
-  // with such an invisible neighbour and a press did nothing visible.
-  const order = normalizeCategoryOrder(categoryOrder);
-  const canonicalNames = canonicalCategoryNames(
-    liveItems.map((i) => itemFieldValue(i, "category") ?? ""),
-    order,
-  );
-  const orderedKeys = order.map(categoryKey);
-  const categoryKeys = [
-    ...orderedKeys.filter((k) => canonicalNames.has(k)),
-    ...Array.from(canonicalNames.keys())
-      .filter((k) => !orderedKeys.includes(k))
-      .sort((a, b) => compareNames(canonicalNames.get(a)!, canonicalNames.get(b)!) || (a < b ? -1 : a > b ? 1 : 0)),
-  ];
-  const orderIndexOf = (key: string) => order.findIndex((e) => categoryKey(e) === key);
+  const nameChanged = name.trim() !== "" && name.trim() !== savedName;
+  const notesChanged = (notes.trim() || null) !== savedNotes;
 
   async function saveName(e: FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || trimmed === savedName) return;
     setSavingName(true);
     setNameError(null);
     try {
       await push({ lists: [{ id, fields: fieldPatch(deviceId, "name", trimmed) }] });
+      setSavedName(trimmed);
+      setNameSaved(true);
     } catch (err) {
       setNameError(errorMessage(t, err, "item.saveFailed"));
     } finally {
@@ -135,10 +132,14 @@ export default function ListPropsPage() {
 
   async function saveNotes(e: FormEvent) {
     e.preventDefault();
+    const next = notes.trim() || null;
+    if (next === savedNotes) return;
     setSavingNotes(true);
     setNotesError(null);
     try {
-      await push({ lists: [{ id, fields: fieldPatch(deviceId, "notes", notes.trim() || null) }] });
+      await push({ lists: [{ id, fields: fieldPatch(deviceId, "notes", next) }] });
+      setSavedNotes(next);
+      setNotesSaved(true);
     } catch (err) {
       setNotesError(errorMessage(t, err, "item.saveFailed"));
     } finally {
@@ -160,95 +161,11 @@ export default function ListPropsPage() {
     }
   }
 
-  async function saveCategoryOrder(next: string[]) {
-    const clean = normalizeCategoryOrder(next);
-    const previous = categoryOrder;
-    setCategoryOrder(clean);
-    setCategoryError(null);
-    try {
-      await push({ lists: [{ id, fields: fieldPatch(deviceId, "category_order", clean) }] });
-    } catch (err) {
-      // The push failed, so the server never got this order (T-266): undo the optimistic update
-      // rather than leave the page showing an order it was never told to save. The seeding ref
-      // above only re-seeds on the list's FIRST arrival, so nothing else would ever correct this.
-      setCategoryOrder(previous);
-      setCategoryError(errorMessage(t, err, "item.saveFailed"));
-    }
-  }
-
-  /** Swap with the neighbouring ROW: indices are into `order`, never the stored array (T-212). */
-  function moveCategory(index: number, delta: number) {
-    const next = [...order];
-    const target = index + delta;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    saveCategoryOrder(next);
-  }
-
-  function removeCategory(index: number) {
-    saveCategoryOrder(order.filter((_, i) => i !== index));
-  }
-
-  function addCategory(e: FormEvent) {
-    e.preventDefault();
-    const trimmed = newCategory.trim();
-    // Case-insensitive dedup (T-108): don't add "Group" when "group" is already ordered.
-    if (!trimmed || order.some((c) => categoryKey(c) === categoryKey(trimmed))) return;
-    saveCategoryOrder([...order, trimmed]);
-    setNewCategory("");
-  }
-
-  /**
-   * The central "fix a category's casing / rename it" action (T-108): rewrites every item in the
-   * `fromKey` category to `toRaw` and updates the matching category_order entry. Renaming onto a
-   * different existing category merges them (confirmed first).
-   */
-  async function renameCategory(fromKey: string, toRaw: string) {
-    const to = toRaw.trim();
-    setEditingCategoryKey(null);
-    if (!to) return;
-    if (categoryKey(to) === fromKey && to === canonicalNames.get(fromKey)) return; // unchanged
-    const toKey = categoryKey(to);
-    if (toKey !== fromKey && canonicalNames.has(toKey)) {
-      if (!confirm(t("listProps.mergeCategoryConfirm", { category: canonicalNames.get(toKey)! }))) return;
-    }
-    const plan = planCategoryRename(
-      liveItems.map((i) => ({ id: i.id, category: itemFieldValue(i, "category") ?? "" })),
-      categoryOrder,
-      fromKey,
-      to,
-    );
-    const previousOrder = categoryOrder;
-    if (plan.orderChanged) setCategoryOrder(plan.nextCategoryOrder);
-    setCategoryError(null);
-    try {
-      await push({
-        lists: plan.orderChanged
-          ? [{ id, fields: fieldPatch(deviceId, "category_order", plan.nextCategoryOrder) }]
-          : [],
-        items: plan.itemIds.map((itemId) => ({
-          id: itemId,
-          list_id: id,
-          fields: fieldPatch(deviceId, "category", to),
-        })),
-      });
-    } catch (err) {
-      // Same data-loss shape as saveCategoryOrder (T-266): the optimistic order update must be
-      // undone on a failed push, not left showing what the server never received.
-      if (plan.orderChanged) setCategoryOrder(previousOrder);
-      setCategoryError(errorMessage(t, err, "item.saveFailed"));
-    }
-  }
-
-  function startRename(key: string) {
-    setEditingCategoryKey(key);
-    setCategoryDraft(canonicalNames.get(key) ?? "");
-  }
-
   async function handleInvite(e: FormEvent) {
     e.preventDefault();
     const email = inviteEmail.trim();
     if (!email) return;
+    setInviteError(null);
     try {
       const minted = await api.mintInvite(id, email);
       setInviteEmail("");
@@ -259,7 +176,7 @@ export default function ListPropsPage() {
       const refreshed = await api.getMembers(id);
       setMembers(refreshed);
     } catch (err) {
-      setMembersError(errorMessage(t, err, "listProps.inviteFailed"));
+      setInviteError(errorMessage(t, err, "listProps.inviteFailed"));
     }
   }
 
@@ -275,13 +192,13 @@ export default function ListPropsPage() {
   }
 
   async function handleRevoke(inviteId: string) {
+    setInviteError(null);
     try {
       await api.revokeInvite(inviteId);
       setMembers(await api.getMembers(id));
     } catch (err) {
-      // Reuses membersError (T-266): this section already has a place to show it, and revoking is
-      // one more thing that can fail about the same roster.
-      setMembersError(errorMessage(t, err, "item.saveFailed"));
+      // Under the invite field, where an invite's own failure shows (T-266, T-340), as on Android.
+      setInviteError(errorMessage(t, err, "item.saveFailed"));
     }
   }
 
@@ -383,8 +300,9 @@ export default function ListPropsPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: "40rem", margin: "0 auto", width: "100%" }}>
+      {/* The arrow comes with the translation, so it points back in Arabic too (T-340). */}
       <Link to={`/list/${listId}`} className="muted" style={{ fontSize: "0.85rem" }}>
-        ← {listFieldValue(list, "name")}
+        {t("listProps.backToList", { name: listFieldValue(list, "name") ?? "" })}
       </Link>
       <h1 style={{ fontSize: "1.3rem" }}>{t("listProps.title")}</h1>
 
@@ -400,13 +318,31 @@ export default function ListPropsPage() {
           the actions, and last, in red, leaving it. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.list")}</h2>
-        <h3 style={{ fontSize: "0.9rem", margin: "0 0 0.5rem" }}>{t("listProps.name")}</h3>
+        {/* A field its card title does not name carries its own label (T-340), as on Android. */}
+        <label htmlFor="list-props-name" style={{ display: "block", fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+          {t("listProps.name")}
+        </label>
         <form onSubmit={saveName} style={{ display: "flex", gap: "0.5rem" }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} disabled={lockedByVote} style={{ flex: 1 }} />
-          <button type="submit" className="btn" disabled={savingName || lockedByVote}>
+          <input
+            id="list-props-name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameSaved(false);
+            }}
+            disabled={lockedByVote}
+            style={{ flex: 1 }}
+          />
+          {/* Offered only while there is something to save, and it says so once saved (T-340). */}
+          <button type="submit" className="btn" disabled={savingName || lockedByVote || !nameChanged}>
             {t("action.save")}
           </button>
         </form>
+        {nameSaved && (
+          <p className="muted" role="status" style={{ margin: "0.4rem 0 0" }}>
+            {t("common.saved")}
+          </p>
+        )}
         {nameError && (
           <p className="error-text" role="alert">
             {nameError}
@@ -414,9 +350,12 @@ export default function ListPropsPage() {
         )}
 
         <h3 style={{ fontSize: "0.9rem", margin: "1rem 0 0.5rem" }}>{t("listProps.type")}</h3>
+        {/* The type's icon and name, and a switch for a checklist, as Android shows it (T-340). */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
           <div>
-            <div>{t(listKindLabelKey(listKind(list)))}</div>
+            <div>
+              <span aria-hidden="true">{listKindIcon(listKind(list))}</span> {t(listKindLabelKey(listKind(list)))}
+            </div>
             <p className="muted" style={{ margin: "0.2rem 0 0", fontSize: "0.85rem" }}>
               {isExpenses(listKind(list))
                 ? t("listProps.kind.expenses")
@@ -428,13 +367,13 @@ export default function ListPropsPage() {
           {/* An expenses list cannot be converted in either direction — the server refuses it,
               because its items have a different shape (T-151). So there is nothing to offer. */}
           {!isExpenses(listKind(list)) && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setKind(listKind(list) === "checklist" ? "shopping" : "checklist")}
-            >
-              {listKind(list) === "checklist" ? t("listProps.makeShopping") : t("listProps.makeChecklist")}
-            </button>
+            <ToggleSwitch
+              checked={listKind(list) === "checklist"}
+              onChange={() => setKind(listKind(list) === "checklist" ? "shopping" : "checklist")}
+              label={t("listKind.checklist")}
+              onColor="var(--color-accent)"
+              offColor="var(--color-text-muted)"
+            />
           )}
         </div>
         <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.8rem" }}>
@@ -456,11 +395,12 @@ export default function ListPropsPage() {
             the type (T-337). */}
         {!isExpenses(listKind(list)) && allChecked.length > 0 && (
           <>
-            <h3 style={{ fontSize: "0.9rem", margin: "1rem 0 0.5rem" }}>{t("listProps.clearChecked")}</h3>
-            <p className="muted" style={{ margin: "0 0 0.6rem" }}>
+            {/* The button names the action; no heading repeats it (T-340). A card's closing
+                action is full width. */}
+            <p className="muted" style={{ margin: "1rem 0 0.6rem", fontSize: "0.85rem" }}>
               {t("listProps.clearCheckedHelp")}
             </p>
-            <button type="button" className="btn btn-danger" onClick={handleClearChecked}>
+            <button type="button" className="btn btn-danger" onClick={handleClearChecked} style={{ width: "100%" }}>
               {t("listProps.clearCheckedCount", { count: allChecked.length })}
             </button>
             {clearCheckedError && (
@@ -472,118 +412,36 @@ export default function ListPropsPage() {
         )}
       </section>
 
-      <section className="card" style={{ padding: "1rem", marginBottom: "1rem", display: isExpenses(listKind(list)) ? "none" : undefined }}>
-        <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
-        <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
-          {t("listProps.categoriesHelp")}
-        </p>
-        {categoryError && (
-          <p className="error-text" role="alert">
-            {categoryError}
-          </p>
-        )}
-        {categoryKeys.length === 0 && <p className="muted">{t("listProps.noCategories")}</p>}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          {categoryKeys.map((key) => {
-            const index = orderIndexOf(key);
-            const inOrder = index >= 0;
-            if (editingCategoryKey === key) {
-              return (
-                <form
-                  key={key}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    renameCategory(key, categoryDraft);
-                  }}
-                  style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
-                >
-                  <input
-                    autoFocus
-                    value={categoryDraft}
-                    onChange={(e) => setCategoryDraft(e.target.value)}
-                    style={{ flex: 1 }}
-                    aria-label={t("listProps.renameCategory", { category: canonicalNames.get(key) ?? "" })}
-                  />
-                  <button type="submit" className="btn btn-sm">
-                    {t("action.save")}
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingCategoryKey(null)}>
-                    {t("action.cancel")}
-                  </button>
-                </form>
-              );
-            }
-            return (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <span style={{ flex: 1 }}>{canonicalNames.get(key)}</span>
-                <button type="button" className="btn-icon" onClick={() => startRename(key)} aria-label={t("listProps.renameCategory", { category: canonicalNames.get(key) ?? "" })}>
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="btn-icon"
-                  disabled={!inOrder || index === 0}
-                  onClick={() => moveCategory(index, -1)}
-                  aria-label={t("listProps.moveUp")}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="btn-icon"
-                  disabled={!inOrder || index === order.length - 1}
-                  onClick={() => moveCategory(index, 1)}
-                  aria-label={t("listProps.moveDown")}
-                >
-                  ↓
-                </button>
-                {inOrder ? (
-                  <button type="button" className="btn-icon" onClick={() => removeCategory(index)} aria-label={t("listProps.removeFromOrder")}>
-                    ✕
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-icon"
-                    onClick={() => saveCategoryOrder([...order, canonicalNames.get(key)!])}
-                    aria-label={t("listProps.addToOrder")}
-                  >
-                    +
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <form onSubmit={addCategory} style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
-          <input
-            placeholder={t("listProps.addCategory")}
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button type="submit" className="btn">
-            {t("action.add")}
-          </button>
-        </form>
-      </section>
+      {!isExpenses(listKind(list)) && (
+        <CategoriesCard listId={id} liveItems={liveItems} categoryOrder={categoryOrder} setCategoryOrder={setCategoryOrder} />
+      )}
 
       {/* Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens. */}
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.notes")}</h2>
         <form onSubmit={saveNotes} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {/* Named by its card's title, which a screen reader hears as its name too (T-340). */}
           <textarea
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => {
+              setNotes(e.target.value);
+              setNotesSaved(false);
+            }}
+            aria-label={t("listProps.notes")}
             placeholder={t("listProps.notesPlaceholder")}
             disabled={lockedByVote}
             rows={4}
             style={{ resize: "vertical", font: "inherit" }}
           />
-          <button type="submit" className="btn" disabled={savingNotes || lockedByVote}>
+          <button type="submit" className="btn" disabled={savingNotes || lockedByVote || !notesChanged}>
             {t("listProps.saveNotes")}
           </button>
         </form>
+        {notesSaved && (
+          <p className="muted" role="status" style={{ margin: "0.4rem 0 0" }}>
+            {t("common.saved")}
+          </p>
+        )}
         {notesError && (
           <p className="error-text" role="alert">
             {notesError}
@@ -593,7 +451,11 @@ export default function ListPropsPage() {
 
       <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
         <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.members")}</h2>
-        {membersError && <p className="error-text">{membersError}</p>}
+        {membersError && (
+          <p className="error-text" role="alert">
+            {membersError}
+          </p>
+        )}
         {members && (
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 0.75rem" }}>
             {members.members.map((m) => (
@@ -601,38 +463,44 @@ export default function ListPropsPage() {
             ))}
           </ul>
         )}
+        {/* A pending invite is a row of the roster marked "(pending)", as on Android (T-340).
+            Revoke acts at once there too: an invite is cheap to send again. */}
         {members && members.invites.length > 0 && (
-          <>
-            <h3 className="muted" style={{ fontSize: "0.85rem" }}>
-              {t("listProps.pendingInvites")}
-            </h3>
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {members.invites.map((inv) => (
-                <li
-                  key={inv.id}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0" }}
-                >
-                  <span>{inv.invited_email}</span>
-                  <button type="button" className="btn btn-danger btn-sm" onClick={() => handleRevoke(inv.id)}>
-                    {t("action.revoke")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
+          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 0.75rem" }}>
+            {members.invites.map((inv) => (
+              <li
+                key={inv.id}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", padding: "0.2rem 0" }}
+              >
+                <span>{t("listProps.invitePending", { email: inv.invited_email })}</span>
+                <button type="button" className="btn btn-danger" onClick={() => handleRevoke(inv.id)}>
+                  {t("action.revoke")}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
         <form onSubmit={handleInvite} style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
           <input
             type="email"
+            aria-label={t("listProps.inviteByEmail")}
             placeholder={t("listProps.inviteByEmail")}
             value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
+            onChange={(e) => {
+              setInviteEmail(e.target.value);
+              setInviteError(null);
+            }}
             style={{ flex: 1 }}
           />
           <button type="submit" className="btn">
             {t("action.invite")}
           </button>
         </form>
+        {inviteError && (
+          <p className="error-text" role="alert">
+            {inviteError}
+          </p>
+        )}
 
         {inviteLink && (
           <div
@@ -707,6 +575,7 @@ export default function ListPropsPage() {
           className="btn btn-danger"
           disabled={isExpenses(listKind(list)) && (list.closed_at ?? null) === null}
           onClick={handleLeave}
+          style={{ width: "100%" }}
         >
           {t("listProps.leaveList")}
         </button>
@@ -722,5 +591,236 @@ export default function ListPropsPage() {
         )}
       </section>
     </main>
+  );
+}
+
+/**
+ * The Categories card (T-340), on Android's model: every category of the list is listed (the
+ * stored order first, then the rest in name order, as categoryEditorList builds it on both
+ * clients), each with a rename pencil and a drag handle, and "Save order" saves the order shown.
+ * The handle is a button, so the keyboard reorders too: ArrowUp/ArrowDown move its row, and the
+ * move is announced.
+ */
+function CategoriesCard({
+  listId,
+  liveItems,
+  categoryOrder,
+  setCategoryOrder,
+}: {
+  listId: string;
+  liveItems: ItemObject[];
+  categoryOrder: string[];
+  setCategoryOrder: (order: string[]) => void;
+}) {
+  const t = useT();
+  const { push, deviceId } = useSyncContext();
+  // The order as the user has moved it, by key, until it is saved; null while nothing has moved.
+  const [draft, setDraft] = useState<string[] | null>(null);
+  // Inline category rename (T-108): the key being edited + its draft text.
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [orderSaved, setOrderSaved] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+
+  const rawCategories = liveItems.map((i) => itemFieldValue(i, "category") ?? "");
+  const canonicalNames = canonicalCategoryNames(rawCategories, normalizeCategoryOrder(categoryOrder));
+  const savedKeys = categoryEditorList(rawCategories, categoryOrder).map(categoryKey);
+  // A category that appears meanwhile joins a moved order at the end; one that went is dropped.
+  const withDraft = (moved: string[] | null) =>
+    moved
+      ? [...moved.filter((k) => canonicalNames.has(k)), ...savedKeys.filter((k) => !moved.includes(k))]
+      : savedKeys;
+  const keys = withDraft(draft);
+  const orderChanged = keys.some((key, i) => key !== savedKeys[i]);
+  const nameOf = (key: string) => canonicalNames.get(key) ?? "";
+
+  function moveRow(from: number, to: number) {
+    setDraft((previous) => {
+      const next = [...withDraft(previous)];
+      [next[from], next[to]] = [next[to], next[from]];
+      return next;
+    });
+    setOrderSaved(false);
+  }
+
+  const reorder = useDragReorder(keys, moveRow, {
+    onKeyboardMove: (key, index, count) =>
+      setAnnouncement(t("listProps.categoryMoved", { category: nameOf(key), position: index + 1, count })),
+  });
+
+  async function saveOrder() {
+    const names = keys.map(nameOf);
+    setSaving(true);
+    setError(null);
+    try {
+      await push({ lists: [{ id: listId, fields: fieldPatch(deviceId, "category_order", names) }] });
+      setCategoryOrder(names);
+      setDraft(null);
+      setOrderSaved(true);
+    } catch (err) {
+      // The server never got this order (T-266): the moved order stays on screen, unsaved, and
+      // Save order stays offered, so trying again is one press.
+      setError(errorMessage(t, err, "item.saveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * The central "fix a category's casing / rename it" action (T-108): rewrites every item in the
+   * `fromKey` category to `toRaw` and saves the order shown with the new name in it, as Android
+   * does. Renaming onto a different existing category merges them (confirmed first).
+   */
+  async function renameCategory(fromKey: string, toRaw: string) {
+    const to = toRaw.trim();
+    setEditingKey(null);
+    if (!to || to === nameOf(fromKey)) return; // blank or unchanged
+    const toKey = categoryKey(to);
+    if (toKey !== fromKey && canonicalNames.has(toKey)) {
+      if (!confirm(t("listProps.mergeCategoryConfirm", { category: nameOf(toKey) }))) return;
+    }
+    const plan = planCategoryRename(
+      liveItems.map((i) => ({ id: i.id, category: itemFieldValue(i, "category") ?? "" })),
+      keys.map(nameOf),
+      fromKey,
+      to,
+    );
+    const previousOrder = categoryOrder;
+    const previousDraft = draft;
+    const orderDiffers = JSON.stringify(plan.nextCategoryOrder) !== JSON.stringify(categoryOrder);
+    setCategoryOrder(plan.nextCategoryOrder);
+    setDraft(null);
+    setError(null);
+    setOrderSaved(false);
+    try {
+      await push({
+        lists: orderDiffers ? [{ id: listId, fields: fieldPatch(deviceId, "category_order", plan.nextCategoryOrder) }] : [],
+        items: plan.itemIds.map((itemId) => ({
+          id: itemId,
+          list_id: listId,
+          fields: fieldPatch(deviceId, "category", to),
+        })),
+      });
+    } catch (err) {
+      // The server never got it (T-266): back to what was shown, not what it never received.
+      setCategoryOrder(previousOrder);
+      setDraft(previousDraft);
+      setError(errorMessage(t, err, "item.saveFailed"));
+    }
+  }
+
+  const iconButton = { minWidth: "2.75rem", minHeight: "2.75rem" };
+
+  return (
+    <section className="card" style={{ padding: "1rem", marginBottom: "1rem" }}>
+      <h2 style={{ fontSize: "1rem", marginTop: 0 }}>{t("listProps.categories")}</h2>
+      <p className="muted" style={{ margin: "0 0 0.6rem", fontSize: "0.85rem" }}>
+        {t("listProps.categoriesHelp")}
+      </p>
+      {keys.length === 0 ? (
+        <p className="muted" style={{ margin: 0 }}>
+          {t("listProps.noCategories")}
+        </p>
+      ) : (
+        <>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {keys.map((key) => {
+              const row = reorder.rowProps(key);
+              if (editingKey === key) {
+                return (
+                  <form
+                    key={key}
+                    ref={row.ref}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      renameCategory(key, renameDraft);
+                    }}
+                    style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.2rem 0" }}
+                  >
+                    <input
+                      autoFocus
+                      value={renameDraft}
+                      onChange={(e) => setRenameDraft(e.target.value)}
+                      style={{ flex: 1, minWidth: 0 }}
+                      aria-label={t("listProps.renameCategory", { category: nameOf(key) })}
+                    />
+                    <button type="submit" className="btn">
+                      {t("action.save")}
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingKey(null)}>
+                      {t("action.cancel")}
+                    </button>
+                  </form>
+                );
+              }
+              const dragging = reorder.isDragging(key);
+              return (
+                <div
+                  key={key}
+                  ref={row.ref}
+                  data-testid="category-row"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    background: dragging ? "var(--color-bg)" : undefined,
+                    boxShadow: dragging ? "var(--shadow)" : undefined,
+                    borderRadius: "var(--radius)",
+                    ...row.style,
+                  }}
+                >
+                  <span style={{ flex: 1, overflowWrap: "anywhere" }}>{nameOf(key)}</span>
+                  <button
+                    type="button"
+                    className="btn-icon"
+                    style={iconButton}
+                    onClick={() => {
+                      setEditingKey(key);
+                      setRenameDraft(nameOf(key));
+                    }}
+                    aria-label={t("listProps.renameCategory", { category: nameOf(key) })}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon"
+                    {...reorder.handleProps(key)}
+                    style={{ ...iconButton, touchAction: "none", cursor: dragging ? "grabbing" : "grab", userSelect: "none" }}
+                    aria-label={t("listProps.reorderCategory", { category: nameOf(key) })}
+                  >
+                    ≡
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="btn"
+            style={{ width: "100%", marginTop: "0.6rem" }}
+            disabled={!orderChanged || saving}
+            onClick={saveOrder}
+          >
+            {t("listProps.saveOrder")}
+          </button>
+          {orderSaved && (
+            <p className="muted" role="status" style={{ margin: "0.4rem 0 0" }}>
+              {t("common.saved")}
+            </p>
+          )}
+        </>
+      )}
+      {error && (
+        <p className="error-text" role="alert">
+          {error}
+        </p>
+      )}
+      <p className="visually-hidden" aria-live="polite">
+        {announcement}
+      </p>
+    </section>
   );
 }

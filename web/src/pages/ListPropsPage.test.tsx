@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup, within } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -492,10 +492,28 @@ describe("ListPropsPage leave list (T-268)", () => {
 
 // ---- reordering categories (T-212) -----------------------------------------------------------
 
-describe("reordering categories in list properties (T-212)", () => {
+describe("the category editor, on Android's model (T-212, T-340)", () => {
   function listWithOrder(order: string[]) {
     const base = listObj();
     return { ...base, fields: { ...base.fields, category_order: clock(order) } };
+  }
+
+  function categoryItem(id: string, category: string) {
+    return {
+      id,
+      list_id: "list-1",
+      created_at: 0,
+      fields: {
+        name: clock(id),
+        category: clock(category),
+        stores: clock([]),
+        quantity: clock(null),
+        price: clock(null),
+        note: clock(null),
+        status: clock<ItemStatus>("todo"),
+        deleted: clock(false),
+      },
+    };
   }
 
   /** The category_order of the first list push, if any. */
@@ -505,6 +523,11 @@ describe("reordering categories in list properties (T-212)", () => {
       .mock.calls.map((c) => c[0])
       .find((req) => (req.changes.lists?.length ?? 0) > 0);
     return call?.changes.lists?.[0].fields.category_order?.value as string[] | undefined;
+  }
+
+  /** The category rows' names, top to bottom. */
+  function rowNames() {
+    return screen.getAllByTestId("category-row").map((row) => row.querySelector("span")!.textContent);
   }
 
   beforeEach(() => {
@@ -520,12 +543,61 @@ describe("reordering categories in list properties (T-212)", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     api.setToken(null);
     localStorage.clear();
     cleanup();
   });
 
-  it("one press moves the last row above the row shown before it, even with a stale entry stored between them", async () => {
+  it("lists every category, the stored order first and the rest in name order, each with a pencil and a handle, and no arrows or add field", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: {
+        lists: [listWithOrder(["Frozen", "Dairy"])],
+        items: [categoryItem("i1", "snacks"), categoryItem("i2", "Dairy"), categoryItem("i3", "Bakery")],
+      },
+    });
+    await renderListPropsPageViaListPage();
+
+    await screen.findByRole("button", { name: "Reorder Frozen" });
+    expect(rowNames()).toEqual(["Frozen", "Dairy", "Bakery", "snacks"]);
+    expect(screen.getByRole("button", { name: "Rename snacks" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Drag a handle to set the order items are grouped in, then save the order. ✎ renames a category, fixes its casing or merges it into another.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Move up" })).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Add category…")).not.toBeInTheDocument();
+    // Nothing has moved, so there is nothing to save.
+    expect(screen.getByRole("button", { name: "Save order" })).toBeDisabled();
+  });
+
+  it("ArrowDown on a handle moves its row, keeps the focus there and says where it went; Save order then saves the order shown", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "Bread"])], items: [categoryItem("i1", "Fruit")] },
+    });
+    await renderListPropsPageViaListPage();
+
+    const handle = await screen.findByRole("button", { name: "Reorder Dairy" });
+    handle.focus();
+    await userEvent.keyboard("{ArrowDown}");
+
+    expect(rowNames()).toEqual(["Bread", "Dairy", "Fruit"]);
+    expect(screen.getByRole("button", { name: "Reorder Dairy" })).toHaveFocus();
+    expect(screen.getByText("Dairy moved to position 2 of 3.")).toBeInTheDocument();
+    // Moving saves nothing yet.
+    expect(pushedOrder()).toBeUndefined();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save order" }));
+    await waitFor(() => expect(pushedOrder()).toEqual(["Bread", "Dairy", "Fruit"]));
+    const card = screen.getByRole("heading", { name: "Categories", level: 2 }).closest("section")!;
+    expect(await within(card).findByRole("status")).toHaveTextContent("Saved.");
+    expect(screen.getByRole("button", { name: "Save order" })).toBeDisabled();
+  });
+
+  it("moves past a stale entry stored between two rows in one press, and saves a clean order", async () => {
     // "dairy" is a second casing of "Dairy", left from before categories were case-insensitive: it
     // is stored but not shown. Swapping RAW positions swapped Bread with it, and nothing moved.
     vi.mocked(api.sync).mockResolvedValueOnce({
@@ -534,56 +606,172 @@ describe("reordering categories in list properties (T-212)", () => {
     });
     await renderListPropsPageViaListPage();
 
-    const ups = await screen.findAllByRole("button", { name: "Move up" });
-    expect(ups).toHaveLength(2);
-    await userEvent.click(ups[1]);
+    const handle = await screen.findByRole("button", { name: "Reorder Bread" });
+    handle.focus();
+    await userEvent.keyboard("{ArrowUp}");
+    await userEvent.click(screen.getByRole("button", { name: "Save order" }));
 
-    // Moved in one press, and the saved order is clean: the stale casing is gone.
     await waitFor(() => expect(pushedOrder()).toEqual(["Bread", "Dairy"]));
   });
 
-  it("disables the arrows at the ends of the order", async () => {
+  it("dragging a handle moves its row one place per row height travelled", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 1,
+      changes: { lists: [listWithOrder(["Dairy", "Bread", "Fruit", "Frozen"])], items: [] },
+    });
+    // jsdom lays nothing out: every row is 40px tall here.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      bottom: 40,
+      right: 300,
+      width: 300,
+      height: 40,
+      toJSON: () => ({}),
+    });
+    await renderListPropsPageViaListPage();
+
+    const handle = await screen.findByRole("button", { name: "Reorder Dairy" });
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientY: 0 });
+    // 2.5 rows down, in small steps: two swaps.
+    for (let y = 10; y <= 100; y += 10) {
+      fireEvent.pointerMove(screen.getByRole("button", { name: "Reorder Dairy" }), { pointerId: 1, clientY: y });
+    }
+    fireEvent.pointerUp(screen.getByRole("button", { name: "Reorder Dairy" }), { pointerId: 1, clientY: 100 });
+
+    expect(rowNames()).toEqual(["Bread", "Fruit", "Dairy", "Frozen"]);
+    expect(screen.getByRole("button", { name: "Save order" })).toBeEnabled();
+  });
+
+  it("a failed save shows its error in the card and keeps the moved order to try again, instead of pretending it was saved (T-266)", async () => {
     vi.mocked(api.sync).mockResolvedValueOnce({
       cursor: 1,
       changes: { lists: [listWithOrder(["Dairy", "Bread"])], items: [] },
     });
     await renderListPropsPageViaListPage();
-
-    const ups = (await screen.findAllByRole("button", { name: "Move up" })) as HTMLButtonElement[];
-    const downs = screen.getAllByRole("button", { name: "Move down" }) as HTMLButtonElement[];
-    expect(ups.map((b) => b.disabled)).toEqual([true, false]);
-    expect(downs.map((b) => b.disabled)).toEqual([false, true]);
-  });
-
-  it("a plain order still swaps with the neighbour", async () => {
-    vi.mocked(api.sync).mockResolvedValueOnce({
-      cursor: 1,
-      changes: { lists: [listWithOrder(["Dairy", "Bread", "Fruit"])], items: [] },
-    });
-    await renderListPropsPageViaListPage();
-
-    const downs = await screen.findAllByRole("button", { name: "Move down" });
-    await userEvent.click(downs[0]);
-
-    await waitFor(() => expect(pushedOrder()).toEqual(["Bread", "Dairy", "Fruit"]));
-  });
-
-  it("reverts the optimistic reorder and shows an error when the push fails, instead of leaving the page showing an order the server never received (T-266)", async () => {
-    vi.mocked(api.sync).mockResolvedValueOnce({
-      cursor: 1,
-      changes: { lists: [listWithOrder(["Dairy", "Bread"])], items: [] },
-    });
-    await renderListPropsPageViaListPage();
-    await screen.findAllByRole("button", { name: "Move down" });
+    const handle = await screen.findByRole("button", { name: "Reorder Dairy" });
+    handle.focus();
+    await userEvent.keyboard("{ArrowDown}");
 
     vi.mocked(api.sync).mockRejectedValueOnce(new Error("network down"));
-    const downs = screen.getAllByRole("button", { name: "Move down" });
-    await userEvent.click(downs[0]);
+    await userEvent.click(screen.getByRole("button", { name: "Save order" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
-    // Reverted: Dairy is still shown before Bread, not swapped.
-    const labels = screen.getAllByText(/^(Dairy|Bread)$/).map((el) => el.textContent);
-    expect(labels).toEqual(["Dairy", "Bread"]);
+    const card = screen.getByRole("heading", { name: "Categories", level: 2 }).closest("section")!;
+    expect(await within(card).findByRole("alert")).toHaveTextContent("Failed to save. Please try again.");
+    expect(within(card).queryByText("Saved.")).not.toBeInTheDocument();
+    expect(rowNames()).toEqual(["Bread", "Dairy"]);
+    expect(screen.getByRole("button", { name: "Save order" })).toBeEnabled();
+  });
+
+  it("with no categories at all, says so and offers nothing to save", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items: [] } });
+    await renderListPropsPageViaListPage();
+
+    expect(await screen.findByText("No categories yet.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save order" })).not.toBeInTheDocument();
+  });
+});
+
+describe("list properties save feedback, type switch and labels (T-340)", () => {
+  beforeEach(() => {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    cleanup();
+  });
+
+  it("Save is offered only once the name changes, and says Saved in the List card", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items: [] } });
+    await renderListPropsPageViaListPage();
+
+    const field = await screen.findByLabelText("List name");
+    const listCard = screen.getByRole("heading", { name: "List", level: 2 }).closest("section")!;
+    const save = within(listCard).getByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+
+    await userEvent.type(field, " Weekly");
+    expect(save).toBeEnabled();
+    await userEvent.click(save);
+
+    await waitFor(() => expect(vi.mocked(api.sync).mock.calls[1][0].changes.lists![0].fields.name?.value).toBe("Groceries Weekly"));
+    expect(await within(listCard).findByRole("status")).toHaveTextContent("Saved.");
+    expect(save).toBeDisabled();
+    // Editing again takes the note away.
+    await userEvent.type(field, "!");
+    expect(within(listCard).queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("Save notes is offered only once the notes change, and says Saved in the Notes card", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj("Gate 4471")], items: [] } });
+    await renderListPropsPageViaListPage();
+
+    const notes = await screen.findByRole("textbox", { name: "Notes" });
+    await waitFor(() => expect(notes).toHaveValue("Gate 4471"));
+    const save = screen.getByRole("button", { name: "Save notes" });
+    expect(save).toBeDisabled();
+    await userEvent.type(notes, "  ");
+    // Only trailing blanks: saved it would be the same note.
+    expect(save).toBeDisabled();
+    await userEvent.type(notes, "!");
+    await userEvent.click(save);
+
+    const notesCard = screen.getByRole("heading", { name: "Notes", level: 2 }).closest("section")!;
+    expect(await within(notesCard).findByRole("status")).toHaveTextContent("Saved.");
+  });
+
+  it("the type is its icon, its name and a switch named Checklist, which converts the list", async () => {
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items: [] } });
+    await renderListPropsPageViaListPage();
+
+    const toggle = await screen.findByRole("switch", { name: "Checklist" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    const listCard = screen.getByRole("heading", { name: "List", level: 2 }).closest("section")!;
+    expect(within(listCard).getByText("🛒")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Make checklist" })).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    await waitFor(() => expect(vi.mocked(api.sync).mock.calls[1][0].changes.lists![0].fields.kind?.value).toBe("checklist"));
+  });
+
+  it("a pending invite is a roster row marked pending, with a full-size Revoke", async () => {
+    vi.mocked(api.getMembers).mockResolvedValue({
+      members: [{ account_id: "acct-me", email: "me@example.com" }],
+      invites: [{ id: "inv-1", invited_email: "sam@example.com", expires_at: 9999999999999 }],
+    } as unknown as Awaited<ReturnType<typeof api.getMembers>>);
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items: [] } });
+    await renderListPropsPageViaListPage();
+
+    expect(await screen.findByText("sam@example.com (pending)")).toBeInTheDocument();
+    expect(screen.queryByText("Pending invites")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Revoke" })).not.toHaveClass("btn-sm");
+    expect(screen.getByRole("textbox", { name: "Invite by email" })).toBeInTheDocument();
+  });
+
+  it("the back link's arrow comes from the translation, so it points back in Arabic", async () => {
+    localStorage.setItem("shoppinglist_locale", "ar");
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items: [] } });
+    render(
+      <MemoryRouter initialEntries={["/list/list-1/properties"]}>
+        <I18nProvider>
+          <AuthProvider>
+            <SyncProvider>
+              <Routes>
+                <Route path="/list/:listId/properties" element={<ListPropsPage />} />
+              </Routes>
+            </SyncProvider>
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("link", { name: "→ Groceries" })).toBeInTheDocument();
   });
 });
 

@@ -17,7 +17,12 @@
     "The web client used to break both of these with String.localeCompare, which agrees with the",
     "code-unit order whenever counts differ or names share a first letter's case, and disagrees",
     "exactly on a genuine tie or a mixed-case comparison ('Obst' vs. 'obst', 'Äpfel' vs. 'Bananen') —",
-    "which is exactly why it went unnoticed until now."
+    "which is exactly why it went unnoticed until now.",
+    "",
+    "editor_list: the categories list properties shows, renames and reorders (T-340), the same on",
+    "both clients: every entry of the clean category_order first, in its order, even one no item",
+    "carries any more; then every other category in use, in name order (name-order.json, accents",
+    "folded), each in its canonical casing. Save order saves exactly this list."
   ],
 
   "canonical_names": [
@@ -65,6 +70,39 @@
       "raw_categories": ["Snacks", "Bakery", "Dairy"],
       "category_order": [],
       "expect": ["Bakery", "Dairy", "Snacks"]
+    }
+  ],
+
+  "editor_list": [
+    {
+      "name": "the ordered categories first, in their order, then the rest in name order",
+      "raw_categories": ["Snacks", "Dairy", "Bakery", "hardware"],
+      "category_order": ["Dairy", "Bakery"],
+      "expect": ["Dairy", "Bakery", "hardware", "Snacks"]
+    },
+    {
+      "name": "an ordered category no item carries stays listed in its place",
+      "raw_categories": ["Bakery"],
+      "category_order": ["Frozen", "Bakery"],
+      "expect": ["Frozen", "Bakery"]
+    },
+    {
+      "name": "a blank and a stale second casing in the stored order are not listed",
+      "raw_categories": ["dairy", "Bread"],
+      "category_order": ["Dairy", " ", "dairy", "Bread"],
+      "expect": ["Dairy", "Bread"]
+    },
+    {
+      "name": "the rest sort as names do, accents folded, each in its canonical casing",
+      "raw_categories": ["Zucker", "äpfel", "Äpfel", "Äpfel", "bananen"],
+      "category_order": [],
+      "expect": ["Äpfel", "bananen", "Zucker"]
+    },
+    {
+      "name": "no categories at all is an empty list",
+      "raw_categories": ["", "  "],
+      "category_order": [],
+      "expect": []
     }
   ]
 }

@@ -212,9 +212,46 @@ class ListPropsViewModelTest {
         viewModel.uiState.first { it.name.isNotBlank() }
 
         viewModel.onNameChange("Weekly Groceries")
-        viewModel.saveName().join()
+        viewModel.saveName()!!.join()
 
         assertEquals("Weekly Groceries", listsRepo.getById(listId)!!.name.value)
+    }
+
+    @Test
+    fun `Save name is offered only for a changed, non-blank name, and says Saved until the next edit (T-340)`() = runTest(mainDispatcherRule.dispatcher) {
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        assertFalse(viewModel.uiState.value.nameChanged)
+        assertNull(viewModel.saveName())
+
+        viewModel.onNameChange("   ")
+        assertFalse(viewModel.uiState.value.nameChanged)
+        viewModel.onNameChange("Groceries ")
+        assertFalse(viewModel.uiState.value.nameChanged)
+
+        viewModel.onNameChange("Weekly")
+        assertTrue(viewModel.uiState.value.nameChanged)
+        viewModel.saveName()!!.join()
+        assertTrue(viewModel.uiState.value.nameSaved)
+        assertFalse(viewModel.uiState.value.nameChanged)
+
+        viewModel.onNameChange("Weekly!")
+        assertFalse(viewModel.uiState.value.nameSaved)
+    }
+
+    @Test
+    fun `Save notes is offered only for changed notes, and says Saved (T-340)`() = runTest(mainDispatcherRule.dispatcher) {
+        listsRepo.setNotes(listId, "Gate")
+        val viewModel = newViewModel()
+        viewModel.uiState.first { it.name.isNotBlank() }
+        assertFalse(viewModel.uiState.value.notesChanged)
+        viewModel.onNotesChange("Gate  ")
+        assertFalse(viewModel.uiState.value.notesChanged)
+
+        viewModel.onNotesChange("Gate 4471")
+        viewModel.saveNotes()!!.join()
+        assertTrue(viewModel.uiState.value.notesSaved)
+        assertFalse(viewModel.uiState.value.notesChanged)
     }
 
     @Test
@@ -232,7 +269,7 @@ class ListPropsViewModelTest {
         viewModel.uiState.first { it.name.isNotBlank() }
 
         viewModel.onNotesChange("Gate code: 4471")
-        viewModel.saveNotes().join()
+        viewModel.saveNotes()!!.join()
 
         assertEquals("Gate code: 4471", listsRepo.getById(listId)!!.notes.value)
     }
@@ -244,7 +281,7 @@ class ListPropsViewModelTest {
         viewModel.uiState.first { it.name.isNotBlank() }
 
         viewModel.onNotesChange("   ")
-        viewModel.saveNotes().join()
+        viewModel.saveNotes()!!.join()
 
         assertEquals(null, listsRepo.getById(listId)!!.notes.value)
     }
@@ -259,10 +296,16 @@ class ListPropsViewModelTest {
         val originalClock = listsRepo.getById(listId)!!.categoryOrder.updatedAt
         assertEquals(listOf("dairy", "bakery"), loaded.categoryOrder)
 
+        assertFalse(loaded.orderChanged)
+        assertNull(viewModel.saveCategoryOrder())
+
         viewModel.moveCategoryUp(1)
         assertEquals(listOf("bakery", "dairy"), viewModel.uiState.value.categoryOrder)
+        assertTrue(viewModel.uiState.value.orderChanged)
 
-        viewModel.saveCategoryOrder().join()
+        viewModel.saveCategoryOrder()!!.join()
+        assertTrue(viewModel.uiState.value.orderSaved)
+        assertFalse(viewModel.uiState.value.orderChanged)
 
         val saved = listsRepo.getById(listId)!!
         assertEquals(listOf("bakery", "dairy"), listsRepo.decodeCategoryOrder(saved.categoryOrder.value))
@@ -354,7 +397,7 @@ class ListPropsViewModelTest {
         val job = viewModel.sendInvite()
 
         assertNull(job)
-        assertNotNull(viewModel.uiState.value.errorMessage)
+        assertNotNull(viewModel.uiState.value.sharingError)
         assertEquals(0, server.requestCount)
     }
 
@@ -380,7 +423,7 @@ class ListPropsViewModelTest {
         viewModel.revokeInvite("inv-1").join()
 
         assertEquals(0, server.requestCount)
-        assertNull(viewModel.uiState.value.errorMessage)
+        assertNull(viewModel.uiState.value.sharingError)
     }
 
     @Test
@@ -411,7 +454,7 @@ class ListPropsViewModelTest {
 
         // Still a member locally (the server never confirmed), with an actionable error.
         assertFalse(viewModel.uiState.value.hasLeft)
-        assertNotNull(viewModel.uiState.value.errorMessage)
+        assertNotNull(viewModel.uiState.value.leaveError)
         assertNotNull(listsRepo.getById(listId))
         assertNotNull(itemsRepo.getById(itemId))
     }
@@ -441,7 +484,7 @@ class ListPropsViewModelTest {
 
         viewModel.toggleCloseVote().join()
 
-        assertEquals(UiText.res(R.string.api_error_list_closed), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(R.string.api_error_list_closed), viewModel.uiState.value.closingError)
         assertFalse(viewModel.uiState.value.isVoting)
     }
 
@@ -453,7 +496,7 @@ class ListPropsViewModelTest {
 
         viewModel.toggleCloseVote().join()
 
-        assertEquals(UiText.res(R.string.error_offline_retry), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(R.string.error_offline_retry), viewModel.uiState.value.closingError)
     }
 
     @Test
@@ -500,7 +543,7 @@ class ListPropsViewModelTest {
 
         viewModel.revokeInvite("inv-1").join()
 
-        assertNotNull(viewModel.uiState.value.errorMessage)
+        assertNotNull(viewModel.uiState.value.sharingError)
     }
 
     @Test

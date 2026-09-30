@@ -68,6 +68,21 @@ object CategoryCanon {
         }
     }
 
+    /**
+     * The categories list properties shows, renames and reorders (T-340), the same on both
+     * clients: the clean `category_order` first, in its order, even an entry no item carries any
+     * more; then every other category in use, in name order. Canonical casing throughout; "Save
+     * order" saves this list. Pinned by shared-test-cases/category-canon.json (editor_list).
+     */
+    fun editorList(rawCategories: List<String>, categoryOrder: List<String>): List<String> {
+        val order = normalizeOrder(categoryOrder)
+        val names = canonicalNames(rawCategories, order)
+        val orderedKeys = order.map(::key)
+        val rest = names.keys.filter { it !in orderedKeys }
+            .sortedWith(compareBy(NameOrder.names) { k: String -> names.getValue(k) }.thenBy { it })
+        return (orderedKeys + rest).mapNotNull { names[it] }
+    }
+
     data class RenamePlan(
         val itemIds: List<String>,
         val nextCategoryOrder: List<String>,

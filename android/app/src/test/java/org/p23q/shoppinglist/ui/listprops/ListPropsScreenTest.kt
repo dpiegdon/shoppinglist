@@ -15,6 +15,10 @@ import org.p23q.shoppinglist.data.insertTestAccount
 import org.p23q.shoppinglist.data.testAccount
 import org.p23q.shoppinglist.data.testListAccounts
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.semantics.SemanticsActions
+import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -121,7 +125,11 @@ class ListPropsScreenTest {
         assertEquals(false, left)
     }
 
-    /** T-30, kept by T-307's shared drag-reorder: a category moves one place per 44dp dragged. */
+    /**
+     * T-30, kept by T-307's shared drag-reorder: a category moves one place per row it is dragged
+     * over. The step is the rows' measured height (T-340): a fixed 44dp step, shorter than the
+     * rows, swapped a row too many here and let the dragged row drift from the finger.
+     */
     @Test
     @Config(qualifiers = "w411dp-h891dp")
     fun `dragging a category's handle moves it one place per row height`() = runBlocking<Unit> {
@@ -151,8 +159,11 @@ class ListPropsScreenTest {
         composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.categoryOrder.size == 4 }
         composeTestRule.waitForIdle()
 
-        // 2.6 rows of 44dp, less the touch slop: two swaps, however tall the rows are drawn.
-        val distance = with(composeTestRule.density) { 44.dp.toPx() } * 2.6f
+        // The rows' own pitch, as drawn: 2.5 of them, less the touch slop, is two swaps.
+        val pitch = composeTestRule.onNodeWithContentDescription("Reorder bakery").fetchSemanticsNode().boundsInRoot.top -
+            composeTestRule.onNodeWithContentDescription("Reorder dairy").fetchSemanticsNode().boundsInRoot.top
+        assertTrue("rows are taller than 44dp", pitch > with(composeTestRule.density) { 48.dp.toPx() })
+        val distance = pitch * 2.5f
         composeTestRule.onNodeWithContentDescription("Reorder dairy").performTouchInput {
             down(center)
             repeat(40) { moveBy(Offset(0f, distance / 40)) }
@@ -161,6 +172,63 @@ class ListPropsScreenTest {
         composeTestRule.waitForIdle()
 
         assertEquals(listOf("bakery", "produce", "dairy", "frozen"), viewModel.uiState.value.categoryOrder)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    /**
+     * T-340: the handle is a 48dp target that offers Move up and Move down to TalkBack, as the
+     * accounts' handles do; Save order is offered only once the order changed, and then says Saved.
+     */
+    @Test
+    @Config(qualifiers = "w411dp-h891dp")
+    fun `a category handle offers Move up and Move down, and Save order says Saved`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount())
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        listsRepo.setCategoryOrder(listId, listOf("dairy", "bakery", "produce"))
+        val viewModel = ListPropsViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            listsRepo,
+            itemsRepo,
+            testListAccounts(db, listsRepo),
+            NotificationPrefsStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("listprops_moves_notif_prefs", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+        )
+        composeTestRule.setContent { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.categoryOrder.size == 3 }
+        composeTestRule.waitForIdle()
+
+        fun actions(category: String) = composeTestRule.onNodeWithContentDescription("Reorder $category")
+            .fetchSemanticsNode().config.getOrElse(SemanticsActions.CustomActions) { emptyList() }
+
+        composeTestRule.onNodeWithContentDescription("Reorder dairy").assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
+        assertEquals(listOf("Move down"), actions("dairy").map { it.label })
+        assertEquals(listOf("Move up", "Move down"), actions("bakery").map { it.label })
+        assertEquals(listOf("Move up"), actions("produce").map { it.label })
+        composeTestRule.onNodeWithText("Save order").assertIsNotEnabled()
+
+        composeTestRule.runOnUiThread { actions("dairy").single { it.label == "Move down" }.action() }
+        composeTestRule.waitForIdle()
+        assertEquals(listOf("bakery", "dairy", "produce"), viewModel.uiState.value.categoryOrder)
+
+        composeTestRule.onNodeWithText("Save order").assertIsEnabled().performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.orderSaved }
+        composeTestRule.assertInSectionCard("Categories", "Saved.")
+        composeTestRule.onNodeWithText("Save order").assertIsNotEnabled()
+        assertEquals(
+            listOf("bakery", "dairy", "produce"),
+            listsRepo.decodeCategoryOrder(listsRepo.getById(listId)!!.categoryOrder.value),
+        )
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
@@ -407,7 +475,9 @@ class ListPropsScreenTest {
 
         composeTestRule.onNodeWithText("You've agreed to close this list", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Trip").assertIsEnabled()
-        composeTestRule.onNodeWithText("Save notes").performScrollTo().assertIsEnabled()
+        composeTestRule.onNodeWithText("Gate code, store hours, anything worth remembering…")
+            .performScrollTo()
+            .assertIsEnabled()
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
     }
 
@@ -496,6 +566,7 @@ class ListPropsScreenTest {
         composeTestRule.assertPlainSectionCards("List", "Categories", "Notes", "Shared with", "Notifications", "Actions")
         composeTestRule.assertDangerSectionCard("Leave list")
         composeTestRule.assertInSectionCard("List", "Clear checked (1)")
+        composeTestRule.assertInSectionCard("List", "Move every checked item back to the backlog.")
         composeTestRule.assertInSectionCard("List", "Type")
         composeTestRule.assertInSectionCard("Actions", "Duplicate list")
         composeTestRule.onNodeWithText("Closing").assertDoesNotExist()
@@ -510,6 +581,10 @@ class ListPropsScreenTest {
         composeTestRule.assertPlainSectionCards("List", "Notes", "Shared with", "Notifications", "Closing")
         composeTestRule.assertDangerSectionCard("Leave list")
         composeTestRule.assertInSectionCard("Leave list", "A ledger can only be left once it is closed.")
+        // A failure shows in the card whose action failed (T-340), not between cards.
+        viewModel.sendInvite()
+        composeTestRule.waitForIdle()
+        composeTestRule.assertInSectionCard("Shared with", "Enter an email address")
         composeTestRule.onNodeWithText("Categories").assertDoesNotExist()
         composeTestRule.onNodeWithText("Actions").assertDoesNotExist()
         closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))

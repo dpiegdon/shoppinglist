@@ -4,62 +4,12 @@ import * as api from "../api/client";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { ModalDialog } from "../components/ModalDialog";
+import ToggleSwitch from "../components/ToggleSwitch";
 import type { AdminUser } from "../api/contract";
 import { useT } from "../i18n";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { errorMessage } from "../i18n/apiErrors";
 import { normalizeServerMessage } from "../lib/serverMessage";
-
-/** Accessible on/off switch (T-112): green track when on, red when off. */
-function ToggleSwitch({
-  checked,
-  disabled,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onChange: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onChange}
-      style={{
-        position: "relative",
-        width: "3rem",
-        height: "1.6rem",
-        borderRadius: "999px",
-        border: "none",
-        flexShrink: 0,
-        cursor: disabled ? "default" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-        background: checked ? "var(--color-switch-on)" : "var(--color-danger)",
-        transition: "background 0.15s",
-      }}
-    >
-      <span
-        style={{
-          position: "absolute",
-          top: "0.2rem",
-          // Logical, not `left` (T-126): this knob's POSITION is what says on/off, so in an
-          // RTL layout it has to travel the other way or the switch reads inverted.
-          insetInlineStart: checked ? "1.6rem" : "0.2rem",
-          width: "1.2rem",
-          height: "1.2rem",
-          borderRadius: "50%",
-          background: "var(--color-switch-knob)",
-          transition: "inset-inline-start 0.15s",
-        }}
-      />
-    </button>
-  );
-}
 
 /**
  * Admin-only server console (T-107): toggle registration for this run, reset a user's password,

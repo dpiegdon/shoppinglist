@@ -119,8 +119,19 @@ class CategoryCanonTest {
     }
 
     @Test
+    fun `editor list matches the shared table (T-340)`() {
+        for (case in group("editor_list")) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val raw = case["raw_categories"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val order = case["category_order"]!!.jsonArray.map { it.jsonPrimitive.content }
+            val expected = case["expect"]!!.jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(name, expected, CategoryCanon.editorList(raw, order))
+        }
+    }
+
+    @Test
     fun `the case table covers every group this test drives`() {
-        for (name in listOf("canonical_names", "autocomplete_order")) {
+        for (name in listOf("canonical_names", "autocomplete_order", "editor_list")) {
             assertTrue(name, group(name).isNotEmpty())
         }
     }

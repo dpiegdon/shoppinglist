@@ -25,14 +25,14 @@ import androidx.compose.ui.zIndex
  * and the gesture reads its item's *current* index live, so the handle keeps following its item
  * across swaps.
  *
- * The step is [fixedStepPx] when given (the categories' rows), otherwise the neighbour's measured
- * height plus [gapPx] — the distance the dragged item's own place moves by when they swap.
+ * The step is the neighbour's measured height plus [gapPx]: the distance the dragged item's own
+ * place moves by when they swap, so the item stays under the finger (T-340: a fixed step shorter
+ * than the rows let a dragged category drift away from it by the difference on every swap).
  */
 @Stable
 class DragReorderState<K> internal constructor(
     private val keys: State<List<K>>,
     private val onMove: State<(from: Int, to: Int) -> Unit>,
-    private val fixedStepPx: Float?,
     private val gapPx: Float,
 ) {
     /** The item being dragged, if any. */
@@ -72,20 +72,19 @@ class DragReorderState<K> internal constructor(
         }
     }
 
-    private fun step(neighbour: K): Float = fixedStepPx ?: ((heights[neighbour] ?: 0) + gapPx)
+    private fun step(neighbour: K): Float = (heights[neighbour] ?: 0) + gapPx
 }
 
 @Composable
 fun <K> rememberDragReorderState(
     keys: List<K>,
     onMove: (from: Int, to: Int) -> Unit,
-    fixedStepPx: Float? = null,
     gapPx: Float = 0f,
 ): DragReorderState<K> {
     val currentKeys = rememberUpdatedState(keys)
     val currentOnMove = rememberUpdatedState(onMove)
-    return remember(fixedStepPx, gapPx) {
-        DragReorderState(currentKeys, currentOnMove, fixedStepPx, gapPx)
+    return remember(gapPx) {
+        DragReorderState(currentKeys, currentOnMove, gapPx)
     }
 }
 

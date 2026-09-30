@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import cases from "../../../shared-test-cases/category-canon.json";
 import {
   canonicalCategoryNames,
+  categoryEditorList,
   categoryKey,
   distinctCanonicalCategories,
   normalizeCategoryOrder,
@@ -58,9 +59,13 @@ describe("category canon (shared table)", () => {
     },
   );
 
+  it.each(cases.editor_list)("editor_list: $name", ({ raw_categories, category_order, expect: expected }) => {
+    expect(categoryEditorList(raw_categories, category_order)).toEqual(expected);
+  });
+
   it("the case table covers every group this test drives", () => {
     // A renamed or emptied group would otherwise make a whole block silently iterate nothing.
-    for (const name of ["canonical_names", "autocomplete_order"] as const) {
+    for (const name of ["canonical_names", "autocomplete_order", "editor_list"] as const) {
       expect(cases[name].length, name).toBeGreaterThan(0);
     }
   });

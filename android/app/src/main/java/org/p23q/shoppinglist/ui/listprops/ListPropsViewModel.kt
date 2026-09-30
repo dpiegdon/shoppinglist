@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ListKind
-import org.p23q.shoppinglist.core.NameOrder
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.CreateInviteRequest
 import org.p23q.shoppinglist.core.api.MemberDto
@@ -47,6 +46,16 @@ data class ListPropsUiState(
     val isVoting: Boolean = false,
     val categoryOrder: List<String> = emptyList(),
     val notes: String = "",
+    /**
+     * What the name, notes and category order were when last loaded or saved (T-340): each Save is
+     * offered only while its value differs, and says "Saved" in its card until it is edited again.
+     */
+    val savedName: String = "",
+    val savedNotes: String? = null,
+    val savedCategoryOrder: List<String> = emptyList(),
+    val nameSaved: Boolean = false,
+    val notesSaved: Boolean = false,
+    val orderSaved: Boolean = false,
     val members: List<MemberDto> = emptyList(),
     val pendingInvites: List<PendingInviteDto> = emptyList(),
     val isMembersLoading: Boolean = false,
@@ -68,13 +77,23 @@ data class ListPropsUiState(
     val notificationsEnabledForList: Boolean = true,
     /** Number of checked items — drives the relocated 'Clear checked (N)' button (T-75). */
     val checkedCount: Int = 0,
-    val errorMessage: UiText? = null,
+    /** Each failure is shown inside the card whose action failed (T-340): inviting or revoking, */
+    val sharingError: UiText? = null,
+    /** agreeing to close, */
+    val closingError: UiText? = null,
+    /** or leaving. */
+    val leaveError: UiText? = null,
     /**
      * Whether the list is in the local area (T-293); null until its account is known. A local list
      * has no roster, invites, close votes or collaborator notifications, and leaving it deletes it.
      */
     val local: Boolean? = null,
-)
+) {
+    /** The name as it would be saved: trimmed, and never blank. */
+    val nameChanged: Boolean get() = name.trim().let { it.isNotBlank() && it != savedName }
+    val notesChanged: Boolean get() = notes.trim().ifBlank { null } != savedNotes
+    val orderChanged: Boolean get() = categoryOrder != savedCategoryOrder
+}
 
 /**
  * A rename held for confirmation. [fromName] is the category being renamed and [newName] what it
@@ -111,9 +130,13 @@ class ListPropsViewModel @Inject constructor(
             val currentOrder = list?.let { listsRepo.decodeCategoryOrder(it.categoryOrder.value) } ?: emptyList()
             val rawCategories = itemsRepo.categoryValues(listId).first()
             val account = listAccounts.accountOf(listId)
+            val categories = CategoryCanon.editorList(rawCategories, currentOrder)
+            val name = list?.name?.value ?: ""
+            val notes = list?.notes?.value ?: ""
             _uiState.update {
                 it.copy(
-                    name = list?.name?.value ?: "",
+                    name = name,
+                    savedName = name.trim(),
                     kind = ListKind.of(list?.kind?.value),
                     currency = list?.currency?.value.orEmpty(),
                     closeVotes = list?.let { row -> listsRepo.decodeCloseVotes(row.closeVotesJson) }
@@ -122,8 +145,10 @@ class ListPropsViewModel @Inject constructor(
                     memberCount = list?.let { row -> listsRepo.decodeMembers(row.membersJson).size } ?: 0,
                     myAccountId = account?.accountId,
                     local = account?.let { row -> !row.isServer },
-                    categoryOrder = buildCategoryDisplay(currentOrder, rawCategories),
-                    notes = list?.notes?.value ?: "",
+                    categoryOrder = categories,
+                    savedCategoryOrder = categories,
+                    notes = notes,
+                    savedNotes = notes.trim().ifBlank { null },
                 )
             }
         }
@@ -182,29 +207,49 @@ class ListPropsViewModel @Inject constructor(
         if (listsRepo.setKind(listId, kind)) _uiState.update { it.copy(kind = ListKind.of(kind)) }
     }
 
-    fun onNameChange(value: String) = _uiState.update { it.copy(name = value) }
+    fun onNameChange(value: String) = _uiState.update { it.copy(name = value, nameSaved = false) }
 
-    fun saveName(): Job = viewModelScope.launch { listsRepo.rename(listId, _uiState.value.name.trim()) }
+    /** Saved only when it changed and is not blank (T-340); the button is disabled otherwise. */
+    fun saveName(): Job? {
+        if (!_uiState.value.nameChanged) return null
+        val name = _uiState.value.name.trim()
+        return viewModelScope.launch {
+            listsRepo.rename(listId, name)
+            _uiState.update { it.copy(savedName = name, nameSaved = it.name.trim() == name) }
+        }
+    }
 
-    fun onNotesChange(value: String) = _uiState.update { it.copy(notes = value) }
+    fun onNotesChange(value: String) = _uiState.update { it.copy(notes = value, notesSaved = false) }
 
     /** Blank collapses to null (matches how other optional text fields are stored) rather than an empty string. */
-    fun saveNotes(): Job = viewModelScope.launch {
-        listsRepo.setNotes(listId, _uiState.value.notes.trim().ifBlank { null })
+    fun saveNotes(): Job? {
+        if (!_uiState.value.notesChanged) return null
+        val notes = _uiState.value.notes.trim().ifBlank { null }
+        return viewModelScope.launch {
+            listsRepo.setNotes(listId, notes)
+            _uiState.update { it.copy(savedNotes = notes, notesSaved = it.notes.trim().ifBlank { null } == notes) }
+        }
     }
 
     fun moveCategoryUp(index: Int) {
         if (index <= 0) return
-        _uiState.update { it.copy(categoryOrder = it.categoryOrder.swap(index, index - 1)) }
+        _uiState.update { it.copy(categoryOrder = it.categoryOrder.swap(index, index - 1), orderSaved = false) }
     }
 
     fun moveCategoryDown(index: Int) {
         val order = _uiState.value.categoryOrder
-        if (index >= order.size - 1) return
-        _uiState.update { it.copy(categoryOrder = it.categoryOrder.swap(index, index + 1)) }
+        if (index !in 0 until order.size - 1) return
+        _uiState.update { it.copy(categoryOrder = it.categoryOrder.swap(index, index + 1), orderSaved = false) }
     }
 
-    fun saveCategoryOrder(): Job = viewModelScope.launch { listsRepo.setCategoryOrder(listId, _uiState.value.categoryOrder) }
+    fun saveCategoryOrder(): Job? {
+        if (!_uiState.value.orderChanged) return null
+        val order = _uiState.value.categoryOrder
+        return viewModelScope.launch {
+            listsRepo.setCategoryOrder(listId, order)
+            _uiState.update { it.copy(savedCategoryOrder = order, orderSaved = it.categoryOrder == order) }
+        }
+    }
 
     /**
      * Rename / recase a category (T-108): rewrite every item in it to [newNameRaw] and update the
@@ -263,16 +308,19 @@ class ListPropsViewModel @Inject constructor(
             )
             itemsRepo.setCategoryBulk(plan.itemIds, newName)
             listsRepo.setCategoryOrder(listId, plan.nextCategoryOrder)
-            _uiState.update { it.copy(categoryOrder = plan.nextCategoryOrder) }
+            // The rename saved the whole order shown, so there is nothing left to save.
+            _uiState.update {
+                it.copy(categoryOrder = plan.nextCategoryOrder, savedCategoryOrder = plan.nextCategoryOrder)
+            }
         }
     }
 
-    fun onInviteEmailChange(value: String) = _uiState.update { it.copy(inviteEmail = value, errorMessage = null) }
+    fun onInviteEmailChange(value: String) = _uiState.update { it.copy(inviteEmail = value, sharingError = null) }
 
     fun sendInvite(): Job? {
         val email = _uiState.value.inviteEmail.trim()
         if (email.isBlank()) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.listprops_msg_email_required)) }
+            _uiState.update { it.copy(sharingError = UiText.res(R.string.listprops_msg_email_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -280,12 +328,12 @@ class ListPropsViewModel @Inject constructor(
             val api = listAccounts.api(listId) ?: return@launch // the list is gone
             try {
                 val response = api.createInvite(serverId, CreateInviteRequest(email))
-                _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, errorMessage = null) }
+                _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, sharingError = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.listprops_msg_invite_failed)) }
+                _uiState.update { it.copy(sharingError = ErrorText.of(e, R.string.listprops_msg_invite_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(sharingError = UiText.res(R.string.error_offline)) }
             }
         }
     }
@@ -293,6 +341,7 @@ class ListPropsViewModel @Inject constructor(
     fun consumeShareUrl() = _uiState.update { it.copy(inviteShareUrl = null) }
 
     fun revokeInvite(inviteId: String): Job = viewModelScope.launch {
+        _uiState.update { it.copy(sharingError = null) }
         // The list is gone, and its invites with it as far as this phone is concerned.
         val api = listAccounts.api(listId) ?: return@launch
         try {
@@ -300,11 +349,11 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the invite is already gone — fall through and refresh so it drops off the list.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.listprops_msg_revoke_failed)) }
+                _uiState.update { it.copy(sharingError = ErrorText.of(e, R.string.listprops_msg_revoke_failed)) }
                 return@launch
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(sharingError = UiText.res(R.string.error_offline_retry)) }
             return@launch
         }
         loadMembers().join()
@@ -351,7 +400,7 @@ class ListPropsViewModel @Inject constructor(
         _uiState.update { it.copy(duplicatedListId = newListId) }
     }
 
-    fun requestLeave() = _uiState.update { it.copy(isLeaveConfirmOpen = true) }
+    fun requestLeave() = _uiState.update { it.copy(isLeaveConfirmOpen = true, leaveError = null) }
 
     fun cancelLeave() = _uiState.update { it.copy(isLeaveConfirmOpen = false) }
 
@@ -369,13 +418,13 @@ class ListPropsViewModel @Inject constructor(
      */
     fun toggleCloseVote(): Job = viewModelScope.launch {
         val voted = _uiState.value.myAccountId in _uiState.value.closeVotes
-        _uiState.update { it.copy(isVoting = true) }
+        _uiState.update { it.copy(isVoting = true, closingError = null) }
         try {
             val serverId = listsRepo.serverIdOf(listId)
             val api = listAccounts.api(listId)
             if (serverId == null || api == null) {
                 // A list this phone no longer holds has no vote left to cast.
-                _uiState.update { it.copy(errorMessage = UiText.res(R.string.expense_vote_failed)) }
+                _uiState.update { it.copy(closingError = UiText.res(R.string.expense_vote_failed)) }
                 return@launch
             }
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
@@ -384,9 +433,9 @@ class ListPropsViewModel @Inject constructor(
             // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has
             // a specific reason (T-264); ApiException must be caught before IOException, which it
             // extends, or every one of these shows as "couldn't reach the server" instead.
-            _uiState.update { it.copy(errorMessage = ErrorText.of(e, R.string.expense_vote_failed)) }
+            _uiState.update { it.copy(closingError = ErrorText.of(e, R.string.expense_vote_failed)) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(closingError = UiText.res(R.string.error_offline_retry)) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
         }
@@ -412,11 +461,11 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = ErrorText.of(e, R.string.listprops_msg_leave_failed)) }
+                _uiState.update { it.copy(isLeaveConfirmOpen = false, leaveError = ErrorText.of(e, R.string.listprops_msg_leave_failed)) }
                 return@launch
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(isLeaveConfirmOpen = false, errorMessage = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(isLeaveConfirmOpen = false, leaveError = UiText.res(R.string.error_offline_retry)) }
             return@launch
         }
         itemsRepo.hardDeleteByListId(listId)
@@ -427,18 +476,3 @@ class ListPropsViewModel @Inject constructor(
 
 private fun List<String>.swap(i: Int, j: Int): List<String> =
     toMutableList().apply { val tmp = this[i]; this[i] = this[j]; this[j] = tmp }
-
-/**
- * The full category set for the settings panel (T-108): distinctCategories ∪ current order, keyed
- * case-insensitively so "Group"/"group" show once, in canonical casing. Ordered categories keep
- * their position (even if no item currently carries them); the rest are appended alphabetically.
- */
-private fun buildCategoryDisplay(currentOrder: List<String>, rawCategories: List<String>): List<String> {
-    // The same clean order the web shows and both clients save (T-212): first casing wins.
-    val order = CategoryCanon.normalizeOrder(currentOrder)
-    val names = CategoryCanon.canonicalNames(rawCategories, order)
-    val orderedKeys = order.map(CategoryCanon::key)
-    val leftover = names.keys.filter { it !in orderedKeys }
-        .sortedWith(compareBy(NameOrder.names) { key: String -> names.getValue(key) }.thenBy { it })
-    return (orderedKeys + leftover).mapNotNull { names[it] }
-}
