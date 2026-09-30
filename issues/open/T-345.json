@@ -1,0 +1,13 @@
+{
+  "body": "Server admin, registered users (both clients): when a long e-mail pushes the buttons onto their own\nline, they sit at the start; they belong at the end, as beside the e-mail. The \"Reset password\"\nbutton is shorter (\"Reset pwd\" in English, shorter forms where a locale has a common one) so fewer\nrows wrap. The confirm dialog keeps its title, body and \"Reset\" button.",
+  "created_at": "2026-09-30T16:25:03+00:00",
+  "id": "T-345",
+  "labels": [
+    "design",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Admin user rows: buttons end-aligned when they wrap, shorter reset label",
+  "updated_at": "2026-09-30T16:25:03+00:00"
+}
