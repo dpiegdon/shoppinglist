@@ -381,6 +381,8 @@ export default function ListPropsPage() {
               label={t("listKind.checklist")}
               onColor="var(--color-accent)"
               offColor="var(--color-text-muted)"
+              onKnobColor="var(--color-accent-text)"
+              offKnobColor="var(--color-switch-knob)"
             />
           )}
         </div>

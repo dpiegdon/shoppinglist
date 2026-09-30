@@ -225,10 +225,10 @@ class ThemeTest {
 
     @Test
     fun `a dialog's destructive confirm is drawn in the error colour (T-343)`() {
-        // A confirm button whose label deletes, leaves or removes (or that merges two categories
-        // for good) is a DangerTextButton, never the accent TuppuTextButton. The block runs from
+        // A confirm button whose label deletes, leaves or removes is a DangerTextButton (a category
+        // merge saves, as on the web, and stays in the accent), never the accent TuppuTextButton. The block runs from
         // `confirmButton =` to the dismiss button, at most a few hundred characters.
-        val destructive = Regex("""R\.string\.\w*(delete|leave|remove|revoke)\w*|confirmCategoryMerge""")
+        val destructive = Regex("""R\.string\.\w*(delete|leave|remove|revoke)\w*""")
         val blocks = uiSources().flatMap { file ->
             val text = file.readText()
             Regex("""confirmButton = \{""").findAll(text).map { match ->

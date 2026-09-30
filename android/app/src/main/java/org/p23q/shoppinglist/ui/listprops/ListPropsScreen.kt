@@ -362,7 +362,7 @@ fun ListPropsScreen(
             onDismissRequest = viewModel::cancelCategoryMerge,
             title = { Text(UiText.res(R.string.listprops_merge_confirm_title, pending.targetName).asString()) },
             text = { Text(stringResource(R.string.listprops_merge_confirm_body)) },
-            confirmButton = { DangerTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
+            confirmButton = { TuppuTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
             dismissButton = { TuppuTextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
