@@ -30,6 +30,15 @@ export interface ItemDialogSaveValues {
   changedFields: Set<ItemChangedField>;
 }
 
+/** The statuses in the order the app's status control offers them (T-339). */
+const STATUS_ORDER: ItemStatus[] = ["backlog", "todo", "checked"];
+
+const STATUS_LABEL_KEYS = {
+  backlog: "item.status.backlog",
+  todo: "item.status.todo",
+  checked: "item.status.checked",
+} as const satisfies Record<ItemStatus, string>;
+
 /** Optional-string parity for diffing: "" and null are the same value (an absent optional field). */
 function optEqual(a: string | null, b: string | null): boolean {
   return (a || null) === (b || null);
@@ -336,7 +345,11 @@ export default function ItemDialog({
    */
   async function performSave() {
     const name = values.name.trim();
-    if (!name) return;
+    // Said inline, in the app's language and words (T-339), not by the browser's own bubble.
+    if (!name) {
+      setNameError(t("item.nameRequired"));
+      return;
+    }
 
     setNameError(null);
     setPriceError(null);
@@ -470,12 +483,18 @@ export default function ItemDialog({
         <input
           id="item-name"
           autoFocus
-          required
+          aria-required="true"
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? "item-name-error" : undefined}
           autoComplete="off"
           value={values.name}
           onChange={(e) => handleNameChange(e.target.value)}
         />
-        {nameError && <p className="error-text">{nameError}</p>}
+        {nameError && (
+          <p id="item-name-error" className="error-text" role="alert">
+            {nameError}
+          </p>
+        )}
         {suggestions.length > 0 && (
           <ul
             className="card"
@@ -607,13 +626,19 @@ export default function ItemDialog({
             id="item-price"
             inputMode="decimal"
             placeholder="0.00"
+            aria-invalid={priceError ? true : undefined}
+            aria-describedby={priceError ? "item-price-error" : undefined}
             value={values.priceAmount}
             onChange={(e) => {
               setValues((v) => ({ ...v, priceAmount: e.target.value }));
               setPriceError(null);
             }}
           />
-          {priceError && <p className="error-text">{priceError}</p>}
+          {priceError && (
+            <p id="item-price-error" className="error-text" role="alert">
+              {priceError}
+            </p>
+          )}
         </div>
         <div className="form-field" style={{ flex: "0 0 6rem", minWidth: 0 }}>
           <label htmlFor="item-currency">{t("item.currency")}</label>
@@ -621,13 +646,19 @@ export default function ItemDialog({
             id="item-currency"
             placeholder={defaultCurrency}
             maxLength={3}
+            aria-invalid={currencyError ? true : undefined}
+            aria-describedby={currencyError ? "item-currency-error" : undefined}
             value={values.priceCurrency}
             onChange={(e) => {
               setValues((v) => ({ ...v, priceCurrency: e.target.value }));
               setCurrencyError(null);
             }}
           />
-          {currencyError && <p className="error-text">{currencyError}</p>}
+          {currencyError && (
+            <p id="item-currency-error" className="error-text" role="alert">
+              {currencyError}
+            </p>
+          )}
         </div>
       </div>
       </>
@@ -671,13 +702,27 @@ export default function ItemDialog({
       )}
 
       {isEdit && (
-        <div className="form-field">
-          <label htmlFor="item-status">{t("item.statusLabel")}</label>
-          <select id="item-status" value={status} onChange={(e) => setStatus(e.target.value as ItemStatus)}>
-            <option value="todo">{t("item.status.todo")}</option>
-            <option value="checked">{t("item.status.checked")}</option>
-            <option value="backlog">{t("item.status.backlog")}</option>
-          </select>
+        // One segmented control in the app's order, Backlog · Todo · Checked (T-339): the three
+        // are one exclusive choice, so all of them are in view, as they are on the phone.
+        <fieldset className="form-field segmented-choice-field">
+          <legend>{t("item.statusLabel")}</legend>
+          <div className="segmented-choice">
+            {STATUS_ORDER.map((option) => (
+              <label key={option}>
+                <input
+                  type="radio"
+                  name="item-status"
+                  value={option}
+                  checked={status === option}
+                  onChange={() => setStatus(option)}
+                />
+                <span>
+                  {status === option && <span aria-hidden="true">✓ </span>}
+                  {t(STATUS_LABEL_KEYS[option])}
+                </span>
+              </label>
+            ))}
+          </div>
           {/* The gloss lives beside the control rather than inside the option label (T-124):
               "Backlog" alone does not survive translation, but welding the explanation into the
               label would drag it onto the Registry chips too, where there is no room. */}
@@ -686,32 +731,38 @@ export default function ItemDialog({
               {t("item.status.backlogHint")}
             </p>
           )}
+        </fieldset>
+      )}
+
+      {/* Delete sits with the fields, below the status, as the app places it (T-339): apart from
+          Cancel and Save, so the footer holds only the two ways out of the dialog. */}
+      {isEdit && onDelete && editingItem && (
+        <div style={{ marginBottom: "0.9rem" }}>
+          <button type="button" className="btn btn-danger" disabled={deleting} onClick={handleDeleteClick}>
+            {t("action.delete")}
+          </button>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "space-between", marginTop: "0.5rem" }}>
-        <div>
-          {isEdit && onDelete && editingItem && (
-            <button
-              type="button"
-              className="btn btn-danger"
-              disabled={deleting}
-              onClick={handleDeleteClick}
-            >
-              {t("action.delete")}
-            </button>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
-            {t("action.cancel")}
-          </button>
-          {/* Add / Save, following the app (T-144): the dialog is titled "Add item", so
-              labelling its confirm button "Save" there read as saving an edit. */}
-          <button type="submit" className="btn" disabled={saving}>
-            {isEdit ? t("action.save") : t("action.add")}
-          </button>
-        </div>
+      {/* Wraps rather than overflowing (T-339): at 360px a long French or German pair of labels
+          no longer pushes the dialog into scrolling sideways. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          justifyContent: "flex-end",
+          marginTop: "0.5rem",
+        }}
+      >
+        <button type="button" className="btn btn-secondary" onClick={onClose}>
+          {t("action.cancel")}
+        </button>
+        {/* Add / Save, following the app (T-144): the dialog is titled "Add item", so
+            labelling its confirm button "Save" there read as saving an edit. */}
+        <button type="submit" className="btn" disabled={saving}>
+          {isEdit ? t("action.save") : t("action.add")}
+        </button>
       </div>
     </ModalDialog>
   );

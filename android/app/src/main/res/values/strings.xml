@@ -106,6 +106,7 @@
     <!-- list -->
     <string name="list_add_item">Add item</string>
     <string name="list_empty">Nothing on this list yet. Add an item to get started.</string>
+    <string name="list_no_category">No category</string>
     <string name="list_clear_checked">Clear checked</string>
     <string name="list_show_checked">Show checked</string>
     <string name="list_edit_item">Edit %1$s</string>

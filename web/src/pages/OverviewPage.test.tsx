@@ -186,6 +186,8 @@ describe("OverviewPage with expenses lists", () => {
     const name = await screen.findByText("Trip");
     const icon = name.previousElementSibling;
     expect(icon).toHaveClass("kind-icon");
+    // An image with a name (T-339): a label on a plain span is not read, the emoji is.
+    expect(screen.getAllByRole("img")).toContain(icon);
   });
 
   it("counts a ledger's income against what it spent", async () => {

@@ -1,4 +1,4 @@
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { act, render, screen, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,7 @@ import ListPage from "./ListPage";
 import { SyncProvider } from "../hooks/SyncContext";
 import * as api from "../api/client";
 import { shortDate, todayIsoDate } from "../lib/format";
+import type { ItemObject } from "../api/contract";
 
 vi.mock("../api/client", async () => {
   const actual = await vi.importActual<typeof api>("../api/client");
@@ -515,5 +516,90 @@ describe("ListPage due dates (T-323)", () => {
     expect(pushed).toHaveLength(1);
     // Only the note: the stored due date is neither cleared nor re-stamped.
     expect(Object.keys(pushed[0].fields)).toEqual(["note"]);
+  });
+});
+
+describe("ListPage rows and headings (T-339)", () => {
+  function withNote(item: ReturnType<typeof itemObj>, note: string): ItemObject {
+    return { ...item, fields: { ...item.fields, note: clock<string | null>(note) } };
+  }
+
+  function mount(items: ItemObject[]) {
+    vi.mocked(api.getSettings).mockResolvedValue({ default_currency: "EUR", initials: "TE" });
+    vi.mocked(api.getMembers).mockResolvedValue({ members: [], invites: [] });
+    vi.mocked(api.sync).mockResolvedValue({ cursor: 2, changes: { lists: [], items: [] } });
+    vi.mocked(api.sync).mockResolvedValueOnce({ cursor: 1, changes: { lists: [listObj()], items } });
+    renderListPage();
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    cleanup();
+  });
+
+  it("each row is a checkbox that says whether the item is checked, with its edit button beside it", async () => {
+    mount([itemObj("item-1", "Milk", "todo"), itemObj("item-2", "Bread", "checked")]);
+    await screen.findByText("Milk");
+    await userEvent.click(screen.getByRole("button", { name: "Show checked" }));
+
+    const milk = screen.getByRole("checkbox", { name: /Milk/ });
+    const bread = screen.getByRole("checkbox", { name: /Bread/ });
+    expect(milk).toHaveAttribute("aria-checked", "false");
+    expect(bread).toHaveAttribute("aria-checked", "true");
+    // Beside, not inside: no control nested in another.
+    expect(milk).not.toContainElement(screen.getByRole("button", { name: "Edit Milk" }));
+    // The whole row is struck, not only the name.
+    expect(bread.parentElement!.querySelector('[data-testid="checked-item-strike"]')).not.toBeNull();
+    expect(milk.parentElement!.querySelector('[data-testid="checked-item-strike"]')).toBeNull();
+  });
+
+  it("shows an item's note under it, as the app does", async () => {
+    mount([withNote(itemObj("item-1", "Milk", "todo"), "the ripe ones")]);
+    await screen.findByText("Milk");
+
+    expect(screen.getByTestId("item-note")).toHaveTextContent("the ripe ones");
+    expect(screen.getByRole("checkbox", { name: /Milk/ })).toContainElement(screen.getByTestId("item-note"));
+  });
+
+  it("draws no heading for the uncategorised group when it is the only one", async () => {
+    mount([itemObj("item-1", "Milk", "todo")]);
+    await screen.findByText("Milk");
+
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+  });
+
+  it("names the uncategorised group No category beside other groups", async () => {
+    mount([itemObj("item-1", "Milk", "todo", "dairy"), itemObj("item-2", "Soap", "todo")]);
+    await screen.findByText("Milk");
+
+    expect(screen.getByRole("heading", { name: "dairy" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No category" })).toBeInTheDocument();
+  });
+
+  it("announces the undo toast and keeps it while the focus is on Undo", async () => {
+    mount([itemObj("item-1", "Milk", "todo")]);
+    await screen.findByText("Milk");
+    vi.mocked(api.sync).mockResolvedValueOnce({
+      cursor: 2,
+      changes: { lists: [], items: [itemObj("item-1", "Milk", "checked")] },
+    });
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Milk/ }));
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    expect(screen.getByRole("status")).toContainElement(undo);
+
+    fireEvent.focus(undo);
+    await act(async () => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+
+    fireEvent.blur(undo);
+    await act(async () => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   });
 });

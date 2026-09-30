@@ -83,6 +83,7 @@
     <string name="overview_kind_shopping">Ajoute magasins, quantité et prix à chaque article.</string>
     <string name="list_add_item">Ajouter un article</string>
     <string name="list_empty">Rien sur cette liste pour l\'instant. Ajoute un article pour commencer.</string>
+    <string name="list_no_category">Sans catégorie</string>
     <string name="list_clear_checked">Réinitialiser les articles faits</string>
     <string name="list_show_checked">Afficher les articles faits</string>
     <string name="list_edit_item">Modifier %1$s</string>

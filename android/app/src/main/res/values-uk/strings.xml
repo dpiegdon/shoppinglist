@@ -83,6 +83,7 @@
     <string name="overview_kind_shopping">Додає магазини, кількість і ціну до кожного товару.</string>
     <string name="list_add_item">Додати товар</string>
     <string name="list_empty">У цьому списку ще нічого немає. Додай товар, щоб почати.</string>
+    <string name="list_no_category">Без категорії</string>
     <string name="list_clear_checked">Скинути виконані</string>
     <string name="list_show_checked">Показати виконані</string>
     <string name="list_edit_item">Редагувати %1$s</string>

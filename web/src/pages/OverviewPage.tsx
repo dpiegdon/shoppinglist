@@ -221,7 +221,7 @@ export default function OverviewPage() {
     );
     const showBalance = members.length > 1 && mine;
     return (
-      <span style={{ textAlign: "end", fontWeight: 400, fontSize: "0.85rem" }}>
+      <span style={{ textAlign: "end", fontSize: "0.85rem" }}>
         <span className="muted" style={{ display: "block" }}>
           {(list.closed_at ?? null) !== null && `${t("expense.closed")} · `}
           {fmt.money(total, currency)}
@@ -245,33 +245,40 @@ export default function OverviewPage() {
       <div
         key={invite.id}
         className="card"
-        style={{ padding: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+        // Wraps (T-339): on a narrow screen the buttons move under the name rather than squeezing
+        // it to a few letters.
+        style={{ padding: "1rem", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem" }}
       >
-        <span className="kind-icon" aria-label={kindLabel} title={kindLabel}>
-          {listKindIcon(invite.list_kind)}
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span dir="auto" style={{ display: "block", fontWeight: 600 }}>
-            {invite.list_name}
+        <span style={{ flex: "1 1 12rem", minWidth: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span className="kind-icon" role="img" aria-label={kindLabel} title={kindLabel}>
+            {listKindIcon(invite.list_kind)}
           </span>
-          <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>
-            {t("overview.invite.from", { initials: invite.invited_by_initials })} ·{" "}
-            {formatExpiresIn(invite.expires_at, now, t)}
+          <span style={{ flex: 1, minWidth: 0 }}>
+            {/* Regular weight, as the app draws list names (T-339). */}
+            <span dir="auto" style={{ display: "block", overflowWrap: "anywhere" }}>
+              {invite.list_name}
+            </span>
+            <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>
+              {t("overview.invite.from", { initials: invite.invited_by_initials })} ·{" "}
+              {formatExpiresIn(invite.expires_at, now, t)}
+            </span>
           </span>
         </span>
-        {!ignored && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => ignoreInvite(invite.id)}
-            disabled={joiningInviteId !== null}
-          >
-            {t("action.ignore")}
+        <span style={{ display: "flex", gap: "0.5rem", marginInlineStart: "auto" }}>
+          {!ignored && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => ignoreInvite(invite.id)}
+              disabled={joiningInviteId !== null}
+            >
+              {t("action.ignore")}
+            </button>
+          )}
+          <button type="button" className="btn" onClick={() => joinInvite(invite)} disabled={joiningInviteId !== null}>
+            {t("action.join")}
           </button>
-        )}
-        <button type="button" className="btn" onClick={() => joinInvite(invite)} disabled={joiningInviteId !== null}>
-          {t("action.join")}
-        </button>
+        </span>
       </div>
     );
   }
@@ -300,7 +307,7 @@ export default function OverviewPage() {
                 padding: "1rem",
                 textDecoration: "none",
                 color: "var(--color-text)",
-                fontWeight: 600,
+                // The name in regular weight, as the app draws it (T-339).
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
@@ -308,6 +315,7 @@ export default function OverviewPage() {
             >
               <span
                 className="kind-icon"
+                role="img"
                 aria-label={t(listKindLabelKey(listKind(list)))}
                 title={t(listKindLabelKey(listKind(list)))}
               >

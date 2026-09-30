@@ -375,6 +375,69 @@ textarea:focus {
   background: var(--color-bg);
 }
 
+/* One exclusive choice inside a form (T-339), the item dialog's status: the same pill as .segmented,
+   as the app draws it with a segmented button, over native radios so the keyboard and a screen
+   reader treat it as the radio group it is. The segments share the row equally. */
+.segmented-choice-field {
+  border: none;
+  padding: 0;
+  margin-inline: 0;
+  min-width: 0;
+}
+
+.segmented-choice-field > legend {
+  padding: 0;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.segmented-choice {
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.segmented-choice label {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.segmented-choice input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.segmented-choice input + span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.segmented-choice input:checked + span {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+.segmented-choice input:focus-visible + span {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 1px;
+}
+
 /* Group headings inside a list — categories, dates (T-183): coloured and centred, as the app
    draws them. */
 .group-heading {

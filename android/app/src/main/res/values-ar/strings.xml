@@ -83,6 +83,7 @@
     <string name="overview_kind_shopping">يضيف المتاجر والكمية والسعر لكل عنصر.</string>
     <string name="list_add_item">إضافة عنصر</string>
     <string name="list_empty">لا يوجد شيء في هذه القائمة بعد. أضف عنصرًا للبدء.</string>
+    <string name="list_no_category">بلا فئة</string>
     <string name="list_clear_checked">إعادة المكتملة</string>
     <string name="list_show_checked">إظهار المكتملة</string>
     <string name="list_edit_item">تعديل %1$s</string>

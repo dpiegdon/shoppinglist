@@ -83,6 +83,7 @@
     <string name="overview_kind_shopping">各アイテムに店舗、数量、価格を追加します。</string>
     <string name="list_add_item">アイテムを追加</string>
     <string name="list_empty">このリストにはまだ何もありません。アイテムを追加してください。</string>
+    <string name="list_no_category">カテゴリなし</string>
     <string name="list_clear_checked">完了済みをリセット</string>
     <string name="list_show_checked">完了済みを表示</string>
     <string name="list_edit_item">%1$s を編集</string>

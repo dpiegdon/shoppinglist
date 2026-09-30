@@ -890,3 +890,59 @@ describe("ItemDialog as a modal dialog (T-283)", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 });
+
+describe("ItemDialog as the app has it (T-339)", () => {
+  it("says a blank name inline, tied to the field, instead of leaving it to the browser", async () => {
+    const onSave = vi.fn();
+    render(<ItemDialog listId="list-1" registryItems={[]} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const name = screen.getByLabelText("Name");
+    expect(screen.getByRole("alert")).toHaveTextContent("Name is required");
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(name).toHaveAccessibleDescription("Name is required");
+    expect(onSave).not.toHaveBeenCalled();
+
+    await userEvent.type(name, "Milk");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("offers the status as one radio group in the app's order, Backlog, Todo, Checked", async () => {
+    const item = registryItem("1", "Milk", "dairy", [], "todo");
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ItemDialog listId="list-1" registryItems={[item]} editingItem={item} defaultCurrency="EUR" onClose={vi.fn()} onSave={onSave} />,
+    );
+
+    const group = screen.getByRole("group", { name: "Status" });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios.map((radio) => radio.closest("label")!.textContent)).toEqual(["Backlog", "✓ Todo", "Checked"]);
+    expect(within(group).getByRole("radio", { name: /Todo/ })).toBeChecked();
+
+    await userEvent.click(within(group).getByRole("radio", { name: /Backlog/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ status: "backlog" }));
+  });
+
+  it("keeps Delete with the fields and the footer to Cancel and Save", () => {
+    const item = registryItem("1", "Milk", "dairy", [], "todo");
+    render(
+      <ItemDialog
+        listId="list-1"
+        registryItems={[item]}
+        editingItem={item}
+        defaultCurrency="EUR"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const save = screen.getByRole("button", { name: "Save" });
+    const footer = save.parentElement!;
+    expect(footer).toContainElement(screen.getByRole("button", { name: "Cancel" }));
+    expect(footer).not.toContainElement(screen.getByRole("button", { name: "Delete" }));
+  });
+});

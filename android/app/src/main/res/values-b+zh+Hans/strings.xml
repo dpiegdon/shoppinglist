@@ -83,6 +83,7 @@
     <string name="overview_kind_shopping">为每件物品添加商店、数量和价格。</string>
     <string name="list_add_item">添加物品</string>
     <string name="list_empty">此清单还是空的。添加一件物品开始吧。</string>
+    <string name="list_no_category">无分类</string>
     <string name="list_clear_checked">重置已完成</string>
     <string name="list_show_checked">显示已完成</string>
     <string name="list_edit_item">编辑 %1$s</string>

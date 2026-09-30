@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import AddFab from "../components/AddFab";
 import ListIcon from "../components/ListIcon";
@@ -24,6 +24,9 @@ import { useT } from "../i18n";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { errorMessage } from "../i18n/apiErrors";
 
+/** How long the "Checked off" toast offers Undo, unless the pointer or the focus holds it. */
+const UNDO_TOAST_MS = 5000;
+
 export default function ListPage() {
   const t = useT();
   const { listId } = useParams<{ listId: string }>();
@@ -32,6 +35,8 @@ export default function ListPage() {
   const [showChecked, toggleShowChecked] = useShowChecked();
   const [dialogItem, setDialogItem] = useState<ItemObject | "new" | null>(null);
   const [undo, setUndo] = useState<{ itemId: string; previousStatus: ItemStatus } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(undoTimer.current), []);
   // Transient confirmation for a category recase-all (T-108), since one item edit rewrites many.
   const [categoryToast, setCategoryToast] = useState<string | null>(null);
   // A failed toggle/undo (T-266): neither goes through a dialog, so without this a rejected push
@@ -131,8 +136,21 @@ export default function ListPage() {
     setActionError(null);
     if (next === "checked") {
       setUndo({ itemId: item.id, previousStatus: current });
-      setTimeout(() => setUndo((u) => (u?.itemId === item.id ? null : u)), 5000);
+      scheduleUndoDismiss(item.id);
     }
+  }
+
+  function scheduleUndoDismiss(itemId: string) {
+    clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndo((u) => (u?.itemId === itemId ? null : u)), UNDO_TOAST_MS);
+  }
+
+  function holdUndo() {
+    clearTimeout(undoTimer.current);
+  }
+
+  function releaseUndo() {
+    if (undo) scheduleUndoDismiss(undo.itemId);
   }
 
   async function handleUndo() {
@@ -327,10 +345,19 @@ export default function ListPage() {
         <section key={group.category} style={{ marginBottom: "1rem" }}>
           {/* Not uppercased (T-108): the category's casing is user-controlled now (fixable in the
               item dialog / list settings), so render it verbatim like the Android app does. */}
-          {/* Coloured and centred, as the app draws them (T-183). */}
-          <h2 className="group-heading" dir="auto">
-            {group.category}
-          </h2>
+          {/* Coloured and centred, as the app draws them (T-183). The uncategorised group (T-339)
+              has no heading when it is the only group, and otherwise a muted dash that a screen
+              reader reads as "No category" rather than "em dash". */}
+          {group.key !== "" ? (
+            <h2 className="group-heading" dir="auto">
+              {group.category}
+            </h2>
+          ) : groups.length > 1 ? (
+            <h2 className="group-heading" style={{ color: "var(--color-text-muted)" }}>
+              <span aria-hidden="true">{group.category}</span>
+              <span className="visually-hidden">{t("list.noCategory")}</span>
+            </h2>
+          ) : null}
           <div className="rows">
             {group.items.map((item) => (
               <ItemRow
@@ -360,47 +387,59 @@ export default function ListPage() {
 
       <div className="fab-spacer" aria-hidden="true" />
 
+      {/* The toasts (T-339): one live region that is always there, so a screen reader announces
+          what appears in it; stacked, so two never cover each other; and before the Add button,
+          so Tab from the last row reaches Undo first. */}
+      <div
+        role="status"
+        style={{
+          position: "fixed",
+          bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "0.5rem",
+          width: "max-content",
+          maxWidth: "calc(100vw - 2rem)",
+          zIndex: 60,
+        }}
+      >
+        {categoryToast && (
+          <div className="card" style={{ padding: "0.6rem 1rem", boxShadow: "var(--shadow)" }}>
+            {categoryToast}
+          </div>
+        )}
+        {undo && (
+          <div
+            className="card"
+            // Held while the pointer or the focus is on it (T-339): the five seconds must not run
+            // out on someone who has just tabbed to Undo.
+            onMouseEnter={holdUndo}
+            onMouseLeave={releaseUndo}
+            onFocus={holdUndo}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) releaseUndo();
+            }}
+            style={{
+              padding: "0.6rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              boxShadow: "var(--shadow)",
+            }}
+          >
+            <span>{t("list.checkedOff")}</span>
+            <button type="button" className="btn-secondary btn" onClick={handleUndo}>
+              {t("action.undo")}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Bottom right on every list kind (T-168), matching the app. */}
       <AddFab label={t("list.addItem")} onClick={() => setDialogItem("new")} raised={Boolean(undo || categoryToast)} />
-
-      {undo && (
-        <div
-          className="card"
-          style={{
-            position: "fixed",
-            bottom: "1rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "0.6rem 1rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.75rem",
-            boxShadow: "var(--shadow)",
-          }}
-        >
-          <span>{t("list.checkedOff")}</span>
-          <button type="button" className="btn-secondary btn" onClick={handleUndo}>
-            {t("action.undo")}
-          </button>
-        </div>
-      )}
-
-      {categoryToast && (
-        <div
-          className="card"
-          role="status"
-          style={{
-            position: "fixed",
-            bottom: "1rem",
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "0.6rem 1rem",
-            boxShadow: "var(--shadow)",
-          }}
-        >
-          {categoryToast}
-        </div>
-      )}
 
       {dialogItem && (
         <ItemDialog

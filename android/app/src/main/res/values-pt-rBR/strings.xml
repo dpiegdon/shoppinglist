@@ -83,6 +83,7 @@
     <string name="overview_kind_shopping">Adiciona lojas, quantidade e preço a cada item.</string>
     <string name="list_add_item">Adicionar item</string>
     <string name="list_empty">Nada nesta lista ainda. Adicione um item para começar.</string>
+    <string name="list_no_category">Sem categoria</string>
     <string name="list_clear_checked">Redefinir concluídos</string>
     <string name="list_show_checked">Mostrar concluídos</string>
     <string name="list_edit_item">Editar %1$s</string>
