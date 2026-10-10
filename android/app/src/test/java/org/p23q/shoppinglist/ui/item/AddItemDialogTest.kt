@@ -88,6 +88,45 @@ class AddItemDialogTest {
     }
 
     /**
+     * The list screen keeps one form view model for every dialog it opens (T-346). A save used to
+     * leave its "saved" flag set, so the next + opened a dialog that closed itself in its first
+     * frame, and only the second press worked.
+     */
+    @Test
+    fun `the dialog opened after a save stays open (T-346)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount()
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        itemsRepo.createItem(listId, "Milk", status = Status.BACKLOG)
+        val viewModel = ItemFormViewModel(itemsRepo, listsRepo, testListAccounts(db, listsRepo))
+        var open by mutableStateOf(true)
+        var dismissals = 0
+
+        composeTestRule.setContent {
+            if (open) AddItemDialog(listId = listId, onDismiss = { open = false; dismissals++ }, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Name").performTextInput("Mil")
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Milk").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals("the save closed the first dialog", 1, dismissals)
+
+        open = true
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Add item").assertExists()
+        assertEquals("the second dialog did not close itself", 1, dismissals)
+        closeWhenIdle(db, ::idleMainLooper, listOf(viewModel))
+    }
+
+    /**
      * Opening the dialog should leave you able to type immediately.
      *
      * Only the focus half is asserted: whether the soft keyboard is actually on screen is decided

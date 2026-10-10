@@ -66,7 +66,7 @@ fun AddItemDialog(
     val keyboard = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(listId) { viewModel.startAdd(listId) }
-    LaunchedEffect(state.isSaved) { if (state.isSaved) onDismiss() }
+    LaunchedEffect(state.isSaved) { if (state.isSaved) { viewModel.onClosed(); onDismiss() } }
     // Open the dialog and just start typing. The frame wait is load-bearing — this dialog is a
     // window of its own, and a focus request placed before that window exists is dropped, taking
     // the keyboard with it.

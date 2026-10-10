@@ -160,6 +160,15 @@ class ExpenseFormViewModel @Inject constructor(
     private var loadedName: String = ""
     private var loadedNote: String? = null
 
+    /**
+     * The dialog has closed on a save or delete (T-346): clear the flag that closed it. This view
+     * model belongs to the list screen and outlives the dialog, so a flag left set would close the
+     * next dialog in its first frame, before starting it could clear the flag.
+     */
+    fun onClosed() {
+        _uiState.update { it.copy(isSaved = false, isDeleted = false) }
+    }
+
     fun startAdd(listId: String, prefill: ExpensePrefill? = null): Job = viewModelScope.launch {
         this@ExpenseFormViewModel.listId = listId
         loadList()

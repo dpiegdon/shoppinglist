@@ -112,7 +112,10 @@ fun ExpenseDialog(
         if (itemId == null) viewModel.startAdd(listId, prefill) else viewModel.startEdit(itemId)
     }
     LaunchedEffect(state.isSaved, state.isDeleted) {
-        if (state.isSaved || state.isDeleted) onDismiss()
+        if (state.isSaved || state.isDeleted) {
+            viewModel.onClosed()
+            onDismiss()
+        }
     }
     // Open and start typing. The frame wait is load-bearing: this dialog is a window of its own,
     // and a focus request placed before that window exists is dropped, taking the keyboard with it.

@@ -70,8 +70,8 @@ fun EditItemDialog(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(itemId) { viewModel.startEdit(itemId) }
-    LaunchedEffect(state.isSaved) { if (state.isSaved) onDismiss() }
-    LaunchedEffect(state.isDeleted) { if (state.isDeleted) onDismiss() }
+    LaunchedEffect(state.isSaved) { if (state.isSaved) { viewModel.onClosed(); onDismiss() } }
+    LaunchedEffect(state.isDeleted) { if (state.isDeleted) { viewModel.onClosed(); onDismiss() } }
 
     // Mutually exclusive rather than stacked: only one dialog window is ever active at a time.
     if (state.isDeleteConfirmOpen) {
