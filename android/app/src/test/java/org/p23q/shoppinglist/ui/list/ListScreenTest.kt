@@ -16,6 +16,7 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -36,6 +37,9 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -264,6 +268,53 @@ class ListScreenTest {
         assertEquals(itemId, editedItemId)
         assertEquals(Status.TODO.wireValue, itemsRepo.getById(itemId)!!.status.value)
         assertFalse(viewModel.uiState.value.undoItemId == itemId)
+    }
+
+    /**
+     * The list's view model outlives the screen (T-346): leaving while "Milk checked · Undo" shows
+     * used to keep the offer, so coming back showed it again for an item checked long ago.
+     */
+    @Test
+    fun `leaving the screen while the undo snackbar shows ends the offer (T-346)`() = runBlocking<Unit> {
+        val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.Unconfined)
+            .build()
+        db.insertTestAccount(testAccount(serverUrl = serverUrl))
+        val deviceId = DeviceIdProvider { "device-1" }
+        val itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())
+        val listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Groceries")
+        val itemId = itemsRepo.createItem(listId, "Milk", status = Status.TODO)
+        val viewModel = ListViewModel(
+            SavedStateHandle(mapOf(Routes.LIST_ID_ARG to listId)),
+            itemsRepo,
+            listsRepo,
+            Syncer { SyncResult.Success(0, 0, 0, 0) },
+            SyncStatus(),
+            testListAccounts(db, listsRepo),
+            ShowCheckedStore(
+                PreferenceDataStoreFactory.create {
+                    File.createTempFile("list_screen_show_checked", ".preferences_pb").apply { deleteOnExit() }
+                },
+            ),
+        )
+        var onScreen by mutableStateOf(true)
+
+        composeTestRule.setContent {
+            if (onScreen) ListScreen(onAddItem = {}, onEditItem = {}, viewModel = viewModel)
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Milk").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) { viewModel.uiState.value.undoItemId == itemId }
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            composeTestRule.onAllNodesWithText("Undo").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onScreen = false
+        composeTestRule.waitForIdle()
+
+        assertEquals(null, viewModel.uiState.value.undoItemId)
     }
 
     @Test

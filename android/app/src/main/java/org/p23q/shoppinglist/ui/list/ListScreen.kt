@@ -73,6 +73,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
@@ -132,13 +133,21 @@ fun ListScreen(
         val name = state.undoItemName
         val itemId = state.undoItemId
         if (itemId != null && name != null) {
-            val result = snackbarHostState.showSnackbar(
-                // Hoisted above the effect: this body is a coroutine, not a composition, so it
-                // cannot call stringResource itself.
-                message = checkedMessage(name),
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Short,
-            )
+            // Leaving the screen while the snackbar shows cancels this effect (T-346). The view
+            // model outlives the screen, so the offer is cleared here, or coming back would show
+            // it again for an item checked long ago.
+            val result = try {
+                snackbarHostState.showSnackbar(
+                    // Hoisted above the effect: this body is a coroutine, not a composition, so it
+                    // cannot call stringResource itself.
+                    message = checkedMessage(name),
+                    actionLabel = undoLabel,
+                    duration = SnackbarDuration.Short,
+                )
+            } catch (cancelled: CancellationException) {
+                viewModel.dismissUndo(itemId)
+                throw cancelled
+            }
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.undoCheckOff()
             } else {

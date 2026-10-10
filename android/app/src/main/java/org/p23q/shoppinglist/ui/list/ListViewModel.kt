@@ -194,7 +194,13 @@ class ListViewModel @Inject constructor(
         _uiState.update { it.copy(undoItemId = null, undoItemName = null) }
     }
 
-    fun dismissUndo() = _uiState.update { it.copy(undoItemId = null, undoItemName = null) }
+    /**
+     * Ends the undo offer. With [itemId], only if it is still that item's offer (T-346): a screen
+     * that leaves while the snackbar shows clears its own offer, never a newer one.
+     */
+    fun dismissUndo(itemId: String? = null) = _uiState.update {
+        if (itemId == null || it.undoItemId == itemId) it.copy(undoItemId = null, undoItemName = null) else it
+    }
 
     private fun regroup() {
         val showChecked = _uiState.value.showChecked
