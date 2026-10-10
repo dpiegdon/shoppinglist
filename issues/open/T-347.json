@@ -1,0 +1,11 @@
+{
+  "body": "Release 3.6.1: admin user rows keep their buttons at the end and the reset button is shorter (T-345); the + and edit buttons open on the first press after a save, and the undo offer no longer returns after leaving the list or registry (T-346).",
+  "created_at": "2026-10-10T13:10:32+00:00",
+  "id": "T-347",
+  "labels": [
+    "release"
+  ],
+  "priority": 2,
+  "title": "Release 3.6.1",
+  "updated_at": "2026-10-10T13:10:32+00:00"
+}
