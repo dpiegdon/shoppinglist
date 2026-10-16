@@ -1,0 +1,12 @@
+{
+  "body": "Write down the iPhone port design: shared Compose UI on a multiplatform :core, built and tested on\nLinux through the Android target, iOS linked and signed on a hosted macOS CI. docs/ios-port-design.md.",
+  "created_at": "2026-10-16T21:23:38+00:00",
+  "id": "T-348",
+  "labels": [
+    "ios",
+    "design"
+  ],
+  "priority": 3,
+  "title": "iPhone port: design document",
+  "updated_at": "2026-10-16T21:23:38+00:00"
+}
