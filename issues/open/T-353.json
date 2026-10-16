@@ -1,0 +1,15 @@
+{
+  "body": "Step 3 of docs/ios-port-design.md. The iOS shell: an Xcode project (ios/) that hosts the shared UI\nin a UIViewController, wires the iOS platform implementations, and builds on a hosted macOS CI\nservice that signs and uploads to TestFlight. First milestone: log in, overview, open a list, add\nand check items, sync while open, multi-account as on Android. Blocked until the maintainer picks\nthe CI service (depends on where the repo is hosted upstream) and has an Apple Developer account.",
+  "created_at": "2026-10-16T21:23:39+00:00",
+  "deps": [
+    "T-349",
+    "T-352"
+  ],
+  "id": "T-353",
+  "labels": [
+    "ios"
+  ],
+  "priority": 4,
+  "title": "iPhone port step 3: the iOS shell, built on hosted macOS CI, TestFlight",
+  "updated_at": "2026-10-16T21:23:39+00:00"
+}
