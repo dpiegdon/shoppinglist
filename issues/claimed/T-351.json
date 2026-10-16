@@ -3,12 +3,11 @@
   "created_at": "2026-10-16T21:23:39+00:00",
   "id": "T-351",
   "labels": [
-    "ios",
-    "android",
-    "refactor"
+    "refactor",
+    "structure"
   ],
   "owner": "user",
   "priority": 3,
   "title": "iPhone port step 2b: strings and drawables as Compose resources",
-  "updated_at": "2026-10-16T21:35:11+00:00"
+  "updated_at": "2026-10-16T22:02:03+00:00"
 }
