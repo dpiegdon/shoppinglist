@@ -1,0 +1,17 @@
+{
+  "body": "Fun extra language: every string of ours in emoji on both clients (placeholders such as names, e-mails and counts stay data). Listed last in the language picker as a normal entry, labelled like the other non-English languages with \"(Emoji)\" in the current language, so a user can always find the way back. Private language code (ISO 639 local-use range, e.g. qaa); dates and numbers format as English. crossClient pairing and all string guards cover it as the tenth locale.",
+  "created_at": "2026-10-16T23:18:52+00:00",
+  "deps": [
+    "T-352"
+  ],
+  "id": "T-359",
+  "labels": [
+    "feature",
+    "ux",
+    "android",
+    "web"
+  ],
+  "priority": 4,
+  "title": "Emoji language: a tenth language in emoji, last in the picker",
+  "updated_at": "2026-10-16T23:18:52+00:00"
+}
