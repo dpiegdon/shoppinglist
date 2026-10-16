@@ -33,6 +33,14 @@ roborazzi = "1.75.0"
 # Compose Multiplatform: its Android artifacts resolve to the androidx Compose the BOM above pins.
 # 1.10.x is the newest line built against Kotlin 2.2 (1.11 needs a 2.3 stdlib).
 composeMultiplatform = "1.10.3"
+# :shared's multiplatform libraries (T-352). Each one's Android artifact is an androidx library the
+# app already uses, at no newer a version, so the Android app keeps exactly the Compose it had:
+# material3 1.9.0 is androidx material3 1.4.0, the BOM's; navigation 2.9.2 and lifecycle 2.9.6
+# (built with Kotlin 2.2) resolve to the newer androidx versions above.
+composeMaterial3Multiplatform = "1.9.0"
+composeMaterialIconsMultiplatform = "1.7.3"
+navigationComposeMultiplatform = "2.9.2"
+lifecycleMultiplatform = "2.9.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -55,6 +63,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 koin-bom = { group = "io.insert-koin", name = "koin-bom", version.ref = "koin" }
 koin-core = { group = "io.insert-koin", name = "koin-core" }
 koin-android = { group = "io.insert-koin", name = "koin-android" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose" }
 koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel" }
 koin-androidx-workmanager = { group = "io.insert-koin", name = "koin-androidx-workmanager" }
 koin-test = { group = "io.insert-koin", name = "koin-test" }
@@ -91,6 +100,14 @@ okhttp-tls = { group = "com.squareup.okhttp3", name = "okhttp-tls", version.ref 
 roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
 compose-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime", version.ref = "composeMultiplatform" }
+compose-foundation = { group = "org.jetbrains.compose.foundation", name = "foundation", version.ref = "composeMultiplatform" }
+compose-ui = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
+compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "composeMaterial3Multiplatform" }
+compose-material-icons-core = { group = "org.jetbrains.compose.material", name = "material-icons-core", version.ref = "composeMaterialIconsMultiplatform" }
+navigation-compose-multiplatform = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "navigationComposeMultiplatform" }
+lifecycle-viewmodel-compose-multiplatform = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleMultiplatform" }
+lifecycle-runtime-compose-multiplatform = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleMultiplatform" }
+androidx-datastore-preferences-core = { group = "androidx.datastore", name = "datastore-preferences-core", version.ref = "datastore" }
 compose-components-resources = { group = "org.jetbrains.compose.components", name = "components-resources", version.ref = "composeMultiplatform" }
 
 [plugins]
