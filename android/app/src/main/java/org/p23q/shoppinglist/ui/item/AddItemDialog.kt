@@ -39,8 +39,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.action_add
 import org.p23q.shoppinglist.resources.action_cancel
@@ -63,7 +63,7 @@ import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 fun AddItemDialog(
     listId: String,
     onDismiss: () -> Unit,
-    viewModel: ItemFormViewModel = hiltViewModel(),
+    viewModel: ItemFormViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val nameFocusRequester = remember { FocusRequester() }

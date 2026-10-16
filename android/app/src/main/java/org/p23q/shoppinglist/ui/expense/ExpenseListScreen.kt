@@ -43,11 +43,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
@@ -100,7 +100,7 @@ fun ExpenseListScreen(
     onOpenListProps: () -> Unit,
     /** Reimburse on a settle-up row (T-165, T-171): the pre-filled expense to open the form with. */
     onReimburse: (ExpensePrefill) -> Unit = {},
-    viewModel: ExpenseListViewModel = hiltViewModel(),
+    viewModel: ExpenseListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val myBalance = state.balances.firstOrNull { it.accountId == state.myAccountId }

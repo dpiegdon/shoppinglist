@@ -12,8 +12,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.action_cancel
 import org.p23q.shoppinglist.resources.action_join
@@ -34,7 +34,7 @@ fun RedeemDialog(
     onDismiss: () -> Unit,
     /** The login route to open: no account on this phone can take the invite yet (T-292). */
     onNeedsLogin: (loginRoute: String) -> Unit = {},
-    viewModel: RedeemViewModel = hiltViewModel(),
+    viewModel: RedeemViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 

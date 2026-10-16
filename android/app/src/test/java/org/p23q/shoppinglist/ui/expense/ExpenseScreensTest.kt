@@ -61,8 +61,8 @@ import org.robolectric.annotation.Config
 /**
  * The expense list and balances screens (T-154).
  *
- * Rendered directly with a real ViewModel over an in-memory database — the screens are Hilt-free
- * by design (T-127), which is what makes this possible at all.
+ * Rendered directly with a real ViewModel over an in-memory database — the screens take their view
+ * model as a parameter by design (T-127), which is what makes this possible at all.
  */
 @RunWith(RobolectricTestRunner::class)
 // A phone-sized screen rather than Robolectric's default 470dp: since the balances view sits under

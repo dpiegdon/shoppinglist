@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -13,7 +12,6 @@ import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.core.db.AccountEntity
-import javax.inject.Inject
 
 /**
  * The current list's name, observed live, for the top-bar title on the list / registry / list-props
@@ -21,8 +19,7 @@ import javax.inject.Inject
  * their own ViewModels know can't be read at the scaffold call site; this tiny ViewModel — scoped to
  * the same nav back-stack entry — provides it to the scaffold's title, and updates on rename/sync.
  */
-@HiltViewModel
-class ListTitleViewModel @Inject constructor(
+class ListTitleViewModel(
     savedStateHandle: SavedStateHandle,
     listsRepo: ListsRepo,
     listAccounts: ListAccounts,

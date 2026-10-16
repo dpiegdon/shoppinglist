@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.redeem
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +22,6 @@ import org.p23q.shoppinglist.resources.redeem_msg_code_required
 import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
-import javax.inject.Inject
 
 data class RedeemUiState(
     val token: String = "",
@@ -54,8 +52,7 @@ data class RedeemUiState(
  *
  * The redemption itself is [InviteJoiner]'s, shared with the overview's Join.
  */
-@HiltViewModel
-class RedeemViewModel @Inject constructor(
+class RedeemViewModel(
     private val registry: AccountRegistry,
     private val sessions: AccountSessions,
     private val syncer: Syncer,

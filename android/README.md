@@ -74,7 +74,8 @@ The build has three Gradle modules:
   Android. Its tests are plain JUnit on the JVM (`./gradlew :core:jvmTest`).
   [`core/README.md`](core/README.md) lists what it may import, what a platform
   implements, and how the iOS targets are built.
-- **`app/`** is the Android app: the Compose UI, the Hilt wiring, and everything
+- **`app/`** is the Android app: the Compose UI, the dependency wiring (Koin,
+  in `di/`), and everything
   that needs the platform, such as DataStore preferences, the Keystore-backed
   store of account tokens, WorkManager scheduling, notifications, and building the Room
   database from a `Context` together with its migrations. Where `core` needs one

@@ -17,7 +17,7 @@ import java.io.File
  * itself (not by reading the XML), so a drift between the two would fail here whichever one moved.
  */
 @RunWith(RobolectricTestRunner::class)
-class CrashLogModuleTest {
+class CrashLogLocationTest {
 
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
     private val authority = "${context.packageName}.fileprovider"
@@ -37,17 +37,17 @@ class CrashLogModuleTest {
 
     @Test
     fun `the provided log file lives in its own subdirectory of filesDir, not filesDir itself`() {
-        val writer = CrashLogModule.provideCrashLogWriter(context)
+        val writer = crashLogWriterIn(context)
 
         val parent = writer.logFile.parentFile!!
         assertEquals("crash_logs", parent.name)
         assertEquals(context.filesDir.canonicalFile, parent.parentFile!!.canonicalFile)
-        assertTrue("the module must create the directory it points at", parent.isDirectory)
+        assertTrue("crashLogWriterIn must create the directory it points at", parent.isDirectory)
     }
 
     @Test
     fun `FileProvider can share the crash log`() {
-        val writer = CrashLogModule.provideCrashLogWriter(context)
+        val writer = crashLogWriterIn(context)
         writer.append("main", RuntimeException("boom"), now = 0L)
 
         // Must not throw: file_paths.xml has to grant this exact file.

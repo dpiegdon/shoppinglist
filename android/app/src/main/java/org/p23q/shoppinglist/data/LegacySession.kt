@@ -1,8 +1,6 @@
 package org.p23q.shoppinglist.data
 
 import kotlinx.coroutines.runBlocking
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * What the single-session app kept outside the database, as the schema-9 migration needs it: the
@@ -38,8 +36,7 @@ interface LegacySessionSource {
     suspend fun discard()
 }
 
-@Singleton
-class StoredLegacySession @Inject constructor(
+class StoredLegacySession(
     private val secrets: KeystoreSecretStore,
     private val serverConfig: ServerConfig,
 ) : LegacySessionSource {

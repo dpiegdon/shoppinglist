@@ -33,9 +33,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.action_cancel
@@ -76,7 +76,7 @@ import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 import org.p23q.shoppinglist.ui.theme.registrationSwitchColors
 
 @Composable
-fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
+fun AdminScreen(viewModel: AdminViewModel = koinViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Misclick guard (T-112): deleting a user opens a confirmation naming them, even though the
     // password was already entered.

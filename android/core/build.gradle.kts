@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The app's data layer: API, Room database, repositories and sync, as Kotlin Multiplatform. The
 // JVM target is what :app builds on; the iOS targets are for an iPhone client. Platform code
-// (Context, DataStore, WorkManager, the Keystore, Hilt modules) lives in :app behind interfaces
+// (Context, DataStore, WorkManager, the Keystore, the Koin modules) lives in :app behind interfaces
 // declared here. See README.md for what may be imported and what a platform implements.
 plugins {
     alias(libs.plugins.kotlin.multiplatform)

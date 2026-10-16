@@ -17,11 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.koin.android.ext.android.inject
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
@@ -33,20 +33,18 @@ import org.p23q.shoppinglist.ui.LocalizedContent
 import org.p23q.shoppinglist.ui.ShoppingListNavHost
 import org.p23q.shoppinglist.ui.coldStartDestination
 import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var themePreferenceStore: ThemePreferenceStore
+    private val themePreferenceStore: ThemePreferenceStore by inject()
 
-    @Inject lateinit var localePreferenceStore: LocalePreferenceStore
+    private val localePreferenceStore: LocalePreferenceStore by inject()
 
-    @Inject lateinit var lastOpened: LastOpenedListStore
+    private val lastOpened: LastOpenedListStore by inject()
 
-    @Inject lateinit var accountRegistry: AccountRegistry
+    private val accountRegistry: AccountRegistry by inject()
 
-    @Inject lateinit var notificationPrefs: NotificationPrefsStore
+    private val notificationPrefs: NotificationPrefsStore by inject()
 
     // Registered up-front (required before STARTED); .launch() is deferred to maybeAsk...() below.
     private val notificationPermissionLauncher =

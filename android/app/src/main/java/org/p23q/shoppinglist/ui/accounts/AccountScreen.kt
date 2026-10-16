@@ -30,8 +30,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.account_delete_on_server
@@ -98,7 +98,7 @@ import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 fun AccountScreen(
     onGone: (AccountGone) -> Unit,
     onSignIn: () -> Unit,
-    viewModel: AccountViewModel = hiltViewModel(),
+    viewModel: AccountViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val account = state.account

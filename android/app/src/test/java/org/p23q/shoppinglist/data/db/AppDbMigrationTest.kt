@@ -34,7 +34,7 @@ import org.p23q.shoppinglist.data.LegacySessionSource
  *
  * Neither half of the real path is reachable on this hardware:
  *
- * - The framework path (what DatabaseModule uses, and what runs on a phone) needs Robolectric's
+ * - The framework path (what buildAppDb uses, and what runs on a phone) needs Robolectric's
  *   SQLite. Both of its implementations lack Linux/aarch64 binaries, which is why every test here
  *   uses BundledSQLiteDriver and why robolectric.properties pins LEGACY.
  * - The driver path cannot run migrations at all: Room 2.8's Migration.migrate(SQLiteConnection)

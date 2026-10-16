@@ -39,8 +39,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.db.label
 import org.p23q.shoppinglist.resources.Res
@@ -74,7 +74,7 @@ import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 fun EditItemDialog(
     itemId: String,
     onDismiss: () -> Unit,
-    viewModel: ItemFormViewModel = hiltViewModel(),
+    viewModel: ItemFormViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 

@@ -54,7 +54,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -69,6 +68,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AccountEntity
@@ -198,7 +198,7 @@ internal fun routeArg(value: String): String = buildString {
  */
 @Composable
 private fun liveListTitle(fallback: String): String {
-    val viewModel: ListTitleViewModel = hiltViewModel()
+    val viewModel: ListTitleViewModel = koinViewModel()
     val name by viewModel.name.collectAsStateWithLifecycle()
     return name.ifBlank { fallback }
 }
@@ -206,7 +206,7 @@ private fun liveListTitle(fallback: String): String {
 /** The list's account under its name, with several accounts (T-292); null with one. */
 @Composable
 private fun liveListSubtitle(): String? {
-    val viewModel: ListTitleViewModel = hiltViewModel()
+    val viewModel: ListTitleViewModel = koinViewModel()
     val account by viewModel.subtitleAccount.collectAsStateWithLifecycle()
     return account?.let { accountLineText(it) }
 }
@@ -320,17 +320,17 @@ private fun NavHostController.backToList(listId: String) {
 fun ShoppingListNavHost(
     navController: NavHostController = rememberNavController(),
     startDestination: String = Routes.LOGIN_PATTERN,
-    rootViewModel: RootViewModel = hiltViewModel(),
+    rootViewModel: RootViewModel = koinViewModel(),
 ) {
-    // Obtained here, not inside each screen: Nav is already inside the Hilt graph, and keeping
-    // the screens Hilt-free is what lets them be rendered directly in unit tests (T-127).
-    val localeViewModel: LocaleViewModel = hiltViewModel()
+    // Obtained here, not inside each screen: Nav already resolves view models from Koin, and
+    // keeping the screens free of it is what lets them be rendered directly in unit tests (T-127).
+    val localeViewModel: LocaleViewModel = koinViewModel()
     val selectedLocale by localeViewModel.locale.collectAsStateWithLifecycle()
 
     // Update check (T-135). ON_START rather than a one-shot LaunchedEffect: a phone that stays on
     // this app for days would otherwise never notice a release. UpdateChecker owns the rate limit,
     // so firing this on every foreground costs nothing.
-    val updateViewModel: UpdateViewModel = hiltViewModel()
+    val updateViewModel: UpdateViewModel = koinViewModel()
     val availableUpdate by updateViewModel.availableUpdate.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updateViewModel.check() }
 
@@ -462,7 +462,7 @@ fun ShoppingListNavHost(
                 // An expenses list shares almost nothing with a shopping list on screen, so it
                 // gets its own screen rather than a branch inside ListScreen (T-154). Nothing is
                 // rendered until the kind is known: guessing would flash the wrong screen.
-                val listKindViewModel: ListTitleViewModel = hiltViewModel()
+                val listKindViewModel: ListTitleViewModel = koinViewModel()
                 val kind by listKindViewModel.kind.collectAsStateWithLifecycle()
                 // However the list was reached, it is the last one opened (T-300).
                 LaunchedEffect(listId) { listKindViewModel.opened() }
@@ -586,7 +586,7 @@ fun ShoppingListNavHost(
         composable(Routes.ADMIN_PATTERN) {
             // The same instance AdminScreen would get: this entry's. Its server under the title,
             // since each admin account opens its own (T-300).
-            val adminViewModel: AdminViewModel = hiltViewModel()
+            val adminViewModel: AdminViewModel = koinViewModel()
             AppDrawerScaffold(
                 navController = navController,
                 title = stringResource(Res.string.nav_server_admin),
@@ -687,13 +687,13 @@ private fun openDownload(context: Context, downloadUrl: String) {
 internal fun AppDrawerScaffold(
     navController: NavHostController,
     title: String,
-    drawerViewModel: DrawerViewModel = hiltViewModel(),
+    drawerViewModel: DrawerViewModel = koinViewModel(),
     // A second, smaller line under the title (T-292): the list's account, with several accounts.
     subtitle: String? = null,
     // When set, the top-bar title becomes tappable (the list screen uses it to jump to Overview).
     onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
-    syncStatusViewModel: SyncStatusViewModel = hiltViewModel(),
+    syncStatusViewModel: SyncStatusViewModel = koinViewModel(),
     content: @Composable () -> Unit,
 ) {
     val syncState by syncStatusViewModel.state.collectAsStateWithLifecycle()

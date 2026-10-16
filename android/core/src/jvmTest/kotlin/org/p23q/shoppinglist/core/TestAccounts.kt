@@ -95,7 +95,7 @@ suspend fun AppDb.itemsToPush(): List<ItemEntity> = accountDao().all().flatMap {
 fun testListsRepo(db: AppDb): ListsRepo = ListsRepo(db, DeviceIdProvider { "this-device" }, FakeSyncTrigger())
 
 /**
- * The account wiring the app builds in Hilt, over a test database: registry, secrets, sessions
+ * The account wiring the app builds in Koin, over a test database: registry, secrets, sessions
  * and the sync status, the API clients on OkHttp.
  */
 class TestAccounts(

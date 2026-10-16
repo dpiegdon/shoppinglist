@@ -5,8 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
 }
 
@@ -109,9 +107,13 @@ dependencies {
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.navigation.compose)
 
-    implementation(libs.hilt.android)
-    implementation(libs.hilt.navigation.compose)
-    ksp(libs.hilt.android.compiler)
+    // Dependency injection (T-350): the wiring is in di/. koin-core and koin-compose-viewmodel are
+    // multiplatform, so the common modules and koinViewModel() can move to :shared as they are.
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose.viewmodel)
+    implementation(libs.koin.androidx.workmanager)
 
     // The @Database, entities and DAOs live in :core, which runs the Room compiler; this module
     // only builds the database (Room.databaseBuilder) and holds its migrations. room-ktx isn't
@@ -124,8 +126,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.security.crypto)
@@ -134,6 +134,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     testImplementation(libs.junit)
+    testImplementation(platform(libs.koin.bom))
+    testImplementation(libs.koin.test)
+    testImplementation(libs.koin.test.junit4)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(platform(libs.androidx.compose.bom))
@@ -162,25 +165,6 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
-}
-
-// androidx.hilt:hilt-work's Gradle module metadata requires com.google.dagger:hilt-android:2.59
-// (and transitively dagger/hilt-core/dagger-lint-aar at the same version), which Gradle's default
-// highest-wins resolution picks over our pinned 2.57.2 — but the Hilt Gradle plugin and
-// hilt-android-compiler both stay at 2.57.2 (libs.versions.toml), so the annotation processor
-// generates code (e.g. Hilt_MainActivity.java) against a runtime API that no longer matches,
-// producing "cannot find symbol: getSavedStateHandleHolder()". Force the whole Dagger/Hilt family
-// back to 2.57.2 so compiler, plugin, and runtime all agree; hilt-work's actual code only needs
-// long-stable hilt-core APIs, so the downgrade is safe.
-configurations.all {
-    resolutionStrategy {
-        force(
-            "com.google.dagger:hilt-android:${libs.versions.hilt.get()}",
-            "com.google.dagger:dagger:${libs.versions.hilt.get()}",
-            "com.google.dagger:hilt-core:${libs.versions.hilt.get()}",
-            "com.google.dagger:dagger-lint-aar:${libs.versions.hilt.get()}",
-        )
-    }
 }
 
 // Robolectric needs JDK 21 to shadow Android SDK 36 (compileSdk here), even though the rest of

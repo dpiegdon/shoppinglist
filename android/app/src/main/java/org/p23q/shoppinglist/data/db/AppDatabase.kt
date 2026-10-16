@@ -4,21 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.normalizeServerUrl
 import org.p23q.shoppinglist.core.account.serverLabel
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
-import org.p23q.shoppinglist.core.db.ItemDao
-import org.p23q.shoppinglist.core.db.ListDao
 import org.p23q.shoppinglist.data.LegacySessionSource
 import java.util.UUID
-import javax.inject.Singleton
 
 /** Adds items.syncBlocked (T-32 row quarantine). Non-destructive: existing rows keep their data. */
 val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -334,23 +326,12 @@ private const val ITEM_COLUMNS_9 =
         "`note_updatedBy`, `status_value`, `status_updatedAt`, `status_updatedBy`, `expense_value`, " +
         "`expense_updatedAt`, `expense_updatedBy`, `deleted_value`, `deleted_updatedAt`, `deleted_updatedBy`"
 
-@Module
-@InstallIn(SingletonComponent::class)
-object DatabaseModule {
-    @Provides
-    @Singleton
-    fun provideAppDb(@ApplicationContext context: Context, legacy: LegacySessionSource): AppDb =
-        Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
-            .addMigrations(
-                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10, MIGRATION_10_11,
-                MIGRATION_11_12, MIGRATION_12_13,
-            )
-            .build()
-
-    @Provides
-    fun provideListDao(db: AppDb): ListDao = db.listDao()
-
-    @Provides
-    fun provideItemDao(db: AppDb): ItemDao = db.itemDao()
-}
+/** The phone's database, with every migration. One per process: see di/PlatformModule.kt. */
+fun buildAppDb(context: Context, legacy: LegacySessionSource): AppDb =
+    Room.databaseBuilder(context, AppDb::class.java, "shoppinglist.db")
+        .addMigrations(
+            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+            MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10, MIGRATION_10_11,
+            MIGRATION_11_12, MIGRATION_12_13,
+        )
+        .build()

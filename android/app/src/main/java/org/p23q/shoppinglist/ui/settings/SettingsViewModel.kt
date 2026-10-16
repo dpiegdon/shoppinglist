@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +39,6 @@ import org.p23q.shoppinglist.resources.settings_last_invite_check
 import org.p23q.shoppinglist.resources.settings_last_invite_check_never
 import org.p23q.shoppinglist.resources.settings_msg_no_crash_logs
 import org.p23q.shoppinglist.ui.UiText
-import javax.inject.Inject
 
 data class SettingsUiState(
     val theme: ThemePreference = ThemePreference.SYSTEM,
@@ -68,8 +66,7 @@ data class SettingsUiState(
  * What is this phone's rather than an account's: theme, language, notifications and diagnostics.
  * Everything an account owns lives on its Account screen (T-292).
  */
-@HiltViewModel
-class SettingsViewModel @Inject constructor(
+class SettingsViewModel(
     private val themePreferenceStore: ThemePreferenceStore,
     private val crashLogWriter: CrashLogWriter,
     private val notificationPrefs: NotificationPrefsStore,

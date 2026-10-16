@@ -10,8 +10,6 @@ import org.p23q.shoppinglist.core.api.AppVersionResponse
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.update.compareVersions
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** A newer app package the server is offering. */
 data class AvailableUpdate(val version: String, val downloadUrl: String)
@@ -35,8 +33,7 @@ sealed interface CheckOutcome {
  * to answer, network down, version unparseable, already asked about. An update check that
  * interrupts you to report that it failed is worse than no update check.
  */
-@Singleton
-class UpdateChecker @Inject constructor(
+class UpdateChecker(
     private val registry: AccountRegistry,
     private val sessions: AccountSessions,
     private val prefs: UpdatePrefsStore,

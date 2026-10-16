@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -10,7 +9,6 @@ import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.deviceLocale
-import javax.inject.Inject
 
 /**
  * Backs the language chooser (T-127) wherever it appears.
@@ -22,8 +20,7 @@ import javax.inject.Inject
  * Seeded with the device language rather than a fixed default, so the control never flashes
  * "English" before the stored preference arrives.
  */
-@HiltViewModel
-class LocaleViewModel @Inject constructor(
+class LocaleViewModel(
     private val store: LocalePreferenceStore,
 ) : ViewModel() {
 

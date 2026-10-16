@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.expense
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +28,6 @@ import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.list.LIVE_SYNC_INTERVAL_MS
 import java.io.IOException
-import javax.inject.Inject
 
 /** One expense, with its money tuple already decoded for rendering. */
 data class ExpenseRow(val item: ItemEntity, val expense: Expense)
@@ -100,8 +98,7 @@ data class ExpenseListUiState(
  * The roster comes off the synced list row rather than the members endpoint, so this screen and
  * its form work offline — that is the whole reason T-152 put it there.
  */
-@HiltViewModel
-class ExpenseListViewModel @Inject constructor(
+class ExpenseListViewModel(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,

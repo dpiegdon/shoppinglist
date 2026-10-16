@@ -13,11 +13,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import java.util.Locale
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
@@ -35,15 +30,6 @@ import org.p23q.shoppinglist.resources.notif_changed_items_lists
 import org.p23q.shoppinglist.resources.notif_channel_collaborator
 import org.p23q.shoppinglist.resources.notif_shopping_lists
 import org.p23q.shoppinglist.ui.getString
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class CollaboratorChangeNotifierModule {
-    @Binds
-    abstract fun bindNotifier(poster: CollaboratorChangeNotificationPoster): CollaboratorChangeNotifier
-}
 
 /**
  * Turns SyncEngine's raw collaborator-change detections into at most ONE notification per sync
@@ -53,9 +39,8 @@ abstract class CollaboratorChangeNotifierModule {
  * notification id means a newer sync's notification replaces a stale unread one. Each pass records
  * the first gate that stopped it, or that it posted, for Settings → Diagnostics (T-318).
  */
-@Singleton
-class CollaboratorChangeNotificationPoster @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class CollaboratorChangeNotificationPoster(
+    private val context: Context,
     private val prefs: NotificationPrefsStore,
     private val foregroundState: AppForegroundState,
     private val localePreferences: LocalePreferenceStore,

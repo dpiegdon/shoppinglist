@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.list
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +32,6 @@ import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.ui.Routes
 import java.io.IOException
 import java.util.Locale
-import javax.inject.Inject
 
 /** A category header ([category] `null` = uncategorized, rendered last) plus its sorted items. */
 data class ItemGroup(val category: String?, val items: List<ItemEntity>)
@@ -67,8 +65,7 @@ data class ListUiState(
     val exitingItemIds: Set<String> = emptySet(),
 )
 
-@HiltViewModel
-class ListViewModel @Inject constructor(
+class ListViewModel(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,

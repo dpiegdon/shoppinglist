@@ -1,8 +1,6 @@
 package org.p23q.shoppinglist.data
 
 import org.p23q.shoppinglist.ui.login.LoginMode
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Carries an invite token across a login (T-28). When an invite cannot be redeemed until an
@@ -18,8 +16,7 @@ import javax.inject.Singleton
  * In-memory (process-scoped): the flow is tap-link -> log in -> redeem within one app session, so
  * this needn't survive a process death (if it does, the user just re-opens the link).
  */
-@Singleton
-class PendingInviteHolder @Inject constructor() {
+class PendingInviteHolder {
     private var pending: PendingInvite? = null
 
     /**

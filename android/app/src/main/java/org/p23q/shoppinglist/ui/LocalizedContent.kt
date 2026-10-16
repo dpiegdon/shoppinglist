@@ -121,10 +121,9 @@ fun localizedContext(base: Context, locale: AppLocale): Context {
     //
     // createConfigurationContext returns a bare ContextImpl, which is NOT a ContextWrapper — so
     // anything that walks up the context chain looking for the Activity dead-ends at it.
-    // hiltViewModel() does exactly that walk, and since LocalizedContent overrides LocalContext
-    // for the whole app, EVERY screen's `viewModel: X = hiltViewModel()` default blew up on the
-    // first frame: "Expected an activity context for creating a HiltViewModelFactory but instead
-    // found: android.app.ContextImpl". The app could not start.
+    // LocalizedContent overrides LocalContext for the whole app, so every such walk below it
+    // fails: with Hilt, whose view model factory made exactly that walk, EVERY screen's view
+    // model default blew up on the first frame and the app could not start (T-129).
     //
     // A ContextThemeWrapper keeps `base` reachable through getBaseContext(), so the walk still
     // finds the Activity, while applyOverrideConfiguration supplies the localized resources.

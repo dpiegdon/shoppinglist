@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.registry
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +15,6 @@ import org.p23q.shoppinglist.core.NameOrder
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.ui.Routes
-import javax.inject.Inject
 
 data class RegistryUiState(
     val query: String = "",
@@ -27,8 +25,7 @@ data class RegistryUiState(
 
 /** Notes: "all items" browse/search across every status, reachable from the list's menu. */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class RegistryViewModel @Inject constructor(
+class RegistryViewModel(
     savedStateHandle: SavedStateHandle,
     private val itemsRepo: ItemsRepo,
 ) : ViewModel() {

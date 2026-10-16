@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.admin
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +30,6 @@ import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
-import javax.inject.Inject
 
 data class AdminUiState(
     /** null until the list has been asked for (T-221); the console does not pull it on open. */
@@ -65,7 +63,6 @@ data class AdminUiState(
  * Admin-only server console (T-107): registration toggle + reset/delete users, all with step-up.
  * One server's: the account the route names, on its server with its token (T-292).
  */
-@HiltViewModel
 class AdminViewModel internal constructor(
     private val api: suspend () -> Api,
     /** The server's id for the signed-in admin, whom the console never offers to delete. */
@@ -74,7 +71,7 @@ class AdminViewModel internal constructor(
     val server: String? = null,
 ) : ViewModel() {
 
-    @Inject constructor(
+    constructor(
         savedStateHandle: SavedStateHandle,
         sessions: AccountSessions,
         registry: AccountRegistry,

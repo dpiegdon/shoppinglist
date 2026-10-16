@@ -1,29 +1,19 @@
 package org.p23q.shoppinglist.data.crash
 
 import android.content.Context
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.inject.Singleton
 
-@Module
-@InstallIn(SingletonComponent::class)
-object CrashLogModule {
-    @Provides
-    @Singleton
-    fun provideCrashLogWriter(@ApplicationContext context: Context): CrashLogWriter {
-        // In its own subdirectory (T-265), not filesDir directly: file_paths.xml grants exactly
-        // this folder to the "Share crash logs" intent, rather than the whole of filesDir — which
-        // also holds the app's DataStore files — the way a files-path rooted at "." did.
-        val dir = File(context.filesDir, "crash_logs").apply { mkdirs() }
-        return CrashLogWriter(File(dir, "crash_log.txt"))
-    }
+/**
+ * The crash log in its own subdirectory (T-265), not filesDir directly: file_paths.xml grants exactly
+ * this folder to the "Share crash logs" intent, rather than the whole of filesDir — which also holds
+ * the app's DataStore files — the way a files-path rooted at "." did.
+ */
+fun crashLogWriterIn(context: Context): CrashLogWriter {
+    val dir = File(context.filesDir, "crash_logs").apply { mkdirs() }
+    return CrashLogWriter(File(dir, "crash_log.txt"))
 }
 
 /**

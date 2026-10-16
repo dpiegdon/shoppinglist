@@ -57,12 +57,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import org.jetbrains.compose.resources.StringResource
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
@@ -132,7 +132,7 @@ fun ExpenseDialog(
     itemId: String?,
     onDismiss: () -> Unit,
     prefill: ExpensePrefill? = null,
-    viewModel: ExpenseFormViewModel = hiltViewModel(),
+    viewModel: ExpenseFormViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val nameFocusRequester = remember { FocusRequester() }

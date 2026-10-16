@@ -175,7 +175,7 @@ class DtoTest {
     // *present* "" still overwrites a custom override. A currency-only save must be able to omit
     // the key entirely when the client doesn't yet know the account's initials (e.g. offline
     // start racing the best-effort preload) instead of resending a literal "". These tests use
-    // the app's actual configured Json instance (AppJson, which :app's JsonModule provides) rather
+    // the app's actual configured Json instance (AppJson, which :app's Koin wiring provides) rather
     // than a fresh default Json() — the omission depends on that instance's encodeDefaults
     // setting, not just the DTO's declared default.
     @Test

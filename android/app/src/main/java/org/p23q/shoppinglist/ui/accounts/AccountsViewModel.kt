@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.accounts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,7 +16,6 @@ import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.sync.SyncState
 import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.ui.overviewOrder
-import javax.inject.Inject
 
 /** What an account's row says about it, in the order the checks run. */
 enum class AccountStatus {
@@ -50,8 +48,7 @@ data class AccountRow(
  * The Accounts screen (T-292): every account on this phone in the order the overview lists them
  * (the user's order, the local area among them), and that order.
  */
-@HiltViewModel
-class AccountsViewModel @Inject constructor(
+class AccountsViewModel(
     private val registry: AccountRegistry,
     syncStatus: SyncStatus,
 ) : ViewModel() {

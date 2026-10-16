@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.overview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +30,6 @@ import org.p23q.shoppinglist.ui.overviewOrder
 import org.p23q.shoppinglist.ui.redeem.InviteJoin
 import org.p23q.shoppinglist.ui.redeem.InviteJoiner
 import java.io.IOException
-import javax.inject.Inject
 
 /** What an expenses list's card shows instead of an open-item count. */
 data class ExpenseSummary(
@@ -115,8 +113,7 @@ data class OverviewUiState(
         }
 }
 
-@HiltViewModel
-class OverviewViewModel @Inject constructor(
+class OverviewViewModel(
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,
     private val registry: AccountRegistry,

@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.listprops
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +37,6 @@ import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.overviewOrder
 import java.io.IOException
-import javax.inject.Inject
 
 data class ListPropsUiState(
     val name: String = "",
@@ -115,8 +113,7 @@ data class ListPropsUiState(
 data class PendingCategoryMerge(val fromName: String, val newName: String, val targetName: String)
 
 /** Notes: rename, category order, members/invites, share, unsubscribe — all "list properties." */
-@HiltViewModel
-class ListPropsViewModel @Inject constructor(
+class ListPropsViewModel(
     savedStateHandle: SavedStateHandle,
     private val listsRepo: ListsRepo,
     private val itemsRepo: ItemsRepo,

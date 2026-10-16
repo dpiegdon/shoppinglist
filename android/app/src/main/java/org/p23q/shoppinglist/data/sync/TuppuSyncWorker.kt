@@ -2,19 +2,15 @@ package org.p23q.shoppinglist.data.sync
 
 import android.content.Context
 import android.util.Log
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 
-@HiltWorker
-class TuppuSyncWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted params: WorkerParameters,
+class TuppuSyncWorker(
+    context: Context,
+    params: WorkerParameters,
     private val syncEngine: SyncEngine,
     private val notificationPrefs: NotificationPrefsStore,
     private val inviteCheck: BackgroundInviteCheck,

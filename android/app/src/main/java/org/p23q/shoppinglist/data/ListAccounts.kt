@@ -13,14 +13,13 @@ import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.repo.ListsRepo
-import javax.inject.Inject
 
 /**
  * The account a list belongs to, for the screens that show one list (T-292): its row, its API
  * client and whether the phone holds others. A list never moves between accounts, so the list row
  * is all a screen needs to know whose it is.
  */
-class ListAccounts @Inject constructor(
+class ListAccounts(
     private val listsRepo: ListsRepo,
     private val registry: AccountRegistry,
     private val sessions: AccountSessions,

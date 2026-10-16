@@ -82,7 +82,7 @@
             android:exported="false"
             tools:replace="android:exported" />
 
-        <!-- ShoppingListApp provides its own WorkManager Configuration (HiltWorkerFactory), which
+        <!-- ShoppingListApp provides its own WorkManager Configuration (Koin's KoinWorkerFactory), which
              requires disabling WorkManager's default auto-initialization. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

@@ -34,9 +34,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
@@ -74,11 +74,11 @@ import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 fun LoginScreen(
     /** Null: go back to where the form was opened from (add and re-sign-in modes). */
     onLoginSuccess: (startDestination: String?) -> Unit,
-    viewModel: LoginViewModel = hiltViewModel(),
-    // Plain hoisted state rather than a second hiltViewModel() default (T-127): this screen is
-    // rendered directly in unit tests against a fake LoginViewModel, and a Hilt-resolved default
-    // fails there because the test host is a bare ComponentActivity, not a Hilt component. The
-    // defaults keep those tests needing no new wiring; Nav supplies the real values.
+    viewModel: LoginViewModel = koinViewModel(),
+    // Plain hoisted state rather than a second koinViewModel() default (T-127): this screen is
+    // rendered directly in unit tests against a fake LoginViewModel, and a Koin-resolved default
+    // fails there because the tests start no Koin. The defaults keep those tests needing no new
+    // wiring; Nav supplies the real values.
     selectedLocale: AppLocale = deviceLocale(),
     onSelectLocale: (AppLocale) -> Unit = {},
     /** Opens the app package a server newer than this build offers (T-298). */

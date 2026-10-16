@@ -4,14 +4,13 @@ import android.util.Log
 import kotlinx.coroutines.CancellationException
 import org.p23q.shoppinglist.core.sync.InviteChecker
 import org.p23q.shoppinglist.data.AppForegroundState
-import javax.inject.Inject
 
 /**
  * The invite check [TuppuSyncWorker] runs after each sync (T-319). Skipped while the app is in
  * the foreground (T-327): the overview fetches invites itself then, and a notification would not
  * be posted anyway, so the request would be spent only on recording "app in foreground".
  */
-class BackgroundInviteCheck @Inject constructor(
+class BackgroundInviteCheck(
     private val inviteChecker: InviteChecker,
     private val foreground: AppForegroundState,
 ) {

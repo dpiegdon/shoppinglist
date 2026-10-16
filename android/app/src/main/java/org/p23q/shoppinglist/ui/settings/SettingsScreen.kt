@@ -30,9 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.deviceLocale
@@ -57,8 +57,8 @@ import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel(),
-    // Plain hoisted state, not a second hiltViewModel() default — see LoginScreen (T-127).
+    viewModel: SettingsViewModel = koinViewModel(),
+    // Plain hoisted state, not a second koinViewModel() default — see LoginScreen (T-127).
     selectedLocale: AppLocale = deviceLocale(),
     onSelectLocale: (AppLocale) -> Unit = {},
 ) {

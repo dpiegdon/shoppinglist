@@ -41,7 +41,7 @@ import org.p23q.shoppinglist.ui.theme.TuppuButton
  * app (or cannot be asked), the notice says so and offers Retry, because only whoever runs the
  * server can fix that.
  *
- * Hoisted state throughout rather than a hiltViewModel() default, so it can be rendered straight
+ * Hoisted state throughout rather than a koinViewModel() default, so it can be rendered straight
  * from a unit test — see LoginScreen (T-127); [org.p23q.shoppinglist.ui.ShoppingListNavHost] hands
  * it the one UpdateViewModel the whole app shares.
  */

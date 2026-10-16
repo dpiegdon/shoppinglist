@@ -13,23 +13,14 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import java.util.Locale
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
-import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
-import org.p23q.shoppinglist.core.sync.InviteChecker
 import org.p23q.shoppinglist.core.sync.InviteNotifier
 import org.p23q.shoppinglist.core.sync.PendingInvite
-import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.accountLine
@@ -38,25 +29,6 @@ import org.p23q.shoppinglist.resources.notif_channel_invites
 import org.p23q.shoppinglist.resources.notif_invites_count
 import org.p23q.shoppinglist.resources.overview_invite_from
 import org.p23q.shoppinglist.ui.getString
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class InviteNotifierModule {
-    @Binds
-    abstract fun bindInviteNotifier(poster: InviteNotificationPoster): InviteNotifier
-
-    companion object {
-        @Provides
-        fun provideInviteChecker(
-            registry: AccountRegistry,
-            sessions: AccountSessions,
-            syncStatus: SyncStatus,
-            notifier: InviteNotifier,
-        ): InviteChecker = InviteChecker(registry, sessions, syncStatus, notifier)
-    }
-}
 
 /**
  * Posts the invites that are new to this phone (T-319) as ONE notification per check: a single
@@ -67,9 +39,8 @@ abstract class InviteNotifierModule {
  * gate stopped stays unseen, so a later check announces it. Gates, in order: app foregrounded, the
  * Invitations switch (Settings), the notification permission. Each check records what decided it, for Settings → Diagnostics.
  */
-@Singleton
-class InviteNotificationPoster @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class InviteNotificationPoster(
+    private val context: Context,
     private val prefs: NotificationPrefsStore,
     private val foregroundState: AppForegroundState,
     private val localePreferences: LocalePreferenceStore,

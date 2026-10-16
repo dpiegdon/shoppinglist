@@ -1,9 +1,5 @@
 package org.p23q.shoppinglist.data
 
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import org.p23q.shoppinglist.core.account.AccountRegistry
 
 /**
@@ -14,11 +10,4 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 fun interface LocalArea {
     /** True when the area was created now, false when the phone has one already. */
     suspend fun create(): Boolean
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-object LocalAreaModule {
-    @Provides
-    fun provideLocalArea(registry: AccountRegistry): LocalArea = LocalArea { registry.addLocal() != null }
 }

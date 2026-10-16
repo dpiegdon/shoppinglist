@@ -22,18 +22,19 @@ import org.robolectric.RobolectricTestRunner
  *
  * This existed as createConfigurationContext(), which returns a bare ContextImpl — NOT a
  * ContextWrapper. Anything that walks up the context chain looking for an Activity therefore
- * dead-ends at it. hiltViewModel() does exactly that walk, and because LocalizedContent overrides
- * LocalContext for the entire app, every screen's `viewModel = hiltViewModel()` default threw on
- * the first frame and the app could not start at all.
+ * dead-ends at it. Hilt's hiltViewModel() made exactly that walk, and because LocalizedContent
+ * overrides LocalContext for the entire app, every screen's view model default threw on the first
+ * frame and the app could not start at all. Koin's koinViewModel() takes the ViewModelStoreOwner
+ * instead, but the theme still makes the walk for the window's system bars (findActivity).
  *
  * Nothing caught it: the Compose tests render each screen directly against a fake ViewModel, so
- * they never go through MainActivity -> LocalizedContent -> hiltViewModel(). This test closes that
- * specific hole rather than the general one — it asserts the property hiltViewModel() depends on.
+ * they never go through MainActivity -> LocalizedContent. This test closes that specific hole
+ * rather than the general one — it asserts the property such a walk depends on.
  */
 @RunWith(RobolectricTestRunner::class)
 class LocalizedContextTest {
 
-    /** The walk HiltViewModelFactory performs. */
+    /** The walk to the Activity, as findActivity() makes it. */
     private fun findActivity(context: Context): Activity? {
         var current = context
         while (current is ContextWrapper) {
@@ -50,8 +51,8 @@ class LocalizedContextTest {
         val localized = localizedContext(activity, AppLocale.GERMAN)
 
         assertNotNull(
-            "hiltViewModel() walks the context chain for an Activity; if this is null the app " +
-                "crashes on its first frame",
+            "the context chain must lead to the Activity; if this is null, whatever looks for it " +
+                "below LocalizedContent fails",
             findActivity(localized),
         )
         assertEquals(activity, findActivity(localized))

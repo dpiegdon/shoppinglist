@@ -65,7 +65,7 @@ const val SOURCE_CODE_URL = "https://github.com/dpiegdon/shoppinglist"
 /**
  * What the app is and where its name comes from (T-224).
  *
- * Hoisted state throughout rather than a hiltViewModel() default, so the screen can be rendered
+ * Hoisted state throughout rather than a koinViewModel() default, so the screen can be rendered
  * straight from a unit test — see LoginScreen (T-127). [Nav] hands it the one UpdateViewModel the
  * whole NavHost shares.
  *

@@ -5,30 +5,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.account.SecretStore
 import java.io.IOException
 import java.security.GeneralSecurityException
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class SecretStoreModule {
-    @Binds
-    abstract fun bindSecretStore(store: KeystoreSecretStore): SecretStore
-
-    @Binds
-    abstract fun bindLastOpenedListStore(store: KeystoreSecretStore): LastOpenedListStore
-
-    @Binds
-    abstract fun bindLegacySessionSource(source: StoredLegacySession): LegacySessionSource
-}
 
 /**
  * The bearer tokens, one per local account id, in the Keystore-backed EncryptedSharedPreferences
@@ -37,8 +17,7 @@ abstract class SecretStoreModule {
  * The file also still holds, on an install upgraded from the single-session app, that app's keys;
  * [StoredLegacySession] reads them once for the database migration and then deletes them.
  */
-@Singleton
-class KeystoreSecretStore @Inject constructor(@ApplicationContext context: Context) : SecretStore, LastOpenedListStore {
+class KeystoreSecretStore(context: Context) : SecretStore, LastOpenedListStore {
     // Built with one-shot recovery: if the encrypted keyset can't be decrypted with this device's
     // Keystore master key (a restored/transferred store on a new device), drop the file and rebuild
     // fresh so the app starts logged-out instead of crash-looping (T-37). Backup is also off (see the

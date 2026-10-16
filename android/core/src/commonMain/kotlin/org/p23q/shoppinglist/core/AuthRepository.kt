@@ -131,7 +131,7 @@ interface AuthRepository {
 }
 
 /**
- * Built by :app's AuthRepositoryModule, which supplies [deviceName] (the label the server shows in
+ * Built by :app's Koin wiring, whose platform module supplies [deviceName] (the label the server shows in
  * the account's session list) from the platform.
  */
 class AuthRepositoryImpl(

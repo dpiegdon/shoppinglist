@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,6 +73,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.DueDate
 import org.p23q.shoppinglist.core.DueState
@@ -111,7 +111,7 @@ fun ListScreen(
     onEditItem: (itemId: String) -> Unit,
     onOpenRegistry: () -> Unit = {},
     onOpenListProps: () -> Unit = {},
-    viewModel: ListViewModel = hiltViewModel(),
+    viewModel: ListViewModel = koinViewModel(),
     /** Today's date, what the due dates are read against: a seam for the screenshot tests. */
     currentDate: () -> LocalDate = LocalDate::now,
 ) {

@@ -108,7 +108,7 @@ fun testApi(
 }
 
 /**
- * The account wiring the app builds in Hilt, over a test database: registry, secrets, sessions
+ * The account wiring the app builds in Koin (di/), over a test database: registry, secrets, sessions
  * and the sync status.
  */
 class TestAccounts(

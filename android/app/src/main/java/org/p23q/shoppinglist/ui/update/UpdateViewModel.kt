@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.update
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,7 +13,6 @@ import org.p23q.shoppinglist.data.update.AvailableUpdate
 import org.p23q.shoppinglist.data.update.CheckOutcome
 import org.p23q.shoppinglist.data.update.UpdateChecker
 import org.p23q.shoppinglist.data.update.UpdatePrefsStore
-import javax.inject.Inject
 
 /** What the About screen says about updates (T-149; it was the settings screen until T-224). */
 sealed interface UpdateStatus {
@@ -27,8 +25,7 @@ sealed interface UpdateStatus {
 }
 
 /** Drives the update prompt (T-135); the check itself lives in [UpdateChecker]. */
-@HiltViewModel
-class UpdateViewModel @Inject constructor(
+class UpdateViewModel(
     private val updateChecker: UpdateChecker,
     private val updatePrefs: UpdatePrefsStore,
 ) : ViewModel() {

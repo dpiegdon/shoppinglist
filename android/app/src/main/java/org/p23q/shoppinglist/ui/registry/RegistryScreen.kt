@@ -30,9 +30,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.CancellationException
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.db.label
@@ -48,7 +48,7 @@ import org.p23q.shoppinglist.ui.stringResource
 @Composable
 fun RegistryScreen(
     onEditItem: (itemId: String) -> Unit,
-    viewModel: RegistryViewModel = hiltViewModel(),
+    viewModel: RegistryViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }

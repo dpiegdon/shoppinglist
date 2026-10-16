@@ -17,8 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.action_back
@@ -44,7 +44,7 @@ fun RedeemScreen(
     link: String? = null,
     /** The account to redeem into, when that is already settled (after signing in for it). */
     accountId: String? = null,
-    viewModel: RedeemViewModel = hiltViewModel(),
+    viewModel: RedeemViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 

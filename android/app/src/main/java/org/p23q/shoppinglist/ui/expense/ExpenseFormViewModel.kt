@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.expense
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +17,6 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.ListAccounts
 import java.time.LocalDate
-import javax.inject.Inject
 
 /** Which of an expense's two distributions a field belongs to. */
 enum class Side { PAID_BY, PAID_FOR }
@@ -135,8 +133,7 @@ data class ExpensePrefill(val name: String, val expense: Expense)
  * with the web client through one case table; this only holds what the user has typed so far,
  * including which of the three an entry is and what switching between them does.
  */
-@HiltViewModel
-class ExpenseFormViewModel @Inject constructor(
+class ExpenseFormViewModel(
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
     private val listAccounts: ListAccounts,

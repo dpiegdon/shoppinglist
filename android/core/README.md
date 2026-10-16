@@ -45,8 +45,8 @@ In `commonMain`:
   Kotlin Multiplatform.
 - The Ktor client core (`io.ktor.client`, `io.ktor.http`, `io.ktor.utils.io`),
   without an engine.
-- Nothing from `java.*`, `javax.*`, `android.*`, `platform.*`, `dagger.*` or any
-  other `androidx.*`.
+- Nothing from `java.*`, `javax.*`, `android.*`, `platform.*`, `org.koin.*` or
+  any other `androidx.*`.
 
 `jvmMain` may use the JDK, `iosMain` Foundation (`platform.Foundation`) and
 Ktor's Darwin engine. What they hold:
@@ -61,8 +61,9 @@ Ktor's Darwin engine. What they hold:
 `ApiException` extends `kotlinx.io.IOException`, which is `java.io.IOException`
 on the JVM, so `:app` catches it, and OkHttp's own `SSLException`, as before.
 
-Nothing here carries injection annotations; `:app` builds every class in its
-Hilt modules (`CoreModule`, `AccountModule`, `AuthRepositoryModule`).
+Nothing here knows about dependency injection; `:app` builds every class in its
+Koin modules (`di/CommonModules.kt`, with the platform implementations in
+`di/PlatformModule.kt`).
 
 ## Platform interfaces
 
@@ -72,10 +73,10 @@ What only the platform can do, the platform hands in:
 |---|---|---|
 | `account/SecretStore` (tokens by local account id), `account/LastOpenedListStore` | `KeystoreSecretStore` (Keystore-backed EncryptedSharedPreferences) | the app's own, on the Keychain |
 | `api/HttpEngineFactory` (a new Ktor engine for each API client) | `OkHttpEngineFactory` (Ktor's OkHttp engine, the debug-only certificate opt-in, OkHttp's User-Agent) | `DarwinEngineFactory` in `iosMain` (NSURLSession; no certificate opt-in) |
-| `DeviceIdProvider` | `DeviceIdModule`, from `ServerConfig` (DataStore) | the app's own, a UUID it keeps |
+| `DeviceIdProvider` | `appPlatformModule`, from `ServerConfig` (DataStore) | the app's own, a UUID it keeps |
 | `sync/SyncTrigger` | `SyncScheduler` (WorkManager) | the app's own, on BGTaskScheduler |
 | `sync/CollaboratorChangeNotifier`, `sync/InviteNotifier` | `CollaboratorChangeNotificationPoster`, `InviteNotificationPoster` (notifications) | the app's own, on UNUserNotificationCenter |
-| the database | `DatabaseModule`: `Room.databaseBuilder(context, AppDb::class.java, …)` with its migrations | `buildAppDb(path)` in `iosMain` (bundled SQLite) |
+| the database | `buildAppDb(context, legacy)` in `data/db/AppDatabase.kt`: `Room.databaseBuilder(context, AppDb::class.java, …)` with its migrations | `buildAppDb(path)` in `iosMain` (bundled SQLite) |
 | `Clock` | `Clock.System`, the default | `Clock.System`, the default |
 
 The design notes call these `SecretStore`, `DeviceId`, `BackgroundSync` and
@@ -84,7 +85,7 @@ and `Clock`.
 
 ### Using the module from an iOS app
 
-An iOS app builds on the same classes the Android app wires in Hilt, built by
+An iOS app builds on the same classes the Android app wires in Koin, built by
 hand:
 
 ```kotlin

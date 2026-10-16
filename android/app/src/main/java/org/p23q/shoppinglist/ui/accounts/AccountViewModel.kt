@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.accounts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +47,6 @@ import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
-import javax.inject.Inject
 
 /** The card a save or error message belongs to (A1): it shows there, next to what caused it. */
 enum class AccountSection { CURRENCY, INITIALS, PASSWORD, EMAIL, SESSIONS, DELETE }
@@ -111,8 +109,7 @@ data class AccountUiState(
  * currency, initials, password, email, sessions and the dev-only certificate opt-in, and the two
  * ways to part with it. Every request goes to this account's server with this account's token.
  */
-@HiltViewModel
-class AccountViewModel @Inject constructor(
+class AccountViewModel(
     savedStateHandle: SavedStateHandle,
     private val registry: AccountRegistry,
     private val sessions: AccountSessions,

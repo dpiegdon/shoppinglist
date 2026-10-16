@@ -38,9 +38,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.StringResource
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.InviteForMeDto
@@ -101,7 +101,7 @@ fun OverviewScreen(
      * automatic check is set to, and offer it (T-304).
      */
     onCheckForUpdate: () -> Unit = {},
-    viewModel: OverviewViewModel = hiltViewModel(),
+    viewModel: OverviewViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val nowMs = rememberTickingNowMs()

@@ -2,7 +2,6 @@ package org.p23q.shoppinglist.ui.item
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +21,6 @@ import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.ListAccounts
-import javax.inject.Inject
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.item_msg_currency_invalid
 import org.p23q.shoppinglist.resources.item_msg_duplicate_name
@@ -85,8 +83,7 @@ data class ItemFormUiState(
  * exposes status + delete.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class ItemFormViewModel @Inject constructor(
+class ItemFormViewModel(
     private val itemsRepo: ItemsRepo,
     private val listsRepo: ListsRepo,
     private val listAccounts: ListAccounts,

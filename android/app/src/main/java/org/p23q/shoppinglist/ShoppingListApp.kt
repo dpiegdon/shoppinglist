@@ -1,49 +1,56 @@
 package org.p23q.shoppinglist
 
 import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
-import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
+import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.factory.KoinWorkerFactory
+import org.koin.core.context.startKoin
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LegacySessionSource
 import org.p23q.shoppinglist.data.crash.CrashHandler
 import org.p23q.shoppinglist.data.sync.SyncScheduler
-import javax.inject.Inject
+import org.p23q.shoppinglist.di.appModules
 
-@HiltAndroidApp
+/**
+ * Starts Koin (T-350) with the app's modules (di/) before anything below resolves from it. The
+ * tests run under RobolectricTestApp instead, which starts neither Koin nor WorkManager.
+ */
 class ShoppingListApp : Application(), Configuration.Provider {
 
-    @Inject lateinit var workerFactory: HiltWorkerFactory
+    private val syncScheduler: SyncScheduler by inject()
 
-    @Inject lateinit var syncScheduler: SyncScheduler
+    private val crashHandler: CrashHandler by inject()
 
-    @Inject lateinit var crashHandler: CrashHandler
+    private val appForegroundState: AppForegroundState by inject()
 
-    @Inject lateinit var appForegroundState: AppForegroundState
+    private val syncEngine: SyncEngine by inject()
 
-    @Inject lateinit var syncEngine: SyncEngine
+    private val accountRegistry: AccountRegistry by inject()
 
-    @Inject lateinit var accountRegistry: AccountRegistry
-
-    @Inject lateinit var legacySession: LegacySessionSource
+    private val legacySession: LegacySessionSource by inject()
 
     /** Outlives every screen, for the one-shot start-up seed below — never used for per-screen work. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
+        get() = Configuration.Builder().setWorkerFactory(KoinWorkerFactory()).build()
 
     override fun onCreate() {
         super.onCreate()
+        startKoin {
+            androidContext(this@ShoppingListApp)
+            modules(appModules)
+        }
         crashHandler.install()
         appScope.launch {
             // Opening the accounts opens the database, which runs the schema-9 migration on an

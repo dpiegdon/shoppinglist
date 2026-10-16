@@ -3,7 +3,6 @@ package org.p23q.shoppinglist.ui.login
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +43,6 @@ import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.authedStartDestination
 import java.io.IOException
 import java.net.URI
-import javax.inject.Inject
 import javax.net.ssl.SSLException
 
 /** What the login form is for (T-292), from the route's `mode` argument. */
@@ -106,8 +104,7 @@ data class LoginUiState(
     val creatingLocalArea: Boolean = false,
 )
 
-@HiltViewModel
-class LoginViewModel @Inject constructor(
+class LoginViewModel(
     private val authRepository: AuthRepository,
     private val knownAccounts: KnownAccounts,
     private val serverConfig: LastServerAddress,

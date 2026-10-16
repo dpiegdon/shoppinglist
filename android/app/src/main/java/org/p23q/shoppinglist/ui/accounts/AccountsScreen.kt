@@ -32,8 +32,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.accounts_add
 import org.p23q.shoppinglist.resources.accounts_add_local
@@ -75,7 +75,7 @@ fun AccountsScreen(
     onSignIn: (accountId: String) -> Unit,
     /** An outdated row's "Check for update": ask the servers for a newer app and offer it (T-304). */
     onCheckForUpdate: () -> Unit = {},
-    viewModel: AccountsViewModel = hiltViewModel(),
+    viewModel: AccountsViewModel = koinViewModel(),
 ) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     val canAddLocal by viewModel.canAddLocal.collectAsStateWithLifecycle()

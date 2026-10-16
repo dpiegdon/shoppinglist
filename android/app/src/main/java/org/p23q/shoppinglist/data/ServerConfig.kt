@@ -1,33 +1,13 @@
 package org.p23q.shoppinglist.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStoreFile
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 import org.p23q.shoppinglist.core.account.normalizeServerUrl
-
-@Module
-@InstallIn(SingletonComponent::class)
-object ServerConfigModule {
-    @Provides
-    @Singleton
-    fun provideServerConfigDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("server_config") }
-}
 
 /**
  * The server address last typed on the login screen, and its debug-only certificate opt-in: a
@@ -45,13 +25,6 @@ interface LastServerAddress {
     suspend fun setLastAllowSelfSignedCerts(allow: Boolean)
 }
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class LastServerAddressModule {
-    @Binds
-    abstract fun bindLastServerAddress(config: ServerConfig): LastServerAddress
-}
-
 /**
  * What this device keeps outside any account: its id, minted once per install, and the server
  * address last typed on the login screen with its debug-only certificate opt-in.
@@ -62,8 +35,7 @@ abstract class LastServerAddressModule {
  * finds an address but no session (T-298). The schema-9 migration also reads it, as the server of
  * the single-session app's account; the keys are the ones that app used.
  */
-@Singleton
-class ServerConfig @Inject constructor(private val dataStore: DataStore<Preferences>) : LastServerAddress {
+class ServerConfig(private val dataStore: DataStore<Preferences>) : LastServerAddress {
     /** Minted once per install and persisted; stamped as `updated_by` on every field this device writes. */
     suspend fun deviceId(): String {
         dataStore.data.first()[DEVICE_ID_KEY]?.let { return it }

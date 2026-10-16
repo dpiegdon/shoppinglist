@@ -9,43 +9,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncTrigger
-import org.p23q.shoppinglist.core.sync.SyncResult
-import org.p23q.shoppinglist.core.sync.Syncer
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class SyncTriggerModule {
-    @Binds
-    abstract fun bindSyncTrigger(scheduler: SyncScheduler): SyncTrigger
-
-    companion object {
-        /** Screens depend on the [Syncer] seam for pull-to-refresh; [SyncEngine] is the impl (T-36).
-         *  A thin adapter (not @Binds) so SyncEngine keeps its own default-arg public API unchanged.
-         *  A list this device does not hold yet is asked of the account that has just joined it. */
-        @Provides
-        fun provideSyncer(engine: SyncEngine): Syncer = object : Syncer {
-            override suspend fun syncNow(fullLists: List<String>): SyncResult = engine.syncNow(fullLists)
-
-            override suspend fun syncJoined(accountId: String, serverListId: String): SyncResult =
-                engine.syncNow(listOf(serverListId), fullListsAccountId = accountId)
-        }
-    }
-}
 
 /** Owns every WorkManager entry point for [TuppuSyncWorker] (Notes: periodic, after-edit, foreground). */
-@Singleton
-class SyncScheduler @Inject constructor(@ApplicationContext private val context: Context) : SyncTrigger {
+class SyncScheduler(private val context: Context) : SyncTrigger {
 
     private val networkConstraint = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 

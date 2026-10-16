@@ -1,9 +1,5 @@
 package org.p23q.shoppinglist.ui.login
 
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AccountEntity
 
@@ -14,11 +10,4 @@ import org.p23q.shoppinglist.core.db.AccountEntity
  */
 fun interface KnownAccounts {
     fun snapshot(): List<AccountEntity>
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-object KnownAccountsModule {
-    @Provides
-    fun provideKnownAccounts(registry: AccountRegistry): KnownAccounts = KnownAccounts { registry.snapshot() }
 }
