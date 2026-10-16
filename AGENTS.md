@@ -101,10 +101,10 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 - Run `./verify-all.sh` before committing code; a docs-only change may skip it.
   While iterating, run just the suite you touched.
 - A new test should fail when its change is reverted. Check by mutating the code.
-- Android build: after a cherry-pick that deletes a Hilt-injected class, the
-  main checkout's `app/build/generated/hilt` still holds that class's factory
-  and `hiltJavaCompile` fails with "Could not find class file for …". A fresh
-  worktree never sees it. Run `cd android && ./gradlew clean` and rerun the gate.
+- Android build: the app wires its classes with Koin, in `app/…/di/`. A class
+  added to or removed from the graph is added to or removed there by hand;
+  `KoinGraphTest` fails if a constructor asks for something no module
+  provides, or a definition fails to build.
 - Android (Robolectric) pitfalls:
   - Use Room with `BundledSQLiteDriver()`: Robolectric has no native SQLite on
     aarch64. Room 2.8 cannot run migrations on the driver path; see
