@@ -7,6 +7,7 @@
     "android",
     "refactor"
   ],
+  "owner": "user",
   "priority": 3,
   "title": "iPhone port step 2b: strings and drawables as Compose resources",
   "updated_at": "2026-10-16T21:35:11+00:00"
