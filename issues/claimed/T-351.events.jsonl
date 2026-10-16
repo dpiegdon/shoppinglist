@@ -3,3 +3,4 @@
 {"actor": "user", "at": "2026-10-16T21:35:11+00:00", "kind": "dependency", "ref": "main@31e50607", "text": "removed T-350"}
 {"actor": "user", "at": "2026-10-16T21:35:11+00:00", "kind": "claimed", "ref": "main@31e50607", "text": "user"}
 {"actor": "user", "at": "2026-10-16T22:02:03+00:00", "kind": "updated", "ref": "main@31e50607", "text": "fields updated"}
+{"actor": "user", "at": "2026-10-16T22:02:04+00:00", "kind": "note", "ref": "main@31e50607", "text": "relates: T-350 (dependency removed 2026-10-16: 2b touches screens and resources, 2a the Hilt wiring; they can run in either order)"}
