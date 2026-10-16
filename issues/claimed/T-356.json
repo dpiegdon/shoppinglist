@@ -6,6 +6,7 @@
     "chore",
     "agent"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Vendored gittoc resynced to upstream v0.10.1",
   "updated_at": "2026-10-16T22:03:46+00:00"
