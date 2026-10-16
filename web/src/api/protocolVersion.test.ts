@@ -18,7 +18,7 @@ import { PROTOCOL_HEADER, PROTOCOL_VERSION } from "./protocol";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const ANDROID_PROTOCOL = path.join(
   ROOT,
-  "android/core/src/main/kotlin/org/p23q/shoppinglist/core/api/Protocol.kt",
+  "android/core/src/commonMain/kotlin/org/p23q/shoppinglist/core/api/Protocol.kt",
 );
 const SERVER_PROTOCOL = path.join(ROOT, "server/src/shoppinglist_server/protocol.py");
 
