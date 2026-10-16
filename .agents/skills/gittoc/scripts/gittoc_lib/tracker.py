@@ -399,13 +399,19 @@ class Tracker:
         states = states or ("open",)
         paths: list[Path] = []
         for state in states:
+            found = [
+                path
+                for path in self.state_dir(state).glob("T-*.json")
+                if not path.name.endswith(EVENT_SUFFIX)
+            ]
+            # Remember each issue's state while we are here, so later lookups
+            # (event logs, readiness) hit the cache instead of probing every
+            # state directory again.
+            for path in found:
+                self._state_cache[path.stem] = state
             paths.extend(
                 sorted(
-                    (
-                        path
-                        for path in self.state_dir(state).glob("T-*.json")
-                        if not path.name.endswith(EVENT_SUFFIX)
-                    ),
+                    found,
                     key=lambda path: issue_number(path.stem),
                 )
             )

@@ -180,6 +180,10 @@ class TestSetupScript(GittocTestBase):
         )
         (target / ".git").mkdir()
         (target / ".git" / "MARKER").write_text("fake clone\n", encoding="utf-8")
+        # setup removes this dev-only file, so the tests use it as the marker
+        # for "setup ran" vs "setup left the tree alone". A vendored install
+        # has no AGENTS.md, so create it here instead of relying on the source.
+        (target / "AGENTS.md").write_text("dev-only marker\n", encoding="utf-8")
         return target
 
     def run_setup(
@@ -415,6 +419,27 @@ class TestCreateAndList(GittocTestBase):
         found = run(["grep", "one"], self.repo)
         self.assertIn("T-3", found)
         self.assertNotIn("T-4", found)
+
+    def test_event_log_lookup_uses_known_state_and_still_finds_orphans(self) -> None:
+        """find() goes straight to the issue's state dir; orphan logs still resolve (T-160)."""
+        run(["init"], self.repo)
+        run(["new", "a"], self.repo)
+        run(["note", "T-1", "hello"], self.repo)
+        run(["update", "T-1", "--state", "blocked"], self.repo)
+        tracker_mod = import_lib("tracker")
+        checkout = self.repo / ".git" / "gittoc"
+        tracker = tracker_mod.Tracker(self.repo, checkout)
+        tracker.list_issues(("blocked",))  # populates the state cache
+        found = tracker.events.find("T-1")
+        assert found is not None
+        self.assertEqual(found.parent.name, "blocked")
+        self.assertEqual(tracker.events.note_count("T-1"), 1)
+        # an orphaned log (issue file gone) is still located by probing
+        (checkout / "issues" / "blocked" / "T-1.json").unlink()
+        fresh = tracker_mod.Tracker(self.repo, checkout)
+        orphan = fresh.events.find("T-1")
+        assert orphan is not None
+        self.assertEqual(orphan.name, "T-1.events.jsonl")
 
     def test_list_alias_and_compact(self) -> None:
         run(["init"], self.repo)

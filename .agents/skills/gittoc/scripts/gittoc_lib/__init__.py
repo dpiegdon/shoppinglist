@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 
 VERSION_FILE = Path("VERSION")
 CURRENT_FORMAT_VERSION = 1

@@ -38,8 +38,18 @@ class EventLog:
         )
 
     def find(self, issue_id: str) -> Path | None:
-        """Return the event log path for an issue, or None if no log exists yet."""
+        """Return the event log path for an issue, or None if no log exists yet.
+
+        The log lives next to the issue file, so when the tracker knows the
+        issue's state this is a single existence check. Probing every state
+        directory is kept only for logs whose issue file is gone (orphans,
+        which fsck reports).
+        """
         issue_id = validate_issue_id(issue_id)
+        state = self.tracker._issue_state(issue_id)
+        if state is not None:
+            path = self.path(issue_id, state)
+            return path if path.exists() else None
         for state in STATE_ORDER:
             path = self.path(issue_id, state)
             if path.exists():

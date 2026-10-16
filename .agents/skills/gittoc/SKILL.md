@@ -5,7 +5,7 @@ license: MIT. LICENSE.txt has complete terms.
 compatibility: Requires python 3.9+ and git.
 metadata:
   author: github.com/dpiegdon/gittoc
-  version: "0.10.1"
+  version: "0.10.2"
 ---
 
 # Gittoc
