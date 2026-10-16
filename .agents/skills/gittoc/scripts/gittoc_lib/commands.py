@@ -12,14 +12,17 @@ from typing import cast
 
 from . import colors as col
 from .common import (
+    ACTIVE_STATES,
     STATE_ORDER,
     STATE_SET,
     TRACKER_BRANCH,
     default_owner,
+    is_worktree,
     issue_number,
     missing_objects,
     parse_state,
     ref_short_hash,
+    repo_and_worktree,
     run_git,
     validate_issue_id,
     validate_title,
@@ -31,8 +34,14 @@ from .tracker import Tracker
 SHOW_NOTES_LIMIT = 3
 
 
-def _auto_pull(tracker: Tracker) -> None:
-    """Pull before a mutation if autopush is enabled."""
+def _begin_mutation(tracker: Tracker) -> None:
+    """Take the writer lock, then pull if autopush is enabled.
+
+    Every mutating command calls this right after ``Tracker.open`` and before
+    reading any issue, so concurrent writers serialize instead of colliding in
+    git's own index and ref locks.
+    """
+    tracker.lock_for_mutation()
     if tracker.remote.autopush_enabled():
         tracker.remote.auto_pull()
 
@@ -137,12 +146,15 @@ def resolve_text_input(
 
 def cmd_init(_args: argparse.Namespace) -> int:
     """Initialize the tracker worktree and auto-configure the remote if possible."""
+    _, checkout = repo_and_worktree()
+    existed = is_worktree(checkout)
     tracker = Tracker.open()
     if not tracker.remote.configured():
         inferred = tracker.remote.effective()
         if inferred:
             tracker.remote.configure(inferred)
-    print(f"initialized tracker branch {TRACKER_BRANCH} at {tracker.checkout}")
+    verb = "already initialized" if existed else "initialized"
+    print(f"{verb} tracker branch {TRACKER_BRANCH} at {tracker.checkout}")
     return 0
 
 
@@ -267,7 +279,7 @@ def cmd_new(args: argparse.Namespace) -> int:
     body = resolve_text_input(args.body, args.file, what="body", allow_empty=True)
     deps = parse_issue_ids(args.dep)
     tracker = Tracker.open()
-    _auto_pull(tracker)
+    _begin_mutation(tracker)
     issue = tracker.create_issue(
         title, body or "", parse_labels(args.label), args.priority, deps=deps
     )
@@ -283,7 +295,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     if args.all:
         states = STATE_ORDER
     else:
-        states = parse_states(args.state) or ("open",)
+        states = parse_states(args.state) or ACTIVE_STATES
     issues = tracker.list_issues(states)
     if args.label:
         required = set(parse_labels(args.label))
@@ -313,19 +325,23 @@ def cmd_unblocked(args: argparse.Namespace) -> int:
 def cmd_claim(args: argparse.Namespace) -> int:
     """Claim one or more issues, assigning them to the given or inferred owner."""
     tracker = Tracker.open()
-    _auto_pull(tracker)
+    _begin_mutation(tracker)
     owner = args.owner or default_owner()
     issue_ids = parse_issue_ids(args.issue_ids)
     # Validate every id up front so a batch claim is all-or-nothing: if any
     # ticket is missing or unclaimable, abort before mutating (committing) any.
     for issue_id in issue_ids:
         issue, _ = tracker.load_issue(issue_id)
-        tracker.ensure_claimable(issue)
+        tracker.ensure_claimable(issue, owner=owner, take=args.take)
     issues = []
     for issue_id in issue_ids:
         issues.append(
             tracker.update_issue(
-                issue_id, state="claimed", owner=owner, event_actor=owner
+                issue_id,
+                state="claimed",
+                owner=owner,
+                event_actor=owner,
+                take=args.take,
             )
         )
     print_issues(issues, tracker, args.format)
@@ -336,7 +352,7 @@ def cmd_claim(args: argparse.Namespace) -> int:
 def cmd_labels(args: argparse.Namespace) -> int:
     """List all labels in use, with counts, across open (or all) tickets."""
     tracker = Tracker.open()
-    states = STATE_ORDER if args.all else ("open",)
+    states = STATE_ORDER if args.all else ACTIVE_STATES
     counts: dict[str, int] = {}
     for issue in tracker.list_issues(states):
         for label in issue.labels:
@@ -365,14 +381,8 @@ def cmd_labels(args: argparse.Namespace) -> int:
 
 
 def cmd_reject(args: argparse.Namespace) -> int:
-    """Reject an issue (mark as won't-do / abandoned) and print confirmation."""
-    tracker = Tracker.open()
-    _auto_pull(tracker)
-    actor = args.actor or default_owner()
-    issue = tracker.reject_issue(args.issue_id, actor=actor)
-    print_issues([issue], tracker, args.format)
-    _auto_push(tracker)
-    return 0
+    """Reject one or more issues (won't-do / abandoned) and print confirmation."""
+    return _finish_issues(args, "rejected")
 
 
 def cmd_summary(args: argparse.Namespace) -> int:
@@ -462,7 +472,7 @@ def cmd_update(args: argparse.Namespace) -> int:
     """Update one or more fields of an existing issue."""
     body = resolve_text_input(args.body, args.file, what="body", allow_empty=True)
     tracker = Tracker.open()
-    _auto_pull(tracker)
+    _begin_mutation(tracker)
     state = parse_state(args.state)
     add_labels = parse_labels(args.label)
     replace_labels = parse_labels(args.replace_label)
@@ -482,16 +492,16 @@ def cmd_update(args: argparse.Namespace) -> int:
                 labels.append(label)
         if remove_labels:
             labels = [label for label in labels if label not in remove_labels]
-    has_changes = any(
+    fields_given = any(
         [
             args.title is not None,
             body is not None,
-            state is not None,
             args.owner is not None,
             labels is not None,
             args.priority is not None,
         ]
     )
+    has_changes = fields_given or state is not None
     if not has_changes:
         print("no fields to update", file=sys.stderr)
         return 1
@@ -503,7 +513,11 @@ def cmd_update(args: argparse.Namespace) -> int:
         owner=args.owner,
         labels=labels,
         priority=args.priority,
-        event_text="fields updated",
+        # Only a field change is worth a text; a bare --state change records
+        # the transition kind alone, exactly like close/reject/claim do.
+        event_text="fields updated" if fields_given else "",
+        # update is the explicit path: --state claimed --owner X may transfer.
+        take=True,
     )
     print(issue.issue_id)
     _auto_push(tracker)
@@ -513,7 +527,7 @@ def cmd_update(args: argparse.Namespace) -> int:
 def cmd_dep(args: argparse.Namespace) -> int:
     """Add or remove blocking dependencies for an issue."""
     tracker = Tracker.open()
-    _auto_pull(tracker)
+    _begin_mutation(tracker)
     dep_ids = parse_issue_ids(args.dep_ids)
     if args.remove:
         issue = tracker.remove_dependencies(args.issue_id, dep_ids)
@@ -537,7 +551,7 @@ def cmd_grep(args: argparse.Namespace) -> int:
     if args.all:
         states = STATE_ORDER
     else:
-        states = parse_states(args.state) or ("open",)
+        states = parse_states(args.state) or ACTIVE_STATES
     files: list[str] = []
     for state in states:
         state_path = tracker.state_dir(state)
@@ -554,15 +568,30 @@ def cmd_grep(args: argparse.Namespace) -> int:
     return result.returncode
 
 
-def cmd_close(args: argparse.Namespace) -> int:
-    """Mark an issue as closed (done) and print confirmation."""
+def _finish_issues(args: argparse.Namespace, state: str) -> int:
+    """Move one or more issues to a terminal state, all-or-nothing like claim."""
+    note = resolve_text_input(args.note, args.file, what="note text", allow_empty=False)
     tracker = Tracker.open()
-    _auto_pull(tracker)
+    _begin_mutation(tracker)
     actor = args.actor or default_owner()
-    issue = tracker.update_issue(args.issue_id, state="closed", event_actor=actor)
-    print_issues([issue], tracker, args.format)
+    issue_ids = parse_issue_ids(args.issue_ids)
+    # Validate every id up front so a missing one aborts before any commit.
+    for issue_id in issue_ids:
+        tracker.load_issue(issue_id)
+    issues = [
+        tracker.update_issue(
+            issue_id, state=state, event_text=note or "", event_actor=actor
+        )
+        for issue_id in issue_ids
+    ]
+    print_issues(issues, tracker, args.format)
     _auto_push(tracker)
     return 0
+
+
+def cmd_close(args: argparse.Namespace) -> int:
+    """Mark one or more issues as closed (done) and print confirmation."""
+    return _finish_issues(args, "closed")
 
 
 def cmd_log(args: argparse.Namespace) -> int:
@@ -593,7 +622,7 @@ def cmd_note(args: argparse.Namespace) -> int:
     if text is None:
         raise SystemExit("note requires text (positional argument or -F)")
     tracker = Tracker.open()
-    _auto_pull(tracker)
+    _begin_mutation(tracker)
     issue = tracker.add_note(args.issue_id, text, actor=args.actor)
     print(issue.issue_id)
     _auto_push(tracker)

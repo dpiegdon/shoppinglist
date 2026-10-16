@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -118,6 +119,10 @@ class GittocTestBase(unittest.TestCase):
 
 
 class TestInitAndRemote(GittocTestBase):
+    def test_init_rerun_says_already_initialized(self) -> None:
+        run(["init"], self.repo)
+        self.assertIn("already initialized", run(["init"], self.repo))
+
     def test_init_creates_tracker(self) -> None:
         init_out = run(["init"], self.repo)
         self.assertIn("initialized tracker branch", init_out)
@@ -130,6 +135,27 @@ class TestInitAndRemote(GittocTestBase):
         self.assertEqual(remote_status["branch_config_remote"], "origin")
         self.assertEqual(remote_status["branch_config_merge"], "refs/heads/gittoc")
         self.assertFalse(remote_status["remote_branch_exists"])
+
+
+class TestMovedRepository(GittocTestBase):
+    def test_moved_repo_reports_repair_command(self) -> None:
+        """A moved repository breaks the worktree link; say so and name the fix (T-190)."""
+        run(["init"], self.repo)
+        run(["new", "before move"], self.repo)
+        moved = Path(self.tempdir.name) / "moved"
+        shutil.move(str(self.repo), str(moved))
+        proc = run_fail(["summary"], moved)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("was the repository moved?", proc.stderr)
+        self.assertIn("git worktree repair", proc.stderr)
+        subprocess.run(
+            ["git", "worktree", "repair", str(moved / ".git" / "gittoc")],
+            cwd=moved,
+            check=True,
+            capture_output=True,
+        )
+        self.assertIn("open=1", run(["summary"], moved))
+        shutil.move(str(moved), str(self.repo))  # let tearDown find it
 
 
 class TestSetupScript(GittocTestBase):
@@ -198,6 +224,10 @@ class TestSetupScript(GittocTestBase):
             check=True,
         ).stdout
         self.assertIn("open=0", out)
+        # it tells the installer how to make agents pick the tracker up
+        self.assertIn("AGENTS.md / CLAUDE.md", proc.stdout)
+        self.assertIn("GITTOC_OWNER", proc.stdout)
+        self.assertIn(f"{self.VENDOR_REL.as_posix()}/SKILL.md", proc.stdout)
         # idempotent: a second run succeeds and changes nothing
         proc = self.run_setup(gittoc_dir, self.repo)
         self.assertEqual(proc.returncode, 0, proc.stderr)
@@ -360,6 +390,31 @@ class TestCreateAndList(GittocTestBase):
         self.assertEqual(tracker_status, "")
         # Re-running with a valid dep mints T-2, not a duplicate-skipping T-3.
         self.assertEqual(run(["new", "Dependent task", "-d", "T-1"], self.repo), "T-2")
+
+    def test_list_labels_grep_default_to_live_states(self) -> None:
+        """The default scope is everything not closed or rejected (T-193)."""
+        run(["init"], self.repo)
+        run(["new", "open one", "-l", "x"], self.repo)
+        run(["new", "claimed one", "-l", "x"], self.repo)
+        run(["new", "blocked one", "-l", "x"], self.repo)
+        run(["new", "closed one", "-l", "x"], self.repo)
+        run(["new", "rejected one", "-l", "x"], self.repo)
+        run(["claim", "T-2", "--owner", "tester"], self.repo)
+        run(["update", "T-3", "--state", "blocked"], self.repo)
+        run(["close", "T-4"], self.repo)
+        run(["reject", "T-5"], self.repo)
+        listed = run(["list"], self.repo)
+        for issue_id in ("T-1", "T-2", "T-3"):
+            self.assertIn(issue_id, listed)
+        for issue_id in ("T-4", "T-5"):
+            self.assertNotIn(issue_id, listed)
+        self.assertIn("T-1", run(["list", "-s", "open"], self.repo))
+        self.assertNotIn("T-2", run(["list", "-s", "open"], self.repo))
+        label_rows = [line.split() for line in run(["labels"], self.repo).splitlines()]
+        self.assertIn(["x", "3"], label_rows)
+        found = run(["grep", "one"], self.repo)
+        self.assertIn("T-3", found)
+        self.assertNotIn("T-4", found)
 
     def test_list_alias_and_compact(self) -> None:
         run(["init"], self.repo)
@@ -569,15 +624,26 @@ class TestClaimWorkflow(GittocTestBase):
         claimed_list = run(["c"], self.repo)
         self.assertIn(issue1, claimed_list)
 
-    def test_reclaim_by_different_owner_warns(self) -> None:
+    def test_reclaim_by_different_owner_refused_unless_take(self) -> None:
+        """Someone else's claim is refused; --take transfers with a warning (T-195)."""
         run(["init"], self.repo)
         issue1 = run(["new", "Task"], self.repo)
         run(["claim", issue1, "--owner", "alice"], self.repo)
         proc = run_fail(["claim", issue1, "--owner", "bob"], self.repo)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn(f"{issue1} is already claimed by alice", proc.stderr)
+        shown = json.loads(run(["show", issue1, "-f", "json"], self.repo))
+        self.assertEqual(shown["owner"], "alice")
+        proc = run_fail(["claim", issue1, "--owner", "bob", "--take"], self.repo)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("warning", proc.stderr)
         self.assertIn("alice", proc.stderr)
         shown = json.loads(run(["show", issue1, "-f", "json"], self.repo))
         self.assertEqual(shown["owner"], "bob")
+        # update --state claimed --owner is the explicit path and may transfer
+        run(["update", issue1, "--state", "claimed", "--owner", "carol"], self.repo)
+        shown = json.loads(run(["show", issue1, "-f", "json"], self.repo))
+        self.assertEqual(shown["owner"], "carol")
 
     def test_reclaim_by_same_owner_no_warning(self) -> None:
         run(["init"], self.repo)
@@ -872,6 +938,45 @@ class TestUpdate(GittocTestBase):
         closed = [e for e in shown["history"] if e["kind"] == "closed"]
         self.assertEqual(closed[0]["text"], "")
 
+    def test_multi_id_close_and_reject(self) -> None:
+        """close and reject take several ids, like claim (T-187)."""
+        run(["init"], self.repo)
+        for title in ("a", "b", "c", "d"):
+            run(["new", title], self.repo)
+        out = run(["close", "T-1,T-2"], self.repo)
+        self.assertIn("T-1", out)
+        self.assertIn("T-2", out)
+        run(["reject", "T-3", "T-4"], self.repo)
+        self.assertIn("closed=2 rejected=2", run(["summary"], self.repo))
+        self.assertEqual(self._history_kinds("T-4"), ["created", "rejected"])
+
+    def test_multi_id_close_missing_id_closes_none(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "a"], self.repo)
+        proc = run_fail(["close", "T-1", "T-99"], self.repo)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("T-99", proc.stderr)
+        self.assertIn("open=1", run(["summary"], self.repo))
+
+    def test_close_and_reject_with_note(self) -> None:
+        """-n / -F put the reason into the close or reject event (T-186)."""
+        run(["init"], self.repo)
+        for title in ("a", "b", "c"):
+            run(["new", title], self.repo)
+        run(["close", "T-1", "-n", "verified by the suite"], self.repo)
+        run(["reject", "T-2", "-F", "-"], self.repo, stdin="out of scope\n")
+        proc = run_fail(["close", "T-3", "-n", "   "], self.repo)
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("note text is empty", proc.stderr)
+        for issue_id, kind, text in (
+            ("T-1", "closed", "verified by the suite"),
+            ("T-2", "rejected", "out of scope"),
+        ):
+            shown = json.loads(run(["show", issue_id, "-a", "-f", "json"], self.repo))
+            events = [e for e in shown["history"] if e["kind"] == kind]
+            self.assertEqual([e["text"] for e in events], [text])
+        self.assertIn("open=1", run(["summary"], self.repo))
+
     def test_update_state_rejected_records_rejected_event(self) -> None:
         run(["init"], self.repo)
         run(["new", "Task"], self.repo)
@@ -985,6 +1090,100 @@ class TestWorktreeIntegrity(GittocTestBase):
             check=True,
         ).stdout
         self.assertIn(str(self.repo), worktree_entry)
+
+
+class TestMutationLock(GittocTestBase):
+    """Concurrent writers serialize through the lock file (T-194)."""
+
+    def test_concurrent_writers_never_fail_or_mix_commits(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "shared"], self.repo)
+        gittoc = str(ROOT / "gittoc")
+        procs = []
+        for agent in ("A", "B", "C"):
+            env = dict(os.environ)
+            env["GITTOC_OWNER"] = f"agent-{agent}"
+            script = " && ".join(
+                f'"{gittoc}" note T-1 "note {i} from {agent}"' for i in range(1, 6)
+            )
+            procs.append(
+                subprocess.Popen(
+                    ["sh", "-c", script],
+                    cwd=self.repo,
+                    env=env,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            )
+        results = [(p.wait(), p.communicate()[1]) for p in procs]
+        for returncode, stderr in results:
+            self.assertEqual(returncode, 0, stderr)
+            self.assertNotIn("tracker changed", stderr)
+            self.assertNotIn("git error", stderr)
+        shown = json.loads(run(["show", "T-1", "-a", "-f", "json"], self.repo))
+        notes = [e for e in shown["history"] if e["kind"] == "note"]
+        self.assertEqual(len(notes), 15)
+        self.assertEqual(len({e["text"] for e in notes}), 15)
+        # every commit carries only its own actor's events
+        checkout = self.repo / ".git" / "gittoc"
+        log = subprocess.run(
+            ["git", "-C", str(checkout), "log", "--format=%H %s"],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.splitlines()
+        for line in log:
+            sha, message = line.split(" ", 1)
+            if not message.startswith("Add note"):
+                continue
+            actor = message[message.rindex("(") + 1 : -1]
+            diff = subprocess.run(
+                ["git", "-C", str(checkout), "show", sha, "--format=", "--", "issues"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout
+            added = [
+                json.loads(ln[1:]) for ln in diff.splitlines() if ln.startswith("+{")
+            ]
+            self.assertEqual({e["actor"] for e in added}, {actor}, message)
+        self.assertFalse((self.repo / ".git" / "gittoc.lock").exists())
+        run(["fsck"], self.repo)
+
+    def test_stale_lock_is_broken(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "shared"], self.repo)
+        lock = self.repo / ".git" / "gittoc.lock"
+        lock.write_text("999999999 nowhere 0\n", encoding="utf-8")
+        os.utime(lock, (0, 0))
+        proc = run_fail(["note", "T-1", "after stale lock"], self.repo)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("removing stale tracker lock", proc.stderr)
+        self.assertFalse(lock.exists())
+
+    def test_live_lock_times_out_with_clear_message(self) -> None:
+        run(["init"], self.repo)
+        run(["new", "shared"], self.repo)
+        lock = self.repo / ".git" / "gittoc.lock"
+        lock.write_text(f"{os.getpid()} {socket.gethostname()} 0\n", encoding="utf-8")
+        env = dict(os.environ)
+        env["GITTOC_LOCK_TIMEOUT"] = "0.3"
+        proc = subprocess.run(
+            [str(ROOT / "gittoc"), "note", "T-1", "blocked"],
+            cwd=self.repo,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("tracker is locked by pid", proc.stderr)
+        self.assertTrue(lock.exists())
+        lock.unlink()
+        # reads never take the lock
+        lock.write_text(f"{os.getpid()} {socket.gethostname()} 0\n", encoding="utf-8")
+        self.assertIn("T-1", run(["list"], self.repo))
 
 
 class TestStaleTracker(GittocTestBase):

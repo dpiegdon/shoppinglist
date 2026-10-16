@@ -1,11 +1,11 @@
 ---
 name: gittoc
-description: Git-repository-specific ticket system. Use when work spans multiple turns or sessions and needs a repo-local issue tracker with dependencies, ready-task discovery, and git history, without external services or nonstandard dependencies.
+description: Repo-local ticket and task tracker stored in git. Use whenever work needs tracking - tickets, issues, backlog, TODOs, planning, resuming earlier work, dependencies between tasks, or hand-offs between sessions and agents - without external services or nonstandard dependencies.
 license: MIT. LICENSE.txt has complete terms.
 compatibility: Requires python 3.9+ and git.
 metadata:
   author: github.com/dpiegdon/gittoc
-  version: "0.9.0"
+  version: "0.10.1"
 ---
 
 # Gittoc
@@ -23,12 +23,41 @@ Use this skill when:
 
 Do not use it for one-off work that can be completed in a single short turn.
 
+## Lifecycle
+
+First set your identity: `export GITTOC_OWNER=<your agent name>` (for example
+`claude`). Without it every claim, note and close is attributed to `$USER`,
+the human running the session.
+
+Every tracked piece of work then goes through these steps, in this order:
+
+1. `gittoc resume` — see what is claimed, ready, or in progress before starting
+2. `gittoc claim T-n` — before changing anything
+3. work, and `gittoc note T-n '…'` findings and decisions worth keeping
+4. `git commit` with `(T-n)` in the message
+5. `gittoc close T-n -n 'what was verified'` — after the commit, so the close
+   event points at it. On a branch that will be rebased or squashed, close
+   after the merge, from the branch that keeps the commit; otherwise the
+   stamped ref dies with the rebase and shows as `(abc1234?)`.
+
+Only close a ticket whose work is complete. If part remains, note what is
+left, or move the remainder to a new ticket (`split-of: T-n`) and close only
+what is done.
+
 ## Operating rules
 
 - Prefer the CLI over reading the hidden tracker checkout directly.
 - Keep tickets concise — store only durable task state, not long design notes.
 - Use dependencies to model blocking relationships.
 - Commit tracker changes with the code they describe when practical.
+
+## Writing tickets
+
+- The title states the problem or the action plainly; one concern per ticket.
+- The body holds what a later session needs to resume cold: the problem, where
+  it is, the evidence, and the proposed fix. Prose, not a form.
+- Notes record why, what was tried, and what was verified; they are the audit
+  trail that survives compaction and hand-offs.
 
 ## Storage model
 
@@ -88,18 +117,18 @@ Use `--help` on any command for full argument documentation.
 
 **Backlog**
 - `summary` / `sum` — ticket counts by state
-- `list` / `l` — open tickets by priority; `-a` for all states
-- `list -s claimed,blocked` — filter by state (comma-separated)
+- `list` / `l` — live tickets (open, claimed, blocked) by priority; `-a` for all states
+- `list -s open` — specific states (comma-separated)
 - `list -l bug` / `list -l feature,ux` — filter by label (AND; comma-separated)
 - `unblocked` / `ubl` — only tickets with no unmet dependencies
-- `labels` / `labels -a` — all labels in use with counts
-- `grep` / `g` `PATTERN [-i] [-n]` — search open ticket files; `-a` for all states, `-s closed,rejected` for specific
+- `labels` / `labels -a` — labels on live tickets with counts; `-a` includes closed/rejected
+- `grep` / `g` `PATTERN [-i] [-n]` — search live ticket files; `-a` for all states, `-s closed,rejected` for specific
 - `list --sort=id` — chronological order instead of priority
 
 **Working with tickets**
 - `new "Title" -p 2 -b "context" -l feature` — create a ticket
 - `new "Blocked task" -d T-1,T-2` — create with dependencies
-- `claim T-1` — claim a ticket (defaults owner to `$GITTOC_OWNER` / `$USER`)
+- `claim T-1` — claim a ticket (defaults owner to `$GITTOC_OWNER` / `$USER`); refuses a ticket someone else holds unless `--take`
 - `claimed` / `c` — list all currently claimed issues
 - `update` / `up` `T-1 --state blocked -p 4` — update fields
 - `update T-1 -l bug,ux` — add labels
@@ -111,8 +140,8 @@ Use `--help` on any command for full argument documentation.
 - `note` / `n` `T-1 "context"` — append a durable note
 - `note T-1 -F FILE` / `note T-1 -F -` — read note text from a file or stdin
 - `new`/`update` `-F FILE` — read body from a file or stdin (alternative to `-b`)
-- `close T-1` — close as done
-- `reject T-1` — close and reject ticket as won't-do
+- `close T-1 [T-2 …]` — close as done; `-n 'why'` or `-F FILE` records the reason in the close event
+- `reject T-1 [T-2 …]` — close as won't-do; takes `-n` / `-F` like close
 
 **Remote sync**
 - `init` — create tracker branch / attach worktree; auto-configures `gittoc.remote` if inferable
@@ -124,19 +153,7 @@ Use `--help` on any command for full argument documentation.
   every mutating command will then pull before and push after the local write.
   Non-trivial pull merges automatically run `fsck` against the changed tracker files.
 
-## Recommended workflow
-
-At the start of multi-step work:
-
-```bash
-gittoc resume
-```
-
-Beginning a task:
-
-```bash
-gittoc claim T-1
-```
+## Workflow details
 
 When new follow-up work appears:
 
@@ -149,8 +166,8 @@ gittoc dep T-3 T-1   # T-3 depends on T-1 (T-1 must complete first)
 Finishing:
 
 ```bash
-git commit ...        # commit the fix FIRST
-gittoc close T-1      # then close — the close event stamps the fix commit
+git commit ...                         # commit the fix FIRST
+gittoc close T-1 -n 'tests pass'       # then close — the event stamps the fix commit
 ```
 
 Every event records the code repo's HEAD at event time, and `show`/`resume`
@@ -186,8 +203,10 @@ Notes are searchable via `gittoc grep`.
   delimiter (`<<'EOF'`) or the shell still expands the body. Agents writing
   backtick-heavy prose should prefer `-F` — a single trailing newline is
   stripped from file/stdin input.
-- Mutating commands use optimistic concurrency; they refuse to commit if the
-  tracker changed mid-command. Review the new state and re-run the command if still applicable.
+- Mutating commands serialize through a lock file in `.git` (readers never
+  wait) and additionally refuse to commit if the tracker changed mid-command.
+  On "tracker changed during this command", review the new state and re-run if
+  still applicable. A stale lock from a crashed process is removed automatically.
 - `resume` without an ID prefers claimed tickets owned by the current user,
   then highest-priority ready issue, then highest-priority open issue.
 - `pull` fetches and attempts a normal merge; conflicts are left for manual

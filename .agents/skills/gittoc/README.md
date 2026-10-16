@@ -18,17 +18,10 @@ To do that, execute in root of your repo:
 mkdir -p .agents/skills/ && git clone --depth=1 https://github.com/dpiegdon/gittoc .agents/skills/gittoc && ./.agents/skills/gittoc/scripts/setup
 ```
 
-### Local-only install (shared repos)
-
-If you want to use gittoc on a project without committing the tool upstream,
-exclude it from git tracking:
-
-```bash
-echo '.agents/skills/gittoc/' >> .git/info/exclude
-```
-
-The tool stays local to your checkout — invisible to git, never pushed. Each
-collaborator who wants gittoc installs it themselves the same way.
+Commit the vendored copy together with your project, so every checkout and
+every linked worktree carries the tool. `setup` ends by printing a short
+paragraph for your `AGENTS.md` / `CLAUDE.md`; add it, so agents treat the
+tracker as mandatory rather than optional.
 
 `setup` strips the vendored clone of its own `.git` and dev-only files. It
 refuses to run on anything that is not a pristine clone (local branches,
@@ -100,6 +93,7 @@ To stay useful, `gittoc` deliberately resists growing into a full issue tracker:
 - **Multi-writer use is load-bearing.** Concurrent agents and humans are a real
   scenario, so optimistic locking, the `actor` field, and `ref` stamping are
   treated as invariants.
+  Writers serialize through a lock file in `.git`; readers never wait.
 
 ## Current commands
 
@@ -108,14 +102,14 @@ Use `--help` on any command for full argument documentation.
 ```bash
 # backlog overview
 gittoc summary
-gittoc list
+gittoc list                         # live tickets: open, claimed, blocked
 gittoc list -l bug                  # filter by label
 gittoc list -l feature,ux           # AND of multiple labels (comma-separated)
-gittoc list -a                      # all states
-gittoc list -s claimed,blocked      # specific states (comma-separated)
-gittoc labels                       # all labels in use with counts
+gittoc list -a                      # all states, including closed/rejected
+gittoc list -s open                 # specific states (comma-separated)
+gittoc labels                       # labels on live tickets with counts
 gittoc unblocked                    # only tickets with no blockers
-gittoc grep "pattern"               # search ticket files
+gittoc grep "pattern"               # search live ticket files
 
 # working with tickets
 gittoc new "short title" -p 2 -b "longer context" -l bug
@@ -130,6 +124,8 @@ gittoc update T-42 -L task,docs      # replace all labels
 gittoc dep T-42 T-7                 # T-42 blocked by T-7
 gittoc dep T-42 T-7 --remove        # remove dependency
 gittoc close T-42
+gittoc close T-42 -n "verified"     # record why in the close event
+gittoc close T-42,T-43              # several at once (also: reject)
 gittoc reject T-42                  # mark as won't-do
 
 # inspecting tickets

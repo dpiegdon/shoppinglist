@@ -15,6 +15,9 @@ ISSUES_ROOT = Path("issues")
 STATE_ORDER = ("open", "claimed", "blocked", "closed", "rejected")
 STATE_SET = set(STATE_ORDER)
 TERMINAL_STATES = frozenset(("closed", "rejected"))
+# Live work: everything not in a terminal state. The default scope of list,
+# labels and grep.
+ACTIVE_STATES = tuple(s for s in STATE_ORDER if s not in TERMINAL_STATES)
 DEFAULT_PRIORITY = 3
 PRIORITY_MIN = 1
 PRIORITY_MAX = 5

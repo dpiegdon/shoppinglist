@@ -76,3 +76,16 @@ done
 
 # initialize gittoc system
 git toc init
+
+# a skill only fires when an agent judges it relevant; an always-loaded
+# instruction file makes the tracker mandatory
+cat <<STANZA
+
+gittoc is installed. Add this to the AGENTS.md / CLAUDE.md of this repository so
+agents use the tracker for all planning and tracking:
+
+    Use gittoc ('git toc'; skill in $GITTOC_DIR_REL/SKILL.md) for all task
+    tracking and planning instead of chat-only plans. Set GITTOC_OWNER to your
+    agent name before any mutating command.
+
+STANZA

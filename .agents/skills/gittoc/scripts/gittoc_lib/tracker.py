@@ -32,12 +32,28 @@ from .common import (
     validate_title,
 )
 from .event_log import EventLog
+from .lock import LOCK_FILENAME, MutationLock
 from .models import Issue
 from .remote_sync import RemoteSync
 
 
 class StaleTrackerError(Exception):
     """Raised when the tracker has been modified since it was opened."""
+
+
+def write_version_file(
+    checkout: Path, format_version: int, layout_version: int
+) -> None:
+    """Write the tracker's VERSION file (shared by bootstrap and migrations)."""
+    data = {
+        "format_version": format_version,
+        "layout_version": layout_version,
+        "migrated_at": now_utc(),
+        "migrated_by": default_owner(),
+    }
+    with (checkout / VERSION_FILE).open("w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2, sort_keys=True)
+        handle.write("\n")
 
 
 class Tracker:
@@ -75,6 +91,15 @@ class Tracker:
                 f"legacy hidden clone detected at {checkout}; remove it before using worktree mode"
             )
         if is_worktree(checkout):
+            # Worktree links are absolute paths, so a moved or copied repository
+            # leaves the tracker checkout pointing at the old location.
+            probe = run_git(["rev-parse", "--git-dir"], cwd=checkout, check=False)
+            if probe.returncode != 0:
+                raise SystemExit(
+                    f"tracker worktree at {checkout} is detached from this repository "
+                    "(was the repository moved?); repair the link with:\n"
+                    f"  git worktree repair {checkout}"
+                )
             if current_branch(checkout) != TRACKER_BRANCH:
                 run_git(["switch", "-q", TRACKER_BRANCH], cwd=checkout)
             return checkout
@@ -120,16 +145,7 @@ class Tracker:
             (checkout / ISSUES_ROOT / state).mkdir(parents=True, exist_ok=True)
         keep = checkout / ISSUES_ROOT / ".gitkeep"
         keep.write_text("", encoding="utf-8")
-        version_path = checkout / VERSION_FILE
-        version_data = {
-            "format_version": CURRENT_FORMAT_VERSION,
-            "layout_version": CURRENT_LAYOUT_VERSION,
-            "migrated_at": now_utc(),
-            "migrated_by": default_owner(),
-        }
-        with version_path.open("w", encoding="utf-8") as handle:
-            json.dump(version_data, handle, indent=2, sort_keys=True)
-            handle.write("\n")
+        write_version_file(checkout, CURRENT_FORMAT_VERSION, CURRENT_LAYOUT_VERSION)
         run_git(["add", "issues", str(VERSION_FILE)], cwd=checkout)
         run_git(
             ["commit", "-q", "-m", "Initialize gittoc tracker"],
@@ -164,16 +180,7 @@ class Tracker:
         self, format_version: int, layout_version: int, *, commit: bool = True
     ) -> None:
         """Write the VERSION file and optionally commit it."""
-        path = self.checkout / VERSION_FILE
-        data = {
-            "format_version": format_version,
-            "layout_version": layout_version,
-            "migrated_at": now_utc(),
-            "migrated_by": default_owner(),
-        }
-        with path.open("w", encoding="utf-8") as handle:
-            json.dump(data, handle, indent=2, sort_keys=True)
-            handle.write("\n")
+        write_version_file(self.checkout, format_version, layout_version)
         if commit:
             run_git(["add", str(VERSION_FILE)], cwd=self.checkout)
             run_git(
@@ -209,6 +216,19 @@ class Tracker:
             raise StaleTrackerError(
                 "tracker changed during this command; re-run your command to retry"
             )
+
+    def lock_for_mutation(self) -> None:
+        """Serialize this command against other writers of the shared worktree.
+
+        Taken once per mutating command, before the auto-pull and before any
+        issue is read, and released when the process exits. The tracker HEAD
+        is re-read afterwards: other writers may have committed while we
+        waited, and nothing has been read yet, so that is not a conflict.
+        """
+        self.mutation_lock = MutationLock(self.checkout.parent / LOCK_FILENAME)
+        self.mutation_lock.acquire()
+        self.base_head = self.head()
+        self._state_cache.clear()
 
     def begin_write(self, *paths: Path) -> None:
         """Gate a worktree write: check staleness first, then record the paths.
@@ -482,18 +502,23 @@ class Tracker:
         """
         state = self._issue_state(dep_id)
         if state is None:
-            key = (issue_id, dep_id)
-            if key not in self._warned_missing_deps:
-                self._warned_missing_deps.add(key)
-                print(
-                    col.warn(
-                        f"warning: {issue_id} depends on {dep_id}, which does "
-                        "not exist; treating as unresolved (run `gittoc fsck`)"
-                    ),
-                    file=sys.stderr,
-                )
+            self._warn_missing_dep(issue_id, dep_id)
             return False
         return state in TERMINAL_STATES
+
+    def _warn_missing_dep(self, issue_id: str, dep_id: str) -> None:
+        """Warn once per (issue, dep) pair about a dependency with no issue file."""
+        key = (issue_id, dep_id)
+        if key in self._warned_missing_deps:
+            return
+        self._warned_missing_deps.add(key)
+        print(
+            col.warn(
+                f"warning: {issue_id} depends on {dep_id}, which does not exist; "
+                "treating as unresolved (run `gittoc fsck`)"
+            ),
+            file=sys.stderr,
+        )
 
     def ready(self, issue: Issue) -> bool:
         """Return True if the issue is open and all its dependencies are closed."""
@@ -501,15 +526,24 @@ class Tracker:
             self.dependency_closed(issue.issue_id, dep_id) for dep_id in issue.deps
         )
 
-    def ensure_claimable(self, issue: Issue) -> None:
+    def ensure_claimable(
+        self, issue: Issue, *, owner: str | None = None, take: bool = False
+    ) -> None:
         """Raise SystemExit if *issue* cannot transition to the claimed state.
 
-        Re-claiming an already-claimed issue (ownership transfer) is allowed;
-        an open issue must be ready; any other state cannot be claimed. Shared
-        by ``update_issue`` and ``claim`` so a batch claim can pre-validate
-        every id before mutating any of them.
+        A claimed issue may be re-claimed by its owner; taking it from someone
+        else requires *take* (``claim --take``), so two agents racing for one
+        ticket cannot both walk away believing they hold it. An open issue
+        must be ready; any other state cannot be claimed. Shared by
+        ``update_issue`` and ``claim`` so a batch claim can pre-validate every
+        id before mutating any of them.
         """
         if issue.state == "claimed":
+            if owner is not None and issue.owner and owner != issue.owner and not take:
+                raise SystemExit(
+                    f"{issue.issue_id} is already claimed by {issue.owner};"
+                    " use --take to transfer ownership"
+                )
             return
         if issue.state != "open":
             raise SystemExit(
@@ -526,9 +560,9 @@ class Tracker:
         if dep_id == issue_id:
             return True
         seen: set[str] = set()
-        stack = [dep_id]
+        stack = [(issue_id, dep_id)]
         while stack:
-            current = stack.pop()
+            parent, current = stack.pop()
             if current == issue_id:
                 return True
             if current in seen:
@@ -536,16 +570,10 @@ class Tracker:
             seen.add(current)
             if self._issue_state(current) is None:
                 # Referenced dep does not exist; treat as a leaf node.
-                print(
-                    col.warn(
-                        f"warning: dependency {current} not found, "
-                        "skipping during cycle check"
-                    ),
-                    file=sys.stderr,
-                )
+                self._warn_missing_dep(parent, current)
                 continue
             current_issue, _ = self.load_issue(current)
-            stack.extend(current_issue.deps)
+            stack.extend((current, child) for child in current_issue.deps)
         return False
 
     def ready_issues(self) -> list[Issue]:
@@ -606,6 +634,7 @@ class Tracker:
         priority: int | None = None,
         event_text: str = "",
         event_actor: str | None = None,
+        take: bool = False,
     ) -> Issue:
         """Apply one or more field changes to an issue and commit the result.
 
@@ -619,7 +648,7 @@ class Tracker:
         issue, path = self.load_issue(issue_id)
         target_state = issue.state if state is None else state
         if target_state == "claimed":
-            self.ensure_claimable(issue)
+            self.ensure_claimable(issue, owner=owner, take=take)
         if (
             target_state == "claimed"
             and issue.state == "claimed"
@@ -686,29 +715,21 @@ class Tracker:
         keep recording what was asked for. A (re-)claim records the owner as
         the event text, mirroring the ``claim`` command, and an owner change
         on a claimed issue counts as a claim. Everything else is a plain
-        ``updated`` event.
+        ``updated`` event. *event_text* is recorded on every kind except
+        ``claimed``.
         """
         issue_id = after.issue_id
-        # Field edits made alongside a terminal transition must stay visible
-        # in the event log, so keep the caller's text when any changed.
-        fields_changed = any(
-            getattr(before, field) != getattr(after, field)
-            for field in ("title", "body", "labels", "priority")
-        )
-        text = event_text if fields_changed else ""
+        # The caller's text rides along on terminal transitions: a close note,
+        # or "fields updated" when update changed fields in the same call.
         if requested_state == "closed":
-            return "closed", text, f"Close issue {issue_id}"
+            return "closed", event_text, f"Close issue {issue_id}"
         if requested_state == "rejected":
-            return "rejected", text, f"Reject issue {issue_id}"
+            return "rejected", event_text, f"Reject issue {issue_id}"
         if requested_state == "claimed" or (
             after.state == "claimed" and after.owner != before.owner
         ):
             return "claimed", after.owner, f"Claim issue {issue_id} for {after.owner}"
         return "updated", event_text, f"Update issue {issue_id}"
-
-    def reject_issue(self, issue_id: str, *, actor: str | None = None) -> Issue:
-        """Move an issue to the rejected state (won't-do / abandoned)."""
-        return self.update_issue(issue_id, state="rejected", event_actor=actor)
 
     def _resolve_deps(
         self, dep_ids: list[str], *, issue_id: str | None = None

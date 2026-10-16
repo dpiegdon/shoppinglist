@@ -94,6 +94,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--owner",
         help="owner name (default: $GITTOC_OWNER or $USER)",
     )
+    claim_parser.add_argument(
+        "--take",
+        action="store_true",
+        help="take over a ticket that someone else has claimed",
+    )
     add_format_argument(claim_parser)
     claim_parser.set_defaults(func=cmd_claim)
 
@@ -112,7 +117,23 @@ def build_parser() -> argparse.ArgumentParser:
         description="Mark a ticket as closed (work complete). "
         "Use reject instead for tickets that won't be done.",
     )
-    close_parser.add_argument("issue_id", help="ticket to close, e.g. T-42")
+    close_parser.add_argument(
+        "issue_ids",
+        nargs="+",
+        metavar="issue_id",
+        help="ticket(s) to close, e.g. T-42,T-43 or T-42 T-43",
+    )
+    close_parser.add_argument(
+        "-n",
+        "--note",
+        help="record why in the close event (same as a separate note)",
+    )
+    close_parser.add_argument(
+        "-F",
+        "--file",
+        metavar="FILE",
+        help="read the note from FILE, or '-' for stdin",
+    )
     close_parser.add_argument(
         "--actor",
         help="override actor name (default: $GITTOC_OWNER or $USER)",
@@ -167,7 +188,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--state",
         action="append",
         metavar="STATE",
-        help="search this state (repeatable, comma-separated; default: open)",
+        help="search this state (repeatable, comma-separated; "
+        "default: open,claimed,blocked)",
     )
     grep_parser.add_argument(
         "-a",
@@ -201,7 +223,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-a",
         "--all",
         action="store_true",
-        help="include closed tickets (default: open only)",
+        help="include closed and rejected tickets (default: live tickets only)",
     )
     add_text_format_argument(labels_parser)
     labels_parser.set_defaults(func=cmd_labels)
@@ -211,14 +233,16 @@ def build_parser() -> argparse.ArgumentParser:
         aliases=["l"],
         help="list issues ordered by priority",
         description="List tickets sorted by priority (1=highest). "
-        "Defaults to open tickets only; use -s or -a to include other states.",
+        "Defaults to live tickets (open, claimed, blocked); use -s for specific "
+        "states or -a for everything.",
     )
     list_parser.add_argument(
         "-s",
         "--state",
         action="append",
         metavar="STATE",
-        help="include this state (repeatable, comma-separated; default: open)",
+        help="include this state (repeatable, comma-separated; "
+        "default: open,claimed,blocked)",
     )
     list_parser.add_argument(
         "-l",
@@ -351,7 +375,23 @@ def build_parser() -> argparse.ArgumentParser:
         description="Mark a ticket as rejected (won't fix, out of scope, abandoned). "
         "Use close instead when work is actually complete.",
     )
-    reject_parser.add_argument("issue_id", help="ticket to reject, e.g. T-42")
+    reject_parser.add_argument(
+        "issue_ids",
+        nargs="+",
+        metavar="issue_id",
+        help="ticket(s) to reject, e.g. T-42,T-43 or T-42 T-43",
+    )
+    reject_parser.add_argument(
+        "-n",
+        "--note",
+        help="record why in the reject event (same as a separate note)",
+    )
+    reject_parser.add_argument(
+        "-F",
+        "--file",
+        metavar="FILE",
+        help="read the note from FILE, or '-' for stdin",
+    )
     reject_parser.add_argument(
         "--actor",
         help="override actor name (default: $GITTOC_OWNER or $USER)",
