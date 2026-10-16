@@ -10,8 +10,8 @@
     "structure",
     "android"
   ],
-  "owner": "user",
+  "owner": "claude",
   "priority": 4,
   "title": "Android core goes Kotlin Multiplatform: Ktor, no javax.inject, iOS targets compile (B5)",
-  "updated_at": "2026-10-16T22:02:11+00:00"
+  "updated_at": "2026-10-16T22:02:13+00:00"
 }
