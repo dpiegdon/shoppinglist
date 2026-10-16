@@ -57,7 +57,8 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   a notification's sub-text.
 - Every user-visible string exists in **all nine locales** (en, de, fr, es,
   pt-BR, uk, ar, ja, zh-Hans) on both clients: `web/src/i18n/messages/*.ts` and
-  `android/app/src/main/res/values*/strings.xml`. `web/src/i18n/crossClient.test.ts`
+  `android/shared/src/commonMain/composeResources/values*/strings.xml` (Compose
+  resources: text as written, no Android escaping). `web/src/i18n/crossClient.test.ts`
   pairs the two by identical English and fails on any drift.
 - Server errors are shown by code. A new code goes into
   `web/src/i18n/apiErrors.ts`, `android/…/ui/ErrorText.kt`, and the error table in

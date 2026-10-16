@@ -59,7 +59,7 @@ which serves it at `/shoppinglist.apk`.
 
 ## Modules
 
-The build has two Gradle modules:
+The build has three Gradle modules:
 
 - **`core/`** is the data layer: the API client (`Api`, the DTOs, the
   interceptors, the protocol version and floor), the accounts (the registry, one
@@ -77,6 +77,49 @@ The build has two Gradle modules:
   Robolectric live here: the screens, the migration test, and several tests of
   `core` classes (the repositories, the sync engine) that are here only because
   they open Room through a `Context`.
+- **`shared/`** is the start of the code the Android and iPhone clients will
+  share (see [`../docs/ios-port-design.md`](../docs/ios-port-design.md)). It is
+  a Kotlin Multiplatform module, so far with an Android target only, and holds
+  the strings and drawables as Compose Multiplatform resources (below).
+
+### Strings and drawables
+
+Every string the app shows, in all nine languages, is in
+`shared/src/commonMain/composeResources/values*/strings.xml`, and the two
+pictures the screens draw (the Tuppu mark and the cuneiform name) are in
+`shared/src/commonMain/composeResources/drawable/`. The build generates
+`org.p23q.shoppinglist.resources.Res` from them: code refers to a string as
+`Res.string.name` and to a picture as `Res.drawable.name`, each imported from
+that package.
+
+The files keep Android's XML format, but a value is taken as written: an
+apostrophe or a double quote needs no backslash, quotes around a value would
+be shown, spaces at either end are kept, and a value stays on one line. Only
+`\n`, `\t`, `\uXXXX` and `\\` are escapes. Placeholders are `%1$s` and `%1$d`.
+The language folders are `values` (English, the fallback), `values-de`,
+`values-es`, `values-fr`, `values-pt-rBR`, `values-zh` (simplified Chinese),
+`values-ja`, `values-uk` and `values-ar`.
+
+To add a string, add it to all nine files, and to the web's catalogues when
+the web shows it too; `web/src/i18n/crossClient.test.ts` pairs the two clients
+by their English and fails when a translation differs, and
+`TranslationResourcesTest` fails on a missing key, a lost placeholder or a
+value written the Android way.
+
+Read a string with the functions in `app/…/ui/Strings.kt`: `stringResource(Res.string.x, args…)`
+inside composition, `getString(locale, Res.string.x, args…)` outside it (the
+notifications pass the language stored in `LocalePreferenceStore`). A view
+model hands the screen a `UiText` naming the string. These functions take the
+language the app has chosen, which `LocalizedContent` puts on
+`LocalConfiguration`, and format numbers in it as Android does (Arabic digits
+in Arabic). The resources library's own `stringResource` and `getString`
+follow the phone's language instead and are not used; a test fails if a
+screen imports them. Pictures are drawn with the library's `painterResource`.
+
+What only Android reads stays an Android resource in `app/src/main/res`: the
+launcher icon with its foreground and background colour, the notification
+icon, the app's name for the launcher (`app_name`, the same word in every
+language), the window themes the manifest names, and the `xml/` configurations.
 
 ### Accounts
 
