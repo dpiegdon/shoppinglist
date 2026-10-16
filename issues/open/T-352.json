@@ -1,0 +1,16 @@
+{
+  "body": "Step 2c of docs/ios-port-design.md. Create :shared (KMP: android target plus iosArm64 and\niosSimulatorArm64) and move the screens, view models, navigation (multiplatform navigation-compose),\ntheme and the Compose resources into its common source set. Android-only pieces go behind\nexpect/actual or interfaces implemented in :app: intents and the share sheet, clipboard,\nAppFormat (number, date, currency formatting), locale switching, system-bar icons, crash logs,\nupdate download, notification permission. The Robolectric screen tests and the Roborazzi\nscreenshots move to :shared's Android unit tests and must be unchanged. The iOS targets of\n:shared compile on Linux (wired into verify-all.sh) or, if that cannot work, the reason is\ndocumented. No user-visible change on Android.",
+  "created_at": "2026-10-16T21:23:39+00:00",
+  "deps": [
+    "T-351"
+  ],
+  "id": "T-352",
+  "labels": [
+    "ios",
+    "android",
+    "refactor"
+  ],
+  "priority": 3,
+  "title": "iPhone port step 2c: screens and view models move to a shared multiplatform module",
+  "updated_at": "2026-10-16T21:23:39+00:00"
+}
