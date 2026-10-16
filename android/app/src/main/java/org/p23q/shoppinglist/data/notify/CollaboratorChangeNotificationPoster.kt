@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.data.notify
 
+import org.p23q.shoppinglist.ui.toJavaLocale
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
