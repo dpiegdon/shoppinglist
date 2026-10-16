@@ -7,11 +7,11 @@
   ],
   "id": "T-352",
   "labels": [
-    "ios",
-    "android",
-    "refactor"
+    "refactor",
+    "structure",
+    "agent"
   ],
   "priority": 3,
   "title": "iPhone port step 2c: screens and view models move to a shared multiplatform module",
-  "updated_at": "2026-10-16T21:35:11+00:00"
+  "updated_at": "2026-10-16T22:02:03+00:00"
 }
