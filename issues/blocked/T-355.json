@@ -6,9 +6,10 @@
   ],
   "id": "T-355",
   "labels": [
-    "ios"
+    "ops",
+    "human"
   ],
   "priority": 5,
   "title": "iPhone port step 5: distribution and updates on iOS",
-  "updated_at": "2026-10-16T21:23:40+00:00"
+  "updated_at": "2026-10-16T22:02:03+00:00"
 }
