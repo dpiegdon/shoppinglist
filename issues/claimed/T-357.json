@@ -7,6 +7,7 @@
     "android",
     "agent"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "AccountsViewModelTest flakes: first() on the rows' initial empty list",
   "updated_at": "2026-10-16T22:16:54+00:00"
