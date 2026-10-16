@@ -7,9 +7,11 @@
   ],
   "id": "T-353",
   "labels": [
-    "ios"
+    "feature",
+    "ops",
+    "human"
   ],
   "priority": 4,
   "title": "iPhone port step 3: the iOS shell, built on hosted macOS CI, TestFlight",
-  "updated_at": "2026-10-16T21:23:40+00:00"
+  "updated_at": "2026-10-16T22:02:03+00:00"
 }
