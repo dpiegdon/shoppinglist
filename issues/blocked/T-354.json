@@ -8,7 +8,8 @@
   "labels": [
     "feature",
     "human",
-    "ios"
+    "ios",
+    "server"
   ],
   "priority": 5,
   "title": "iPhone port step 4: background sync and push notifications on iOS (design)",
