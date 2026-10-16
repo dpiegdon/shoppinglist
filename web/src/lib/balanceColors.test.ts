@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CSS = readFileSync(path.join(HERE, "../index.css"), "utf8");
 const THEME_KT = readFileSync(
-  path.join(HERE, "../../../android/app/src/main/java/org/p23q/shoppinglist/ui/theme/Theme.kt"),
+  path.join(HERE, "../../../android/shared/src/commonMain/kotlin/org/p23q/shoppinglist/ui/theme/Theme.kt"),
   "utf8",
 );
 

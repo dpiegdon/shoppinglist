@@ -16,11 +16,11 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.join(HERE, "..");
 const CSS = readFileSync(path.join(SRC, "index.css"), "utf8");
 const BRAND_KT = readFileSync(
-  path.join(HERE, "../../../android/app/src/main/java/org/p23q/shoppinglist/ui/theme/BrandColors.kt"),
+  path.join(HERE, "../../../android/shared/src/commonMain/kotlin/org/p23q/shoppinglist/ui/theme/BrandColors.kt"),
   "utf8",
 );
 const THEME_KT = readFileSync(
-  path.join(HERE, "../../../android/app/src/main/java/org/p23q/shoppinglist/ui/theme/Theme.kt"),
+  path.join(HERE, "../../../android/shared/src/commonMain/kotlin/org/p23q/shoppinglist/ui/theme/Theme.kt"),
   "utf8",
 );
 

@@ -1,0 +1,415 @@
+package org.p23q.shoppinglist.data.update
+
+import org.p23q.shoppinglist.data.closeWhenIdle
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.Dispatchers
+import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
+import org.p23q.shoppinglist.data.TestAccounts
+import org.robolectric.RobolectricTestRunner
+import java.io.File
+
+/**
+ * T-135. Driven through the account's real API client against MockWebServer rather than a hand-rolled fake
+ * Api, following the existing repo/viewmodel tests: the 404 path in particular only behaves
+ * realistically if it goes through ApiErrors, which is what turns a non-2xx into the
+ * ApiException this class relies on catching.
+ */
+@RunWith(RobolectricTestRunner::class)
+class UpdateCheckerTest {
+
+    private lateinit var server: MockWebServer
+    private lateinit var prefs: UpdatePrefsStore
+    private lateinit var accounts: TestAccounts
+    private lateinit var checker: UpdateChecker
+    private val allAccounts = mutableListOf<TestAccounts>()
+
+    private fun newAccounts(): TestAccounts = TestAccounts(
+        Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDb::class.java)
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build(),
+    ).also { allAccounts += it }
+
+    @Before
+    fun setUp() = runTest {
+        server = MockWebServer()
+        server.start()
+
+        val prefsFile = File.createTempFile("update_prefs_test", ".preferences_pb")
+        prefsFile.deleteOnExit()
+        prefs = UpdatePrefsStore(PreferenceDataStoreFactory.create { prefsFile })
+
+        accounts = newAccounts()
+        accounts.add(server.url("/").toString())
+        checker = UpdateChecker(accounts.registry, accounts.sessions, prefs, appVersion = "3.6.1")
+    }
+
+    @After
+    fun tearDown() {
+        if (::server.isInitialized) server.shutdown()
+        // A 401 writes the account in the background; that lands before its database goes.
+        allAccounts.forEach { closeWhenIdle(it.db, pumpMain = {}, registry = it.registry) }
+    }
+
+    private fun offering(version: String) = MockResponse()
+        .setResponseCode(200)
+        .setBody("""{"version": "$version", "download_url": "https://example.com/shoppinglist.apk"}""")
+
+    @Test
+    fun `offers a newer version`() = runTest {
+        server.enqueue(offering("1.12.0"))
+
+        val update = checker.check(currentVersion = "1.11.0")
+
+        assertNotNull(update)
+        assertEquals("1.12.0", update!!.version)
+        assertEquals("https://example.com/shoppinglist.apk", update.downloadUrl)
+    }
+
+    @Test
+    fun `a two-digit minor really is newer`() = runTest {
+        // The version pair a string comparison gets backwards, asserted end-to-end and not only
+        // in the comparator's own test.
+        server.enqueue(offering("1.10.0"))
+
+        assertNotNull(checker.check(currentVersion = "1.9.3"))
+    }
+
+    @Test
+    fun `says nothing when the server matches or trails this build`() = runTest {
+        server.enqueue(offering("1.12.0"))
+        assertNull(checker.check(currentVersion = "1.12.0"))
+
+        prefs.recordCheck(0L)
+        server.enqueue(offering("1.11.0"))
+        assertNull(checker.check(currentVersion = "1.12.0"))
+    }
+
+    @Test
+    fun `asks about a version only once`() = runTest {
+        server.enqueue(offering("1.12.0"))
+        val first = checker.check(currentVersion = "1.11.0")
+        assertNotNull(first)
+        checker.markPrompted(first!!.version)
+
+        prefs.recordCheck(0L)
+        server.enqueue(offering("1.12.0"))
+
+        assertNull(checker.check(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `a skipped version does not suppress the next one`() = runTest {
+        checker.markPrompted("1.12.0")
+        server.enqueue(offering("1.13.0"))
+
+        assertNotNull(checker.check(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `a server too old to answer is silent, not an error`() = runTest {
+        // What every server released before this endpoint returns.
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
+
+        assertNull(checker.check(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `an unparseable version is declined rather than guessed at`() = runTest {
+        server.enqueue(offering("2.0.0-rc1"))
+
+        assertNull(checker.check(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `a dead server is silent`() = runTest {
+        server.shutdown()
+
+        assertNull(checker.check(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `switching the check off sends no request at all`() = runTest {
+        prefs.setAutoCheckEnabled(false)
+        server.enqueue(offering("1.12.0"))
+
+        assertNull(checker.check(currentVersion = "1.11.0"))
+        // The point of the toggle: not a silent check, no check. If a request had gone out, the
+        // enqueued response would have been consumed and this count would be 1.
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `no server configured means no request`() = runTest {
+        val none = newAccounts()
+        val unconfigured = UpdateChecker(none.registry, none.sessions, prefs, appVersion = "3.6.1")
+
+        assertNull(unconfigured.check(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `a second check inside the rate limit window does not hit the server`() = runTest {
+        server.enqueue(offering("1.12.0"))
+        assertNotNull(checker.check(currentVersion = "1.11.0"))
+        val afterFirst = server.requestCount
+
+        server.enqueue(offering("1.12.0"))
+        checker.check(currentVersion = "1.11.0")
+
+        assertEquals(afterFirst, server.requestCount)
+    }
+
+    @Test
+    fun `the attempt is recorded before the request, so a dead server is not retried every time`() = runTest {
+        server.shutdown()
+
+        assertNull(checker.check(currentVersion = "1.11.0"))
+
+        // Recording only on success would leave lastCheckedAt at 0 and re-hit an unreachable
+        // server on every single foreground.
+        assertEquals(true, prefs.lastCheckedAt.first() > 0L)
+    }
+
+    // ---- the check made on opening settings (T-149) ------------------------------
+
+    @Test
+    fun `opening settings asks even inside the twelve-hour window`() = runTest {
+        // The case the ticket came from: an automatic check an hour ago, a release since.
+        prefs.recordCheck(System.currentTimeMillis())
+        server.enqueue(offering("1.12.0"))
+
+        val outcome = checker.checkNow(currentVersion = "1.11.0")
+
+        assertEquals(CheckOutcome.Available(AvailableUpdate("1.12.0", "https://example.com/shoppinglist.apk")), outcome)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `opening settings offers a version that was skipped`() = runTest {
+        // The escape hatch for a prompt tapped away by accident.
+        checker.markPrompted("1.12.0")
+        server.enqueue(offering("1.12.0"))
+
+        assertTrue(checker.checkNow(currentVersion = "1.11.0") is CheckOutcome.Available)
+    }
+
+    @Test
+    fun `opening settings says so when this build is current`() = runTest {
+        server.enqueue(offering("1.12.0"))
+
+        assertEquals(CheckOutcome.UpToDate("1.12.0"), checker.checkNow(currentVersion = "1.12.0"))
+    }
+
+    @Test
+    fun `opening settings reports a failed check instead of staying silent`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+
+        server.enqueue(offering("2.0.0-rc1"))
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+
+        server.shutdown()
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `switched off, opening settings sends nothing`() = runTest {
+        prefs.setAutoCheckEnabled(false)
+        server.enqueue(offering("1.12.0"))
+
+        assertEquals(CheckOutcome.NotChecked, checker.checkNow(currentVersion = "1.11.0"))
+        assertEquals(0, server.requestCount)
+    }
+
+    // ---- the check the "update required" screen makes (T-244) ---------------------
+
+    @Test
+    fun `a forced check asks even with the switch off — updating is not optional here`() = runTest {
+        // The switch is a preference about being OFFERED updates. Once the server has refused this
+        // build outright, it is the only way back in, so the switch cannot suppress the question.
+        prefs.setAutoCheckEnabled(false)
+        server.enqueue(offering("1.12.0"))
+
+        val outcome = checker.checkForced(currentVersion = "1.11.0")
+
+        assertEquals(CheckOutcome.Available(AvailableUpdate("1.12.0", "https://example.com/shoppinglist.apk")), outcome)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `a forced check ignores the twelve-hour interval`() = runTest {
+        prefs.recordCheck(System.currentTimeMillis())
+        server.enqueue(offering("1.12.0"))
+
+        assertTrue(checker.checkForced(currentVersion = "1.11.0") is CheckOutcome.Available)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `a forced check offers a version that was skipped`() = runTest {
+        checker.markPrompted("1.12.0")
+        server.enqueue(offering("1.12.0"))
+
+        assertTrue(checker.checkForced(currentVersion = "1.11.0") is CheckOutcome.Available)
+    }
+
+    @Test
+    fun `a server with no newer app to offer, and one that cannot be asked`() = runTest {
+        // Both are the same thing to the blocking screen: nothing to install, ask the operator.
+        server.enqueue(offering("1.11.0"))
+        assertEquals(CheckOutcome.UpToDate("1.11.0"), checker.checkForced(currentVersion = "1.11.0"))
+
+        // 404 no_app_package: the server carries no APK, which is also what a pre-T-135 server says.
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "no_app_package", "message": "nope"}"""))
+        assertEquals(CheckOutcome.Failed, checker.checkForced(currentVersion = "1.11.0"))
+
+        server.shutdown()
+        assertEquals(CheckOutcome.Failed, checker.checkForced(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `a forced check with no server configured asks nothing`() = runTest {
+        val none = newAccounts()
+        val unconfigured = UpdateChecker(none.registry, none.sessions, prefs, appVersion = "3.6.1")
+
+        assertEquals(CheckOutcome.NotChecked, unconfigured.checkForced(currentVersion = "1.11.0"))
+    }
+
+    @Test
+    fun `the settings check counts as the automatic one`() = runTest {
+        server.enqueue(offering("1.12.0"))
+        checker.checkNow(currentVersion = "1.12.0")
+
+        // Leaving settings must not set off a second request straight away.
+        assertNull(checker.check(currentVersion = "1.12.0"))
+        assertEquals(1, server.requestCount)
+    }
+
+    // ---- several accounts (T-291) --------------------------------------------------
+
+    @Test
+    fun `every server is asked, and the newest version any of them offers is the offer`() = runTest {
+        val second = MockWebServer().apply { start() }
+        try {
+            accounts.add(second.url("/").toString(), id = "second-account", accountId = "acct-2")
+            server.enqueue(offering("1.12.0"))
+            second.enqueue(
+                MockResponse().setResponseCode(200)
+                    .setBody("""{"version": "1.13.0", "download_url": "https://second.example.com/app.apk"}"""),
+            )
+
+            val outcome = checker.checkNow(currentVersion = "1.11.0")
+
+            assertEquals(CheckOutcome.Available(AvailableUpdate("1.13.0", "https://second.example.com/app.apk")), outcome)
+            assertEquals(1, server.requestCount)
+            assertEquals(1, second.requestCount)
+        } finally {
+            second.shutdown()
+        }
+    }
+
+    @Test
+    fun `one server that cannot be asked does not hide another's offer`() = runTest {
+        val second = MockWebServer().apply { start() }
+        try {
+            accounts.add(second.url("/").toString(), id = "second-account", accountId = "acct-2")
+            server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error": "not_found", "message": "nope"}"""))
+            second.enqueue(offering("1.12.0"))
+
+            assertTrue(checker.checkNow(currentVersion = "1.11.0") is CheckOutcome.Available)
+        } finally {
+            second.shutdown()
+        }
+    }
+
+    @Test
+    fun `each answer refreshes the protocol stored on the account`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"version": "1.12.0", "download_url": "https://example.com/a.apk", "protocol": 7}"""),
+        )
+
+        checker.checkNow(currentVersion = "1.11.0")
+
+        assertEquals(7, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertEquals(7, accounts.db.accountDao().all().single().serverProtocol)
+    }
+
+    /** T-304: an answer that names no protocol says nothing about it, so what is stored stays. */
+    @Test
+    fun `an answer without a protocol keeps the one stored`() = runTest {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = 7) }
+        server.enqueue(offering("1.12.0"))
+
+        checker.checkNow(currentVersion = "1.11.0")
+
+        assertEquals(7, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+        assertEquals(7, accounts.db.accountDao().all().single().serverProtocol)
+    }
+
+    /** T-297: a server without an app package says its protocol in the 404. */
+    @Test
+    fun `a server without a package still refreshes the protocol, and offers nothing`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(404)
+                .setBody("""{"error": "no_app_package", "message": "none", "protocol": 5}"""),
+        )
+
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+
+        assertEquals(5, accounts.registry.get(TEST_ACCOUNT_ID)!!.serverProtocol)
+    }
+
+    /** T-327: the release gates the due date, so every answer stores it beside the protocol. */
+    @Test
+    fun `each answer stores the server's release, the 404 included`() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200)
+                .setBody("""{"version": "3.5.0", "download_url": "https://example.com/a.apk", "protocol": 3}"""),
+        )
+        checker.checkNow(currentVersion = "1.11.0")
+        assertEquals("3.5.0", accounts.db.accountDao().all().single().serverVersion)
+
+        server.enqueue(
+            MockResponse().setResponseCode(404)
+                .setBody("""{"error": "no_app_package", "message": "none", "protocol": 3, "version": "3.6.0"}"""),
+        )
+        checker.checkForced(currentVersion = "1.11.0")
+        assertEquals("3.6.0", accounts.registry.get(TEST_ACCOUNT_ID)!!.serverVersion)
+    }
+
+    /** T-298: the endpoint needs no token, and a check must never sign anybody out. */
+    @Test
+    fun `the check carries no token, so a 401 there signs nobody out`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error": "invalid_token", "message": "no"}"""))
+
+        checker.checkNow(currentVersion = "1.11.0")
+
+        assertNull(server.takeRequest().getHeader("Authorization"))
+        assertTrue(accounts.registry.get(TEST_ACCOUNT_ID)!!.signedIn)
+        assertEquals("tok-123", accounts.secrets.token(TEST_ACCOUNT_ID))
+    }
+
+    @Test
+    fun `a page that is not the endpoint's answer is silent`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("<html>portal</html>"))
+
+        assertEquals(CheckOutcome.Failed, checker.checkNow(currentVersion = "1.11.0"))
+    }
+}

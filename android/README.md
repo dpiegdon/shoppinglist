@@ -21,9 +21,10 @@ build signed with the standard Android debug key — fine for installing and
 testing.
 
 Run the checks with `./gradlew lint test :core:jvmTest` (`:core` is a Kotlin
-Multiplatform module, whose JVM tests are `jvmTest`, not `test`). Compiling
-`:core` for iOS (`./gradlew :core:compileKotlinIosArm64`) downloads the
-Kotlin/Native toolchain into `~/.konan` the first time; see
+Multiplatform module whose JVM tests are `jvmTest`, not `test`; `test` runs
+`:shared`'s and `:app`'s). Compiling `:core` and `:shared` for iOS
+(`./gradlew :core:compileKotlinIosArm64 :shared:compileKotlinIosArm64`) downloads
+the Kotlin/Native toolchain into `~/.konan` the first time; see
 [`core/README.md`](core/README.md#the-ios-targets).
 
 ### Release builds
@@ -74,18 +75,69 @@ The build has three Gradle modules:
   Android. Its tests are plain JUnit on the JVM (`./gradlew :core:jvmTest`).
   [`core/README.md`](core/README.md) lists what it may import, what a platform
   implements, and how the iOS targets are built.
-- **`app/`** is the Android app: the Compose UI, the dependency wiring (Koin,
-  in `di/`), and everything
-  that needs the platform, such as DataStore preferences, the Keystore-backed
-  store of account tokens, WorkManager scheduling, notifications, and building the Room
-  database from a `Context` together with its migrations. Where `core` needs one
-  of these it declares an interface and `app` implements it. The tests that
-  need Robolectric live here: the screens, the view models and the migration
-  test.
-- **`shared/`** is the start of the code the Android and iPhone clients will
-  share (see [`../docs/ios-port-design.md`](../docs/ios-port-design.md)). It is
-  a Kotlin Multiplatform module, so far with an Android target only, and holds
-  the strings and drawables as Compose Multiplatform resources (below).
+- **`shared/`** is the app the Android and iPhone clients share (see
+  [`../docs/ios-port-design.md`](../docs/ios-port-design.md)): the screens, their
+  view models, the navigation, the theme, the device's preference stores, the
+  update check, the strings and drawables (Compose Multiplatform resources,
+  below) and the Koin modules that name no platform class
+  (`di/CommonModules.kt`). It is a Kotlin Multiplatform module with an Android
+  target and the `iosArm64` and `iosSimulatorArm64` targets; the code is in
+  `src/commonMain`, and what needs the platform is described under
+  [The shared module](#the-shared-module). Its tests run on the Android target
+  under Robolectric (`./gradlew :shared:testDebugUnitTest`): the screens, the view
+  models, the stores and the screenshots.
+- **`app/`** is the Android shell: `MainActivity`, which shows `:shared`'s
+  `TuppuApp`; the `Application`, which starts Koin with `appPlatformModule`
+  (`di/PlatformModule.kt`) and the common modules; and everything that needs the
+  platform, such as the DataStore files, the Keystore-backed store of account
+  tokens, WorkManager scheduling and its worker, notifications, the crash
+  handler, the HTTP engine, and building the Room database from a `Context`
+  together with its migrations. Where `core` or `shared` needs one of these it
+  declares an interface and `app` implements it. Its tests cover these: the
+  notifications, the workers, the Keystore, the migration test and the Koin
+  graph.
+
+### The shared module
+
+`commonMain` uses Compose Multiplatform (foundation, ui, material3, the icons),
+the multiplatform navigation-compose and lifecycle, Koin, DataStore preferences
+and `:core`; no `android.*`, `java.*` or `platform.*`. Each multiplatform
+library's Android artifact is the androidx one the app used before, at the
+version `gradle/libs.versions.toml` pins, so the Android app draws exactly as
+it did.
+
+What only a platform can do is an `expect` in `commonMain`, with its `actual`
+in `src/androidMain` and `src/iosMain`:
+
+| `expect` | Android | iOS |
+|---|---|---|
+| `PlatformLocale`, `toPlatformLocale()`, `appLocale()` | `java.util.Locale`; the language `LocalizedContent` put on `LocalConfiguration` | `NSLocale`; the language from `LocalAppLocale` |
+| `formatString` (placeholders, a number in the string's language) | `String.format(locale, …)` | its own, with `NSNumberFormatter` |
+| `bidiWrap` | `BidiFormatter` | first-strong isolates around right-to-left text |
+| `LocalizedContent` | the configuration and context in the chosen language, and the layout direction | the layout direction |
+| `AppFormat` (amounts and dates), `shortDate` | `java.text`, `java.time`, ICU | `NSNumberFormatter`, `NSDateFormatter` |
+| `todayIso` | `LocalDate.now()` | `NSCalendar` |
+| `deviceLocale` | the system's locale list | `NSLocale.preferredLanguages` |
+| `isDebugBuild`, `appVersionName` | this module's `BuildConfig.DEBUG`; the package's version name | `Platform.isDebugBinary`; the bundle's short version |
+| `rememberShareText`, `rememberShareFile` | a chooser over `ACTION_SEND` (the file through the app's FileProvider) | `UIActivityViewController` |
+| `rememberOpenUrl` (the app package to install) | `ACTION_VIEW` | `UIApplication.openURL` |
+| `rememberNotificationPermissionRequest` | `POST_NOTIFICATIONS` from API 33 | `UNUserNotificationCenter` |
+| `SystemBarIcons`, `DialogEdgeToEdge` | the window's insets controller | nothing |
+| `deepLinkUri` (the invite link a destination was opened by) | the deep-link `Intent` in the arguments | none |
+| `isValidHttpsUrl` | `java.net.URI` | `NSURL` |
+
+What a platform hands in through Koin is an interface or a value: the
+`DataStore<Preferences>` each store keeps its file in, the crash log
+(`data/crash/CrashLog`, on Android `CrashLogWriter` in `androidMain`, which
+the app's uncaught-exception handler writes), the app's version for
+`UpdateChecker`, and everything `:core` asks for. An iOS app starts Koin with
+its own module beside `commonModules` and hosts `TuppuApp(startDestination)` in
+a view controller; linking that framework needs a Mac.
+
+The strings resolve through a `ResourceEnvironment` built from the app's
+language, whose constructor the resources library keeps internal: `Strings.kt`
+calls it under a suppression, which the compiler warns about, and
+`StringsTest` pins what it does.
 
 ### Strings and drawables
 
@@ -111,13 +163,12 @@ by their English and fails when a translation differs, and
 `TranslationResourcesTest` fails on a missing key, a lost placeholder or a
 value written the Android way.
 
-Read a string with the functions in `app/…/ui/Strings.kt`: `stringResource(Res.string.x, args…)`
+Read a string with the functions in `shared/…/ui/Strings.kt`: `stringResource(Res.string.x, args…)`
 inside composition, `getString(locale, Res.string.x, args…)` outside it (the
 notifications pass the language stored in `LocalePreferenceStore`). A view
 model hands the screen a `UiText` naming the string. These functions take the
-language the app has chosen, which `LocalizedContent` puts on
-`LocalConfiguration`, and format numbers in it as Android does (Arabic digits
-in Arabic). The resources library's own `stringResource` and `getString`
+language the app has chosen, which `LocalizedContent` puts into composition,
+and format numbers in it as Android does (Arabic digits in Arabic). The resources library's own `stringResource` and `getString`
 follow the phone's language instead and are not used; a test fails if a
 screen imports them. Pictures are drawn with the library's `painterResource`.
 
@@ -208,7 +259,7 @@ another account first, or to this phone when the local area is there.
 
 The app has one colour scheme, in a light and a dark version that follow the
 system setting or the choice in Settings. It is held in one file,
-`app/src/main/java/org/p23q/shoppinglist/ui/theme/BrandColors.kt`, one value
+`shared/src/commonMain/kotlin/org/p23q/shoppinglist/ui/theme/BrandColors.kt`, one value
 per role:
 
 | role | light | dark |
@@ -241,9 +292,9 @@ two differ, so change both together.
 [Roborazzi](https://github.com/takahirom/roborazzi) takes pictures of the main
 screens on the JVM, under Robolectric's native graphics mode, with no device or
 emulator. The tests are in
-`app/src/test/java/org/p23q/shoppinglist/ui/screenshots/`, one class per group
-of screens, each run twice, light and dark. The reference images are committed
-in `app/src/test/screenshots/` as `<screen>-light.png` and `<screen>-dark.png`:
+`shared/src/androidUnitTest/kotlin/org/p23q/shoppinglist/ui/screenshots/`, one
+class per group of screens, each run twice, light and dark. The reference images
+are committed in `shared/src/androidUnitTest/screenshots/` as `<screen>-light.png` and `<screen>-dark.png`:
 the start screen, the overview with one account and with several, a shopping
 list, a checklist with due dates, the item dialog, a ledger and its balances,
 list properties and its "Copy to" picker, Accounts, an Account screen,
@@ -261,12 +312,12 @@ it. Robolectric draws text with its own fonts, which look a little different fro
 a phone's but are the same on every run.
 
 ```bash
-./gradlew :app:verifyRoborazziDebug   # compare with the committed images (the gate runs this)
-./gradlew :app:recordRoborazziDebug   # write new reference images
-./gradlew :app:recordRoborazziDebug --tests '*screenshots.ListShotsTest*'   # just one class
+./gradlew :shared:verifyRoborazziDebug   # compare with the committed images (the gate runs this)
+./gradlew :shared:recordRoborazziDebug   # write new reference images
+./gradlew :shared:recordRoborazziDebug --tests '*screenshots.ListShotsTest*'   # just one class
 ```
 
-A plain `testDebugUnitTest` runs the screenshot tests without comparing
+A plain `:shared:testDebugUnitTest` runs the screenshot tests without comparing
 anything. `verifyRoborazziDebug` runs them within `testDebugUnitTest`, so the
 gate pays for no second run. A pixel counts as changed when its colour moved by
 more than 1 % (antialiasing and blending), and a shot fails when more than
@@ -274,16 +325,16 @@ more than 1 % (antialiasing and blending), and a shot fails when more than
 word). Both numbers are `SCREENSHOT_OPTIONS` in `ScreenshotSupport.kt`.
 
 When a comparison fails, the test fails with "Roborazzi: …/<screen>-<theme>.png
-is changed", and `app/build/outputs/roborazzi/` holds
+is changed", and `shared/build/outputs/roborazzi/` holds
 `<screen>-<theme>_actual.png`, what the screen looks like now, and
 `<screen>-<theme>_compare.png`: the reference on the left, the capture on the
 right, and between them only the pixels that differ, in red. The report at
-`app/build/reports/roborazzi/debug/index.html` shows them all. If the change is wanted,
+`shared/build/reports/roborazzi/debug/index.html` shows them all. If the change is wanted,
 record again, look at the new images (`git diff --stat` names them), and commit
 them with the change. If it is not, the change broke the screen.
 
 Robolectric's native graphics has no Linux/aarch64 build, so on such a host
-(a Raspberry Pi) `app/build.gradle.kts` leaves the screenshot tests out and
+(a Raspberry Pi) `shared/build.gradle.kts` leaves the screenshot tests out and
 `verifyRoborazziDebug` compares nothing. Record on an x86_64 host.
 
 ## Installing on a phone
@@ -344,12 +395,12 @@ area included.
 The default is one constant:
 
 ```
-app/src/main/java/org/p23q/shoppinglist/ui/login/LoginViewModel.kt
+shared/src/commonMain/kotlin/org/p23q/shoppinglist/ui/login/LoginViewModel.kt
     const val DEFAULT_SERVER_URL = "https://p23q.org/shopping"
 ```
 
 Edit it before building, and update the assertion in
-`app/src/test/java/org/p23q/shoppinglist/ui/login/LoginViewModelTest.kt` to match
+`shared/src/androidUnitTest/kotlin/org/p23q/shoppinglist/ui/login/LoginViewModelTest.kt` to match
 or the test suite fails. It is only a prefill — the field stays editable, and any
 URL a user logs into replaces it — so users of a stock build can always reach your
 server by typing its URL.

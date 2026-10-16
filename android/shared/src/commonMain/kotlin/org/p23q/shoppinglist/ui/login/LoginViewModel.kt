@@ -1,0 +1,373 @@
+package org.p23q.shoppinglist.ui.login
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.serialization.SerializationException
+import org.p23q.shoppinglist.core.AlreadyAddedException
+import org.p23q.shoppinglist.core.AppTooOldException
+import org.p23q.shoppinglist.core.AuthRepository
+import org.p23q.shoppinglist.core.LoginExpectation
+import org.p23q.shoppinglist.core.NotATuppuServerException
+import org.p23q.shoppinglist.core.ServerTooOldException
+import org.p23q.shoppinglist.core.WrongAccountException
+import org.p23q.shoppinglist.core.account.normalizeServerUrl
+import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.core.api.ApiException
+import org.p23q.shoppinglist.core.api.isTlsFailure
+import org.p23q.shoppinglist.ui.isValidHttpsUrl
+import org.p23q.shoppinglist.core.api.UnauthorizedException
+import org.p23q.shoppinglist.core.sync.SyncTrigger
+import org.p23q.shoppinglist.data.LastServerAddress
+import org.p23q.shoppinglist.data.LocalArea
+import org.p23q.shoppinglist.data.PendingInviteHolder
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.error_generic
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.login_msg_already_added
+import org.p23q.shoppinglist.resources.login_msg_app_too_old
+import org.p23q.shoppinglist.resources.login_msg_credentials_required
+import org.p23q.shoppinglist.resources.login_msg_incorrect_credentials
+import org.p23q.shoppinglist.resources.login_msg_invalid_url
+import org.p23q.shoppinglist.resources.login_msg_not_a_server
+import org.p23q.shoppinglist.resources.login_msg_server_too_old
+import org.p23q.shoppinglist.resources.login_msg_untrusted_cert
+import org.p23q.shoppinglist.resources.login_msg_wrong_account
+import org.p23q.shoppinglist.ui.ErrorText
+import org.p23q.shoppinglist.ui.Routes
+import org.p23q.shoppinglist.ui.UiText
+import org.p23q.shoppinglist.ui.authedStartDestination
+import kotlinx.io.IOException
+
+/** What the login form is for (T-292), from the route's `mode` argument. */
+enum class LoginMode(val arg: String) {
+    /** No server account on this phone yet: the start screen. */
+    START("start"),
+
+    /** Another account beside the ones already here, opened from the Accounts screen. */
+    ADD("add"),
+
+    /** An account the server signed out, signing in again: its server URL is fixed. */
+    RESIGNIN("resignin");
+
+    companion object {
+        fun fromArg(arg: String?): LoginMode = entries.firstOrNull { it.arg == arg } ?: START
+    }
+}
+
+data class LoginUiState(
+    val mode: LoginMode = LoginMode.START,
+    val serverUrl: String = "",
+    val email: String = "",
+    val password: String = "",
+    val isRegisterMode: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: UiText? = null,
+    val loginSucceeded: Boolean = false,
+    /**
+     * A re-sign-in's server is the account's own and cannot be changed here, once this phone has
+     * heard from it (its protocol is known). Editable until then: a row migrated from 3.1.0 has
+     * only the address last typed there, saved before the server answered, and may have none at
+     * all (T-300, T-304).
+     */
+    val serverUrlLocked: Boolean = false,
+    /** Debug-only self-signed-cert opt-in, surfaced here (not just in Settings) so a self-hoster can
+     *  reach it before they've managed to log in — otherwise it's a bootstrap deadlock (T-38/T-46). */
+    val allowSelfSignedCerts: Boolean = false,
+    /** Whether the configured server currently accepts new accounts (T-276); true until the
+     *  up-front check says otherwise, so a slow or failed check never blocks registering. */
+    val registrationAllowed: Boolean = true,
+    /**
+     * The confirmed server's one-line message (T-315), from the same up-front check; null when it
+     * has none or has not answered. Shown, never stored: the account row keeps the synced one.
+     */
+    val serverMessage: String? = null,
+    /**
+     * The app package the server offers, set with the "app too old" message (T-298): the server
+     * speaks a newer protocol than this build, so an update is the only way in.
+     */
+    val downloadUrl: String? = null,
+    /**
+     * "Use without an account" created the local area (T-293): the one-time note is showing, and
+     * the lists open once it is read.
+     */
+    val localAreaNoteOpen: Boolean = false,
+    /** Set once the start screen is done with: to the lists, without an account (T-293). */
+    val localAreaChosen: Boolean = false,
+    /** "Use without an account" is creating the local area: the button waits for it (T-302). */
+    val creatingLocalArea: Boolean = false,
+)
+
+class LoginViewModel(
+    private val authRepository: AuthRepository,
+    private val knownAccounts: KnownAccounts,
+    private val serverConfig: LastServerAddress,
+    private val pendingInviteHolder: PendingInviteHolder,
+    private val syncTrigger: SyncTrigger,
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    private val localArea: LocalArea = LocalArea { false },
+) : ViewModel() {
+
+    private val mode = LoginMode.fromArg(savedStateHandle[Routes.LOGIN_MODE_ARG])
+
+    /** The account a re-sign-in is for; null in the other modes, or if it has gone meanwhile. */
+    private val resignInAccount: AccountEntity? =
+        if (mode == LoginMode.RESIGNIN) {
+            savedStateHandle.get<String>(Routes.ACCOUNT_ID_ARG)?.let { id -> knownAccounts.snapshot().firstOrNull { it.id == id } }
+        } else {
+            null
+        }
+
+    private val _uiState = MutableStateFlow(
+        resignInAccount?.let { account ->
+            LoginUiState(
+                mode = mode,
+                serverUrl = account.serverUrl.orEmpty(),
+                email = account.email.orEmpty(),
+                serverUrlLocked = account.serverProtocol != null && !account.serverUrl.isNullOrBlank(),
+                allowSelfSignedCerts = account.allowSelfSignedCerts,
+            )
+        } ?: LoginUiState(
+            mode = mode,
+            // An invite link for a server this phone has no account on opens the add form on
+            // that server (T-292).
+            serverUrl = savedStateHandle.get<String>(Routes.SERVER_URL_ARG).orEmpty(),
+        ),
+    )
+    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+
+    /** The local id of the account the last successful submit signed in (T-300). */
+    private var signedInId: String? = null
+
+    /** The address [refreshRegistrationStatus] last answered for; another one resets its answer. */
+    private var registrationCheckedUrl: String? = null
+
+    init {
+        // A re-sign-in knows its server and its certificate choice already.
+        if (resignInAccount == null) viewModelScope.launch {
+            // Prefill the address last submitted on this device, kept whatever became of the
+            // attempt or its account (T-298), or the canonical instance for a first run. A URL
+            // the user has started typing in the meantime is left alone.
+            val savedUrl = serverConfig.lastServerUrl()?.takeIf { it.isNotBlank() }
+            val allowSelfSigned = serverConfig.lastAllowSelfSignedCerts()
+            _uiState.update {
+                it.copy(
+                    serverUrl = it.serverUrl.ifBlank { savedUrl ?: DEFAULT_SERVER_URL },
+                    allowSelfSignedCerts = allowSelfSigned,
+                )
+            }
+            // Only once an address has been submitted (T-287). On a fresh install the prefilled
+            // default is a suggestion nobody has confirmed, and the app must not contact any
+            // server before the user has chosen one: if that server turns out to refuse
+            // registration, the attempt failing with 403 is how they find out — the same answer
+            // this check would have given, one screen later.
+            if (savedUrl != null) refreshRegistrationStatus()
+        }
+        // A re-sign-in's server is the account's own, so it is confirmed already: its message is
+        // shown there too (T-327). The registration toggle stays hidden in this mode.
+        else if (!resignInAccount.serverUrl.isNullOrBlank()) refreshRegistrationStatus()
+    }
+
+    /**
+     * Asks the form's server up front whether it is accepting new accounts (T-276), matching the
+     * web login page, and for its server message (T-315). Best-effort — see
+     * [AuthRepository.registrationStatus] — so any failure just leaves the toggle enabled and shows
+     * no message, rather than surfacing an error nobody asked about.
+     *
+     * Only for an address the user has confirmed, by submitting it on this device (T-287): never
+     * the default on a fresh install, and never an address an invite prefilled (T-300) until the
+     * user has submitted it. The form's own address, not the last typed one, which an invite for
+     * another server has replaced in the field. A re-sign-in's account's own server counts as
+     * confirmed (T-327).
+     */
+    fun refreshRegistrationStatus(): Job = viewModelScope.launch {
+        val url = _uiState.value.serverUrl
+        val ownServer = resignInAccount?.serverUrl?.let { sameServer(url, it) } == true
+        if (!ownServer && serverConfig.lastServerUrl()?.let { sameServer(url, it) } != true) return@launch
+        val status = runCatching {
+            authRepository.registrationStatus(url, _uiState.value.allowSelfSignedCerts)
+        }.getOrNull()
+        val allowed = status?.allowRegistration ?: true
+        val message = status?.message?.takeIf { it.isNotBlank() }
+        registrationCheckedUrl = url
+        // Unless the user has typed another address meanwhile: the answer is not about that one.
+        _uiState.update {
+            if (sameServer(it.serverUrl, url)) it.copy(registrationAllowed = allowed, serverMessage = message) else it
+        }
+    }
+
+    private companion object {
+        /** First-run prefill; still editable, and replaced by whatever the user last logged into. */
+        const val DEFAULT_SERVER_URL = "https://p23q.org/shopping"
+    }
+
+    /** Debug-only: the self-signed-cert opt-in, which the next submit uses and the account it signs
+     *  in to keeps. Surfaced on login to break the self-hosting bootstrap deadlock — the Settings
+     *  screen isn't reachable until you're already logged in (T-38/T-46). */
+    fun setAllowSelfSignedCerts(allow: Boolean): Job = viewModelScope.launch {
+        _uiState.update { it.copy(allowSelfSignedCerts = allow, errorMessage = null) }
+        serverConfig.setLastAllowSelfSignedCerts(allow)
+    }
+
+    fun onServerUrlChange(value: String) {
+        if (_uiState.value.serverUrlLocked) return
+        _uiState.update {
+            it.copy(
+                serverUrl = value,
+                errorMessage = null,
+                downloadUrl = null,
+                // The answer was about another address.
+                registrationAllowed = it.registrationAllowed || registrationCheckedUrl?.let { url -> !sameServer(value, url) } == true,
+                serverMessage = it.serverMessage.takeIf { registrationCheckedUrl?.let { url -> sameServer(value, url) } == true },
+            )
+        }
+    }
+
+    fun onEmailChange(value: String) {
+        _uiState.update { it.copy(email = value, errorMessage = null, downloadUrl = null) }
+    }
+
+    fun onPasswordChange(value: String) {
+        _uiState.update { it.copy(password = value, errorMessage = null, downloadUrl = null) }
+    }
+
+    fun onToggleRegisterMode() {
+        _uiState.update { it.copy(isRegisterMode = !it.isRegisterMode, errorMessage = null, downloadUrl = null) }
+    }
+
+    /** Returns the launched Job (or null if validation failed synchronously) so tests can await it. */
+    fun submit(): Job? {
+        val state = _uiState.value
+        if (!isValidHttpsUrl(state.serverUrl)) {
+            _uiState.update { it.copy(errorMessage = UiText.res(Res.string.login_msg_invalid_url)) }
+            return null
+        }
+        if (state.email.isBlank() || state.password.isBlank()) {
+            _uiState.update { it.copy(errorMessage = UiText.res(Res.string.login_msg_credentials_required)) }
+            return null
+        }
+
+        return viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, downloadUrl = null) }
+            try {
+                // Before the server has answered, as in 3.1.0: the next visit prefills what was
+                // typed whatever becomes of this attempt.
+                serverConfig.setLastServerUrl(state.serverUrl)
+                serverConfig.setLastAllowSelfSignedCerts(state.allowSelfSignedCerts)
+                if (state.isRegisterMode) {
+                    authRepository.register(state.serverUrl, state.email, state.password, state.allowSelfSignedCerts)
+                }
+                // Every other account stays (T-292); the repository refuses what this mode does
+                // not expect (T-300), before it has changed anything.
+                signedInId = authRepository.login(
+                    state.serverUrl,
+                    state.email,
+                    state.password,
+                    state.allowSelfSignedCerts,
+                    expect = expectation(),
+                )
+                // The session is now authenticated — pull its data right away, so the first screen
+                // isn't stuck on empty until some later incidental sync (the app-foreground sync
+                // already fired before login, with no token).
+                syncTrigger.scheduleImmediate()
+                _uiState.update { it.copy(isLoading = false, loginSucceeded = true) }
+            } catch (e: AlreadyAddedException) {
+                // The same server and account as one already here and signed in: nothing to add.
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_already_added)) }
+            } catch (e: WrongAccountException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_wrong_account)) }
+            } catch (e: ServerTooOldException) {
+                // Asked before anything else went to a server this device did not know (T-291).
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_server_too_old)) }
+            } catch (e: AppTooOldException) {
+                // The same question, the other way round (T-298): the sign-in would be refused
+                // with 426, so offer the server's package, if it has one, right here.
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = UiText.res(Res.string.login_msg_app_too_old),
+                        downloadUrl = e.downloadUrl,
+                    )
+                }
+            } catch (e: NotATuppuServerException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_not_a_server)) }
+            } catch (e: SerializationException) {
+                // Any other answer that is not the API's JSON: the address is not a Tuppu server.
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_not_a_server)) }
+            } catch (e: UnauthorizedException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_incorrect_credentials)) }
+            } catch (e: ApiException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, Res.string.error_generic)) }
+            } catch (e: IOException) {
+                // A TLS failure is distinct from the generic reach-the-server case: an
+                // untrusted/self-signed cert is the first thing a self-hoster hits, and it's
+                // actionable (T-38).
+                val message = if (e.isTlsFailure()) Res.string.login_msg_untrusted_cert else Res.string.error_offline
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(message)) }
+            }
+            // The attempt confirmed an address that has not answered yet: ask it now, as the next
+            // visit would, so its message shows beside the error (T-327).
+            if (!_uiState.value.loginSucceeded && registrationCheckedUrl?.let { sameServer(it, state.serverUrl) } != true) {
+                refreshRegistrationStatus().join()
+            }
+        }
+    }
+
+    /**
+     * The start screen's "Use without an account" (T-293): creates the local area and shows its
+     * one-time note; a phone that has one already goes straight to the lists. A second tap while
+     * the first runs does nothing: its create() would find the area made and skip the note (T-302).
+     */
+    fun useWithoutAccount(): Job? {
+        val state = _uiState.value
+        if (state.creatingLocalArea || state.localAreaNoteOpen || state.localAreaChosen) return null
+        _uiState.update { it.copy(creatingLocalArea = true) }
+        return viewModelScope.launch {
+            val created = try {
+                localArea.create()
+            } finally {
+                _uiState.update { it.copy(creatingLocalArea = false) }
+            }
+            _uiState.update { if (created) it.copy(localAreaNoteOpen = true) else it.copy(localAreaChosen = true) }
+        }
+    }
+
+    /** The note has been read: on to the lists. */
+    fun dismissLocalAreaNote() = _uiState.update { it.copy(localAreaNoteOpen = false, localAreaChosen = true) }
+
+    private fun expectation(): LoginExpectation = when (mode) {
+        LoginMode.START -> LoginExpectation.Anyone
+        LoginMode.ADD -> LoginExpectation.NewAccount
+        // The account gone meanwhile: nothing to sign in again, so as if adding one.
+        LoginMode.RESIGNIN -> resignInAccount?.let { LoginExpectation.Account(it.id) } ?: LoginExpectation.NewAccount
+    }
+
+    /**
+     * Where to go once signed in: into redeeming an invite parked for this sign-in (T-28), into
+     * the account that signed in (T-300), else from the start screen to the lists as a cold start
+     * would, else null, back to where the form was opened from (the Accounts screen, or a
+     * signed-out account's banner).
+     */
+    fun startDestinationAfterLogin(): String? {
+        pendingInviteHolder.consumeFor(mode, resignInAccount?.id)?.let { invite ->
+            return Routes.redeem(invite.token, invite.url, signedInId ?: invite.accountId)
+        }
+        return if (mode == LoginMode.START) authedStartDestination(authRepository.lastOpenedListId()) else null
+    }
+
+    /** Left without signing in: an invite parked for this sign-in is not for any later one (T-300). */
+    override fun onCleared() {
+        if (!_uiState.value.loginSucceeded) pendingInviteHolder.clear()
+    }
+}
+
+/** Whether two typed addresses name the same server, as the accounts table compares them. */
+private fun sameServer(a: String, b: String): Boolean =
+    a.isNotBlank() && b.isNotBlank() && normalizeServerUrl(a) == normalizeServerUrl(b)
+

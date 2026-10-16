@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // models, the navigation, the theme, the preference stores, the dependency wiring (Koin) and the
 // user-facing strings and drawables (Compose resources in src/commonMain/composeResources). What
 // needs the platform is an expect in commonMain with its actual in androidMain and iosMain, or an
-// interface the app implements. See README.md.
+// interface the app implements. See ../README.md, "The shared module".
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
@@ -43,6 +43,8 @@ kotlin {
             implementation(libs.lifecycle.viewmodel.compose.multiplatform)
             implementation(libs.lifecycle.runtime.compose.multiplatform)
             implementation(libs.kotlinx.coroutines.core)
+            // :core's AppDb is a RoomDatabase, which the view models see.
+            implementation(libs.androidx.room.runtime)
             implementation(libs.kotlinx.serialization.json)
             // The device-local preferences: DataStore is multiplatform, and the platform hands each
             // store its file (the app's appPlatformModule).
@@ -119,6 +121,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        // BuildConfig.DEBUG gates the dev-only "trust self-signed certs" toggle (isDebugBuild).
+        buildConfig = true
     }
 
     testOptions {

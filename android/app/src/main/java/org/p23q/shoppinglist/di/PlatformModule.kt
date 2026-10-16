@@ -29,7 +29,9 @@ import org.p23q.shoppinglist.data.ShowCheckedStore
 import org.p23q.shoppinglist.data.StoredLegacySession
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.api.OkHttpEngineFactory
+import org.p23q.shoppinglist.BuildConfig
 import org.p23q.shoppinglist.data.crash.CrashHandler
+import org.p23q.shoppinglist.data.crash.CrashLog
 import org.p23q.shoppinglist.data.crash.crashLogWriterIn
 import org.p23q.shoppinglist.data.db.buildAppDb
 import org.p23q.shoppinglist.data.notify.CollaboratorChangeNotificationPoster
@@ -42,9 +44,10 @@ import org.p23q.shoppinglist.data.update.UpdateChecker
 import org.p23q.shoppinglist.data.update.UpdatePrefsStore
 
 /**
- * The Android implementations: everything built on a [Context] (the database file, DataStore, the
- * Keystore, WorkManager, notifications), and the Android-only services built on them. An iOS app
- * supplies its own module in place of this one; [commonModules] only names what this provides.
+ * The Android implementations: everything built on a [Context] (the database file, the DataStore
+ * files, the Keystore, WorkManager, notifications), and the Android-only services built on them.
+ * An iOS app supplies its own module in place of this one; [commonModules] (in :shared) only names
+ * what this provides.
  *
  * `single` is one instance per process, `factory` a new one for every injection.
  */
@@ -66,10 +69,10 @@ val appPlatformModule: Module = module {
     single { UpdatePrefsStore(preferencesDataStore(androidContext(), "update_prefs")) }
     single { NotificationPrefsStore(preferencesDataStore(androidContext(), "notification_prefs")) }
 
-    single { crashLogWriterIn(androidContext()) }
+    single { crashLogWriterIn(androidContext()) } bind CrashLog::class
     single { CrashHandler(get()) }
     single { AppForegroundState() }
-    single { UpdateChecker(get(), get(), get()) }
+    single { UpdateChecker(get(), get(), get(), appVersion = BuildConfig.VERSION_NAME) }
 
     single { SyncScheduler(androidContext()) } bind SyncTrigger::class
     single { CollaboratorChangeNotificationPoster(androidContext(), get(), get(), get(), get()) } bind
@@ -79,6 +82,9 @@ val appPlatformModule: Module = module {
     // Built by ShoppingListApp's KoinWorkerFactory, which passes the WorkerParameters.
     worker { params -> TuppuSyncWorker(androidContext(), params.get(), get(), get(), get()) }
 }
+
+/** Everything the app starts Koin with. */
+val appModules: List<Module> = listOf(appPlatformModule) + commonModules
 
 /** One DataStore file under the app's files; each is created once, by the one store that owns it. */
 private fun preferencesDataStore(context: Context, name: String): DataStore<Preferences> =

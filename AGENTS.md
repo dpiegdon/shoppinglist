@@ -73,6 +73,11 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 
 - **`:core` has no Android on its classpath; put platform code behind an
   interface in `:app`.** See `android/core/README.md` for what `:core` may import.
+- **`:shared` is the UI both phones run** (screens, view models, navigation,
+  theme, preference stores, strings, the common Koin modules), in `commonMain`,
+  compiled for Android and iOS. What needs Android goes behind an `expect` with
+  its `actual` in `androidMain` and `iosMain`, or an interface `:app` implements;
+  `:app` is the Android shell. See "The shared module" in `android/README.md`.
 
 ## Server rules
 
@@ -101,10 +106,15 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 - Run `./verify-all.sh` before committing code; a docs-only change may skip it.
   While iterating, run just the suite you touched.
 - A new test should fail when its change is reverted. Check by mutating the code.
-- Android build: the app wires its classes with Koin, in `app/…/di/`. A class
-  added to or removed from the graph is added to or removed there by hand;
-  `KoinGraphTest` fails if a constructor asks for something no module
-  provides, or a definition fails to build.
+- Android build: the app wires its classes with Koin: the common modules in
+  `shared/…/di/CommonModules.kt`, the Android ones in `app/…/di/PlatformModule.kt`.
+  A class added to or removed from the graph is added to or removed there by
+  hand; `KoinGraphTest` (in `:app`) fails if a constructor asks for something no
+  module provides, or a definition fails to build.
+- Android tests: the screens', view models' and stores' tests and the
+  screenshot tests are `:shared`'s, in `shared/src/androidUnitTest` (Robolectric
+  on the Android target); `:app` keeps the tests of what it holds (notifications,
+  workers, the Keystore, migrations, the Koin graph).
 - Android (Robolectric) pitfalls:
   - Use Room with `BundledSQLiteDriver()`: Robolectric has no native SQLite on
     aarch64. Room 2.8 cannot run migrations on the driver path; see
@@ -112,9 +122,10 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   - Never `db.close()` a test database while a coroutine may still be inside a
     query: Room closes every connection at once, and a query running natively on
     another thread then segfaults the whole test executor (exit 134, an
-    `hs_err_pid*.log` in `app/`, T-303). Close through `closeWhenIdle(...)` in
-    `app/src/test/.../data/CloseTestDb.kt`, which cancels the view models, waits
-    for them, flushes the registry, then closes.
+    `hs_err_pid*.log` in `app/` or `shared/`, T-303). Close through
+    `closeWhenIdle(...)` in `data/CloseTestDb.kt` (one copy in `app/src/test`, one
+    in `shared/src/androidUnitTest`), which cancels the view models, waits for
+    them, flushes the registry, then closes.
   - Don't put a Compose test rule and `MainDispatcherRule` in one class; they
     wait on each other forever. Screen tests use `runBlocking<Unit>` (JUnit
     rejects a non-Unit return).

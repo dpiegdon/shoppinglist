@@ -8,37 +8,20 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
-import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
-import org.p23q.shoppinglist.data.deviceLocale
-import org.p23q.shoppinglist.data.ThemePreference
-import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
-import org.p23q.shoppinglist.ui.LocalizedContent
-import org.p23q.shoppinglist.ui.ShoppingListNavHost
+import org.p23q.shoppinglist.ui.TuppuApp
 import org.p23q.shoppinglist.ui.coldStartDestination
-import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
 
 class MainActivity : ComponentActivity() {
-
-    private val themePreferenceStore: ThemePreferenceStore by inject()
-
-    private val localePreferenceStore: LocalePreferenceStore by inject()
 
     private val lastOpened: LastOpenedListStore by inject()
 
@@ -72,37 +55,8 @@ class MainActivity : ComponentActivity() {
 
         if (accounts.any { it.isServer && it.signedIn }) maybeRequestNotificationPermission()
 
-        setContent {
-            val themePreference by themePreferenceStore.theme.collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)
-            val darkTheme = when (themePreference) {
-                ThemePreference.SYSTEM -> isSystemInDarkTheme()
-                ThemePreference.LIGHT -> false
-                ThemePreference.DARK -> true
-            }
-            // Seeded with the device language rather than a fixed default, so the very first
-            // frame is already in the right language for a user who has never chosen one — an
-            // English flash before the stored value arrives would be visible on every cold start.
-            val locale by localePreferenceStore.effective.collectAsStateWithLifecycle(
-                initialValue = deviceLocale(),
-            )
-            // Outermost, so the theme and every screen below resolve strings — and layout
-            // direction — in the chosen language (T-111/T-126).
-            LocalizedContent(locale) {
-                ShoppingListTheme(darkTheme = darkTheme) {
-                    // The base Android theme (themes.xml) is a fixed light theme, not day/night — so
-                    // without this Surface, dark mode paints the DarkColors palette's light-on-dark
-                    // text over the window's still-white background ("light gray on white"). Surface
-                    // is the one composable that actually fills the screen with
-                    // colorScheme.background.
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {
-                        ShoppingListNavHost(startDestination = startDestination)
-                    }
-                }
-            }
-        }
+        // The shared app (:shared): language, theme and navigation.
+        setContent { TuppuApp(startDestination = startDestination) }
     }
 
     /**

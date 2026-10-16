@@ -138,22 +138,25 @@ android_check() (
   # that compiles the src/release source set, which is where the debug-only TLS
   # bypass is proven absent (see android/README.md). It does not minify or need
   # signing, so it belongs in the gate rather than release.sh, unlike assembleRelease.
-  # :core:jvmTest runs the data layer's plain-JVM suite (android/core). The
-  # :core:compileKotlinIos* tasks compile the same code for the iPhone targets, to
-  # klibs only (T-295): Kotlin/Native does that on Linux x86_64 and macOS, and has
-  # no Linux/aarch64 host, so there the iOS check is left out.
-  # :app:verifyRoborazziDebug compares the screenshot tests' captures with the
-  # committed images in android/app/src/test/screenshots (T-325); it runs them as
-  # part of testDebugUnitTest, so it costs no second test run.
+  # :core:jvmTest runs the data layer's plain-JVM suite (android/core).
+  # :shared:testDebugUnitTest runs the screens', view models' and stores' tests
+  # (android/shared, T-352), and :shared:lintDebug lints that code, which
+  # :app:lintDebug does not see. The :core:compileKotlinIos* and
+  # :shared:compileKotlinIos* tasks compile the same code for the iPhone targets,
+  # to klibs only (T-295): Kotlin/Native does that on Linux x86_64 and macOS, and
+  # has no Linux/aarch64 host, so there the iOS check is left out.
+  # :shared:verifyRoborazziDebug compares the screenshot tests' captures with the
+  # committed images in android/shared/src/androidUnitTest/screenshots (T-325); it
+  # runs them as part of :shared:testDebugUnitTest, so it costs no second test run.
   local ios=""
   case "$(uname -s)/$(uname -m)" in
-    Linux/x86_64 | Darwin/*) ios=":core:compileKotlinIosArm64 :core:compileKotlinIosSimulatorArm64" ;;
+    Linux/x86_64 | Darwin/*) ios=":core:compileKotlinIosArm64 :core:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64" ;;
   esac
   local log
   log=$(mktemp)
-  # $ios is unquoted on purpose: none, or two task names.
+  # $ios is unquoted on purpose: none, or four task names.
   # shellcheck disable=SC2086
-  if ./gradlew :core:jvmTest $ios :app:testDebugUnitTest :app:verifyRoborazziDebug :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
+  if ./gradlew :core:jvmTest $ios :shared:testDebugUnitTest :shared:verifyRoborazziDebug :shared:lintDebug :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug --offline 2>&1 | tee "$log"; then
     rm -f "$log"
     return 0
   fi
@@ -162,7 +165,7 @@ android_check() (
     echo
     echo "=== android: Gradle cache is cold; rerunning online ==="
     # shellcheck disable=SC2086
-    ./gradlew :core:jvmTest $ios :app:testDebugUnitTest :app:verifyRoborazziDebug :app:testReleaseUnitTest :app:lintDebug
+    ./gradlew :core:jvmTest $ios :shared:testDebugUnitTest :shared:verifyRoborazziDebug :shared:lintDebug :app:testDebugUnitTest :app:testReleaseUnitTest :app:lintDebug
   else
     rm -f "$log"
     return 1

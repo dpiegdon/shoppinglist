@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.roborazzi)
 }
 
 // Release signing (T-49): credentials live in android/keystore.properties next to the gitignored
@@ -91,28 +90,20 @@ android {
 
 dependencies {
     implementation(project(":core"))
-    // The strings and drawables (Compose resources), and later the shared screens.
+    // The screens, view models, navigation, theme, preference stores, strings and drawables, and
+    // the common Koin modules (T-352). MainActivity hosts its TuppuApp.
     implementation(project(":shared"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.core)
-    implementation(libs.androidx.navigation.compose)
 
-    // Dependency injection (T-350): the wiring is in di/. koin-core and koin-compose-viewmodel are
-    // multiplatform, so the common modules and koinViewModel() can move to :shared as they are.
+    // Dependency injection (T-350): appPlatformModule is in di/, the common modules in :shared.
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.core)
     implementation(libs.koin.android)
-    implementation(libs.koin.compose.viewmodel)
     implementation(libs.koin.androidx.workmanager)
 
     // The @Database, entities and DAOs live in :core, which runs the Room compiler; this module
@@ -138,6 +129,7 @@ dependencies {
     testImplementation(libs.koin.test)
     testImplementation(libs.koin.test.junit4)
     testImplementation(libs.robolectric)
+    // Brings androidx.test's ApplicationProvider, which the Robolectric tests use.
     testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.kotlinx.coroutines.test)
@@ -151,15 +143,9 @@ dependencies {
     // self-load under a plain JVM test; "-jvm" bundles + self-extracts its native library instead.
     testImplementation(libs.sqlite.bundled.jvm)
     testImplementation(libs.okhttp.mockwebserver)
-    // The screenshot tests' server answers through Ktor's MockEngine.
-    testImplementation(libs.ktor.client.mock)
     // HeldCertificate / HandshakeCertificates for the self-signed-cert TLS tests that verify the
     // debug bypass connects and the release no-op still rejects untrusted certs.
     testImplementation(libs.okhttp.tls)
-    // Screenshot tests (T-325): Roborazzi captures Compose screens under Robolectric's native
-    // graphics; see "Screenshot tests" in ../README.md.
-    testImplementation(libs.roborazzi)
-    testImplementation(libs.roborazzi.compose)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -175,18 +161,4 @@ tasks.withType<Test>().configureEach {
             languageVersion.set(JavaLanguageVersion.of(21))
         },
     )
-    // The screenshot tests need Robolectric's native graphics, which has no Linux/aarch64 build
-    // (see src/test/resources/robolectric.properties): it fails while the test's sandbox starts,
-    // before any assumption in the test could skip it. On such a host they are left out, and
-    // verifyRoborazziDebug has nothing to compare.
-    if (System.getProperty("os.name") == "Linux" && System.getProperty("os.arch") == "aarch64") {
-        filter { excludeTestsMatching("org.p23q.shoppinglist.ui.screenshots.*") }
-        doFirst { logger.warn("Linux/aarch64: the screenshot tests are skipped (no native graphics for Robolectric here)") }
-    }
-}
-
-// Screenshot tests (T-325). The reference PNGs are committed next to the tests; a comparison's
-// actual and diff images land in build/outputs/roborazzi. See "Screenshot tests" in ../README.md.
-roborazzi {
-    outputDir.set(file("src/test/screenshots"))
 }

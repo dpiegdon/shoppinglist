@@ -41,7 +41,7 @@ def test_the_android_screenshots_are_compared():
     runs = [line for line in android_check.splitlines() if "./gradlew " in line]
     # both the offline attempt and the online retry
     assert len(runs) >= 2
-    assert all(":app:verifyRoborazziDebug" in line for line in runs)
+    assert all(":shared:verifyRoborazziDebug" in line for line in runs)
 
 
 def test_the_wheel_is_built_and_smoke_tested_in_the_gate():
