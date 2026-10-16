@@ -5,7 +5,8 @@
   "labels": [
     "refactor",
     "structure",
-    "android"
+    "android",
+    "ios"
   ],
   "owner": "user",
   "priority": 3,
