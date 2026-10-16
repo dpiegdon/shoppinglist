@@ -6,11 +6,11 @@
   ],
   "id": "T-350",
   "labels": [
-    "ios",
-    "android",
-    "refactor"
+    "refactor",
+    "agent",
+    "ready"
   ],
   "priority": 3,
   "title": "iPhone port step 2a: Hilt out, Koin in",
-  "updated_at": "2026-10-16T21:23:38+00:00"
+  "updated_at": "2026-10-16T22:02:03+00:00"
 }
