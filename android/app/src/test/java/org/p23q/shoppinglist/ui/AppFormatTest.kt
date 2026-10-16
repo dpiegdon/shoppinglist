@@ -1,4 +1,4 @@
-package org.p23q.shoppinglist.core
+package org.p23q.shoppinglist.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

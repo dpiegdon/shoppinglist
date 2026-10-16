@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.StringResource
-import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.InviteForMeDto
 import org.p23q.shoppinglist.core.db.AccountEntity

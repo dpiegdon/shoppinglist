@@ -3,12 +3,16 @@ package org.p23q.shoppinglist.core.sync
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import org.p23q.shoppinglist.core.Clock
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.AppJson
+import org.p23q.shoppinglist.core.newId
 import org.p23q.shoppinglist.core.api.FieldClock
 import org.p23q.shoppinglist.core.api.ItemDto
 import org.p23q.shoppinglist.core.api.ItemFieldsDto
@@ -18,6 +22,7 @@ import org.p23q.shoppinglist.core.api.PriceDto
 import org.p23q.shoppinglist.core.api.SyncChanges
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.api.UnauthorizedException
+import org.p23q.shoppinglist.core.api.isTlsFailure
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemDao
 import org.p23q.shoppinglist.core.db.ItemEntity
@@ -29,11 +34,7 @@ import org.p23q.shoppinglist.core.db.LwwString
 import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
-import java.io.IOException
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.net.ssl.SSLException
+import kotlinx.io.IOException
 
 sealed interface SyncResult {
     data class Success(val pushedItems: Int, val pushedLists: Int, val pulledItems: Int, val pulledLists: Int) : SyncResult
@@ -62,7 +63,7 @@ sealed interface SyncResult {
  * Two accounts on this phone that share a list hold a row each, with their own clocks, dirty flags
  * and quarantine, and the server reconciles what both push. What goes out carries server ids.
  */
-class SyncEngine @Inject constructor(
+class SyncEngine(
     private val itemDao: ItemDao,
     private val listDao: ListDao,
     private val registry: AccountRegistry,
@@ -71,13 +72,14 @@ class SyncEngine @Inject constructor(
     private val appDb: AppDb,
     private val syncStatus: SyncStatus,
     private val notifier: CollaboratorChangeNotifier,
+    private val clock: Clock = Clock.System,
 ) {
     /**
      * By account, the local ids of the rows its last `410` re-base dropped, keyed by server id,
      * until the pull that follows has handed them back ([newListLocalId]). Only touched under the
-     * account's lock.
+     * account's lock; the map itself is replaced as a whole, since several accounts sync at once.
      */
-    private val rebasedLocalIds = ConcurrentHashMap<String, RebasedLocalIds>()
+    private val rebasedLocalIds = MutableStateFlow<Map<String, RebasedLocalIds>>(emptyMap())
 
     private class RebasedLocalIds(val lists: MutableMap<String, String>, val items: MutableMap<String, String>)
 
@@ -136,7 +138,7 @@ class SyncEngine @Inject constructor(
                 // Isolated: whatever went wrong with this account's run must not cost the next
                 // account its sync. The status records it as that account's failure — unless the
                 // account is gone by now, whose status must not be brought back.
-                val message = e.message ?: e.javaClass.simpleName
+                val message = e.message ?: e::class.simpleName ?: "Exception"
                 if (registry.get(account.id) != null) {
                     syncStatus.account(account.id).failed(
                         message,
@@ -265,13 +267,14 @@ class SyncEngine @Inject constructor(
                 // the rows it brings: notification mutes, the last-opened list and an open screen
                 // name a list by its local id, and a list created on this phone has one that is
                 // not its server id.
-                rebasedLocalIds[accountId] = appDb.inTransaction {
+                val dropped = appDb.inTransaction {
                     val items = itemDao.syncedRowsForAccount(accountId).associate { it.serverId to it.localId }
                     itemDao.deleteSyncedRowsForAccount(accountId)
                     val lists = listDao.syncedRowsForAccount(accountId).associate { it.serverId to it.localId }
                     listDao.deleteSyncedRowsForAccount(accountId)
                     RebasedLocalIds(lists = lists.toMutableMap(), items = items.toMutableMap())
                 }
+                rebasedLocalIds.update { it + (accountId to dropped) }
                 registry.update(accountId) { it.copy(syncCursor = 0) }
                 return syncAccountLocked(accountId, fullLists)
             }
@@ -329,19 +332,14 @@ class SyncEngine @Inject constructor(
             val message = e.message ?: "sync failed"
             status.failed(message, pending = pendingBefore, blocked = blockedCount(accountId))
             return SyncResult.Failed(message)
-        } catch (e: SSLException) {
-            // Distinct, actionable message for an untrusted cert (T-38); SSLException extends
-            // IOException, so this catch must precede it.
+        } catch (e: IOException) {
+            // A distinct, actionable message for an untrusted cert (T-38).
             //
             // Deliberately NOT a string resource: nothing renders it. SyncState.lastError is only
             // ever null-checked (SyncStatusBar picks a colour from it), and TuppuSyncWorker discards
             // SyncResult.Failed's message entirely. It is a diagnostic, so translating it would be
             // work with no user-visible effect (T-111).
-            val message = "Server certificate not trusted"
-            status.failed(message, pending = pendingBefore, blocked = blockedCount(accountId))
-            return SyncResult.Failed(message)
-        } catch (e: IOException) {
-            val message = e.message ?: "network error"
+            val message = if (e.isTlsFailure()) "Server certificate not trusted" else e.message ?: "network error"
             status.failed(message, pending = pendingBefore, blocked = blockedCount(accountId))
             return SyncResult.Failed(message)
         }
@@ -378,7 +376,7 @@ class SyncEngine @Inject constructor(
             }
         }
         // The pull that follows a re-base is this one: what it did not bring back is gone.
-        rebasedLocalIds.remove(accountId)
+        rebasedLocalIds.update { it - accountId }
 
         // The server message rides on every response (T-315); kept on the row so it shows offline.
         // A server that predates it sends none, which clears whatever an older answer left.
@@ -411,7 +409,7 @@ class SyncEngine @Inject constructor(
         }
 
         status.succeeded(
-            at = System.currentTimeMillis(),
+            at = clock.nowMillis(),
             pending = pendingAfter,
             blocked = blockedCount(accountId),
         )
@@ -455,14 +453,14 @@ class SyncEngine @Inject constructor(
      * The server id is the rule MIGRATION_9_10 set for the rows it carried over.
      */
     private suspend fun newListLocalId(accountId: String, serverId: String): String {
-        rebasedLocalIds[accountId]?.lists?.remove(serverId)?.let { if (listDao.get(it) == null) return it }
-        return if (listDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+        rebasedLocalIds.value[accountId]?.lists?.remove(serverId)?.let { if (listDao.get(it) == null) return it }
+        return if (listDao.get(serverId) == null) serverId else newId()
     }
 
     /** The same for an item: see [newListLocalId]. */
     private suspend fun newItemLocalId(accountId: String, serverId: String): String {
-        rebasedLocalIds[accountId]?.items?.remove(serverId)?.let { if (itemDao.get(it) == null) return it }
-        return if (itemDao.get(serverId) == null) serverId else UUID.randomUUID().toString()
+        rebasedLocalIds.value[accountId]?.items?.remove(serverId)?.let { if (itemDao.get(it) == null) return it }
+        return if (itemDao.get(serverId) == null) serverId else newId()
     }
 
     /** One account's rows the server quarantined with a 422, items and lists alike (T-32, T-198). */
@@ -504,7 +502,7 @@ class SyncEngine @Inject constructor(
      */
     private suspend fun ensureServerProtocol(accountId: String) {
         val account = registry.get(accountId) ?: return
-        if (account.serverProtocol != null || accountId in protocolAsked) return
+        if (account.serverProtocol != null || accountId in protocolAsked.value) return
         val url = account.serverUrl ?: return
         var version: String? = null
         val protocol = try {
@@ -522,7 +520,7 @@ class SyncEngine @Inject constructor(
             // Something answered, but not the endpoint's JSON.
             null
         }
-        protocolAsked.add(accountId)
+        protocolAsked.update { it + accountId }
         if (protocol != null || version != null) {
             registry.update(accountId) {
                 it.copy(serverProtocol = protocol ?: it.serverProtocol, serverVersion = version ?: it.serverVersion)
@@ -531,7 +529,7 @@ class SyncEngine @Inject constructor(
     }
 
     /** The accounts [ensureServerProtocol] has had an answer for in this process. */
-    private val protocolAsked: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val protocolAsked = MutableStateFlow<Set<String>>(emptySet())
 
     /**
      * Detects rows in this pull that were last touched by a DIFFERENT account and reports them

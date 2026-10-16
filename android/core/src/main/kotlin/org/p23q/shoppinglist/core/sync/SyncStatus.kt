@@ -3,8 +3,8 @@ package org.p23q.shoppinglist.core.sync
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 
 /**
  * A snapshot of sync health for the UI (T-47). [lastSyncAt] is epoch-ms of the last *successful*
@@ -37,9 +37,8 @@ data class SyncState(
  *
  * With one account the aggregate is that account's state, field for field.
  */
-@Singleton
-class SyncStatus @Inject constructor() {
-    private val lock = Any()
+class SyncStatus {
+    private val lock = SynchronizedObject()
     private val perAccount = LinkedHashMap<String, SyncState>()
     private val inactive = HashSet<String>()
     private val _accounts = MutableStateFlow<Map<String, SyncState>>(emptyMap())

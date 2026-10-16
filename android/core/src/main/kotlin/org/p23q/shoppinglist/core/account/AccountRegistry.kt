@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.inTransaction
-import java.util.UUID
+import org.p23q.shoppinglist.core.newId
 
 /**
  * The accounts on this device, and the only code that writes the `accounts` table.
@@ -104,7 +104,7 @@ class AccountRegistry(
         if (local() != null) return@withLock null
         add(
             AccountEntity(
-                id = UUID.randomUUID().toString(),
+                id = newId(),
                 kind = AccountEntity.KIND_LOCAL,
                 serverUrl = null,
                 accountId = null,
@@ -264,5 +264,43 @@ fun normalizeServerUrl(url: String): String {
 private fun withTrailingSlash(url: String): String = if (url.endsWith("/")) url else "$url/"
 
 /** The default label of an account on [serverUrl]: the server's host, or the URL if it has none. */
-fun serverLabel(serverUrl: String): String =
-    runCatching { java.net.URI(serverUrl).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: serverUrl
+fun serverLabel(serverUrl: String): String = urlHost(serverUrl)?.takeIf { it.isNotBlank() } ?: serverUrl
+
+/**
+ * The host of an absolute URL with an authority, as RFC 2396 reads it: a domain name, an IPv4
+ * address, or an IPv6 literal with its brackets. Null when there is none, or when the URL is not
+ * one (a character no URL may hold, a port that is not a number, a host no DNS name can be).
+ */
+private fun urlHost(url: String): String? {
+    if (url.any { it <= ' ' || it == '\u007f' || it in "\"<>\\^`{|}" }) return null
+    val schemeEnd = url.indexOf("://")
+    if (schemeEnd <= 0) return null
+    val scheme = url.substring(0, schemeEnd)
+    if (!scheme[0].isAsciiLetter() || !scheme.all { it.isAsciiLetter() || it in '0'..'9' || it in "+-." }) return null
+    val rest = url.substring(schemeEnd + 3)
+    val authorityEnd = rest.indexOfFirst { it == '/' || it == '?' || it == '#' }.let { if (it < 0) rest.length else it }
+    val hostPort = rest.substring(0, authorityEnd).substringAfterLast('@')
+    val hostEnd = if (hostPort.startsWith("[")) hostPort.indexOf(']') + 1 else hostPort.indexOf(':').let { if (it < 0) hostPort.length else it }
+    if (hostEnd <= 0) return null
+    val host = hostPort.substring(0, hostEnd)
+    val port = hostPort.substring(hostEnd)
+    if (port.isNotEmpty() && (port[0] != ':' || !port.drop(1).all { it in '0'..'9' })) return null
+    return host.takeIf { it.startsWith("[") || isIpv4(it) || isDomainName(it) }
+}
+
+private fun Char.isAsciiLetter() = this in 'a'..'z' || this in 'A'..'Z'
+
+private fun isIpv4(host: String): Boolean {
+    val parts = host.split('.')
+    return parts.size == 4 && parts.all { part -> part.isNotEmpty() && part.length <= 3 && part.all { it in '0'..'9' } && part.toInt() <= 255 }
+}
+
+/** Labels of letters, digits and inner hyphens, the last one starting with a letter; a trailing dot is allowed. */
+private fun isDomainName(host: String): Boolean {
+    val labels = host.removeSuffix(".").split('.')
+    val wellFormed = labels.all { label ->
+        label.isNotEmpty() && label.first() != '-' && label.last() != '-' &&
+            label.all { it.isAsciiLetter() || it in '0'..'9' || it == '-' }
+    }
+    return wellFormed && labels.last().first().isAsciiLetter()
+}

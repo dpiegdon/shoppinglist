@@ -12,7 +12,7 @@ import java.util.Locale
  * "3. Okt.", and with the year only when it is not [today]'s: "Jan 5, 2027". The web's
  * `shortDate` in lib/format.ts, tested with the same example dates.
  *
- * Here rather than in :core's AppFormat: a month-and-day form is a CLDR skeleton, which only ICU
+ * Not in [AppFormat], which plain JVM tests run: a month-and-day form is a CLDR skeleton, which only ICU
  * resolves per language (java.time's localized styles all carry the year, and its skeleton
  * lookup is newer than Android's). Formatted at UTC midnight, so no zone moves the day.
  */

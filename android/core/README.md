@@ -21,8 +21,10 @@ to this directory, the same depth as `app/`.
   JDK.
 - From `androidx.*`, only `androidx.room` and `androidx.sqlite`. Both are Kotlin
   Multiplatform, so this module compiles against their JVM artifacts.
-- Nothing from `android.*`, any other `androidx.*`, or `dagger.*`. Hilt modules
-  stay in `:app`.
+- `kotlinx.io` (its `IOException` is `java.io.IOException` on the JVM) and
+  `kotlinx.atomicfu` locks.
+- Nothing from `android.*`, any other `androidx.*`, `dagger.*` or `javax.inject`.
+  Hilt modules stay in `:app`.
 
 Tolerated for now, until the module goes multiplatform:
 
@@ -30,11 +32,11 @@ Tolerated for now, until the module goes multiplatform:
 |---|---|
 | `retrofit2.http.*` annotations | `api/Api.kt` |
 | `okhttp3.Interceptor`, `okhttp3.Response` | `api/AuthInterceptor.kt`, `api/ErrorInterceptor.kt`, `api/Protocol.kt`, `account/AccountSessions.kt` |
-| `javax.inject.Inject` on constructors | `repo/ItemsRepo.kt`, `repo/ListsRepo.kt`, `sync/SyncEngine.kt`, `sync/SyncStatus.kt` |
-| `javax.inject.Singleton` | `sync/SyncStatus.kt` |
+| `java.text.Normalizer`, `java.lang.Character` | `UnicodeText.kt` |
+| `javax.net.ssl.SSLException` | `api/Tls.kt` |
 
-The classes in `account/` and `AuthRepositoryImpl` carry no annotations; `:app`
-builds them in its Hilt modules.
+Nothing here carries injection annotations; `:app` builds every class in its
+Hilt modules (`CoreModule`, `AccountModule`, `AuthRepositoryModule`).
 
 ## Platform interfaces
 

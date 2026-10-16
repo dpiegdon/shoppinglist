@@ -63,7 +63,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import org.jetbrains.compose.resources.StringResource
-import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.resources.Res

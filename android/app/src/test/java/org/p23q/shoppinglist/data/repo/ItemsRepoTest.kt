@@ -487,7 +487,7 @@ class ItemsRepoTest {
             // the write transaction and this wait runs out; without it, the second edit reads the
             // stale row, commits here, and is overwritten by the write two lines below.
             committedInsideTheWindow = withTimeoutOrNull(2_000) { tap!!.join() } != null
-            current.copy(name = "Milk 2%".toLww("device-1"))
+            current.copy(name = "Milk 2%".toLww("device-1", System.currentTimeMillis()))
         }
         tap!!.join()
 

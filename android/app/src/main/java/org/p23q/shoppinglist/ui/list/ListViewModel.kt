@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListKind

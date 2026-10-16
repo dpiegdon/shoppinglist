@@ -1,8 +1,10 @@
 package org.p23q.shoppinglist.core.account
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import org.p23q.shoppinglist.core.api.Api
@@ -14,7 +16,6 @@ import org.p23q.shoppinglist.core.api.TokenProvider
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.sync.AccountSyncStatus
 import org.p23q.shoppinglist.core.sync.SyncStatus
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Builds a Retrofit [Api] for one server. Implemented in :app, which owns Retrofit, OkHttp's client
@@ -52,7 +53,7 @@ class AccountSessions(
     private val json: Json,
     private val syncStatus: SyncStatus,
 ) {
-    private val cache = ConcurrentHashMap<String, AccountSession>()
+    private val cache = MutableStateFlow<Map<String, AccountSession>>(emptyMap())
 
     /**
      * Whether the app is too old for every server it has an account on — the state in which the
@@ -77,7 +78,7 @@ class AccountSessions(
         val account = registry.get(accountId) ?: error("No account $accountId")
         val serverUrl = account.serverUrl ?: error("Account $accountId has no server")
         val key = serverUrl to account.allowSelfSignedCerts
-        cache[accountId]?.takeIf { it.builtFor == key }?.let { return it }
+        cache.value[accountId]?.takeIf { it.builtFor == key }?.let { return it }
         val events = object : ApiEvents {
             override fun onUnauthorized(sentToken: String) {
                 // Only the account's current token: a 401 to a request sent before the account
@@ -112,7 +113,7 @@ class AccountSessions(
             ),
         )
         val session = AccountSession(accountId, api, syncStatus.account(accountId), key)
-        cache[accountId] = session
+        cache.update { it + (accountId to session) }
         return session
     }
 
@@ -132,7 +133,7 @@ class AccountSessions(
 
     /** Forgets a removed account's session. */
     fun drop(accountId: String) {
-        cache.remove(accountId)
+        cache.update { it - accountId }
         syncStatus.remove(accountId)
     }
 }

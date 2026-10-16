@@ -1,43 +1,36 @@
 package org.p23q.shoppinglist.core
 
-import java.text.Normalizer
-import java.util.Locale
-
 /**
  * The one name order both clients use (T-176) — lists on the overview, categories, items, the All
  * items screen. Pinned by shared-test-cases/name-order.json, which the web's nameOrder.ts is tested
  * against too; the rules are spelled out there.
  *
- * Not a java.text.Collator (nor SQLite's NOCASE, which folds only A-Z): the web and Android used
+ * Not a platform collator (nor SQLite's NOCASE, which folds only A-Z): the web and Android used
  * different platform rules, and put accented, non-Latin and emoji-led names in different places.
+ * What it needs of Unicode, the platform supplies through [UnicodeText].
  */
 object NameOrder {
 
     private val folds = listOf("ß" to "ss", "æ" to "ae", "œ" to "oe", "ø" to "o", "đ" to "d", "ł" to "l", "þ" to "th")
 
-    private val markTypes = setOf(
-        Character.NON_SPACING_MARK.toInt(),
-        Character.ENCLOSING_MARK.toInt(),
-        Character.COMBINING_SPACING_MARK.toInt(),
-    )
-
     /** What a name sorts by: no accents, no case, nothing before its first letter or digit. */
     fun key(name: String): String {
-        val decomposed = Normalizer.normalize(name, Normalizer.Form.NFKD)
+        val decomposed = UnicodeText.nfkd(name)
         val unmarked = StringBuilder(decomposed.length)
-        var i = 0
-        while (i < decomposed.length) {
-            val cp = decomposed.codePointAt(i)
-            if (Character.getType(cp) !in markTypes) unmarked.appendCodePoint(cp)
-            i += Character.charCount(cp)
+        forEachCodePoint(decomposed) { cp, start, end ->
+            if (!UnicodeText.isMark(cp)) unmarked.appendRange(decomposed, start, end)
+            true
         }
-        var key = unmarked.toString().lowercase(Locale.ROOT)
+        // lowercase() is Unicode's own, the same in every locale.
+        var key = unmarked.toString().lowercase()
         for ((from, to) in folds) key = key.replace(from, to)
-        var start = 0
-        while (start < key.length) {
-            val cp = key.codePointAt(start)
-            if (Character.isLetterOrDigit(cp)) break
-            start += Character.charCount(cp)
+        var start = key.length
+        forEachCodePoint(key) { cp, at, _ ->
+            if (UnicodeText.isLetterOrDigit(cp)) {
+                start = at
+                return@forEachCodePoint false
+            }
+            true
         }
         return key.substring(start)
     }
@@ -53,5 +46,18 @@ object NameOrder {
     fun <T> by(name: (T) -> String, id: (T) -> String): Comparator<T> = Comparator { a, b ->
         val byName = names.compare(name(a), name(b))
         if (byName != 0) byName else id(a).compareTo(id(b))
+    }
+
+    /** Calls [action] with each code point of [s] and its UTF-16 range, until it returns false. */
+    private inline fun forEachCodePoint(s: String, action: (cp: Int, start: Int, end: Int) -> Boolean) {
+        var i = 0
+        while (i < s.length) {
+            val high = s[i]
+            val pair = high.isHighSurrogate() && i + 1 < s.length && s[i + 1].isLowSurrogate()
+            val cp = if (pair) 0x10000 + ((high.code - 0xD800) shl 10) + (s[i + 1].code - 0xDC00) else high.code
+            val end = if (pair) i + 2 else i + 1
+            if (!action(cp, i, end)) return
+            i = end
+        }
     }
 }

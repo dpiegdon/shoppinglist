@@ -16,7 +16,6 @@ import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
-import java.util.UUID
 
 /**
  * The server is older than [MIN_SERVER_PROTOCOL], or too old to say which protocol it speaks: this
@@ -205,7 +204,7 @@ class AuthRepositoryImpl(
                 }
             }
         }
-        val id = existing?.id ?: UUID.randomUUID().toString()
+        val id = existing?.id ?: newId()
         secrets.setToken(id, response.token)
         if (existing != null) {
             registry.update(id) {

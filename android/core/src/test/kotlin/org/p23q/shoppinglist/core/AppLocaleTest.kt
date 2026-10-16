@@ -83,10 +83,10 @@ class AppLocaleTest {
 
     @Test
     fun `every tag is a parseable BCP-47 language tag`() {
-        // toJavaLocale feeds Configuration.setLocale; a tag Java cannot parse would silently
+        // :app feeds the tag to Configuration.setLocale; a tag Java cannot parse would silently
         // resolve to the root locale and show English while claiming to be something else.
         AppLocale.entries.forEach { locale ->
-            assertTrue(locale.tag, locale.toJavaLocale().language.isNotEmpty())
+            assertTrue(locale.tag, java.util.Locale.forLanguageTag(locale.tag).language.isNotEmpty())
         }
     }
 }

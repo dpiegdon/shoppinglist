@@ -9,7 +9,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import java.io.IOException
+import kotlinx.io.IOException
 
 /**
  * A non-2xx response whose body was a Wire Contract error envelope ({"error", "message"}).

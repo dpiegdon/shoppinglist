@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.ui.AppFormat
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.action_cancel
 import org.p23q.shoppinglist.resources.action_ok

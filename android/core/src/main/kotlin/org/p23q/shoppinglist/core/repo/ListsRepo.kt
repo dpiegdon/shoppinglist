@@ -4,18 +4,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.core.Clock
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.core.NameOrder
+import org.p23q.shoppinglist.core.newId
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.core.db.inTransaction
 import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.core.sync.SyncTrigger
-import java.util.UUID
-import javax.inject.Inject
 
 /**
  * Every list id here is a local one ([ListEntity.localId]); only the sync engine deals in server ids.
@@ -23,10 +23,11 @@ import javax.inject.Inject
  * Takes the database rather than a bare DAO because every edit here is a read-modify-write that
  * has to run inside a transaction — see [org.p23q.shoppinglist.core.repo.ItemsRepo] (T-261).
  */
-class ListsRepo @Inject constructor(
+class ListsRepo(
     private val db: AppDb,
     private val deviceId: DeviceIdProvider,
     private val syncTrigger: SyncTrigger,
+    private val clock: Clock = Clock.System,
 ) {
     private val listDao = db.listDao()
 
@@ -68,13 +69,13 @@ class ListsRepo @Inject constructor(
         currency: String? = null,
     ): String {
         require(ListKind.of(kind) in ListKind.choices(isServerAccount(accountId))) { "No $kind list in account $accountId" }
-        val id = UUID.randomUUID().toString()
+        val id = newId()
         val by = deviceId.get()
-        val now = System.currentTimeMillis()
+        val now = clock.nowMillis()
         listDao.upsert(
             ListEntity(
                 localId = id,
-                serverId = UUID.randomUUID().toString(),
+                serverId = newId(),
                 accountId = accountId,
                 createdAt = now,
                 name = name.toLww(by, now),
@@ -102,7 +103,7 @@ class ListsRepo @Inject constructor(
         val next = ListKind.of(kind)
         val list = listDao.get(listId) ?: return false
         if (next !in ListKind.choices(isServerAccount(list.accountId))) return false
-        updateField(listId) { it.copy(kind = next.toLww(deviceId.get())) }
+        updateField(listId) { it.copy(kind = next.toLww(deviceId.get(), clock.nowMillis())) }
         return true
     }
 
@@ -110,17 +111,17 @@ class ListsRepo @Inject constructor(
     private suspend fun isServerAccount(accountId: String): Boolean = db.accountDao().get(accountId)?.isServer == true
 
     suspend fun rename(listId: String, name: String) =
-        updateField(listId) { it.copy(name = name.toLww(deviceId.get())) }
+        updateField(listId) { it.copy(name = name.toLww(deviceId.get(), clock.nowMillis())) }
 
     suspend fun setCategoryOrder(listId: String, order: List<String>) =
-        updateField(listId) { it.copy(categoryOrder = encodeCategoryOrder(order).toLww(deviceId.get())) }
+        updateField(listId) { it.copy(categoryOrder = encodeCategoryOrder(order).toLww(deviceId.get(), clock.nowMillis())) }
 
     /** Free-text, not-regularly-needed info (T-62) — list-properties-dialog only, synced like any other field. */
     suspend fun setNotes(listId: String, notes: String?) =
-        updateField(listId) { it.copy(notes = notes.toLwwOptional(deviceId.get())) }
+        updateField(listId) { it.copy(notes = notes.toLwwOptional(deviceId.get(), clock.nowMillis())) }
 
     /** Tombstone: [ListEntity.deleted] flips true, the row itself is retained for sync. */
-    suspend fun delete(listId: String) = updateField(listId) { it.copy(deleted = true.toLww(deviceId.get())) }
+    suspend fun delete(listId: String) = updateField(listId) { it.copy(deleted = true.toLww(deviceId.get(), clock.nowMillis())) }
 
     /**
      * Solo-owned snapshot copy (T-63): a new list with its own id and fresh field-clocks, carrying
@@ -148,13 +149,13 @@ class ListsRepo @Inject constructor(
                 "A ledger is not copied into another account"
             }
             require(kind in ListKind.choices(target.isServer)) { "No $kind list in account $accountId" }
-            val id = UUID.randomUUID().toString()
+            val id = newId()
             val by = deviceId.get()
-            val now = System.currentTimeMillis()
+            val now = clock.nowMillis()
             listDao.upsert(
                 ListEntity(
                     localId = id,
-                    serverId = UUID.randomUUID().toString(),
+                    serverId = newId(),
                     accountId = accountId,
                     createdAt = now,
                     name = "${source.name.value} $copySuffix".toLww(by, now),

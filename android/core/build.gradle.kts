@@ -28,7 +28,10 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.javax.inject)
+    // kotlinx.io.IOException, which ApiException extends: java.io.IOException on the JVM.
+    api(libs.kotlinx.io.core)
+    // A lock that is kotlin.synchronized on the JVM (SyncStatus).
+    implementation(libs.atomicfu)
     // Tolerated until the module goes multiplatform: the retrofit2.http annotations on Api and
     // okhttp3.Interceptor in the interceptors and the account sessions (README.md).
     implementation(libs.retrofit)

@@ -1,7 +1,5 @@
 package org.p23q.shoppinglist.core
 
-import java.util.Locale
-
 /**
  * The languages this client ships, and how a device locale is narrowed to one (T-111).
  *
@@ -30,9 +28,6 @@ enum class AppLocale(val tag: String, val displayName: String) {
      * call site so adding Hebrew or Farsi later touches this file only (T-126).
      */
     val isRtl: Boolean get() = this == ARABIC
-
-    /** The java.util.Locale this tag denotes, for Configuration and resource resolution. */
-    fun toJavaLocale(): Locale = Locale.forLanguageTag(tag)
 
     companion object {
         val DEFAULT = ENGLISH

@@ -5,9 +5,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.core.Clock
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.api.AppJson
+import org.p23q.shoppinglist.core.newId
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.LwwOptionalString
@@ -17,8 +19,6 @@ import org.p23q.shoppinglist.core.db.toLww
 import org.p23q.shoppinglist.core.db.toLwwOptional
 import org.p23q.shoppinglist.core.db.unblocked
 import org.p23q.shoppinglist.core.sync.SyncTrigger
-import java.util.UUID
-import javax.inject.Inject
 
 @Serializable
 data class Price(val amount: String, val currency: String?)
@@ -33,10 +33,11 @@ data class Price(val amount: String, val currency: String?)
  * even left dirty: the edit is lost with nothing queued to recover it. The list screen syncs every
  * 5 s while it is open, so the window is hit in normal use. Hence [db] rather than a bare DAO.
  */
-class ItemsRepo @Inject constructor(
+class ItemsRepo(
     private val db: AppDb,
     private val deviceId: DeviceIdProvider,
     private val syncTrigger: SyncTrigger,
+    private val clock: Clock = Clock.System,
 ) {
     private val itemDao = db.itemDao()
     private val listDao = db.listDao()
@@ -80,13 +81,13 @@ class ItemsRepo @Inject constructor(
 
     /** @return the new item's local id; its server id is minted here too. Throws if [listId] is no list. */
     suspend fun createItem(listId: String, name: String, status: Status = Status.TODO): String {
-        val id = UUID.randomUUID().toString()
+        val id = newId()
         val by = deviceId.get()
-        val now = System.currentTimeMillis()
+        val now = clock.nowMillis()
         insertNew(listId) { accountId ->
             ItemEntity(
                 localId = id,
-                serverId = UUID.randomUUID().toString(),
+                serverId = newId(),
                 accountId = accountId,
                 listLocalId = listId,
                 createdAt = now,
@@ -122,13 +123,13 @@ class ItemsRepo @Inject constructor(
      * under a single clock rather than as a create followed by an edit.
      */
     suspend fun createExpense(listId: String, name: String, expense: Expense, note: String? = null): String {
-        val id = UUID.randomUUID().toString()
+        val id = newId()
         val by = deviceId.get()
-        val now = System.currentTimeMillis()
+        val now = clock.nowMillis()
         insertNew(listId) { accountId ->
             ItemEntity(
                 localId = id,
-                serverId = UUID.randomUUID().toString(),
+                serverId = newId(),
                 accountId = accountId,
                 listLocalId = listId,
                 createdAt = now,
@@ -150,7 +151,7 @@ class ItemsRepo @Inject constructor(
 
     /** Replace an expense's money tuple; the whole object is one LWW field (T-151). */
     suspend fun setExpense(itemId: String, expense: Expense) =
-        updateField(itemId) { it.copy(expense = encodeExpense(expense).toLwwOptional(deviceId.get())) }
+        updateField(itemId) { it.copy(expense = encodeExpense(expense).toLwwOptional(deviceId.get(), clock.nowMillis())) }
 
     /**
      * The stored value is raw wire JSON, decoded here rather than at the sync boundary, so it goes
@@ -165,10 +166,10 @@ class ItemsRepo @Inject constructor(
     fun encodeExpense(expense: Expense): String = AppJson.encodeToString(expense)
 
     suspend fun rename(itemId: String, name: String) =
-        updateField(itemId) { it.copy(name = name.toLww(deviceId.get())) }
+        updateField(itemId) { it.copy(name = name.toLww(deviceId.get(), clock.nowMillis())) }
 
     suspend fun setStatus(itemId: String, status: Status) =
-        updateField(itemId) { it.copy(status = status.wireValue.toLww(deviceId.get())) }
+        updateField(itemId) { it.copy(status = status.wireValue.toLww(deviceId.get(), clock.nowMillis())) }
 
     /**
      * Bulk 'clear checked': every checked item in [listId] -> backlog, in one dirty batch so it's a
@@ -182,7 +183,7 @@ class ItemsRepo @Inject constructor(
         val checked = db.inTransaction {
             val checked = itemDao.itemsForListByStatusOnce(listId, Status.CHECKED.wireValue)
             val by = deviceId.get()
-            val now = System.currentTimeMillis()
+            val now = clock.nowMillis()
             checked.forEach { item ->
                 itemDao.upsert(item.copy(status = Status.BACKLOG.wireValue.toLww(by, now), dirty = true).unblocked())
             }
@@ -198,7 +199,7 @@ class ItemsRepo @Inject constructor(
         if (itemIds.isEmpty()) return
         val changed = db.inTransaction {
             val by = deviceId.get()
-            val now = System.currentTimeMillis()
+            val now = clock.nowMillis()
             var changed = false
             itemIds.forEach { id ->
                 val current = itemDao.get(id) ?: return@forEach
@@ -211,14 +212,14 @@ class ItemsRepo @Inject constructor(
     }
 
     suspend fun setCategory(itemId: String, category: String?) =
-        updateField(itemId) { it.copy(category = category.toLwwOptional(deviceId.get())) }
+        updateField(itemId) { it.copy(category = category.toLwwOptional(deviceId.get(), clock.nowMillis())) }
 
     /** Stamp the same category on many items at once (T-108 recase/rename); one shared clock. */
     suspend fun setCategoryBulk(itemIds: List<String>, category: String?) {
         if (itemIds.isEmpty()) return
         val changed = db.inTransaction {
             val by = deviceId.get()
-            val now = System.currentTimeMillis()
+            val now = clock.nowMillis()
             var changed = false
             itemIds.forEach { id ->
                 val current = itemDao.get(id) ?: return@forEach
@@ -231,26 +232,26 @@ class ItemsRepo @Inject constructor(
     }
 
     suspend fun setStores(itemId: String, stores: List<String>) =
-        updateField(itemId) { it.copy(stores = encodeStores(stores).toLww(deviceId.get())) }
+        updateField(itemId) { it.copy(stores = encodeStores(stores).toLww(deviceId.get(), clock.nowMillis())) }
 
     suspend fun setQuantity(itemId: String, quantity: String?) =
-        updateField(itemId) { it.copy(quantity = quantity.toLwwOptional(deviceId.get())) }
+        updateField(itemId) { it.copy(quantity = quantity.toLwwOptional(deviceId.get(), clock.nowMillis())) }
 
     suspend fun setPrice(itemId: String, amount: String?, currency: String?) =
         updateField(itemId) {
             val json = amount?.let { Json.encodeToString(Price(it, currency)) }
-            it.copy(price = json.toLwwOptional(deviceId.get()))
+            it.copy(price = json.toLwwOptional(deviceId.get(), clock.nowMillis()))
         }
 
     suspend fun setNote(itemId: String, note: String?) =
-        updateField(itemId) { it.copy(note = note.toLwwOptional(deviceId.get())) }
+        updateField(itemId) { it.copy(note = note.toLwwOptional(deviceId.get(), clock.nowMillis())) }
 
     /** The due date (T-323): a calendar date `YYYY-MM-DD`, or null for none. */
     suspend fun setDue(itemId: String, due: String?) =
-        updateField(itemId) { it.copy(due = due.toLwwOptional(deviceId.get())) }
+        updateField(itemId) { it.copy(due = due.toLwwOptional(deviceId.get(), clock.nowMillis())) }
 
     /** Tombstone: [ItemEntity.deleted] flips true, the row itself is retained for sync/undo. */
-    suspend fun delete(itemId: String) = updateField(itemId) { it.copy(deleted = true.toLww(deviceId.get())) }
+    suspend fun delete(itemId: String) = updateField(itemId) { it.copy(deleted = true.toLww(deviceId.get(), clock.nowMillis())) }
 
     /**
      * Snapshot-copies every non-deleted item of [sourceListId] into [targetListId] as a fresh row
@@ -264,12 +265,12 @@ class ItemsRepo @Inject constructor(
             val target = listDao.get(targetListId) ?: return@inTransaction 0
             val items = itemDao.activeItemsForListOnce(sourceListId)
             val by = deviceId.get()
-            val now = System.currentTimeMillis()
+            val now = clock.nowMillis()
             items.forEach { source ->
                 itemDao.upsert(
                     ItemEntity(
-                        localId = UUID.randomUUID().toString(),
-                        serverId = UUID.randomUUID().toString(),
+                        localId = newId(),
+                        serverId = newId(),
                         accountId = target.accountId,
                         listLocalId = targetListId,
                         createdAt = now,
@@ -295,7 +296,7 @@ class ItemsRepo @Inject constructor(
     }
 
     /** Reverses [delete] (Notes: registry delete offers a snackbar undo). */
-    suspend fun restore(itemId: String) = updateField(itemId) { it.copy(deleted = false.toLww(deviceId.get())) }
+    suspend fun restore(itemId: String) = updateField(itemId) { it.copy(deleted = false.toLww(deviceId.get(), clock.nowMillis())) }
 
     /** Real delete, not the LWW tombstone — only for leaving a shared list (A9), never synced. */
     suspend fun hardDeleteByListId(listId: String) = itemDao.hardDeleteByListId(listId)

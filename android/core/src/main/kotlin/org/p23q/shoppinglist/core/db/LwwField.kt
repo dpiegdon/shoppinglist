@@ -8,11 +8,11 @@ data class LwwString(val value: String, val updatedAt: Long, val updatedBy: Stri
 data class LwwOptionalString(val value: String?, val updatedAt: Long, val updatedBy: String)
 data class LwwBoolean(val value: Boolean, val updatedAt: Long, val updatedBy: String)
 
-fun String.toLww(updatedBy: String, updatedAt: Long = System.currentTimeMillis()): LwwString =
+fun String.toLww(updatedBy: String, updatedAt: Long): LwwString =
     LwwString(this, updatedAt, updatedBy)
 
-fun String?.toLwwOptional(updatedBy: String, updatedAt: Long = System.currentTimeMillis()): LwwOptionalString =
+fun String?.toLwwOptional(updatedBy: String, updatedAt: Long): LwwOptionalString =
     LwwOptionalString(this, updatedAt, updatedBy)
 
-fun Boolean.toLww(updatedBy: String, updatedAt: Long = System.currentTimeMillis()): LwwBoolean =
+fun Boolean.toLww(updatedBy: String, updatedAt: Long): LwwBoolean =
     LwwBoolean(this, updatedAt, updatedBy)
