@@ -1,0 +1,13 @@
+{
+  "body": "rows.first { it.first().account.id == ... } throws NoSuchElementException when the StateFlow still holds its initial empty list; seen twice in full parallel runs during T-351. Use firstOrNull().",
+  "created_at": "2026-10-16T22:16:54+00:00",
+  "id": "T-357",
+  "labels": [
+    "bug",
+    "android",
+    "agent"
+  ],
+  "priority": 3,
+  "title": "AccountsViewModelTest flakes: first() on the rows' initial empty list",
+  "updated_at": "2026-10-16T22:16:54+00:00"
+}
