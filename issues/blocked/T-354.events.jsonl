@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-10-16T21:23:39+00:00", "kind": "created", "ref": "main@cee82f68", "text": "iPhone port step 4: background sync and push notifications on iOS (design)"}
 {"actor": "user", "at": "2026-10-16T21:23:39+00:00", "kind": "dependency", "ref": "main@cee82f68", "text": "T-353"}
 {"actor": "user", "at": "2026-10-16T21:23:40+00:00", "kind": "updated", "ref": "main@cee82f68", "text": "fields updated"}
+{"actor": "user", "at": "2026-10-16T22:02:03+00:00", "kind": "updated", "ref": "main@31e50607", "text": "fields updated"}
