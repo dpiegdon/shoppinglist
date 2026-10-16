@@ -1,0 +1,13 @@
+{
+  "body": "OverviewPage.test.tsx \"says why a join failed, in the server's words, and re-reads the inbox\" failed once in the full gate while a Gradle build ran in parallel (2026-10-16); passes alone. Likely a findBy/waitFor timeout too short for a loaded host.",
+  "created_at": "2026-10-16T23:02:35+00:00",
+  "id": "T-358",
+  "labels": [
+    "bug",
+    "web",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "Web OverviewPage test flakes under load: join failure re-reads the inbox",
+  "updated_at": "2026-10-16T23:02:35+00:00"
+}
