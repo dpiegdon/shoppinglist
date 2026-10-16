@@ -1,0 +1,16 @@
+{
+  "body": "Step 2a of docs/ios-port-design.md. Replace Hilt with Koin in :app: modules for the repositories,\nthe account registry, platform services and every view model (koinViewModel in the screens),\nWorkManager workers through Koin's WorkManager support. Hilt plugins and dependencies leave the\nbuild. No user-visible change; the existing screen and Robolectric tests keep passing with test\nwiring rebuilt on Koin. The ThemeTest-style source guards that mention Hilt follow.",
+  "created_at": "2026-10-16T21:23:38+00:00",
+  "deps": [
+    "T-295"
+  ],
+  "id": "T-350",
+  "labels": [
+    "ios",
+    "android",
+    "refactor"
+  ],
+  "priority": 3,
+  "title": "iPhone port step 2a: Hilt out, Koin in",
+  "updated_at": "2026-10-16T21:23:38+00:00"
+}
