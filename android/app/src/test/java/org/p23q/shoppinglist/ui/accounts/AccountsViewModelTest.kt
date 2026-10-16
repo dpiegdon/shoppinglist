@@ -90,7 +90,7 @@ class AccountsViewModelTest {
 
         viewModel.moveDown("prod").join()
 
-        assertEquals(listOf("stage", "prod", "old", "local"), viewModel.rows.first { it.first().account.id == "stage" }.map { it.account.id })
+        assertEquals(listOf("stage", "prod", "old", "local"), viewModel.rows.first { it.firstOrNull()?.account?.id == "stage" }.map { it.account.id })
         assertEquals(listOf("stage", "prod", "old", "local"), db.accountDao().all().map { it.id })
     }
 
