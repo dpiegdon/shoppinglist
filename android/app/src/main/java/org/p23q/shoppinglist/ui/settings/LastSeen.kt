@@ -1,6 +1,10 @@
 package org.p23q.shoppinglist.ui.settings
 
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.ago_days
+import org.p23q.shoppinglist.resources.ago_hours
+import org.p23q.shoppinglist.resources.ago_minutes
+import org.p23q.shoppinglist.resources.last_seen_active_now
 import org.p23q.shoppinglist.ui.UiText
 
 /**
@@ -25,10 +29,10 @@ import org.p23q.shoppinglist.ui.UiText
 fun formatLastSeen(lastSeenAt: Long, now: Long = System.currentTimeMillis()): UiText {
     val elapsed = now - lastSeenAt
     return when {
-        elapsed < 2 * MINUTE_MS -> UiText.res(R.string.last_seen_active_now)
-        elapsed < HOUR_MS -> UiText.res(R.string.ago_minutes, (elapsed / MINUTE_MS).toInt())
-        elapsed < DAY_MS -> UiText.res(R.string.ago_hours, (elapsed / HOUR_MS).toInt())
-        else -> UiText.res(R.string.ago_days, (elapsed / DAY_MS).toInt())
+        elapsed < 2 * MINUTE_MS -> UiText.res(Res.string.last_seen_active_now)
+        elapsed < HOUR_MS -> UiText.res(Res.string.ago_minutes, (elapsed / MINUTE_MS).toInt())
+        elapsed < DAY_MS -> UiText.res(Res.string.ago_hours, (elapsed / HOUR_MS).toInt())
+        else -> UiText.res(Res.string.ago_days, (elapsed / DAY_MS).toInt())
     }
 }
 

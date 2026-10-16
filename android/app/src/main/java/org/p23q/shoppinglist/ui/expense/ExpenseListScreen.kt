@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,11 +48,29 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.expense_add
+import org.p23q.shoppinglist.resources.expense_agree_count
+import org.p23q.shoppinglist.resources.expense_agree_to_close
+import org.p23q.shoppinglist.resources.expense_balances
+import org.p23q.shoppinglist.resources.expense_closed_on
+import org.p23q.shoppinglist.resources.expense_empty
+import org.p23q.shoppinglist.resources.expense_entries
+import org.p23q.shoppinglist.resources.expense_for_everyone
+import org.p23q.shoppinglist.resources.expense_former_member
+import org.p23q.shoppinglist.resources.expense_not_saved
+import org.p23q.shoppinglist.resources.expense_row_by
+import org.p23q.shoppinglist.resources.expense_row_received_by
+import org.p23q.shoppinglist.resources.expense_row_transfer
+import org.p23q.shoppinglist.resources.expense_spent_breakdown
+import org.p23q.shoppinglist.resources.expense_total_spent
+import org.p23q.shoppinglist.resources.expense_withdraw_vote
+import org.p23q.shoppinglist.resources.expense_your_balance
+import org.p23q.shoppinglist.resources.nav_list_properties
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.EmptyState
@@ -62,6 +79,7 @@ import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.bidiIsolate
 import org.p23q.shoppinglist.ui.layoutTextDirection
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.LocalPositiveBalanceColor
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.accentText
@@ -102,7 +120,7 @@ fun ExpenseListScreen(
             // A closed list is an archive: nothing to add to it (T-157). Balances has its own actions.
             // Not for someone who has agreed to close (T-192): the server refuses their new expenses.
             if (!state.isClosed && !showBalances && !state.iHaveVoted) {
-                AddFab(onClick = onAddExpense, contentDescription = stringResource(R.string.expense_add))
+                AddFab(onClick = onAddExpense, contentDescription = stringResource(Res.string.expense_add))
             }
         },
         // Inside AppDrawerScaffold's own Scaffold, which already insets for the top bar — the same
@@ -129,19 +147,19 @@ fun ExpenseListScreen(
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                         contentPadding = PaddingValues(horizontal = 10.dp),
                         modifier = Modifier.heightIn(min = 32.dp),
-                    ) { Text(stringResource(R.string.expense_entries), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringResource(Res.string.expense_entries), style = MaterialTheme.typography.labelMedium) }
                     SegmentedButton(
                         selected = showBalances,
                         onClick = { showBalances = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                         contentPadding = PaddingValues(horizontal = 10.dp),
                         modifier = Modifier.heightIn(min = 32.dp),
-                    ) { Text(stringResource(R.string.expense_balances), style = MaterialTheme.typography.labelMedium) }
+                    ) { Text(stringResource(Res.string.expense_balances), style = MaterialTheme.typography.labelMedium) }
                 }
                 IconButton(onClick = onOpenListProps, modifier = Modifier.size(40.dp)) {
                     Icon(
                         Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.nav_list_properties),
+                        contentDescription = stringResource(Res.string.nav_list_properties),
                     )
                 }
             }
@@ -181,7 +199,7 @@ fun ExpenseListScreen(
                     if (state.rows.isEmpty()) {
                         item(key = "empty") {
                             // Muted and at the start, as every empty state (A20).
-                            EmptyState(stringResource(R.string.expense_empty), modifier = Modifier.testTag("expense-empty"))
+                            EmptyState(stringResource(Res.string.expense_empty), modifier = Modifier.testTag("expense-empty"))
                         }
                     }
                     // Rows arrive newest date first, so grouping keeps that order.
@@ -246,7 +264,7 @@ internal fun refusalOf(row: ExpenseRow, state: ExpenseListUiState): RowRefusal? 
     if (!row.item.syncBlocked) return null
     val who = row.item.syncBlockedAccountId?.let { participantLabel(it, state) }
     return RowRefusal(
-        label = stringResource(R.string.expense_not_saved),
+        label = stringResource(Res.string.expense_not_saved),
         reason = ErrorText.refusal(row.item.syncBlockedCode, who)?.asString(),
     )
 }
@@ -357,7 +375,7 @@ internal fun LedgerSummaryCard(
             ) {
                 Column {
                     Text(
-                        stringResource(R.string.expense_total_spent),
+                        stringResource(Res.string.expense_total_spent),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -370,7 +388,7 @@ internal fun LedgerSummaryCard(
                 if (myBalanceCents != null) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            stringResource(R.string.expense_your_balance),
+                            stringResource(Res.string.expense_your_balance),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -385,7 +403,7 @@ internal fun LedgerSummaryCard(
             if (breakdown != null && breakdown.incomeCents != 0L) {
                 Text(
                     stringResource(
-                        R.string.expense_spent_breakdown,
+                        Res.string.expense_spent_breakdown,
                         AppFormat.money(breakdown.expensesCents, currency, appLocale()),
                         AppFormat.money(breakdown.incomeCents, currency, appLocale()),
                     ),
@@ -403,7 +421,7 @@ internal fun LedgerSummaryCard(
 internal fun participantLabel(accountId: String, state: ExpenseListUiState): String {
     val member = state.members.firstOrNull { it.accountId == accountId }
     if (member != null) return member.initials
-    return stringResource(R.string.expense_former_member, state.formerMemberNumbers[accountId] ?: 0)
+    return stringResource(Res.string.expense_former_member, state.formerMemberNumbers[accountId] ?: 0)
 }
 
 /**
@@ -420,14 +438,14 @@ internal fun subLine(expense: Expense, state: ExpenseListUiState): String {
         // Isolated, so the arrow keeps pointing from sender to recipient whatever script the names
         // are in; Arabic's arrow points left (T-342).
         ExpenseType.TRANSFER -> stringResource(
-            R.string.expense_row_transfer,
+            Res.string.expense_row_transfer,
             bidiIsolate(by),
             bidiIsolate(expense.paidFor.keys.map { participantLabel(it, state) }.joinToString(", ")),
         )
         ExpenseType.INCOME ->
-            stringResource(R.string.expense_row_received_by, by, forWhomLabel(expense, state))
+            stringResource(Res.string.expense_row_received_by, by, forWhomLabel(expense, state))
         ExpenseType.EXPENSE ->
-            stringResource(R.string.expense_row_by, by, forWhomLabel(expense, state))
+            stringResource(Res.string.expense_row_by, by, forWhomLabel(expense, state))
     }
 }
 
@@ -439,7 +457,7 @@ internal fun forWhomLabel(expense: Expense, state: ExpenseListUiState): String {
         ids.size == state.members.size &&
         state.members.all { it.accountId in ids }
     return if (everyone) {
-        stringResource(R.string.expense_for_everyone)
+        stringResource(Res.string.expense_for_everyone)
     } else {
         ids.map { participantLabel(it, state) }.joinToString(", ")
     }
@@ -467,7 +485,7 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
         VoteCard {
             Text(
                 text = stringResource(
-                    R.string.expense_closed_on,
+                    Res.string.expense_closed_on,
                     AppFormat.day(state.closedAt ?: 0L, appLocale()),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
@@ -485,7 +503,7 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.expense_agree_count, state.closeVotes.size, state.members.size),
+                    stringResource(Res.string.expense_agree_count, state.closeVotes.size, state.members.size),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 state.voteError?.let {
@@ -499,7 +517,7 @@ private fun CloseVoteBanner(state: ExpenseListUiState, onToggleVote: () -> Unit)
             TuppuButton(onClick = onToggleVote, enabled = !state.isVoting, contentPadding = CompactButtonPadding) {
                 Text(
                     stringResource(
-                        if (state.iHaveVoted) R.string.expense_withdraw_vote else R.string.expense_agree_to_close,
+                        if (state.iHaveVoted) Res.string.expense_withdraw_vote else Res.string.expense_agree_to_close,
                     ),
                 )
             }

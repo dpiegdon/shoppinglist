@@ -16,18 +16,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.expense_all_settled
+import org.p23q.shoppinglist.resources.expense_paid_and_share
+import org.p23q.shoppinglist.resources.expense_paid_share_settled
+import org.p23q.shoppinglist.resources.expense_reimburse
+import org.p23q.shoppinglist.resources.expense_settle_up
+import org.p23q.shoppinglist.resources.expense_settlement
+import org.p23q.shoppinglist.resources.expense_transfer
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.bidiIsolate
 import org.p23q.shoppinglist.ui.layoutTextDirection
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
@@ -45,7 +52,7 @@ fun BalancesContent(
     state: ExpenseListUiState,
     onReimburse: (ExpensePrefill) -> Unit,
 ) {
-    val settlementTitle = stringResource(R.string.expense_settlement)
+    val settlementTitle = stringResource(Res.string.expense_settlement)
 
     @Composable
     fun label(accountId: String): String =
@@ -88,13 +95,13 @@ fun BalancesContent(
                             // when nothing was settled, which is every ledger not yet paid back.
                             text = if (balance.settledCents == 0L) {
                                 stringResource(
-                                    R.string.expense_paid_and_share,
+                                    Res.string.expense_paid_and_share,
                                     AppFormat.number(balance.paidCents, appLocale()),
                                     AppFormat.number(balance.shareCents, appLocale()),
                                 )
                             } else {
                                 stringResource(
-                                    R.string.expense_paid_share_settled,
+                                    Res.string.expense_paid_share_settled,
                                     AppFormat.number(balance.paidCents, appLocale()),
                                     AppFormat.number(balance.shareCents, appLocale()),
                                     AppFormat.signedNumber(balance.settledCents, appLocale()),
@@ -117,13 +124,13 @@ fun BalancesContent(
                 item(key = "settle-up") {
                     Spacer(Modifier.height(20.dp))
                     Text(
-                        stringResource(R.string.expense_settle_up),
+                        stringResource(Res.string.expense_settle_up),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Spacer(Modifier.height(4.dp))
                     if (state.transfers.isEmpty()) {
                         Text(
-                            stringResource(R.string.expense_all_settled),
+                            stringResource(Res.string.expense_all_settled),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -140,7 +147,7 @@ fun BalancesContent(
                         // reads from payer to payee in Arabic too, whatever script the names are in.
                         Text(
                             text = stringResource(
-                                R.string.expense_transfer,
+                                Res.string.expense_transfer,
                                 bidiIsolate(label(transfer.from)),
                                 bidiIsolate(label(transfer.to)),
                             ),
@@ -176,7 +183,7 @@ fun BalancesContent(
                                     )
                                 },
                             ) {
-                                Text(stringResource(R.string.expense_reimburse))
+                                Text(stringResource(Res.string.expense_reimburse))
                             }
                         }
                     }

@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,13 +36,39 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.api.AdminUserDto
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_clear
+import org.p23q.shoppinglist.resources.action_copied
+import org.p23q.shoppinglist.resources.action_copy
+import org.p23q.shoppinglist.resources.action_delete
+import org.p23q.shoppinglist.resources.action_refresh
+import org.p23q.shoppinglist.resources.action_reset
+import org.p23q.shoppinglist.resources.action_save
+import org.p23q.shoppinglist.resources.admin_allow_new_accounts
+import org.p23q.shoppinglist.resources.admin_delete_user_body
+import org.p23q.shoppinglist.resources.admin_delete_user_title
+import org.p23q.shoppinglist.resources.admin_is_admin_suffix
+import org.p23q.shoppinglist.resources.admin_new_password_for
+import org.p23q.shoppinglist.resources.admin_registration
+import org.p23q.shoppinglist.resources.admin_registration_help
+import org.p23q.shoppinglist.resources.admin_reset_password
+import org.p23q.shoppinglist.resources.admin_reset_user_body
+import org.p23q.shoppinglist.resources.admin_reset_user_title
+import org.p23q.shoppinglist.resources.admin_server_message
+import org.p23q.shoppinglist.resources.admin_server_message_help
+import org.p23q.shoppinglist.resources.admin_session_count
+import org.p23q.shoppinglist.resources.admin_show_users
+import org.p23q.shoppinglist.resources.admin_user_count
+import org.p23q.shoppinglist.resources.admin_users
+import org.p23q.shoppinglist.resources.admin_your_password
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
@@ -65,16 +90,16 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
     ) {
         state.error?.let { Text(it.asString(), color = MaterialTheme.colorScheme.error) }
 
-        SectionCard(stringResource(R.string.admin_registration)) {
+        SectionCard(stringResource(Res.string.admin_registration)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.admin_allow_new_accounts))
+                    Text(stringResource(Res.string.admin_allow_new_accounts))
                     Text(
-                        stringResource(R.string.admin_registration_help),
+                        stringResource(Res.string.admin_registration_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -95,11 +120,11 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 OutlinedTextField(
                     value = state.messageDraft,
                     onValueChange = viewModel::onMessageChange,
-                    label = { Text(stringResource(R.string.admin_server_message)) },
+                    label = { Text(stringResource(Res.string.admin_server_message)) },
                     singleLine = true,
                     isError = state.messageError != null,
                     supportingText = {
-                        Text(state.messageError?.asString() ?: stringResource(R.string.admin_server_message_help))
+                        Text(state.messageError?.asString() ?: stringResource(Res.string.admin_server_message_help))
                     },
                     modifier = Modifier.fillMaxWidth().testTag("admin-server-message"),
                 )
@@ -113,7 +138,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                         enabled = state.canSaveMessage(),
                         modifier = Modifier.testTag("admin-server-message-save"),
                     ) {
-                        Text(stringResource(R.string.action_save))
+                        Text(stringResource(Res.string.action_save))
                     }
                     // A real button, outlined as the web's secondary one (B5).
                     TuppuOutlinedButton(
@@ -121,19 +146,19 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                         enabled = state.canClearMessage(),
                         modifier = Modifier.testTag("admin-server-message-clear"),
                     ) {
-                        Text(stringResource(R.string.action_clear))
+                        Text(stringResource(Res.string.action_clear))
                     }
                 }
             }
         }
 
-        SectionCard(stringResource(R.string.admin_users)) {
+        SectionCard(stringResource(Res.string.admin_users)) {
             // One screen, not a submenu (T-221): the console is small, and a second navigation step on
             // both clients would buy nothing. The list is simply not fetched until asked for.
             val users = state.users
             if (users == null) {
                 TuppuButton(onClick = { viewModel.loadUsers() }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.admin_show_users))
+                    Text(stringResource(Res.string.admin_show_users))
                 }
             } else {
                 Row(
@@ -142,18 +167,18 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        stringResource(R.string.admin_user_count, users.size),
+                        stringResource(Res.string.admin_user_count, users.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     TuppuButton(onClick = { viewModel.loadUsers() }, contentPadding = CompactButtonPadding) {
-                        Text(stringResource(R.string.action_refresh))
+                        Text(stringResource(Res.string.action_refresh))
                     }
                 }
                 OutlinedTextField(
                     value = state.password,
                     onValueChange = viewModel::onPasswordChange,
-                    label = { Text(stringResource(R.string.admin_your_password)) },
+                    label = { Text(stringResource(Res.string.admin_your_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     isError = state.passwordError != null,
@@ -164,7 +189,7 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
                 if (state.resetPassword != null) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        stringResource(R.string.admin_new_password_for, state.resetEmail ?: ""),
+                        stringResource(Res.string.admin_new_password_for, state.resetEmail ?: ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -190,34 +215,34 @@ fun AdminScreen(viewModel: AdminViewModel = hiltViewModel()) {
     pendingReset?.let { user ->
         LocalizedAlertDialog(
             onDismissRequest = { pendingReset = null },
-            title = { Text(stringResource(R.string.admin_reset_user_title)) },
-            text = { Text(stringResource(R.string.admin_reset_user_body, user.email)) },
+            title = { Text(stringResource(Res.string.admin_reset_user_title)) },
+            text = { Text(stringResource(Res.string.admin_reset_user_body, user.email)) },
             confirmButton = {
                 TuppuTextButton(onClick = {
                     viewModel.resetPassword(user)
                     pendingReset = null
                 }) {
-                    Text(stringResource(R.string.action_reset))
+                    Text(stringResource(Res.string.action_reset))
                 }
             },
-            dismissButton = { TuppuTextButton(onClick = { pendingReset = null }) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = { pendingReset = null }) { Text(stringResource(Res.string.action_cancel)) } },
         )
     }
 
     pendingDelete?.let { user ->
         LocalizedAlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text(stringResource(R.string.admin_delete_user_title)) },
-            text = { Text(stringResource(R.string.admin_delete_user_body, user.email)) },
+            title = { Text(stringResource(Res.string.admin_delete_user_title)) },
+            text = { Text(stringResource(Res.string.admin_delete_user_body, user.email)) },
             confirmButton = {
                 DangerTextButton(onClick = {
                     viewModel.deleteUser(user)
                     pendingDelete = null
                 }) {
-                    Text(stringResource(R.string.action_delete))
+                    Text(stringResource(Res.string.action_delete))
                 }
             },
-            dismissButton = { TuppuTextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = { pendingDelete = null }) { Text(stringResource(Res.string.action_cancel)) } },
         )
     }
 }
@@ -245,7 +270,7 @@ private fun ResetPasswordRow(password: String) {
             },
             contentPadding = CompactButtonPadding,
         ) {
-            Text(stringResource(if (copied) R.string.action_copied else R.string.action_copy))
+            Text(stringResource(if (copied) Res.string.action_copied else Res.string.action_copy))
         }
     }
 }
@@ -265,9 +290,9 @@ private fun UserRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("admin-user-row"),
     ) {
         Column(modifier = Modifier.padding(end = 8.dp)) {
-            Text(user.email + if (user.isAdmin) stringResource(R.string.admin_is_admin_suffix) else "")
+            Text(user.email + if (user.isAdmin) stringResource(Res.string.admin_is_admin_suffix) else "")
             Text(
-                stringResource(R.string.admin_session_count, user.sessionCount),
+                stringResource(Res.string.admin_session_count, user.sessionCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -276,10 +301,10 @@ private fun UserRow(
             modifier = Modifier.testTag("admin-user-buttons"),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            TuppuButton(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.admin_reset_password)) }
+            TuppuButton(onClick = onReset, contentPadding = CompactButtonPadding) { Text(stringResource(Res.string.admin_reset_password)) }
             if (deletable) {
                 TuppuButton(onClick = onDelete, colors = dangerButtonColors(), contentPadding = CompactButtonPadding) {
-                    Text(stringResource(R.string.action_delete))
+                    Text(stringResource(Res.string.action_delete))
                 }
             }
         }

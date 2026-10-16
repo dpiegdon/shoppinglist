@@ -23,7 +23,11 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.data.ListAccounts
 import javax.inject.Inject
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.item_msg_currency_invalid
+import org.p23q.shoppinglist.resources.item_msg_duplicate_name
+import org.p23q.shoppinglist.resources.item_msg_name_required
+import org.p23q.shoppinglist.resources.item_msg_price_invalid
 import org.p23q.shoppinglist.ui.UiText
 
 data class ItemFormUiState(
@@ -307,7 +311,7 @@ class ItemFormViewModel @Inject constructor(
         val state = _uiState.value
         val trimmedName = state.name.trim()
         if (trimmedName.isBlank()) {
-            _uiState.update { it.copy(nameError = UiText.res(R.string.item_msg_name_required)) }
+            _uiState.update { it.copy(nameError = UiText.res(Res.string.item_msg_name_required)) }
             return null
         }
         // Validate/normalize price BEFORE writing, so a bad value (e.g. "1,99", "2€", "1.999") is
@@ -330,7 +334,7 @@ class ItemFormViewModel @Inject constructor(
         return viewModelScope.launch {
             val collision = itemsRepo.findByExactName(listId, trimmedName, excludingId = state.itemId ?: "")
             if (collision != null) {
-                _uiState.update { it.copy(nameError = UiText.res(R.string.item_msg_duplicate_name, trimmedName)) }
+                _uiState.update { it.copy(nameError = UiText.res(Res.string.item_msg_duplicate_name, trimmedName)) }
                 return@launch
             }
             val targetId = state.itemId ?: itemsRepo.createItem(listId, trimmedName, status = Status.TODO)
@@ -472,7 +476,7 @@ internal fun parsePriceAmount(raw: String): PriceParse {
         .replace(TRAILING_CURRENCY_RE, "")
     if (cleaned.isBlank()) return PriceParse.Valid(null)
     return if (PRICE_AMOUNT_RE.matches(cleaned)) PriceParse.Valid(cleaned)
-    else PriceParse.Invalid(UiText.res(R.string.item_msg_price_invalid))
+    else PriceParse.Invalid(UiText.res(Res.string.item_msg_price_invalid))
 }
 
 /** Uppercases and validates a 3-letter ISO-4217 code; blank -> [PriceParse.Valid] with null. */
@@ -480,5 +484,5 @@ internal fun parseCurrency(raw: String): PriceParse {
     val code = raw.trim().uppercase()
     if (code.isBlank()) return PriceParse.Valid(null)
     return if (CURRENCY_RE.matches(code)) PriceParse.Valid(code)
-    else PriceParse.Invalid(UiText.res(R.string.item_msg_currency_invalid))
+    else PriceParse.Invalid(UiText.res(Res.string.item_msg_currency_invalid))
 }

@@ -2,7 +2,8 @@
      mask the icon to a circle of 66dp, and a square slab reaches that circle at its corners
      before its edges do, so the 42-unit slab is scaled 1.15x (48.3dp, corners at about 32dp
      from the centre) rather than filling the zone. Background is @color/ic_launcher_background.
-     Same gradient as ic_brand_logo.xml: its coordinates live in the path's own space, so the
+     Same gradient as the shared ic_brand_logo.xml (shared/src/commonMain/composeResources/
+     drawable): its coordinates live in the path's own space, so the
      group's scale and translate carry it along with the path. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"

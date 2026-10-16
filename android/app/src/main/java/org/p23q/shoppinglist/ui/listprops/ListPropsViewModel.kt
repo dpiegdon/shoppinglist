@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.ApiException
@@ -25,6 +24,15 @@ import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.error_offline_retry
+import org.p23q.shoppinglist.resources.expense_vote_failed
+import org.p23q.shoppinglist.resources.listprops_msg_email_required
+import org.p23q.shoppinglist.resources.listprops_msg_invite_failed
+import org.p23q.shoppinglist.resources.listprops_msg_leave_failed
+import org.p23q.shoppinglist.resources.listprops_msg_members_offline
+import org.p23q.shoppinglist.resources.listprops_msg_revoke_failed
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -194,7 +202,7 @@ class ListPropsViewModel @Inject constructor(
                 it.copy(members = response.members, pendingInvites = response.invites, isMembersLoading = false)
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(isMembersLoading = false, membersError = UiText.res(R.string.listprops_msg_members_offline)) }
+            _uiState.update { it.copy(isMembersLoading = false, membersError = UiText.res(Res.string.listprops_msg_members_offline)) }
         }
     }
 
@@ -320,7 +328,7 @@ class ListPropsViewModel @Inject constructor(
     fun sendInvite(): Job? {
         val email = _uiState.value.inviteEmail.trim()
         if (email.isBlank()) {
-            _uiState.update { it.copy(sharingError = UiText.res(R.string.listprops_msg_email_required)) }
+            _uiState.update { it.copy(sharingError = UiText.res(Res.string.listprops_msg_email_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -331,9 +339,9 @@ class ListPropsViewModel @Inject constructor(
                 _uiState.update { it.copy(inviteEmail = "", inviteShareUrl = response.url, sharingError = null) }
                 loadMembers().join()
             } catch (e: ApiException) {
-                _uiState.update { it.copy(sharingError = ErrorText.of(e, R.string.listprops_msg_invite_failed)) }
+                _uiState.update { it.copy(sharingError = ErrorText.of(e, Res.string.listprops_msg_invite_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(sharingError = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(sharingError = UiText.res(Res.string.error_offline)) }
             }
         }
     }
@@ -349,11 +357,11 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the invite is already gone — fall through and refresh so it drops off the list.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(sharingError = ErrorText.of(e, R.string.listprops_msg_revoke_failed)) }
+                _uiState.update { it.copy(sharingError = ErrorText.of(e, Res.string.listprops_msg_revoke_failed)) }
                 return@launch
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(sharingError = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(sharingError = UiText.res(Res.string.error_offline_retry)) }
             return@launch
         }
         loadMembers().join()
@@ -424,7 +432,7 @@ class ListPropsViewModel @Inject constructor(
             val api = listAccounts.api(listId)
             if (serverId == null || api == null) {
                 // A list this phone no longer holds has no vote left to cast.
-                _uiState.update { it.copy(closingError = UiText.res(R.string.expense_vote_failed)) }
+                _uiState.update { it.copy(closingError = UiText.res(Res.string.expense_vote_failed)) }
                 return@launch
             }
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
@@ -433,9 +441,9 @@ class ListPropsViewModel @Inject constructor(
             // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has
             // a specific reason (T-264); ApiException must be caught before IOException, which it
             // extends, or every one of these shows as "couldn't reach the server" instead.
-            _uiState.update { it.copy(closingError = ErrorText.of(e, R.string.expense_vote_failed)) }
+            _uiState.update { it.copy(closingError = ErrorText.of(e, Res.string.expense_vote_failed)) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(closingError = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(closingError = UiText.res(Res.string.error_offline_retry)) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
         }
@@ -461,11 +469,11 @@ class ListPropsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // 404: the server already lacks the membership — effectively left, so finish cleanup.
             if (e.httpStatus != 404) {
-                _uiState.update { it.copy(isLeaveConfirmOpen = false, leaveError = ErrorText.of(e, R.string.listprops_msg_leave_failed)) }
+                _uiState.update { it.copy(isLeaveConfirmOpen = false, leaveError = ErrorText.of(e, Res.string.listprops_msg_leave_failed)) }
                 return@launch
             }
         } catch (e: IOException) {
-            _uiState.update { it.copy(isLeaveConfirmOpen = false, leaveError = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(isLeaveConfirmOpen = false, leaveError = UiText.res(Res.string.error_offline_retry)) }
             return@launch
         }
         itemsRepo.hardDeleteByListId(listId)

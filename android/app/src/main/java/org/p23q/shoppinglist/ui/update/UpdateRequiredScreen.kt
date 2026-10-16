@@ -16,12 +16,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.p23q.shoppinglist.BuildConfig
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.update.AvailableUpdate
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_retry
+import org.p23q.shoppinglist.resources.action_update
+import org.p23q.shoppinglist.resources.update_available_body
+import org.p23q.shoppinglist.resources.update_checking
+import org.p23q.shoppinglist.resources.update_required_body
+import org.p23q.shoppinglist.resources.update_required_title
+import org.p23q.shoppinglist.resources.update_required_unavailable
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 /**
@@ -56,12 +63,12 @@ fun UpdateRequiredScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(R.string.update_required_title),
+            text = stringResource(Res.string.update_required_title),
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = stringResource(R.string.update_required_body),
+            text = stringResource(Res.string.update_required_body),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         )
@@ -73,7 +80,7 @@ fun UpdateRequiredScreen(
             UpdateStatus.Idle, UpdateStatus.Checking -> {
                 CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp).size(32.dp))
                 Text(
-                    text = stringResource(R.string.update_checking),
+                    text = stringResource(Res.string.update_checking),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp),
@@ -81,7 +88,7 @@ fun UpdateRequiredScreen(
             }
             is UpdateStatus.Available -> {
                 Text(
-                    text = stringResource(R.string.update_available_body, status.version, currentVersion),
+                    text = stringResource(Res.string.update_available_body, status.version, currentVersion),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                 )
@@ -91,12 +98,12 @@ fun UpdateRequiredScreen(
                     enabled = update != null,
                     modifier = Modifier.padding(top = 16.dp).testTag("update-required-download"),
                 ) {
-                    Text(stringResource(R.string.action_update))
+                    Text(stringResource(Res.string.action_update))
                 }
             }
             is UpdateStatus.UpToDate, UpdateStatus.Failed -> {
                 Text(
-                    text = stringResource(R.string.update_required_unavailable),
+                    text = stringResource(Res.string.update_required_unavailable),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                 )
@@ -104,7 +111,7 @@ fun UpdateRequiredScreen(
                     onClick = onRetry,
                     modifier = Modifier.padding(top = 16.dp).testTag("update-required-retry"),
                 ) {
-                    Text(stringResource(R.string.action_retry))
+                    Text(stringResource(Res.string.action_retry))
                 }
             }
         }

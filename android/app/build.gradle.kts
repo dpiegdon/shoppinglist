@@ -93,6 +93,8 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    // The strings and drawables (Compose resources), and later the shared screens.
+    implementation(project(":shared"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

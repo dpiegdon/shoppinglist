@@ -28,7 +28,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.LocalAreaNotEmptyException
@@ -36,6 +35,9 @@ import org.p23q.shoppinglist.data.RecordingAuthRepository
 import org.p23q.shoppinglist.data.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.data.testListsRepo
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.settings_msg_delete_password_incorrect
+import org.p23q.shoppinglist.resources.settings_msg_password_incorrect
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
@@ -244,7 +246,7 @@ class AccountViewModelTest {
 
         viewModel.changePassword()?.join()
 
-        assertEquals(UiText.res(R.string.settings_msg_password_incorrect), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.settings_msg_password_incorrect), viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -374,7 +376,7 @@ class AccountViewModelTest {
 
         viewModel.confirmDeleteAccount()?.join()
 
-        assertEquals(UiText.res(R.string.settings_msg_delete_password_incorrect), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.settings_msg_delete_password_incorrect), viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.gone)
         assertTrue(authRepository.removed.isEmpty())
     }

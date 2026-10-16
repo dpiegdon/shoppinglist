@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.normalizeServerUrl
@@ -18,6 +17,9 @@ import org.p23q.shoppinglist.core.pastedInvite
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.PendingInviteHolder
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.overview_account_outdated
+import org.p23q.shoppinglist.resources.redeem_msg_code_required
 import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -80,7 +82,7 @@ class RedeemViewModel @Inject constructor(
         val pasted = pastedInvite(_uiState.value.token)
         val token = extractInviteToken(pasted)
         if (token.isBlank()) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.redeem_msg_code_required)) }
+            _uiState.update { it.copy(errorMessage = UiText.res(Res.string.redeem_msg_code_required)) }
             return null
         }
         val url = link ?: pasted.takeIf { inviteServerUrl(it) != null }
@@ -126,7 +128,7 @@ class RedeemViewModel @Inject constructor(
     private fun redeemInto(account: AccountEntity, token: String): Job? {
         _uiState.update { it.copy(account = account, choices = emptyList()) }
         if (account.outdated) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.overview_account_outdated)) }
+            _uiState.update { it.copy(errorMessage = UiText.res(Res.string.overview_account_outdated)) }
             return null
         }
         // Signed out: park the invite and sign this account in again, which resumes the redeem

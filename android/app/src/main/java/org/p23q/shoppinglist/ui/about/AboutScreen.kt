@@ -25,8 +25,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 
@@ -39,8 +37,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import org.p23q.shoppinglist.R
+import org.jetbrains.compose.resources.painterResource
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.about_auto_update_check
+import org.p23q.shoppinglist.resources.about_auto_update_check_help
+import org.p23q.shoppinglist.resources.about_license
+import org.p23q.shoppinglist.resources.about_source_code
+import org.p23q.shoppinglist.resources.about_tagline
+import org.p23q.shoppinglist.resources.about_transliteration
+import org.p23q.shoppinglist.resources.about_updates
+import org.p23q.shoppinglist.resources.about_version
+import org.p23q.shoppinglist.resources.app_name
+import org.p23q.shoppinglist.resources.ic_brand_logo
+import org.p23q.shoppinglist.resources.ic_cuneiform_tuppu
+import org.p23q.shoppinglist.resources.update_available_status
+import org.p23q.shoppinglist.resources.update_check_failed
+import org.p23q.shoppinglist.resources.update_checking
+import org.p23q.shoppinglist.resources.update_up_to_date
 import org.p23q.shoppinglist.ui.SectionCard
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.update.UpdateStatus
 import org.p23q.shoppinglist.ui.theme.accentText
 
@@ -80,7 +95,7 @@ fun AboutScreen(
         ) {
             // The mark over the name, exactly as the login screen opens (T-213/T-216), at 72dp.
             Image(
-                painter = painterResource(R.drawable.ic_brand_logo),
+                painter = painterResource(Res.drawable.ic_brand_logo),
                 contentDescription = null,
                 // Tagged because the mark is decorative: no contentDescription means no semantics
                 // of its own, and the test has to be able to say it is on the page.
@@ -88,7 +103,7 @@ fun AboutScreen(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.app_name),
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
@@ -102,8 +117,8 @@ fun AboutScreen(
             // the light theme and the dark one alike; the web masks the same path over
             // currentColor. The login screen shows it smaller and without the caption.
             Image(
-                painter = painterResource(R.drawable.ic_cuneiform_tuppu),
-                contentDescription = stringResource(R.string.about_transliteration),
+                painter = painterResource(Res.drawable.ic_cuneiform_tuppu),
+                contentDescription = stringResource(Res.string.about_transliteration),
                 contentScale = ContentScale.Fit,
                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
                 // Height only: the sign is about 3:1, so the width follows from it.
@@ -112,7 +127,7 @@ fun AboutScreen(
             Spacer(Modifier.height(4.dp))
             // Hidden from TalkBack: the sign above already reads as ṭuppu, once is enough (B15).
             Text(
-                text = stringResource(R.string.about_transliteration),
+                text = stringResource(Res.string.about_transliteration),
                 style = MaterialTheme.typography.bodySmall,
                 fontStyle = FontStyle.Italic,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -124,13 +139,13 @@ fun AboutScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.about_tagline),
+                text = stringResource(Res.string.about_tagline),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.about_version, appVersion),
+                text = stringResource(Res.string.about_version, appVersion),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -142,12 +157,12 @@ fun AboutScreen(
             // current is about the app, not about the account. Device-local like the notification
             // toggle — whether this phone checks is a property of the phone, so it isn't synced.
             // Off means no request at all, not a silent check. In a card, as every other section (A17).
-            SectionCard(stringResource(R.string.about_updates)) {
+            SectionCard(stringResource(Res.string.about_updates)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.about_auto_update_check))
+                        Text(stringResource(Res.string.about_auto_update_check))
                         Text(
-                            stringResource(R.string.about_auto_update_check_help),
+                            stringResource(Res.string.about_auto_update_check_help),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -158,10 +173,10 @@ fun AboutScreen(
                 // switched off, which is also when no request was made.
                 val updateLine = when (updateStatus) {
                     UpdateStatus.Idle -> null
-                    UpdateStatus.Checking -> stringResource(R.string.update_checking)
-                    is UpdateStatus.UpToDate -> stringResource(R.string.update_up_to_date, updateStatus.version)
-                    is UpdateStatus.Available -> stringResource(R.string.update_available_status, updateStatus.version)
-                    UpdateStatus.Failed -> stringResource(R.string.update_check_failed)
+                    UpdateStatus.Checking -> stringResource(Res.string.update_checking)
+                    is UpdateStatus.UpToDate -> stringResource(Res.string.update_up_to_date, updateStatus.version)
+                    is UpdateStatus.Available -> stringResource(Res.string.update_available_status, updateStatus.version)
+                    UpdateStatus.Failed -> stringResource(Res.string.update_check_failed)
                 }
                 if (updateLine != null) {
                     Text(
@@ -185,13 +200,13 @@ fun AboutScreen(
         val smallPrint = MaterialTheme.typography.bodySmall
         val smallPrintColor = MaterialTheme.colorScheme.onSurfaceVariant
         val linkColor = MaterialTheme.colorScheme.accentText
-        val sourceCode = stringResource(R.string.about_source_code)
+        val sourceCode = stringResource(Res.string.about_source_code)
         FlowRow(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
         ) {
             Text(
-                text = stringResource(R.string.about_license),
+                text = stringResource(Res.string.about_license),
                 style = smallPrint,
                 color = smallPrintColor,
                 textAlign = TextAlign.Center,

@@ -36,18 +36,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_ok
+import org.p23q.shoppinglist.resources.item_add_store
+import org.p23q.shoppinglist.resources.item_category
+import org.p23q.shoppinglist.resources.item_currency
+import org.p23q.shoppinglist.resources.item_due
+import org.p23q.shoppinglist.resources.item_due_clear
+import org.p23q.shoppinglist.resources.item_due_needs_server
+import org.p23q.shoppinglist.resources.item_note
+import org.p23q.shoppinglist.resources.item_price
+import org.p23q.shoppinglist.resources.item_quantity
+import org.p23q.shoppinglist.resources.item_remove_store
+import org.p23q.shoppinglist.resources.item_stores
 import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /** Category/stores/quantity/price/note/due fields shared by [AddItemDialog] and [EditItemDialog]. */
@@ -56,7 +69,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     OutlinedTextField(
         value = state.category,
         onValueChange = viewModel::onCategoryChange,
-        label = { Text(stringResource(R.string.item_category)) },
+        label = { Text(stringResource(Res.string.item_category)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -79,17 +92,17 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     // Shopping-only fields (T-110): a checklist shows just category / note / status. Existing
     // values are preserved, merely not rendered, so converting a list is reversible.
     if (state.showShoppingFields) {
-    FieldLabel(stringResource(R.string.item_stores))
+    FieldLabel(stringResource(Res.string.item_stores))
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = state.storeInput,
             onValueChange = viewModel::onStoreInputChange,
-            label = { Text(stringResource(R.string.item_add_store)) },
+            label = { Text(stringResource(Res.string.item_add_store)) },
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = viewModel::addStore) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.item_add_store))
+            Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(Res.string.item_add_store))
         }
     }
     // Existing stores on this list, offered the same way categories are (T-138) — retyping "Aldi"
@@ -124,7 +137,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
                         Icon(
                             imageVector = Icons.Default.Close,
                             // Merged into the chip, so TalkBack says what pressing it does.
-                            contentDescription = stringResource(R.string.item_remove_store, store),
+                            contentDescription = stringResource(Res.string.item_remove_store, store),
                             modifier = Modifier.size(InputChipDefaults.IconSize),
                         )
                     },
@@ -138,7 +151,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     OutlinedTextField(
         value = state.quantity,
         onValueChange = viewModel::onQuantityChange,
-        label = { Text(stringResource(R.string.item_quantity)) },
+        label = { Text(stringResource(Res.string.item_quantity)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -148,7 +161,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         OutlinedTextField(
             value = state.priceAmount,
             onValueChange = viewModel::onPriceAmountChange,
-            label = { Text(stringResource(R.string.item_price)) },
+            label = { Text(stringResource(Res.string.item_price)) },
             singleLine = true,
             isError = state.priceError != null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -158,7 +171,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
         OutlinedTextField(
             value = state.priceCurrency,
             onValueChange = viewModel::onPriceCurrencyChange,
-            label = { Text(stringResource(R.string.item_currency)) },
+            label = { Text(stringResource(Res.string.item_currency)) },
             singleLine = true,
             isError = state.currencyError != null,
             modifier = Modifier.widthIn(min = 88.dp),
@@ -173,7 +186,7 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
     OutlinedTextField(
         value = state.note,
         onValueChange = viewModel::onNoteChange,
-        label = { Text(stringResource(R.string.item_note)) },
+        label = { Text(stringResource(Res.string.item_note)) },
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -195,11 +208,11 @@ internal fun ItemFormFields(state: ItemFormUiState, viewModel: ItemFormViewModel
 private fun ReadOnlyDueRow(due: String) {
     Column(modifier = Modifier.fillMaxWidth().testTag("item-due-row")) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.item_due), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(stringResource(Res.string.item_due), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Text(AppFormat.calendarDate(due, appLocale()), style = MaterialTheme.typography.bodyLarge)
         }
         Text(
-            stringResource(R.string.item_due_needs_server),
+            stringResource(Res.string.item_due_needs_server),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -214,7 +227,7 @@ private fun ReadOnlyDueRow(due: String) {
 @Composable
 private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
     var isPicking by remember { mutableStateOf(false) }
-    val label = stringResource(R.string.item_due)
+    val label = stringResource(Res.string.item_due)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().testTag("item-due-row"),
@@ -225,7 +238,7 @@ private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
                 Text(AppFormat.calendarDate(due, appLocale()))
             }
             IconButton(onClick = { onDueChange(null) }, modifier = Modifier.testTag("item-due-clear")) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.item_due_clear))
+                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(Res.string.item_due_clear))
             }
         } else {
             IconButton(onClick = { isPicking = true }, modifier = Modifier.testTag("item-due-pick")) {
@@ -251,12 +264,12 @@ private fun DueRow(due: String?, onDueChange: (String?) -> Unit) {
                             onDueChange(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString())
                         }
                         isPicking = false
-                    }) { Text(stringResource(R.string.action_ok)) }
+                    }) { Text(stringResource(Res.string.action_ok)) }
                 }
             },
             dismissButton = {
                 LocalizedOverlay {
-                    TuppuTextButton(onClick = { isPicking = false }) { Text(stringResource(R.string.action_cancel)) }
+                    TuppuTextButton(onClick = { isPicking = false }) { Text(stringResource(Res.string.action_cancel)) }
                 }
             },
         ) {

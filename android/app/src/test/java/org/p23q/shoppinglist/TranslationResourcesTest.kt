@@ -18,12 +18,13 @@ import java.io.File
  * - stray-script detection, added after finding Cyrillic spliced into a Japanese string. That
  *   class of corruption is invisible to a reader who cannot read the language.
  *
- * Parsed as text rather than via Resources: this asserts what is in the files, independent of
- * whatever the current device locale happens to resolve to.
+ * Parsed as text rather than through the resources API: this asserts what is in the files,
+ * independent of whatever the current device locale happens to resolve to. The files are :shared's
+ * Compose resources (T-351).
  */
 class TranslationResourcesTest {
 
-    private val resDir = File("src/main/res")
+    private val resDir = File("../shared/src/commonMain/composeResources")
 
     private val stringPattern = Regex("""<string name="([^"]+)">(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
     private val formatArg = Regex("""%\d+\$[sd]""")
@@ -35,7 +36,7 @@ class TranslationResourcesTest {
         "values-fr" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF\\u4E00-\\u9FFF]"),
         "values-pt-rBR" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF\\u4E00-\\u9FFF]"),
         "values-ja" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF]"),
-        "values-b+zh+Hans" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF]"),
+        "values-zh" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF]"),
         "values-uk" to Regex("[\\u0600-\\u06FF\\u4E00-\\u9FFF]"),
         "values-ar" to Regex("[\\u0400-\\u04FF\\u4E00-\\u9FFF]"),
     )
@@ -88,6 +89,21 @@ class TranslationResourcesTest {
         strayScript.forEach { (dir, pattern) ->
             read(dir).forEach { (key, value) ->
                 assertTrue("$dir/$key contains stray script: $value", !pattern.containsMatchIn(value))
+            }
+        }
+    }
+
+    @Test
+    fun `no string is written the Android way, which Compose resources would show as is`() {
+        // Compose resources take a value literally (T-351): a backslash before a quote or an
+        // apostrophe, quotes around the value, or a line break inside it would all reach the
+        // screen. Android's aapt removed them, so a string copied from an Android project is the
+        // likely way one comes back.
+        (strayScript.keys + "values").forEach { dir ->
+            read(dir).forEach { (key, value) ->
+                assertTrue("$dir/$key escapes a quote: $value", !value.contains("\\'") && !value.contains("\\\""))
+                assertTrue("$dir/$key is wrapped in quotes: $value", !(value.length >= 2 && value.startsWith('"') && value.endsWith('"')))
+                assertTrue("$dir/$key spans lines: $value", !value.contains('\n'))
             }
         }
     }

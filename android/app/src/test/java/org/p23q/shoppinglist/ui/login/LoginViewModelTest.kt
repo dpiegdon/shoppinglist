@@ -20,7 +20,14 @@ import org.p23q.shoppinglist.core.NotATuppuServerException
 import org.p23q.shoppinglist.core.ServerTooOldException
 import org.p23q.shoppinglist.data.FakeLastServerAddress
 import org.p23q.shoppinglist.core.api.UnauthorizedException
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.login_msg_app_too_old
+import org.p23q.shoppinglist.resources.login_msg_incorrect_credentials
+import org.p23q.shoppinglist.resources.login_msg_invalid_url
+import org.p23q.shoppinglist.resources.login_msg_not_a_server
+import org.p23q.shoppinglist.resources.login_msg_server_too_old
+import org.p23q.shoppinglist.resources.login_msg_untrusted_cert
 import org.p23q.shoppinglist.ui.UiText
 
 class LoginViewModelTest {
@@ -136,7 +143,7 @@ class LoginViewModelTest {
         viewModel.submit()?.join()
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
-        assertEquals(UiText.res(R.string.login_msg_incorrect_credentials), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_incorrect_credentials), viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -156,8 +163,8 @@ class LoginViewModelTest {
         // WHICH message was chosen — the wording itself now lives in strings.xml.
         val message = viewModel.uiState.value.errorMessage
         assertNotNull(message)
-        assertEquals(UiText.res(R.string.login_msg_untrusted_cert), message)
-        assertNotEquals(UiText.res(R.string.error_offline), message)
+        assertEquals(UiText.res(Res.string.login_msg_untrusted_cert), message)
+        assertNotEquals(UiText.res(Res.string.error_offline), message)
     }
 
     @Test
@@ -199,7 +206,7 @@ class LoginViewModelTest {
         viewModel.submit()
 
         assertFalse(repo.loginCalled)
-        assertEquals(UiText.res(R.string.login_msg_invalid_url), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_invalid_url), viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -259,7 +266,7 @@ class LoginViewModelTest {
 
         assertEquals(1, repo.registrationChecks)
         assertEquals("Moving to a new host", viewModel.uiState.value.serverMessage)
-        assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.error_offline), viewModel.uiState.value.errorMessage)
 
         // The same address again: answered already, not asked twice.
         viewModel.submit()?.join()
@@ -364,7 +371,7 @@ class LoginViewModelTest {
         viewModel.submit()?.join()
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
-        assertEquals(UiText.res(R.string.login_msg_server_too_old), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_server_too_old), viewModel.uiState.value.errorMessage)
     }
 
     private suspend fun kotlinx.coroutines.test.TestScope.submitWith(error: Throwable): LoginViewModel {
@@ -382,7 +389,7 @@ class LoginViewModelTest {
         val viewModel = submitWith(AppTooOldException(4, "https://new.example.com/app.apk"))
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
-        assertEquals(UiText.res(R.string.login_msg_app_too_old), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_app_too_old), viewModel.uiState.value.errorMessage)
         assertEquals("https://new.example.com/app.apk", viewModel.uiState.value.downloadUrl)
 
         viewModel.onServerUrlChange("https://other.example.com")
@@ -393,7 +400,7 @@ class LoginViewModelTest {
     fun `no Tuppu server at the address gets its own message (T-298)`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = submitWith(NotATuppuServerException())
 
-        assertEquals(UiText.res(R.string.login_msg_not_a_server), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_not_a_server), viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.downloadUrl)
     }
 
@@ -403,7 +410,7 @@ class LoginViewModelTest {
         val viewModel = submitWith(kotlinx.serialization.SerializationException("Unexpected JSON token"))
 
         assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals(UiText.res(R.string.login_msg_not_a_server), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_not_a_server), viewModel.uiState.value.errorMessage)
     }
 
     @Test

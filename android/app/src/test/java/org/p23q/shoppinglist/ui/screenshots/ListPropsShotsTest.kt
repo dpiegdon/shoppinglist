@@ -7,9 +7,11 @@ import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_duplicate
+import org.p23q.shoppinglist.resources.nav_list_properties
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.listprops.ListPropsScreen
 import org.p23q.shoppinglist.ui.listprops.ListPropsViewModel
@@ -51,7 +53,7 @@ class ListPropsShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
             syncer,
         ).tracked()
 
-        setScreen(str(R.string.nav_list_properties)) { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
+        setScreen(str(Res.string.nav_list_properties)) { ListPropsScreen(onLeft = {}, onDuplicated = {}, viewModel = viewModel) }
         awaitUntil { viewModel.uiState.value.members.isNotEmpty() }
         viewModel
     }
@@ -67,7 +69,7 @@ class ListPropsShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
     @Test
     fun copyPicker() {
         val viewModel = show()
-        composeTestRule.onNodeWithText(str(R.string.action_duplicate)).performScrollTo().performClick()
+        composeTestRule.onNodeWithText(str(Res.string.action_duplicate)).performScrollTo().performClick()
         awaitUntil { viewModel.uiState.value.copyTargets.isNotEmpty() }
         captureWithDialog("listprops-copy-to")
     }

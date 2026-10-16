@@ -20,6 +20,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainActivity
+import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
@@ -40,6 +41,7 @@ class InviteNotificationPosterTest {
     private lateinit var prefs: NotificationPrefsStore
     private lateinit var foreground: AppForegroundState
     private lateinit var poster: InviteNotificationPoster
+    private lateinit var locales: LocalePreferenceStore
     private lateinit var notificationManager: NotificationManager
     private lateinit var db: AppDb
 
@@ -53,7 +55,7 @@ class InviteNotificationPosterTest {
         prefs = NotificationPrefsStore(PreferenceDataStoreFactory.create { file })
         foreground = AppForegroundState()
         val localeFile = File.createTempFile("invite_poster_locale_test", ".preferences_pb").apply { deleteOnExit() }
-        val locales = LocalePreferenceStore(PreferenceDataStoreFactory.create { localeFile })
+        locales = LocalePreferenceStore(PreferenceDataStoreFactory.create { localeFile })
         db = Room.inMemoryDatabaseBuilder(context, AppDb::class.java).setDriver(BundledSQLiteDriver()).build()
         runBlocking { db.insertTestAccount() }
         poster = InviteNotificationPoster(context, prefs, foreground, locales, AccountRegistry(db))
@@ -88,6 +90,25 @@ class InviteNotificationPosterTest {
         assertEquals(InviteNotificationPoster.CHANNEL_ID, n.channelId)
         assertEquals("Invitations", notificationManager.getNotificationChannel(InviteNotificationPoster.CHANNEL_ID).name)
         assertEquals(InviteCheckOutcome.POSTED to 1, recorded())
+    }
+
+    @Test
+    fun `it speaks the language chosen in the app, not the phone's (T-111)`() = runTest {
+        locales.setLocale(AppLocale.GERMAN)
+
+        poster.notifyPendingInvites(listOf(invite("i1", "Groceries"), invite("i2", "Office")))
+
+        assertEquals("Einladungen: 2", posted().single().title())
+        assertEquals("Einladungen", notificationManager.getNotificationChannel(InviteNotificationPoster.CHANNEL_ID).name)
+    }
+
+    @Test
+    fun `an Arabic count has Arabic digits`() = runTest {
+        locales.setLocale(AppLocale.ARABIC)
+
+        poster.notifyPendingInvites(listOf(invite("i1", "Groceries"), invite("i2", "Office")))
+
+        assertEquals("الدعوات: ٢", posted().single().title())
     }
 
     @Test

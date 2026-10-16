@@ -29,7 +29,11 @@ import { zhHans } from "./messages/zh-Hans";
  * list below then shows.
  */
 
-const RES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../android/app/src/main/res");
+// Android's strings are Compose resources in the shared module (T-351), in Android's XML format.
+const RES = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../android/shared/src/commonMain/composeResources",
+);
 const xmlOf = (dir: string) => readFileSync(path.join(RES, dir, "strings.xml"), "utf8");
 
 const LOCALES: Array<[string, string, Record<string, string>]> = [
@@ -38,21 +42,23 @@ const LOCALES: Array<[string, string, Record<string, string>]> = [
   ["es", xmlOf("values-es"), es as Record<string, string>],
   ["fr", xmlOf("values-fr"), fr as Record<string, string>],
   ["pt-BR", xmlOf("values-pt-rBR"), ptBR as Record<string, string>],
-  ["zh-Hans", xmlOf("values-b+zh+Hans"), zhHans as Record<string, string>],
+  ["zh-Hans", xmlOf("values-zh"), zhHans as Record<string, string>],
   ["ja", xmlOf("values-ja"), ja as Record<string, string>],
   ["uk", xmlOf("values-uk"), uk as Record<string, string>],
   ["ar", xmlOf("values-ar"), ar as Record<string, string>],
 ];
 
-/** Android's <string> resources, decoded the way aapt decodes them. */
+/**
+ * Android's <string> resources, decoded the way Compose resources decode them: the text as
+ * written, with only \n, \t, \uXXXX and \\ as escapes.
+ */
 function androidStrings(xml: string): Map<string, string> {
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   const strings = new Map<string, string>();
+  const unescape = (escape: string) =>
+    escape === "n" ? "\n" : escape === "t" ? "\t" : escape === "\\" ? "\\" : String.fromCharCode(parseInt(escape.slice(1), 16));
   for (const node of Array.from(doc.getElementsByTagName("string"))) {
-    let value = node.textContent ?? "";
-    // A value wrapped in double quotes keeps its whitespace; the quotes themselves are not text.
-    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
-    value = value.replace(/\\n/g, "\n").replace(/\\(['"@?\\])/g, "$1");
+    const value = (node.textContent ?? "").replace(/\\(u[0-9a-fA-F]{4}|n|t|\\)/g, (_, escape: string) => unescape(escape));
     strings.set(node.getAttribute("name") ?? "", value);
   }
   return strings;
@@ -150,15 +156,22 @@ describe("the two clients say the same thing (T-148)", () => {
     });
   }
 
+  it("the admin suffix keeps the space before it (T-341)", () => {
+    // It follows an email: "kim@example.org (admin)". Compose resources keep a value's edge spaces
+    // as written; aapt used to strip them unless the value was quoted. (Japanese and Chinese open
+    // with a full-width parenthesis instead.)
+    expect(androidEn.get("admin_is_admin_suffix")).toBe(" (admin)");
+  });
+
   for (const [tag, xml] of LOCALES) {
-    it(`${tag}: no Android string starts or ends with a space aapt would strip`, () => {
-      // aapt drops a value's leading and trailing whitespace unless the value is quoted: " (admin)"
-      // came out as "(admin)", glued to the email before it (T-341).
+    it(`${tag}: no Android string is quoted the aapt way, which Compose resources would show`, () => {
+      // aapt removed a backslash before a quote or an apostrophe, quotes around a value and the
+      // line breaks inside it; Compose resources take all of them as text (T-351).
       const doc = new DOMParser().parseFromString(xml, "text/xml");
-      const stripped = Array.from(doc.getElementsByTagName("string"))
-        .filter((node) => /^\s|\s$/.test(node.textContent ?? ""))
+      const literal = Array.from(doc.getElementsByTagName("string"))
+        .filter((node) => /\\['"]|^".*"$|\n/s.test(node.textContent ?? ""))
         .map((node) => node.getAttribute("name"));
-      expect(stripped, "quote these values to keep their edge spaces").toEqual([]);
+      expect(literal, "write these values as they should read").toEqual([]);
     });
   }
 

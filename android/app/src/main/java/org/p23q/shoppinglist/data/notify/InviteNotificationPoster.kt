@@ -18,6 +18,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.util.Locale
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.R
@@ -31,7 +32,11 @@ import org.p23q.shoppinglist.core.sync.SyncStatus
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.accountLine
-import org.p23q.shoppinglist.ui.localizedContext
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.notif_channel_invites
+import org.p23q.shoppinglist.resources.notif_invites_count
+import org.p23q.shoppinglist.resources.overview_invite_from
+import org.p23q.shoppinglist.ui.getString
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -90,13 +95,13 @@ class InviteNotificationPoster @Inject constructor(
             return record(now, fresh.size, stoppedBy)
         }
 
-        // A localized context (T-111): this runs outside composition.
-        val strings = localizedContext(context, localePreferences.effective.first())
-        ensureChannel(strings)
+        // In the app's chosen language (T-111): this runs outside composition.
+        val locale = localePreferences.effective.first().toJavaLocale()
+        ensureChannel(locale)
         val single = fresh.singleOrNull()
-        val title = single?.listName ?: strings.getString(R.string.notif_invites_count, fresh.size)
+        val title = single?.listName ?: getString(locale, Res.string.notif_invites_count, fresh.size)
         val text = if (single != null) {
-            strings.getString(R.string.overview_invite_from, single.invitedByInitials)
+            getString(locale, Res.string.overview_invite_from, single.invitedByInitials)
         } else {
             fresh.joinToString(", ") { it.listName }
         }
@@ -146,9 +151,9 @@ class InviteNotificationPoster @Inject constructor(
         return NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
-    private fun ensureChannel(strings: Context) {
+    private suspend fun ensureChannel(locale: Locale) {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, strings.getString(R.string.notif_channel_invites), NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(CHANNEL_ID, getString(locale, Res.string.notif_channel_invites), NotificationManager.IMPORTANCE_DEFAULT),
         )
     }
 

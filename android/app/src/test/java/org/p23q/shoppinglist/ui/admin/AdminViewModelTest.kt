@@ -26,10 +26,12 @@ import org.p23q.shoppinglist.MainDispatcherRule
 import org.p23q.shoppinglist.data.TestServerAddress
 import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.data.testApi
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.admin_msg_password_required
+import org.p23q.shoppinglist.resources.admin_server_message_invalid
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.concurrent.TimeUnit
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
 
 @RunWith(RobolectricTestRunner::class)
@@ -139,7 +141,7 @@ class AdminViewModelTest {
             // requirePassword is what the screen calls before opening the delete confirmation.
             assertFalse(viewModel.requirePassword())
             assertEquals(
-                UiText.res(R.string.admin_msg_password_required),
+                UiText.res(Res.string.admin_msg_password_required),
                 viewModel.uiState.value.passwordError,
             )
 
@@ -315,7 +317,7 @@ class AdminViewModelTest {
             for (bad in listOf("one\ntwo", "tab\there", "x".repeat(201))) {
                 viewModel.onMessageChange(bad)
                 assertEquals(bad, null, viewModel.saveMessage())
-                assertEquals(bad, UiText.res(R.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
+                assertEquals(bad, UiText.res(Res.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
             }
             // Typing clears the complaint; 200 characters (and spaces trimmed off) is allowed.
             viewModel.onMessageChange(" " + "x".repeat(200) + " ")
@@ -335,7 +337,7 @@ class AdminViewModelTest {
         viewModel.onMessageChange("fine here")
         viewModel.saveMessage()!!.join()
 
-        assertEquals(UiText.res(R.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
+        assertEquals(UiText.res(Res.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
         assertEquals("", viewModel.uiState.value.serverMessage)
     }
 
@@ -364,7 +366,7 @@ class AdminViewModelTest {
         for (bad in listOf("a\u2028b", "a\u202eb", "a\u0085b")) {
             viewModel.onMessageChange(bad)
             assertEquals(bad, null, viewModel.saveMessage())
-            assertEquals(bad, UiText.res(R.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
+            assertEquals(bad, UiText.res(Res.string.admin_server_message_invalid), viewModel.uiState.value.messageError)
         }
         assertEquals(emptyList<String>(), puts)
     }

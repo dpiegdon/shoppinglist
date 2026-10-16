@@ -15,9 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppLocale
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.settings_language
 
 /**
  * The language chooser (T-127), used on the login screen and in Settings.
@@ -55,7 +55,7 @@ fun LanguagePicker(
             onValueChange = {},
             readOnly = true,
             singleLine = true,
-            label = { Text(stringResource(R.string.settings_language)) },
+            label = { Text(stringResource(Res.string.settings_language)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()

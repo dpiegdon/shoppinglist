@@ -3,15 +3,18 @@ package org.p23q.shoppinglist.ui
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppLocale
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_join
+import org.p23q.shoppinglist.resources.redeem_code
+import org.p23q.shoppinglist.resources.redeem_title
 import org.robolectric.RobolectricTestRunner
 
 /**
@@ -39,13 +42,13 @@ class LocalizedDialogTest {
             LocalizedContent(AppLocale.GERMAN) {
                 LocalizedAlertDialog(
                     onDismissRequest = {},
-                    title = { Text(stringResource(R.string.redeem_title)) },
-                    text = { Text(stringResource(R.string.redeem_code)) },
+                    title = { Text(stringResource(Res.string.redeem_title)) },
+                    text = { Text(stringResource(Res.string.redeem_code)) },
                     confirmButton = {
-                        TextButton(onClick = {}) { Text(stringResource(R.string.action_join)) }
+                        TextButton(onClick = {}) { Text(stringResource(Res.string.action_join)) }
                     },
                     dismissButton = {
-                        TextButton(onClick = {}) { Text(stringResource(R.string.action_cancel)) }
+                        TextButton(onClick = {}) { Text(stringResource(Res.string.action_cancel)) }
                     },
                 )
             }
@@ -71,9 +74,9 @@ class LocalizedDialogTest {
             LocalizedContent(AppLocale.GERMAN) {
                 AlertDialog(
                     onDismissRequest = {},
-                    title = { Text(stringResource(R.string.redeem_title)) },
+                    title = { Text(stringResource(Res.string.redeem_title)) },
                     confirmButton = {
-                        TextButton(onClick = {}) { Text(stringResource(R.string.action_join)) }
+                        TextButton(onClick = {}) { Text(stringResource(Res.string.action_join)) }
                     },
                 )
             }
@@ -85,7 +88,7 @@ class LocalizedDialogTest {
     @Test
     fun `content outside a dialog was already localized and stays so`() {
         composeTestRule.setContent {
-            LocalizedContent(AppLocale.GERMAN) { Text(stringResource(R.string.redeem_title)) }
+            LocalizedContent(AppLocale.GERMAN) { Text(stringResource(Res.string.redeem_title)) }
         }
 
         composeTestRule.onNodeWithText("Liste beitreten").assertIsDisplayed()

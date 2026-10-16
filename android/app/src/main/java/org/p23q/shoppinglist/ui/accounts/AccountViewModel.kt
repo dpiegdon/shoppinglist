@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AuthRepository
 import org.p23q.shoppinglist.core.LocalAreaNotEmptyException
 import org.p23q.shoppinglist.core.account.AccountRegistry
@@ -25,6 +24,26 @@ import org.p23q.shoppinglist.core.api.UnauthorizedException
 import org.p23q.shoppinglist.core.api.UpdateSettingsRequest
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.settings_msg_currency_failed
+import org.p23q.shoppinglist.resources.settings_msg_currency_invalid
+import org.p23q.shoppinglist.resources.settings_msg_currency_updated
+import org.p23q.shoppinglist.resources.settings_msg_delete_failed
+import org.p23q.shoppinglist.resources.settings_msg_delete_password_incorrect
+import org.p23q.shoppinglist.resources.settings_msg_email_changed
+import org.p23q.shoppinglist.resources.settings_msg_email_failed
+import org.p23q.shoppinglist.resources.settings_msg_email_fields_required
+import org.p23q.shoppinglist.resources.settings_msg_initials_failed
+import org.p23q.shoppinglist.resources.settings_msg_initials_too_long
+import org.p23q.shoppinglist.resources.settings_msg_initials_updated
+import org.p23q.shoppinglist.resources.settings_msg_password_changed
+import org.p23q.shoppinglist.resources.settings_msg_password_failed
+import org.p23q.shoppinglist.resources.settings_msg_password_fields_required
+import org.p23q.shoppinglist.resources.settings_msg_password_incorrect
+import org.p23q.shoppinglist.resources.settings_msg_password_required
+import org.p23q.shoppinglist.resources.settings_msg_revoke_failed
+import org.p23q.shoppinglist.resources.settings_msg_sessions_failed
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -139,7 +158,7 @@ class AccountViewModel @Inject constructor(
             val list = api().sessions().sessions
             _uiState.update { it.copy(sessions = list) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(messageSection = AccountSection.SESSIONS, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_sessions_failed)) }
+            _uiState.update { it.copy(messageSection = AccountSection.SESSIONS, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_sessions_failed)) }
         }
     }
 
@@ -177,7 +196,7 @@ class AccountViewModel @Inject constructor(
     fun updateCurrency(currency: String): Job? {
         val normalized = currency.trim().uppercase()
         if (!ISO_CURRENCY.matches(normalized)) {
-            _uiState.update { it.copy(messageSection = AccountSection.CURRENCY, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_currency_invalid)) }
+            _uiState.update { it.copy(messageSection = AccountSection.CURRENCY, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_currency_invalid)) }
             return null
         }
         return viewModelScope.launch {
@@ -194,13 +213,13 @@ class AccountViewModel @Inject constructor(
                         initials = response.initials,
                         errorMessage = null,
                         messageSection = AccountSection.CURRENCY,
-                        infoMessage = UiText.res(R.string.settings_msg_currency_updated),
+                        infoMessage = UiText.res(Res.string.settings_msg_currency_updated),
                     )
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(messageSection = AccountSection.CURRENCY, infoMessage = null, errorMessage = ErrorText.of(e, R.string.settings_msg_currency_failed)) }
+                _uiState.update { it.copy(messageSection = AccountSection.CURRENCY, infoMessage = null, errorMessage = ErrorText.of(e, Res.string.settings_msg_currency_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(messageSection = AccountSection.CURRENCY, infoMessage = null, errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(messageSection = AccountSection.CURRENCY, infoMessage = null, errorMessage = UiText.res(Res.string.error_offline)) }
             }
         }
     }
@@ -208,7 +227,7 @@ class AccountViewModel @Inject constructor(
     fun updateInitials(initials: String): Job? {
         val normalized = initials.trim().uppercase()
         if (normalized.length > INITIALS_MAX_LENGTH) {
-            _uiState.update { it.copy(messageSection = AccountSection.INITIALS, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_initials_too_long, INITIALS_MAX_LENGTH)) }
+            _uiState.update { it.copy(messageSection = AccountSection.INITIALS, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_initials_too_long, INITIALS_MAX_LENGTH)) }
             return null
         }
         return viewModelScope.launch {
@@ -223,13 +242,13 @@ class AccountViewModel @Inject constructor(
                         initials = response.initials,
                         errorMessage = null,
                         messageSection = AccountSection.INITIALS,
-                        infoMessage = UiText.res(R.string.settings_msg_initials_updated),
+                        infoMessage = UiText.res(Res.string.settings_msg_initials_updated),
                     )
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(messageSection = AccountSection.INITIALS, infoMessage = null, errorMessage = ErrorText.of(e, R.string.settings_msg_initials_failed)) }
+                _uiState.update { it.copy(messageSection = AccountSection.INITIALS, infoMessage = null, errorMessage = ErrorText.of(e, Res.string.settings_msg_initials_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(messageSection = AccountSection.INITIALS, infoMessage = null, errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(messageSection = AccountSection.INITIALS, infoMessage = null, errorMessage = UiText.res(Res.string.error_offline)) }
             }
         }
     }
@@ -237,7 +256,7 @@ class AccountViewModel @Inject constructor(
     fun changePassword(): Job? {
         val state = _uiState.value
         if (state.currentPassword.isBlank() || state.newPassword.isBlank()) {
-            _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_password_fields_required)) }
+            _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_password_fields_required)) }
             return null
         }
         if (state.newPassword != state.newPasswordAgain) {
@@ -248,14 +267,14 @@ class AccountViewModel @Inject constructor(
             try {
                 api().changePassword(ChangePasswordRequest(state.currentPassword, state.newPassword))
                 _uiState.update {
-                    it.copy(currentPassword = "", newPassword = "", newPasswordAgain = "", errorMessage = null, messageSection = AccountSection.PASSWORD, infoMessage = UiText.res(R.string.settings_msg_password_changed))
+                    it.copy(currentPassword = "", newPassword = "", newPasswordAgain = "", errorMessage = null, messageSection = AccountSection.PASSWORD, infoMessage = UiText.res(Res.string.settings_msg_password_changed))
                 }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_password_incorrect)) }
+                _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = ErrorText.of(e, R.string.settings_msg_password_failed, mapOf("invalid_credentials" to R.string.settings_msg_password_incorrect))) }
+                _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = ErrorText.of(e, Res.string.settings_msg_password_failed, mapOf("invalid_credentials" to Res.string.settings_msg_password_incorrect))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(messageSection = AccountSection.PASSWORD, infoMessage = null, errorMessage = UiText.res(Res.string.error_offline)) }
             }
         }
     }
@@ -263,7 +282,7 @@ class AccountViewModel @Inject constructor(
     fun changeEmail(): Job? {
         val state = _uiState.value
         if (state.changeEmailPassword.isBlank() || state.newEmail.isBlank()) {
-            _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_email_fields_required)) }
+            _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_email_fields_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -276,15 +295,15 @@ class AccountViewModel @Inject constructor(
                         changeEmailPassword = "",
                         errorMessage = null,
                         messageSection = AccountSection.EMAIL,
-                        infoMessage = UiText.res(R.string.settings_msg_email_changed),
+                        infoMessage = UiText.res(Res.string.settings_msg_email_changed),
                     )
                 }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
+                _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_delete_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = ErrorText.of(e, R.string.settings_msg_email_failed, mapOf("invalid_credentials" to R.string.settings_msg_delete_password_incorrect))) }
+                _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = ErrorText.of(e, Res.string.settings_msg_email_failed, mapOf("invalid_credentials" to Res.string.settings_msg_delete_password_incorrect))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(messageSection = AccountSection.EMAIL, infoMessage = null, errorMessage = UiText.res(Res.string.error_offline)) }
             }
         }
     }
@@ -293,7 +312,7 @@ class AccountViewModel @Inject constructor(
         try {
             api().revokeSession(id)
         } catch (e: IOException) {
-            _uiState.update { it.copy(messageSection = AccountSection.SESSIONS, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_revoke_failed)) }
+            _uiState.update { it.copy(messageSection = AccountSection.SESSIONS, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_revoke_failed)) }
         }
         loadSessions().join()
     }
@@ -314,7 +333,7 @@ class AccountViewModel @Inject constructor(
     fun confirmDeleteAccount(): Job? {
         val password = _uiState.value.deleteAccountPassword
         if (password.isBlank()) {
-            _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_password_required)) }
+            _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_password_required)) }
             return null
         }
         return viewModelScope.launch {
@@ -323,11 +342,11 @@ class AccountViewModel @Inject constructor(
                 authRepository.removeAccount(accountId)
                 _uiState.update { it.copy(isDeleteConfirmOpen = false, gone = whereNext()) }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = UiText.res(R.string.settings_msg_delete_password_incorrect)) }
+                _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = UiText.res(Res.string.settings_msg_delete_password_incorrect)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = ErrorText.of(e, R.string.settings_msg_delete_failed, mapOf("invalid_credentials" to R.string.settings_msg_delete_password_incorrect))) }
+                _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = ErrorText.of(e, Res.string.settings_msg_delete_failed, mapOf("invalid_credentials" to Res.string.settings_msg_delete_password_incorrect))) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(messageSection = AccountSection.DELETE, infoMessage = null, errorMessage = UiText.res(Res.string.error_offline)) }
             }
         }
     }

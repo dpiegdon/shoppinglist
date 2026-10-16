@@ -154,8 +154,8 @@
     <string name="listprops_notify_changes">إشعاري بالتغييرات في هذه القائمة</string>
     <string name="listprops_leave_list">مغادرة القائمة</string>
     <string name="listprops_leave_confirm_title">مغادرة هذه القائمة؟</string>
-    <string name="listprops_leave_confirm_body">لن تتلقى تحديثات \"%1$s\" على هذا الجهاز بعد الآن.</string>
-    <string name="listprops_merge_confirm_title">الدمج في \"%1$s\"؟</string>
+    <string name="listprops_leave_confirm_body">لن تتلقى تحديثات "%1$s" على هذا الجهاز بعد الآن.</string>
+    <string name="listprops_merge_confirm_title">الدمج في "%1$s"؟</string>
     <string name="listprops_merge_confirm_body">ستصبح الفئتان واحدة.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">الكلمة الأكدية التي تعني اللوح الطيني — الشيء الذي كانت القائمة تُضغط فيه.</string>
@@ -248,14 +248,14 @@
     <string name="login_msg_invalid_url">أدخل عنوان خادم https صالحًا</string>
     <string name="login_msg_credentials_required">البريد الإلكتروني وكلمة المرور مطلوبان</string>
     <string name="login_msg_incorrect_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
-    <string name="login_msg_untrusted_cert">شهادة الخادم غير موثوقة. استخدم شهادة من جهة معتمدة. لخادم تطوير بشهادة موقّعة ذاتيًا، فعّل \"الوثوق بالشهادات الموقّعة ذاتيًا\" في هذا النموذج أو في صفحة الحساب (نسخ التصحيح فقط).</string>
+    <string name="login_msg_untrusted_cert">شهادة الخادم غير موثوقة. استخدم شهادة من جهة معتمدة. لخادم تطوير بشهادة موقّعة ذاتيًا، فعّل "الوثوق بالشهادات الموقّعة ذاتيًا" في هذا النموذج أو في صفحة الحساب (نسخ التصحيح فقط).</string>
     <string name="login_msg_server_too_old">هذا الخادم أقدم من أن يعمل مع هذا التطبيق.</string>
     <string name="login_msg_app_too_old">هذا التطبيق أقدم من أن يعمل مع هذا الخادم.</string>
     <string name="login_msg_not_a_server">لم يستجب أي خادم Tuppu على هذا العنوان.</string>
     <string name="redeem_msg_code_required">أدخل رمز دعوة</string>
     <string name="redeem_msg_failed">تعذّر استخدام الدعوة</string>
     <string name="item_msg_name_required">الاسم مطلوب</string>
-    <string name="item_msg_duplicate_name">يوجد بالفعل عنصر باسم \"%1$s\"</string>
+    <string name="item_msg_duplicate_name">يوجد بالفعل عنصر باسم "%1$s"</string>
     <string name="item_msg_price_invalid">أدخل مبلغًا مثل 1.99</string>
     <string name="item_msg_currency_invalid">استخدم رمزًا من 3 أحرف مثل EUR</string>
     <string name="listprops_msg_members_offline">الأعضاء متاحون عند الاتصال فقط</string>
@@ -269,7 +269,7 @@
     <string name="admin_server_message">رسالة الخادم</string>
     <string name="admin_server_message_help">سطر واحد يظهر للجميع في صفحة تسجيل الدخول وفوق قوائمهم.</string>
     <string name="admin_server_message_invalid">يجب أن تكون الرسالة سطرًا واحدًا لا يتجاوز 200 حرف.</string>
-    <string name="admin_is_admin_suffix">" (مسؤول)"</string>
+    <string name="admin_is_admin_suffix"> (مسؤول)</string>
     <string name="admin_users">المستخدمون</string>
     <string name="admin_show_users">إظهار المستخدمين المسجّلين</string>
     <string name="admin_user_count">المستخدمون المسجّلون: %1$d</string>

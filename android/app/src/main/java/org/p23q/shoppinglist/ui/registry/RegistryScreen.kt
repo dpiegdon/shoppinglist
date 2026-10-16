@@ -29,16 +29,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.CancellationException
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.db.label
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_undo
+import org.p23q.shoppinglist.resources.registry_delete_item
+import org.p23q.shoppinglist.resources.registry_empty
+import org.p23q.shoppinglist.resources.registry_item_deleted
+import org.p23q.shoppinglist.resources.registry_search
 import org.p23q.shoppinglist.ui.EmptyState
+import org.p23q.shoppinglist.ui.stringResource
 
 @Composable
 fun RegistryScreen(
@@ -48,8 +53,8 @@ fun RegistryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val undoLabel = stringResource(R.string.action_undo)
-    val deletedTemplate = stringResource(R.string.registry_item_deleted)
+    val undoLabel = stringResource(Res.string.action_undo)
+    val deletedTemplate = stringResource(Res.string.registry_item_deleted)
     LaunchedEffect(state.undoItemId) {
         val name = state.undoItemName
         val itemId = state.undoItemId
@@ -81,7 +86,7 @@ fun RegistryScreen(
             OutlinedTextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                label = { Text(stringResource(R.string.registry_search)) },
+                label = { Text(stringResource(Res.string.registry_search)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
@@ -89,7 +94,7 @@ fun RegistryScreen(
                 // Said, not left blank, when nothing matches, as the web does (T-342).
                 if (state.items.isEmpty()) {
                     item(key = "empty") {
-                        EmptyState(stringResource(R.string.registry_empty))
+                        EmptyState(stringResource(Res.string.registry_empty))
                     }
                 }
                 items(state.items, key = { it.localId }) { item ->
@@ -125,7 +130,7 @@ private fun RegistryRow(item: ItemEntity, onClick: () -> Unit, onDelete: () -> U
         )
         Spacer(Modifier.width(4.dp))
         IconButton(onClick = onDelete) {
-            Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(R.string.registry_delete_item, item.name.value))
+            Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(Res.string.registry_delete_item, item.name.value))
         }
     }
 }

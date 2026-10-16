@@ -6,6 +6,7 @@
 /build/
 /app/build/
 /core/build/
+/shared/build/
 /captures/
 .externalNativeBuild/
 .cxx/

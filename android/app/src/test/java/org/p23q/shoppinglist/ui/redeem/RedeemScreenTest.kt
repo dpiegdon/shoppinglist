@@ -17,9 +17,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.TestAccounts
 import org.p23q.shoppinglist.core.db.AppDb
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.api_error_invite_not_found
 import org.robolectric.RobolectricTestRunner
 import org.p23q.shoppinglist.ui.UiText
 
@@ -94,7 +95,7 @@ class RedeemScreenTest {
         // each attempt so a response that lands late still gets picked up.
         composeTestRule.waitUntil(timeoutMillis = 5_000) {
             composeTestRule.waitForIdle()
-            viewModel.uiState.value.errorMessage == UiText.res(R.string.api_error_invite_not_found)
+            viewModel.uiState.value.errorMessage == UiText.res(Res.string.api_error_invite_not_found)
         }
 
         // A garbled link reads as an invite that does not exist, in the app's language (see ErrorText).

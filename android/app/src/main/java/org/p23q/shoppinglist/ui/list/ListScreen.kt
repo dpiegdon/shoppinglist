@@ -54,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -75,19 +74,34 @@ import androidx.lifecycle.repeatOnLifecycle
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.CategoryCanon
 import org.p23q.shoppinglist.core.DueDate
 import org.p23q.shoppinglist.core.DueState
 import org.p23q.shoppinglist.core.api.MemberDto
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.db.Status
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_undo
+import org.p23q.shoppinglist.resources.expense_not_saved
+import org.p23q.shoppinglist.resources.item_due_overdue
+import org.p23q.shoppinglist.resources.item_due_today
+import org.p23q.shoppinglist.resources.list_add_item
+import org.p23q.shoppinglist.resources.list_clear_checked
+import org.p23q.shoppinglist.resources.list_edit_item
+import org.p23q.shoppinglist.resources.list_empty
+import org.p23q.shoppinglist.resources.list_item_checked
+import org.p23q.shoppinglist.resources.list_last_touched_by
+import org.p23q.shoppinglist.resources.list_no_category
+import org.p23q.shoppinglist.resources.list_show_checked
+import org.p23q.shoppinglist.resources.nav_list_properties
+import org.p23q.shoppinglist.resources.nav_registry
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.EmptyState
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.shortDate
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.accentText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,8 +140,8 @@ fun ListScreen(
     }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val undoLabel = stringResource(R.string.action_undo)
-    val checkedTemplate = stringResource(R.string.list_item_checked)
+    val undoLabel = stringResource(Res.string.action_undo)
+    val checkedTemplate = stringResource(Res.string.list_item_checked)
     val checkedMessage = { name: String -> String.format(checkedTemplate, name) }
     LaunchedEffect(state.undoItemId) {
         val name = state.undoItemName
@@ -159,7 +173,7 @@ fun ListScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         // Bottom right on every list kind (T-168), where the expense list already had it.
-        floatingActionButton = { AddFab(onClick = onAddItem, contentDescription = stringResource(R.string.list_add_item)) },
+        floatingActionButton = { AddFab(onClick = onAddItem, contentDescription = stringResource(Res.string.list_add_item)) },
         // This screen already sits inside AppDrawerScaffold's Scaffold (which insets for the top
         // bar); without this, this inner Scaffold re-applies the status-bar inset and the controls
         // sit a status-bar-height too low, leaving empty space up top.
@@ -167,7 +181,7 @@ fun ListScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             // Slim controls row: show-checked toggle-button on the left; the registry and
-            // list-settings actions on the right (T-35). stringResource(R.string.list_clear_checked) moved into list properties
+            // list-settings actions on the right (T-35). stringResource(Res.string.list_clear_checked) moved into list properties
             // (T-75) — too easy to tap here by accident.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
@@ -177,7 +191,7 @@ fun ListScreen(
                 FilterChip(
                     selected = state.showChecked,
                     onClick = { viewModel.toggleShowChecked() },
-                    label = { Text(stringResource(R.string.list_show_checked)) },
+                    label = { Text(stringResource(Res.string.list_show_checked)) },
                     // Material's FilterChip shows no check unless given one; the web's toggle has
                     // always shown "✓" when on, and so does the expense list's selector (T-174).
                     leadingIcon = if (state.showChecked) {
@@ -196,10 +210,10 @@ fun ListScreen(
                 // Icon buttons as 48dp targets (C6), as the item pencil is; Material draws them at 40dp.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onOpenRegistry, modifier = Modifier.size(48.dp)) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = stringResource(R.string.nav_registry))
+                        Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = stringResource(Res.string.nav_registry))
                     }
                     IconButton(onClick = onOpenListProps, modifier = Modifier.size(48.dp)) {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = stringResource(R.string.nav_list_properties))
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = stringResource(Res.string.nav_list_properties))
                     }
                 }
             }
@@ -213,7 +227,7 @@ fun ListScreen(
                     // Muted and at the start, the one style every empty state has (T-339).
                     if (state.groups.isEmpty()) {
                         item(key = "empty") {
-                            EmptyState(stringResource(R.string.list_empty), modifier = Modifier.testTag("list-empty"))
+                            EmptyState(stringResource(Res.string.list_empty), modifier = Modifier.testTag("list-empty"))
                         }
                     }
                     // The uncategorised group's heading (T-339): none when it is the only group, a
@@ -232,7 +246,7 @@ fun ListScreen(
                         if (index > 0) {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         }
-                        val noCategory = stringResource(R.string.list_no_category)
+                        val noCategory = stringResource(Res.string.list_no_category)
                         Text(
                             text = group.category ?: CategoryCanon.UNCATEGORIZED_LABEL,
                             style = MaterialTheme.typography.titleSmall,
@@ -332,7 +346,7 @@ private fun ItemRow(
             shrinkVertically(animationSpec = collapse) +
             fadeOut(animationSpec = dim),
     ) {
-    val editLabel = stringResource(R.string.list_edit_item, item.name.value)
+    val editLabel = stringResource(Res.string.list_edit_item, item.name.value)
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -397,7 +411,7 @@ private fun ItemRow(
                 // say it here the same way. The web needs no equivalent: it pushes synchronously and
                 // reports the refusal at save time.
                 if (item.syncBlocked) {
-                    val notSaved = stringResource(R.string.expense_not_saved)
+                    val notSaved = stringResource(Res.string.expense_not_saved)
                     // No participant to name on an item, so the codes that name one cannot arise.
                     val reason = ErrorText.refusal(item.syncBlockedCode, null)?.asString()
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -465,8 +479,8 @@ private fun DueDateText(due: String, today: String, isChecked: Boolean) {
     }
     val text = shortDate(due, appLocale(), today)
     val meaning = when (state) {
-        DueState.OVERDUE -> stringResource(R.string.item_due_overdue)
-        DueState.TODAY -> stringResource(R.string.item_due_today)
+        DueState.OVERDUE -> stringResource(Res.string.item_due_overdue)
+        DueState.TODAY -> stringResource(Res.string.item_due_today)
         DueState.UPCOMING -> null
     }
     Text(
@@ -484,7 +498,7 @@ private fun DueDateText(due: String, today: String, isChecked: Boolean) {
  *  accessibility content description since there's no hover on touch devices. */
 @Composable
 private fun AuthorBadge(member: MemberDto) {
-    val touchedByDescription = stringResource(R.string.list_last_touched_by, member.email)
+    val touchedByDescription = stringResource(Res.string.list_last_touched_by, member.email)
     Box(
         modifier = Modifier
             .size(24.dp)

@@ -17,6 +17,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.util.Locale
 import kotlinx.coroutines.flow.first
 import org.p23q.shoppinglist.MainActivity
 import org.p23q.shoppinglist.R
@@ -27,7 +28,12 @@ import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.data.accountLine
-import org.p23q.shoppinglist.ui.localizedContext
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.notif_changed_items
+import org.p23q.shoppinglist.resources.notif_changed_items_lists
+import org.p23q.shoppinglist.resources.notif_channel_collaborator
+import org.p23q.shoppinglist.resources.notif_shopping_lists
+import org.p23q.shoppinglist.ui.getString
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -74,18 +80,18 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
 
         val totalItems = audible.sumOf { it.changedItemCount }
         val singleList = audible.singleOrNull()
-        // Resolved against a LOCALIZED context, not the raw application one (T-111): this runs
-        // outside composition, so LocalizedContent cannot reach it and the app's chosen language
-        // would otherwise be ignored here while the rest of the UI honoured it.
-        val strings = localizedContext(context, localePreferences.effective.first())
-        ensureChannel(strings)
-        val title = singleList?.listName ?: strings.getString(R.string.notif_shopping_lists)
+        // Resolved in the app's chosen language, not the system's (T-111): this runs outside
+        // composition, so LocalizedContent cannot reach it and the chosen language would
+        // otherwise be ignored here while the rest of the UI honoured it.
+        val locale = localePreferences.effective.first().toJavaLocale()
+        ensureChannel(locale)
+        val title = singleList?.listName ?: getString(locale, Res.string.notif_shopping_lists)
         val text = if (singleList != null) {
-            itemsChangedText(strings, singleList.changedItemCount)
+            itemsChangedText(locale, singleList.changedItemCount)
         } else {
             // Two counts, so two labels (T-123) — "N items changed across M lists" would have
             // needed plural agreement twice over.
-            strings.getString(R.string.notif_changed_items_lists, totalItems, audible.size)
+            getString(locale, Res.string.notif_changed_items_lists, totalItems, audible.size)
         }
         // Whose lists these are, with several accounts on the phone (T-292): the notification's sub
         // text, beside the app name, email and server (T-300). With one account there is nobody
@@ -135,13 +141,13 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
         return NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
-    /** [strings] is the localized context — the channel name is user-visible in system settings. */
-    private fun ensureChannel(strings: Context) {
+    /** In [locale], the app's language — the channel name is user-visible in system settings. */
+    private suspend fun ensureChannel(locale: Locale) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                strings.getString(R.string.notif_channel_collaborator),
+                getString(locale, Res.string.notif_channel_collaborator),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ),
         )
@@ -149,8 +155,8 @@ class CollaboratorChangeNotificationPoster @Inject constructor(
 
     // Label-then-count (T-123), so neither string has to agree with its number. The notification
     // still carries the list name as its title, so the body losing its verb costs little.
-    private fun itemsChangedText(context: Context, count: Int): String =
-        context.getString(R.string.notif_changed_items, count)
+    private suspend fun itemsChangedText(locale: Locale, count: Int): String =
+        getString(locale, Res.string.notif_changed_items, count)
 
     private companion object {
         const val CHANNEL_ID = "collaborator_changes"

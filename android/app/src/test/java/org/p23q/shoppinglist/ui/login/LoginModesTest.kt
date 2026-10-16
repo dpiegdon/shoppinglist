@@ -15,7 +15,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.p23q.shoppinglist.core.api.PROTOCOL_VERSION
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AlreadyAddedException
 import org.p23q.shoppinglist.core.LoginExpectation
 import org.p23q.shoppinglist.core.WrongAccountException
@@ -24,6 +23,9 @@ import org.p23q.shoppinglist.data.PendingInviteHolder
 import org.p23q.shoppinglist.data.RecordingAuthRepository
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.data.testAccount
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.login_msg_already_added
+import org.p23q.shoppinglist.resources.login_msg_wrong_account
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 
@@ -129,7 +131,7 @@ class LoginModesTest {
         viewModel.submit()?.join()
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
-        assertEquals(UiText.res(R.string.login_msg_already_added), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_already_added), viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -196,7 +198,7 @@ class LoginModesTest {
         viewModel.submit()?.join()
 
         assertFalse(viewModel.uiState.value.loginSucceeded)
-        assertEquals(UiText.res(R.string.login_msg_wrong_account), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.login_msg_wrong_account), viewModel.uiState.value.errorMessage)
     }
 
     /** T-300: 3.1.0's last typed address may not be the server of the session it migrated. */

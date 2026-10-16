@@ -27,8 +27,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.sync.SyncState
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.ago_days
+import org.p23q.shoppinglist.resources.ago_hours
+import org.p23q.shoppinglist.resources.ago_just_now
+import org.p23q.shoppinglist.resources.ago_minutes
+import org.p23q.shoppinglist.resources.sync_attention
+import org.p23q.shoppinglist.resources.sync_failed_since
+import org.p23q.shoppinglist.resources.sync_not_synced
+import org.p23q.shoppinglist.resources.sync_pending_suffix
+import org.p23q.shoppinglist.resources.sync_synced
+import org.p23q.shoppinglist.resources.sync_syncing
 
 /** The attention banner's test tag. */
 internal const val ATTENTION_BANNER_TAG = "attention-banner"
@@ -135,7 +145,7 @@ fun rememberTickingNowMs(intervalMs: Long = 60_000L, clock: () -> Long = System:
 // English and needs no agreement, whereas "1 items need attention" would force a plural rule the
 // codebase otherwise never needs. A bare plural reads naturally in label position.
 internal fun attentionText(blockedCount: Int): UiText =
-    UiText.res(R.string.sync_attention, blockedCount)
+    UiText.res(Res.string.sync_attention, blockedCount)
 
 /**
  * The quiet one-liner: "Syncing…" while in progress, "Not synced yet" before the first success,
@@ -144,25 +154,25 @@ internal fun attentionText(blockedCount: Int): UiText =
  * this stays a pure, unit-testable function.
  */
 internal fun syncRecencyText(state: SyncState, nowMs: Long): UiText {
-    if (state.inProgress) return UiText.res(R.string.sync_syncing)
-    val last = state.lastSyncAt ?: return UiText.res(R.string.sync_not_synced)
+    if (state.inProgress) return UiText.res(Res.string.sync_syncing)
+    val last = state.lastSyncAt ?: return UiText.res(Res.string.sync_not_synced)
     val ago = (nowMs - last).coerceAtLeast(0)
     val relative = when {
-        ago < 60_000L -> UiText.res(R.string.ago_just_now)
-        ago < 3_600_000L -> UiText.res(R.string.ago_minutes, (ago / 60_000L).toInt())
-        ago < 86_400_000L -> UiText.res(R.string.ago_hours, (ago / 3_600_000L).toInt())
-        else -> UiText.res(R.string.ago_days, (ago / 86_400_000L).toInt())
+        ago < 60_000L -> UiText.res(Res.string.ago_just_now)
+        ago < 3_600_000L -> UiText.res(Res.string.ago_minutes, (ago / 60_000L).toInt())
+        ago < 86_400_000L -> UiText.res(Res.string.ago_hours, (ago / 3_600_000L).toInt())
+        else -> UiText.res(Res.string.ago_days, (ago / 86_400_000L).toInt())
     }
     // Nested UiText: the outer message takes the relative label as an ARGUMENT rather than being
     // concatenated with it, so both halves stay independently translatable and a translator can
     // put them in whatever order the language wants.
     val base = if (state.lastError != null) {
-        UiText.res(R.string.sync_failed_since, relative)
+        UiText.res(Res.string.sync_failed_since, relative)
     } else {
-        UiText.res(R.string.sync_synced, relative)
+        UiText.res(Res.string.sync_synced, relative)
     }
     return if (state.pendingCount > 0) {
-        UiText.res(R.string.sync_pending_suffix, base, state.pendingCount)
+        UiText.res(Res.string.sync_pending_suffix, base, state.pendingCount)
     } else {
         base
     }

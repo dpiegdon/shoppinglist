@@ -4,10 +4,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.data.accountLine
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.accounts_state_local
+import org.p23q.shoppinglist.resources.action_ok
+import org.p23q.shoppinglist.resources.local_area_note_body
+import org.p23q.shoppinglist.resources.local_area_note_title
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 
 /**
@@ -18,11 +21,11 @@ import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 fun LocalAreaNote(onDismiss: () -> Unit) {
     LocalizedAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.local_area_note_title)) },
-        text = { Text(stringResource(R.string.local_area_note_body)) },
+        title = { Text(stringResource(Res.string.local_area_note_title)) },
+        text = { Text(stringResource(Res.string.local_area_note_body)) },
         confirmButton = {
             TuppuTextButton(onClick = onDismiss, modifier = Modifier.testTag(LOCAL_AREA_NOTE_OK_TAG)) {
-                Text(stringResource(R.string.action_ok))
+                Text(stringResource(Res.string.action_ok))
             }
         },
     )
@@ -37,9 +40,9 @@ internal const val LOCAL_AREA_NOTE_OK_TAG = "local-area-note-ok"
  */
 @Composable
 fun accountName(account: AccountEntity): String =
-    if (account.isServer) account.email ?: account.label else stringResource(R.string.accounts_state_local)
+    if (account.isServer) account.email ?: account.label else stringResource(Res.string.accounts_state_local)
 
 /** [accountLine] for the screens, with the local area named as [accountName] names it. */
 @Composable
 fun accountLineText(account: AccountEntity): String =
-    if (account.isServer) accountLine(account) else stringResource(R.string.accounts_state_local)
+    if (account.isServer) accountLine(account) else stringResource(Res.string.accounts_state_local)

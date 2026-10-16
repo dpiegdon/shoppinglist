@@ -6,10 +6,11 @@ import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseType
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.expense_balances
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.expense.ExpenseListScreen
 import org.p23q.shoppinglist.ui.expense.ExpenseListViewModel
@@ -65,7 +66,7 @@ class LedgerShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
         }
         awaitUntil { viewModel.uiState.value.rows.isNotEmpty() }
         if (balances) {
-            composeTestRule.onNodeWithText(str(R.string.expense_balances)).performClick()
+            composeTestRule.onNodeWithText(str(Res.string.expense_balances)).performClick()
             composeTestRule.waitForIdle()
         }
     }

@@ -4,8 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.RecordingAuthRepository
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.nav_accounts
+import org.p23q.shoppinglist.resources.settings_account
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.accounts.AccountScreen
 import org.p23q.shoppinglist.ui.accounts.AccountViewModel
@@ -44,7 +46,7 @@ class AccountShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
         checkNotNull(accounts.registry.addLocal())
         val viewModel = AccountsViewModel(accounts.registry, accounts.syncStatus).tracked()
 
-        setScreen(str(R.string.nav_accounts)) {
+        setScreen(str(Res.string.nav_accounts)) {
             AccountsScreen(onAddAccount = {}, onOpenAccount = {}, onSignIn = {}, viewModel = viewModel)
         }
         capture("accounts")
@@ -77,7 +79,7 @@ class AccountShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
             db,
         ).tracked()
 
-        setScreen(str(R.string.settings_account)) { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
+        setScreen(str(Res.string.settings_account)) { AccountScreen(onGone = {}, onSignIn = {}, viewModel = viewModel) }
         awaitUntil { viewModel.uiState.value.initials != null && viewModel.uiState.value.sessions.isNotEmpty() }
         capture("account")
     }

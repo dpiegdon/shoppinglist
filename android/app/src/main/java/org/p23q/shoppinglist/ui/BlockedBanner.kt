@@ -10,9 +10,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.expense_not_saved
 
 /**
  * The server refused this row and the device parked it. Shown at the top of the form that opened
@@ -30,7 +30,7 @@ fun BlockedBanner(code: String?, who: String?) {
         Column {
             // expense_not_saved, whose English is generic on purpose: "the list" is whichever list
             // this row belongs to, so the item form says it too rather than owning a second string.
-            Text(stringResource(R.string.expense_not_saved), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(Res.string.expense_not_saved), style = MaterialTheme.typography.titleSmall)
             // Only when the refusal says more than the heading already does.
             if (reason != null) {
                 Spacer(Modifier.height(4.dp))

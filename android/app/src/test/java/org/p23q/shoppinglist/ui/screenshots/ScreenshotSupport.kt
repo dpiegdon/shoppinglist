@@ -21,12 +21,15 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -45,6 +48,7 @@ import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.AppDrawerScaffold
 import org.p23q.shoppinglist.ui.DrawerViewModel
 import org.p23q.shoppinglist.ui.SyncStatusViewModel
+import org.p23q.shoppinglist.ui.getString
 import org.p23q.shoppinglist.ui.theme.ShoppingListTheme
 import java.io.File
 import java.time.LocalDate
@@ -179,8 +183,8 @@ abstract class ScreenshotTest(protected val theme: ShotTheme) {
     }
 
     /** An English string of the app's, as a title the screen's top bar shows. */
-    protected fun str(id: Int, vararg args: Any): String =
-        ApplicationProvider.getApplicationContext<android.content.Context>().getString(id, *args)
+    protected fun str(resource: StringResource, vararg args: Any): String =
+        runBlocking { getString(Locale.US, resource, *args) }
 
     protected fun <T : ViewModel> T.tracked(): T = also { viewModels += it }
 

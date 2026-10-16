@@ -26,12 +26,12 @@ import org.p23q.shoppinglist.core.AppLocale
  * (T-126): selecting Arabic mirrors the layout in the same recomposition that changes the text.
  *
  * The trade-off is real and worth stating: this only reaches strings resolved INSIDE composition.
- * Anything resolved outside it — notifications, WorkManager — must localize itself, which is what
- * [localizedContext] below exists for. The known case is the collaborator-change notification.
+ * Anything resolved outside it — notifications, WorkManager — must name the language itself, as
+ * the notification posters do by passing the stored choice to [getString].
  *
- * `LocalContext` is overridden, not just `LocalConfiguration`, because `stringResource` resolves
- * against the context's resources; providing only the configuration would change layout direction
- * while leaving every string in the system language.
+ * The app's strings ([stringResource] in Strings.kt) take their language from `LocalConfiguration`.
+ * `LocalContext` is overridden too, with a context whose resources carry the same configuration,
+ * so whatever reads the platform's resources or configuration through the context agrees.
  */
 @Composable
 fun LocalizedContent(locale: AppLocale, content: @Composable () -> Unit) {
@@ -105,8 +105,8 @@ fun LocalizedAlertDialog(
 }
 
 /**
- * A [Context] whose resources resolve in [locale], for code that runs OUTSIDE composition and so
- * cannot see [LocalizedContent] — notifications and background workers.
+ * A [Context] whose resources and configuration are in [locale]: what [LocalizedContent] provides
+ * as `LocalContext`, and whose configuration it provides as `LocalConfiguration`.
  *
  * Sets the layout direction on the configuration too, so a right-to-left language is handled
  * consistently by anything that inflates a view from this context rather than only by Compose.

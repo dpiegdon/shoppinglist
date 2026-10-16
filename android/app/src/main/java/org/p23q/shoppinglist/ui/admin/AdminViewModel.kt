@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.ServerMessageRule
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
@@ -19,6 +18,15 @@ import org.p23q.shoppinglist.core.api.AdminPasswordRequest
 import org.p23q.shoppinglist.core.api.AdminUserDto
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.ServerSettingsUpdate
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.admin_msg_delete_failed
+import org.p23q.shoppinglist.resources.admin_msg_load_failed
+import org.p23q.shoppinglist.resources.admin_msg_offline
+import org.p23q.shoppinglist.resources.admin_msg_offline_admin
+import org.p23q.shoppinglist.resources.admin_msg_password_required
+import org.p23q.shoppinglist.resources.admin_msg_reset_failed
+import org.p23q.shoppinglist.resources.admin_msg_update_failed
+import org.p23q.shoppinglist.resources.admin_server_message_invalid
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
@@ -97,9 +105,9 @@ class AdminViewModel internal constructor(
                 )
             }
         } catch (e: ApiException) {
-            _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
+            _uiState.update { it.copy(error = ErrorText.of(e, Res.string.admin_msg_load_failed)) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline_admin)) }
+            _uiState.update { it.copy(error = UiText.res(Res.string.admin_msg_offline_admin)) }
         }
     }
 
@@ -110,9 +118,9 @@ class AdminViewModel internal constructor(
             val users = api().adminUsers().users
             _uiState.update { it.copy(users = users, error = null) }
         } catch (e: ApiException) {
-            _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_load_failed)) }
+            _uiState.update { it.copy(error = ErrorText.of(e, Res.string.admin_msg_load_failed)) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline_admin)) }
+            _uiState.update { it.copy(error = UiText.res(Res.string.admin_msg_offline_admin)) }
         }
     }
 
@@ -129,7 +137,7 @@ class AdminViewModel internal constructor(
             _uiState.update { it.copy(passwordError = null) }
             return true
         }
-        _uiState.update { it.copy(passwordError = UiText.res(R.string.admin_msg_password_required)) }
+        _uiState.update { it.copy(passwordError = UiText.res(Res.string.admin_msg_password_required)) }
         return false
     }
 
@@ -141,9 +149,9 @@ class AdminViewModel internal constructor(
                 val result = api().adminSetServerSettings(ServerSettingsUpdate(allowRegistration = !current))
                 _uiState.update { it.copy(allowRegistration = result.allowRegistration, error = null) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_update_failed)) }
+                _uiState.update { it.copy(error = ErrorText.of(e, Res.string.admin_msg_update_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
+                _uiState.update { it.copy(error = UiText.res(Res.string.admin_msg_offline)) }
             }
         }
     }
@@ -158,7 +166,7 @@ class AdminViewModel internal constructor(
         if (_uiState.value.serverMessage == null) return null
         return when (val checked = ServerMessageRule.check(_uiState.value.messageDraft)) {
             ServerMessageRule.Result.Invalid -> {
-                _uiState.update { it.copy(messageError = UiText.res(R.string.admin_server_message_invalid)) }
+                _uiState.update { it.copy(messageError = UiText.res(Res.string.admin_server_message_invalid)) }
                 null
             }
             is ServerMessageRule.Result.Valid -> sendMessage(checked.message.orEmpty())
@@ -186,12 +194,12 @@ class AdminViewModel internal constructor(
                 }
             } catch (e: ApiException) {
                 if (e.code == "invalid_message") {
-                    _uiState.update { it.copy(messageError = UiText.res(R.string.admin_server_message_invalid)) }
+                    _uiState.update { it.copy(messageError = UiText.res(Res.string.admin_server_message_invalid)) }
                 } else {
-                    _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_update_failed)) }
+                    _uiState.update { it.copy(error = ErrorText.of(e, Res.string.admin_msg_update_failed)) }
                 }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
+                _uiState.update { it.copy(error = UiText.res(Res.string.admin_msg_offline)) }
             }
         }
 
@@ -208,9 +216,9 @@ class AdminViewModel internal constructor(
                     it.copy(resetEmail = user.email, resetPassword = result.password, error = null)
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_reset_failed)) }
+                _uiState.update { it.copy(error = ErrorText.of(e, Res.string.admin_msg_reset_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
+                _uiState.update { it.copy(error = UiText.res(Res.string.admin_msg_offline)) }
             }
         }
     }
@@ -225,9 +233,9 @@ class AdminViewModel internal constructor(
                     it.copy(users = it.users?.filterNot { u -> u.id == user.id }, error = null)
                 }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(error = ErrorText.of(e, R.string.admin_msg_delete_failed)) }
+                _uiState.update { it.copy(error = ErrorText.of(e, Res.string.admin_msg_delete_failed)) }
             } catch (e: IOException) {
-                _uiState.update { it.copy(error = UiText.res(R.string.admin_msg_offline)) }
+                _uiState.update { it.copy(error = UiText.res(Res.string.admin_msg_offline)) }
             }
         }
     }

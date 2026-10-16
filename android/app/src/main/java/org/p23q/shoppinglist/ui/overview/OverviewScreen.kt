@@ -35,19 +35,41 @@ import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.R
+import org.jetbrains.compose.resources.StringResource
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.InviteForMeDto
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.ListEntity
 import org.p23q.shoppinglist.data.label
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_create
+import org.p23q.shoppinglist.resources.action_ignore
+import org.p23q.shoppinglist.resources.action_join
+import org.p23q.shoppinglist.resources.expense_closed
+import org.p23q.shoppinglist.resources.expense_currency
+import org.p23q.shoppinglist.resources.overview_account_outdated
+import org.p23q.shoppinglist.resources.overview_account_signed_out
+import org.p23q.shoppinglist.resources.overview_currency_help
+import org.p23q.shoppinglist.resources.overview_currency_required
+import org.p23q.shoppinglist.resources.overview_invite_from
+import org.p23q.shoppinglist.resources.overview_invites
+import org.p23q.shoppinglist.resources.overview_invites_ignored
+import org.p23q.shoppinglist.resources.overview_kind_checklist
+import org.p23q.shoppinglist.resources.overview_kind_expenses
+import org.p23q.shoppinglist.resources.overview_kind_shopping
+import org.p23q.shoppinglist.resources.overview_list_name
+import org.p23q.shoppinglist.resources.overview_name_required
+import org.p23q.shoppinglist.resources.overview_new_list
+import org.p23q.shoppinglist.resources.overview_new_list_account
+import org.p23q.shoppinglist.resources.overview_no_lists
+import org.p23q.shoppinglist.resources.overview_type
 import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.CompactButtonPadding
@@ -62,6 +84,7 @@ import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.expense.balanceColor
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
@@ -95,7 +118,7 @@ fun OverviewScreen(
         floatingActionButton = {
             // The same Add button as every list (T-168), in the primary colours, not Material's
             // paler default (T-174).
-            AddFab(onClick = viewModel::openCreateDialog, contentDescription = stringResource(R.string.overview_new_list))
+            AddFab(onClick = viewModel::openCreateDialog, contentDescription = stringResource(Res.string.overview_new_list))
         },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
@@ -118,7 +141,7 @@ fun OverviewScreen(
                     // Scrollable so the pull gesture still fires with no lists to scroll. Muted and
                     // at the start, the one style every empty state has (T-339), as the web says it.
                     Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        EmptyState(stringResource(R.string.overview_no_lists), modifier = Modifier.testTag("overview-empty"))
+                        EmptyState(stringResource(Res.string.overview_no_lists), modifier = Modifier.testTag("overview-empty"))
                     }
                 } else {
                     LazyColumn(
@@ -149,8 +172,8 @@ fun OverviewScreen(
                                     AccountBanner(
                                         text = stringResource(banner),
                                         onClick = when (banner) {
-                                            R.string.overview_account_signed_out -> { { onSignIn(account.id) } }
-                                            R.string.overview_account_outdated -> onCheckForUpdate
+                                            Res.string.overview_account_signed_out -> { { onSignIn(account.id) } }
+                                            Res.string.overview_account_outdated -> onCheckForUpdate
                                             else -> null
                                         },
                                     )
@@ -159,7 +182,7 @@ fun OverviewScreen(
                             if (section.lists.isEmpty() && (state.several || state.invites.isNotEmpty() || hasBanner)) {
                                 // Only invites (or nothing) to show: say the lists are empty where they would be.
                                 item(key = "no-lists-" + account.id) {
-                                    EmptyState(stringResource(R.string.overview_no_lists), padding = PaddingValues(vertical = 12.dp))
+                                    EmptyState(stringResource(Res.string.overview_no_lists), padding = PaddingValues(vertical = 12.dp))
                                 }
                             }
                             items(section.lists, key = { it.localId }) { list ->
@@ -175,7 +198,7 @@ fun OverviewScreen(
                             // to the greyed part at the bottom of the section, where Join is still offered.
                             if (section.invites.isNotEmpty()) {
                                 item(key = "invites-heading-" + account.id) {
-                                    SectionHeading(stringResource(R.string.overview_invites), tag = "invites-heading-" + account.id)
+                                    SectionHeading(stringResource(Res.string.overview_invites), tag = "invites-heading-" + account.id)
                                 }
                                 items(section.invites, key = { "invite-" + account.id + "-" + it.id }) { invite ->
                                     InviteCard(
@@ -203,7 +226,7 @@ fun OverviewScreen(
                             if (section.ignoredInvites.isNotEmpty()) {
                                 item(key = "ignored-heading-" + account.id) {
                                     SectionHeading(
-                                        stringResource(R.string.overview_invites_ignored),
+                                        stringResource(Res.string.overview_invites_ignored),
                                         tag = "ignored-heading-" + account.id,
                                         muted = true,
                                     )
@@ -252,13 +275,13 @@ internal fun NewListDialog(
 ) {
     LocalizedAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.overview_new_list)) },
+        title = { Text(stringResource(Res.string.overview_new_list)) },
         text = {
             Column {
                 // Which account the list goes to (T-292), only when there is a choice. Fixed for
                 // the list's life: a list never moves between accounts.
                 if (state.several) {
-                    FieldLabel(stringResource(R.string.overview_new_list_account))
+                    FieldLabel(stringResource(Res.string.overview_new_list_account))
                     state.accounts.forEach { account ->
                         AccountChoiceRow(
                             account = account,
@@ -272,11 +295,11 @@ internal fun NewListDialog(
                 OutlinedTextField(
                     value = state.newListName,
                     onValueChange = onNameChange,
-                    label = { Text(stringResource(R.string.overview_list_name)) },
+                    label = { Text(stringResource(Res.string.overview_list_name)) },
                     singleLine = true,
                     isError = state.newListNameMissing,
                     supportingText = if (state.newListNameMissing) {
-                        { Text(stringResource(R.string.overview_name_required)) }
+                        { Text(stringResource(Res.string.overview_name_required)) }
                     } else {
                         null
                     },
@@ -285,7 +308,7 @@ internal fun NewListDialog(
                 Spacer(Modifier.height(12.dp))
                 // Kind is chosen up front (T-110) but isn't permanent — list properties can
                 // convert it later, and converting never touches item data.
-                FieldLabel(stringResource(R.string.overview_type))
+                FieldLabel(stringResource(Res.string.overview_type))
                 // No ledger in the local area (T-293): its lists are never shared.
                 state.newListKinds.forEach { kind ->
                     Row(
@@ -308,9 +331,9 @@ internal fun NewListDialog(
                 }
                 Text(
                     when (state.newListKind) {
-                        ListKind.CHECKLIST -> stringResource(R.string.overview_kind_checklist)
-                        ListKind.EXPENSES -> stringResource(R.string.overview_kind_expenses)
-                        else -> stringResource(R.string.overview_kind_shopping)
+                        ListKind.CHECKLIST -> stringResource(Res.string.overview_kind_checklist)
+                        ListKind.EXPENSES -> stringResource(Res.string.overview_kind_expenses)
+                        else -> stringResource(Res.string.overview_kind_shopping)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -322,18 +345,18 @@ internal fun NewListDialog(
                     OutlinedTextField(
                         value = state.newListCurrency,
                         onValueChange = onCurrencyChange,
-                        label = { Text(stringResource(R.string.expense_currency)) },
+                        label = { Text(stringResource(Res.string.expense_currency)) },
                         singleLine = true,
                         isError = state.newListCurrencyMissing,
                         supportingText = if (state.newListCurrencyMissing) {
-                            { Text(stringResource(R.string.overview_currency_required)) }
+                            { Text(stringResource(Res.string.overview_currency_required)) }
                         } else {
                             null
                         },
                         modifier = Modifier.testTag("new-list-currency"),
                     )
                     Text(
-                        stringResource(R.string.overview_currency_help),
+                        stringResource(Res.string.overview_currency_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -341,19 +364,19 @@ internal fun NewListDialog(
             }
         },
         confirmButton = {
-            TuppuTextButton(onClick = onCreate) { Text(stringResource(R.string.action_create)) }
+            TuppuTextButton(onClick = onCreate) { Text(stringResource(Res.string.action_create)) }
         },
         dismissButton = {
-            TuppuTextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TuppuTextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
         },
     )
 }
 
 /** What an account's section says above its lists, if anything (T-292): signed out, or app too old. */
-private fun accountBanner(account: AccountEntity): Int? = when {
+private fun accountBanner(account: AccountEntity): StringResource? = when {
     !account.isServer -> null
-    account.outdated -> R.string.overview_account_outdated
-    !account.signedIn -> R.string.overview_account_signed_out
+    account.outdated -> Res.string.overview_account_outdated
+    !account.signedIn -> Res.string.overview_account_signed_out
     else -> null
 }
 
@@ -444,7 +467,7 @@ private fun ListCard(
                     Text(
                         // "Closed · total", as the web writes it (T-181).
                         text = if (summary.closed) {
-                            "${stringResource(R.string.expense_closed)} · $total"
+                            "${stringResource(Res.string.expense_closed)} · $total"
                         } else {
                             total
                         },
@@ -523,7 +546,7 @@ internal fun InviteCard(
                     Text(text = invite.listName)
                     Text(
                         // "From AL · Expires in 5 d", as the web writes it.
-                        text = stringResource(R.string.overview_invite_from, invite.invitedByInitials) +
+                        text = stringResource(Res.string.overview_invite_from, invite.invitedByInitials) +
                             " · " + formatExpiresIn(invite.expiresAt, nowMs).asString(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -533,12 +556,12 @@ internal fun InviteCard(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("invite-buttons-${invite.id}")) {
                 if (!ignored) {
                     TuppuOutlinedButton(onClick = onIgnore, enabled = !busy, contentPadding = CompactButtonPadding) {
-                        Text(stringResource(R.string.action_ignore))
+                        Text(stringResource(Res.string.action_ignore))
                     }
                     Spacer(Modifier.width(4.dp))
                 }
                 TuppuButton(onClick = onJoin, enabled = !busy, contentPadding = CompactButtonPadding) {
-                    Text(stringResource(R.string.action_join))
+                    Text(stringResource(Res.string.action_join))
                 }
             }
         }

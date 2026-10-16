@@ -34,7 +34,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -42,9 +41,14 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_add
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.item_add
+import org.p23q.shoppinglist.resources.item_name
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 
@@ -96,10 +100,10 @@ fun AddItemDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = onDismiss) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
+                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(Res.string.action_cancel))
                         }
                         Text(
-                            stringResource(R.string.item_add),
+                            stringResource(Res.string.item_add),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f).padding(start = 4.dp),
                         )
@@ -117,7 +121,7 @@ fun AddItemDialog(
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::onNameChange,
-                            label = { Text(stringResource(R.string.item_name)) },
+                            label = { Text(stringResource(Res.string.item_name)) },
                             singleLine = true,
                             isError = state.nameError != null,
                             modifier = Modifier.fillMaxWidth().focusRequester(nameFocusRequester),
@@ -148,9 +152,9 @@ fun AddItemDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                        TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
-                        TuppuButton(onClick = viewModel::save) { Text(stringResource(R.string.action_add)) }
+                        TuppuButton(onClick = viewModel::save) { Text(stringResource(Res.string.action_add)) }
                     }
                 }
             }

@@ -29,7 +29,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.db.Status
@@ -39,6 +38,9 @@ import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.api_error_list_closed
+import org.p23q.shoppinglist.resources.error_offline_retry
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import org.robolectric.RobolectricTestRunner
@@ -484,7 +486,7 @@ class ListPropsViewModelTest {
 
         viewModel.toggleCloseVote().join()
 
-        assertEquals(UiText.res(R.string.api_error_list_closed), viewModel.uiState.value.closingError)
+        assertEquals(UiText.res(Res.string.api_error_list_closed), viewModel.uiState.value.closingError)
         assertFalse(viewModel.uiState.value.isVoting)
     }
 
@@ -496,7 +498,7 @@ class ListPropsViewModelTest {
 
         viewModel.toggleCloseVote().join()
 
-        assertEquals(UiText.res(R.string.error_offline_retry), viewModel.uiState.value.closingError)
+        assertEquals(UiText.res(Res.string.error_offline_retry), viewModel.uiState.value.closingError)
     }
 
     @Test

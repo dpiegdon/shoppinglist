@@ -154,8 +154,8 @@
     <string name="listprops_notify_changes">Über Änderungen an dieser Liste benachrichtigen</string>
     <string name="listprops_leave_list">Liste verlassen</string>
     <string name="listprops_leave_confirm_title">Diese Liste verlassen?</string>
-    <string name="listprops_leave_confirm_body">Du erhältst auf diesem Gerät keine Updates mehr für \"%1$s\".</string>
-    <string name="listprops_merge_confirm_title">In \"%1$s\" zusammenführen?</string>
+    <string name="listprops_leave_confirm_body">Du erhältst auf diesem Gerät keine Updates mehr für "%1$s".</string>
+    <string name="listprops_merge_confirm_title">In "%1$s" zusammenführen?</string>
     <string name="listprops_merge_confirm_body">Beide Kategorien werden zu einer.</string>
     <string name="about_transliteration">ṭuppu</string>
     <string name="about_tagline">Das akkadische Wort für eine Tontafel — das, in das eine Liste gedrückt wurde.</string>
@@ -248,14 +248,14 @@
     <string name="login_msg_invalid_url">Gib eine gültige https-Server-URL ein</string>
     <string name="login_msg_credentials_required">E-Mail und Passwort sind erforderlich</string>
     <string name="login_msg_incorrect_credentials">E-Mail oder Passwort ist falsch</string>
-    <string name="login_msg_untrusted_cert">Dem Zertifikat des Servers wird nicht vertraut. Verwende ein Zertifikat einer anerkannten Zertifizierungsstelle. Für einen selbstsignierten Testserver aktiviere \"Selbstsignierten Zertifikaten vertrauen\" in diesem Formular oder auf der Seite des Kontos (nur Debug-Builds).</string>
+    <string name="login_msg_untrusted_cert">Dem Zertifikat des Servers wird nicht vertraut. Verwende ein Zertifikat einer anerkannten Zertifizierungsstelle. Für einen selbstsignierten Testserver aktiviere "Selbstsignierten Zertifikaten vertrauen" in diesem Formular oder auf der Seite des Kontos (nur Debug-Builds).</string>
     <string name="login_msg_server_too_old">Dieser Server ist zu alt für diese App.</string>
     <string name="login_msg_app_too_old">Diese App ist zu alt für diesen Server.</string>
     <string name="login_msg_not_a_server">Unter dieser Adresse hat kein Tuppu-Server geantwortet.</string>
     <string name="redeem_msg_code_required">Gib einen Einladungscode ein</string>
     <string name="redeem_msg_failed">Einladung konnte nicht eingelöst werden</string>
     <string name="item_msg_name_required">Name ist erforderlich</string>
-    <string name="item_msg_duplicate_name">Ein Artikel namens \"%1$s\" existiert bereits</string>
+    <string name="item_msg_duplicate_name">Ein Artikel namens "%1$s" existiert bereits</string>
     <string name="item_msg_price_invalid">Gib einen Betrag wie 1.99 ein</string>
     <string name="item_msg_currency_invalid">Verwende einen 3-Buchstaben-Code wie EUR</string>
     <string name="listprops_msg_members_offline">Mitglieder sind nur online verfügbar</string>
@@ -269,7 +269,7 @@
     <string name="admin_server_message">Servernachricht</string>
     <string name="admin_server_message_help">Eine Zeile, die alle auf der Anmeldeseite und über ihren Listen sehen.</string>
     <string name="admin_server_message_invalid">Die Nachricht muss eine Zeile mit höchstens 200 Zeichen sein.</string>
-    <string name="admin_is_admin_suffix">" (Admin)"</string>
+    <string name="admin_is_admin_suffix"> (Admin)</string>
     <string name="admin_users">Benutzer</string>
     <string name="admin_show_users">Registrierte Benutzer anzeigen</string>
     <string name="admin_user_count">Registrierte Benutzer: %1$d</string>

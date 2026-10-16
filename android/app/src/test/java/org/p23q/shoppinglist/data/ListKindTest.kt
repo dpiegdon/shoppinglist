@@ -4,8 +4,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.list_kind_checklist
+import org.p23q.shoppinglist.resources.list_kind_shopping
 
 /**
  * T-110 list-kind rules. Must stay in lockstep with the web client's listKind.test.ts — the two
@@ -38,8 +40,8 @@ class ListKindTest {
     @Test
     fun `labels and icons distinguish the two kinds`() {
         // A resource id now, not a String — the label must follow the chosen language (T-111).
-        assertEquals(R.string.list_kind_shopping, ListKind.label(ListKind.SHOPPING))
-        assertEquals(R.string.list_kind_checklist, ListKind.label(ListKind.CHECKLIST))
+        assertEquals(Res.string.list_kind_shopping, ListKind.label(ListKind.SHOPPING))
+        assertEquals(Res.string.list_kind_checklist, ListKind.label(ListKind.CHECKLIST))
         assertTrue(ListKind.icon(ListKind.SHOPPING) != ListKind.icon(ListKind.CHECKLIST))
     }
 }

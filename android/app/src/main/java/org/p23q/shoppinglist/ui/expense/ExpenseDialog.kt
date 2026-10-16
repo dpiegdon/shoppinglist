@@ -51,7 +51,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -63,10 +62,46 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import org.p23q.shoppinglist.R
+import org.jetbrains.compose.resources.StringResource
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ExpenseType
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_add
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_delete
+import org.p23q.shoppinglist.resources.action_ok
+import org.p23q.shoppinglist.resources.action_save
+import org.p23q.shoppinglist.resources.expense_credited_to
+import org.p23q.shoppinglist.resources.expense_date
+import org.p23q.shoppinglist.resources.expense_delete_blocked
+import org.p23q.shoppinglist.resources.expense_delete_body
+import org.p23q.shoppinglist.resources.expense_delete_title
+import org.p23q.shoppinglist.resources.expense_edit
+import org.p23q.shoppinglist.resources.expense_error_above_total
+import org.p23q.shoppinglist.resources.expense_error_does_not_add_up
+import org.p23q.shoppinglist.resources.expense_error_need_two_members
+import org.p23q.shoppinglist.resources.expense_error_nobody
+import org.p23q.shoppinglist.resources.expense_error_same_member
+import org.p23q.shoppinglist.resources.expense_error_use_sum
+import org.p23q.shoppinglist.resources.expense_former_member
+import org.p23q.shoppinglist.resources.expense_from
+import org.p23q.shoppinglist.resources.expense_frozen_former
+import org.p23q.shoppinglist.resources.expense_frozen_voter
+import org.p23q.shoppinglist.resources.expense_new
+import org.p23q.shoppinglist.resources.expense_paid_by
+import org.p23q.shoppinglist.resources.expense_paid_for
+import org.p23q.shoppinglist.resources.expense_received_by
+import org.p23q.shoppinglist.resources.expense_solo_hint
+import org.p23q.shoppinglist.resources.expense_to
+import org.p23q.shoppinglist.resources.expense_total_with_currency
+import org.p23q.shoppinglist.resources.expense_type
+import org.p23q.shoppinglist.resources.expense_type_expense
+import org.p23q.shoppinglist.resources.expense_type_income
+import org.p23q.shoppinglist.resources.expense_type_transfer
+import org.p23q.shoppinglist.resources.expense_what
+import org.p23q.shoppinglist.resources.item_note
+import org.p23q.shoppinglist.resources.overview_name_required
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.FieldLabel
@@ -74,6 +109,7 @@ import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
@@ -143,10 +179,10 @@ fun ExpenseDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.action_cancel))
                         }
                         Text(
-                            stringResource(if (state.isEditMode) R.string.expense_edit else R.string.expense_new),
+                            stringResource(if (state.isEditMode) Res.string.expense_edit else Res.string.expense_new),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f).padding(start = 4.dp),
                         )
@@ -168,13 +204,13 @@ fun ExpenseDialog(
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::onNameChange,
-                            label = { Text(stringResource(R.string.expense_what)) },
+                            label = { Text(stringResource(Res.string.expense_what)) },
                             singleLine = true,
                             // Said under the field, as the new-list dialog and the web say it (T-342).
                             // Only an expense insists on a title, so Income or Transfer drops it.
                             isError = state.nameError && state.type == ExpenseType.EXPENSE,
                             supportingText = if (state.nameError && state.type == ExpenseType.EXPENSE) {
-                                { Text(stringResource(R.string.overview_name_required)) }
+                                { Text(stringResource(Res.string.overview_name_required)) }
                             } else {
                                 null
                             },
@@ -185,7 +221,7 @@ fun ExpenseDialog(
                             OutlinedTextField(
                                 value = state.totalText,
                                 onValueChange = viewModel::onTotalChange,
-                                label = { Text(stringResource(R.string.expense_total_with_currency, state.currency)) },
+                                label = { Text(stringResource(Res.string.expense_total_with_currency, state.currency)) },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1f),
@@ -196,10 +232,10 @@ fun ExpenseDialog(
                                 value = AppFormat.calendarDate(state.date, appLocale()),
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text(stringResource(R.string.expense_date)) },
+                                label = { Text(stringResource(Res.string.expense_date)) },
                                 trailingIcon = {
                                     IconButton(onClick = { isPickingDate = true }) {
-                                        Icon(Icons.Default.DateRange, contentDescription = stringResource(R.string.expense_date))
+                                        Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.expense_date))
                                     }
                                 },
                                 singleLine = true,
@@ -223,9 +259,9 @@ fun ExpenseDialog(
                                 // in to someone and was credited to the others (T-245).
                                 title = stringResource(
                                     if (state.type == ExpenseType.INCOME) {
-                                        R.string.expense_received_by
+                                        Res.string.expense_received_by
                                     } else {
-                                        R.string.expense_paid_by
+                                        Res.string.expense_paid_by
                                     },
                                 ),
                                 rows = state.paidBy,
@@ -240,9 +276,9 @@ fun ExpenseDialog(
                             ShareSection(
                                 title = stringResource(
                                     if (state.type == ExpenseType.INCOME) {
-                                        R.string.expense_credited_to
+                                        Res.string.expense_credited_to
                                     } else {
-                                        R.string.expense_paid_for
+                                        Res.string.expense_paid_for
                                     },
                                 ),
                                 rows = state.paidFor,
@@ -256,7 +292,7 @@ fun ExpenseDialog(
                         } else {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                stringResource(R.string.expense_solo_hint),
+                                stringResource(Res.string.expense_solo_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -266,17 +302,17 @@ fun ExpenseDialog(
                         OutlinedTextField(
                             value = state.note,
                             onValueChange = viewModel::onNoteChange,
-                            label = { Text(stringResource(R.string.item_note)) },
+                            label = { Text(stringResource(Res.string.item_note)) },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         if (state.isEditMode) {
                             Spacer(Modifier.height(16.dp))
                             TuppuButton(onClick = viewModel::requestDelete, enabled = state.canDelete, colors = dangerButtonColors()) {
-                                Text(stringResource(R.string.action_delete))
+                                Text(stringResource(Res.string.action_delete))
                             }
                             if (!state.canDelete) {
                                 Text(
-                                    stringResource(R.string.expense_delete_blocked),
+                                    stringResource(Res.string.expense_delete_blocked),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -290,13 +326,13 @@ fun ExpenseDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                        TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
                         // An income or a transfer left untitled names itself, and only the screen
                         // can say what that name is in the app's language (T-245).
                         val typeLabel = stringResource(typeLabelOf(state.type))
                         TuppuButton(onClick = { viewModel.save(typeLabel) }, enabled = state.canSave) {
-                            Text(stringResource(if (state.isEditMode) R.string.action_save else R.string.action_add))
+                            Text(stringResource(if (state.isEditMode) Res.string.action_save else Res.string.action_add))
                         }
                     }
                 }
@@ -322,12 +358,12 @@ fun ExpenseDialog(
                                     )
                                 }
                                 isPickingDate = false
-                            }) { Text(stringResource(R.string.action_ok)) }
+                            }) { Text(stringResource(Res.string.action_ok)) }
                         }
                     },
                     dismissButton = {
                         LocalizedOverlay {
-                            TuppuTextButton(onClick = { isPickingDate = false }) { Text(stringResource(R.string.action_cancel)) }
+                            TuppuTextButton(onClick = { isPickingDate = false }) { Text(stringResource(Res.string.action_cancel)) }
                         }
                     },
                 ) {
@@ -338,16 +374,16 @@ fun ExpenseDialog(
             if (state.isDeleteConfirmOpen) {
                 LocalizedAlertDialog(
                     onDismissRequest = viewModel::cancelDelete,
-                    title = { Text(stringResource(R.string.expense_delete_title)) },
-                    text = { Text(stringResource(R.string.expense_delete_body)) },
+                    title = { Text(stringResource(Res.string.expense_delete_title)) },
+                    text = { Text(stringResource(Res.string.expense_delete_body)) },
                     confirmButton = {
                         DangerTextButton(onClick = { viewModel.confirmDelete() }) {
-                            Text(stringResource(R.string.action_delete))
+                            Text(stringResource(Res.string.action_delete))
                         }
                     },
                     dismissButton = {
                         TuppuTextButton(onClick = viewModel::cancelDelete) {
-                            Text(stringResource(R.string.action_cancel))
+                            Text(stringResource(Res.string.action_cancel))
                         }
                     },
                 )
@@ -372,10 +408,10 @@ private fun ExpenseBlockedBanner(state: ExpenseFormUiState) {
 }
 
 /** The i18n key of a type's label — also the title a blank income or transfer falls back to. */
-internal fun typeLabelOf(type: ExpenseType): Int = when (type) {
-    ExpenseType.EXPENSE -> R.string.expense_type_expense
-    ExpenseType.INCOME -> R.string.expense_type_income
-    ExpenseType.TRANSFER -> R.string.expense_type_transfer
+internal fun typeLabelOf(type: ExpenseType): StringResource = when (type) {
+    ExpenseType.EXPENSE -> Res.string.expense_type_expense
+    ExpenseType.INCOME -> Res.string.expense_type_income
+    ExpenseType.TRANSFER -> Res.string.expense_type_transfer
 }
 
 /**
@@ -388,7 +424,7 @@ internal fun typeLabelOf(type: ExpenseType): Int = when (type) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TypeSection(type: ExpenseType, canTransfer: Boolean, onChange: (ExpenseType) -> Unit) {
-    FieldLabel(stringResource(R.string.expense_type))
+    FieldLabel(stringResource(Res.string.expense_type))
     Spacer(Modifier.height(4.dp))
     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
         ExpenseType.entries.forEachIndexed { index, option ->
@@ -405,7 +441,7 @@ private fun TypeSection(type: ExpenseType, canTransfer: Boolean, onChange: (Expe
     }
     if (!canTransfer) {
         Text(
-            stringResource(R.string.expense_error_need_two_members),
+            stringResource(Res.string.expense_error_need_two_members),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -425,7 +461,7 @@ private fun TransferPickers(
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         TransferPicker(
-            label = stringResource(R.string.expense_from),
+            label = stringResource(Res.string.expense_from),
             value = state.transferFrom,
             other = state.transferTo,
             participants = state.participants,
@@ -433,7 +469,7 @@ private fun TransferPickers(
             modifier = Modifier.weight(1f),
         )
         TransferPicker(
-            label = stringResource(R.string.expense_to),
+            label = stringResource(Res.string.expense_to),
             value = state.transferTo,
             other = state.transferFrom,
             participants = state.participants,
@@ -443,7 +479,7 @@ private fun TransferPickers(
     }
     if (state.sameMemberError) {
         Text(
-            stringResource(R.string.expense_error_same_member),
+            stringResource(Res.string.expense_error_same_member),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
         )
@@ -499,7 +535,7 @@ private fun TransferPicker(
 /** An email while they are a member, a stable number once they have left (T-152, T-197). */
 @Composable
 private fun participantLabel(row: ShareRow): String =
-    row.email ?: stringResource(R.string.expense_former_member, row.formerNumber)
+    row.email ?: stringResource(Res.string.expense_former_member, row.formerNumber)
 
 @Composable
 private fun ShareSection(
@@ -527,8 +563,8 @@ private fun ShareSection(
                 // Why, not just that (T-203): "agreed to close" was said of everyone frozen, which
                 // is untrue of someone who has simply left the list.
                 val reason = when (row.frozen) {
-                    FrozenReason.VOTER -> R.string.expense_frozen_voter
-                    FrozenReason.FORMER -> R.string.expense_frozen_former
+                    FrozenReason.VOTER -> Res.string.expense_frozen_voter
+                    FrozenReason.FORMER -> Res.string.expense_frozen_former
                     FrozenReason.NONE -> null
                 }
                 if (reason != null) {
@@ -555,14 +591,14 @@ private fun ShareSection(
     when (error) {
         ExpenseMath.DistributeError.FIXED_EXCEEDS_TOTAL ->
             Text(
-                stringResource(R.string.expense_error_above_total),
+                stringResource(Res.string.expense_error_above_total),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
         ExpenseMath.DistributeError.FIXED_SUM_MISMATCH -> {
             Text(
                 stringResource(
-                    R.string.expense_error_does_not_add_up,
+                    Res.string.expense_error_does_not_add_up,
                     ExpenseMath.fromCents(sumCents),
                     ExpenseMath.fromCents(totalCents),
                 ),
@@ -571,12 +607,12 @@ private fun ShareSection(
             )
             // The one-tap way out, for when that sum was the intended total all along.
             TuppuButton(onClick = onUseSum, contentPadding = CompactButtonPadding) {
-                Text(stringResource(R.string.expense_error_use_sum, ExpenseMath.fromCents(sumCents)))
+                Text(stringResource(Res.string.expense_error_use_sum, ExpenseMath.fromCents(sumCents)))
             }
         }
         ExpenseMath.DistributeError.NO_PARTICIPANTS ->
             Text(
-                stringResource(R.string.expense_error_nobody),
+                stringResource(Res.string.expense_error_nobody),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )

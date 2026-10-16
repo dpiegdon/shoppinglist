@@ -29,8 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -38,15 +36,36 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.jetbrains.compose.resources.painterResource
 import org.p23q.shoppinglist.BuildConfig
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.deviceLocale
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.about_transliteration
+import org.p23q.shoppinglist.resources.action_hide
+import org.p23q.shoppinglist.resources.action_show
+import org.p23q.shoppinglist.resources.action_update
+import org.p23q.shoppinglist.resources.app_name
+import org.p23q.shoppinglist.resources.ic_brand_logo
+import org.p23q.shoppinglist.resources.ic_cuneiform_tuppu
+import org.p23q.shoppinglist.resources.login_email
+import org.p23q.shoppinglist.resources.login_log_in
+import org.p23q.shoppinglist.resources.login_password
+import org.p23q.shoppinglist.resources.login_register
+import org.p23q.shoppinglist.resources.login_registration_disabled
+import org.p23q.shoppinglist.resources.login_resignin_help
+import org.p23q.shoppinglist.resources.login_server_url
+import org.p23q.shoppinglist.resources.login_to_login
+import org.p23q.shoppinglist.resources.login_to_register
+import org.p23q.shoppinglist.resources.login_trust_self_signed
+import org.p23q.shoppinglist.resources.login_trust_self_signed_help
+import org.p23q.shoppinglist.resources.login_use_without_account
 import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.ui.LocalAreaNote
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.ServerMessage
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 import org.p23q.shoppinglist.ui.theme.TuppuTextButton
@@ -92,13 +111,13 @@ fun LoginScreen(
         // bar that already says what the form is for.
         if (state.mode == LoginMode.START) {
             Image(
-                painter = painterResource(R.drawable.ic_brand_logo),
+                painter = painterResource(Res.drawable.ic_brand_logo),
                 contentDescription = null,
                 modifier = Modifier.size(72.dp).align(Alignment.CenterHorizontally),
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.app_name),
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
@@ -107,8 +126,8 @@ fun LoginScreen(
             // here and without the transliteration caption: this is a mark, not the explanation.
             // Tinted to onSurface so it follows the text colour on both themes.
             Image(
-                painter = painterResource(R.drawable.ic_cuneiform_tuppu),
-                contentDescription = stringResource(R.string.about_transliteration),
+                painter = painterResource(Res.drawable.ic_cuneiform_tuppu),
+                contentDescription = stringResource(Res.string.about_transliteration),
                 contentScale = ContentScale.Fit,
                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
                 // Height only: the sign is about 3:1, so the width follows from it.
@@ -117,14 +136,14 @@ fun LoginScreen(
             Spacer(Modifier.height(24.dp))
         }
         if (state.mode == LoginMode.RESIGNIN) {
-            Text(stringResource(R.string.login_resignin_help), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(Res.string.login_resignin_help), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
         }
 
         OutlinedTextField(
             value = state.serverUrl,
             onValueChange = viewModel::onServerUrlChange,
-            label = { Text(stringResource(R.string.login_server_url)) },
+            label = { Text(stringResource(Res.string.login_server_url)) },
             singleLine = true,
             readOnly = state.serverUrlLocked,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
@@ -140,7 +159,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
-            label = { Text(stringResource(R.string.login_email)) },
+            label = { Text(stringResource(Res.string.login_email)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
@@ -150,7 +169,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
-            label = { Text(stringResource(R.string.login_password)) },
+            label = { Text(stringResource(Res.string.login_password)) },
             singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
@@ -158,7 +177,7 @@ fun LoginScreen(
             keyboardActions = KeyboardActions(onDone = { viewModel.submit() }),
             trailingIcon = {
                 TuppuTextButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Text(if (passwordVisible) stringResource(R.string.action_hide) else stringResource(R.string.action_show))
+                    Text(if (passwordVisible) stringResource(Res.string.action_hide) else stringResource(Res.string.action_show))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -174,7 +193,7 @@ fun LoginScreen(
                 onClick = { onDownload(url) },
                 modifier = Modifier.fillMaxWidth().testTag("login-download"),
             ) {
-                Text(stringResource(R.string.action_update))
+                Text(stringResource(Res.string.action_update))
             }
         }
 
@@ -184,7 +203,7 @@ fun LoginScreen(
             enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (state.isRegisterMode) stringResource(R.string.login_register) else stringResource(R.string.login_log_in))
+            Text(if (state.isRegisterMode) stringResource(Res.string.login_register) else stringResource(Res.string.login_log_in))
         }
 
         // Disabled while the configured server is refusing new accounts (T-276), matching the web
@@ -197,13 +216,13 @@ fun LoginScreen(
                 enabled = state.registrationAllowed,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (state.isRegisterMode) stringResource(R.string.login_to_login) else stringResource(R.string.login_to_register))
+                Text(if (state.isRegisterMode) stringResource(Res.string.login_to_login) else stringResource(Res.string.login_to_register))
             }
             // Why Register is off, right under it (C9) rather than past the language picker.
             if (!state.registrationAllowed) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.login_registration_disabled),
+                    text = stringResource(Res.string.login_registration_disabled),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterHorizontally).testTag("login-registration-disabled"),
@@ -219,7 +238,7 @@ fun LoginScreen(
                 enabled = !state.isLoading && !state.creatingLocalArea,
                 modifier = Modifier.fillMaxWidth().testTag("login-use-local"),
             ) {
-                Text(stringResource(R.string.login_use_without_account))
+                Text(stringResource(Res.string.login_use_without_account))
             }
         }
 
@@ -239,9 +258,9 @@ fun LoginScreen(
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.login_trust_self_signed), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(Res.string.login_trust_self_signed), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        stringResource(R.string.login_trust_self_signed_help),
+                        stringResource(Res.string.login_trust_self_signed_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

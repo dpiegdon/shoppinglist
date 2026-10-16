@@ -20,13 +20,14 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.settings_msg_no_crash_logs
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.accounts.accountRow
 import org.robolectric.RobolectricTestRunner
@@ -135,7 +136,7 @@ class SettingsViewModelTest {
         viewModel.shareLogs()
 
         assertNull(viewModel.uiState.value.crashLogPath)
-        assertEquals(UiText.res(R.string.settings_msg_no_crash_logs), viewModel.uiState.value.infoMessage)
+        assertEquals(UiText.res(Res.string.settings_msg_no_crash_logs), viewModel.uiState.value.infoMessage)
     }
 
     @Test

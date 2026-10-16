@@ -27,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
@@ -35,7 +34,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.accounts_add
+import org.p23q.shoppinglist.resources.accounts_add_local
+import org.p23q.shoppinglist.resources.accounts_local_help
+import org.p23q.shoppinglist.resources.accounts_move_down
+import org.p23q.shoppinglist.resources.accounts_move_up
+import org.p23q.shoppinglist.resources.accounts_outdated_help
+import org.p23q.shoppinglist.resources.accounts_sign_in
+import org.p23q.shoppinglist.resources.accounts_state_outdated
+import org.p23q.shoppinglist.resources.accounts_state_signed_in
+import org.p23q.shoppinglist.resources.accounts_state_signed_out
+import org.p23q.shoppinglist.resources.listprops_reorder_category
+import org.p23q.shoppinglist.resources.update_check_action
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.DragReorderState
 import org.p23q.shoppinglist.ui.LocalAreaNote
@@ -46,6 +57,7 @@ import org.p23q.shoppinglist.ui.dragReorderHandle
 import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
 import org.p23q.shoppinglist.ui.rememberTickingNowMs
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.syncRecencyText
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
@@ -101,7 +113,7 @@ fun AccountsScreen(
         TuppuOutlinedButton(onClick = onAddAccount, modifier = Modifier.fillMaxWidth().testTag("accounts-add")) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.accounts_add))
+            Text(stringResource(Res.string.accounts_add))
         }
         // One local area per phone (T-293): offered while there is none.
         if (canAddLocal) {
@@ -109,7 +121,7 @@ fun AccountsScreen(
             TuppuOutlinedButton(onClick = { viewModel.addLocal() }, modifier = Modifier.fillMaxWidth().testTag("accounts-add-local")) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.accounts_add_local))
+                Text(stringResource(Res.string.accounts_add_local))
             }
         }
     }
@@ -149,45 +161,45 @@ private fun AccountCard(
                 Spacer(Modifier.height(4.dp))
                 when (row.status) {
                     AccountStatus.SIGNED_IN -> {
-                        Text(stringResource(R.string.accounts_state_signed_in), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(Res.string.accounts_state_signed_in), style = MaterialTheme.typography.bodyMedium)
                         SyncFigures(row, nowMs)
                     }
                     // A status line like the other states, and a button that names the action (A6).
                     AccountStatus.SIGNED_OUT -> {
                         Text(
-                            stringResource(R.string.accounts_state_signed_out),
+                            stringResource(Res.string.accounts_state_signed_out),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                         SyncFigures(row, nowMs)
                         TuppuButton(onClick = onSignIn, modifier = Modifier.testTag("account-sign-in-${account.id}"), contentPadding = CompactButtonPadding) {
-                            Text(stringResource(R.string.accounts_sign_in))
+                            Text(stringResource(Res.string.accounts_sign_in))
                         }
                     }
                     AccountStatus.OUTDATED -> {
                         Text(
-                            stringResource(R.string.accounts_state_outdated),
+                            stringResource(Res.string.accounts_state_outdated),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            stringResource(R.string.accounts_outdated_help),
+                            stringResource(Res.string.accounts_outdated_help),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         TuppuButton(onClick = onCheckForUpdate, modifier = Modifier.testTag("account-check-update-${account.id}"), contentPadding = CompactButtonPadding) {
-                            Text(stringResource(R.string.update_check_action))
+                            Text(stringResource(Res.string.update_check_action))
                         }
                     }
                     // Named "On this phone" above; what that means, here.
                     AccountStatus.LOCAL ->
-                        Text(stringResource(R.string.accounts_local_help), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(Res.string.accounts_local_help), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             // The arrows' moves stay offered to accessibility services, as actions on the handle.
-            val up = stringResource(R.string.accounts_move_up)
-            val down = stringResource(R.string.accounts_move_down)
-            val handleLabel = stringResource(R.string.listprops_reorder_category, accountName(account))
+            val up = stringResource(Res.string.accounts_move_up)
+            val down = stringResource(Res.string.accounts_move_down)
+            val handleLabel = stringResource(Res.string.listprops_reorder_category, accountName(account))
             // The whole 48dp box is both the drag target and what TalkBack focuses, as the
             // category handle's (T-340); the icon inside says nothing of its own.
             Box(

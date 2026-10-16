@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -42,15 +41,25 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.db.label
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_delete
+import org.p23q.shoppinglist.resources.action_save
+import org.p23q.shoppinglist.resources.item_delete_body
+import org.p23q.shoppinglist.resources.item_delete_title
+import org.p23q.shoppinglist.resources.item_edit
+import org.p23q.shoppinglist.resources.item_name
+import org.p23q.shoppinglist.resources.item_status
+import org.p23q.shoppinglist.resources.status_backlog_hint
 import org.p23q.shoppinglist.ui.BlockedBanner
 import org.p23q.shoppinglist.ui.FieldLabel
 import org.p23q.shoppinglist.ui.LocalizedAlertDialog
 import org.p23q.shoppinglist.ui.LocalizedOverlay
 import org.p23q.shoppinglist.ui.asString
 import org.p23q.shoppinglist.ui.dangerButtonColors
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
@@ -77,10 +86,10 @@ fun EditItemDialog(
     if (state.isDeleteConfirmOpen) {
         LocalizedAlertDialog(
             onDismissRequest = viewModel::cancelDelete,
-            title = { Text(stringResource(R.string.item_delete_title)) },
-            text = { Text(stringResource(R.string.item_delete_body, state.name)) },
-            confirmButton = { DangerTextButton(onClick = viewModel::confirmDelete) { Text(stringResource(R.string.action_delete)) } },
-            dismissButton = { TuppuTextButton(onClick = viewModel::cancelDelete) { Text(stringResource(R.string.action_cancel)) } },
+            title = { Text(stringResource(Res.string.item_delete_title)) },
+            text = { Text(stringResource(Res.string.item_delete_body, state.name)) },
+            confirmButton = { DangerTextButton(onClick = viewModel::confirmDelete) { Text(stringResource(Res.string.action_delete)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelDelete) { Text(stringResource(Res.string.action_cancel)) } },
         )
     } else {
         Dialog(
@@ -107,10 +116,10 @@ fun EditItemDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             IconButton(onClick = onDismiss) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.action_cancel))
+                                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(Res.string.action_cancel))
                             }
                             Text(
-                                stringResource(R.string.item_edit),
+                                stringResource(Res.string.item_edit),
                                 style = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier.weight(1f).padding(start = 4.dp),
                             )
@@ -132,7 +141,7 @@ fun EditItemDialog(
                             OutlinedTextField(
                                 value = state.name,
                                 onValueChange = viewModel::onNameChange,
-                                label = { Text(stringResource(R.string.item_name)) },
+                                label = { Text(stringResource(Res.string.item_name)) },
                                 singleLine = true,
                                 isError = state.nameError != null,
                                 modifier = Modifier.fillMaxWidth(),
@@ -144,7 +153,7 @@ fun EditItemDialog(
                             ItemFormFields(state = state, viewModel = viewModel)
                             Spacer(Modifier.height(8.dp))
 
-                            FieldLabel(stringResource(R.string.item_status))
+                            FieldLabel(stringResource(Res.string.item_status))
                             Spacer(Modifier.height(4.dp))
                             // One segmented control (T-339), as every exclusive choice is drawn and as
                             // the web offers it, in the same order: Backlog, Todo, Checked.
@@ -168,7 +177,7 @@ fun EditItemDialog(
                                 // The gloss sits beside the control, not inside the label, so it never
                                 // reaches the space-constrained Registry chip (T-124).
                                 Text(
-                                    text = stringResource(R.string.status_backlog_hint),
+                                    text = stringResource(Res.string.status_backlog_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -176,7 +185,7 @@ fun EditItemDialog(
                             Spacer(Modifier.height(8.dp))
 
                             TuppuButton(onClick = viewModel::requestDelete, colors = dangerButtonColors()) {
-                                Text(stringResource(R.string.action_delete))
+                                Text(stringResource(Res.string.action_delete))
                             }
                         }
 
@@ -186,9 +195,9 @@ fun EditItemDialog(
                             horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+                            TuppuOutlinedButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) }
                             Spacer(Modifier.width(8.dp))
-                            TuppuButton(onClick = viewModel::save) { Text(stringResource(R.string.action_save)) }
+                            TuppuButton(onClick = viewModel::save) { Text(stringResource(Res.string.action_save)) }
                         }
                     }
                 }

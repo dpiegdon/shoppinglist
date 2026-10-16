@@ -31,8 +31,10 @@ import org.p23q.shoppinglist.core.db.LwwBoolean
 import org.p23q.shoppinglist.core.db.LwwOptionalString
 import org.p23q.shoppinglist.core.db.LwwString
 import org.p23q.shoppinglist.core.sync.SyncEngine
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.api_error_invite_used
+import org.p23q.shoppinglist.resources.error_offline
 import org.robolectric.RobolectricTestRunner
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.login.LoginMode
 import org.p23q.shoppinglist.ui.Routes
@@ -152,7 +154,7 @@ class RedeemViewModelTest {
         viewModel.redeem()?.join()
 
         assertNull(viewModel.uiState.value.redeemedListId)
-        assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.error_offline), viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
@@ -191,7 +193,7 @@ class RedeemViewModelTest {
         viewModel.redeem()?.join()
 
         // Translated from the error's code, not the server's English text (see ErrorText).
-        assertEquals(UiText.res(R.string.api_error_invite_used), viewModel.uiState.value.errorMessage)
+        assertEquals(UiText.res(Res.string.api_error_invite_used), viewModel.uiState.value.errorMessage)
         assertNull(viewModel.uiState.value.redeemedListId)
     }
 

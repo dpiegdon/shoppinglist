@@ -1,8 +1,9 @@
 <!-- The Tuppu mark (T-216): a clay tablet with three rows of cuneiform wedges, the list pressed
      into it, in the app's violet-to-blue gradient. The web favicon draws the same two paths, so
      both clients show the identical picture. Used on the login screen and the Overview corner;
-     the launcher foreground (ic_launcher_foreground.xml) and the notification icon
-     (ic_notification.xml) carry copies of the paths, since a drawable cannot include another. -->
+     the launcher foreground and the notification icon, Android resources in app/src/main/res/
+     drawable (ic_launcher_foreground.xml, ic_notification.xml), carry copies of the paths, since a
+     drawable cannot include another. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="48dp"

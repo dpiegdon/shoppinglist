@@ -50,8 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -70,10 +68,36 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.p23q.shoppinglist.BuildConfig
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.accounts_add
+import org.p23q.shoppinglist.resources.action_back
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_ok
+import org.p23q.shoppinglist.resources.action_skip
+import org.p23q.shoppinglist.resources.action_update
+import org.p23q.shoppinglist.resources.ic_brand_logo
+import org.p23q.shoppinglist.resources.login_resignin_title
+import org.p23q.shoppinglist.resources.nav_about
+import org.p23q.shoppinglist.resources.nav_accounts
+import org.p23q.shoppinglist.resources.nav_join_list
+import org.p23q.shoppinglist.resources.nav_list
+import org.p23q.shoppinglist.resources.nav_list_properties
+import org.p23q.shoppinglist.resources.nav_menu
+import org.p23q.shoppinglist.resources.nav_overview
+import org.p23q.shoppinglist.resources.nav_registry
+import org.p23q.shoppinglist.resources.nav_server_admin
+import org.p23q.shoppinglist.resources.nav_server_admin_choose
+import org.p23q.shoppinglist.resources.nav_settings
+import org.p23q.shoppinglist.resources.nav_sync_open_accounts
+import org.p23q.shoppinglist.resources.settings_account
+import org.p23q.shoppinglist.resources.update_available_body
+import org.p23q.shoppinglist.resources.update_available_title
+import org.p23q.shoppinglist.resources.update_check_failed
+import org.p23q.shoppinglist.resources.update_required_unavailable
 import org.p23q.shoppinglist.ui.about.AboutScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.admin.AdminViewModel
@@ -367,13 +391,13 @@ fun ShoppingListNavHost(
                 form()
             } else {
                 BackScaffold(
-                    title = stringResource(if (mode == LoginMode.ADD) R.string.accounts_add else R.string.login_resignin_title),
+                    title = stringResource(if (mode == LoginMode.ADD) Res.string.accounts_add else Res.string.login_resignin_title),
                     onBack = { navController.popBackStack() },
                 ) { form() }
             }
         }
         composable(Routes.ACCOUNTS) {
-            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_accounts)) {
+            AppDrawerScaffold(navController = navController, title = stringResource(Res.string.nav_accounts)) {
                 AccountsScreen(
                     onAddAccount = { navController.navigate(Routes.login(LoginMode.ADD)) },
                     onOpenAccount = { id -> navController.navigate(Routes.account(id)) },
@@ -386,7 +410,7 @@ fun ShoppingListNavHost(
             val accountId = checkNotNull(backStackEntry.arguments?.getString(Routes.ACCOUNT_ID_ARG))
             AppDrawerScaffold(
                 navController = navController,
-                title = stringResource(R.string.settings_account),
+                title = stringResource(Res.string.settings_account),
                 onTitleClick = { navController.popBackStack(Routes.ACCOUNTS, inclusive = false) },
             ) {
                 AccountScreen(
@@ -398,10 +422,10 @@ fun ShoppingListNavHost(
         composable(Routes.OVERVIEW) {
             AppDrawerScaffold(
                 navController = navController,
-                title = stringResource(R.string.nav_overview),
+                title = stringResource(Res.string.nav_overview),
                 actions = {
                     Image(
-                        painter = painterResource(R.drawable.ic_brand_logo),
+                        painter = painterResource(Res.drawable.ic_brand_logo),
                         contentDescription = null,
                         modifier = Modifier.padding(end = 12.dp).size(28.dp),
                     )
@@ -422,7 +446,7 @@ fun ShoppingListNavHost(
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
             AppDrawerScaffold(
                 navController = navController,
-                title = liveListTitle(stringResource(R.string.nav_list)),
+                title = liveListTitle(stringResource(Res.string.nav_list)),
                 subtitle = liveListSubtitle(),
                 // Tapping the open list's title jumps back to the overview to pick another list.
                 onTitleClick = {
@@ -490,7 +514,7 @@ fun ShoppingListNavHost(
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
             AppDrawerScaffold(
                 navController = navController,
-                title = liveListTitle(stringResource(R.string.nav_registry)),
+                title = liveListTitle(stringResource(Res.string.nav_registry)),
                 onTitleClick = { navController.backToList(listId) },
             ) {
                 var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -506,7 +530,7 @@ fun ShoppingListNavHost(
             val listId = checkNotNull(backStackEntry.arguments?.getString(Routes.LIST_ID_ARG))
             AppDrawerScaffold(
                 navController = navController,
-                title = liveListTitle(stringResource(R.string.nav_list_properties)),
+                title = liveListTitle(stringResource(Res.string.nav_list_properties)),
                 onTitleClick = { navController.backToList(listId) },
             ) {
                 ListPropsScreen(
@@ -555,7 +579,7 @@ fun ShoppingListNavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_settings)) {
+            AppDrawerScaffold(navController = navController, title = stringResource(Res.string.nav_settings)) {
                 SettingsScreen(selectedLocale = selectedLocale, onSelectLocale = localeViewModel::setLocale)
             }
         }
@@ -565,7 +589,7 @@ fun ShoppingListNavHost(
             val adminViewModel: AdminViewModel = hiltViewModel()
             AppDrawerScaffold(
                 navController = navController,
-                title = stringResource(R.string.nav_server_admin),
+                title = stringResource(Res.string.nav_server_admin),
                 subtitle = adminViewModel.server,
             ) {
                 AdminScreen(viewModel = adminViewModel)
@@ -577,7 +601,7 @@ fun ShoppingListNavHost(
             // status line either way. The block it answers lives on this screen now.
             val updateStatus by updateViewModel.status.collectAsStateWithLifecycle()
             val autoCheckEnabled by updateViewModel.autoCheckEnabled.collectAsStateWithLifecycle()
-            AppDrawerScaffold(navController = navController, title = stringResource(R.string.nav_about)) {
+            AppDrawerScaffold(navController = navController, title = stringResource(Res.string.nav_about)) {
                 AboutScreen(
                     updateStatus = updateStatus,
                     autoCheckEnabled = autoCheckEnabled,
@@ -602,12 +626,12 @@ fun ShoppingListNavHost(
             text = {
                 Text(
                     stringResource(
-                        if (notice is UpdateStatus.UpToDate) R.string.update_required_unavailable else R.string.update_check_failed,
+                        if (notice is UpdateStatus.UpToDate) Res.string.update_required_unavailable else Res.string.update_check_failed,
                     ),
                 )
             },
             confirmButton = {
-                TuppuTextButton(onClick = { updateViewModel.dismissCheckNotice() }) { Text(stringResource(R.string.action_ok)) }
+                TuppuTextButton(onClick = { updateViewModel.dismissCheckNotice() }) { Text(stringResource(Res.string.action_ok)) }
             },
         )
     }
@@ -618,20 +642,20 @@ fun ShoppingListNavHost(
         LocalizedAlertDialog(
             // Dismissing by tapping outside counts as having been asked, same as Skip.
             onDismissRequest = { updateViewModel.dismiss() },
-            title = { Text(stringResource(R.string.update_available_title)) },
+            title = { Text(stringResource(Res.string.update_available_title)) },
             text = {
-                Text(stringResource(R.string.update_available_body, update.version, BuildConfig.VERSION_NAME))
+                Text(stringResource(Res.string.update_available_body, update.version, BuildConfig.VERSION_NAME))
             },
             confirmButton = {
                 TuppuTextButton(onClick = {
                     openDownload(context, update.downloadUrl)
                     updateViewModel.dismiss()
-                }) { Text(stringResource(R.string.action_update)) }
+                }) { Text(stringResource(Res.string.action_update)) }
             },
             dismissButton = {
                 // "Skip", not "Later": declining is final for this version.
                 TuppuTextButton(onClick = { updateViewModel.dismiss() }) {
-                    Text(stringResource(R.string.action_skip))
+                    Text(stringResource(Res.string.action_skip))
                 }
             },
         )
@@ -698,7 +722,7 @@ internal fun AppDrawerScaffold(
                 // Mirrored in right-to-left, as a list's bullets are (C8).
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_overview)) },
+                    label = { Text(stringResource(Res.string.nav_overview)) },
                     selected = currentRoute == Routes.OVERVIEW,
                     onClick = { navigateTo(Routes.OVERVIEW) },
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -709,7 +733,7 @@ internal fun AppDrawerScaffold(
                 // A list someone shared, not a second Overview icon (C8).
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.Default.Share, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_join_list)) },
+                    label = { Text(stringResource(Res.string.nav_join_list)) },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -721,7 +745,7 @@ internal fun AppDrawerScaffold(
                 // since nobody signs out; a server does, and the account's row says so.
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_accounts)) },
+                    label = { Text(stringResource(Res.string.nav_accounts)) },
                     selected = currentRoute == Routes.ACCOUNTS,
                     onClick = { navigateTo(Routes.ACCOUNTS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -730,7 +754,7 @@ internal fun AppDrawerScaffold(
                 NavigationDrawerItem(
                     // "Settings", as the screen it opens is titled (T-170); it was "Account".
                     icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_settings)) },
+                    label = { Text(stringResource(Res.string.nav_settings)) },
                     selected = currentRoute == Routes.SETTINGS,
                     onClick = { navigateTo(Routes.SETTINGS) },
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -742,7 +766,7 @@ internal fun AppDrawerScaffold(
                 if (adminAccounts.isNotEmpty()) {
                     NavigationDrawerItem(
                         icon = { Icon(imageVector = Icons.Default.Build, contentDescription = null) },
-                        label = { Text(stringResource(R.string.nav_server_admin)) },
+                        label = { Text(stringResource(Res.string.nav_server_admin)) },
                         selected = currentRoute == Routes.ADMIN_PATTERN,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -755,7 +779,7 @@ internal fun AppDrawerScaffold(
                 // Last (T-224): what the app is, not something you do with it.
                 NavigationDrawerItem(
                     icon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
-                    label = { Text(stringResource(R.string.nav_about)) },
+                    label = { Text(stringResource(Res.string.nav_about)) },
                     selected = currentRoute == Routes.ABOUT,
                     onClick = { navigateTo(Routes.ABOUT) },
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -785,7 +809,7 @@ internal fun AppDrawerScaffold(
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = stringResource(R.string.nav_menu))
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = stringResource(Res.string.nav_menu))
                         }
                     },
                     actions = {
@@ -801,7 +825,7 @@ internal fun AppDrawerScaffold(
                                 state = syncState,
                                 nowMs = rememberTickingNowMs(),
                                 modifier = Modifier
-                                    .clickable(onClickLabel = stringResource(R.string.nav_sync_open_accounts), role = Role.Button) {
+                                    .clickable(onClickLabel = stringResource(Res.string.nav_sync_open_accounts), role = Role.Button) {
                                         if (currentRoute != Routes.ACCOUNTS) navController.navigate(Routes.ACCOUNTS)
                                     }
                                     .minimumInteractiveComponentSize()
@@ -864,7 +888,7 @@ private fun NavHostController.openAdmin(accountId: String) {
 private fun AdminChooserDialog(accounts: List<AccountEntity>, onChoose: (String) -> Unit, onDismiss: () -> Unit) {
     LocalizedAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.nav_server_admin_choose)) },
+        title = { Text(stringResource(Res.string.nav_server_admin_choose)) },
         text = {
             Column {
                 accounts.forEach { account ->
@@ -877,7 +901,7 @@ private fun AdminChooserDialog(accounts: List<AccountEntity>, onChoose: (String)
             }
         },
         confirmButton = {},
-        dismissButton = { TuppuTextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+        dismissButton = { TuppuTextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
 }
 
@@ -892,7 +916,7 @@ private fun BackScaffold(title: String, onBack: () -> Unit, content: @Composable
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.action_back))
                     }
                 },
             )

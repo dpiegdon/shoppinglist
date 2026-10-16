@@ -7,10 +7,14 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.admin_show_users
+import org.p23q.shoppinglist.resources.nav_about
+import org.p23q.shoppinglist.resources.nav_server_admin
+import org.p23q.shoppinglist.resources.nav_settings
 import org.p23q.shoppinglist.ui.about.AboutScreen
 import org.p23q.shoppinglist.ui.admin.AdminScreen
 import org.p23q.shoppinglist.ui.admin.AdminViewModel
@@ -45,7 +49,7 @@ class AppShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
             accounts.registry,
         ).tracked()
 
-        setScreen(str(R.string.nav_settings)) { SettingsScreen(viewModel = viewModel) }
+        setScreen(str(Res.string.nav_settings)) { SettingsScreen(viewModel = viewModel) }
         capture("settings")
     }
 
@@ -68,9 +72,9 @@ class AppShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
         val api = server.apiFactory(json).create("https://lists.example.org/", false, emptyList())
         val viewModel = AdminViewModel({ api }, serverAccountId = "u-1", server = "lists.example.org").tracked()
 
-        setScreen(str(R.string.nav_server_admin), subtitle = viewModel.server) { AdminScreen(viewModel = viewModel) }
+        setScreen(str(Res.string.nav_server_admin), subtitle = viewModel.server) { AdminScreen(viewModel = viewModel) }
         awaitUntil { viewModel.uiState.value.allowRegistration != null }
-        composeTestRule.onNodeWithText(str(R.string.admin_show_users)).performClick()
+        composeTestRule.onNodeWithText(str(Res.string.admin_show_users)).performClick()
         awaitUntil { viewModel.uiState.value.users != null }
         capture("admin")
     }
@@ -81,7 +85,7 @@ class AppShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         shadowOf(context.packageManager).getInternalMutablePackageInfo(context.packageName).versionName = "1.2.3"
 
-        setScreen(str(R.string.nav_about)) { AboutScreen(updateStatus = UpdateStatus.UpToDate("1.2.3")) }
+        setScreen(str(Res.string.nav_about)) { AboutScreen(updateStatus = UpdateStatus.UpToDate("1.2.3")) }
         capture("about")
     }
 }

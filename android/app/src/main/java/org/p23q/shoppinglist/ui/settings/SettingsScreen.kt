@@ -28,19 +28,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.data.ThemePreference
 import org.p23q.shoppinglist.data.deviceLocale
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.settings_collaborator_changes
+import org.p23q.shoppinglist.resources.settings_collaborator_changes_help
+import org.p23q.shoppinglist.resources.settings_diagnostics
+import org.p23q.shoppinglist.resources.settings_invitations
+import org.p23q.shoppinglist.resources.settings_invitations_help
+import org.p23q.shoppinglist.resources.settings_last_background_sync
+import org.p23q.shoppinglist.resources.settings_notifications
+import org.p23q.shoppinglist.resources.settings_share_crash_logs
+import org.p23q.shoppinglist.resources.settings_theme
+import org.p23q.shoppinglist.resources.settings_theme_dark
+import org.p23q.shoppinglist.resources.settings_theme_light
+import org.p23q.shoppinglist.resources.settings_theme_system
 import org.p23q.shoppinglist.ui.LanguagePicker
 import org.p23q.shoppinglist.ui.SectionCard
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 
 @Composable
@@ -54,7 +66,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     // Hoisted above the effect: its body is a coroutine, not a composition.
-    val shareCrashLogsTitle = stringResource(R.string.settings_share_crash_logs)
+    val shareCrashLogsTitle = stringResource(Res.string.settings_share_crash_logs)
     LaunchedEffect(state.crashLogPath) {
         val path = state.crashLogPath
         if (path != null) {
@@ -76,7 +88,7 @@ fun SettingsScreen(
         // Bare, as on the web: the picker carries its own label.
         LanguagePicker(selected = selectedLocale, onSelect = onSelectLocale)
 
-        SectionCard(stringResource(R.string.settings_theme)) {
+        SectionCard(stringResource(Res.string.settings_theme)) {
             // An exclusive choice is a segmented control (A8), as the item's status is; a FilterChip
             // is only for a toggle such as Show checked.
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().testTag("settings-theme")) {
@@ -95,13 +107,13 @@ fun SettingsScreen(
         // Collaborator-change notifications (T-65); mute individual lists in their list properties.
         // Only server accounts have collaborators, so a phone with none has nothing to notify of.
         if (state.hasServerAccount) {
-            SectionCard(stringResource(R.string.settings_notifications)) {
+            SectionCard(stringResource(Res.string.settings_notifications)) {
                 val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.settings_collaborator_changes))
+                        Text(stringResource(Res.string.settings_collaborator_changes))
                         Text(
-                            stringResource(R.string.settings_collaborator_changes_help),
+                            stringResource(Res.string.settings_collaborator_changes_help),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -120,9 +132,9 @@ fun SettingsScreen(
                 // Invite notifications (T-319): their own switch, sharing the permission request.
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.settings_invitations))
+                        Text(stringResource(Res.string.settings_invitations))
                         Text(
-                            stringResource(R.string.settings_invitations_help),
+                            stringResource(Res.string.settings_invitations_help),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -143,14 +155,14 @@ fun SettingsScreen(
 
         // No telemetry service (T-50) — this is purely local, opt-in, and manual: the crash log
         // never leaves the device unless the user explicitly shares it here.
-        SectionCard(stringResource(R.string.settings_diagnostics)) {
+        SectionCard(stringResource(Res.string.settings_diagnostics)) {
             // On-device way to check that background sync (WorkManager) actually runs (T-112) — if this
             // stays "never" while the app is closed, the OS is likely killing background work (battery
             // optimization / Doze), which is also why collaborator-change notifications wouldn't fire.
             // The local area never syncs, so without a server account there is no background sync.
             if (state.hasServerAccount) {
                 Text(
-                    stringResource(R.string.settings_last_background_sync, state.lastBackgroundSyncText.asString()),
+                    stringResource(Res.string.settings_last_background_sync, state.lastBackgroundSyncText.asString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -171,7 +183,7 @@ fun SettingsScreen(
             }
             // The card's closing action, full width as every one is (A11).
             TuppuButton(onClick = viewModel::shareLogs, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.settings_share_crash_logs))
+                Text(stringResource(Res.string.settings_share_crash_logs))
             }
             // A confirmation, in the muted grey the web uses: the accent is too light to read as text.
             state.infoMessage?.let { Text(it.asString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -186,8 +198,8 @@ fun SettingsScreen(
  */
 @Composable
 private fun ThemePreference.label(): String = when (this) {
-    ThemePreference.SYSTEM -> stringResource(R.string.settings_theme_system)
-    ThemePreference.LIGHT -> stringResource(R.string.settings_theme_light)
-    ThemePreference.DARK -> stringResource(R.string.settings_theme_dark)
+    ThemePreference.SYSTEM -> stringResource(Res.string.settings_theme_system)
+    ThemePreference.LIGHT -> stringResource(Res.string.settings_theme_light)
+    ThemePreference.DARK -> stringResource(Res.string.settings_theme_dark)
 }
 

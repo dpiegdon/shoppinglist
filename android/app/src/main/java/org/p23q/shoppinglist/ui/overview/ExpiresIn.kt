@@ -1,6 +1,9 @@
 package org.p23q.shoppinglist.ui.overview
 
-import org.p23q.shoppinglist.R
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.overview_invite_expires_days
+import org.p23q.shoppinglist.resources.overview_invite_expires_hours
+import org.p23q.shoppinglist.resources.overview_invite_expires_minutes
 import org.p23q.shoppinglist.ui.UiText
 
 /**
@@ -13,9 +16,9 @@ import org.p23q.shoppinglist.ui.UiText
 fun formatExpiresIn(expiresAt: Long, now: Long = System.currentTimeMillis()): UiText {
     val remaining = maxOf(expiresAt - now, MINUTE_MS)
     return when {
-        remaining < HOUR_MS -> UiText.res(R.string.overview_invite_expires_minutes, (remaining / MINUTE_MS).toInt())
-        remaining < DAY_MS -> UiText.res(R.string.overview_invite_expires_hours, (remaining / HOUR_MS).toInt())
-        else -> UiText.res(R.string.overview_invite_expires_days, (remaining / DAY_MS).toInt())
+        remaining < HOUR_MS -> UiText.res(Res.string.overview_invite_expires_minutes, (remaining / MINUTE_MS).toInt())
+        remaining < DAY_MS -> UiText.res(Res.string.overview_invite_expires_hours, (remaining / HOUR_MS).toInt())
+        else -> UiText.res(Res.string.overview_invite_expires_days, (remaining / DAY_MS).toInt())
     }
 }
 

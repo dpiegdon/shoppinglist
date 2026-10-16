@@ -6,6 +6,7 @@ import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.p23q.shoppinglist.resources.Res
 
 class ThemeTest {
 
@@ -219,7 +220,7 @@ class ThemeTest {
     fun `every field-group label is the one muted FieldLabel (A15, T-343)`() {
         val text = uiSources().joinToString("\n") { it.readText() }
         val labels = listOf("item_stores", "item_status", "expense_type", "overview_type", "overview_new_list_account", "listprops_type")
-        val missing = labels.filter { "FieldLabel(stringResource(R.string.$it))" !in text }
+        val missing = labels.filter { "FieldLabel(stringResource(Res.string.$it))" !in text }
         assertEquals("drawn as FieldLabel", emptyList<String>(), missing)
     }
 
@@ -228,7 +229,7 @@ class ThemeTest {
         // A confirm button whose label deletes, leaves or removes is a DangerTextButton (a category
         // merge saves, as on the web, and stays in the accent), never the accent TuppuTextButton. The block runs from
         // `confirmButton =` to the dismiss button, at most a few hundred characters.
-        val destructive = Regex("""R\.string\.\w*(delete|leave|remove|revoke)\w*""")
+        val destructive = Regex("""Res\.string\.\w*(delete|leave|remove|revoke)\w*""")
         val blocks = uiSources().flatMap { file ->
             val text = file.readText()
             Regex("""confirmButton = \{""").findAll(text).map { match ->

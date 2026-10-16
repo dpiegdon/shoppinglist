@@ -1,8 +1,48 @@
 package org.p23q.shoppinglist.ui
 
-import androidx.annotation.StringRes
-import org.p23q.shoppinglist.R
+import org.jetbrains.compose.resources.StringResource
 import org.p23q.shoppinglist.core.api.ApiException
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.admin_server_message_invalid
+import org.p23q.shoppinglist.resources.api_error_account_not_found
+import org.p23q.shoppinglist.resources.api_error_cannot_delete_admin
+import org.p23q.shoppinglist.resources.api_error_cannot_delete_expense_list
+import org.p23q.shoppinglist.resources.api_error_cannot_delete_self
+import org.p23q.shoppinglist.resources.api_error_client_outdated
+import org.p23q.shoppinglist.resources.api_error_email_taken
+import org.p23q.shoppinglist.resources.api_error_internal_error
+import org.p23q.shoppinglist.resources.api_error_invalid_currency
+import org.p23q.shoppinglist.resources.api_error_invalid_device_label
+import org.p23q.shoppinglist.resources.api_error_invalid_email
+import org.p23q.shoppinglist.resources.api_error_invalid_expense
+import org.p23q.shoppinglist.resources.api_error_invalid_field
+import org.p23q.shoppinglist.resources.api_error_invalid_list_currency
+import org.p23q.shoppinglist.resources.api_error_invalid_name
+import org.p23q.shoppinglist.resources.api_error_invalid_notes
+import org.p23q.shoppinglist.resources.api_error_invalid_password
+import org.p23q.shoppinglist.resources.api_error_invalid_price
+import org.p23q.shoppinglist.resources.api_error_invalid_status
+import org.p23q.shoppinglist.resources.api_error_invite_email_mismatch
+import org.p23q.shoppinglist.resources.api_error_invite_expired
+import org.p23q.shoppinglist.resources.api_error_invite_not_found
+import org.p23q.shoppinglist.resources.api_error_invite_revoked
+import org.p23q.shoppinglist.resources.api_error_invite_used
+import org.p23q.shoppinglist.resources.api_error_list_closed
+import org.p23q.shoppinglist.resources.api_error_method_not_allowed
+import org.p23q.shoppinglist.resources.api_error_not_a_member
+import org.p23q.shoppinglist.resources.api_error_not_admin
+import org.p23q.shoppinglist.resources.api_error_not_an_expenses_list
+import org.p23q.shoppinglist.resources.api_error_not_found
+import org.p23q.shoppinglist.resources.api_error_payload_too_large
+import org.p23q.shoppinglist.resources.api_error_registration_disabled
+import org.p23q.shoppinglist.resources.api_error_server_busy
+import org.p23q.shoppinglist.resources.api_error_session_not_found
+import org.p23q.shoppinglist.resources.api_error_unknown_list
+import org.p23q.shoppinglist.resources.api_error_voted_to_close
+import org.p23q.shoppinglist.resources.expense_error_frozen
+import org.p23q.shoppinglist.resources.listprops_leave_blocked
+import org.p23q.shoppinglist.resources.login_msg_incorrect_credentials
+import org.p23q.shoppinglist.resources.settings_msg_initials_too_long
 
 /**
  * What a failure says to the user, in the app's language.
@@ -17,60 +57,60 @@ import org.p23q.shoppinglist.core.api.ApiException
 object ErrorText {
 
     private val byCode: Map<String, UiText> = mapOf(
-        "invalid_credentials" to UiText.res(R.string.login_msg_incorrect_credentials),
-        "email_taken" to UiText.res(R.string.api_error_email_taken),
-        "registration_disabled" to UiText.res(R.string.api_error_registration_disabled),
-        "invalid_email" to UiText.res(R.string.api_error_invalid_email),
-        "invalid_password" to UiText.res(R.string.api_error_invalid_password),
-        "invalid_name" to UiText.res(R.string.api_error_invalid_name),
-        "invalid_notes" to UiText.res(R.string.api_error_invalid_notes),
-        "invalid_initials" to UiText.res(R.string.settings_msg_initials_too_long, 3),
-        "invalid_currency" to UiText.res(R.string.api_error_invalid_currency),
+        "invalid_credentials" to UiText.res(Res.string.login_msg_incorrect_credentials),
+        "email_taken" to UiText.res(Res.string.api_error_email_taken),
+        "registration_disabled" to UiText.res(Res.string.api_error_registration_disabled),
+        "invalid_email" to UiText.res(Res.string.api_error_invalid_email),
+        "invalid_password" to UiText.res(Res.string.api_error_invalid_password),
+        "invalid_name" to UiText.res(Res.string.api_error_invalid_name),
+        "invalid_notes" to UiText.res(Res.string.api_error_invalid_notes),
+        "invalid_initials" to UiText.res(Res.string.settings_msg_initials_too_long, 3),
+        "invalid_currency" to UiText.res(Res.string.api_error_invalid_currency),
         // A different rule, so a different code and a different sentence (T-199): the account's
         // default_currency is an ISO code, an expenses list's currency is a free-text label.
-        "invalid_list_currency" to UiText.res(R.string.api_error_invalid_list_currency),
-        "invalid_price" to UiText.res(R.string.api_error_invalid_price),
+        "invalid_list_currency" to UiText.res(Res.string.api_error_invalid_list_currency),
+        "invalid_price" to UiText.res(Res.string.api_error_invalid_price),
         // Four codes the wire contract always listed but neither client mapped (T-271):
         // invalid_expense is the likeliest 422 on a ledger row, and was the hole the parked-row
         // banner (refusal, below) fell back to a bare "not saved" for.
-        "invalid_expense" to UiText.res(R.string.api_error_invalid_expense),
-        "invalid_field" to UiText.res(R.string.api_error_invalid_field),
-        "invalid_status" to UiText.res(R.string.api_error_invalid_status),
-        "invalid_device_label" to UiText.res(R.string.api_error_invalid_device_label),
+        "invalid_expense" to UiText.res(Res.string.api_error_invalid_expense),
+        "invalid_field" to UiText.res(Res.string.api_error_invalid_field),
+        "invalid_status" to UiText.res(Res.string.api_error_invalid_status),
+        "invalid_device_label" to UiText.res(Res.string.api_error_invalid_device_label),
         // The admin-set server message breaks its rule: one line, at most 200 characters (T-315).
-        "invalid_message" to UiText.res(R.string.admin_server_message_invalid),
-        "invite_expired" to UiText.res(R.string.api_error_invite_expired),
-        "invite_revoked" to UiText.res(R.string.api_error_invite_revoked),
-        "invite_used" to UiText.res(R.string.api_error_invite_used),
-        "invite_not_found" to UiText.res(R.string.api_error_invite_not_found),
-        "invite_email_mismatch" to UiText.res(R.string.api_error_invite_email_mismatch),
-        "list_closed" to UiText.res(R.string.api_error_list_closed),
-        "list_open" to UiText.res(R.string.listprops_leave_blocked),
-        "voted_to_close" to UiText.res(R.string.api_error_voted_to_close),
+        "invalid_message" to UiText.res(Res.string.admin_server_message_invalid),
+        "invite_expired" to UiText.res(Res.string.api_error_invite_expired),
+        "invite_revoked" to UiText.res(Res.string.api_error_invite_revoked),
+        "invite_used" to UiText.res(Res.string.api_error_invite_used),
+        "invite_not_found" to UiText.res(Res.string.api_error_invite_not_found),
+        "invite_email_mismatch" to UiText.res(Res.string.api_error_invite_email_mismatch),
+        "list_closed" to UiText.res(Res.string.api_error_list_closed),
+        "list_open" to UiText.res(Res.string.listprops_leave_blocked),
+        "voted_to_close" to UiText.res(Res.string.api_error_voted_to_close),
         // The close-vote endpoints answer this for any list that isn't an expenses list (T-264).
-        "not_an_expenses_list" to UiText.res(R.string.api_error_not_an_expenses_list),
-        "cannot_delete_expense_list" to UiText.res(R.string.api_error_cannot_delete_expense_list),
-        "not_a_member" to UiText.res(R.string.api_error_not_a_member),
+        "not_an_expenses_list" to UiText.res(Res.string.api_error_not_an_expenses_list),
+        "cannot_delete_expense_list" to UiText.res(Res.string.api_error_cannot_delete_expense_list),
+        "not_a_member" to UiText.res(Res.string.api_error_not_a_member),
         // A pushed item names a list this account can no longer write to — deleted, or left while
         // offline (T-214) — so the parked row can say more than "not saved".
-        "unknown_list" to UiText.res(R.string.api_error_unknown_list),
-        "not_admin" to UiText.res(R.string.api_error_not_admin),
-        "cannot_delete_admin" to UiText.res(R.string.api_error_cannot_delete_admin),
-        "cannot_delete_self" to UiText.res(R.string.api_error_cannot_delete_self),
-        "account_not_found" to UiText.res(R.string.api_error_account_not_found),
-        "session_not_found" to UiText.res(R.string.api_error_session_not_found),
-        "server_busy" to UiText.res(R.string.api_error_server_busy),
-        "payload_too_large" to UiText.res(R.string.api_error_payload_too_large),
+        "unknown_list" to UiText.res(Res.string.api_error_unknown_list),
+        "not_admin" to UiText.res(Res.string.api_error_not_admin),
+        "cannot_delete_admin" to UiText.res(Res.string.api_error_cannot_delete_admin),
+        "cannot_delete_self" to UiText.res(Res.string.api_error_cannot_delete_self),
+        "account_not_found" to UiText.res(Res.string.api_error_account_not_found),
+        "session_not_found" to UiText.res(Res.string.api_error_session_not_found),
+        "server_busy" to UiText.res(Res.string.api_error_server_busy),
+        "payload_too_large" to UiText.res(Res.string.api_error_payload_too_large),
         // 426: this build's protocol is older than the server's (T-240). The blocking update
         // screen is what the user actually deals with, but a code the server can answer to any
         // request belongs in the table rather than falling back to "something went wrong".
-        "client_outdated" to UiText.res(R.string.api_error_client_outdated),
+        "client_outdated" to UiText.res(Res.string.api_error_client_outdated),
         // An unknown path or a wrong method under the API prefix (T-316): this build asked for
         // something the server does not have, most likely because the server is older.
-        "not_found" to UiText.res(R.string.api_error_not_found),
-        "method_not_allowed" to UiText.res(R.string.api_error_method_not_allowed),
+        "not_found" to UiText.res(Res.string.api_error_not_found),
+        "method_not_allowed" to UiText.res(Res.string.api_error_method_not_allowed),
         // An unhandled server fault (T-316): nothing the user can fix, so the generic sentence.
-        "internal_error" to UiText.res(R.string.api_error_internal_error),
+        "internal_error" to UiText.res(Res.string.api_error_internal_error),
     )
 
     /**
@@ -84,7 +124,7 @@ object ErrorText {
      */
     fun refusal(code: String?, who: String?): UiText? = when {
         code == null -> null
-        code == "participant_frozen" -> who?.let { UiText.res(R.string.expense_error_frozen, it) }
+        code == "participant_frozen" -> who?.let { UiText.res(Res.string.expense_error_frozen, it) }
         else -> byCode[code]
     }
 
@@ -93,7 +133,7 @@ object ErrorText {
      * [overrides] lets a screen say something narrower for a code — "Current password is incorrect"
      * rather than "Incorrect email or password" on the change-password form.
      */
-    fun of(e: Throwable, @StringRes fallback: Int, overrides: Map<String, Int> = emptyMap()): UiText {
+    fun of(e: Throwable, fallback: StringResource, overrides: Map<String, StringResource> = emptyMap()): UiText {
         val code = (e as? ApiException)?.code ?: return UiText.res(fallback)
         overrides[code]?.let { return UiText.res(it) }
         return byCode[code] ?: UiText.res(fallback)

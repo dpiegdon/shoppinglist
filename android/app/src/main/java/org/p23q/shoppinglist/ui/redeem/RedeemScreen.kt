@@ -15,15 +15,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.db.AccountEntity
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.action_back
+import org.p23q.shoppinglist.resources.redeem_choose_account
+import org.p23q.shoppinglist.resources.redeem_joining
 import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.asString
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
 
 /**
@@ -74,10 +77,10 @@ fun RedeemScreen(
                 Text(error.asString(), color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(16.dp))
                 // Back is the quiet way out, not the screen's primary action (A21).
-                TuppuOutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                TuppuOutlinedButton(onClick = onCancel) { Text(stringResource(Res.string.action_back)) }
             }
             state.choices.isNotEmpty() -> {
-                Text(stringResource(R.string.redeem_choose_account), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.redeem_choose_account), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(16.dp))
                 state.choices.forEach { account ->
                     AccountChoiceRow(
@@ -87,12 +90,12 @@ fun RedeemScreen(
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                TuppuOutlinedButton(onClick = onCancel) { Text(stringResource(R.string.action_back)) }
+                TuppuOutlinedButton(onClick = onCancel) { Text(stringResource(Res.string.action_back)) }
             }
             else -> {
                 CircularProgressIndicator()
                 Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.redeem_joining))
+                Text(stringResource(Res.string.redeem_joining))
                 // Which account it joins with, when the phone holds several (T-292).
                 state.account?.takeIf { state.several }?.let { account ->
                     Spacer(Modifier.height(8.dp))

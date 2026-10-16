@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.ListMember
@@ -22,6 +21,9 @@ import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.ListAccounts
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.error_offline_retry
+import org.p23q.shoppinglist.resources.expense_vote_failed
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -125,7 +127,7 @@ class ExpenseListViewModel @Inject constructor(
             val api = listAccounts.api(listId)
             if (serverId == null || api == null) {
                 // A list this phone no longer holds has no vote left to cast.
-                _uiState.update { it.copy(voteError = UiText.res(R.string.expense_vote_failed)) }
+                _uiState.update { it.copy(voteError = UiText.res(Res.string.expense_vote_failed)) }
                 return@launch
             }
             if (voted) api.withdrawCloseVote(serverId) else api.castCloseVote(serverId)
@@ -134,9 +136,9 @@ class ExpenseListViewModel @Inject constructor(
             // A server refusal — 409 list_closed, 403 not_a_member, 409 not_an_expenses_list — has
             // a specific reason (T-264); ApiException must be caught before IOException, which it
             // extends, or every one of these shows as "couldn't reach the server" instead.
-            _uiState.update { it.copy(voteError = ErrorText.of(e, R.string.expense_vote_failed)) }
+            _uiState.update { it.copy(voteError = ErrorText.of(e, Res.string.expense_vote_failed)) }
         } catch (e: IOException) {
-            _uiState.update { it.copy(voteError = UiText.res(R.string.error_offline_retry)) }
+            _uiState.update { it.copy(voteError = UiText.res(Res.string.error_offline_retry)) }
         } finally {
             _uiState.update { it.copy(isVoting = false) }
         }

@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -48,11 +47,68 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.AppFormat
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.data.label
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.accounts_move_down
+import org.p23q.shoppinglist.resources.accounts_move_up
+import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.action_delete
+import org.p23q.shoppinglist.resources.action_duplicate
+import org.p23q.shoppinglist.resources.action_invite
+import org.p23q.shoppinglist.resources.action_leave
+import org.p23q.shoppinglist.resources.action_revoke
+import org.p23q.shoppinglist.resources.action_save
+import org.p23q.shoppinglist.resources.api_error_voted_to_close
+import org.p23q.shoppinglist.resources.expense_agree_count
+import org.p23q.shoppinglist.resources.expense_agree_to_close
+import org.p23q.shoppinglist.resources.expense_closed_on
+import org.p23q.shoppinglist.resources.expense_closing
+import org.p23q.shoppinglist.resources.expense_closing_help
+import org.p23q.shoppinglist.resources.expense_currency_value
+import org.p23q.shoppinglist.resources.expense_withdraw_vote
+import org.p23q.shoppinglist.resources.list_copy_suffix
+import org.p23q.shoppinglist.resources.listprops_actions
+import org.p23q.shoppinglist.resources.listprops_categories
+import org.p23q.shoppinglist.resources.listprops_categories_help
+import org.p23q.shoppinglist.resources.listprops_clear_checked
+import org.p23q.shoppinglist.resources.listprops_clear_checked_help
+import org.p23q.shoppinglist.resources.listprops_copy_to
+import org.p23q.shoppinglist.resources.listprops_delete_confirm_body
+import org.p23q.shoppinglist.resources.listprops_delete_confirm_title
+import org.p23q.shoppinglist.resources.listprops_delete_list
+import org.p23q.shoppinglist.resources.listprops_invite_by_email
+import org.p23q.shoppinglist.resources.listprops_invite_pending
+import org.p23q.shoppinglist.resources.listprops_kind_checklist
+import org.p23q.shoppinglist.resources.listprops_kind_expenses
+import org.p23q.shoppinglist.resources.listprops_kind_fixed
+import org.p23q.shoppinglist.resources.listprops_kind_shopping
+import org.p23q.shoppinglist.resources.listprops_kind_switch_help
+import org.p23q.shoppinglist.resources.listprops_leave_blocked
+import org.p23q.shoppinglist.resources.listprops_leave_confirm_body
+import org.p23q.shoppinglist.resources.listprops_leave_confirm_title
+import org.p23q.shoppinglist.resources.listprops_leave_list
+import org.p23q.shoppinglist.resources.listprops_list
+import org.p23q.shoppinglist.resources.listprops_list_name
+import org.p23q.shoppinglist.resources.listprops_local_not_shared
+import org.p23q.shoppinglist.resources.listprops_member_you
+import org.p23q.shoppinglist.resources.listprops_merge_confirm_body
+import org.p23q.shoppinglist.resources.listprops_merge_confirm_title
+import org.p23q.shoppinglist.resources.listprops_no_categories
+import org.p23q.shoppinglist.resources.listprops_notes
+import org.p23q.shoppinglist.resources.listprops_notes_placeholder
+import org.p23q.shoppinglist.resources.listprops_notifications
+import org.p23q.shoppinglist.resources.listprops_notify_changes
+import org.p23q.shoppinglist.resources.listprops_rename_category
+import org.p23q.shoppinglist.resources.listprops_reorder_category
+import org.p23q.shoppinglist.resources.listprops_save_notes
+import org.p23q.shoppinglist.resources.listprops_save_order
+import org.p23q.shoppinglist.resources.listprops_saved
+import org.p23q.shoppinglist.resources.listprops_share_invite
+import org.p23q.shoppinglist.resources.listprops_shared_with
+import org.p23q.shoppinglist.resources.listprops_type
 import org.p23q.shoppinglist.ui.AccountChoiceRow
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.FieldLabel
@@ -65,6 +121,7 @@ import org.p23q.shoppinglist.ui.dangerButtonColors
 import org.p23q.shoppinglist.ui.dragReorderHandle
 import org.p23q.shoppinglist.ui.dragReorderItem
 import org.p23q.shoppinglist.ui.rememberDragReorderState
+import org.p23q.shoppinglist.ui.stringResource
 import org.p23q.shoppinglist.ui.theme.DangerTextButton
 import org.p23q.shoppinglist.ui.theme.TuppuButton
 import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
@@ -83,9 +140,9 @@ fun ListPropsScreen(
     LaunchedEffect(state.hasLeft) { if (state.hasLeft) onLeft() }
     LaunchedEffect(state.duplicatedListId) { state.duplicatedListId?.let(onDuplicated) }
     // A copy's name ends in "(Copy)" in the app's language, the copier's (T-302).
-    val copySuffix = stringResource(R.string.list_copy_suffix)
+    val copySuffix = stringResource(Res.string.list_copy_suffix)
     // Hoisted above the effect: its body is a coroutine, not a composition.
-    val shareInviteTitle = stringResource(R.string.listprops_share_invite)
+    val shareInviteTitle = stringResource(Res.string.listprops_share_invite)
     LaunchedEffect(state.inviteShareUrl) {
         val url = state.inviteShareUrl
         if (url != null) {
@@ -111,20 +168,20 @@ fun ListPropsScreen(
             state.myAccountId in state.closeVotes
         if (lockedByVote) {
             Text(
-                stringResource(R.string.api_error_voted_to_close),
+                stringResource(Res.string.api_error_voted_to_close),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         val isExpenses = ListKind.isExpenses(state.kind)
 
-        SectionCard(stringResource(R.string.listprops_list)) {
+        SectionCard(stringResource(Res.string.listprops_list)) {
             // A field its card title does not name carries its own label (T-340), as Invite does.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChange,
-                    label = { Text(stringResource(R.string.listprops_list_name)) },
+                    label = { Text(stringResource(Res.string.listprops_list_name)) },
                     singleLine = true,
                     enabled = !lockedByVote,
                     modifier = Modifier.weight(1f),
@@ -132,7 +189,7 @@ fun ListPropsScreen(
                 Spacer(Modifier.width(8.dp))
                 // Offered only when there is something to save, and it says so once saved (T-340).
                 TuppuButton(onClick = { viewModel.saveName() }, enabled = !lockedByVote && state.nameChanged, contentPadding = CompactButtonPadding) {
-                    Text(stringResource(R.string.action_save))
+                    Text(stringResource(Res.string.action_save))
                 }
             }
             SavedNote(state.nameSaved)
@@ -140,7 +197,7 @@ fun ListPropsScreen(
 
             // Convert between shopping list and checklist (T-110) — non-destructive, so it's a plain
             // switch rather than a guarded action.
-            FieldLabel(stringResource(R.string.listprops_type))
+            FieldLabel(stringResource(Res.string.listprops_type))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -150,16 +207,16 @@ fun ListPropsScreen(
                     Text("${ListKind.icon(state.kind)}  ${stringResource(ListKind.label(state.kind))}")
                     Text(
                         when (state.kind) {
-                            ListKind.CHECKLIST -> stringResource(R.string.listprops_kind_checklist)
-                            ListKind.EXPENSES -> stringResource(R.string.listprops_kind_expenses)
-                            else -> stringResource(R.string.listprops_kind_shopping)
+                            ListKind.CHECKLIST -> stringResource(Res.string.listprops_kind_checklist)
+                            ListKind.EXPENSES -> stringResource(Res.string.listprops_kind_expenses)
+                            else -> stringResource(Res.string.listprops_kind_shopping)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (isExpenses) {
                         Text(
-                            stringResource(R.string.expense_currency_value, state.currency),
+                            stringResource(Res.string.expense_currency_value, state.currency),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -181,7 +238,7 @@ fun ListPropsScreen(
             }
             Text(
                 stringResource(
-                    if (isExpenses) R.string.listprops_kind_fixed else R.string.listprops_kind_switch_help,
+                    if (isExpenses) Res.string.listprops_kind_fixed else Res.string.listprops_kind_switch_help,
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -194,7 +251,7 @@ fun ListPropsScreen(
             if (state.checkedCount > 0) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    stringResource(R.string.listprops_clear_checked_help),
+                    stringResource(Res.string.listprops_clear_checked_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -205,22 +262,22 @@ fun ListPropsScreen(
                     colors = dangerButtonColors(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.listprops_clear_checked, state.checkedCount))
+                    Text(stringResource(Res.string.listprops_clear_checked, state.checkedCount))
                 }
             }
         }
 
         if (!isExpenses) {
-            SectionCard(stringResource(R.string.listprops_categories)) {
+            SectionCard(stringResource(Res.string.listprops_categories)) {
                 Text(
-                    stringResource(R.string.listprops_categories_help),
+                    stringResource(Res.string.listprops_categories_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (state.categoryOrder.isEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        stringResource(R.string.listprops_no_categories),
+                        stringResource(Res.string.listprops_no_categories),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
@@ -235,7 +292,7 @@ fun ListPropsScreen(
                         enabled = state.orderChanged,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(R.string.listprops_save_order))
+                        Text(stringResource(Res.string.listprops_save_order))
                     }
                     SavedNote(state.orderSaved)
                 }
@@ -243,11 +300,11 @@ fun ListPropsScreen(
         }
 
         // Free-text, not-regularly-needed info (T-62) — lives only here, not on the list/overview screens.
-        SectionCard(stringResource(R.string.listprops_notes)) {
+        SectionCard(stringResource(Res.string.listprops_notes)) {
             OutlinedTextField(
                 value = state.notes,
                 onValueChange = viewModel::onNotesChange,
-                placeholder = { Text(stringResource(R.string.listprops_notes_placeholder)) },
+                placeholder = { Text(stringResource(Res.string.listprops_notes_placeholder)) },
                 minLines = 3,
                 maxLines = 6,
                 enabled = !lockedByVote,
@@ -259,7 +316,7 @@ fun ListPropsScreen(
                 enabled = !lockedByVote && state.notesChanged,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.listprops_save_notes))
+                Text(stringResource(Res.string.listprops_save_notes))
             }
             SavedNote(state.notesSaved)
         }
@@ -267,10 +324,10 @@ fun ListPropsScreen(
         // A list in the local area is nobody else's (T-293): no collaborators to hear from, no
         // roster, no invites. Nothing of this is drawn until the list's account is known.
         if (state.local == true) {
-            SectionCard(stringResource(R.string.listprops_shared_with)) {
-                Text(stringResource(R.string.listprops_member_you))
+            SectionCard(stringResource(Res.string.listprops_shared_with)) {
+                Text(stringResource(Res.string.listprops_member_you))
                 Text(
-                    stringResource(R.string.listprops_local_not_shared),
+                    stringResource(Res.string.listprops_local_not_shared),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -285,16 +342,16 @@ fun ListPropsScreen(
         // above Leave (T-169): the two are stages of one thing — agree to close, then leave. A
         // ledger has no Actions card between them.
         if (isExpenses) {
-            SectionCard(stringResource(R.string.expense_closing)) {
+            SectionCard(stringResource(Res.string.expense_closing)) {
                 CloseVoteSection(state, viewModel)
             }
         }
 
         // Client-side snapshot copy (T-63): a private, single-owner list with its own history.
         if (!isExpenses) {
-            SectionCard(stringResource(R.string.listprops_actions)) {
+            SectionCard(stringResource(Res.string.listprops_actions)) {
                 TuppuButton(onClick = { viewModel.requestDuplicate(copySuffix) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.action_duplicate))
+                    Text(stringResource(Res.string.action_duplicate))
                 }
             }
         }
@@ -303,7 +360,7 @@ fun ListPropsScreen(
         // saying why beats a button that fails. A local list is deleted instead: it exists on this
         // phone alone (T-293).
         val leaveBlocked = isExpenses && state.closedAt == null
-        val leaveLabel = stringResource(if (state.local == true) R.string.listprops_delete_list else R.string.listprops_leave_list)
+        val leaveLabel = stringResource(if (state.local == true) Res.string.listprops_delete_list else Res.string.listprops_leave_list)
         SectionCard(leaveLabel, danger = true) {
             TuppuButton(
                 onClick = viewModel::requestLeave,
@@ -313,7 +370,7 @@ fun ListPropsScreen(
             ) { Text(leaveLabel) }
             if (leaveBlocked) {
                 Text(
-                    stringResource(R.string.listprops_leave_blocked),
+                    stringResource(Res.string.listprops_leave_blocked),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -327,7 +384,7 @@ fun ListPropsScreen(
         LocalizedAlertDialog(
             onDismissRequest = viewModel::cancelLeave,
             title = {
-                Text(stringResource(if (local) R.string.listprops_delete_confirm_title else R.string.listprops_leave_confirm_title))
+                Text(stringResource(if (local) Res.string.listprops_delete_confirm_title else Res.string.listprops_leave_confirm_title))
             },
             // Through UiText, not stringResource directly, so the list name gets bidi-isolated
             // (T-126) — this is VISIBLE text with the name embedded mid-sentence in quotes. The
@@ -336,17 +393,17 @@ fun ListPropsScreen(
             text = {
                 Text(
                     UiText.res(
-                        if (local) R.string.listprops_delete_confirm_body else R.string.listprops_leave_confirm_body,
+                        if (local) Res.string.listprops_delete_confirm_body else Res.string.listprops_leave_confirm_body,
                         state.name,
                     ).asString(),
                 )
             },
             confirmButton = {
                 DangerTextButton(onClick = viewModel::confirmLeave) {
-                    Text(stringResource(if (local) R.string.action_delete else R.string.action_leave))
+                    Text(stringResource(if (local) Res.string.action_delete else Res.string.action_leave))
                 }
             },
-            dismissButton = { TuppuTextButton(onClick = viewModel::cancelLeave) { Text(stringResource(R.string.action_cancel)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelLeave) { Text(stringResource(Res.string.action_cancel)) } },
         )
     }
 
@@ -360,10 +417,10 @@ fun ListPropsScreen(
     state.pendingCategoryMerge?.let { pending ->
         LocalizedAlertDialog(
             onDismissRequest = viewModel::cancelCategoryMerge,
-            title = { Text(UiText.res(R.string.listprops_merge_confirm_title, pending.targetName).asString()) },
-            text = { Text(stringResource(R.string.listprops_merge_confirm_body)) },
-            confirmButton = { TuppuTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(R.string.action_save)) } },
-            dismissButton = { TuppuTextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(R.string.action_cancel)) } },
+            title = { Text(UiText.res(Res.string.listprops_merge_confirm_title, pending.targetName).asString()) },
+            text = { Text(stringResource(Res.string.listprops_merge_confirm_body)) },
+            confirmButton = { TuppuTextButton(onClick = viewModel::confirmCategoryMerge) { Text(stringResource(Res.string.action_save)) } },
+            dismissButton = { TuppuTextButton(onClick = viewModel::cancelCategoryMerge) { Text(stringResource(Res.string.action_cancel)) } },
         )
     }
 }
@@ -373,7 +430,7 @@ fun ListPropsScreen(
 private fun CopyToDialog(targets: List<AccountEntity>, onPick: (accountId: String) -> Unit, onDismiss: () -> Unit) {
     LocalizedAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.listprops_copy_to)) },
+        title = { Text(stringResource(Res.string.listprops_copy_to)) },
         text = {
             Column {
                 // The one "which account" row (A7), as the new list and the invite ask it.
@@ -386,7 +443,7 @@ private fun CopyToDialog(targets: List<AccountEntity>, onPick: (accountId: Strin
                 }
             }
         },
-        confirmButton = { TuppuTextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+        confirmButton = { TuppuTextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_cancel)) } },
     )
 }
 
@@ -395,7 +452,7 @@ internal const val COPY_TARGET_TAG_PREFIX = "copy-target-"
 /** Who a server list is shared with: the roster, pending invites and inviting someone (T-293: not a local list). */
 @Composable
 private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewModel) {
-    SectionCard(stringResource(R.string.listprops_shared_with)) {
+    SectionCard(stringResource(Res.string.listprops_shared_with)) {
         if (state.isMembersLoading) {
             CircularProgressIndicator()
         }
@@ -407,12 +464,12 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.listprops_invite_pending, invite.invitedEmail))
+                Text(stringResource(Res.string.listprops_invite_pending, invite.invitedEmail))
                 TuppuButton(
                     onClick = { viewModel.revokeInvite(invite.id) },
                     colors = dangerButtonColors(),
                     contentPadding = CompactButtonPadding,
-                ) { Text(stringResource(R.string.action_revoke)) }
+                ) { Text(stringResource(Res.string.action_revoke)) }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -421,12 +478,12 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
             OutlinedTextField(
                 value = state.inviteEmail,
                 onValueChange = viewModel::onInviteEmailChange,
-                label = { Text(stringResource(R.string.listprops_invite_by_email)) },
+                label = { Text(stringResource(Res.string.listprops_invite_by_email)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(8.dp))
-            TuppuButton(onClick = { viewModel.sendInvite() }, contentPadding = CompactButtonPadding) { Text(stringResource(R.string.action_invite)) }
+            TuppuButton(onClick = { viewModel.sendInvite() }, contentPadding = CompactButtonPadding) { Text(stringResource(Res.string.action_invite)) }
         }
         ErrorNote(state.sharingError)
     }
@@ -437,7 +494,7 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
 private fun SavedNote(saved: Boolean) {
     if (saved) {
         Text(
-            stringResource(R.string.listprops_saved),
+            stringResource(Res.string.listprops_saved),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
@@ -463,9 +520,9 @@ private fun ErrorNote(error: UiText?) {
  */
 @Composable
 private fun NotificationsSection(state: ListPropsUiState, viewModel: ListPropsViewModel) {
-    SectionCard(stringResource(R.string.listprops_notifications)) {
+    SectionCard(stringResource(Res.string.listprops_notifications)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.listprops_notify_changes), modifier = Modifier.weight(1f))
+            Text(stringResource(Res.string.listprops_notify_changes), modifier = Modifier.weight(1f))
             Switch(
                 checked = state.notificationsEnabledForList,
                 onCheckedChange = { viewModel.setListNotificationsEnabled(it) },
@@ -478,7 +535,7 @@ private fun NotificationsSection(state: ListPropsUiState, viewModel: ListPropsVi
 @Composable
 private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewModel) {
     Text(
-        stringResource(R.string.expense_closing_help),
+        stringResource(Res.string.expense_closing_help),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -486,7 +543,7 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
     if (closedAt != null) {
         Text(
             stringResource(
-                R.string.expense_closed_on,
+                Res.string.expense_closed_on,
                 AppFormat.day(closedAt, appLocale()),
             ),
             style = MaterialTheme.typography.bodyMedium,
@@ -494,7 +551,7 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
     } else {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.expense_agree_count, state.closeVotes.size, state.memberCount),
+                stringResource(Res.string.expense_agree_count, state.closeVotes.size, state.memberCount),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -502,9 +559,9 @@ private fun CloseVoteSection(state: ListPropsUiState, viewModel: ListPropsViewMo
                 Text(
                     stringResource(
                         if (state.myAccountId in state.closeVotes) {
-                            R.string.expense_withdraw_vote
+                            Res.string.expense_withdraw_vote
                         } else {
-                            R.string.expense_agree_to_close
+                            Res.string.expense_agree_to_close
                         },
                     ),
                 )
@@ -532,8 +589,8 @@ private fun CategoryOrderList(
         keys = categories,
         onMove = { from, to -> if (to < from) onMoveUp(from) else onMoveDown(from) },
     )
-    val up = stringResource(R.string.accounts_move_up)
-    val down = stringResource(R.string.accounts_move_down)
+    val up = stringResource(Res.string.accounts_move_up)
+    val down = stringResource(Res.string.accounts_move_down)
     var editingCategory by remember { mutableStateOf<String?>(null) }
     var draftName by remember { mutableStateOf("") }
     val currentCategories by rememberUpdatedState(categories)
@@ -560,10 +617,10 @@ private fun CategoryOrderList(
                                 editingCategory = null
                             },
                             contentPadding = CompactButtonPadding,
-                        ) { Text(stringResource(R.string.action_save)) }
+                        ) { Text(stringResource(Res.string.action_save)) }
                         Spacer(Modifier.width(4.dp))
                         TuppuOutlinedButton(onClick = { editingCategory = null }, contentPadding = CompactButtonPadding) {
-                            Text(stringResource(R.string.action_cancel))
+                            Text(stringResource(Res.string.action_cancel))
                         }
                     }
                 } else {
@@ -579,10 +636,10 @@ private fun CategoryOrderList(
                     ) {
                         Text(category, modifier = Modifier.weight(1f))
                         IconButton(onClick = { editingCategory = category; draftName = category }) {
-                            Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(R.string.listprops_rename_category, category))
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = stringResource(Res.string.listprops_rename_category, category))
                         }
                         val index = categories.indexOf(category)
-                        val handleLabel = stringResource(R.string.listprops_reorder_category, category)
+                        val handleLabel = stringResource(Res.string.listprops_reorder_category, category)
                         // The whole 48dp box is both the drag target and what TalkBack focuses.
                         Box(
                             contentAlignment = Alignment.Center,

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.p23q.shoppinglist.R
 import kotlinx.serialization.SerializationException
 import org.p23q.shoppinglist.core.AlreadyAddedException
 import org.p23q.shoppinglist.core.AppTooOldException
@@ -27,6 +26,18 @@ import org.p23q.shoppinglist.core.sync.SyncTrigger
 import org.p23q.shoppinglist.data.LastServerAddress
 import org.p23q.shoppinglist.data.LocalArea
 import org.p23q.shoppinglist.data.PendingInviteHolder
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.error_generic
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.login_msg_already_added
+import org.p23q.shoppinglist.resources.login_msg_app_too_old
+import org.p23q.shoppinglist.resources.login_msg_credentials_required
+import org.p23q.shoppinglist.resources.login_msg_incorrect_credentials
+import org.p23q.shoppinglist.resources.login_msg_invalid_url
+import org.p23q.shoppinglist.resources.login_msg_not_a_server
+import org.p23q.shoppinglist.resources.login_msg_server_too_old
+import org.p23q.shoppinglist.resources.login_msg_untrusted_cert
+import org.p23q.shoppinglist.resources.login_msg_wrong_account
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
@@ -237,11 +248,11 @@ class LoginViewModel @Inject constructor(
     fun submit(): Job? {
         val state = _uiState.value
         if (!isValidHttpsUrl(state.serverUrl)) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.login_msg_invalid_url)) }
+            _uiState.update { it.copy(errorMessage = UiText.res(Res.string.login_msg_invalid_url)) }
             return null
         }
         if (state.email.isBlank() || state.password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = UiText.res(R.string.login_msg_credentials_required)) }
+            _uiState.update { it.copy(errorMessage = UiText.res(Res.string.login_msg_credentials_required)) }
             return null
         }
 
@@ -271,31 +282,31 @@ class LoginViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, loginSucceeded = true) }
             } catch (e: AlreadyAddedException) {
                 // The same server and account as one already here and signed in: nothing to add.
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_already_added)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_already_added)) }
             } catch (e: WrongAccountException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_wrong_account)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_wrong_account)) }
             } catch (e: ServerTooOldException) {
                 // Asked before anything else went to a server this device did not know (T-291).
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_server_too_old)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_server_too_old)) }
             } catch (e: AppTooOldException) {
                 // The same question, the other way round (T-298): the sign-in would be refused
                 // with 426, so offer the server's package, if it has one, right here.
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = UiText.res(R.string.login_msg_app_too_old),
+                        errorMessage = UiText.res(Res.string.login_msg_app_too_old),
                         downloadUrl = e.downloadUrl,
                     )
                 }
             } catch (e: NotATuppuServerException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_not_a_server)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_not_a_server)) }
             } catch (e: SerializationException) {
                 // Any other answer that is not the API's JSON: the address is not a Tuppu server.
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_not_a_server)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_not_a_server)) }
             } catch (e: UnauthorizedException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.login_msg_incorrect_credentials)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.login_msg_incorrect_credentials)) }
             } catch (e: ApiException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, R.string.error_generic)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = ErrorText.of(e, Res.string.error_generic)) }
             } catch (e: SSLException) {
                 // Distinct from the generic reach-the-server case: an untrusted/self-signed cert is the
                 // first thing a self-hoster hits, and it's actionable (T-38). SSLException extends
@@ -303,11 +314,11 @@ class LoginViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = UiText.res(R.string.login_msg_untrusted_cert),
+                        errorMessage = UiText.res(Res.string.login_msg_untrusted_cert),
                     )
                 }
             } catch (e: IOException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(R.string.error_offline)) }
+                _uiState.update { it.copy(isLoading = false, errorMessage = UiText.res(Res.string.error_offline)) }
             }
             // The attempt confirmed an address that has not answered yet: ask it now, as the next
             // visit would, so its message shows beside the error (T-327).

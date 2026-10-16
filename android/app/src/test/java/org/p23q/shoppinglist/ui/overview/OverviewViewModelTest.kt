@@ -32,7 +32,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.p23q.shoppinglist.MainDispatcherRule
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.AppDb
@@ -48,6 +47,10 @@ import org.p23q.shoppinglist.data.AppForegroundState
 import org.p23q.shoppinglist.data.LocalePreferenceStore
 import org.p23q.shoppinglist.core.sync.InviteCheckOutcome
 import org.p23q.shoppinglist.core.sync.PendingInvite
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.api_error_invite_revoked
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.redeem_msg_failed
 import org.robolectric.Shadows.shadowOf
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
 import org.p23q.shoppinglist.ui.UiText
@@ -450,7 +453,7 @@ class OverviewViewModelTest {
         viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
 
         assertNull(viewModel.uiState.value.joinedListId)
-        assertEquals(UiText.res(R.string.error_offline), viewModel.uiState.value.inviteError)
+        assertEquals(UiText.res(Res.string.error_offline), viewModel.uiState.value.inviteError)
         assertNull(viewModel.uiState.value.joiningInviteId)
     }
 
@@ -462,7 +465,7 @@ class OverviewViewModelTest {
 
         viewModel.joinInvite("gone", invite).join()
 
-        assertEquals(UiText.res(R.string.redeem_msg_failed), viewModel.uiState.value.inviteError)
+        assertEquals(UiText.res(Res.string.redeem_msg_failed), viewModel.uiState.value.inviteError)
         assertNull(viewModel.uiState.value.joinedListId)
         assertNull(viewModel.uiState.value.joiningInviteId)
     }
@@ -477,7 +480,7 @@ class OverviewViewModelTest {
 
         viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
 
-        assertEquals(UiText.res(R.string.api_error_invite_revoked), viewModel.uiState.value.inviteError)
+        assertEquals(UiText.res(Res.string.api_error_invite_revoked), viewModel.uiState.value.inviteError)
         assertNull(viewModel.uiState.value.joinedListId)
         viewModel.uiState.first { it.invites.isEmpty() }
     }

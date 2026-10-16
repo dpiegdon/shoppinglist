@@ -1,12 +1,15 @@
 package org.p23q.shoppinglist.ui.redeem
 
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.api_error_invite_not_found
+import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.redeem_msg_failed
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.UiText
 import java.io.IOException
@@ -27,19 +30,19 @@ internal class InviteJoiner(
     suspend fun join(accountId: String, token: String): InviteJoin {
         // Removed meanwhile: there is no server left to ask.
         val account = registry.get(accountId)?.takeIf { it.isServer && it.serverUrl != null }
-            ?: return InviteJoin.Failed(UiText.res(R.string.redeem_msg_failed))
+            ?: return InviteJoin.Failed(UiText.res(Res.string.redeem_msg_failed))
         return try {
             val serverId = sessions.get(account.id).api.redeemInvite(RedeemInviteRequest(token)).listId
             syncer.syncJoined(account.id, serverId)
             // Without the row (the pull failed) there is nothing to open yet.
             listsRepo.localIdForServerId(account.id, serverId)?.let { InviteJoin.Joined(it) }
-                ?: InviteJoin.Failed(UiText.res(R.string.error_offline))
+                ?: InviteJoin.Failed(UiText.res(Res.string.error_offline))
         } catch (e: ApiException) {
             // Before IOException, which it extends (T-264).
-            val message = ErrorText.of(e, R.string.redeem_msg_failed, mapOf("invalid_token" to R.string.api_error_invite_not_found))
+            val message = ErrorText.of(e, Res.string.redeem_msg_failed, mapOf("invalid_token" to Res.string.api_error_invite_not_found))
             InviteJoin.Failed(message, refused = true)
         } catch (e: IOException) {
-            InviteJoin.Failed(UiText.res(R.string.error_offline))
+            InviteJoin.Failed(UiText.res(Res.string.error_offline))
         }
     }
 }

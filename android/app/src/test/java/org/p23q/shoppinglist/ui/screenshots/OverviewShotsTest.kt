@@ -4,15 +4,17 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.painterResource
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.p23q.shoppinglist.R
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.db.Status
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
+import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.ic_brand_logo
+import org.p23q.shoppinglist.resources.nav_overview
 import org.p23q.shoppinglist.ui.overview.OverviewScreen
 import org.p23q.shoppinglist.ui.overview.OverviewViewModel
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -56,10 +58,10 @@ class OverviewShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
             prefs("overview") { NotificationPrefsStore(it) },
         ).tracked()
         setScreen(
-            str(R.string.nav_overview),
+            str(Res.string.nav_overview),
             actions = {
                 Image(
-                    painter = painterResource(R.drawable.ic_brand_logo),
+                    painter = painterResource(Res.drawable.ic_brand_logo),
                     contentDescription = null,
                     modifier = Modifier.padding(end = 12.dp).size(28.dp),
                 )
