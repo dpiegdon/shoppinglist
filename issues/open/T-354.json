@@ -1,0 +1,16 @@
+{
+  "body": "Step 4 of docs/ios-port-design.md. Background sync and notifications on iOS. Background app refresh\nruns when the system chooses, so invite and collaborator notifications by polling are best effort\nonly. Reliable notifications need Apple push: the server stores device tokens per session and sends\npushes on invite and on collaborator changes. That is a wire change (docs/wire-contract.md, maybe a\nprotocol bump) and a server dependency on APNs credentials per instance. Design first; blocked until\nthe iOS shell runs.",
+  "created_at": "2026-10-16T21:23:39+00:00",
+  "deps": [
+    "T-353"
+  ],
+  "id": "T-354",
+  "labels": [
+    "ios",
+    "server",
+    "design"
+  ],
+  "priority": 5,
+  "title": "iPhone port step 4: background sync and push notifications on iOS (design)",
+  "updated_at": "2026-10-16T21:23:39+00:00"
+}
