@@ -83,10 +83,6 @@ suspend fun AppDb.markItemsClean(localIds: List<String>) {
 suspend fun AppDb.itemsToPush(): List<org.p23q.shoppinglist.core.db.ItemEntity> =
     accountDao().all().flatMap { itemDao().dirtyRowsForAccount(it.id) }
 
-/** Every account's lists that are waiting to be pushed. */
-suspend fun AppDb.listsToPush(): List<org.p23q.shoppinglist.core.db.ListEntity> =
-    accountDao().all().flatMap { listDao().dirtyRowsForAccount(it.id) }
-
 /** A [ListsRepo] over [db], as the screens get one. */
 fun testListsRepo(db: AppDb): ListsRepo =
     ListsRepo(db, DeviceIdProvider { "this-device" }, org.p23q.shoppinglist.data.sync.FakeSyncTrigger())

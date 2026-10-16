@@ -1,0 +1,50 @@
+package org.p23q.shoppinglist.core
+
+/**
+ * The one name order both clients use (T-176) — lists on the overview, categories, items, the All
+ * items screen. Pinned by shared-test-cases/name-order.json, which the web's nameOrder.ts is tested
+ * against too; the rules are spelled out there.
+ *
+ * Not a platform collator (nor SQLite's NOCASE, which folds only A-Z): the web and Android used
+ * different platform rules, and put accented, non-Latin and emoji-led names in different places.
+ * What it needs of Unicode, the platform supplies through [UnicodeText].
+ */
+object NameOrder {
+
+    private val folds = listOf("ß" to "ss", "æ" to "ae", "œ" to "oe", "ø" to "o", "đ" to "d", "ł" to "l", "þ" to "th")
+
+    /** What a name sorts by: no accents, no case, nothing before its first letter or digit. */
+    fun key(name: String): String {
+        val decomposed = UnicodeText.nfkd(name)
+        val unmarked = StringBuilder(decomposed.length)
+        forEachCodePoint(decomposed) { cp, start, end ->
+            if (!UnicodeText.isMark(cp)) unmarked.appendRange(decomposed, start, end)
+            true
+        }
+        // lowercase() is Unicode's own, the same in every locale.
+        var key = unmarked.toString().lowercase()
+        for ((from, to) in folds) key = key.replace(from, to)
+        var start = key.length
+        forEachCodePoint(key) { cp, at, _ ->
+            if (UnicodeText.isLetterOrDigit(cp)) {
+                start = at
+                return@forEachCodePoint false
+            }
+            true
+        }
+        return key.substring(start)
+    }
+
+    /** Two names in the shared order; equal keys fall back to the full name. String.compareTo is by
+     *  UTF-16 code unit, which is how the web compares them too. */
+    val names: Comparator<String> = Comparator { a, b ->
+        val byKey = key(a).compareTo(key(b))
+        if (byKey != 0) byKey else a.compareTo(b)
+    }
+
+    /** A comparator for things with a name and an id, total even when two names are identical. */
+    fun <T> by(name: (T) -> String, id: (T) -> String): Comparator<T> = Comparator { a, b ->
+        val byName = names.compare(name(a), name(b))
+        if (byName != 0) byName else id(a).compareTo(id(b))
+    }
+}

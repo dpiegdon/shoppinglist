@@ -20,7 +20,11 @@ The APK lands at `app/build/outputs/apk/debug/app-debug.apk`. It's a debug
 build signed with the standard Android debug key — fine for installing and
 testing.
 
-Run the checks with `./gradlew lint test`.
+Run the checks with `./gradlew lint test :core:jvmTest` (`:core` is a Kotlin
+Multiplatform module, whose JVM tests are `jvmTest`, not `test`). Compiling
+`:core` for iOS (`./gradlew :core:compileKotlinIosArm64`) downloads the
+Kotlin/Native toolchain into `~/.konan` the first time; see
+[`core/README.md`](core/README.md#the-ios-targets).
 
 ### Release builds
 
@@ -65,18 +69,18 @@ The build has three Gradle modules:
   client plugins, the protocol version and floor), the accounts (the registry, one
   API session per account), the Room database (entities, DAOs, the `@Database`
   class and its exported schemas in `core/schemas/`), the repositories and the
-  sync engine. It is a plain Kotlin/JVM module with no
-  Android SDK on its classpath, so none of it can use Android. Its tests are
-  plain JUnit (`./gradlew :core:test`). [`core/README.md`](core/README.md) lists
-  what it may import.
+  sync engine. It is a Kotlin Multiplatform module: its JVM target is what `app`
+  builds on, and its iOS targets are for an iPhone client, so none of it can use
+  Android. Its tests are plain JUnit on the JVM (`./gradlew :core:jvmTest`).
+  [`core/README.md`](core/README.md) lists what it may import, what a platform
+  implements, and how the iOS targets are built.
 - **`app/`** is the Android app: the Compose UI, the Hilt wiring, and everything
   that needs the platform, such as DataStore preferences, the Keystore-backed
   store of account tokens, WorkManager scheduling, notifications, and building the Room
   database from a `Context` together with its migrations. Where `core` needs one
-  of these it declares an interface and `app` implements it. Tests that need
-  Robolectric live here: the screens, the migration test, and several tests of
-  `core` classes (the repositories, the sync engine) that are here only because
-  they open Room through a `Context`.
+  of these it declares an interface and `app` implements it. The tests that
+  need Robolectric live here: the screens, the view models and the migration
+  test.
 - **`shared/`** is the start of the code the Android and iPhone clients will
   share (see [`../docs/ios-port-design.md`](../docs/ios-port-design.md)). It is
   a Kotlin Multiplatform module, so far with an Android target only, and holds
