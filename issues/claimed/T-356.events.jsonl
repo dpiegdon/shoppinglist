@@ -1,2 +1,3 @@
 {"actor": "user", "at": "2026-10-16T22:03:46+00:00", "kind": "created", "ref": "main@31e50607", "text": "Vendored gittoc resynced to upstream v0.10.1"}
 {"actor": "claude", "at": "2026-10-16T22:03:46+00:00", "kind": "claimed", "ref": "main@31e50607", "text": "claude"}
+{"actor": "user", "at": "2026-10-16T22:07:08+00:00", "kind": "note", "ref": "main@ff92d41f", "text": "Two TestSetupScript tests fail in the vendored copy only: they expect upstream AGENTS.md, which is not vendored; 193/195 pass, both pass on the upstream checkout."}
