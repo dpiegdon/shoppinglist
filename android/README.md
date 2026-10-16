@@ -61,8 +61,8 @@ which serves it at `/shoppinglist.apk`.
 
 The build has three Gradle modules:
 
-- **`core/`** is the data layer: the API client (`Api`, the DTOs, the
-  interceptors, the protocol version and floor), the accounts (the registry, one
+- **`core/`** is the data layer: the API client (`Api` over Ktor, the DTOs, the
+  client plugins, the protocol version and floor), the accounts (the registry, one
   API session per account), the Room database (entities, DAOs, the `@Database`
   class and its exported schemas in `core/schemas/`), the repositories and the
   sync engine. It is a plain Kotlin/JVM module with no

@@ -27,7 +27,7 @@ import java.io.File
 /**
  * T-135. Driven through the account's real API client against MockWebServer rather than a hand-rolled fake
  * Api, following the existing repo/viewmodel tests: the 404 path in particular only behaves
- * realistically if it goes through ErrorInterceptor, which is what turns a non-2xx into the
+ * realistically if it goes through ApiErrors, which is what turns a non-2xx into the
  * ApiException this class relies on catching.
  */
 @RunWith(RobolectricTestRunner::class)

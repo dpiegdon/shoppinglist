@@ -1,15 +1,20 @@
 package org.p23q.shoppinglist.core.api
 
+import io.ktor.client.plugins.api.Send
+import io.ktor.client.plugins.api.createClientPlugin
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.HttpHeaders
+import io.ktor.http.isSuccess
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readString
 import kotlinx.serialization.json.Json
-import okhttp3.Interceptor
-import okhttp3.Response
 
 /**
  * What one account's API client reports about its requests, beyond the exception each call throws.
  * Implemented per account by [org.p23q.shoppinglist.core.account.AccountSessions], so a 401 or a
  * 426 from one server marks that account and no other.
  *
- * Called on OkHttp's thread: implementations must not block for long and must not suspend.
+ * Called while the request is in flight: implementations must not block for long.
  */
 interface ApiEvents {
     /**
@@ -32,32 +37,39 @@ interface ApiEvents {
     }
 }
 
-/** Parses the Wire Contract's error envelope on non-2xx responses and throws a typed exception. */
-class ErrorInterceptor(
-    private val json: Json,
-    private val events: ApiEvents = ApiEvents.NONE,
-) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val response = chain.proceed(chain.request())
-        if (response.isSuccessful) {
-            val path = chain.request().url.encodedPath
+class ApiErrorsConfig {
+    var json: Json = AppJson
+    var events: ApiEvents = ApiEvents.NONE
+}
+
+/**
+ * Turns a non-2xx answer into the typed exception its Wire Contract error envelope describes, and
+ * tells [ApiErrorsConfig.events] what the answer says about the account.
+ */
+val ApiErrors = createClientPlugin("ApiErrors", ::ApiErrorsConfig) {
+    val json = pluginConfig.json
+    val events = pluginConfig.events
+    on(Send) { request ->
+        val call = proceed(request)
+        val response = call.response
+        if (response.status.isSuccess()) {
+            val path = call.request.url.encodedPath
             if (UNCHECKED_PATH_SUFFIXES.none { path.endsWith(it) }) events.onAccepted()
-            return response
+            return@on call
         }
 
-        val body = response.body?.string().orEmpty()
+        val body = response.bodyAsChannel().readRemaining().readString()
         val envelope = runCatching { json.decodeFromString<ErrorEnvelope>(body) }.getOrNull()
         val code = envelope?.error ?: "unknown_error"
-        val message = envelope?.message ?: response.message
-        val httpCode = response.code
+        val message = envelope?.message ?: response.status.description
+        val httpCode = response.status.value
 
-        response.close()
         if (httpCode == 401) {
             // A 401 on a request that actually carried a bearer token means "your token was
             // rejected" -> force re-login. A 401 with no Authorization header is an ordinary
             // login/register credential failure (no session to invalidate), so it must NOT trigger
             // a forced logout — it's surfaced to the caller as UnauthorizedException as usual.
-            chain.request().header("Authorization")?.let { header ->
+            call.request.headers[HttpHeaders.Authorization]?.let { header ->
                 events.onUnauthorized(header.removePrefix("Bearer "))
             }
             throw UnauthorizedException(message)
@@ -81,9 +93,7 @@ class ErrorInterceptor(
             version = envelope?.version,
         )
     }
-
-    private companion object {
-        /** Exempt from the protocol check, so a 2xx there says nothing about this build. */
-        val UNCHECKED_PATH_SUFFIXES = setOf("/app-version")
-    }
 }
+
+/** Exempt from the protocol check, so a 2xx there says nothing about this build. */
+private val UNCHECKED_PATH_SUFFIXES = setOf("/app-version")

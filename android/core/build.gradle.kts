@@ -32,15 +32,14 @@ dependencies {
     api(libs.kotlinx.io.core)
     // A lock that is kotlin.synchronized on the JVM (SyncStatus).
     implementation(libs.atomicfu)
-    // Tolerated until the module goes multiplatform: the retrofit2.http annotations on Api and
-    // okhttp3.Interceptor in the interceptors and the account sessions (README.md).
-    implementation(libs.retrofit)
-    implementation(libs.okhttp)
+    // The API client. The engine is the platform's (api.HttpEngineFactory), so only the core here.
+    api(libs.ktor.client.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // The API tests run the real client on the engine :app uses, against MockWebServer.
     testImplementation(libs.okhttp.mockwebserver)
-    testImplementation(libs.retrofit.kotlinx.serialization.converter)
+    testImplementation(libs.ktor.client.okhttp)
     // Room's bundled SQLite driver: real native SQLite on a plain JVM, for database tests here.
     testImplementation(libs.sqlite.bundled.jvm)
 }

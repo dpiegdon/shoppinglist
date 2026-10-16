@@ -1,10 +1,7 @@
 package org.p23q.shoppinglist.core.sync
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -13,12 +10,10 @@ import org.junit.Before
 import org.junit.Test
 import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
-import org.p23q.shoppinglist.core.account.ApiFactory
 import org.p23q.shoppinglist.core.account.MapSecretStore
 import org.p23q.shoppinglist.core.account.account
 import org.p23q.shoppinglist.core.account.testDb
-import org.p23q.shoppinglist.core.api.Api
-import retrofit2.Retrofit
+import org.p23q.shoppinglist.core.api.TestEngines
 
 class InviteCheckerTest {
 
@@ -26,14 +21,8 @@ class InviteCheckerTest {
     private val db = testDb()
     private val secrets = MapSecretStore()
     private val registry = AccountRegistry(db)
-    private val factory = ApiFactory { baseUrl, _, interceptors ->
-        val client = OkHttpClient.Builder().apply { interceptors.forEach { addInterceptor(it) } }.build()
-        Retrofit.Builder().baseUrl(baseUrl).client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build().create(Api::class.java)
-    }
     private val syncStatus = SyncStatus()
-    private val sessions = AccountSessions(registry, secrets, factory, json, syncStatus)
+    private val sessions = AccountSessions(registry, secrets, TestEngines(), json, syncStatus)
     private val handed = mutableListOf<List<PendingInvite>>()
     private val checker = InviteChecker(registry, sessions, syncStatus) { handed += it }
     private val servers = mutableMapOf<String, MockWebServer>()

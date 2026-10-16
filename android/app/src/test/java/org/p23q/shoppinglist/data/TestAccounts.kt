@@ -9,17 +9,16 @@ import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.account.SecretStore
 import org.p23q.shoppinglist.core.api.Api
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.ProtocolInterceptor
+import org.p23q.shoppinglist.core.api.HttpEngineFactory
 import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.core.api.createApi
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.CollaboratorChangeNotifier
 import org.p23q.shoppinglist.core.sync.SyncEngine
 import org.p23q.shoppinglist.core.sync.SyncStatus
-import org.p23q.shoppinglist.data.api.RetrofitApiFactory
+import org.p23q.shoppinglist.data.api.OkHttpEngineFactory
 
 /** An in-memory [LastServerAddress] that keeps what it is given as [ServerConfig] does: normalised. */
 class FakeLastServerAddress(var url: String? = null, var allowSelfSigned: Boolean = false) : LastServerAddress {
@@ -108,11 +107,8 @@ fun testApi(
     token: () -> String? = { null },
     baseUrl: () -> String?,
 ): suspend () -> Api = {
-    RetrofitApiFactory(json).create(
-        baseUrl() ?: error("No account is signed in"),
-        false,
-        listOf(ProtocolInterceptor(), AuthInterceptor(TokenProvider(token)), ErrorInterceptor(json)),
-    )
+    val engines = OkHttpEngineFactory()
+    createApi(baseUrl() ?: error("No account is signed in"), engines.create(false), json, TokenProvider(token), userAgent = engines.userAgent)
 }
 
 /**
@@ -122,12 +118,12 @@ fun testApi(
 class TestAccounts(
     val db: AppDb,
     val json: Json = Json { ignoreUnknownKeys = true },
-    apiFactory: org.p23q.shoppinglist.core.account.ApiFactory = RetrofitApiFactory(json),
+    engines: HttpEngineFactory = OkHttpEngineFactory(),
 ) {
     val secrets = FakeSecretStore()
     val registry = AccountRegistry(db)
     val syncStatus = SyncStatus()
-    val sessions = AccountSessions(registry, secrets, apiFactory, json, syncStatus)
+    val sessions = AccountSessions(registry, secrets, engines, json, syncStatus)
 
     /** Adds a signed-in account on [serverUrl] with [token]. */
     suspend fun add(
@@ -207,5 +203,5 @@ fun testListAccounts(
         override fun setToken(accountId: String, token: String?) {}
     }
     val registry = AccountRegistry(db)
-    return ListAccounts(listsRepo, registry, AccountSessions(registry, secrets, RetrofitApiFactory(json), json, SyncStatus()))
+    return ListAccounts(listsRepo, registry, AccountSessions(registry, secrets, OkHttpEngineFactory(), json, SyncStatus()))
 }

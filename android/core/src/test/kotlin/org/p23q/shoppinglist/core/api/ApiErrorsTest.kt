@@ -1,10 +1,8 @@
 package org.p23q.shoppinglist.core.api
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -12,9 +10,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Retrofit
 
-class ErrorInterceptorTest {
+class ApiErrorsTest {
 
     private lateinit var server: MockWebServer
     private val json = Json { ignoreUnknownKeys = true }
@@ -41,18 +38,8 @@ class ErrorInterceptorTest {
         if (::server.isInitialized) server.shutdown()
     }
 
-    private fun buildApi(tokenProvider: TokenProvider, events: ApiEvents): Api {
-        val client = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(tokenProvider))
-            .addInterceptor(ErrorInterceptor(json, events))
-            .build()
-        val retrofit = Retrofit.Builder()
-            .baseUrl(server.url("/").toString())
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-        return retrofit.create(Api::class.java)
-    }
+    private fun buildApi(tokenProvider: TokenProvider, events: ApiEvents): Api =
+        createApi(server.url("/").toString(), OkHttp.create(), json, tokenProvider, events)
 
     private suspend fun expectFailure(block: suspend () -> Unit): ApiException {
         try {

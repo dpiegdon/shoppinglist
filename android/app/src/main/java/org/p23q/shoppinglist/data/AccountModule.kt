@@ -10,7 +10,7 @@ import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.SecretStore
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.sync.SyncStatus
-import org.p23q.shoppinglist.data.api.RetrofitApiFactory
+import org.p23q.shoppinglist.data.api.OkHttpEngineFactory
 import javax.inject.Singleton
 
 /** The accounts and their API clients, from :core, wired to :app's platform implementations. */
@@ -26,8 +26,8 @@ object AccountModule {
     fun provideAccountSessions(
         registry: AccountRegistry,
         secrets: SecretStore,
-        apiFactory: RetrofitApiFactory,
+        engines: OkHttpEngineFactory,
         json: Json,
         syncStatus: SyncStatus,
-    ): AccountSessions = AccountSessions(registry, secrets, apiFactory, json, syncStatus)
+    ): AccountSessions = AccountSessions(registry, secrets, engines, json, syncStatus)
 }

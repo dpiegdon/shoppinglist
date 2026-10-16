@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.data.api
 
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -8,9 +9,14 @@ import okhttp3.tls.HandshakeCertificates
 import okhttp3.tls.HeldCertificate
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
+import org.p23q.shoppinglist.core.api.AppJson
+import org.p23q.shoppinglist.core.api.createApi
+import org.p23q.shoppinglist.core.api.isTlsFailure
+import java.io.IOException
 import javax.net.ssl.SSLHandshakeException
 
 /**
@@ -58,6 +64,31 @@ class DevCertTrustDebugTest {
             fail("expected an untrusted self-signed cert to be rejected")
         } catch (_: SSLHandshakeException) {
             // expected
+        }
+    }
+
+    private val appVersion = """{"version": "1.0.0", "download_url": "https://example.com/a.apk", "protocol": 3}"""
+
+    @Test
+    fun `the app's engine with the flag on reaches a self-signed server`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(appVersion))
+        val api = createApi(server.url("/").toString(), OkHttpEngineFactory().create(allowSelfSignedCerts = true), AppJson)
+
+        assertEquals(3, api.appVersion().protocol)
+    }
+
+    @Test
+    fun `the app's engine with the flag off fails with a TLS error`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(appVersion))
+        val api = createApi(server.url("/").toString(), OkHttpEngineFactory().create(allowSelfSignedCerts = false), AppJson)
+
+        try {
+            api.appVersion()
+            fail("expected an untrusted self-signed cert to be rejected")
+        } catch (e: IOException) {
+            // An SSLHandshakeException, as OkHttp threw it: the login screen and the sync status
+            // name an untrusted certificate by it (T-38).
+            assertTrue("not a TLS failure: $e", e is SSLHandshakeException && e.isTlsFailure())
         }
     }
 }

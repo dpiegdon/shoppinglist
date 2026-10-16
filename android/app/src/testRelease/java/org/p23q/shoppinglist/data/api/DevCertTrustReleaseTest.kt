@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.data.api
 
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -10,6 +11,8 @@ import org.junit.After
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
+import org.p23q.shoppinglist.core.api.AppJson
+import org.p23q.shoppinglist.core.api.createApi
 import javax.net.ssl.SSLHandshakeException
 
 /**
@@ -46,6 +49,19 @@ class DevCertTrustReleaseTest {
             fail("release variant must not trust a self-signed cert — the debug bypass leaked in")
         } catch (_: SSLHandshakeException) {
             // expected: release applyDevCertTrust is a no-op, so normal validation rejects the cert
+        }
+    }
+
+    @Test
+    fun `the app's engine never trusts a self-signed server either`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"version": "1.0.0", "download_url": "https://example.com/a.apk", "protocol": 3}"""))
+        val api = createApi(server.url("/").toString(), OkHttpEngineFactory().create(allowSelfSignedCerts = true), AppJson)
+
+        try {
+            api.appVersion()
+            fail("release variant must not trust a self-signed cert — the debug bypass leaked in")
+        } catch (_: SSLHandshakeException) {
+            // expected
         }
     }
 }

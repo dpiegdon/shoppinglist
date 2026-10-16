@@ -1,7 +1,9 @@
 package org.p23q.shoppinglist.core.api
 
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.request.get
+import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -13,13 +15,13 @@ import org.junit.Test
  * T-240: every request carries the protocol header, credential exchanges included — the server
  * compares it BEFORE it authenticates, so a request without it is refused whoever sends it.
  */
-class ProtocolInterceptorTest {
+class ProtocolHeaderTest {
 
     private lateinit var server: MockWebServer
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(ProtocolInterceptor())
-        .addInterceptor(AuthInterceptor(TokenProvider { "live-token" }))
-        .build()
+    private val client = HttpClient(OkHttp) {
+        install(ProtocolHeader)
+        install(BearerAuth) { tokens = TokenProvider { "live-token" } }
+    }
 
     @Before
     fun setUp() {
@@ -34,7 +36,7 @@ class ProtocolInterceptorTest {
 
     private fun protocolHeaderFor(path: String): String? {
         server.enqueue(MockResponse().setResponseCode(200))
-        client.newCall(Request.Builder().url(server.url(path)).build()).execute().close()
+        runBlocking { client.get(server.url(path).toString()) }
         return server.takeRequest().getHeader(PROTOCOL_HEADER)
     }
 

@@ -1,20 +1,11 @@
 package org.p23q.shoppinglist.core.api
 
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.GET
-import retrofit2.http.HTTP
-import retrofit2.http.Header
-import retrofit2.http.PATCH
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
 import kotlinx.io.IOException
 
 /**
- * A non-2xx response whose body was a Wire Contract error envelope ({"error", "message"}).
- * Extends IOException, not Exception: OkHttp interceptors may only throw IOException — anything
- * else gets caught by RealCall and rewrapped as a generic IOException, losing this type entirely.
+ * A non-2xx response, with what its Wire Contract error envelope ({"error", "message"}) said.
+ * An IOException, as every failure to get an answer from the server is: a caller that only needs
+ * to know the request did not succeed catches that one type.
  */
 open class ApiException(
     val code: String,
@@ -38,110 +29,85 @@ open class ApiException(
 class UnauthorizedException(message: String) : ApiException("unauthorized", message, 401)
 
 /**
- * Retrofit interface mirroring the Wire Contract. Every path is relative (no leading '/') so the
- * configured server URL's own path prefix (the Flask blueprint may be mounted under a subpath,
- * e.g. https://host/my/stuff/shoppinglist/) is preserved rather than discarded — see ServerConfig.
+ * The Wire Contract's endpoints, one method each; [createApi] builds the client. Every path is
+ * relative to the account's server URL, so its own path prefix (the Flask blueprint may be
+ * mounted under a subpath, e.g. https://host/my/stuff/shoppinglist/) is kept. A failed request
+ * throws an [IOException]: an [ApiException] when the server refused it, another one when no
+ * answer came. An answer that is not the endpoint's JSON throws a SerializationException.
  */
 interface Api {
-    @POST("api/v1/register")
-    suspend fun register(@Body body: RegisterRequest): RegisterResponse
+    suspend fun register(body: RegisterRequest): RegisterResponse
 
-    @POST("api/v1/login")
-    suspend fun login(@Body body: LoginRequest): LoginResponse
+    suspend fun login(body: LoginRequest): LoginResponse
 
     /**
      * Whether this server currently accepts new accounts (T-276), and its server message (T-315).
      * Unauthenticated.
      */
-    @GET("api/v1/registration-status")
     suspend fun registrationStatus(): RegistrationStatusResponse
 
     /** Agree to close an expenses list (T-157); it closes when the last current member agrees. */
-    @POST("api/v1/lists/{listId}/close-votes")
-    suspend fun castCloseVote(@Path("listId") listId: String): CloseVoteStateDto
+    suspend fun castCloseVote(listId: String): CloseVoteStateDto
 
-    @DELETE("api/v1/lists/{listId}/close-votes")
-    suspend fun withdrawCloseVote(@Path("listId") listId: String): CloseVoteStateDto
+    suspend fun withdrawCloseVote(listId: String): CloseVoteStateDto
 
     /**
      * Ends the session [authorization] (`Bearer <token>`) names. Only the unbound client sends it,
      * for a sign-in the phone refuses after the server accepted it (T-300): nothing signs out a
      * stored session, whose client would add its own token beside this one.
      */
-    @POST("api/v1/logout")
-    suspend fun logout(@Header("Authorization") authorization: String)
+    suspend fun logout(authorization: String)
 
     /**
      * The app version this server carries (T-135). Unauthenticated. A 404 means "no app package
      * here" — which is also what every server released before this endpoint existed returns, so
      * the client needs only one code path for "nothing to say".
      */
-    @GET("api/v1/app-version")
     suspend fun appVersion(): AppVersionResponse
 
-    @POST("api/v1/account/change-password")
-    suspend fun changePassword(@Body body: ChangePasswordRequest)
+    suspend fun changePassword(body: ChangePasswordRequest)
 
-    @POST("api/v1/account/change-email")
-    suspend fun changeEmail(@Body body: ChangeEmailRequest)
+    suspend fun changeEmail(body: ChangeEmailRequest)
 
-    @GET("api/v1/account/sessions")
     suspend fun sessions(): SessionsResponse
 
-    @DELETE("api/v1/account/sessions/{id}")
-    suspend fun revokeSession(@Path("id") id: String)
+    suspend fun revokeSession(id: String)
 
-    @HTTP(method = "DELETE", path = "api/v1/account", hasBody = true)
-    suspend fun deleteAccount(@Body body: DeleteAccountRequest)
+    suspend fun deleteAccount(body: DeleteAccountRequest)
 
-    @GET("api/v1/settings")
     suspend fun getSettings(): SettingsResponse
 
-    @PATCH("api/v1/settings")
-    suspend fun updateSettings(@Body body: UpdateSettingsRequest): SettingsResponse
+    suspend fun updateSettings(body: UpdateSettingsRequest): SettingsResponse
 
-    @GET("api/v1/lists")
     suspend fun lists(): ListsResponse
 
-    @GET("api/v1/lists/{id}/members")
-    suspend fun members(@Path("id") listId: String): MembersResponse
+    suspend fun members(listId: String): MembersResponse
 
-    @POST("api/v1/lists/{id}/leave")
-    suspend fun leaveList(@Path("id") listId: String)
+    suspend fun leaveList(listId: String)
 
-    @POST("api/v1/lists/{id}/invites")
-    suspend fun createInvite(@Path("id") listId: String, @Body body: CreateInviteRequest): CreateInviteResponse
+    suspend fun createInvite(listId: String, body: CreateInviteRequest): CreateInviteResponse
 
-    @DELETE("api/v1/invites/{id}")
-    suspend fun revokeInvite(@Path("id") id: String)
+    suspend fun revokeInvite(id: String)
 
-    @POST("api/v1/invites/redeem")
-    suspend fun redeemInvite(@Body body: RedeemInviteRequest): RedeemInviteResponse
+    suspend fun redeemInvite(body: RedeemInviteRequest): RedeemInviteResponse
 
     /** The invites addressed to the signed-in account that are still open to join (T-233). */
-    @GET("api/v1/invites/pending")
     suspend fun pendingInvites(): PendingInvitesResponse
 
-    @POST("api/v1/sync")
-    suspend fun sync(@Body body: SyncRequest): SyncResponse
+    suspend fun sync(body: SyncRequest): SyncResponse
 
     // --- Admin (T-107) ---
 
-    @GET("api/v1/admin/users")
     suspend fun adminUsers(): AdminUsersResponse
 
-    @GET("api/v1/admin/server-settings")
     suspend fun adminGetServerSettings(): ServerSettingsDto
 
-    @PUT("api/v1/admin/server-settings")
-    suspend fun adminSetServerSettings(@Body body: ServerSettingsUpdate): ServerSettingsDto
+    suspend fun adminSetServerSettings(body: ServerSettingsUpdate): ServerSettingsDto
 
-    @POST("api/v1/admin/users/{id}/reset-password")
     suspend fun adminResetPassword(
-        @Path("id") id: String,
-        @Body body: AdminPasswordRequest,
+        id: String,
+        body: AdminPasswordRequest,
     ): AdminResetPasswordResponse
 
-    @HTTP(method = "DELETE", path = "api/v1/admin/users/{id}", hasBody = true)
-    suspend fun adminDeleteUser(@Path("id") id: String, @Body body: AdminPasswordRequest)
+    suspend fun adminDeleteUser(id: String, body: AdminPasswordRequest)
 }

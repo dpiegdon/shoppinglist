@@ -118,8 +118,9 @@ dependencies {
     // used: androidx.room:room-runtime 2.8+ already includes its Flow/coroutines support natively.
     implementation(libs.androidx.room.runtime)
 
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx.serialization.converter)
+    // :core's API client runs on OkHttp here (data/api/OkHttpEngineFactory.kt).
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.androidx.work.runtime.ktx)
@@ -147,6 +148,8 @@ dependencies {
     // self-load under a plain JVM test; "-jvm" bundles + self-extracts its native library instead.
     testImplementation(libs.sqlite.bundled.jvm)
     testImplementation(libs.okhttp.mockwebserver)
+    // The screenshot tests' server answers through Ktor's MockEngine.
+    testImplementation(libs.ktor.client.mock)
     // HeldCertificate / HandshakeCertificates for the self-signed-cert TLS tests that verify the
     // debug bypass connects and the release no-op still rejects untrusted certs.
     testImplementation(libs.okhttp.tls)

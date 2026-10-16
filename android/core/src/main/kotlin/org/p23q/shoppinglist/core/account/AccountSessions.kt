@@ -6,24 +6,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
-import okhttp3.Interceptor
 import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.api.ApiEvents
-import org.p23q.shoppinglist.core.api.AuthInterceptor
-import org.p23q.shoppinglist.core.api.ErrorInterceptor
-import org.p23q.shoppinglist.core.api.ProtocolInterceptor
+import org.p23q.shoppinglist.core.api.HttpEngineFactory
 import org.p23q.shoppinglist.core.api.TokenProvider
+import org.p23q.shoppinglist.core.api.createApi
 import org.p23q.shoppinglist.core.db.AccountEntity
 import org.p23q.shoppinglist.core.sync.AccountSyncStatus
 import org.p23q.shoppinglist.core.sync.SyncStatus
-
-/**
- * Builds a Retrofit [Api] for one server. Implemented in :app, which owns Retrofit, OkHttp's client
- * configuration and the debug-only certificate opt-in. [interceptors] run in the order given.
- */
-fun interface ApiFactory {
-    fun create(baseUrl: String, allowSelfSignedCerts: Boolean, interceptors: List<Interceptor>): Api
-}
 
 /**
  * Everything that talks to one server account: its API client, bound to that account's token,
@@ -49,7 +39,7 @@ class AccountSession internal constructor(
 class AccountSessions(
     private val registry: AccountRegistry,
     private val secrets: SecretStore,
-    private val apiFactory: ApiFactory,
+    private val engines: HttpEngineFactory,
     private val json: Json,
     private val syncStatus: SyncStatus,
 ) {
@@ -102,15 +92,13 @@ class AccountSessions(
                 }
             }
         }
-        val api = apiFactory.create(
+        val api = createApi(
             serverUrl,
-            account.allowSelfSignedCerts,
-            listOf(
-                // First in the chain: the protocol header rides on every request there is (T-240).
-                ProtocolInterceptor(),
-                AuthInterceptor(TokenProvider { secrets.token(accountId) }),
-                ErrorInterceptor(json, events),
-            ),
+            engines.create(account.allowSelfSignedCerts),
+            json,
+            tokens = TokenProvider { secrets.token(accountId) },
+            events = events,
+            userAgent = engines.userAgent,
         )
         val session = AccountSession(accountId, api, syncStatus.account(accountId), key)
         cache.update { it + (accountId to session) }
@@ -122,11 +110,8 @@ class AccountSessions(
      * account exists — `/app-version`, `/registration-status`, `/login`, `/register` — and for
      * `/app-version` afterwards, which needs none. A 426 here is an ordinary error for the caller.
      */
-    fun unbound(serverUrl: String, allowSelfSignedCerts: Boolean): Api = apiFactory.create(
-        serverUrl,
-        allowSelfSignedCerts,
-        listOf(ProtocolInterceptor(), ErrorInterceptor(json)),
-    )
+    fun unbound(serverUrl: String, allowSelfSignedCerts: Boolean): Api =
+        createApi(serverUrl, engines.create(allowSelfSignedCerts), json, userAgent = engines.userAgent)
 
     /** Whether the secret store holds a token for the account. */
     fun hasToken(accountId: String): Boolean = secrets.token(accountId) != null

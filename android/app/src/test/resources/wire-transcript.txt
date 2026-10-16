@@ -1,0 +1,232 @@
+POST /base/api/v1/register
+  accept-encoding: gzip
+  connection: Keep-Alive
+  content-length: 41
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"email":"a@example.com","password":"pw"}
+POST /base/api/v1/login
+  accept-encoding: gzip
+  connection: Keep-Alive
+  content-length: 85
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"email":"a@example.com","password":"pw","device_label":"Phone","platform":"android"}
+GET /base/api/v1/registration-status
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/lists/list%201/close-votes
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 0
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+DELETE /base/api/v1/lists/list-1/close-votes
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/logout
+  accept-encoding: gzip
+  authorization: Bearer other
+  connection: Keep-Alive
+  content-length: 0
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+GET /base/api/v1/app-version
+  accept-encoding: gzip
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+GET /base/api/v1/app-version
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/account/change-password
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 47
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"current_password":"old","new_password":"new"}
+POST /base/api/v1/account/change-email
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 45
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"password":"pw","new_email":"b@example.com"}
+GET /base/api/v1/account/sessions
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+DELETE /base/api/v1/account/sessions/s-1
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+DELETE /base/api/v1/account
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 17
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"password":"pw"}
+GET /base/api/v1/settings
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+PATCH /base/api/v1/settings
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 17
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"initials":"AB"}
+GET /base/api/v1/lists
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+GET /base/api/v1/lists/list-1/members
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/lists/list-1/leave
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 0
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/lists/list-1/invites
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 33
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"invited_email":"c@example.com"}
+DELETE /base/api/v1/invites/inv-1
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/invites/redeem
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 15
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"token":"t0k"}
+GET /base/api/v1/invites/pending
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+POST /base/api/v1/sync
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 56
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"cursor":7,"device_id":"dev-1","full_lists":["list-1"]}
+GET /base/api/v1/admin/users
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+GET /base/api/v1/admin/server-settings
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+PUT /base/api/v1/admin/server-settings
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 46
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"allow_registration":true,"message":"Hällo"}
+POST /base/api/v1/admin/users/u-1/reset-password
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 17
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"password":"pw"}
+DELETE /base/api/v1/admin/users/u-1
+  accept-encoding: gzip
+  authorization: Bearer tok-1
+  connection: Keep-Alive
+  content-length: 17
+  content-type: application/json; charset=utf-8
+  host: localhost
+  user-agent: okhttp/4.12.0
+  x-client-protocol: 3
+  {"password":"pw"}

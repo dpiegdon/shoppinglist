@@ -25,7 +25,7 @@ import org.p23q.shoppinglist.core.newId
  *
  * Being the only writer is what lets it keep the table in memory: the copy here is always what the
  * table holds or is about to hold, so a read needs no query and can be synchronous, which the
- * OkHttp interceptors and the single-account view models both need. A change applies to the copy
+ * API client's plugins and the single-account view models both need. A change applies to the copy
  * at once and is then written through; each write stores the copy's current row, so writes that
  * land out of order still leave the table matching the copy.
  *
@@ -127,7 +127,7 @@ class AccountRegistry(
     }
 
     /**
-     * [update] for callers that cannot suspend (an OkHttp interceptor, a view model's setter). The
+     * [update] for callers that cannot suspend (the API client's error reporting, a view model's setter). The
      * change is visible to every reader when this returns; only the write to the table is left to
      * run in the background. [flush] waits for it. There is nobody to tell of a refused row here,
      * so the copy just goes back to what the table holds.

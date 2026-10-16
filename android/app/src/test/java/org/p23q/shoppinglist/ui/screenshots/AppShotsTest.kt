@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.api.createApi
 import org.p23q.shoppinglist.data.ThemePreferenceStore
 import org.p23q.shoppinglist.data.crash.CrashLogWriter
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
@@ -69,7 +70,7 @@ class AppShotsTest(theme: ShotTheme) : ScreenshotTest(theme) {
                 else -> null
             }
         }
-        val api = server.apiFactory(json).create("https://lists.example.org/", false, emptyList())
+        val api = createApi("https://lists.example.org/", server.create(false), json)
         val viewModel = AdminViewModel({ api }, serverAccountId = "u-1", server = "lists.example.org").tracked()
 
         setScreen(str(Res.string.nav_server_admin), subtitle = viewModel.server) { AdminScreen(viewModel = viewModel) }

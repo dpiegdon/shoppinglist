@@ -1,14 +1,11 @@
 package org.p23q.shoppinglist.core.account
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.assertNull
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -19,11 +16,10 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.p23q.shoppinglist.core.api.Api
 import org.p23q.shoppinglist.core.api.ApiException
+import org.p23q.shoppinglist.core.api.TestEngines
 import org.p23q.shoppinglist.core.api.LoginRequest
 import org.p23q.shoppinglist.core.sync.SyncStatus
-import retrofit2.Retrofit
 
 class AccountSessionsTest {
 
@@ -31,15 +27,8 @@ class AccountSessionsTest {
     private val db = testDb()
     private val secrets = MapSecretStore()
     private val registry = AccountRegistry(db)
-    private var built = 0
-    private val factory = ApiFactory { baseUrl, _, interceptors ->
-        built++
-        val client = OkHttpClient.Builder().apply { interceptors.forEach { addInterceptor(it) } }.build()
-        Retrofit.Builder().baseUrl(baseUrl).client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build().create(Api::class.java)
-    }
-    private val sessions = AccountSessions(registry, secrets, factory, json, SyncStatus())
+    private val engines = TestEngines()
+    private val sessions = AccountSessions(registry, secrets, engines, json, SyncStatus())
     private lateinit var a: MockWebServer
     private lateinit var b: MockWebServer
 
@@ -67,7 +56,7 @@ class AccountSessionsTest {
         val first = sessions.get("a")
         assertSame(first, sessions.get("a"))
         assertNotSame(first, sessions.get("b"))
-        assertEquals(2, built)
+        assertEquals(2, engines.built)
     }
 
     @Test

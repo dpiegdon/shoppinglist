@@ -21,8 +21,9 @@ to this directory, the same depth as `app/`.
   JDK.
 - From `androidx.*`, only `androidx.room` and `androidx.sqlite`. Both are Kotlin
   Multiplatform, so this module compiles against their JVM artifacts.
-- `kotlinx.io` (its `IOException` is `java.io.IOException` on the JVM) and
-  `kotlinx.atomicfu` locks.
+- `kotlinx.io` (its `IOException` is `java.io.IOException` on the JVM),
+  `kotlinx.atomicfu` locks, and the Ktor client core (`io.ktor.client`,
+  `io.ktor.http`, `io.ktor.utils.io`), without an engine.
 - Nothing from `android.*`, any other `androidx.*`, `dagger.*` or `javax.inject`.
   Hilt modules stay in `:app`.
 
@@ -30,8 +31,6 @@ Tolerated for now, until the module goes multiplatform:
 
 | import | files |
 |---|---|
-| `retrofit2.http.*` annotations | `api/Api.kt` |
-| `okhttp3.Interceptor`, `okhttp3.Response` | `api/AuthInterceptor.kt`, `api/ErrorInterceptor.kt`, `api/Protocol.kt`, `account/AccountSessions.kt` |
 | `java.text.Normalizer`, `java.lang.Character` | `UnicodeText.kt` |
 | `javax.net.ssl.SSLException` | `api/Tls.kt` |
 
@@ -46,7 +45,7 @@ interface and `:app` implements it and binds it in Hilt:
 | interface | implemented in `:app` by |
 |---|---|
 | `account/SecretStore` (tokens by local account id), `account/LastOpenedListStore` | `KeystoreSecretStore` (Keystore-backed EncryptedSharedPreferences) |
-| `account/ApiFactory` | `RetrofitApiFactory` (Retrofit and OkHttp, and the debug-only certificate opt-in) |
+| `api/HttpEngineFactory` | `OkHttpEngineFactory` (Ktor's OkHttp engine, the debug-only certificate opt-in, OkHttp's User-Agent) |
 | `DeviceIdProvider` | `DeviceIdModule`, from `ServerConfig` (DataStore) |
 | `sync/SyncTrigger` | `SyncScheduler` (WorkManager) |
 | `sync/CollaboratorChangeNotifier` | `CollaboratorChangeNotificationPoster` (notifications) |
@@ -84,7 +83,7 @@ interface and `:app` implements it and binds it in Hilt:
   `withAccountLock(id)` serialises one account's sync, local sign-out and
   removal.
 - `account/AccountSessions` builds one `AccountSession` per server account, on
-  first use: an `Api` whose interceptors carry that account's token and report to
+  first use: an `Api` whose client plugins carry that account's token and report to
   that account (a `401` to the account's current token deletes it and sets
   `signedIn = false`: the row says it is signed out, and its lists stay; `426`
   sets `outdated`, an accepted request clears it), and the account's share of

@@ -1,7 +1,9 @@
 package org.p23q.shoppinglist.core.api
 
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.request.get
+import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -13,15 +15,15 @@ import org.junit.Test
 /**
  * Mirrors the web fix (T-89, ab7e059): credential-exchange endpoints (/login, /register) must
  * never carry the current session token, so a wrong-password 401 there can't look like a revoked
- * session and trip ErrorInterceptor's forced-logout path (see ErrorInterceptorTest). /logout must
+ * session and trip ApiErrors' forced-logout path (see ApiErrorsTest). /logout must
  * keep its token — the server needs it to know which session to revoke.
  */
-class AuthInterceptorTest {
+class BearerAuthTest {
 
     private lateinit var server: MockWebServer
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(AuthInterceptor(TokenProvider { "live-token" }))
-        .build()
+    private val client = HttpClient(OkHttp) {
+        install(BearerAuth) { tokens = TokenProvider { "live-token" } }
+    }
 
     @Before
     fun setUp() {
@@ -37,8 +39,7 @@ class AuthInterceptorTest {
     }
 
     private fun authHeaderFor(path: String): String? {
-        val request = Request.Builder().url(server.url(path)).build()
-        client.newCall(request).execute().close()
+        runBlocking { client.get(server.url(path).toString()) }
         return server.takeRequest().getHeader("Authorization")
     }
 

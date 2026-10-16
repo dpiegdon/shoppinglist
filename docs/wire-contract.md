@@ -451,7 +451,7 @@ the one that made the change.
 list state (including `notes` and `kind`), which is how both clients actually
 learn what lists exist today. Neither client calls it in the running app — the
 web client keeps an unused wrapper (`getLists()` in `web/src/api/client.ts`,
-exercised only by its own test) and Android keeps an unused Retrofit method
+exercised only by its own test) and Android keeps an unused API method
 (`lists()` in `Api.kt`) — but the server still serves it and it is not
 scheduled for removal; treat it as available but not part of either client's
 real sync path.

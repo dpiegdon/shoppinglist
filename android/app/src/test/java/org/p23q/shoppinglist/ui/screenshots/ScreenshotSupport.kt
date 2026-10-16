@@ -25,23 +25,24 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import okhttp3.Interceptor
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
 import org.jetbrains.compose.resources.StringResource
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.p23q.shoppinglist.core.DeviceIdProvider
-import org.p23q.shoppinglist.core.account.ApiFactory
+import org.p23q.shoppinglist.core.api.HttpEngineFactory
 import org.p23q.shoppinglist.core.db.AppDb
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.SyncResult
 import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.TestAccounts
-import org.p23q.shoppinglist.data.api.RetrofitApiFactory
 import org.p23q.shoppinglist.data.closeWhenIdle
 import org.p23q.shoppinglist.data.idleMainLooper
 import org.p23q.shoppinglist.data.sync.FakeSyncTrigger
@@ -97,28 +98,20 @@ enum class ShotTheme(val dark: Boolean) {
 }
 
 /**
- * A server that answers without a network: the last interceptor of every test account's client,
- * returning [answer]'s JSON for a path (from `api/v1/` on), or a 404 when it has none. The
- * accounts can then carry fixed, readable URLs rather than a MockWebServer's random port, which
- * would show on the screens and change every run.
+ * A server that answers without a network: the engine of every test account's client, returning
+ * [answer]'s JSON for a path (from `api/v1/` on), or a 404 when it has none. The accounts can
+ * then carry fixed, readable URLs rather than a MockWebServer's random port, which would show on
+ * the screens and change every run.
  */
-class FakeServer(private val answer: (method: String, path: String) -> String?) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val request = chain.request()
+class FakeServer(private val answer: (method: String, path: String) -> String?) : HttpEngineFactory {
+    override fun create(allowSelfSignedCerts: Boolean): HttpClientEngine = MockEngine { request ->
         val path = request.url.encodedPath.substringAfter("/api/v1/", "")
-        val body = answer(request.method, path)
-        return Response.Builder()
-            .request(request)
-            .protocol(okhttp3.Protocol.HTTP_1_1)
-            .code(if (body == null) 404 else 200)
-            .message(if (body == null) "Not Found" else "OK")
-            .body((body ?: """{"error": "not_found", "message": "no"}""").toResponseBody("application/json".toMediaType()))
-            .build()
-    }
-
-    /** An [ApiFactory] like the app's whose clients all end at this server. */
-    fun apiFactory(json: Json): ApiFactory = ApiFactory { baseUrl, allowSelfSigned, interceptors ->
-        RetrofitApiFactory(json).create(baseUrl, allowSelfSigned, interceptors + this)
+        val body = answer(request.method.value, path)
+        respond(
+            body ?: """{"error": "not_found", "message": "no"}""",
+            if (body == null) HttpStatusCode.NotFound else HttpStatusCode.OK,
+            headersOf(HttpHeaders.ContentType, "application/json"),
+        )
     }
 }
 
@@ -153,7 +146,7 @@ abstract class ScreenshotTest(protected val theme: ShotTheme) {
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.Unconfined)
             .build()
-        accounts = TestAccounts(db, json, server.apiFactory(json))
+        accounts = TestAccounts(db, json, server)
         val deviceId = DeviceIdProvider { "device-1" }
         listsRepo = ListsRepo(db, deviceId, FakeSyncTrigger())
         itemsRepo = ItemsRepo(db, deviceId, FakeSyncTrigger())

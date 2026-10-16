@@ -1,7 +1,6 @@
 package org.p23q.shoppinglist.core.api
 
-import okhttp3.Interceptor
-import okhttp3.Response
+import io.ktor.client.plugins.api.createClientPlugin
 
 /**
  * The client/server protocol version (T-240).
@@ -32,12 +31,12 @@ const val PROTOCOL_HEADER = "X-Client-Protocol"
  * Adds the protocol header to every request, login and register included — the server checks the
  * protocol before authentication, so a request without it is refused whoever sends it.
  *
- * An interceptor rather than a Retrofit `@Headers` annotation on each method: one place that
- * cannot be forgotten when an endpoint is added, and it covers the app-version request too (that
- * one endpoint stays reachable while outdated, but sending the header there costs nothing).
+ * A client plugin rather than a header set in each method: one place that cannot be forgotten
+ * when an endpoint is added, and it covers the app-version request too (that one endpoint stays
+ * reachable while outdated, but sending the header there costs nothing).
  */
-class ProtocolInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response = chain.proceed(
-        chain.request().newBuilder().header(PROTOCOL_HEADER, PROTOCOL_VERSION.toString()).build(),
-    )
+val ProtocolHeader = createClientPlugin("ProtocolHeader") {
+    onRequest { request, _ ->
+        request.headers[PROTOCOL_HEADER] = PROTOCOL_VERSION.toString()
+    }
 }

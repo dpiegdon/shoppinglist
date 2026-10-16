@@ -4,7 +4,7 @@ package org.p23q.shoppinglist.core.account
  * Bearer tokens, one per account, keyed by the local account id ([org.p23q.shoppinglist.core.db.AccountEntity.id]).
  * Kept out of Room on purpose: :app backs this with the Keystore-encrypted preferences.
  *
- * Synchronous, because OkHttp's interceptors run on a blocking call chain.
+ * Synchronous, because the API client's plugins read the token and report a 401 without suspending.
  */
 interface SecretStore {
     fun token(accountId: String): String?
