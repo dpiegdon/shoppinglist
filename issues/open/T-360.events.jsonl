@@ -1,0 +1,2 @@
+{"actor": "user", "at": "2026-10-16T23:18:52+00:00", "kind": "created", "ref": "main@0283b5dc", "text": "Faster gate: run pytest in parallel, and other stages where safe"}
+{"actor": "user", "at": "2026-10-16T23:18:52+00:00", "kind": "dependency", "ref": "main@0283b5dc", "text": "T-352 T-359"}

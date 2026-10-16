@@ -1,0 +1,17 @@
+{
+  "body": "verify-all.sh runs pytest single-threaded and the six stages one after another. Measure each stage, then parallelise where it is safe: pytest with pytest-xdist (tests must not share a database file, port or temp dir), vitest worker settings, and independent stages (server, web, Android) concurrently with readable per-stage logs and the same PASS/FAIL summary. The release script runs the same gate and must keep working. Report the before/after times.",
+  "created_at": "2026-10-16T23:18:52+00:00",
+  "deps": [
+    "T-352",
+    "T-359"
+  ],
+  "id": "T-360",
+  "labels": [
+    "ops",
+    "perf",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "Faster gate: run pytest in parallel, and other stages where safe",
+  "updated_at": "2026-10-16T23:18:52+00:00"
+}
