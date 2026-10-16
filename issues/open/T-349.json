@@ -1,0 +1,15 @@
+{
+  "body": "Step 1 of docs/ios-port-design.md. The iOS implementations of :core's platform interfaces, in\n:core's iosMain (or :shared's), compiled on Linux by klib cross-compilation, not yet run:\nKeychain-backed SecretStore and LastOpenedListStore, the database file location and Room builder,\na device id stored like Android's, the Darwin Ktor engine with the self-signed-certificate opt-in\n(debug-only, as on Android), and a SyncTrigger that syncs while the app is open (background\nrefresh is step 4). Document in android/core/README.md which Swift side, if any, each needs.",
+  "created_at": "2026-10-16T21:23:38+00:00",
+  "deps": [
+    "T-295"
+  ],
+  "id": "T-349",
+  "labels": [
+    "ios",
+    "android"
+  ],
+  "priority": 4,
+  "title": "iPhone port step 1: iOS implementations of the platform interfaces",
+  "updated_at": "2026-10-16T21:23:38+00:00"
+}
