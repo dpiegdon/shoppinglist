@@ -9,7 +9,8 @@
     "refactor",
     "agent",
     "ready",
-    "android"
+    "android",
+    "ios"
   ],
   "priority": 3,
   "title": "iPhone port step 2a: Hilt out, Koin in",
