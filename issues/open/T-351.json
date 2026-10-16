@@ -1,9 +1,6 @@
 {
   "body": "Step 2b of docs/ios-port-design.md. Strings and drawables become Compose Multiplatform resources\n(composeResources/values*/strings.xml in the nine locales, drawables as vector XML), still inside\n:app or a first :shared skeleton, used through Res.string / Res.drawable. Code outside composition\n(notifications, workers, view models producing UiText) reads them through the resources API.\ncrossClient.test.ts and every string guard follow the new path. No user-visible change; the\nlauncher icon and other Android-only resources stay in res/.",
   "created_at": "2026-10-16T21:23:39+00:00",
-  "deps": [
-    "T-350"
-  ],
   "id": "T-351",
   "labels": [
     "ios",
@@ -12,5 +9,5 @@
   ],
   "priority": 3,
   "title": "iPhone port step 2b: strings and drawables as Compose resources",
-  "updated_at": "2026-10-16T21:23:39+00:00"
+  "updated_at": "2026-10-16T21:35:11+00:00"
 }
