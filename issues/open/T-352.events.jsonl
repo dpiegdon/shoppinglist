@@ -5,3 +5,4 @@
 {"actor": "user", "at": "2026-10-16T22:02:12+00:00", "kind": "updated", "ref": "main@31e50607", "text": "fields updated"}
 {"actor": "user", "at": "2026-10-16T22:02:13+00:00", "kind": "updated", "ref": "main@31e50607", "text": "fields updated"}
 {"actor": "user", "at": "2026-10-16T22:16:44+00:00", "kind": "note", "ref": "main@ff92d41f", "text": "From T-351: ui/Strings.kt resolves Compose resources per locale via java.util.Locale and a brief Locale.setDefault around getSystemResourceEnvironment (cached per locale); common code needs a multiplatform replacement (ResourceEnvironment built from the app locale) when the screens move."}
+{"actor": "user", "at": "2026-10-16T22:57:44+00:00", "kind": "note", "ref": "main@0283b5dc", "text": "From T-350: CommonModules.kt (coreModule, viewModelModule) still names :app-only classes the view models use (NotificationPrefsStore, ThemePreferenceStore, UpdateChecker, ...); put interfaces in front of them when the modules move."}
