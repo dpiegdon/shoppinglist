@@ -1,3 +1,4 @@
 {"actor": "user", "at": "2026-10-16T23:18:52+00:00", "kind": "created", "ref": "main@0283b5dc", "text": "Emoji language: a tenth language in emoji, last in the picker"}
 {"actor": "user", "at": "2026-10-16T23:18:52+00:00", "kind": "dependency", "ref": "main@0283b5dc", "text": "T-352"}
 {"actor": "claude", "at": "2026-10-17T00:03:02+00:00", "kind": "claimed", "ref": "main@8056c1ff", "text": "claude"}
+{"actor": "user", "at": "2026-10-17T00:27:01+00:00", "kind": "closed", "ref": "main@188b1696", "text": ""}
