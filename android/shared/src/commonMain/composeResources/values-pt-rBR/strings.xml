@@ -175,6 +175,7 @@
     <string name="action_update">Atualizar</string>
     <string name="action_skip">Ignorar</string>
     <string name="settings_language">Idioma (Language)</string>
+    <string name="settings_language_emoji">Emoji</string>
     <string name="settings_account">Conta</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_theme_system">Sistema</string>

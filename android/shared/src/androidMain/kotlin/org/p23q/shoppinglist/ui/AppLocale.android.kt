@@ -21,7 +21,7 @@ internal actual fun PlatformLocale.resourceLanguage(): String = language
 internal actual fun PlatformLocale.resourceRegion(): String = country
 
 actual fun formatString(locale: PlatformLocale, template: String, vararg args: Any): String =
-    String.format(locale, template, *args)
+    String.format(locale.forFormatting(), template, *args)
 
 // BidiFormatter adds isolates only when the run's direction differs from the context's, so an
 // all-LTR app is byte-for-byte unchanged.

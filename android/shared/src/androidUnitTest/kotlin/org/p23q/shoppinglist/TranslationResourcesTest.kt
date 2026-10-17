@@ -8,7 +8,7 @@ import java.io.File
 /**
  * Mechanical integrity of the translated string resources (T-124).
  *
- * These are the ONLY checks available for six of the nine languages — nobody working on this repo
+ * These are the ONLY checks available for six of the ten languages — nobody working on this repo
  * can read Japanese, Ukrainian or Arabic well enough to spot a wrong word, so what can be verified
  * must be verified automatically:
  *
@@ -39,6 +39,7 @@ class TranslationResourcesTest {
         "values-zh" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF]"),
         "values-uk" to Regex("[\\u0600-\\u06FF\\u4E00-\\u9FFF]"),
         "values-ar" to Regex("[\\u0400-\\u04FF\\u4E00-\\u9FFF]"),
+        "values-qaa" to Regex("[\\u0400-\\u04FF\\u0600-\\u06FF\\u4E00-\\u9FFF]"),
     )
 
     private fun read(dir: String): Map<String, String> {
@@ -105,6 +106,27 @@ class TranslationResourcesTest {
                 assertTrue("$dir/$key is wrapped in quotes: $value", !(value.length >= 2 && value.startsWith('"') && value.endsWith('"')))
                 assertTrue("$dir/$key spans lines: $value", !value.contains('\n'))
             }
+        }
+    }
+
+    @Test
+    fun `the Emoji language has no letters outside its placeholders (T-359)`() {
+        // Names, emails and counts are data and stay as they are; everything of ours is emoji.
+        // Only what every language keeps is allowed: the app's name, the transliteration, the
+        // licence line, and the "(Language)" every non-English picker label carries as the way back.
+        val kept = mapOf(
+            "app_name" to "Tuppu",
+            "about_transliteration" to "ṭuppu",
+            "about_license" to "MIT, © 2026 David R. Piegdon",
+            "settings_language" to "(Language)",
+        )
+        val letter = Regex("\\p{L}")
+        val emoji = read("values-qaa")
+        kept.forEach { (key, text) -> assertTrue("values-qaa/$key keeps $text", emoji.getValue(key).contains(text)) }
+        emoji.forEach { (key, value) ->
+            val text = value.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
+            val rest = text.replace(kept[key] ?: "\u0000", "").replace(formatArg, "")
+            assertTrue("values-qaa/$key has letters: $value", !letter.containsMatchIn(rest))
         }
     }
 

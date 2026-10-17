@@ -6,6 +6,7 @@ import { es } from "./messages/es";
 import { fr } from "./messages/fr";
 import { ja } from "./messages/ja";
 import { ptBR } from "./messages/pt-BR";
+import { qaa } from "./messages/qaa";
 import { uk } from "./messages/uk";
 import { zhHans } from "./messages/zh-Hans";
 
@@ -13,7 +14,7 @@ import { zhHans } from "./messages/zh-Hans";
  * Consistency of the WEB catalogs against each other and against English (T-124): no language
  * translates the same English source two different ways.
  *
- * The cross-CLIENT check — web against the Android resources, in all nine languages — is
+ * The cross-CLIENT check — web against the Android resources, in all ten languages — is
  * crossClient.test.ts (T-148). It replaced a hand-kept snapshot of Android's German here, which had
  * drifted, and a comment claiming the Android suite did this, which it never did.
  */
@@ -26,6 +27,7 @@ const CATALOGS: Array<[string, Record<string, string>]> = [
   ["ja", ja as Record<string, string>],
   ["uk", uk as Record<string, string>],
   ["ar", ar as Record<string, string>],
+  ["qaa", qaa as Record<string, string>],
 ];
 
 const source = en as Record<string, string>;

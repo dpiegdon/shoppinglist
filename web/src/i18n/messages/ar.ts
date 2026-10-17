@@ -174,6 +174,7 @@ export const ar: Catalog = {
   "list.addItem": "إضافة عنصر",
 
   "settings.language": "اللغة (Language)",
+  "settings.languageEmoji": "إيموجي",
   "settings.title": "الإعدادات",
   "settings.defaultCurrency": "العملة الافتراضية",
   "settings.currentlyCached": "المخزَّن حاليًا: {currency}",

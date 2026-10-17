@@ -172,6 +172,7 @@ export const zhHans: Catalog = {
   "list.addItem": "添加物品",
 
   "settings.language": "语言 (Language)",
+  "settings.languageEmoji": "表情符号",
   "settings.title": "设置",
   "settings.defaultCurrency": "默认货币",
   "settings.currentlyCached": "当前缓存：{currency}",

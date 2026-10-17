@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.testTag
 import org.p23q.shoppinglist.core.AppLocale
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.settings_language
+import org.p23q.shoppinglist.resources.settings_language_emoji
 
 /**
  * The language chooser (T-127), used on the login screen and in Settings.
@@ -30,6 +31,8 @@ import org.p23q.shoppinglist.resources.settings_language
  * Each language is listed in its OWN language, never translated into the current UI language. That
  * is the standard convention, and the only way a user who has landed in a script they cannot read
  * can find their way back out — so the entries deliberately do not go through a string resource.
+ * The one exception is Emoji (T-359), listed last: "😀🔤" alone does not say what it is, so it
+ * carries its name in the current language, "😀🔤 (Emoji)", except while the app shows it.
  *
  * Stateless: [selected] and [onSelect] are hoisted so this can be previewed and tested without a
  * DataStore, and so both hosts drive it from their own ViewModel.
@@ -51,7 +54,7 @@ fun LanguagePicker(
         modifier = modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
-            value = selected.displayName,
+            value = languageLabel(selected),
             onValueChange = {},
             readOnly = true,
             singleLine = true,
@@ -69,7 +72,7 @@ fun LanguagePicker(
             LocalizedOverlay {
                 AppLocale.entries.forEach { locale ->
                     DropdownMenuItem(
-                        text = { Text(locale.displayName) },
+                        text = { Text(languageLabel(locale)) },
                         onClick = {
                             expanded = false
                             onSelect(locale)
@@ -80,3 +83,12 @@ fun LanguagePicker(
         }
     }
 }
+
+/** How [locale] is named in the picker: its own name, and for Emoji its name in the current language too. */
+@Composable
+internal fun languageLabel(locale: AppLocale): String =
+    if (locale == AppLocale.EMOJI && LocalAppLocale.current != AppLocale.EMOJI) {
+        "${locale.displayName} (${stringResource(Res.string.settings_language_emoji)})"
+    } else {
+        locale.displayName
+    }

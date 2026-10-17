@@ -170,6 +170,7 @@ export const fr: Catalog = {
   "list.addItem": "Ajouter un article",
 
   "settings.language": "Langue (Language)",
+  "settings.languageEmoji": "Emoji",
   "settings.title": "Paramètres",
   "settings.defaultCurrency": "Devise par défaut",
   "settings.currentlyCached": "En cache actuellement : {currency}",

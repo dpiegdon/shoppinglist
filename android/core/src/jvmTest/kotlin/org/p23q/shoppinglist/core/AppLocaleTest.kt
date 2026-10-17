@@ -76,6 +76,18 @@ class AppLocaleTest {
     }
 
     @Test
+    fun `Emoji is the last language, private-use, left-to-right and formatted as English (T-359)`() {
+        // Last in the picker on both clients: a fun extra, after every real language.
+        assertEquals(AppLocale.EMOJI, AppLocale.entries.last())
+        assertEquals("qaa", AppLocale.EMOJI.tag)
+        assertEquals("en", AppLocale.EMOJI.formatTag)
+        assertFalse(AppLocale.EMOJI.isRtl)
+        AppLocale.entries.filter { it != AppLocale.EMOJI }.forEach { assertEquals(it.name, it.tag, it.formatTag) }
+        // No device language narrows to it.
+        assertEquals(AppLocale.DEFAULT, AppLocale.resolve(listOf("qab", "is")))
+    }
+
+    @Test
     fun `has no duplicate tags`() {
         val tags = AppLocale.entries.map { it.tag }
         assertEquals(tags.size, tags.toSet().size)

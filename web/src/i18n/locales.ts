@@ -13,6 +13,12 @@
  *
  * `dir` drives the document's writing direction. Only Arabic is RTL today; keeping it as data
  * rather than an `=== "ar"` test means adding Hebrew or Farsi later touches this table only.
+ *
+ * `format`, where given, is the language numbers, amounts and dates are written in instead of the
+ * tag's own. Emoji (T-359) is a tenth language for fun, last in the picker, under `qaa` from ISO
+ * 639's local-use range: no browser asks for it, and Intl has no data for it, so it borrows
+ * English's. Its picker entry alone also carries its name in the current language
+ * (LanguagePicker), since "😀🔤" alone does not say what it is.
  */
 export const LOCALES = [
   { tag: "en", name: "English", dir: "ltr" },
@@ -24,6 +30,7 @@ export const LOCALES = [
   { tag: "ja", name: "日本語", dir: "ltr" },
   { tag: "uk", name: "Українська", dir: "ltr" },
   { tag: "ar", name: "العربية", dir: "rtl" },
+  { tag: "qaa", name: "😀🔤", dir: "ltr", format: "en" },
 ] as const;
 
 export type Locale = (typeof LOCALES)[number]["tag"];
@@ -34,6 +41,12 @@ const BY_TAG = new Map(LOCALES.map((l) => [l.tag.toLowerCase(), l]));
 
 export function localeDir(tag: Locale): "ltr" | "rtl" {
   return BY_TAG.get(tag.toLowerCase())?.dir ?? "ltr";
+}
+
+/** The tag Intl formats this language's numbers, amounts and dates with: "en" for Emoji. */
+export function formatLocale(tag: Locale): string {
+  const entry = BY_TAG.get(tag.toLowerCase());
+  return entry && "format" in entry ? entry.format : tag;
 }
 
 /**

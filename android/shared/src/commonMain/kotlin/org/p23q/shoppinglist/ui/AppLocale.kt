@@ -39,3 +39,15 @@ expect fun formatString(locale: PlatformLocale, template: String, vararg args: A
  * so user-authored text dropped into a sentence does not reorder the punctuation around it.
  */
 expect fun bidiWrap(text: String): String
+
+/**
+ * The locale numbers, amounts and dates are written in for this one: itself, or the language its
+ * [AppLocale.formatTag] names. Emoji (qaa, T-359) has no conventions of its own, and the platform
+ * would write it as its root locale (2026 Oct 17, ¤ 64.00), so it borrows English's.
+ */
+fun PlatformLocale.forFormatting(): PlatformLocale {
+    val language = resourceLanguage()
+    val borrowing = AppLocale.entries.firstOrNull { it.tag != it.formatTag && it.tag.equals(language, ignoreCase = true) }
+        ?: return this
+    return (AppLocale.match(borrowing.formatTag) ?: AppLocale.DEFAULT).toPlatformLocale()
+}

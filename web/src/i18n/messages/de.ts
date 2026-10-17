@@ -173,6 +173,7 @@ export const de: Catalog = {
   "list.addItem": "Artikel hinzufügen",
 
   "settings.language": "Sprache (Language)",
+  "settings.languageEmoji": "Emoji",
   "settings.title": "Einstellungen",
   "settings.defaultCurrency": "Standardwährung",
   "settings.currentlyCached": "Aktuell zwischengespeichert: {currency}",

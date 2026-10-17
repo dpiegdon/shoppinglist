@@ -212,6 +212,7 @@ export const en = {
 
   // ---- settings ----
   "settings.language": "Language",
+  "settings.languageEmoji": "Emoji",
   "settings.title": "Settings",
   "settings.defaultCurrency": "Default currency",
   "settings.currentlyCached": "Currently cached: {currency}",

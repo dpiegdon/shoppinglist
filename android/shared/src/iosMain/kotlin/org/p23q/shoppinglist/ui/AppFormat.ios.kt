@@ -23,7 +23,7 @@ actual object AppFormat {
         if (isoCurrency.matches(label)) {
             val format = NSNumberFormatter().apply {
                 numberStyle = NSNumberFormatterCurrencyStyle
-                this.locale = locale
+                this.locale = locale.forFormatting()
                 currencyCode = label
             }
             // The currency's own precision (none for yen); an amount that really has cents keeps them.
@@ -43,7 +43,7 @@ actual object AppFormat {
 
     actual fun number(cents: Long, locale: NSLocale): String = NSNumberFormatter().apply {
         numberStyle = NSNumberFormatterDecimalStyle
-        this.locale = locale
+        this.locale = locale.forFormatting()
         minimumFractionDigits = 2uL
         maximumFractionDigits = 2uL
     }.stringFromNumber(amount(cents)) ?: (cents / 100.0).toString()
@@ -51,7 +51,7 @@ actual object AppFormat {
     private fun mediumDate(locale: NSLocale, utc: Boolean) = NSDateFormatter().apply {
         dateStyle = NSDateFormatterMediumStyle
         timeStyle = NSDateFormatterNoStyle
-        this.locale = locale
+        this.locale = locale.forFormatting()
         if (utc) timeZone = NSTimeZone.timeZoneForSecondsFromGMT(0)
     }
 
@@ -68,9 +68,9 @@ actual fun shortDate(isoDate: String, locale: NSLocale, today: String): String {
     val millis = isoDateToUtcMillis(isoDate) ?: return isoDate
     val skeleton = if (today.take(4) == isoDate.take(4)) "MMMd" else "yMMMd"
     val format = NSDateFormatter().apply {
-        this.locale = locale
+        this.locale = locale.forFormatting()
         timeZone = NSTimeZone.timeZoneForSecondsFromGMT(0)
-        dateFormat = NSDateFormatter.dateFormatFromTemplate(skeleton, 0u, locale) ?: "yyyy-MM-dd"
+        dateFormat = NSDateFormatter.dateFormatFromTemplate(skeleton, 0u, locale.forFormatting()) ?: "yyyy-MM-dd"
     }
     return format.stringFromDate(NSDate.dateWithTimeIntervalSince1970(millis / 1000.0))
 }

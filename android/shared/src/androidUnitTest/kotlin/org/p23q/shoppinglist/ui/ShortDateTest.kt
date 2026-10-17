@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.ui
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.p23q.shoppinglist.core.AppLocale
 import org.robolectric.RobolectricTestRunner
 import java.util.Locale
 
@@ -23,6 +24,13 @@ class ShortDateTest {
     fun `keeps the year when it is another one`() {
         assertEquals("Jan 5, 2027", plain(shortDate("2027-01-05", Locale.ENGLISH, "2026-09-28")))
         assertEquals("31. Dez. 2025", plain(shortDate("2025-12-31", Locale.GERMAN, "2026-09-28")))
+    }
+
+    @Test
+    fun `Emoji writes it as English (T-359)`() {
+        val emoji = AppLocale.EMOJI.toJavaLocale()
+        assertEquals("Sep 17", plain(shortDate("2026-09-17", emoji, "2026-09-28")))
+        assertEquals("Jan 5, 2027", plain(shortDate("2027-01-05", emoji, "2026-09-28")))
     }
 
     @Test

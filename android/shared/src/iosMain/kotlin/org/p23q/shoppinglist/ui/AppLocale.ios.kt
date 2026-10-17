@@ -38,7 +38,7 @@ actual fun formatString(locale: PlatformLocale, template: String, vararg args: A
         when {
             conversion == "d" && (arg is Int || arg is Long) -> {
                 val formatter = NSNumberFormatter().apply {
-                    this.locale = locale
+                    this.locale = locale.forFormatting()
                     usesGroupingSeparator = false
                 }
                 formatter.stringFromNumber(NSNumber(longLong = (arg as Number).toLong())) ?: arg.toString()

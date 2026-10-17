@@ -171,6 +171,7 @@ export const ptBR: Catalog = {
   "list.addItem": "Adicionar item",
 
   "settings.language": "Idioma (Language)",
+  "settings.languageEmoji": "Emoji",
   "settings.title": "Configurações",
   "settings.defaultCurrency": "Moeda padrão",
   "settings.currentlyCached": "Em cache agora: {currency}",

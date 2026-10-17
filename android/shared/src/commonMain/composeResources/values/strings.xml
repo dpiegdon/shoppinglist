@@ -224,6 +224,7 @@
 
     <!-- settings -->
     <string name="settings_language">Language</string>
+    <string name="settings_language_emoji">Emoji</string>
     <string name="settings_account">Account</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_system">System</string>

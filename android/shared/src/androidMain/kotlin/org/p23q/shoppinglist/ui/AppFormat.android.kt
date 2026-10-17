@@ -20,7 +20,7 @@ actual object AppFormat {
             // The currency's own precision (none for yen), set explicitly: java.text's setCurrency
             // does not change the fraction digits. An amount that really has cents keeps them
             // rather than being rounded away.
-            val format = NumberFormat.getCurrencyInstance(locale).apply { this.currency = code }
+            val format = NumberFormat.getCurrencyInstance(locale.forFormatting()).apply { this.currency = code }
             val digits = if (cents % 100 != 0L) 2 else code.defaultFractionDigits.coerceAtLeast(0)
             format.minimumFractionDigits = digits
             format.maximumFractionDigits = digits
@@ -35,12 +35,12 @@ actual object AppFormat {
 
     actual fun signedNumber(cents: Long, locale: Locale): String = signedAmount(cents) { number(it, locale) }
 
-    actual fun number(cents: Long, locale: Locale): String = NumberFormat.getNumberInstance(locale).apply {
+    actual fun number(cents: Long, locale: Locale): String = NumberFormat.getNumberInstance(locale.forFormatting()).apply {
         minimumFractionDigits = 2
         maximumFractionDigits = 2
     }.format(BigDecimal.valueOf(cents, 2))
 
-    private fun dateStyle(locale: Locale) = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
+    private fun dateStyle(locale: Locale) = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale.forFormatting())
 
     actual fun calendarDate(isoDate: String, locale: Locale): String =
         runCatching { LocalDate.parse(isoDate).format(dateStyle(locale)) }.getOrDefault(isoDate)

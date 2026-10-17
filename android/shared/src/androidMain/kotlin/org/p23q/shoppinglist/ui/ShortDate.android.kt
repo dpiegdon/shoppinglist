@@ -12,6 +12,6 @@ import java.util.Locale
 actual fun shortDate(isoDate: String, locale: Locale, today: String): String {
     val date = runCatching { LocalDate.parse(isoDate) }.getOrNull() ?: return isoDate
     val skeleton = if (today.take(4) == isoDate.take(4)) "MMMd" else "yMMMd"
-    val format = DateFormat.getInstanceForSkeleton(skeleton, locale).apply { timeZone = TimeZone.GMT_ZONE }
+    val format = DateFormat.getInstanceForSkeleton(skeleton, locale.forFormatting()).apply { timeZone = TimeZone.GMT_ZONE }
     return format.format(Date(date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()))
 }

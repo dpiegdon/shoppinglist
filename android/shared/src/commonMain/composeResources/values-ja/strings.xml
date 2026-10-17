@@ -175,6 +175,7 @@
     <string name="action_update">更新</string>
     <string name="action_skip">スキップ</string>
     <string name="settings_language">言語 (Language)</string>
+    <string name="settings_language_emoji">絵文字</string>
     <string name="settings_account">アカウント</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_theme_system">システムに合わせる</string>

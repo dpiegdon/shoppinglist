@@ -16,6 +16,7 @@ import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.action_cancel
 import org.p23q.shoppinglist.resources.admin_is_admin_suffix
 import org.p23q.shoppinglist.resources.admin_session_count
+import org.p23q.shoppinglist.resources.expense_agree_count
 import org.p23q.shoppinglist.resources.listprops_leave_confirm_body
 import org.robolectric.RobolectricTestRunner
 import java.util.Locale
@@ -39,6 +40,7 @@ class StringsTest {
         assertEquals("取消", get(AppLocale.CHINESE_SIMPLIFIED, Res.string.action_cancel))
         assertEquals("キャンセル", get(AppLocale.JAPANESE, Res.string.action_cancel))
         assertEquals("Cancel", get(AppLocale.ENGLISH, Res.string.action_cancel))
+        assertEquals("✖️", get(AppLocale.EMOJI, Res.string.action_cancel))
         assertEquals("Cancel", runBlocking { getString(Locale.ITALIAN, Res.string.action_cancel) })
     }
 
@@ -56,6 +58,10 @@ class StringsTest {
         // The resources library would put toString() in: "3", where an Arabic sentence has "٣".
         assertEquals("الجلسات: ٣", get(AppLocale.ARABIC, Res.string.admin_session_count, 3))
         assertEquals("Sitzungen: 3", get(AppLocale.GERMAN, Res.string.admin_session_count, 3))
+        // Emoji (qaa) has no number conventions of its own and writes English's (T-359).
+        assertEquals("🗳️🔒: 3 / 4", get(AppLocale.EMOJI, Res.string.expense_agree_count, 3, 4))
+        assertEquals(Locale.ENGLISH, AppLocale.EMOJI.toJavaLocale().forFormatting())
+        assertEquals(Locale.GERMAN, AppLocale.GERMAN.toJavaLocale().forFormatting())
     }
 
     @Test

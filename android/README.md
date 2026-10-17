@@ -141,7 +141,7 @@ calls it under a suppression, which the compiler warns about, and
 
 ### Strings and drawables
 
-Every string the app shows, in all nine languages, is in
+Every string the app shows, in all ten languages, is in
 `shared/src/commonMain/composeResources/values*/strings.xml`, and the two
 pictures the screens draw (the Tuppu mark and the cuneiform name) are in
 `shared/src/commonMain/composeResources/drawable/`. The build generates
@@ -155,9 +155,18 @@ be shown, spaces at either end are kept, and a value stays on one line. Only
 `\n`, `\t`, `\uXXXX` and `\\` are escapes. Placeholders are `%1$s` and `%1$d`.
 The language folders are `values` (English, the fallback), `values-de`,
 `values-es`, `values-fr`, `values-pt-rBR`, `values-zh` (simplified Chinese),
-`values-ja`, `values-uk` and `values-ar`.
+`values-ja`, `values-uk`, `values-ar` and `values-qaa` (Emoji).
 
-To add a string, add it to all nine files, and to the web's catalogues when
+Emoji is the tenth language, for fun: every string in emoji, placeholders kept as
+data. Its code `qaa` is from ISO 639's local-use range, which the resources
+accept as a three-letter language folder, and no device language resolves to
+it. It is the last `AppLocale`, and the picker labels it "😀🔤 (Emoji)" with its
+name in the current language. It has no formatting data of its own, so
+`forFormatting()` (in `ui/AppLocale.kt`) hands numbers, amounts and dates the
+locale its `formatTag` names, English. `TranslationResourcesTest` fails on a
+letter in it outside a placeholder, except the few kept in every language.
+
+To add a string, add it to all ten files, and to the web's catalogues when
 the web shows it too; `web/src/i18n/crossClient.test.ts` pairs the two clients
 by their English and fails when a translation differs, and
 `TranslationResourcesTest` fails on a missing key, a lost placeholder or a

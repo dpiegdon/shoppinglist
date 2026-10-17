@@ -9,9 +9,13 @@ package org.p23q.shoppinglist.core
  *
  * [displayName] is written in the language's OWN language, never translated into the current UI
  * language. That is the standard convention, and it is the only way a user who has accidentally
- * selected a script they cannot read can find their way back out.
+ * selected a script they cannot read can find their way back out. [EMOJI] alone also carries its name
+ * in the current UI language (the picker's job), since "😀🔤" alone does not say what it is.
+ *
+ * [formatTag] is the language numbers, amounts and dates are written in: the language's own,
+ * except for [EMOJI], which has no conventions of its own and borrows English's.
  */
-enum class AppLocale(val tag: String, val displayName: String) {
+enum class AppLocale(val tag: String, val displayName: String, val formatTag: String = tag) {
     ENGLISH("en", "English"),
     GERMAN("de", "Deutsch"),
     SPANISH("es", "Español"),
@@ -21,6 +25,13 @@ enum class AppLocale(val tag: String, val displayName: String) {
     JAPANESE("ja", "日本語"),
     UKRAINIAN("uk", "Українська"),
     ARABIC("ar", "العربية"),
+
+    /**
+     * Every string in emoji (T-359), for fun. Its tag is from ISO 639's local-use range, so no real
+     * device locale ever resolves to it: it is only ever chosen in the picker, where it is last and
+     * carries "(Emoji)" in the current language. Numbers, amounts and dates are English.
+     */
+    EMOJI("qaa", "😀🔤", formatTag = "en"),
     ;
 
     /**

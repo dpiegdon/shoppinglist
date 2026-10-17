@@ -13,6 +13,7 @@ import { es } from "./messages/es";
 import { fr } from "./messages/fr";
 import { ja } from "./messages/ja";
 import { ptBR } from "./messages/pt-BR";
+import { qaa } from "./messages/qaa";
 import { uk } from "./messages/uk";
 import { zhHans } from "./messages/zh-Hans";
 
@@ -21,7 +22,7 @@ import { zhHans } from "./messages/zh-Hans";
  *
  * Reads the Android resources straight from the repository — no snapshot, so nothing to drift — and
  * pairs a web message with an Android string when their English is the same text. Every such pair
- * must then say the same thing in all nine languages. A user switching between phone and browser
+ * must then say the same thing in all ten languages, Emoji (qaa) included. A user switching between phone and browser
  * mid-shop should not meet two vocabularies.
  *
  * Pairing by English rather than by a hand-kept key map is the point: a map is one more thing to
@@ -46,6 +47,7 @@ const LOCALES: Array<[string, string, Record<string, string>]> = [
   ["ja", xmlOf("values-ja"), ja as Record<string, string>],
   ["uk", xmlOf("values-uk"), uk as Record<string, string>],
   ["ar", xmlOf("values-ar"), ar as Record<string, string>],
+  ["qaa", xmlOf("values-qaa"), qaa as Record<string, string>],
 ];
 
 /**

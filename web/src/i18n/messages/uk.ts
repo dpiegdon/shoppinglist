@@ -172,6 +172,7 @@ export const uk: Catalog = {
   "list.addItem": "Додати товар",
 
   "settings.language": "Мова (Language)",
+  "settings.languageEmoji": "Емодзі",
   "settings.title": "Налаштування",
   "settings.defaultCurrency": "Валюта за замовчуванням",
   "settings.currentlyCached": "Зараз у кеші: {currency}",

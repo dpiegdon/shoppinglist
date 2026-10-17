@@ -47,8 +47,13 @@ your source changes.
   the net spent and who pays whom), name order (`nameOrder.ts`), money and date
   formatting (`format.ts`). The ledger and name-order rules are tested against
   the same case tables as Android, in `../shared-test-cases/`.
-- `src/i18n/` — the nine catalogs in `messages/` (English is the fallback), and
-  `apiErrors.ts`, which translates server errors by their code.
+- `src/i18n/` — the ten catalogs in `messages/` (English is the fallback), and
+  `apiErrors.ts`, which translates server errors by their code. The language
+  list is `locales.ts`; the picker names each language in its own language. The
+  tenth, Emoji (`qaa.ts`, under the private-use tag `qaa`), writes every string
+  in emoji, keeping placeholders as data, and formats numbers, amounts and dates
+  as English. It is last in the picker, labelled "😀🔤 (Emoji)" with its name in
+  the current language. No browser language resolves to it.
   `crossClient.test.ts` fails if a string shared with the Android app reads
   differently there, in any language.
 - `src/index.css` — the colour scheme, as custom properties at the top, light in

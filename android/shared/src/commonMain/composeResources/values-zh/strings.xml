@@ -175,6 +175,7 @@
     <string name="action_update">更新</string>
     <string name="action_skip">跳过</string>
     <string name="settings_language">语言 (Language)</string>
+    <string name="settings_language_emoji">表情符号</string>
     <string name="settings_account">账户</string>
     <string name="settings_theme">主题</string>
     <string name="settings_theme_system">跟随系统</string>

@@ -3,6 +3,7 @@ package org.p23q.shoppinglist.ui
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.p23q.shoppinglist.core.AppLocale
 import java.time.ZoneOffset
 import java.util.Locale
 
@@ -96,6 +97,19 @@ class AppFormatTest {
         assertEquals("17.09.2026", AppFormat.calendarDate("2026-09-17", de))
         // Never worse than what was stored.
         assertEquals("not a date", AppFormat.calendarDate("not a date", en))
+    }
+
+    @Test
+    fun `Emoji writes amounts, numbers and dates as English (T-359)`() {
+        // Its tag, qaa, has no data of its own: java.text would write the root locale's
+        // "¤ 64.00" and "2026 Sep 17".
+        val emoji = AppLocale.EMOJI.toJavaLocale()
+        assertEquals("€64.00", AppFormat.money(6400, "EUR", emoji))
+        assertEquals("+€32.00", AppFormat.signedMoney(3200, "EUR", emoji))
+        assertEquals("1,500.00", AppFormat.number(150000, emoji))
+        assertEquals("Sep 17, 2026", AppFormat.calendarDate("2026-09-17", emoji))
+        val noonUtc = java.time.LocalDate.of(2026, 9, 17).atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
+        assertEquals("Sep 17, 2026", AppFormat.day(noonUtc, emoji, ZoneOffset.UTC))
     }
 
     @Test

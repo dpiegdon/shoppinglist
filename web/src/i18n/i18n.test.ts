@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DEFAULT_LOCALE, LOCALES, localeDir, matchLocale, resolveLocale } from "./locales";
+import { DEFAULT_LOCALE, LOCALES, formatLocale, localeDir, matchLocale, resolveLocale } from "./locales";
 import { registerCatalog, translate } from "./index";
 import { ar } from "./messages/ar";
 import { de } from "./messages/de";
@@ -7,6 +7,7 @@ import { es } from "./messages/es";
 import { fr as frCatalog } from "./messages/fr";
 import { ja } from "./messages/ja";
 import { ptBR } from "./messages/pt-BR";
+import { qaa } from "./messages/qaa";
 import { uk } from "./messages/uk";
 import { zhHans } from "./messages/zh-Hans";
 import { en } from "./messages/en";
@@ -73,6 +74,40 @@ describe("language list", () => {
   it("has no duplicate tags", () => {
     const tags = LOCALES.map((l) => l.tag);
     expect(new Set(tags).size).toBe(tags.length);
+  });
+
+  it("ends with Emoji, a private-use tag written left to right and formatted as English (T-359)", () => {
+    // Last in the picker on both clients: a fun extra, after every real language.
+    expect(LOCALES[LOCALES.length - 1]).toEqual({ tag: "qaa", name: "😀🔤", dir: "ltr", format: "en" });
+    expect(formatLocale("qaa")).toBe("en");
+    expect(formatLocale("de")).toBe("de");
+    // No browser language narrows to it.
+    expect(resolveLocale(["qab", "is"])).toBe(DEFAULT_LOCALE);
+  });
+});
+
+describe("the Emoji language (T-359)", () => {
+  // Only what every language keeps: the app's name, the transliteration, the licence line, and
+  // the "(Language)" every non-English picker label carries as the way back.
+  const kept: Record<string, string> = {
+    "app.title": "Tuppu",
+    "about.transliteration": "ṭuppu",
+    "about.license": "MIT, © 2026 David R. Piegdon",
+    "settings.language": "(Language)",
+  };
+
+  it("has no letters outside its placeholders", () => {
+    const catalog = qaa as Record<string, string>;
+    for (const [key, text] of Object.entries(kept)) expect(catalog[key], key).toContain(text);
+    const lettered = Object.entries(catalog)
+      .filter(([key, value]) => /\p{L}/u.test(value.replace(kept[key] ?? "\u0000", "").replace(/\{\w+\}/g, "")))
+      .map(([key, value]) => `${key}: ${value}`);
+    expect(lettered).toEqual([]);
+  });
+
+  it("is what translate() shows", () => {
+    expect(translate("qaa", "action.save")).toBe("💾");
+    expect(translate("qaa", "admin.sessionCount", { count: 3 })).toBe("🎟️🎟️: 3");
   });
 });
 
@@ -205,6 +240,7 @@ describe("translation catalogs (T-124)", () => {
     ["ja", ja as Record<string, string>],
     ["uk", uk as Record<string, string>],
     ["ar", ar as Record<string, string>],
+    ["qaa", qaa as Record<string, string>],
   ];
 
   for (const [name, catalog] of catalogs) {
@@ -263,6 +299,7 @@ describe("catalog registration (T-124)", () => {
     ["ja", ja as Record<string, string>],
     ["uk", uk as Record<string, string>],
     ["ar", ar as Record<string, string>],
+    ["qaa", qaa as Record<string, string>],
   ];
     for (const [tag, catalog] of withCatalogs) {
       const [key, translated] = Object.entries(catalog).find(

@@ -175,6 +175,7 @@
     <string name="action_update">Aktualisieren</string>
     <string name="action_skip">Überspringen</string>
     <string name="settings_language">Sprache (Language)</string>
+    <string name="settings_language_emoji">Emoji</string>
     <string name="settings_account">Konto</string>
     <string name="settings_theme">Design</string>
     <string name="settings_theme_system">System</string>

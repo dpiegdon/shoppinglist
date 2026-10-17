@@ -175,6 +175,7 @@
     <string name="action_update">تحديث</string>
     <string name="action_skip">تخطٍ</string>
     <string name="settings_language">اللغة (Language)</string>
+    <string name="settings_language_emoji">إيموجي</string>
     <string name="settings_account">الحساب</string>
     <string name="settings_theme">المظهر</string>
     <string name="settings_theme_system">النظام</string>

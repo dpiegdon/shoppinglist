@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useI18n } from "../i18n";
+import { formatLocale, useI18n } from "../i18n";
 
 /**
  * Amounts and dates in the app's chosen language (T-180, T-187), rather than one fixed format:
@@ -113,9 +113,11 @@ export function formatDay(epochMillis: number, locale: string): string {
 
 /** The formatters bound to the current language. */
 export function useFormat() {
-  const { locale } = useI18n();
-  return useMemo(
-    () => ({
+  const { locale: language } = useI18n();
+  return useMemo(() => {
+    // Emoji has no conventions of its own and writes English's (T-359).
+    const locale = formatLocale(language);
+    return {
       money: (cents: number, currency: string | null | undefined) => formatMoney(cents, currency, locale),
       signedMoney: (cents: number, currency: string | null | undefined) => formatSignedMoney(cents, currency, locale),
       number: (cents: number) => formatNumber(cents, locale),
@@ -123,9 +125,8 @@ export function useFormat() {
       date: (isoDate: string) => formatCalendarDate(isoDate, locale),
       day: (epochMillis: number) => formatDay(epochMillis, locale),
       shortDate: (isoDate: string, today: string) => shortDate(isoDate, locale, today),
-    }),
-    [locale],
-  );
+    };
+  }, [language]);
 }
 
 /**
