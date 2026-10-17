@@ -403,7 +403,11 @@ below.
 
 ```bash
 pytest -v
+pytest -n auto   # in parallel worker processes (pytest-xdist), as the gate runs it
 ```
+
+Every test gets its own temporary directory and database and nothing listens on a
+port, so the tests can run in any worker in any order.
 
 `tests/test_full_system.py` runs the whole lifecycle end to end: two accounts,
 invite and redeem, concurrent offline edits, convergence, both members leaving,

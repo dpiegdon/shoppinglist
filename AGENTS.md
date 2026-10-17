@@ -104,7 +104,16 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 ## Tests
 
 - Run `./verify-all.sh` before committing code; a docs-only change may skip it.
-  While iterating, run just the suite you touched.
+  While iterating, run just the suite you touched. Read the summary's six lines:
+  each stage is PASS, FAIL, or SKIP (not run, or stopped because another stage
+  failed). On a host with 6+ cores and 12 GB the server, web and Android stages
+  run side by side, each into a log under the directory the run prints; a failed
+  stage's log is printed above the summary. `--serial` runs one stage after
+  another with all output on the terminal.
+- pytest runs in parallel workers (pytest-xdist). A server test must not share
+  anything with another: use `tmp_path` for files and databases, `monkeypatch`
+  for the environment, and never a fixed port or path. An existing
+  `server/.venv` needs `.venv/bin/pip install -e '.[dev]'` once to get xdist.
 - A new test should fail when its change is reverted. Check by mutating the code.
 - Android build: the app wires its classes with Koin: the common modules in
   `shared/…/di/CommonModules.kt`, the Android ones in `app/…/di/PlatformModule.kt`.
@@ -160,4 +169,6 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 - On a low-RAM host (the original Pi had about 4 GB), stop the Gradle daemon
   after Android work (`cd android && ./gradlew --stop`), batch Android builds, and
   don't leave watchers or dev servers running. Only touch your own user's
-  processes.
+  processes. There `./verify-all.sh` picks its serial mode by itself (fewer than
+  6 cores or 12 GB); its parallel mode runs Gradle, vitest and pytest workers at
+  once and peaks about 2.5 GB above an idle Gradle daemon.

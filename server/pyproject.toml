@@ -27,6 +27,7 @@ Issues = "https://github.com/dpiegdon/shoppinglist/issues"
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-xdist>=3.6",  # ../verify-all.sh runs the suite in parallel workers (T-360)
     "cryptography>=42.0",  # only for the ad-hoc TLS dev server (dev_tls_server.py)
     # The build backend, pinned exactly (T-281): build-wheel.sh runs `pip wheel
     # --no-build-isolation` so it uses this installed copy instead of fetching one

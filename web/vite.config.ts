@@ -35,7 +35,9 @@ export default defineConfig({
     // promises) to occasionally miss the default test timeout under
     // contention - not a logic bug, confirmed by every affected test passing
     // reliably in isolation. Single-threaded file execution trades wall-clock
-    // speed for determinism, which matters more for a suite this size.
+    // speed for determinism, which matters more for a suite this size. On a
+    // host with the cores for it, ../verify-all.sh passes `--fileParallelism
+    // --maxWorkers=N` instead.
     fileParallelism: false,
   },
 })

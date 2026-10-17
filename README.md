@@ -83,7 +83,14 @@ your own server, see [`android/README.md`](android/README.md).
 
 `./verify-all.sh` runs every suite (server lint and pytest, web vitest, tsc and
 lint, a server wheel build and smoke test, Android debug and release unit tests,
-the Android screenshot comparison and lint), fastest first, and stops at the first failure. The server lint stage
+the Android screenshot comparison and lint) and ends with one PASS, FAIL or SKIP
+line per stage. On a host with at least 6 cores and 12 GB of memory it runs the
+server stages, the web stage and the Android stages side by side, each into its
+own log; the first failure stops the rest and prints the failed stage's log, and
+the logs stay in the directory the run names. Elsewhere it runs one stage after
+another and stops at the first failure. `--serial` or `--parallel` (or
+`VERIFY_ALL_MODE=serial|parallel`) overrides the choice. pytest runs in parallel
+workers either way (`PYTEST_WORKERS=N` sets how many). The server lint stage
 only checks; `cd server && .venv/bin/isort . && .venv/bin/black .` fixes the
 layout. The Android stage needs a JDK, from `JAVA_HOME` or the `PATH`, and also
 runs `testReleaseUnitTest`, the only variant that compiles the release source

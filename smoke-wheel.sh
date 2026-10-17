@@ -31,6 +31,8 @@ WHEEL=$(cd "$(dirname "$WHEEL")" && pwd)/$(basename "$WHEEL")
 
 VENV=$(mktemp -d)
 trap 'rm -rf "$VENV"' EXIT
+# Stopped by a signal (verify-all.sh stops its other stages when one fails), still clean up.
+trap 'exit 143' TERM INT
 
 echo "=== installing $(basename "$WHEEL") into a clean venv ==="
 python3 -m venv "$VENV" || exit 1
