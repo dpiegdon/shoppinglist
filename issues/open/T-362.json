@@ -1,0 +1,11 @@
+{
+  "body": "Release 3.7.0: Emoji language (T-359); Android rebuilt on Kotlin Multiplatform for the iPhone port (T-295, T-350, T-351, T-352); faster gate (T-360). No protocol change.",
+  "created_at": "2026-10-17T16:46:22+00:00",
+  "id": "T-362",
+  "labels": [
+    "release"
+  ],
+  "priority": 1,
+  "title": "Release 3.7.0",
+  "updated_at": "2026-10-17T16:46:22+00:00"
+}
