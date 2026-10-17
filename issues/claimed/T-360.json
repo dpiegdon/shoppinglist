@@ -11,7 +11,8 @@
     "perf",
     "agent"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "Faster gate: run pytest in parallel, and other stages where safe",
-  "updated_at": "2026-10-16T23:18:52+00:00"
+  "updated_at": "2026-10-17T00:27:02+00:00"
 }
