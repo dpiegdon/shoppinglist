@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-10-31T22:03:09+00:00", "kind": "dependency", "ref": "main@4a1a7df9", "text": "T-364"}
 {"actor": "claude", "at": "2026-10-31T22:07:16+00:00", "kind": "dependency", "ref": "main@cde16cb1", "text": "removed T-364"}
 {"actor": "claude", "at": "2026-10-31T22:07:16+00:00", "kind": "claimed", "ref": "main@cde16cb1", "text": "claude"}
+{"actor": "claude", "at": "2026-10-31T22:07:16+00:00", "kind": "note", "ref": "main@cde16cb1", "text": "Delegated to an Opus subagent in worktree .claude/worktrees/guests-android (branch guests-android); the orchestrator reviews the diff, aligns strings with the web, cherry-picks onto main, runs the gate and closes."}
