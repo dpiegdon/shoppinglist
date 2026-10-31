@@ -1,0 +1,3 @@
+{"actor": "claude", "at": "2026-10-31T22:03:09+00:00", "kind": "created", "ref": "main@4a1a7df9", "text": "Ledger guests: shared cases for the fold"}
+{"actor": "claude", "at": "2026-10-31T22:03:09+00:00", "kind": "dependency", "ref": "main@4a1a7df9", "text": "T-364"}
+{"actor": "claude", "at": "2026-10-31T22:04:19+00:00", "kind": "closed", "ref": "main@cde16cb1", "text": "Committed in cde16cb1. Verified: an independent Python computation of fold/balances/settle reproduces every expected value; the web harness indexes groups by name so the new group is inert until T-367/T-368 run it (checked by reading expenses.test.ts and ExpenseMathTest.kt). The gate runs on this host once the toolchain is installed, before the implementation branches land."}
