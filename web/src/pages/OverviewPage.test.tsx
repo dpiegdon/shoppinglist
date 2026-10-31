@@ -459,10 +459,15 @@ describe("OverviewPage pending invites", () => {
   });
 
   it("says why a join failed, in the server's words, and re-reads the inbox", async () => {
-    vi.mocked(api.redeemInvite).mockRejectedValue(new api.ApiError(409, "invite_revoked", "revoked"));
+    // The inbox changes at the moment the join fails, not before (T-358): the page re-reads the
+    // inbox after every sync as well, and the mount sync's re-read could land after an earlier
+    // re-mock and take Camping out from under the click, so the join never started.
+    vi.mocked(api.redeemInvite).mockImplementation(async () => {
+      vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [invite("b", "Chores")] });
+      throw new api.ApiError(409, "invite_revoked", "revoked");
+    });
     renderOverview();
     await screen.findByRole("heading", { name: "Invitations" });
-    vi.mocked(api.getPendingInvites).mockResolvedValue({ invites: [invite("b", "Chores")] });
 
     await userEvent.click(within(screen.getByText("Camping").closest<HTMLElement>(".card")!).getByRole("button", { name: "Join" }));
 
