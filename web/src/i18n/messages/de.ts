@@ -360,11 +360,11 @@ export const de: Catalog = {
   "guest.frozenLocked": "gesperrt – Beträge festgeschrieben",
   "guest.balanceLocked": "Beträge gesperrt",
   "guest.errorLocked": "{who}: Beträge gesperrt",
-  "guest.chooserTitle": "Bist du einer von diesen?",
+  "guest.chooserTitle": "Bist du eine dieser Personen?",
   "guest.chooserNew": "Nein, ich bin neu",
   "guest.errorClaimed": "Dieser Gast wurde bereits übernommen",
   "guest.errorNotFound": "Dieser Gast ist nicht mehr auf dieser Liste",
-  "guest.errorInvalidName": "Gib einen Gastnamen mit höchstens 64 Zeichen ein",
+  "guest.errorInvalidName": "Gib einen Gastnamen mit bis zu 64 Zeichen ein",
   "action.rename": "Umbenennen",
   "action.remove": "Entfernen",
 };

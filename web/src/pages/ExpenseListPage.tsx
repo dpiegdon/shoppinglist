@@ -126,12 +126,14 @@ export default function ExpenseListPage() {
 
   /**
    * "for everyone" beats naming every member, which is the usual case and the longest string.
-   * Everyone is the roster: the members and the unclaimed guests (T-364).
+   * Everyone is the roster — the members and the unclaimed guests (T-364) — counted by whom they
+   * now are: an entry naming a guest someone has since claimed still covers that someone.
    */
   function forWhom(expense: Expense): string {
     const ids = Object.keys(expense.paid_for);
+    const effective = new Set(ids.map((id) => aliases.get(id) ?? id));
     const everyone =
-      roster.length > 0 && ids.length === roster.length && roster.every((id) => ids.includes(id));
+      roster.length > 0 && effective.size === roster.length && roster.every((id) => effective.has(id));
     return everyone ? t("expense.forEveryone") : ids.map(nameOf).join(", ");
   }
 

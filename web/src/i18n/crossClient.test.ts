@@ -105,6 +105,9 @@ const ONE_SIDED: Record<string, string> = {
   api_error_cannot_delete_self: "the web's apiError.cannotDeleteSelf, naming the account's page instead of Settings",
   // T-327: the web always runs against the server it ships with, so it never lacks due dates.
   item_due_needs_server: "Android's item form on an account whose server is older than the due date; the web ships with its server",
+  // T-364: the generic failure of a guest action. The web falls back to item.saveFailed, which is
+  // one-sided above for the same reason; Android says it in the Guests card's own words.
+  guest_msg_failed: "Android's fallback when a guest endpoint fails for a reason the error table does not name; the web shows item.saveFailed there",
 };
 
 describe("the two clients say the same thing (T-148)", () => {

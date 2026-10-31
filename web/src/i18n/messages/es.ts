@@ -355,7 +355,7 @@ export const es: Catalog = {
   "guest.frozenLocked": "bloqueado: importes fijados",
   "guest.balanceLocked": "importes bloqueados",
   "guest.errorLocked": "{who}: importes bloqueados",
-  "guest.chooserTitle": "¿Eres uno de ellos?",
+  "guest.chooserTitle": "¿Eres una de estas personas?",
   "guest.chooserNew": "No, soy nuevo",
   "guest.errorClaimed": "Este invitado ya ha sido reclamado",
   "guest.errorNotFound": "Este invitado ya no está en esta lista",
