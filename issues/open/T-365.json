@@ -1,0 +1,17 @@
+{
+  "body": "Add the fold group to shared-test-cases/expense-arithmetic.json: guests and claimed guests folded before the arithmetic, with the cases listed in T-364 section 7. The group is new, so both clients' harnesses ignore it until they run it (their tickets).",
+  "created_at": "2026-10-31T22:03:09+00:00",
+  "deps": [
+    "T-364"
+  ],
+  "id": "T-365",
+  "labels": [
+    "agent",
+    "server",
+    "web",
+    "android"
+  ],
+  "priority": 2,
+  "title": "Ledger guests: shared cases for the fold",
+  "updated_at": "2026-10-31T22:03:09+00:00"
+}
