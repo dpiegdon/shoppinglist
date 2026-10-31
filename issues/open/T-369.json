@@ -1,0 +1,14 @@
+{
+  "body": "`SettingsViewModelTest > the invitations switch is on by default, loads from prefs and leaves the collaborator switch alone (T-319)` fails under the parallel gate with `kotlinx.coroutines.test.UncompletedCoroutinesError at TestBuilders.kt:353`, and `InboxSeenInvitesTest` (T-322) has timed out the same way in the same kind of run. Both pass alone and in other full runs.\n\nEvidence, all on 2026-10-31 on a 12-core / 31 GB host running `./verify-all.sh` in parallel mode (Gradle, vitest and pytest workers at once):\n- the T-368 subagent's first Android stage: both tests timed out; both green when run alone and in its next full run;\n- the orchestrator's gate on the guests integration branch (`/tmp/verify-all.JNQSbs/android-test-lint.log`): `SettingsViewModelTest` failed, 763 tests, 1 failed; the class alone passed straight after; the guests change (T-366/T-367/T-368) touches nothing on `SettingsViewModel`'s path;\n- the baseline gate on `main` at cde16cb1 passed.\n\nProbably the same shape as T-358 (web `OverviewPage` flake under load): a `runTest` whose collector or child coroutine is still pending when the body returns under scheduler starvation. Look at how the test waits for the prefs flow, and whether `advanceUntilIdle`/`closeWhenIdle` is missing before the assertion, rather than raising the timeout.",
+  "created_at": "2026-10-31T22:45:11+00:00",
+  "id": "T-369",
+  "labels": [
+    "bug",
+    "android",
+    "reliability",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "Android: SettingsViewModelTest and InboxSeenInvitesTest time out under the parallel gate",
+  "updated_at": "2026-10-31T22:45:11+00:00"
+}

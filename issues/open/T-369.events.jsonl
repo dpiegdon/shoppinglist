@@ -1,0 +1,1 @@
+{"actor": "claude", "at": "2026-10-31T22:45:11+00:00", "kind": "created", "ref": "guests-integration@17be55cd", "text": "Android: SettingsViewModelTest and InboxSeenInvitesTest time out under the parallel gate"}
