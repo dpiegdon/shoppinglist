@@ -46,7 +46,22 @@
     "",
     "effect (T-245): ONE entry and ONE account -> what that entry alone does to that account's",
     "balance, signed. expense and transfer give paid_by[a] - paid_for[a]; income negates it.",
-    "'0.00' where the account is not on the entry, or the two sides cancel out."
+    "'0.00' where the account is not on the entry, or the two sides cancel out.",
+    "",
+    "GUESTS AND THE FOLD (T-364). A ledger may hold guests — participants with no account, keyed",
+    "'g:<uuid>' in the two maps — and a member may CLAIM a guest, after which that guest's",
+    "history is the member's. No stored entry is ever rewritten for that; instead both clients",
+    "fold before any arithmetic: 'aliases' maps a claimed guest id to the claimant's account id,",
+    "and fold(entry, aliases) replaces every key of paid_by and paid_for by aliases[key] ?? key,",
+    "SUMMING in cents the amounts of keys that land on the same id. type, date and the two equal",
+    "flags are copied. A folded entry is for arithmetic and display only, never written, so a",
+    "transfer that folds onto one id on both sides is fine: its effect is zero, which is right.",
+    "",
+    "fold: 'aliases', 'participants' (current members and UNCLAIMED guests, what balancesFor is",
+    "given) and 'expenses' -> 'folded' (the entries after the fold, in order, maps compared as",
+    "wire strings), 'expect' and 'total' (balancesFor over the folded entries, same shape and",
+    "same order rule as the balances group) and 'settle' (settle over those balances). An empty",
+    "'aliases' is the identity, and fold is idempotent — both clients pin those as properties."
   ],
 
   "to_cents": [
@@ -621,6 +636,227 @@
       "name": "a solo list has nothing to settle",
       "balances": { "a": "0.00" },
       "expect": []
+    }
+  ],
+  "fold": [
+    {
+      "name": "an unclaimed guest is a participant like any member",
+      "aliases": {},
+      "participants": ["a", "b", "g:1"],
+      "expenses": [
+        {
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "g:1": "10.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "g:1": "10.00" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "30.00", "share": "10.00", "settled": "0.00", "balance": "20.00" },
+        "b": { "paid": "0.00", "share": "10.00", "settled": "0.00", "balance": "-10.00" },
+        "g:1": { "paid": "0.00", "share": "10.00", "settled": "0.00", "balance": "-10.00" }
+      },
+      "total": "30.00",
+      "settle": [
+        { "from": "b", "to": "a", "amount": "10.00" },
+        { "from": "g:1", "to": "a", "amount": "10.00" }
+      ]
+    },
+    {
+      "name": "a claimed guest's amounts become the claimant's",
+      "aliases": { "g:1": "b" },
+      "participants": ["a", "b"],
+      "expenses": [
+        {
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "10.00", "g:1": "10.00" }
+        },
+        {
+          "type": "expense",
+          "paid_by": { "g:1": "6.00" },
+          "paid_for": { "a": "3.00", "b": "3.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "b": "20.00" }
+        },
+        {
+          "type": "expense",
+          "paid_by": { "b": "6.00" },
+          "paid_for": { "a": "3.00", "b": "3.00" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "30.00", "share": "13.00", "settled": "0.00", "balance": "17.00" },
+        "b": { "paid": "6.00", "share": "23.00", "settled": "0.00", "balance": "-17.00" }
+      },
+      "total": "36.00",
+      "settle": [{ "from": "b", "to": "a", "amount": "17.00" }]
+    },
+    {
+      "name": "two guests claimed by one account fold onto it",
+      "aliases": { "g:1": "b", "g:2": "b" },
+      "participants": ["a", "b"],
+      "expenses": [
+        {
+          "paid_by": { "g:1": "10.00" },
+          "paid_for": { "g:1": "10.00" }
+        },
+        {
+          "paid_by": { "g:2": "20.00" },
+          "paid_for": { "a": "20.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "expense",
+          "paid_by": { "b": "10.00" },
+          "paid_for": { "b": "10.00" }
+        },
+        {
+          "type": "expense",
+          "paid_by": { "b": "20.00" },
+          "paid_for": { "a": "20.00" }
+        }
+      ],
+      "expect": {
+        "b": { "paid": "30.00", "share": "10.00", "settled": "0.00", "balance": "20.00" },
+        "a": { "paid": "0.00", "share": "20.00", "settled": "0.00", "balance": "-20.00" }
+      },
+      "total": "30.00",
+      "settle": [{ "from": "a", "to": "b", "amount": "20.00" }]
+    },
+    {
+      "name": "a guest and the claimant on one side are summed",
+      "aliases": { "g:1": "a" },
+      "participants": ["a", "b"],
+      "expenses": [
+        {
+          "paid_by": { "a": "10.00", "g:1": "5.00" },
+          "paid_for": { "b": "15.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "15.00" },
+          "paid_for": { "b": "15.00" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "15.00", "share": "0.00", "settled": "0.00", "balance": "15.00" },
+        "b": { "paid": "0.00", "share": "15.00", "settled": "0.00", "balance": "-15.00" }
+      },
+      "total": "15.00",
+      "settle": [{ "from": "b", "to": "a", "amount": "15.00" }]
+    },
+    {
+      "name": "a transfer that folds onto one id does nothing",
+      "aliases": { "g:1": "a" },
+      "participants": ["a", "b"],
+      "expenses": [
+        {
+          "paid_by": { "a": "20.00" },
+          "paid_for": { "b": "20.00" }
+        },
+        {
+          "type": "transfer",
+          "paid_by": { "g:1": "20.00" },
+          "paid_for": { "a": "20.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "20.00" },
+          "paid_for": { "b": "20.00" }
+        },
+        {
+          "type": "transfer",
+          "paid_by": { "a": "20.00" },
+          "paid_for": { "a": "20.00" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "20.00", "share": "0.00", "settled": "0.00", "balance": "20.00" },
+        "b": { "paid": "0.00", "share": "20.00", "settled": "0.00", "balance": "-20.00" }
+      },
+      "total": "40.00",
+      "settle": [{ "from": "b", "to": "a", "amount": "20.00" }]
+    },
+    {
+      "name": "an income credited to a claimed guest is the claimant's",
+      "aliases": { "g:1": "b" },
+      "participants": ["a", "b"],
+      "expenses": [
+        {
+          "type": "income",
+          "paid_by": { "a": "9.00" },
+          "paid_for": { "g:1": "9.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "income",
+          "paid_by": { "a": "9.00" },
+          "paid_for": { "b": "9.00" }
+        }
+      ],
+      "expect": {
+        "b": { "paid": "0.00", "share": "-9.00", "settled": "0.00", "balance": "9.00" },
+        "a": { "paid": "-9.00", "share": "0.00", "settled": "0.00", "balance": "-9.00" }
+      },
+      "total": "9.00",
+      "settle": [{ "from": "a", "to": "b", "amount": "9.00" }]
+    },
+    {
+      "name": "a removed guest and a departed claimant are former participants",
+      "aliases": { "g:1": "z" },
+      "participants": ["a"],
+      "expenses": [
+        {
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "g:1": "10.00", "g:2": "10.00" }
+        }
+      ],
+      "folded": [
+        {
+          "type": "expense",
+          "paid_by": { "a": "30.00" },
+          "paid_for": { "a": "10.00", "g:2": "10.00", "z": "10.00" }
+        }
+      ],
+      "expect": {
+        "a": { "paid": "30.00", "share": "10.00", "settled": "0.00", "balance": "20.00" },
+        "g:2": { "paid": "0.00", "share": "10.00", "settled": "0.00", "balance": "-10.00" },
+        "z": { "paid": "0.00", "share": "10.00", "settled": "0.00", "balance": "-10.00" }
+      },
+      "total": "30.00",
+      "settle": [
+        { "from": "g:2", "to": "a", "amount": "10.00" },
+        { "from": "z", "to": "a", "amount": "10.00" }
+      ]
+    },
+    {
+      "name": "a claimed guest with no entries has no row of its own",
+      "aliases": { "g:1": "b" },
+      "participants": ["a", "b"],
+      "expenses": [],
+      "folded": [],
+      "expect": {
+        "a": { "paid": "0.00", "share": "0.00", "settled": "0.00", "balance": "0.00" },
+        "b": { "paid": "0.00", "share": "0.00", "settled": "0.00", "balance": "0.00" }
+      },
+      "total": "0.00",
+      "settle": []
     }
   ]
 }
