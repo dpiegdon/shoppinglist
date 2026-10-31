@@ -124,10 +124,12 @@ describe("the two clients say the same thing (T-148)", () => {
     // T-270: widened to item.*/item_* after the price/currency messages and the delete
     // confirmation moved into the catalog on both sides — that family had the same silent-drift
     // risk (a string added to one client's item form with nothing to pair it on the other).
+    // T-364: and guest.*/guest_*, the ledger-guest family, for the same reason.
     const inFamily = (key: string) =>
       key.startsWith("expense.") || key.startsWith("apiError.") ||
       key.startsWith("expense_") || key.startsWith("api_error_") ||
-      key.startsWith("item.") || key.startsWith("item_");
+      key.startsWith("item.") || key.startsWith("item_") ||
+      key.startsWith("guest.") || key.startsWith("guest_");
     const pairedWeb = new Set(pairs.map(([webKey]) => webKey));
     const pairedAndroid = new Set(pairs.map(([, name]) => name));
     const lonely = [
