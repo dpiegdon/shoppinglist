@@ -1,0 +1,2 @@
+{"actor": "claude", "at": "2026-10-31T21:45:47+00:00", "kind": "created", "ref": "main@4a1a7df9", "text": "Ledger guests: participants without an account \u2014 add, lock, claim on join (design)"}
+{"actor": "claude", "at": "2026-10-31T23:06:32+00:00", "kind": "rejected", "ref": "t369@17be55cd", "text": "Duplicate of T-364: the first 'git toc new' wrote this file and then failed to commit (no git identity in a fresh container), so the retry filed the same design again as T-364, which was groomed and implemented (T-365..T-368, on main as of 17be55cd)."}
