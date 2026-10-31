@@ -1,20 +1,26 @@
-import { useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import ExpenseDialog, { type ExpenseSaveValues } from "../components/ExpenseDialog";
 import AddFab from "../components/AddFab";
 import CloseVoteBanner from "../components/CloseVoteBanner";
 import ExpenseListHeader from "../components/ExpenseListHeader";
 import LedgerSummary from "../components/LedgerSummary";
+import GuestChooser from "../components/GuestChooser";
+import { participantText } from "../lib/participantLabel";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import { useLiveListSync } from "../hooks/useLiveListSync";
 import {
+  aliasesOf,
   balancesFor,
   entryEffectCents,
   entryType,
   expenseTotalCents,
+  fold,
   formerMemberNumbers,
+  resolveParticipant,
+  rosterIds,
   sortedExpenses,
   spentTotals,
 } from "../lib/expenses";
@@ -35,11 +41,17 @@ export default function ExpenseListPage() {
   const { lists, items, push, deviceId } = useSyncContext();
   const { account } = useAuth();
   const [dialogItem, setDialogItem] = useState<ItemObject | "new" | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [chooserOpen, setChooserOpen] = useState(false);
 
   useLiveListSync();
 
   const list = listId ? lists.get(listId) : undefined;
   const members = useMemo(() => list?.members ?? [], [list]);
+  // Absent on a server older than guests (protocol 4), which reads as none (T-364).
+  const guests = useMemo(() => list?.guests ?? [], [list]);
+  const aliases = useMemo(() => aliasesOf(guests), [guests]);
+  const roster = useMemo(() => rosterIds(members, guests), [members, guests]);
   const currency = (list ? listFieldValue(list, "currency") : null) ?? "";
   const closeVotes = useMemo(() => list?.close_votes ?? [], [list]);
   const closedAt = list?.closed_at ?? null;
@@ -59,15 +71,36 @@ export default function ExpenseListPage() {
     [items, listId],
   );
 
-  const formerNumbers = useMemo(() => formerMemberNumbers(expenses, members), [expenses, members]);
+  const formerNumbers = useMemo(
+    () => formerMemberNumbers(expenses, members, guests),
+    [expenses, members, guests],
+  );
+  // Every figure is computed on folded entries (T-364): a claimed guest's amounts are its claimant's.
   const balances = useMemo(
     () =>
       balancesFor(
-        expenses.map((item) => itemFieldValue(item, "expense") as Expense),
-        members.map((member) => member.account_id),
+        expenses.map((item) => fold(itemFieldValue(item, "expense") as Expense, aliases)),
+        roster,
       ),
-    [expenses, members],
+    [expenses, aliases, roster],
   );
+
+  // The post-join chooser (T-364): RedeemPage and the overview's inbox arrive with `?joined`, read
+  // exactly once — the flag goes from the URL whatever is decided, so a reload never asks again.
+  const joined = searchParams.has("joined");
+  useEffect(() => {
+    if (!joined || !list) return;
+    const unclaimed = (list.guests ?? []).filter((guest) => !guest.claimed_by);
+    if (unclaimed.length > 0 && (list.closed_at ?? null) === null) setChooserOpen(true);
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("joined");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [joined, list, setSearchParams]);
 
   if (!listId) return <Navigate to="/" replace />;
   // Not a redirect: `list` is undefined on the first render of every visit (T-146).
@@ -82,23 +115,23 @@ export default function ExpenseListPage() {
 
   // What the list has spent, income taken off it and settlements counting for nothing (T-245).
   const netCents = spentTotals(
-    expenses.map((item) => itemFieldValue(item, "expense") as Expense),
+    expenses.map((item) => fold(itemFieldValue(item, "expense") as Expense, aliases)),
   ).netCents;
   const myBalance = balances.find((balance) => balance.accountId === account?.id);
 
+  /** A stored key as the label table reads it (T-364): initials, a guest's name, "Dave · DP". */
   function nameOf(id: string): string {
-    const member = members.find((m) => m.account_id === id);
-    if (member) return member.initials;
-    return t("expense.formerMember", { number: formerNumbers.get(id) ?? 0 });
+    return participantText(resolveParticipant(id, members, guests, formerNumbers), t, (m) => m.initials);
   }
 
-  /** "for everyone" beats naming every member, which is the usual case and the longest string. */
+  /**
+   * "for everyone" beats naming every member, which is the usual case and the longest string.
+   * Everyone is the roster: the members and the unclaimed guests (T-364).
+   */
   function forWhom(expense: Expense): string {
     const ids = Object.keys(expense.paid_for);
     const everyone =
-      members.length > 0 &&
-      ids.length === members.length &&
-      members.every((member) => ids.includes(member.account_id));
+      roster.length > 0 && ids.length === roster.length && roster.every((id) => ids.includes(id));
     return everyone ? t("expense.forEveryone") : ids.map(nameOf).join(", ");
   }
 
@@ -155,7 +188,7 @@ export default function ExpenseListPage() {
       <LedgerSummary
         currency={currency}
         netCents={netCents}
-        myBalanceCents={members.length > 1 && myBalance ? myBalance.balanceCents : null}
+        myBalanceCents={roster.length > 1 && myBalance ? myBalance.balanceCents : null}
       />
 
       <CloseVoteBanner
@@ -179,7 +212,8 @@ export default function ExpenseListPage() {
               const totalCents = expenseTotalCents(expense);
               // What this one entry does to my own balance, which is the only figure on the row
               // that is mine rather than the group's — so the only one that is coloured (T-245).
-              const myEffect = account ? entryEffectCents(expense, account.id) : 0;
+              // On the folded entry (T-364), so a guest I have claimed counts as me.
+              const myEffect = account ? entryEffectCents(fold(expense, aliases), account.id) : 0;
               return (
                 <button
                   key={item.id}
@@ -241,6 +275,7 @@ export default function ExpenseListPage() {
       {dialogItem && account && (
         <ExpenseDialog
           members={members}
+          guests={guests}
           closeVotes={closeVotes}
           currency={currency}
           myAccountId={account.id}
@@ -249,6 +284,14 @@ export default function ExpenseListPage() {
           onClose={() => setDialogItem(null)}
           onSave={handleSave}
           onDelete={handleDelete}
+        />
+      )}
+
+      {chooserOpen && (
+        <GuestChooser
+          listId={listId}
+          guests={guests.filter((guest) => !guest.claimed_by)}
+          onClose={() => setChooserOpen(false)}
         />
       )}
     </main>

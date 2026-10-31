@@ -4,6 +4,7 @@ import type {
   RegistrationStatus,
   AdminUsersResponse,
   ApiErrorBody,
+  ListGuest,
   ListSummary,
   LoginRequest,
   LoginResponse,
@@ -17,6 +18,7 @@ import type {
   Settings,
   SyncRequest,
   SyncResponse,
+  UpdateGuestRequest,
   UpdateSettingsRequest,
 } from "./contract";
 import { appBasename } from "../lib/appConfig";
@@ -238,6 +240,31 @@ export function castCloseVote(listId: string): Promise<CloseVoteState> {
 
 export function withdrawCloseVote(listId: string): Promise<CloseVoteState> {
   return apiFetch(`/lists/${seg(listId)}/close-votes`, { method: "DELETE" });
+}
+
+// --- Ledger guests (T-364). Online actions, like votes: the list object carries the result, so
+// a caller pulls afterwards to see it. ---
+
+export function createGuest(listId: string, name: string): Promise<ListGuest> {
+  return apiFetch(`/lists/${seg(listId)}/guests`, { method: "POST", body: { name } });
+}
+
+export function updateGuest(listId: string, guestId: string, changes: UpdateGuestRequest): Promise<ListGuest> {
+  return apiFetch(`/lists/${seg(listId)}/guests/${seg(guestId)}`, { method: "PATCH", body: changes });
+}
+
+export function deleteGuest(listId: string, guestId: string): Promise<void> {
+  return apiFetch(`/lists/${seg(listId)}/guests/${seg(guestId)}`, { method: "DELETE" });
+}
+
+/** "This is me": the guest's entries count towards the caller from now on. */
+export function claimGuest(listId: string, guestId: string): Promise<ListGuest> {
+  return apiFetch(`/lists/${seg(listId)}/guests/${seg(guestId)}/claim`, { method: "POST" });
+}
+
+/** Undoes the caller's own claim while the list is open. */
+export function unclaimGuest(listId: string, guestId: string): Promise<ListGuest> {
+  return apiFetch(`/lists/${seg(listId)}/guests/${seg(guestId)}/claim`, { method: "DELETE" });
 }
 
 export function mintInvite(listId: string, invitedEmail: string): Promise<MintInviteResponse> {

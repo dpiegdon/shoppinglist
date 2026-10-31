@@ -388,6 +388,30 @@ export const en = {
   "expense.deleteBlocked": "This entry can't be deleted: it involves someone whose amounts are fixed.",
   "expense.deleteTitle": "Delete this entry?",
   "expense.deleteBody": "It is removed for everyone on the list.",
+
+  // ---- ledger guests (T-364) ----
+  "guest.section": "Guests",
+  "guest.label": "{name} (guest)",
+  "guest.claimedLabel": "{guest} · {claimant}",
+  "guest.name": "Guest name",
+  "guest.add": "Add guest",
+  "guest.addAnother": "Add another",
+  "guest.lockedSwitch": "Amounts locked",
+  "guest.lockedHelp": "Locked: the amounts cannot change, like a member who agreed to close",
+  "guest.thisIsMe": "This is me",
+  "guest.claimedBy": "claimed by {initials}",
+  "guest.unclaim": "Unclaim",
+  "guest.inUse": "Named in entries — edit those first",
+  "guest.frozenLocked": "locked — amounts fixed",
+  "guest.balanceLocked": "amounts locked",
+  "guest.errorLocked": "{who}: amounts locked",
+  "guest.chooserTitle": "Are you one of these?",
+  "guest.chooserNew": "No, I'm new",
+  "guest.errorClaimed": "This guest has already been claimed",
+  "guest.errorNotFound": "This guest is no longer on this list",
+  "guest.errorInvalidName": "Enter a guest name of up to 64 characters",
+  "action.rename": "Rename",
+  "action.remove": "Remove",
 } as const;
 
 export type MessageKey = keyof typeof en;

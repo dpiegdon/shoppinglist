@@ -1,4 +1,4 @@
-import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
+import type { Expense, ExpenseType, ItemObject, ListGuest, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 
 /**
@@ -246,13 +246,26 @@ export function sortedExpenses(items: ItemObject[]): ItemObject[] {
 /**
  * How to label a participant who is no longer a member (T-152): numbered by first appearance
  * across the list's expenses, so two of them stay distinguishable and the number is stable.
+ *
+ * With guests (T-364) the numbering runs over EFFECTIVE ids: the entries are folded first, and a
+ * guest of the list — claimed or not — is as current as a member. So a removed guest and a departed
+ * claimant each get one number, and a live claimed guest never does.
  */
-export function formerMemberNumbers(expenses: ItemObject[], members: ListMember[]): Map<string, number> {
-  const current = new Set(members.map((member) => member.account_id));
+export function formerMemberNumbers(
+  expenses: ItemObject[],
+  members: ListMember[],
+  guests: readonly ListGuest[] = [],
+): Map<string, number> {
+  const current = new Set([
+    ...members.map((member) => member.account_id),
+    ...guests.map((guest) => guest.id),
+  ]);
+  const aliases = aliasesOf(guests);
   const numbers = new Map<string, number>();
   for (const item of expenses) {
-    const expense = itemFieldValue(item, "expense");
-    if (!expense) continue;
+    const stored = itemFieldValue(item, "expense");
+    if (!stored) continue;
+    const expense = fold(stored, aliases);
     for (const id of [...Object.keys(expense.paid_by), ...Object.keys(expense.paid_for)]) {
       if (!current.has(id) && !numbers.has(id)) numbers.set(id, numbers.size + 1);
     }
@@ -306,4 +319,114 @@ export function settle(balances: Pick<Balance, "accountId" | "balanceCents">[]):
     else credits.set(creditorId, credit - cents);
   }
   return transfers;
+}
+
+// ---- guests (T-364) ---------------------------------------------------------
+
+/** Claimed guest id -> claimant's account id. Unclaimed guests are not in it. */
+export type Aliases = ReadonlyMap<string, string>;
+
+/** The alias map of a list's guests: every claimed guest folds onto its claimant. */
+export function aliasesOf(guests: readonly ListGuest[] | undefined): Aliases {
+  const aliases = new Map<string, string>();
+  for (const guest of guests ?? []) {
+    if (guest.claimed_by) aliases.set(guest.id, guest.claimed_by);
+  }
+  return aliases;
+}
+
+function foldMap(shares: Record<string, string>, aliases: Aliases): Record<string, string> {
+  const cents = new Map<string, number>();
+  for (const [id, amount] of Object.entries(shares)) {
+    const target = aliases.get(id) ?? id;
+    cents.set(target, (cents.get(target) ?? 0) + toCents(amount));
+  }
+  return Object.fromEntries([...cents].map(([id, total]) => [id, fromCents(total)]));
+}
+
+/**
+ * An entry as its effective participants see it (T-364): every key of both maps replaced by its
+ * claimant where it is a claimed guest, and the amounts of keys that land on one id summed, in
+ * cents. The type is the entry's read type and the date and equal flags are copied.
+ *
+ * Only ever computed, never written: the stored entry keeps the guest's id, so a claim needs no
+ * rewrite and an unclaim restores the exact split. A transfer that folds onto one id on both sides
+ * is fine — it was the claimant paying themself, and its effect is zero.
+ *
+ * Every figure on every screen is computed on folded entries; the shared case table pins it.
+ */
+export function fold(expense: Expense, aliases: Aliases): Expense {
+  return {
+    type: entryType(expense),
+    paid_by: foldMap(expense.paid_by, aliases),
+    equal_by: expense.equal_by,
+    paid_for: foldMap(expense.paid_for, aliases),
+    equal_for: expense.equal_for,
+    date: expense.date,
+  };
+}
+
+/**
+ * Who balances are computed for (T-364): the members, then the unclaimed guests — so a guest with no
+ * entries yet shows a zero row like a member. A claimed guest is its claimant's now.
+ */
+export function rosterIds(members: readonly ListMember[], guests: readonly ListGuest[] | undefined): string[] {
+  return [
+    ...members.map((member) => member.account_id),
+    ...(guests ?? []).filter((guest) => !guest.claimed_by).map((guest) => guest.id),
+  ];
+}
+
+/**
+ * Who a stored participant id is (T-364, design section 8), for every screen to label alike:
+ * a current member, an unclaimed guest, a claimed guest (with its claimant resolved the same way),
+ * or anyone else — someone who left, or a removed guest — as a numbered former member.
+ */
+export type Participant =
+  | { kind: "member"; id: string; member: ListMember }
+  | { kind: "guest"; id: string; guest: ListGuest }
+  | { kind: "claimed"; id: string; guest: ListGuest; claimant: Participant }
+  | { kind: "former"; id: string; number: number };
+
+export function resolveParticipant(
+  id: string,
+  members: readonly ListMember[],
+  guests: readonly ListGuest[] | undefined,
+  formerNumbers: ReadonlyMap<string, number>,
+): Participant {
+  const member = members.find((m) => m.account_id === id);
+  if (member) return { kind: "member", id, member };
+  const guest = (guests ?? []).find((g) => g.id === id);
+  if (guest && guest.claimed_by) {
+    // The claimant is an account id, never a guest, so this recursion is one level deep.
+    const claimant = resolveParticipant(guest.claimed_by, members, [], formerNumbers);
+    return { kind: "claimed", id, guest, claimant };
+  }
+  if (guest) return { kind: "guest", id, guest };
+  return { kind: "former", id, number: formerNumbers.get(id) ?? 0 };
+}
+
+/** Why a participant's amounts may not move. */
+export type FrozenReason = "voter" | "former" | "locked";
+
+/**
+ * Whether a STORED key is frozen, and why (T-364, design sections 4 and 6), mirroring the server's
+ * `is_frozen`: an account id when it has voted or is not a member; an unclaimed guest when locked;
+ * a guest id the list no longer has like someone who left; a claimed guest whatever its claimant is.
+ * Null when its amounts may move.
+ */
+export function frozenReasonOf(
+  id: string,
+  members: readonly ListMember[],
+  guests: readonly ListGuest[] | undefined,
+  closeVotes: readonly string[],
+): FrozenReason | null {
+  const guest = (guests ?? []).find((g) => g.id === id);
+  if (guest) {
+    if (guest.claimed_by) return frozenReasonOf(guest.claimed_by, members, [], closeVotes);
+    return guest.locked ? "locked" : null;
+  }
+  if (closeVotes.includes(id)) return "voter";
+  if (!members.some((member) => member.account_id === id)) return "former";
+  return null;
 }

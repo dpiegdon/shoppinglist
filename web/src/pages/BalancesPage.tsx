@@ -3,13 +3,20 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import ExpenseDialog, { today, type ExpenseSaveValues } from "../components/ExpenseDialog";
 import ExpenseListHeader from "../components/ExpenseListHeader";
 import LedgerSummary from "../components/LedgerSummary";
+import { GuestBadge } from "../components/GuestBadge";
+import { participantText } from "../lib/participantLabel";
 import { useAuth } from "../auth/AuthContext";
 import { useSyncContext } from "../hooks/SyncContext";
 import { fieldPatch, itemFieldValue, listFieldValue, nowMs } from "../hooks/useSync";
 import {
+  aliasesOf,
   balancesFor,
+  fold,
   formerMemberNumbers,
+  frozenReasonOf,
   fromCents,
+  resolveParticipant,
+  rosterIds,
   settle,
   sortedExpenses,
   spentTotals,
@@ -38,6 +45,8 @@ export default function BalancesPage() {
   const currency = (list ? listFieldValue(list, "currency") : null) ?? "";
   const closeVotes = useMemo(() => list?.close_votes ?? [], [list]);
   const closedAt = list?.closed_at ?? null;
+  // Absent on a server older than guests, which reads as none (T-364).
+  const guests = useMemo(() => list?.guests ?? [], [list]);
 
   const expenseItems = useMemo(
     () =>
@@ -51,17 +60,18 @@ export default function BalancesPage() {
       ),
     [items, listId],
   );
-  const expenses = useMemo(
-    () => expenseItems.map((item) => itemFieldValue(item, "expense") as Expense),
-    [expenseItems],
-  );
+  // Folded (T-364): one row per effective id, a claimed guest's amounts under its claimant.
+  const expenses = useMemo(() => {
+    const aliases = aliasesOf(guests);
+    return expenseItems.map((item) => fold(itemFieldValue(item, "expense") as Expense, aliases));
+  }, [expenseItems, guests]);
   const formerNumbers = useMemo(
-    () => formerMemberNumbers(expenseItems, members),
-    [expenseItems, members],
+    () => formerMemberNumbers(expenseItems, members, guests),
+    [expenseItems, members, guests],
   );
   const balances = useMemo(
-    () => balancesFor(expenses, members.map((member) => member.account_id)),
-    [expenses, members],
+    () => balancesFor(expenses, rosterIds(members, guests)),
+    [expenses, members, guests],
   );
   const transfers = useMemo(() => settle(balances), [balances]);
 
@@ -78,11 +88,12 @@ export default function BalancesPage() {
   }
 
   const spent = spentTotals(expenses);
-  const currentIds = new Set(members.map((member) => member.account_id));
+  // Who a transfer may be recorded between: the members and the unclaimed guests (T-364).
+  const currentIds = new Set(rosterIds(members, guests));
 
+  /** An effective id: a member's email, an unclaimed guest's name, or a former participant. */
   function labelFor(id: string): string {
-    const member = members.find((m) => m.account_id === id);
-    return member?.email ?? t("expense.formerMember", { number: formerNumbers.get(id) ?? 0 });
+    return participantText(resolveParticipant(id, members, guests, formerNumbers), t, (m) => m.email);
   }
 
   /**
@@ -98,8 +109,9 @@ export default function BalancesPage() {
       !closeVotes.includes(account.id) &&
       currentIds.has(transfer.from) &&
       currentIds.has(transfer.to) &&
-      !closeVotes.includes(transfer.from) &&
-      !closeVotes.includes(transfer.to)
+      // A voter's amounts and a locked guest's are frozen alike (T-364).
+      frozenReasonOf(transfer.from, members, guests, closeVotes) === null &&
+      frozenReasonOf(transfer.to, members, guests, closeVotes) === null
     );
   }
 
@@ -138,15 +150,23 @@ export default function BalancesPage() {
       <div className="rows">
         {balances.map((balance) => {
           const member = members.find((m) => m.account_id === balance.accountId);
+          // Only an unclaimed guest has a row of its own: a claimed one is folded into its claimant.
+          const guest = guests.find((g) => g.id === balance.accountId);
           return (
             <div
               key={balance.accountId}
               className="row"
               style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.6rem 0.75rem" }}
             >
-              <span aria-hidden="true" style={{ fontWeight: 700, minWidth: "2.2rem" }}>
-                {member?.initials ?? "—"}
-              </span>
+              {guest ? (
+                <span style={{ minWidth: "2.2rem" }}>
+                  <GuestBadge name={guest.name} initials={guest.initials} />
+                </span>
+              ) : (
+                <span aria-hidden="true" style={{ fontWeight: 700, minWidth: "2.2rem" }}>
+                  {member?.initials ?? "—"}
+                </span>
+              )}
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span dir="auto" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {labelFor(balance.accountId)}
@@ -167,6 +187,12 @@ export default function BalancesPage() {
                         settled: fmt.signedNumber(balance.settledCents),
                       })}
                 </span>
+                {/* Its own words, not a voter's "agreed to close" (T-364). */}
+                {guest?.locked && (
+                  <span className="muted" style={{ display: "block", fontSize: "0.8rem" }}>
+                    {t("guest.balanceLocked")}
+                  </span>
+                )}
               </span>
               <strong
                 style={{
@@ -224,6 +250,7 @@ export default function BalancesPage() {
       {recording && account && (
         <ExpenseDialog
           members={members}
+          guests={guests}
           closeVotes={closeVotes}
           currency={currency}
           myAccountId={account.id}

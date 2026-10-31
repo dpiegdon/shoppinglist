@@ -11,7 +11,7 @@ import { safeSessionStorage } from "../lib/safeStorage";
  * The same integer lives in `server/src/shoppinglist_server/protocol.py` and in the Android
  * client's `Protocol.kt`; protocolVersion.test.ts reads all three and asserts they are equal.
  */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 export const PROTOCOL_HEADER = "X-Client-Protocol";
 
 /**

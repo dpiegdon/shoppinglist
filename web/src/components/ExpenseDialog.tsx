@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { ApiError } from "../api/client";
-import type { Expense, ExpenseType, ItemObject, ListMember } from "../api/contract";
+import type { Expense, ExpenseType, ItemObject, ListGuest, ListMember } from "../api/contract";
 import { itemFieldValue } from "../hooks/useSync";
 import { ModalDialog } from "./ModalDialog";
 import { useConfirm } from "../hooks/useConfirm";
@@ -9,7 +9,11 @@ import {
   distribute,
   entryType,
   expenseTotalCents,
+  frozenReasonOf,
   fromCents,
+  resolveParticipant,
+  rosterIds,
+  type FrozenReason,
   sharesToWire,
   toCents,
   type DistributeError,
@@ -17,6 +21,8 @@ import {
 } from "../lib/expenses";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
+import { GuestBadge } from "./GuestBadge";
+import { participantText } from "../lib/participantLabel";
 
 export interface ExpenseSaveValues {
   itemId: string;
@@ -27,6 +33,11 @@ export interface ExpenseSaveValues {
 
 interface ExpenseDialogProps {
   members: ListMember[];
+  /**
+   * The ledger's guests (T-364). The unclaimed ones are offered after the members; a claimed one
+   * never is, but an entry stored before the claim still shows it under its own key.
+   */
+  guests?: ListGuest[];
   /** Who has agreed to close the list (T-157): their amounts are frozen and cannot be edited. */
   closeVotes: string[];
   /** The list's free-text currency label, shown beside the total. */
@@ -113,20 +124,17 @@ function soleParticipant(shares: Record<string, string>): string {
   return ids.length === 1 ? ids[0] : "";
 }
 
-/** A new expense can never involve a frozen participant, so they start unselected. */
-function frozenFreeSelection(
-  ids: string[],
-  closeVotes: string[],
-  members: ListMember[],
-): Record<string, boolean> {
-  const current = new Set(members.map((member) => member.account_id));
-  return Object.fromEntries(
-    ids.filter((id) => !closeVotes.includes(id) && current.has(id)).map((id) => [id, true]),
-  );
+/**
+ * A new expense can never involve a frozen participant — a voter, someone who left, a locked
+ * guest (T-364) — so they start unselected.
+ */
+function frozenFreeSelection(ids: string[], frozen: ReadonlySet<string>): Record<string, boolean> {
+  return Object.fromEntries(ids.filter((id) => !frozen.has(id)).map((id) => [id, true]));
 }
 
 export default function ExpenseDialog({
   members,
+  guests = [],
   closeVotes,
   currency,
   myAccountId,
@@ -144,15 +152,16 @@ export default function ExpenseDialog({
   // What the distributions start from: the expense being edited, else a prefill, else nothing.
   const seed = stored ?? prefill?.expense ?? null;
 
-  // Everyone who can be given a share: the current roster, plus anyone already on this expense
-  // who has since left — their amount must stay visible and editable rather than vanish.
+  // Everyone who can be given a share: the current roster — the members, then the unclaimed guests
+  // (T-364) — plus anyone already on this expense who has since left, or a guest since claimed or
+  // removed: their amount must stay visible and editable rather than vanish.
   const participantIds = useMemo(() => {
-    const ids = members.map((member) => member.account_id);
+    const ids = rosterIds(members, guests);
     for (const id of [...Object.keys(seed?.paid_by ?? {}), ...Object.keys(seed?.paid_for ?? {})]) {
       if (!ids.includes(id)) ids.push(id);
     }
     return ids;
-  }, [members, seed]);
+  }, [members, guests, seed]);
 
   /**
    * Whose amounts may not move, and why (T-203): whoever has agreed to close, and anyone no longer
@@ -160,15 +169,17 @@ export default function ExpenseDialog({
    * and a share that vanished from the form would be silently dropped on the next save. The reason
    * is kept because the row says it: "agreed to close" is a lie about someone who simply left.
    */
+  //
+  // Guests (T-364) on their stored keys, as the server judges them: a locked guest is frozen like a
+  // voter, a claimed one whenever its claimant is, with the claimant's reason.
   const frozenReason = useMemo(() => {
-    const current = new Set(members.map((member) => member.account_id));
-    const reasons = new Map<string, "voter" | "former">();
+    const reasons = new Map<string, FrozenReason>();
     for (const id of participantIds) {
-      if (closeVotes.includes(id)) reasons.set(id, "voter");
-      else if (!current.has(id)) reasons.set(id, "former");
+      const reason = frozenReasonOf(id, members, guests, closeVotes);
+      if (reason) reasons.set(id, reason);
     }
     return reasons;
-  }, [participantIds, members, closeVotes]);
+  }, [participantIds, members, guests, closeVotes]);
   const frozen = useMemo(() => new Set(frozenReason.keys()), [frozenReason]);
 
   const [name, setName] = useState(() =>
@@ -187,17 +198,13 @@ export default function ExpenseDialog({
   const [paidBy, setPaidBy] = useState<ShareState>(() =>
     seed
       ? shareStateFrom(seed.paid_by, seed.equal_by, seedFrozen)
-      : { selected: frozenFreeSelection([myAccountId], closeVotes, members), text: {} },
+      : { selected: frozenFreeSelection([myAccountId], frozen), text: {} },
   );
   const [paidFor, setPaidFor] = useState<ShareState>(() =>
     seed
       ? shareStateFrom(seed.paid_for, seed.equal_for, seedFrozen)
       : {
-          selected: frozenFreeSelection(
-            members.map((m) => m.account_id),
-            closeVotes,
-            members,
-          ),
+          selected: frozenFreeSelection(participantIds, frozen),
           text: {},
         },
   );
@@ -281,9 +288,30 @@ export default function ExpenseDialog({
   const soloList = participantIds.length <= 1;
 
   function labelFor(id: string): string {
-    const member = members.find((m) => m.account_id === id);
-    if (member) return member.email;
-    return t("expense.formerMember", { number: formerNumbers.get(id) ?? 0 });
+    return participantText(resolveParticipant(id, members, guests, formerNumbers), t, (m) => m.email);
+  }
+
+  /** As labelFor, and an unclaimed guest says it is one where no badge can (a select's options). */
+  function optionLabel(id: string): string {
+    const participant = resolveParticipant(id, members, guests, formerNumbers);
+    return participant.kind === "guest" ? t("guest.label", { name: participant.guest.name }) : labelFor(id);
+  }
+
+  /** An unclaimed guest's outline badge, before its name (T-364). */
+  function badgeFor(id: string) {
+    const participant = resolveParticipant(id, members, guests, formerNumbers);
+    if (participant.kind !== "guest") return null;
+    return (
+      <>
+        <GuestBadge name={participant.guest.name} initials={participant.guest.initials} />{" "}
+      </>
+    );
+  }
+
+  function frozenText(reason: FrozenReason): string {
+    if (reason === "voter") return t("expense.frozenVoter");
+    if (reason === "locked") return t("guest.frozenLocked");
+    return t("expense.frozenFormer");
   }
 
   function errorText(error: DistributeError, sumCents: number): string {
@@ -348,10 +376,11 @@ export default function ExpenseDialog({
               />
               {/* Wraps rather than truncates: in a form, who a share belongs to must stay readable. */}
               <label htmlFor={`${which}-${id}`} style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }} dir="auto">
+                {badgeFor(id)}
                 {labelFor(id)}
                 {reason && (
                   <span className="muted" style={{ fontSize: "0.75rem", display: "block" }}>
-                    {t(reason === "voter" ? "expense.frozenVoter" : "expense.frozenFormer")}
+                    {frozenText(reason)}
                   </span>
                 )}
               </label>
@@ -440,7 +469,13 @@ export default function ExpenseDialog({
   /** The server's refusals, said in terms of this list's people rather than account ids. */
   function saveErrorText(err: unknown): string {
     if (err instanceof ApiError && err.code === "participant_frozen") {
-      return t("expense.error.frozen", { who: labelFor(String(err.details.account_id ?? "")) });
+      const id = String(err.details.account_id ?? "");
+      // A locked guest's refusal says so in its own words (T-364); everyone else — a claimed guest
+      // included, which is frozen because its claimant is — keeps the voter-or-left sentence.
+      if (frozenReasonOf(id, members, guests, closeVotes) === "locked") {
+        return t("guest.errorLocked", { who: labelFor(id) });
+      }
+      return t("expense.error.frozen", { who: labelFor(id) });
     }
     return errorMessage(t, err, "item.saveFailed");
   }
@@ -500,7 +535,7 @@ export default function ExpenseDialog({
             .filter((id) => (id !== other || id === value) && (!frozen.has(id) || id === value))
             .map((id) => (
               <option key={id} value={id}>
-                {labelFor(id)}
+                {optionLabel(id)}
               </option>
             ))}
         </select>

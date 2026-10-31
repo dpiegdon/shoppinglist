@@ -14,6 +14,7 @@ import {
 } from "../lib/categories";
 import { isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
 import CloseVoteBanner from "../components/CloseVoteBanner";
+import GuestsCard from "../components/GuestsCard";
 import ToggleSwitch from "../components/ToggleSwitch";
 import { useAuth } from "../auth/AuthContext";
 import type { ItemObject, ItemStatus, ListKind, MembersResponse } from "../api/contract";
@@ -539,6 +540,12 @@ export default function ListPropsPage() {
           </div>
         )}
       </section>
+
+      {/* A ledger's guests (T-364), directly under Members. Only from a server that serves them: an
+          older one's list object has no `guests` key at all, and its ledger looks as it always did. */}
+      {isExpenses(listKind(list)) && list.guests !== undefined && (
+        <GuestsCard list={list} liveItems={liveItems} myAccountId={account?.id ?? null} lockedByVote={lockedByVote} />
+      )}
 
       {/* Closing sits directly above Leave (T-169): they are two stages of one thing — agree to
           close, then, once closed, leave. */}

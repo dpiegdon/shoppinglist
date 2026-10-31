@@ -11,7 +11,7 @@ import { itemFieldValue, listFieldValue } from "../hooks/useSync";
 import { errorMessage } from "../i18n/apiErrors";
 import { formatExpiresIn } from "../lib/relativeTime";
 import { DEFAULT_LIST_KIND, isExpenses, listKind, listKindIcon, listKindLabelKey } from "../lib/listKind";
-import { balancesFor, spentTotals } from "../lib/expenses";
+import { aliasesOf, balancesFor, fold, rosterIds, spentTotals } from "../lib/expenses";
 import { IGNORED_INVITES_STORAGE_KEY, LAST_LIST_STORAGE_KEY } from "../lib/storageKeys";
 import { useDefaultCurrency } from "../hooks/useDefaultCurrency";
 import { useAuth } from "../auth/AuthContext";
@@ -40,6 +40,9 @@ function writeIgnoredInvites(ids: Set<string>) {
   safeLocalStorage.setItem(IGNORED_INVITES_STORAGE_KEY, JSON.stringify([...ids]));
 }
 
+/** The most guests a ledger can be created with (`guest_names`, T-364). */
+export const MAX_NEW_GUESTS = 50;
+
 // Resuming the last-opened list must happen once, on first entry into the
 // app (Spec: "on login, open the list the user last had open") - NOT on
 // every visit to "/", or the overview would become unreachable once any
@@ -65,6 +68,8 @@ export default function OverviewPage() {
   // An expenses list needs a currency up front, and it is fixed afterwards (T-151).
   const defaultCurrency = useDefaultCurrency();
   const [newCurrency, setNewCurrency] = useState("");
+  // A new ledger's first guests (T-364): one box to start, one more per "Add another".
+  const [newGuests, setNewGuests] = useState<string[]>([""]);
   // Create tapped with a blank name, or a ledger with a blank currency (T-307): said inline, as on
   // Android, rather than by the browser's own "required" bubble. Typing clears it.
   const [nameMissing, setNameMissing] = useState(false);
@@ -123,7 +128,8 @@ export default function OverviewPage() {
       setInvites((current) => current.filter((other) => other.id !== invite.id));
       await push({}, [list_id]);
       safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
-      navigate(`/list/${list_id}`);
+      // `joined` asks the ledger to offer its guests to the newcomer, once (T-364).
+      navigate(`/list/${list_id}?joined=1`);
     } catch (err) {
       setInviteError(errorMessage(t, err, "redeem.error", { invalid_token: "apiError.inviteNotFound" }));
       // A used, withdrawn or expired invite drops out of the section on this reload.
@@ -163,6 +169,9 @@ export default function OverviewPage() {
       return;
     }
     const id = crypto.randomUUID();
+    // Blank boxes are dropped here, never left for the server to skip; no comma splitting — a
+    // name may contain one (T-364).
+    const guestNames = newGuests.map((guest) => guest.trim()).filter((guest) => guest !== "");
     setCreateError(null);
     try {
       await push({
@@ -174,6 +183,7 @@ export default function OverviewPage() {
               ...fieldPatch(deviceId, "kind", newKind),
               ...(isExpenses(newKind) ? fieldPatch(deviceId, "currency", currency) : {}),
             },
+            ...(isExpenses(newKind) && guestNames.length > 0 ? { guest_names: guestNames } : {}),
           },
         ],
       });
@@ -187,6 +197,7 @@ export default function OverviewPage() {
     setNewName("");
     setNewKind(DEFAULT_LIST_KIND);
     setNewCurrency("");
+    setNewGuests([""]);
     setCreating(false);
   }
 
@@ -214,12 +225,13 @@ export default function OverviewPage() {
     const expenses = expensesByList.get(list.id) ?? [];
     const currency = listFieldValue(list, "currency") ?? "";
     // Net spent, as on the ledger itself: income off it, settlements counting for nothing (T-245).
-    const total = spentTotals(expenses).netCents;
-    const members = list.members ?? [];
-    const mine = balancesFor(expenses, members.map((m) => m.account_id)).find(
-      (balance) => balance.accountId === account?.id,
-    );
-    const showBalance = members.length > 1 && mine;
+    // Folded, so a guest this account has claimed counts as it (T-364).
+    const aliases = aliasesOf(list.guests);
+    const folded = expenses.map((expense) => fold(expense, aliases));
+    const total = spentTotals(folded).netCents;
+    const roster = rosterIds(list.members ?? [], list.guests);
+    const mine = balancesFor(folded, roster).find((balance) => balance.accountId === account?.id);
+    const showBalance = roster.length > 1 && mine;
     return (
       <span style={{ textAlign: "end", fontSize: "0.85rem" }}>
         <span className="muted" style={{ display: "block" }}>
@@ -475,6 +487,44 @@ export default function OverviewPage() {
                 {t("overview.currencyHelp")}
               </p>
             </div>
+          )}
+          {/* A ledger's first guests (T-364), so a group can start with everyone in it. One box per
+              name; the server takes at most 50. */}
+          {isExpenses(newKind) && (
+            <fieldset style={{ border: "none", padding: 0, margin: "0 0 0.75rem" }}>
+              <legend className="field-label" style={{ padding: 0 }}>
+                {t("guest.section")}
+              </legend>
+              {newGuests.map((guest, index) => (
+                <div key={index} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                  <input
+                    aria-label={t("guest.name")}
+                    placeholder={t("guest.name")}
+                    value={guest}
+                    onChange={(e) =>
+                      setNewGuests((current) => current.map((other, at) => (at === index ? e.target.value : other)))
+                    }
+                    style={{ flex: 1, minWidth: 0 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setNewGuests((current) => current.filter((_, at) => at !== index))}
+                  >
+                    {t("action.remove")}
+                  </button>
+                </div>
+              ))}
+              {newGuests.length < MAX_NEW_GUESTS && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setNewGuests((current) => [...current, ""])}
+                >
+                  {t("guest.addAnother")}
+                </button>
+              )}
+            </fieldset>
           )}
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button type="button" className="btn btn-secondary" onClick={closeCreateDialog}>

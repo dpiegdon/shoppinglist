@@ -103,6 +103,23 @@ export interface ListMember {
   initials: string;
 }
 
+/**
+ * A participant of one ledger who has no account (T-364): created and renamed by any member, named
+ * in entries by its `g:`-prefixed id like a member by account id, never voting. `locked` freezes its
+ * amounts the way a close vote freezes a member's; `claimed_by` is the account that took it over,
+ * whose balance its entries then count towards (see `fold` in lib/expenses).
+ */
+export interface ListGuest {
+  /** Server-minted, `g:` + uuid4: never an account id, so the prefix alone tells the two apart. */
+  id: string;
+  name: string;
+  /** Resolved from the name by the server, as a member's are from the email. */
+  initials: string;
+  locked: boolean;
+  claimed_by: string | null;
+  created_at: number;
+}
+
 export interface ListObject {
   id: string;
   created_at?: number;
@@ -113,6 +130,16 @@ export interface ListObject {
   members?: ListMember[];
   close_votes?: string[];
   closed_at?: number | null;
+  /**
+   * A ledger's guests (T-364), oldest first; `[]` on any other kind. Server-maintained like
+   * `members`: ignored on a push. Absent from a server older than protocol 4, which reads as none.
+   */
+  guests?: ListGuest[];
+  /**
+   * Push-only, and only on the row that creates a ledger (T-364): the names of its first guests,
+   * minted by the server in this order. Ignored on every later push and on other kinds.
+   */
+  guest_names?: string[];
 }
 
 export interface SyncRequest {
@@ -273,6 +300,12 @@ export interface RedeemResponse {
 export interface CloseVoteState {
   close_votes: string[];
   closed_at: number | null;
+}
+
+/** `PATCH /lists/{id}/guests/{gid}`: at least one of the two. */
+export interface UpdateGuestRequest {
+  name?: string;
+  locked?: boolean;
 }
 
 export interface ApiErrorBody {

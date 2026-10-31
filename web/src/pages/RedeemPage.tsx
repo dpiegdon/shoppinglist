@@ -30,7 +30,8 @@ export default function RedeemPage() {
       // Pull the newly joined list's full state immediately (Spec §6 full_lists).
       await push({}, [list_id]);
       safeLocalStorage.setItem(LAST_LIST_STORAGE_KEY, list_id);
-      navigate(`/list/${list_id}`, { replace: true });
+      // `joined` asks a ledger to offer its guests to the newcomer, once (T-364).
+      navigate(`/list/${list_id}?joined=1`, { replace: true });
     } catch (err) {
       // A garbled or tampered link is, to its holder, an invite that does not exist.
       setError(errorMessage(t, err, "redeem.error", { invalid_token: "apiError.inviteNotFound" }));

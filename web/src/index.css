@@ -628,3 +628,16 @@ html[dir="rtl"] .item-exiting {
   width: 1.25em;
   text-align: center;
 }
+
+/* A ledger guest's initials (T-364): outlined where a member's are plain, so a participant with no
+   account reads as one at a glance on every screen. */
+.guest-badge {
+  display: inline-block;
+  border: 1px solid var(--color-text-muted);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}

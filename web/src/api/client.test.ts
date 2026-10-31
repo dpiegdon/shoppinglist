@@ -341,6 +341,11 @@ describe("ids in paths are one percent-encoded segment (T-316)", () => {
     ["withdrawCloseVote", () => client.withdrawCloseVote(ID), `/lists/${ENC}/close-votes`],
     ["mintInvite", () => client.mintInvite(ID, "x@example.com"), `/lists/${ENC}/invites`],
     ["revokeInvite", () => client.revokeInvite(ID), `/invites/${ENC}`],
+    ["createGuest", () => client.createGuest(ID, "Dave"), `/lists/${ENC}/guests`],
+    ["updateGuest", () => client.updateGuest(ID, ID, { locked: true }), `/lists/${ENC}/guests/${ENC}`],
+    ["deleteGuest", () => client.deleteGuest(ID, ID), `/lists/${ENC}/guests/${ENC}`],
+    ["claimGuest", () => client.claimGuest(ID, ID), `/lists/${ENC}/guests/${ENC}/claim`],
+    ["unclaimGuest", () => client.unclaimGuest(ID, ID), `/lists/${ENC}/guests/${ENC}/claim`],
     ["adminResetPassword", () => client.adminResetPassword(ID, "pw"), `/admin/users/${ENC}/reset-password`],
     ["adminDeleteUser", () => client.adminDeleteUser(ID, "pw"), `/admin/users/${ENC}`],
   ];
@@ -351,6 +356,31 @@ describe("ids in paths are one percent-encoded segment (T-316)", () => {
       await call();
       const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
       expect(url).toBe(`/api/v1${path}`);
+    });
+  }
+});
+
+describe("the guest endpoints (T-364)", () => {
+  beforeEach(() => setToken("tok"));
+  afterEach(() => vi.restoreAllMocks());
+
+  const cases: Array<[string, () => Promise<unknown>, string, string, unknown]> = [
+    ["create", () => client.createGuest("l1", "Dave"), "POST", "/lists/l1/guests", { name: "Dave" }],
+    ["rename", () => client.updateGuest("l1", "g:1", { name: "Eve" }), "PATCH", "/lists/l1/guests/g%3A1", { name: "Eve" }],
+    ["lock", () => client.updateGuest("l1", "g:1", { locked: true }), "PATCH", "/lists/l1/guests/g%3A1", { locked: true }],
+    ["remove", () => client.deleteGuest("l1", "g:1"), "DELETE", "/lists/l1/guests/g%3A1", undefined],
+    ["claim", () => client.claimGuest("l1", "g:1"), "POST", "/lists/l1/guests/g%3A1/claim", undefined],
+    ["unclaim", () => client.unclaimGuest("l1", "g:1"), "DELETE", "/lists/l1/guests/g%3A1/claim", undefined],
+  ];
+
+  for (const [name, call, method, path, body] of cases) {
+    it(`${name}: ${method} ${path}`, async () => {
+      mockFetchOnce(200, {});
+      await call();
+      const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(url).toBe(`/api/v1${path}`);
+      expect(init.method).toBe(method);
+      expect(init.body === undefined ? undefined : JSON.parse(init.body)).toEqual(body);
     });
   }
 });

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import cases from "../../../shared-test-cases/expense-arithmetic.json";
 import {
+  aliasesOf,
   balancesFor,
+  fold,
+  frozenReasonOf,
+  resolveParticipant,
+  rosterIds,
   distribute,
   entryEffectCents,
   entryType,
@@ -15,7 +20,7 @@ import {
   toCents,
   type ShareEntry,
 } from "./expenses";
-import type { Expense, ItemObject, ListMember } from "../api/contract";
+import type { Expense, ItemObject, ListGuest, ListMember } from "../api/contract";
 
 /**
  * The case table is shared with Android's ExpenseMathTest (T-148's lesson: one copy, not two), so
@@ -371,9 +376,233 @@ describe("the shared case table", () => {
       "spent",
       "effect",
       "settle",
+      "fold",
     ] as const;
     for (const name of groups) {
       expect(cases[name].length, name).toBeGreaterThan(0);
     }
+  });
+});
+
+// ---- guests and the fold (T-364) ---------------------------------------------
+
+/** A wire expense as the case table writes it: type optional, the date and flags left out. */
+function asExpense(entry: object): Expense {
+  return { equal_by: false, equal_for: false, date: "2026-10-31", ...entry } as Expense;
+}
+
+/** The parts of an entry the fold group pins: the read type and both maps as wire strings. */
+function wireOf(expense: Expense) {
+  return { type: expense.type, paid_by: expense.paid_by, paid_for: expense.paid_for };
+}
+
+describe("the fold (shared cases)", () => {
+  it.each(cases.fold)("$name", (testCase) => {
+    const aliases = new Map(Object.entries(testCase.aliases as Record<string, string>));
+    const folded = testCase.expenses.map((entry) => fold(asExpense(entry), aliases));
+    expect(folded.map(wireOf)).toEqual(testCase.folded);
+
+    const balances = balancesFor(folded, testCase.participants);
+    const rendered = Object.fromEntries(
+      balances.map((balance) => [
+        balance.accountId,
+        {
+          paid: fromCents(balance.paidCents),
+          share: fromCents(balance.shareCents),
+          settled: fromCents(balance.settledCents),
+          balance: fromCents(balance.balanceCents),
+        },
+      ]),
+    );
+    expect(rendered).toEqual(testCase.expect);
+    expect(balances.map((balance) => balance.accountId)).toEqual(Object.keys(testCase.expect));
+    expect(folded.reduce((sum, expense) => sum + expenseTotalCents(expense), 0)).toBe(toCents(testCase.total));
+    expect(
+      settle(balances).map((t) => ({ from: t.from, to: t.to, amount: fromCents(t.cents) })),
+    ).toEqual(testCase.settle);
+  });
+
+  it("copies the date and both equal flags", () => {
+    const entry: Expense = {
+      paid_by: { "g:1": "5.00" },
+      equal_by: true,
+      paid_for: { a: "5.00" },
+      equal_for: false,
+      date: "2026-01-02",
+    };
+    expect(fold(entry, new Map([["g:1", "a"]]))).toEqual({
+      type: "expense",
+      paid_by: { a: "5.00" },
+      equal_by: true,
+      paid_for: { a: "5.00" },
+      equal_for: false,
+      date: "2026-01-02",
+    });
+  });
+});
+
+describe("the fold (property tests)", () => {
+  /** Seeded, as the ledger property test above: the same ledgers every run. */
+  function rng(seed: number): () => number {
+    let state = seed >>> 0;
+    return () => {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      state >>>= 0;
+      return state / 0x100000000;
+    };
+  }
+
+  /** A random ledger over accounts and guests, and a random alias map onto the accounts. */
+  function randomLedger(random: () => number) {
+    const pick = (n: number) => Math.floor(random() * n);
+    const accounts = Array.from({ length: 1 + pick(3) }, (_, index) => `a${index}`);
+    const guests = Array.from({ length: 1 + pick(3) }, (_, index) => `g:${index}`);
+    const ids = [...accounts, ...guests];
+    const aliases = new Map<string, string>();
+    for (const guest of guests) if (random() < 0.5) aliases.set(guest, accounts[pick(accounts.length)]);
+    const expenses: Expense[] = [];
+    for (let index = 0, count = 1 + pick(6); index < count; index += 1) {
+      const type = (["expense", "income", "transfer"] as const)[pick(3)];
+      const totalCents = 1 + pick(20000);
+      if (type === "transfer") {
+        const from = pick(ids.length);
+        const to = (from + 1 + pick(ids.length - 1)) % ids.length;
+        expenses.push(asExpense({
+          type,
+          paid_by: { [ids[from]]: fromCents(totalCents) },
+          paid_for: { [ids[to]]: fromCents(totalCents) },
+        }));
+        continue;
+      }
+      const payers = ids.filter(() => random() < 0.4);
+      const forWhom = ids.filter(() => random() < 0.7);
+      expenses.push(asExpense({
+        type,
+        paid_by: sharesToWire(splitEqually(totalCents, payers.length ? payers : [ids[pick(ids.length)]])),
+        paid_for: sharesToWire(splitEqually(totalCents, forWhom.length ? forWhom : [ids[pick(ids.length)]])),
+      }));
+    }
+    // What the screens give balancesFor: the members and the guests nobody has claimed.
+    const participants = [...accounts, ...guests.filter((guest) => !aliases.has(guest))];
+    return { expenses, aliases, participants };
+  }
+
+  it("balances over folded entries sum to zero, whatever the alias map", () => {
+    const random = rng(20261031);
+    for (let round = 0; round < 300; round += 1) {
+      const { expenses, aliases, participants } = randomLedger(random);
+      const balances = balancesFor(expenses.map((e) => fold(e, aliases)), participants);
+      expect(balances.reduce((sum, b) => sum + b.balanceCents, 0)).toBe(0);
+      // No claimed guest keeps a row of its own: its numbers are its claimant's.
+      for (const guest of aliases.keys()) expect(balances.some((b) => b.accountId === guest)).toBe(false);
+      // And the total does not move: folding only renames who.
+      const total = (list: Expense[]) => list.reduce((sum, e) => sum + expenseTotalCents(e), 0);
+      expect(total(expenses.map((e) => fold(e, aliases)))).toBe(total(expenses));
+    }
+  });
+
+  it("with no aliases is the identity", () => {
+    const random = rng(7);
+    for (let round = 0; round < 200; round += 1) {
+      const { expenses } = randomLedger(random);
+      for (const expense of expenses) {
+        expect(fold(expense, new Map())).toEqual({ ...expense, type: expense.type ?? "expense" });
+      }
+    }
+  });
+
+  it("is idempotent", () => {
+    const random = rng(11);
+    for (let round = 0; round < 200; round += 1) {
+      const { expenses, aliases } = randomLedger(random);
+      for (const expense of expenses) {
+        const once = fold(expense, aliases);
+        expect(fold(once, aliases)).toEqual(once);
+      }
+    }
+  });
+});
+
+const guestOf = (id: string, extra: Partial<ListGuest> = {}): ListGuest => ({
+  id,
+  name: `Guest ${id}`,
+  initials: "GU",
+  locked: false,
+  claimed_by: null,
+  created_at: 0,
+  ...extra,
+});
+
+describe("guests on a ledger", () => {
+  const members: ListMember[] = [
+    { account_id: "a", email: "a@example.com", initials: "A" },
+    { account_id: "b", email: "b@example.com", initials: "B" },
+  ];
+  const dave = guestOf("g:dave", { name: "Dave" });
+  const eve = guestOf("g:eve", { name: "Eve", claimed_by: "b" });
+  const ghost = guestOf("g:ghost", { name: "Ghost", claimed_by: "gone" });
+
+  it("aliases only the claimed guests", () => {
+    expect([...aliasesOf([dave, eve, ghost])]).toEqual([
+      ["g:eve", "b"],
+      ["g:ghost", "gone"],
+    ]);
+    expect(aliasesOf(undefined).size).toBe(0);
+  });
+
+  it("puts the members first, then the guests nobody has claimed", () => {
+    expect(rosterIds(members, [eve, dave])).toEqual(["a", "b", "g:dave"]);
+  });
+
+  it("resolves an id the way the label table reads", () => {
+    const former = new Map([["gone", 1], ["g:removed", 2]]);
+    expect(resolveParticipant("a", members, [dave, eve], former)).toMatchObject({ kind: "member" });
+    expect(resolveParticipant("g:dave", members, [dave, eve], former)).toMatchObject({ kind: "guest", guest: dave });
+    expect(resolveParticipant("g:eve", members, [dave, eve], former)).toMatchObject({
+      kind: "claimed",
+      guest: eve,
+      claimant: { kind: "member", id: "b" },
+    });
+    // A claimant who has left reads as the former member they are.
+    expect(resolveParticipant("g:ghost", members, [ghost], former)).toMatchObject({
+      kind: "claimed",
+      claimant: { kind: "former", number: 1 },
+    });
+    expect(resolveParticipant("g:removed", members, [dave], former)).toEqual({
+      kind: "former",
+      id: "g:removed",
+      number: 2,
+    });
+  });
+
+  it("freezes stored keys as the server does", () => {
+    const locked = guestOf("g:locked", { locked: true });
+    const guests = [dave, eve, locked];
+    expect(frozenReasonOf("a", members, guests, [])).toBeNull();
+    expect(frozenReasonOf("a", members, guests, ["a"])).toBe("voter");
+    expect(frozenReasonOf("gone", members, guests, [])).toBe("former");
+    expect(frozenReasonOf("g:dave", members, guests, [])).toBeNull();
+    expect(frozenReasonOf("g:locked", members, guests, [])).toBe("locked");
+    // A guest the list no longer has is frozen like someone who left.
+    expect(frozenReasonOf("g:removed", members, guests, [])).toBe("former");
+    // A claimed guest is whatever its claimant is — and its own lock no longer counts.
+    expect(frozenReasonOf("g:eve", members, guests, [])).toBeNull();
+    expect(frozenReasonOf("g:eve", members, guests, ["b"])).toBe("voter");
+    expect(frozenReasonOf("g:eve", members, [{ ...eve, locked: true }], [])).toBeNull();
+    expect(frozenReasonOf("g:ghost", members, [ghost], [])).toBe("former");
+  });
+
+  it("numbers former participants over effective ids", () => {
+    const items = [
+      expenseItem("e1", "2026-09-01", ["a", "g:removed", "g:dave", "g:eve", "g:ghost"]),
+    ];
+    const numbers = formerMemberNumbers(items, members, [dave, eve, ghost]);
+    // The removed guest and the departed claimant get one number each; live guests none.
+    expect([...numbers]).toEqual([
+      ["g:removed", 1],
+      ["gone", 2],
+    ]);
   });
 });

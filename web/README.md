@@ -44,8 +44,10 @@ your source changes.
   Server admin; `AboutPage` is About.
 - `src/lib/` — pure logic, tested on its own: category grouping, ledger
   arithmetic (`expenses.ts`: the split, each entry type's effect on a balance,
-  the net spent and who pays whom), name order (`nameOrder.ts`), money and date
-  formatting (`format.ts`). The ledger and name-order rules are tested against
+  the net spent and who pays whom, and a ledger's guests: `fold` puts a claimed
+  guest's amounts under its claimant before any figure is computed, and
+  `resolveParticipant` says who a stored id is for every screen to label alike),
+  name order (`nameOrder.ts`), money and date formatting (`format.ts`). The ledger and name-order rules are tested against
   the same case tables as Android, in `../shared-test-cases/`.
 - `src/i18n/` — the ten catalogs in `messages/` (English is the fallback), and
   `apiErrors.ts`, which translates server errors by their code. The language

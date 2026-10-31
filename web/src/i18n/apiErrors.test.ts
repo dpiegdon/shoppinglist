@@ -39,6 +39,14 @@ describe("server errors in the app's language", () => {
     );
   });
 
+  it("says each guest refusal in words (T-364)", () => {
+    const said = (code: string) => errorMessage(t, apiError(code), "apiError.serverBusy");
+    expect(said("guest_not_found")).toBe("This guest is no longer on this list");
+    expect(said("guest_claimed")).toBe("This guest has already been claimed");
+    expect(said("guest_in_use")).toBe("Named in entries — edit those first");
+    expect(said("invalid_guest_name")).toBe("Enter a guest name of up to 64 characters");
+  });
+
   it("falls back to the screen's own message for a code no person can cause", () => {
     expect(errorMessage(t, apiError("invalid_cursor"), "apiError.serverBusy")).toBe(
       en["apiError.serverBusy"],

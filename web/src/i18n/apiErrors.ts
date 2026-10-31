@@ -48,6 +48,12 @@ const BY_CODE: Record<string, MessageKey | [MessageKey, Record<string, number>]>
   // A pushed item names a list the caller can no longer write to — deleted, or left while offline
   // (T-214). The Android row that gets parked for it shows this rather than the bare "not saved".
   unknown_list: "apiError.unknownList",
+  // Ledger guests (T-364). A guest still named in a live entry cannot be removed: the same
+  // sentence the disabled Remove button carries.
+  guest_not_found: "guest.errorNotFound",
+  guest_claimed: "guest.errorClaimed",
+  guest_in_use: "guest.inUse",
+  invalid_guest_name: "guest.errorInvalidName",
   not_admin: "apiError.notAdmin",
   cannot_delete_admin: "apiError.cannotDeleteAdmin",
   cannot_delete_self: "apiError.cannotDeleteSelf",
