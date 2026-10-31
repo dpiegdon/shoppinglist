@@ -7,7 +7,9 @@ import kotlinx.serialization.json.Json
 import org.p23q.shoppinglist.core.Clock
 import org.p23q.shoppinglist.core.DeviceIdProvider
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.core.ListGuest
 import org.p23q.shoppinglist.core.ListMember
+import org.p23q.shoppinglist.core.api.AppJson
 import org.p23q.shoppinglist.core.NameOrder
 import org.p23q.shoppinglist.core.newId
 import org.p23q.shoppinglist.core.db.AppDb
@@ -59,6 +61,9 @@ class ListsRepo(
      * @param currency free-text label, required for an expenses list and meaningless elsewhere
      *   (T-151). The kind is fixed for the list's whole life, so both are decided here or never.
      * @return the new list's local id. Its server id is minted here too.
+     * @param guestNames a ledger's first guests (T-364), in order: trimmed, blanks dropped, and
+     *   kept on the row until the server has seen the list, so a creation queued offline carries
+     *   them. Ignored for any other kind.
      * @throws IllegalArgumentException for a kind the account cannot hold ([ListKind.choices]):
      *   the local area has no ledgers (T-293).
      */
@@ -67,6 +72,7 @@ class ListsRepo(
         name: String,
         kind: String = ListKind.DEFAULT,
         currency: String? = null,
+        guestNames: List<String> = emptyList(),
     ): String {
         require(ListKind.of(kind) in ListKind.choices(isServerAccount(accountId))) { "No $kind list in account $accountId" }
         val id = newId()
@@ -85,6 +91,13 @@ class ListsRepo(
                 currency = currency?.trim()?.takeIf { it.isNotEmpty() }.toLwwOptional(by, now),
                 deleted = false.toLww(by, now),
                 dirty = true,
+                pendingGuestNamesJson = Json.encodeToString(
+                    if (ListKind.isExpenses(ListKind.of(kind))) {
+                        guestNames.map { it.trim() }.filter { it.isNotEmpty() }
+                    } else {
+                        emptyList()
+                    },
+                ),
             ),
         )
         syncTrigger.scheduleAfterEdit()
@@ -184,6 +197,14 @@ class ListsRepo(
      */
     fun decodeMembers(json: String): List<ListMember> =
         runCatching { Json.decodeFromString<List<ListMember>>(json) }.getOrDefault(emptyList())
+
+    /**
+     * A ledger's guests as the server last reported them (T-364), oldest first. Decoded leniently:
+     * a row from before the column, or a guest object with keys this build does not know, still
+     * reads (T-205).
+     */
+    fun decodeGuests(json: String): List<ListGuest> =
+        runCatching { AppJson.decodeFromString<List<ListGuest>>(json) }.getOrDefault(emptyList())
 
     /** Who has agreed to close this list (T-157), as the server last reported. */
     fun decodeCloseVotes(json: String): List<String> =

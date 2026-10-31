@@ -15,6 +15,7 @@ import io.ktor.http.content.ByteArrayContent
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readString
 import kotlinx.serialization.json.Json
+import org.p23q.shoppinglist.core.ListGuest
 
 /**
  * The HTTP engine requests go out on, which only the platform can build: on Android OkHttp, with
@@ -197,6 +198,22 @@ internal class HttpApi(
 
     override suspend fun sync(body: SyncRequest): SyncResponse =
         decode(send(HttpMethod.Post, "api/v1/sync", body = encode(body)))
+
+    override suspend fun createGuest(listId: String, body: CreateGuestRequest): ListGuest =
+        decode(send(HttpMethod.Post, "api/v1/lists/${segment(listId)}/guests", body = encode(body)))
+
+    override suspend fun updateGuest(listId: String, guestId: String, body: UpdateGuestRequest): ListGuest =
+        decode(send(HttpMethod.Patch, "api/v1/lists/${segment(listId)}/guests/${segment(guestId)}", body = encode(body)))
+
+    override suspend fun deleteGuest(listId: String, guestId: String) {
+        send(HttpMethod.Delete, "api/v1/lists/${segment(listId)}/guests/${segment(guestId)}")
+    }
+
+    override suspend fun claimGuest(listId: String, guestId: String): ListGuest =
+        decode(send(HttpMethod.Post, "api/v1/lists/${segment(listId)}/guests/${segment(guestId)}/claim"))
+
+    override suspend fun unclaimGuest(listId: String, guestId: String): ListGuest =
+        decode(send(HttpMethod.Delete, "api/v1/lists/${segment(listId)}/guests/${segment(guestId)}/claim"))
 
     override suspend fun adminUsers(): AdminUsersResponse =
         decode(send(HttpMethod.Get, "api/v1/admin/users"))

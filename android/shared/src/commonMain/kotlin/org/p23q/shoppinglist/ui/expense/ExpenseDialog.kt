@@ -84,6 +84,7 @@ import org.p23q.shoppinglist.resources.expense_former_member
 import org.p23q.shoppinglist.resources.expense_from
 import org.p23q.shoppinglist.resources.expense_frozen_former
 import org.p23q.shoppinglist.resources.expense_frozen_voter
+import org.p23q.shoppinglist.resources.guest_frozen_locked
 import org.p23q.shoppinglist.resources.expense_new
 import org.p23q.shoppinglist.resources.expense_paid_by
 import org.p23q.shoppinglist.resources.expense_paid_for
@@ -397,7 +398,7 @@ private fun ExpenseBlockedBanner(state: ExpenseFormUiState) {
     // once they have left (T-197).
     val row = (state.paidBy + state.paidFor).firstOrNull { it.accountId == state.blockedAccountId }
     val who = row?.let { participantLabel(it) }
-    BlockedBanner(code = state.blockedCode, who = who)
+    BlockedBanner(code = state.blockedCode, who = who, guest = row?.name is ParticipantName.Guest)
 }
 
 /** The i18n key of a type's label — also the title a blank income or transfer falls back to. */
@@ -525,10 +526,13 @@ private fun TransferPicker(
     }
 }
 
-/** An email while they are a member, a stable number once they have left (T-152, T-197). */
+/**
+ * An email while they are a member, a guest's name (with its claimant once claimed, T-364), a
+ * stable number once they have left (T-152, T-197).
+ */
 @Composable
 private fun participantLabel(row: ShareRow): String =
-    row.email ?: stringResource(Res.string.expense_former_member, row.formerNumber)
+    row.name?.text() ?: row.email ?: stringResource(Res.string.expense_former_member, row.formerNumber)
 
 @Composable
 private fun ShareSection(
@@ -552,12 +556,21 @@ private fun ShareSection(
                 onCheckedChange = { onToggle(row.accountId) },
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.bodyMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // A guest carries the outline badge, a member none, as on every screen (T-364).
+                    val guestName = row.name as? ParticipantName.Guest
+                    if (guestName != null) {
+                        GuestBadge(guestName.name, guestName.initials)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(label, style = MaterialTheme.typography.bodyMedium)
+                }
                 // Why, not just that (T-203): "agreed to close" was said of everyone frozen, which
                 // is untrue of someone who has simply left the list.
                 val reason = when (row.frozen) {
                     FrozenReason.VOTER -> Res.string.expense_frozen_voter
                     FrozenReason.FORMER -> Res.string.expense_frozen_former
+                    FrozenReason.LOCKED -> Res.string.guest_frozen_locked
                     FrozenReason.NONE -> null
                 }
                 if (reason != null) {

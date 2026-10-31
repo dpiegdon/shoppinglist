@@ -506,4 +506,27 @@
     <string name="listprops_delete_list">Delete list</string>
     <string name="listprops_delete_confirm_title">Delete this list?</string>
     <string name="listprops_delete_confirm_body">"%1$s" and its items are deleted from this phone. This cannot be undone.</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">Guests</string>
+    <string name="guest_rename">Rename</string>
+    <string name="guest_locked">Amounts locked</string>
+    <string name="guest_locked_help">Locked: the amounts cannot change, like a member who agreed to close</string>
+    <string name="guest_this_is_me">This is me</string>
+    <string name="guest_in_use">Named in entries — edit those first</string>
+    <string name="guest_claimed_by">claimed by %1$s</string>
+    <string name="guest_unclaim">Unclaim</string>
+    <string name="guest_add">Add guest</string>
+    <string name="guest_add_another">Add another</string>
+    <string name="guest_chooser_title">Are you one of these?</string>
+    <string name="guest_chooser_new">No, I'm new</string>
+    <string name="guest_amounts_locked">amounts locked</string>
+    <string name="guest_error_locked">%1$s: amounts locked</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s (guest)</string>
+    <string name="guest_frozen_locked">locked — amounts fixed</string>
+    <string name="guest_name">Guest name</string>
+    <string name="guest_msg_failed">Couldn't change the guest</string>
+    <string name="api_error_guest_not_found">This guest is no longer on this list</string>
+    <string name="api_error_guest_claimed">This guest has already been claimed</string>
+    <string name="api_error_invalid_guest_name">Enter a guest name of up to 64 characters</string>
 </resources>

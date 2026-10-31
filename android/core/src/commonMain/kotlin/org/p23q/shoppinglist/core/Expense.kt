@@ -65,3 +65,30 @@ data class ListMember(
     val email: String,
     val initials: String,
 )
+
+/**
+ * A participant of a ledger who has no account on the server (T-364): served on the list object
+ * beside [ListMember], never written through `/sync`. The id is `g:` + a uuid, so it is never an
+ * account id and is told apart by [isGuestId] without a lookup.
+ *
+ * [locked] freezes the guest's amounts as a member's vote to close does; [claimedBy] is the account
+ * that has claimed the guest, after which every figure folds the guest into that account
+ * ([ExpenseMath.fold]). [initials] arrive resolved from the name, as a member's do.
+ */
+@Serializable
+data class ListGuest(
+    val id: String,
+    val name: String,
+    val initials: String = "",
+    val locked: Boolean = false,
+    @SerialName("claimed_by") val claimedBy: String? = null,
+    @SerialName("created_at") val createdAt: Long = 0,
+) {
+    val isClaimed: Boolean get() = claimedBy != null
+}
+
+/** The prefix every guest id carries (T-364); no account id has it. */
+const val GUEST_ID_PREFIX = "g:"
+
+/** Whether [id] names a guest rather than an account (T-364). */
+fun isGuestId(id: String): Boolean = id.startsWith(GUEST_ID_PREFIX)

@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.overview
 
+import org.p23q.shoppinglist.data.JoinedLists
 import org.p23q.shoppinglist.core.Clock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +16,7 @@ import org.p23q.shoppinglist.core.account.AccountRegistry
 import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.GuestName
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.InviteForMeDto
@@ -72,6 +74,13 @@ data class OverviewUiState(
     /** Create was tapped with a blank name, or an expenses list with a blank currency (T-307); typing clears it. */
     val newListNameMissing: Boolean = false,
     val newListCurrencyMissing: Boolean = false,
+    /**
+     * A new ledger's first guests (T-364): one box each, in order, an empty one to start with.
+     * Blank boxes are dropped on create; the rest go on the creation row's `guest_names`.
+     */
+    val newListGuestNames: List<String> = listOf(""),
+    /** A typed guest name the server would refuse; Create stays in the dialog and says so. */
+    val newListGuestNameInvalid: Boolean = false,
     /** Total spent and this account's balance per expenses list, for its card (T-154). */
     val expenseSummaries: Map<String, ExpenseSummary> = emptyMap(),
     val sync: SyncState = SyncState(),
@@ -96,6 +105,17 @@ data class OverviewUiState(
     /** The kinds the New-list dialog offers for its account (T-293): no ledger in the local area. */
     val newListKinds: List<String>
         get() = ListKind.choices(accounts.firstOrNull { it.id == newListAccountId }?.isServer ?: true)
+
+    /**
+     * Whether the dialog offers the Guests section (T-364): a ledger, in an account whose server
+     * keeps guests. Against an older server the names would be ignored, and the guests lost.
+     */
+    val newListGuestsOffered: Boolean
+        get() = ListKind.isExpenses(newListKind) &&
+            accounts.firstOrNull { it.id == newListAccountId }?.supportsGuests == true
+
+    /** "Add another" is hidden once there are as many boxes as one creation may carry. */
+    val canAddNewListGuest: Boolean get() = newListGuestNames.size < MAX_NEW_LIST_GUESTS
 
     /** Every invite, of every account. */
     val invites: List<InviteForMeDto> get() = invitesByAccount.values.flatten()
@@ -123,9 +143,10 @@ class OverviewViewModel(
     private val syncer: Syncer,
     syncStatus: SyncStatus,
     private val notificationPrefs: NotificationPrefsStore,
+    joinedLists: JoinedLists = JoinedLists(),
 ) : ViewModel() {
 
-    private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo)
+    private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo, joinedLists)
 
     private val _uiState = MutableStateFlow(OverviewUiState())
     val uiState: StateFlow<OverviewUiState> = _uiState.asStateFlow()
@@ -173,17 +194,20 @@ class OverviewViewModel(
                     val expenses = (itemsByList[list.localId] ?: emptyList())
                         .mapNotNull { itemsRepo.decodeExpense(it.expense.value) }
                     val members = listsRepo.decodeMembers(list.membersJson)
+                    val guests = listsRepo.decodeGuests(list.guestsJson)
                     // Where the list's own account stands: another account on this phone may be
-                    // on the same list, with its own row and its own balance (T-292).
+                    // on the same list, with its own row and its own balance (T-292). Folded, as
+                    // on the ledger, so what a guest I claimed did is mine (T-364).
                     val me = registry.get(list.accountId)?.accountId
-                    val balance = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
+                    val participants = members.map { m -> m.accountId } + guests.filter { g -> !g.isClaimed }.map { g -> g.id }
+                    val balance = ExpenseMath.balancesFor(ExpenseMath.foldAll(expenses, ExpenseMath.aliasesOf(guests)), participants)
                         .firstOrNull { b -> b.accountId == me }
                     list.localId to ExpenseSummary(
                         // Net spent, as on the ledger itself: income off it, settlements counting
                         // for nothing (T-245).
                         totalCents = ExpenseMath.spentTotals(expenses).netCents,
                         // A list of one is always square with itself, so its balance says nothing.
-                        myBalanceCents = balance?.balanceCents?.takeIf { members.size > 1 },
+                        myBalanceCents = balance?.balanceCents?.takeIf { participants.size > 1 },
                         currency = list.currency.value.orEmpty(),
                         closed = list.closedAt != null,
                     )
@@ -220,7 +244,28 @@ class OverviewViewModel(
             newListCurrency = account?.defaultCurrency.orEmpty(),
             newListNameMissing = false,
             newListCurrencyMissing = false,
+            newListGuestNames = listOf(""),
+            newListGuestNameInvalid = false,
         )
+    }
+
+    fun onNewListGuestNameChange(index: Int, value: String) = _uiState.update { state ->
+        if (index !in state.newListGuestNames.indices) return@update state
+        state.copy(
+            newListGuestNames = state.newListGuestNames.toMutableList().also { it[index] = value },
+            newListGuestNameInvalid = false,
+        )
+    }
+
+    fun addNewListGuest() = _uiState.update { state ->
+        if (!state.canAddNewListGuest) state else state.copy(newListGuestNames = state.newListGuestNames + "")
+    }
+
+    /** Removes a box; the last one left is emptied instead, so there is always one to type in. */
+    fun removeNewListGuest(index: Int) = _uiState.update { state ->
+        if (index !in state.newListGuestNames.indices) return@update state
+        val rest = state.newListGuestNames.filterIndexed { i, _ -> i != index }
+        state.copy(newListGuestNames = rest.ifEmpty { listOf("") }, newListGuestNameInvalid = false)
     }
 
     fun onNewListCurrencyChange(value: String) = _uiState.update { it.copy(newListCurrency = value, newListCurrencyMissing = false) }
@@ -252,8 +297,23 @@ class OverviewViewModel(
         // The server refuses an expenses list without one, and the kind is fixed for life, so
         // there is no second chance to supply it later.
         val currencyMissing = ListKind.isExpenses(_uiState.value.newListKind) && _uiState.value.newListCurrency.isBlank()
-        if (name.isBlank() || currencyMissing) {
-            _uiState.update { it.copy(newListNameMissing = name.isBlank(), newListCurrencyMissing = currencyMissing) }
+        // Blank boxes are dropped; a name the server would refuse keeps the dialog open (T-364).
+        // No comma splitting: a name may hold one.
+        val typedGuests = if (_uiState.value.newListGuestsOffered) {
+            _uiState.value.newListGuestNames.filter { it.isNotBlank() }
+        } else {
+            emptyList()
+        }
+        val guestNames = typedGuests.map { GuestName.normalize(it) }
+        val guestInvalid = guestNames.any { it == null }
+        if (name.isBlank() || currencyMissing || guestInvalid) {
+            _uiState.update {
+                it.copy(
+                    newListNameMissing = name.isBlank(),
+                    newListCurrencyMissing = currencyMissing,
+                    newListGuestNameInvalid = guestInvalid,
+                )
+            }
             return null
         }
         val state = _uiState.value
@@ -272,9 +332,10 @@ class OverviewViewModel(
                 currency = _uiState.value.newListCurrency.takeIf {
                     ListKind.isExpenses(_uiState.value.newListKind)
                 },
+                guestNames = guestNames.filterNotNull(),
             )
             _uiState.update {
-                it.copy(isCreateDialogOpen = false, newListName = "", newListKind = ListKind.DEFAULT)
+                it.copy(isCreateDialogOpen = false, newListName = "", newListKind = ListKind.DEFAULT, newListGuestNames = listOf(""))
             }
         }
     }
@@ -359,3 +420,6 @@ class OverviewViewModel(
 
     fun joinedListOpened() = _uiState.update { it.copy(joinedListId = null) }
 }
+
+/** How many guests one creation may carry (T-364), the server's limit on `guest_names`. */
+const val MAX_NEW_LIST_GUESTS = 50

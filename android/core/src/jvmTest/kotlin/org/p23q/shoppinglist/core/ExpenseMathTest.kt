@@ -230,11 +230,84 @@ class ExpenseMathTest {
         }
     }
 
+    private fun aliasesOf(case: JsonObject): Map<String, String> =
+        case["aliases"]?.jsonObject?.let(::shares).orEmpty()
+
+    /** An entry as the table writes it: its type spelled out, and both maps as wire strings. */
+    private fun wireOf(expense: Expense): Map<String, Any> = mapOf(
+        "type" to ExpenseMath.entryType(expense).wire,
+        "paid_by" to expense.paidBy,
+        "paid_for" to expense.paidFor,
+    )
+
+    private fun tableWireOf(obj: JsonObject): Map<String, Any> = mapOf(
+        "type" to (obj["type"]?.jsonPrimitive?.content ?: ExpenseType.EXPENSE.wire),
+        "paid_by" to shares(obj["paid_by"]!!.jsonObject),
+        "paid_for" to shares(obj["paid_for"]!!.jsonObject),
+    )
+
+    @Test
+    fun `folding claimed guests matches the shared case table (T-364)`() {
+        for (case in group("fold")) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val aliases = aliasesOf(case)
+            val expenses = case["expenses"]!!.jsonArray.map { expenseOf(it.jsonObject) }
+            val participants = case["participants"]!!.jsonArray.map { it.jsonPrimitive.content }
+
+            val folded = ExpenseMath.foldAll(expenses, aliases)
+            assertEquals(
+                name,
+                case["folded"]!!.jsonArray.map { tableWireOf(it.jsonObject) },
+                folded.map(::wireOf),
+            )
+            // Everything else on a folded entry is the stored entry's.
+            for ((before, after) in expenses.zip(folded)) {
+                assertEquals(name, before.copy(paidBy = after.paidBy, paidFor = after.paidFor), after)
+            }
+
+            val balances = ExpenseMath.balancesFor(folded, participants)
+            val rendered = balances.associate { balance ->
+                balance.accountId to mapOf(
+                    "paid" to ExpenseMath.fromCents(balance.paidCents),
+                    "share" to ExpenseMath.fromCents(balance.shareCents),
+                    "settled" to ExpenseMath.fromCents(balance.settledCents),
+                    "balance" to ExpenseMath.fromCents(balance.balanceCents),
+                )
+            }
+            val expected = case["expect"]!!.jsonObject.mapValues { (_, value) ->
+                value.jsonObject.mapValues { (_, amount) -> amount.jsonPrimitive.content }
+            }
+            assertEquals(name, expected, rendered)
+            assertEquals(name, expected.keys.toList(), balances.map { it.accountId })
+            assertEquals(name, 0L, balances.sumOf { it.balanceCents })
+            assertEquals(name, cents(case["total"]!!.jsonPrimitive.content), folded.sumOf { ExpenseMath.expenseTotalCents(it) })
+
+            val transfers = ExpenseMath.settle(balances).map {
+                mapOf("from" to it.from, "to" to it.to, "amount" to ExpenseMath.fromCents(it.cents))
+            }
+            val expectedTransfers = case["settle"]!!.jsonArray.map { transfer ->
+                transfer.jsonObject.mapValues { (_, value) -> value.jsonPrimitive.content }
+            }
+            assertEquals(name, expectedTransfers, transfers)
+        }
+    }
+
+    @Test
+    fun `the aliases are the claimed guests, each to its claimant (T-364)`() {
+        val guests = listOf(
+            ListGuest(id = "g:1", name = "Dave", claimedBy = "b"),
+            ListGuest(id = "g:2", name = "Eve"),
+            ListGuest(id = "g:3", name = "Dave", claimedBy = "b", locked = true),
+        )
+
+        assertEquals(mapOf("g:1" to "b", "g:3" to "b"), ExpenseMath.aliasesOf(guests))
+    }
+
     @Test
     fun `the case table covers every group this test drives`() {
         // A renamed or dropped group would otherwise make a whole block silently iterate nothing.
         for (name in listOf(
-            "to_cents", "from_cents", "equal_split", "distribute", "balances", "spent", "effect", "settle",
+            "to_cents", "from_cents", "equal_split", "distribute", "balances", "spent", "effect", "settle", "fold",
         )) {
             assertTrue(name, group(name).isNotEmpty())
         }
@@ -336,6 +409,75 @@ class ExpenseMathTest {
             ),
             balances,
         )
+    }
+
+    @Test
+    fun `folded ledgers of random entries and random aliases add up, and fold is idempotent (T-364)`() {
+        var state = 20261031
+        fun random(): Double {
+            state = state xor (state shl 13)
+            state = state xor (state ushr 17)
+            state = state xor (state shl 5)
+            return (state.toLong() and 0xFFFFFFFFL).toDouble() / 4294967296.0
+        }
+        fun pick(n: Int): Int = (random() * n).toInt()
+
+        repeat(300) {
+            val members = (0 until 2 + pick(3)).map { "p$it" }
+            val guests = (0 until 1 + pick(3)).map { "g:$it" }
+            val ids = members + guests
+            // Each guest is claimed by a random member, or by nobody.
+            val aliases = guests.mapNotNull { guest -> if (random() < 0.5) guest to members[pick(members.size)] else null }.toMap()
+            val expenses = mutableListOf<Expense>()
+            repeat(1 + pick(6)) {
+                val type = ExpenseType.entries[pick(3)]
+                val totalCents = (1 + pick(20000)).toLong()
+                if (type == ExpenseType.TRANSFER) {
+                    val from = pick(ids.size)
+                    val to = (from + 1 + pick(ids.size - 1)) % ids.size
+                    expenses += Expense(
+                        paidBy = mapOf(ids[from] to ExpenseMath.fromCents(totalCents)),
+                        equalBy = true,
+                        paidFor = mapOf(ids[to] to ExpenseMath.fromCents(totalCents)),
+                        equalFor = true,
+                        date = "2026-10-31",
+                        type = type.wire,
+                    )
+                    return@repeat
+                }
+                val payers = ids.filter { random() < 0.5 }.ifEmpty { listOf(ids[pick(ids.size)]) }
+                val forWhom = ids.filter { random() < 0.7 }.ifEmpty { listOf(ids[pick(ids.size)]) }
+                expenses += Expense(
+                    paidBy = ExpenseMath.sharesToWire(ExpenseMath.splitEqually(totalCents, payers)),
+                    equalBy = false,
+                    paidFor = ExpenseMath.sharesToWire(ExpenseMath.splitEqually(totalCents, forWhom)),
+                    equalFor = true,
+                    date = "2026-10-31",
+                    type = type.wire,
+                )
+            }
+
+            // No map ever changes an entry: an empty one is the identity.
+            assertEquals(expenses, expenses.map { ExpenseMath.fold(it, emptyMap()) })
+            val folded = ExpenseMath.foldAll(expenses, aliases)
+            // Folding twice is folding once.
+            assertEquals(folded, ExpenseMath.foldAll(folded, aliases))
+            for ((before, after) in expenses.zip(folded)) {
+                // Nothing lost or invented on either side, and nothing claimed is left over.
+                assertEquals(ExpenseMath.mapTotalCents(before.paidBy), ExpenseMath.mapTotalCents(after.paidBy))
+                assertEquals(ExpenseMath.mapTotalCents(before.paidFor), ExpenseMath.mapTotalCents(after.paidFor))
+                assertTrue((after.paidBy.keys + after.paidFor.keys).none { it in aliases })
+            }
+
+            val participants = members + guests.filter { it !in aliases }
+            val balances = ExpenseMath.balancesFor(folded, participants)
+            assertEquals(0L, balances.sumOf { it.balanceCents })
+            assertTrue(balances.none { it.accountId in aliases })
+            for (balance in balances) {
+                assertEquals(balance.balanceCents, folded.sumOf { ExpenseMath.entryEffectCents(it, balance.accountId) })
+            }
+            assertEquals(ExpenseMath.spentTotals(expenses), ExpenseMath.spentTotals(folded))
+        }
     }
 
     @Test

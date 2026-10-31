@@ -14,6 +14,12 @@ import org.p23q.shoppinglist.resources.api_error_invalid_status
 import org.p23q.shoppinglist.resources.api_error_invite_used
 import org.p23q.shoppinglist.resources.api_error_unknown_list
 import org.p23q.shoppinglist.resources.redeem_msg_failed
+import org.p23q.shoppinglist.resources.api_error_guest_claimed
+import org.p23q.shoppinglist.resources.api_error_guest_not_found
+import org.p23q.shoppinglist.resources.api_error_invalid_guest_name
+import org.p23q.shoppinglist.resources.expense_error_frozen
+import org.p23q.shoppinglist.resources.guest_error_locked
+import org.p23q.shoppinglist.resources.guest_in_use
 import org.p23q.shoppinglist.resources.settings_msg_initials_failed
 import org.p23q.shoppinglist.resources.settings_msg_initials_too_long
 import org.p23q.shoppinglist.resources.settings_msg_password_failed
@@ -110,5 +116,24 @@ class ErrorTextTest {
             UiText.res(Res.string.redeem_msg_failed),
             ErrorText.of(IOException("Unable to resolve host"), Res.string.redeem_msg_failed),
         )
+    }
+
+    @Test
+    fun `the guest codes each say what went wrong (T-364)`() {
+        val expected = mapOf(
+            "guest_not_found" to Res.string.api_error_guest_not_found,
+            "guest_claimed" to Res.string.api_error_guest_claimed,
+            "guest_in_use" to Res.string.guest_in_use,
+            "invalid_guest_name" to Res.string.api_error_invalid_guest_name,
+        )
+        for ((code, string) in expected) {
+            assertEquals(code, UiText.res(string), ErrorText.of(apiError(code), Res.string.redeem_msg_failed))
+        }
+    }
+
+    @Test
+    fun `a frozen guest reads as locked, a member as agreed to close or left (T-364)`() {
+        assertEquals(UiText.res(Res.string.guest_error_locked, "Dave"), ErrorText.refusal("participant_frozen", "Dave", guest = true))
+        assertEquals(UiText.res(Res.string.expense_error_frozen, "DP"), ErrorText.refusal("participant_frozen", "DP"))
     }
 }

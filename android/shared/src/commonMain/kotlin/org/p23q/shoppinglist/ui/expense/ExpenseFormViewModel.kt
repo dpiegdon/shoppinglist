@@ -26,7 +26,7 @@ enum class Side { PAID_BY, PAID_FOR }
  * reached by agreeing to close and by leaving the list, and "agreed to close" is simply untrue of
  * someone who left.
  */
-enum class FrozenReason { NONE, VOTER, FORMER }
+enum class FrozenReason { NONE, VOTER, FORMER, LOCKED }
 
 /** One participant's row in a distribution. [text] empty means auto: share whatever is left. */
 data class ShareRow(
@@ -44,6 +44,12 @@ data class ShareRow(
      * record — but nothing about it can be edited, and it never absorbs a change elsewhere.
      */
     val frozen: FrozenReason = FrozenReason.NONE,
+    /**
+     * What the row is called (T-364), resolved by the [Roster]: a member's email, a guest's name,
+     * a claimed guest's name and claimant, or a former participant's number. Null only where a
+     * row is built without a roster; the screen then falls back to [email] / [formerNumber].
+     */
+    val name: ParticipantName? = null,
 ) {
     val isFrozen: Boolean get() = frozen != FrozenReason.NONE
 }
@@ -146,6 +152,8 @@ class ExpenseFormViewModel(
     /** This list's account's server-side id: who "I" am among its members. */
     private var me: String? = null
     private var members: List<ListMember> = emptyList()
+    /** Members, guests and votes as the list row holds them (T-364): who is who, and who is frozen. */
+    private var roster: Roster = Roster()
     private var participantIds: List<String> = emptyList()
     private var selected = mapOf(Side.PAID_BY to emptySet<String>(), Side.PAID_FOR to emptySet())
     private var typed = mapOf(Side.PAID_BY to emptyMap<String, String>(), Side.PAID_FOR to emptyMap())
@@ -276,8 +284,15 @@ class ExpenseFormViewModel(
         val list = listsRepo.observeById(listId).first()
         me = listAccounts.accountOf(listId)?.accountId
         members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList()
-        participantIds = members.map { it.accountId }
         frozenIds = list?.let { listsRepo.decodeCloseVotes(it.closeVotesJson) }?.toSet() ?: emptySet()
+        // Members, then the guests nobody has claimed (T-364): a claimed guest is its claimant
+        // now, and is never offered, though an entry that already names one keeps it.
+        roster = Roster(
+            members = members,
+            guests = list?.let { listsRepo.decodeGuests(it.guestsJson) } ?: emptyList(),
+            closeVotes = frozenIds.toList(),
+        )
+        participantIds = roster.participantIds
         // Across the list's expenses in the order the list shows them, which is how the list and
         // balances screens number them (T-197): numbering only the expense being edited would call
         // the same person something else here. Read once rather than observed: the numbering is
@@ -285,23 +300,24 @@ class ExpenseFormViewModel(
         // itemsForListOnce, not activeItemsForListOnce (T-265): the ledger numbers from itemsForList,
         // which excludes backlog, so reading a wider set here could number the same former member
         // differently between the two screens.
-        formerNumbers = ExpenseMath.formerMemberNumbers(
+        // Over effective ids, as the list screen numbers them (T-364).
+        roster = roster.withFormerNumbersFrom(
             expenseRowsOf(itemsRepo.itemsForListOnce(listId), itemsRepo).map { it.expense },
-            members.map { it.accountId }.toSet(),
         )
+        formerNumbers = roster.formerNumbers
         _uiState.update { it.copy(currency = list?.currency?.value.orEmpty()) }
     }
 
     /** Voters, plus anyone on this expense who is no longer a member (T-157). */
     private fun isFrozen(accountId: String): Boolean = frozenReason(accountId) != FrozenReason.NONE
 
-    /** Which of the two put the lock there (T-203), for the row to say. A voter who has also left
-     *  is named as a voter: that is the choice they made, and the one they can still withdraw. */
-    private fun frozenReason(accountId: String): FrozenReason = when {
-        accountId in frozenIds -> FrozenReason.VOTER
-        members.none { it.accountId == accountId } -> FrozenReason.FORMER
-        else -> FrozenReason.NONE
-    }
+    /**
+     * Which lock is there (T-203, T-364), for the row to say, computed on the STORED key as the
+     * server does: a voter (named as a voter even if they also left: that is the choice they made,
+     * and the one they can still withdraw), a former member, a locked guest, or a claimed guest
+     * by its claimant's reason.
+     */
+    private fun frozenReason(accountId: String): FrozenReason = roster.frozenReason(accountId)
 
     private fun frozenShares(stored: Map<String, String>): Map<String, String> =
         stored.filterKeys(::isFrozen)
@@ -443,6 +459,7 @@ class ExpenseFormViewModel(
             text = "",
             derivedCents = 0,
             frozen = frozenReason(id),
+            name = roster.nameOf(id, byEmail = true),
         )
     }
 
@@ -459,6 +476,7 @@ class ExpenseFormViewModel(
                 text = typed[side].orEmpty()[id].orEmpty(),
                 derivedCents = shares[id] ?: 0,
                 frozen = frozenReason(id),
+                name = roster.nameOf(id, byEmail = true),
             )
         }
     }

@@ -437,4 +437,27 @@
     <string name="listprops_delete_list">حذف القائمة</string>
     <string name="listprops_delete_confirm_title">حذف هذه القائمة؟</string>
     <string name="listprops_delete_confirm_body">تُحذف «%1$s» وعناصرها من هذا الهاتف. لا يمكن التراجع عن ذلك.</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">الضيوف</string>
+    <string name="guest_rename">إعادة تسمية</string>
+    <string name="guest_locked">المبالغ مقفلة</string>
+    <string name="guest_locked_help">مقفل: لا يمكن أن تتغير المبالغ، كعضو وافق على الإغلاق</string>
+    <string name="guest_this_is_me">هذا أنا</string>
+    <string name="guest_in_use">مذكور في قيود — عدّلها أولًا</string>
+    <string name="guest_claimed_by">طالب به %1$s</string>
+    <string name="guest_unclaim">إلغاء المطالبة</string>
+    <string name="guest_add">إضافة ضيف</string>
+    <string name="guest_add_another">إضافة آخر</string>
+    <string name="guest_chooser_title">هل أنت أحد هؤلاء؟</string>
+    <string name="guest_chooser_new">لا، أنا جديد</string>
+    <string name="guest_amounts_locked">المبالغ مقفلة</string>
+    <string name="guest_error_locked">%1$s: المبالغ مقفلة</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s (ضيف)</string>
+    <string name="guest_frozen_locked">مقفل — المبالغ ثابتة</string>
+    <string name="guest_name">اسم الضيف</string>
+    <string name="guest_msg_failed">تعذّر تغيير الضيف</string>
+    <string name="api_error_guest_not_found">لم يعد هذا الضيف في هذه القائمة</string>
+    <string name="api_error_guest_claimed">تمت المطالبة بهذا الضيف بالفعل</string>
+    <string name="api_error_invalid_guest_name">أدخل اسم ضيف لا يتجاوز 64 حرفًا</string>
 </resources>

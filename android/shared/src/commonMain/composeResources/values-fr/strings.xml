@@ -437,4 +437,27 @@
     <string name="listprops_delete_list">Supprimer la liste</string>
     <string name="listprops_delete_confirm_title">Supprimer cette liste ?</string>
     <string name="listprops_delete_confirm_body">« %1$s » et ses articles sont supprimés de ce téléphone. Cette action est irréversible.</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">Invités</string>
+    <string name="guest_rename">Renommer</string>
+    <string name="guest_locked">Montants verrouillés</string>
+    <string name="guest_locked_help">Verrouillé : les montants ne peuvent pas changer, comme pour un membre qui a accepté la clôture</string>
+    <string name="guest_this_is_me">C'est moi</string>
+    <string name="guest_in_use">Cité dans des entrées — modifiez-les d'abord</string>
+    <string name="guest_claimed_by">revendiqué par %1$s</string>
+    <string name="guest_unclaim">Annuler la revendication</string>
+    <string name="guest_add">Ajouter un invité</string>
+    <string name="guest_add_another">Ajouter un autre</string>
+    <string name="guest_chooser_title">Êtes-vous l'une de ces personnes ?</string>
+    <string name="guest_chooser_new">Non, je suis nouveau</string>
+    <string name="guest_amounts_locked">montants verrouillés</string>
+    <string name="guest_error_locked">%1$s : montants verrouillés</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s (invité)</string>
+    <string name="guest_frozen_locked">verrouillé — montants figés</string>
+    <string name="guest_name">Nom de l'invité</string>
+    <string name="guest_msg_failed">Impossible de modifier l'invité</string>
+    <string name="api_error_guest_not_found">Cet invité n'est plus sur cette liste</string>
+    <string name="api_error_guest_claimed">Cet invité a déjà été revendiqué</string>
+    <string name="api_error_invalid_guest_name">Saisissez un nom d'invité de 64 caractères au plus</string>
 </resources>

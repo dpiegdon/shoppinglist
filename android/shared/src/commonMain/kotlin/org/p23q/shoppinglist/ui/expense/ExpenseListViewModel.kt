@@ -13,24 +13,32 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.Expense
 import org.p23q.shoppinglist.core.ExpenseMath
+import org.p23q.shoppinglist.core.ListGuest
+import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.ListMember
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.db.ItemEntity
 import org.p23q.shoppinglist.core.repo.ItemsRepo
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.JoinedLists
 import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.error_offline_retry
 import org.p23q.shoppinglist.resources.expense_vote_failed
+import org.p23q.shoppinglist.resources.guest_msg_failed
 import org.p23q.shoppinglist.ui.ErrorText
 import org.p23q.shoppinglist.ui.Routes
 import org.p23q.shoppinglist.ui.UiText
 import org.p23q.shoppinglist.ui.list.LIVE_SYNC_INTERVAL_MS
 import kotlinx.io.IOException
 
-/** One expense, with its money tuple already decoded for rendering. */
-data class ExpenseRow(val item: ItemEntity, val expense: Expense)
+/**
+ * One expense, with its money tuple already decoded for rendering: [expense] as stored, whose keys
+ * the row names, and [folded] with every claimed guest replaced by its claimant (T-364), which is
+ * what every figure is computed on.
+ */
+data class ExpenseRow(val item: ItemEntity, val expense: Expense, val folded: Expense = expense)
 
 /**
  * A list's expenses in the order they are shown: newest date first, then newest created. Sorted
@@ -50,12 +58,20 @@ fun expenseRowsOf(items: List<ItemEntity>, itemsRepo: ItemsRepo): List<ExpenseRo
 data class ExpenseListUiState(
     val currency: String = "",
     val members: List<ListMember> = emptyList(),
+    /** The ledger's guests (T-364), claimed or not, as the list row last had them. */
+    val guests: List<ListGuest> = emptyList(),
+    /** Whether the account's server keeps guests (T-364): the chooser and claiming need it. */
+    val guestsEnabled: Boolean = false,
+    /** "Are you one of these?" is open, right after joining (T-364). */
+    val isChooserOpen: Boolean = false,
+    val isClaiming: Boolean = false,
+    val chooserError: UiText? = null,
     /** Newest date first; within a date, newest first. */
     val rows: List<ExpenseRow> = emptyList(),
     /** What the ledger spent, took in and the net of the two (T-245). */
     val spent: ExpenseMath.SpentTotals = ExpenseMath.SpentTotals(0, 0, 0),
     val balances: List<ExpenseMath.Balance> = emptyList(),
-    /** Numbering for participants who are no longer members (T-152). */
+    /** Numbering for participants who are no longer members (T-152), over effective ids (T-364). */
     val formerMemberNumbers: Map<String, Int> = emptyMap(),
     val myAccountId: String? = null,
     /** Who has agreed to close (T-157), and when it closed — both server-maintained. */
@@ -72,6 +88,12 @@ data class ExpenseListUiState(
     /** What the screens show as "Net spent": expenses less income, settlements counting for nothing. */
     val totalCents: Long get() = spent.netCents
 
+    /** Who is who: labels, guests and the freeze, one source for every row (T-364). */
+    val roster: Roster get() = Roster(members, guests, closeVotes, formerMemberNumbers)
+
+    /** The guests the chooser offers: every one nobody has claimed yet. */
+    val unclaimedGuests: List<ListGuest> get() = guests.filter { !it.isClaimed }
+
     val isClosed: Boolean get() = closedAt != null
     val iHaveVoted: Boolean get() = myAccountId != null && myAccountId in closeVotes
 
@@ -80,15 +102,17 @@ data class ExpenseListUiState(
 
     /**
      * Record is offered only where it can succeed (T-165): the list is open, both parties are
-     * current members, and neither has agreed to close — the freeze rule would refuse the expense
-     * otherwise. Everywhere else the row is display only; on a closed list that is the archive.
+     * current members or unclaimed guests (T-364), and neither is frozen — has agreed to close,
+     * or is a locked guest — which the freeze rule would refuse. Everywhere else the row is
+     * display only; on a closed list that is the archive.
      */
     fun canRecord(transfer: ExpenseMath.Transfer): Boolean {
-        val current = members.map { it.accountId }.toSet()
+        val roster = roster
+        val current = roster.participantIds.toSet()
         // Reimburse adds an expense, which someone who has agreed to close may not do (T-192).
         return !isClosed && !iHaveVoted &&
             transfer.from in current && transfer.to in current &&
-            transfer.from !in closeVotes && transfer.to !in closeVotes
+            !roster.isFrozen(transfer.from) && !roster.isFrozen(transfer.to)
     }
 }
 
@@ -104,6 +128,7 @@ class ExpenseListViewModel(
     private val listsRepo: ListsRepo,
     private val listAccounts: ListAccounts,
     private val syncer: Syncer,
+    private val joinedLists: JoinedLists = JoinedLists(),
 ) : ViewModel() {
 
     private val listId: String = checkNotNull(savedStateHandle[Routes.LIST_ID_ARG])
@@ -162,34 +187,80 @@ class ExpenseListViewModel(
         }
     }
 
+    /**
+     * The chooser after a join (T-364): claim [guestId] as me. Online-only, like a vote; the claim
+     * reaches the figures through the sync that follows. The chooser closes once it went through.
+     */
+    fun claimFromChooser(guestId: String): Job = viewModelScope.launch {
+        _uiState.update { it.copy(isClaiming = true, chooserError = null) }
+        try {
+            val serverId = listsRepo.serverIdOf(listId)
+            val api = listAccounts.api(listId)
+            if (serverId == null || api == null) {
+                _uiState.update { it.copy(chooserError = UiText.res(Res.string.guest_msg_failed)) }
+                return@launch
+            }
+            val claimed = api.claimGuest(serverId, guestId)
+            _uiState.update { state ->
+                state.copy(isChooserOpen = false, guests = state.guests.map { if (it.id == claimed.id) claimed else it })
+            }
+            runCatching { syncer.syncNow(emptyList()) }
+        } catch (e: ApiException) {
+            val message = if (e.code == "participant_frozen") {
+                // A locked guest's numbers may not move onto anyone (T-364).
+                val name = _uiState.value.guests.firstOrNull { it.id == guestId }?.name ?: guestId
+                ErrorText.frozen(name, guest = true)
+            } else {
+                ErrorText.of(e, Res.string.guest_msg_failed)
+            }
+            _uiState.update { it.copy(chooserError = message) }
+        } catch (e: IOException) {
+            _uiState.update { it.copy(chooserError = UiText.res(Res.string.error_offline_retry)) }
+        } finally {
+            _uiState.update { it.copy(isClaiming = false) }
+        }
+    }
+
+    /** "No, I'm new": final for this join; the list menu's "This is me" covers second thoughts. */
+    fun dismissChooser() = _uiState.update { it.copy(isChooserOpen = false, chooserError = null) }
+
     init {
         viewModelScope.launch {
             // Who "I" am on this list is its account's server-side id, not any other account's.
-            val me = listAccounts.accountOf(listId)?.accountId
-            _uiState.update { it.copy(myAccountId = me) }
-        }
-        viewModelScope.launch {
+            val account = listAccounts.accountOf(listId)
+            val guestsEnabled = account?.supportsGuests == true
+            _uiState.update { it.copy(myAccountId = account?.accountId, guestsEnabled = guestsEnabled) }
+            // Taken once, whatever the list turns out to hold: the chooser belongs to this join.
+            var askWhoIAm = joinedLists.consume(listId)
             combine(listsRepo.observeById(listId), itemsRepo.itemsForList(listId), ::Pair)
                 .collect { (list, items) ->
-                    val members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList()
-                    val rows = expenseRowsOf(items, itemsRepo)
-                    val expenses = rows.map { it.expense }
-                    val balances = ExpenseMath.balancesFor(expenses, members.map { m -> m.accountId })
+                    val roster = Roster(
+                        members = list?.let { listsRepo.decodeMembers(it.membersJson) } ?: emptyList(),
+                        guests = list?.let { listsRepo.decodeGuests(it.guestsJson) } ?: emptyList(),
+                        closeVotes = list?.let { row -> listsRepo.decodeCloseVotes(row.closeVotesJson) } ?: emptyList(),
+                    )
+                    // Every figure is computed on folded entries (T-364): a claimed guest's
+                    // amounts are its claimant's. The rows still name what is stored.
+                    val rows = expenseRowsOf(items, itemsRepo).map { it.copy(folded = ExpenseMath.fold(it.expense, roster.aliases)) }
+                    val folded = rows.map { it.folded }
+                    val balances = ExpenseMath.balancesFor(folded, roster.participantIds)
+                    val openChooser = askWhoIAm && list != null && guestsEnabled &&
+                        ListKind.isExpenses(list.kind.value) && list.closedAt == null &&
+                        roster.unclaimedGuests.isNotEmpty()
+                    if (list != null) askWhoIAm = false
                     _uiState.update {
                         it.copy(
                             currency = list?.currency?.value.orEmpty(),
-                            closeVotes = list?.let { row -> listsRepo.decodeCloseVotes(row.closeVotesJson) }
-                                ?: emptyList(),
+                            closeVotes = roster.closeVotes,
                             closedAt = list?.closedAt,
-                            members = members,
+                            members = roster.members,
+                            guests = roster.guests,
                             rows = rows,
-                            spent = ExpenseMath.spentTotals(expenses),
+                            spent = ExpenseMath.spentTotals(folded),
                             balances = balances,
                             transfers = ExpenseMath.settle(balances),
-                            formerMemberNumbers = ExpenseMath.formerMemberNumbers(
-                                expenses,
-                                members.map { m -> m.accountId }.toSet(),
-                            ),
+                            formerMemberNumbers = Roster.formerNumbersFor(rows.map { row -> row.expense }, roster),
+                            isChooserOpen = it.isChooserOpen || openChooser,
                         )
                     }
                 }

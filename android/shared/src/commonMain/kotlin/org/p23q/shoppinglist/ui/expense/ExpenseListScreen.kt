@@ -61,7 +61,6 @@ import org.p23q.shoppinglist.resources.expense_closed_on
 import org.p23q.shoppinglist.resources.expense_empty
 import org.p23q.shoppinglist.resources.expense_entries
 import org.p23q.shoppinglist.resources.expense_for_everyone
-import org.p23q.shoppinglist.resources.expense_former_member
 import org.p23q.shoppinglist.resources.expense_not_saved
 import org.p23q.shoppinglist.resources.expense_row_by
 import org.p23q.shoppinglist.resources.expense_row_received_by
@@ -70,7 +69,12 @@ import org.p23q.shoppinglist.resources.expense_spent_breakdown
 import org.p23q.shoppinglist.resources.expense_total_spent
 import org.p23q.shoppinglist.resources.expense_withdraw_vote
 import org.p23q.shoppinglist.resources.expense_your_balance
+import org.p23q.shoppinglist.resources.guest_chooser_new
+import org.p23q.shoppinglist.resources.guest_chooser_title
 import org.p23q.shoppinglist.resources.nav_list_properties
+import org.p23q.shoppinglist.ui.LocalizedAlertDialog
+import org.p23q.shoppinglist.ui.theme.TuppuOutlinedButton
+import org.p23q.shoppinglist.ui.theme.TuppuTextButton
 import org.p23q.shoppinglist.ui.AddFab
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.EmptyState
@@ -111,6 +115,9 @@ fun ExpenseListScreen(
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.liveSyncLoop()
         }
+    }
+    if (state.isChooserOpen) {
+        GuestChooserDialog(state, onClaim = { viewModel.claimFromChooser(it) }, onDismiss = viewModel::dismissChooser)
     }
     // Expenses or balances (T-172). Saveable, so rotating the phone keeps the view you were on.
     var showBalances by rememberSaveable { mutableStateOf(false) }
@@ -181,7 +188,7 @@ fun ExpenseListScreen(
             LedgerSummaryCard(
                 netCents = state.totalCents,
                 currency = state.currency,
-                myBalanceCents = if (state.members.size > 1) myBalance?.balanceCents else null,
+                myBalanceCents = if (state.roster.participantIds.size > 1) myBalance?.balanceCents else null,
             )
 
             CloseVoteBanner(
@@ -228,8 +235,9 @@ fun ExpenseListScreen(
                                 subLine = subLine(row.expense, state),
                                 // What this one entry does to MY balance, the only figure on the
                                 // row that is mine rather than the group's (T-245).
+                                // On the folded entry (T-364): what a guest I claimed did is mine.
                                 myEffectCents = state.myAccountId
-                                    ?.let { ExpenseMath.entryEffectCents(row.expense, it) }
+                                    ?.let { ExpenseMath.entryEffectCents(row.folded, it) }
                                     ?: 0L,
                                 refusal = refusalOf(row, state),
                                 // Nothing to open on a closed list, nor for someone who has agreed to close (T-193).
@@ -251,6 +259,40 @@ fun ExpenseListScreen(
     }
 }
 
+/**
+ * "Are you one of these?" (T-364): right after joining a ledger that has unclaimed guests, one
+ * button per guest, and "No, I'm new". Picking one claims it; either way the question is not asked
+ * again for this join.
+ */
+@Composable
+internal fun GuestChooserDialog(state: ExpenseListUiState, onClaim: (String) -> Unit, onDismiss: () -> Unit) {
+    LocalizedAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.guest_chooser_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                state.unclaimedGuests.forEach { guest ->
+                    TuppuOutlinedButton(
+                        onClick = { onClaim(guest.id) },
+                        enabled = !state.isClaiming,
+                        modifier = Modifier.fillMaxWidth().testTag("guest-choice-" + guest.id),
+                    ) {
+                        GuestBadge(guest.name, guest.initials)
+                        Spacer(Modifier.width(8.dp))
+                        Text(guest.name)
+                    }
+                }
+                state.chooserError?.let {
+                    Text(it.asString(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TuppuTextButton(onClick = onDismiss) { Text(stringResource(Res.string.guest_chooser_new)) }
+        },
+    )
+}
+
 /** The "not saved" mark on a parked row, and the reason where the refusal gave one (T-200). */
 internal data class RowRefusal(val label: String, val reason: String?)
 
@@ -262,10 +304,12 @@ internal data class RowRefusal(val label: String, val reason: String?)
 @Composable
 internal fun refusalOf(row: ExpenseRow, state: ExpenseListUiState): RowRefusal? {
     if (!row.item.syncBlocked) return null
-    val who = row.item.syncBlockedAccountId?.let { participantLabel(it, state) }
+    val id = row.item.syncBlockedAccountId
+    val who = id?.let { participantLabel(it, state) }
     return RowRefusal(
         label = stringResource(Res.string.expense_not_saved),
-        reason = ErrorText.refusal(row.item.syncBlockedCode, who)?.asString(),
+        // A guest the server named is locked: "Dave: amounts locked" (T-364).
+        reason = ErrorText.refusal(row.item.syncBlockedCode, who, guest = id != null && state.roster.isUnclaimedGuest(id))?.asString(),
     )
 }
 
@@ -416,13 +460,13 @@ internal fun LedgerSummaryCard(
     }
 }
 
-/** A member's initials, or a stable "Former member N" for someone who has left (T-152). */
+/**
+ * A stored key as the rows name it (T-152, T-364): a member's initials, a guest's name, a claimed
+ * guest's name and claimant ("Dave · DP"), or a stable "Former member N" for someone who has left.
+ */
 @Composable
-internal fun participantLabel(accountId: String, state: ExpenseListUiState): String {
-    val member = state.members.firstOrNull { it.accountId == accountId }
-    if (member != null) return member.initials
-    return stringResource(Res.string.expense_former_member, state.formerMemberNumbers[accountId] ?: 0)
-}
+internal fun participantLabel(accountId: String, state: ExpenseListUiState): String =
+    state.roster.nameOf(accountId).text()
 
 /**
  * Who an entry moved money between, said the way its type reads it (T-245): an expense was paid by
@@ -453,9 +497,12 @@ internal fun subLine(expense: Expense, state: ExpenseListUiState): String {
 @Composable
 internal fun forWhomLabel(expense: Expense, state: ExpenseListUiState): String {
     val ids = expense.paidFor.keys
-    val everyone = state.members.isNotEmpty() &&
-        ids.size == state.members.size &&
-        state.members.all { it.accountId in ids }
+    // Everyone is every participant, guests included (T-364), counted by whom they now are.
+    val participants = state.roster.participantIds
+    val effective = ids.map { state.roster.effective(it) }.toSet()
+    val everyone = participants.isNotEmpty() &&
+        effective.size == participants.size &&
+        participants.all { it in effective }
     return if (everyone) {
         stringResource(Res.string.expense_for_everyone)
     } else {

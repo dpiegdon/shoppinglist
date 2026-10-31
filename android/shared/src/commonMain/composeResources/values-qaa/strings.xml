@@ -430,4 +430,27 @@
     <string name="listprops_delete_list">🗑️📋</string>
     <string name="listprops_delete_confirm_title">🗑️📋❓</string>
     <string name="listprops_delete_confirm_body">"%1$s" + 🥕 ➡️ 🗑️📱. 🚫↩️</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">🙋👥</string>
+    <string name="guest_rename">✏️📛</string>
+    <string name="guest_locked">💶🔒</string>
+    <string name="guest_locked_help">🔒: 💶🚫🔄 (👍🔒)</string>
+    <string name="guest_this_is_me">🙋👈</string>
+    <string name="guest_in_use">📝🙋 — ✏️📝⬅️</string>
+    <string name="guest_claimed_by">🙋➡️ %1$s</string>
+    <string name="guest_unclaim">↩️🙋</string>
+    <string name="guest_add">➕🙋</string>
+    <string name="guest_add_another">➕➕</string>
+    <string name="guest_chooser_title">🤔🙋❓</string>
+    <string name="guest_chooser_new">🙅🆕</string>
+    <string name="guest_amounts_locked">💶🔒</string>
+    <string name="guest_error_locked">%1$s: 💶🔒</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s (🙋)</string>
+    <string name="guest_frozen_locked">🔒 — 💶🧊</string>
+    <string name="guest_name">🙋📛</string>
+    <string name="guest_msg_failed">🚫🙋❌</string>
+    <string name="api_error_guest_not_found">🙋❓🚫📋</string>
+    <string name="api_error_guest_claimed">🙋➡️👤✅</string>
+    <string name="api_error_invalid_guest_name">📛 ≤ 64</string>
 </resources>

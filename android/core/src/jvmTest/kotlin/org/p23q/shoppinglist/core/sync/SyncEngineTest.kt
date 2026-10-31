@@ -34,6 +34,7 @@ import org.junit.Test
 import org.p23q.shoppinglist.core.FakeSyncTrigger
 import org.p23q.shoppinglist.core.TEST_ACCOUNT_ID
 import org.p23q.shoppinglist.core.TestAccounts
+import org.p23q.shoppinglist.core.ListGuest
 import org.p23q.shoppinglist.core.testListsRepo
 import org.p23q.shoppinglist.core.api.SyncRequest
 import org.p23q.shoppinglist.core.DeviceIdProvider
@@ -485,6 +486,37 @@ class SyncEngineTest {
 
         assertTrue(syncEngine.syncNow() is SyncResult.Success)
         assertEquals(1, syncStatus.state.value.blockedCount)
+    }
+
+    @Test
+    fun `a ledger created here pushes its first guests once, and mirrors the guests the server serves (T-364)`() = runTest {
+        pointAtServer()
+        db.listDao().upsert(dummyList("trip", "Trip", dirty = true).copy(pendingGuestNamesJson = """["Dave","Eve, Jr."]"""))
+        db.listDao().upsert(dummyList("other", "Other", dirty = true))
+
+        val served = expensesListJson("trip", "Trip", at = 1_000L, closeVotes = "[]").replace(
+            "\"closed_at\": null}",
+            "\"closed_at\": null, \"guests\": [" +
+                "{\"id\": \"g:1\", \"name\": \"Dave\", \"initials\": \"DA\", \"locked\": false, \"claimed_by\": null, \"created_at\": 5, \"future\": 1}," +
+                "{\"id\": \"g:2\", \"name\": \"Eve, Jr.\", \"initials\": \"EJ\", \"locked\": true, \"claimed_by\": \"acct-b\", \"created_at\": 6}]}",
+        )
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"cursor": 1, "changes": {"lists": [$served], "items": []}}"""))
+
+        assertTrue(syncEngine.syncNow() is SyncResult.Success)
+
+        val raw = server.takeRequest().body.readUtf8()
+        val pushed = Json.decodeFromString<SyncRequest>(raw).changes.lists.associateBy { it.id }
+        // As typed, comma and all: no parsing on the wire.
+        assertEquals(listOf("Dave", "Eve, Jr."), pushed.getValue("trip").guestNames)
+        // A list with none says nothing about guests at all.
+        assertEquals(null, pushed.getValue("other").guestNames)
+        assertEquals("only the creating ledger carries the key", 1, Regex("\"guest_names\"").findAll(raw).count())
+
+        val stored = list("trip")!!
+        assertEquals("[]", stored.pendingGuestNamesJson)
+        val guests = testListsRepo(db).decodeGuests(stored.guestsJson)
+        assertEquals(listOf("g:1", "g:2"), guests.map { it.id })
+        assertEquals(ListGuest("g:2", "Eve, Jr.", "EJ", locked = true, claimedBy = "acct-b", createdAt = 6), guests[1])
     }
 
     @Test

@@ -52,7 +52,22 @@ import org.p23q.shoppinglist.data.label
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.accounts_move_down
 import org.p23q.shoppinglist.resources.accounts_move_up
+import org.p23q.shoppinglist.resources.action_add
 import org.p23q.shoppinglist.resources.action_cancel
+import org.p23q.shoppinglist.resources.guest_add
+import org.p23q.shoppinglist.resources.guest_claimed_by
+import org.p23q.shoppinglist.resources.guest_in_use
+import org.p23q.shoppinglist.resources.guest_locked
+import org.p23q.shoppinglist.resources.guest_locked_help
+import org.p23q.shoppinglist.resources.guest_name
+import org.p23q.shoppinglist.resources.account_remove_confirm
+import org.p23q.shoppinglist.resources.guest_rename
+import org.p23q.shoppinglist.resources.guest_section
+import org.p23q.shoppinglist.resources.guest_this_is_me
+import org.p23q.shoppinglist.resources.guest_unclaim
+import org.p23q.shoppinglist.ui.expense.GuestBadge
+import org.p23q.shoppinglist.ui.expense.Roster
+import org.p23q.shoppinglist.ui.expense.text
 import org.p23q.shoppinglist.resources.action_delete
 import org.p23q.shoppinglist.resources.action_duplicate
 import org.p23q.shoppinglist.resources.action_invite
@@ -330,6 +345,10 @@ fun ListPropsScreen(
         }
         if (state.local == false) {
             SharedWithSection(state, viewModel)
+            // Directly under who it is shared with, on a ledger whose server keeps guests (T-364).
+            if (isExpenses && state.guestsEnabled) {
+                GuestsSection(state, viewModel, lockedByVote)
+            }
             NotificationsSection(state, viewModel)
         }
 
@@ -481,6 +500,146 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
             TuppuButton(onClick = { viewModel.sendInvite() }, contentPadding = CompactButtonPadding) { Text(stringResource(Res.string.action_invite)) }
         }
         ErrorNote(state.sharingError)
+    }
+}
+
+/**
+ * A ledger's guests (T-364): one row per guest — its outline badge and name, Rename, the
+ * "Amounts locked" switch, "This is me" and Remove while unclaimed; "claimed by DP", and Unclaim
+ * for the claimant, once claimed — and "Add guest" below. Read-only on a closed list, and every
+ * control is off while the viewer has agreed to close, as the entry form is.
+ */
+@Composable
+private fun GuestsSection(state: ListPropsUiState, viewModel: ListPropsViewModel, lockedByVote: Boolean) {
+    val open = state.closedAt == null
+    val enabled = open && !lockedByVote && !state.isGuestBusy
+    val roster = Roster(state.listMembers, state.guests).withFormerNumbersFrom(state.ledgerEntries)
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var draft by remember { mutableStateOf("") }
+    SectionCard(stringResource(Res.string.guest_section), modifier = Modifier.testTag("guests-card")) {
+        if (open && lockedByVote) {
+            Text(
+                stringResource(Res.string.api_error_voted_to_close),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        state.guests.forEach { guest ->
+            key(guest.id) {
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("guest-" + guest.id)) {
+                    if (renaming == guest.id) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = draft,
+                                onValueChange = { draft = it },
+                                label = { Text(stringResource(Res.string.guest_name)) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f).testTag("guest-rename-field"),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            TuppuButton(
+                                onClick = { if (viewModel.renameGuest(guest.id, draft)) renaming = null },
+                                enabled = enabled,
+                                contentPadding = CompactButtonPadding,
+                            ) { Text(stringResource(Res.string.action_save)) }
+                            Spacer(Modifier.width(4.dp))
+                            TuppuOutlinedButton(onClick = { renaming = null }, contentPadding = CompactButtonPadding) {
+                                Text(stringResource(Res.string.action_cancel))
+                            }
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            GuestBadge(guest.name, guest.initials)
+                            Spacer(Modifier.width(8.dp))
+                            Text(guest.name, modifier = Modifier.weight(1f))
+                            if (open) {
+                                TuppuTextButton(
+                                    onClick = { renaming = guest.id; draft = guest.name },
+                                    enabled = enabled,
+                                ) { Text(stringResource(Res.string.guest_rename)) }
+                            }
+                        }
+                    }
+                    val claimant = guest.claimedBy
+                    if (claimant != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(Res.string.guest_claimed_by, roster.nameOf(claimant).text()),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (open && claimant == state.myAccountId) {
+                                TuppuOutlinedButton(
+                                    onClick = { viewModel.unclaimGuest(guest.id) },
+                                    enabled = enabled,
+                                    contentPadding = CompactButtonPadding,
+                                ) { Text(stringResource(Res.string.guest_unclaim)) }
+                            }
+                        }
+                    } else {
+                        val lockedLabel = stringResource(Res.string.guest_locked)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(lockedLabel, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = guest.locked,
+                                onCheckedChange = { viewModel.setGuestLocked(guest.id, it) },
+                                enabled = enabled,
+                                modifier = Modifier.semantics { contentDescription = lockedLabel }.testTag("guest-lock-" + guest.id),
+                            )
+                        }
+                        Text(
+                            stringResource(Res.string.guest_locked_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (open) {
+                            val inUse = guest.id in state.guestsInUse
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                                TuppuOutlinedButton(
+                                    onClick = { viewModel.claimGuest(guest.id) },
+                                    enabled = enabled,
+                                    contentPadding = CompactButtonPadding,
+                                ) { Text(stringResource(Res.string.guest_this_is_me)) }
+                                TuppuButton(
+                                    onClick = { viewModel.removeGuest(guest.id) },
+                                    enabled = enabled && !inUse,
+                                    colors = dangerButtonColors(),
+                                    contentPadding = CompactButtonPadding,
+                                ) { Text(stringResource(Res.string.account_remove_confirm)) }
+                            }
+                            if (inUse) {
+                                Text(
+                                    stringResource(Res.string.guest_in_use),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (open) {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = state.newGuestName,
+                    onValueChange = viewModel::onNewGuestNameChange,
+                    label = { Text(stringResource(Res.string.guest_add)) },
+                    singleLine = true,
+                    enabled = !lockedByVote,
+                    modifier = Modifier.weight(1f).testTag("guest-add-field"),
+                )
+                Spacer(Modifier.width(8.dp))
+                TuppuButton(
+                    onClick = { viewModel.addGuest() },
+                    enabled = enabled,
+                    contentPadding = CompactButtonPadding,
+                ) { Text(stringResource(Res.string.action_add)) }
+            }
+        }
+        ErrorNote(state.guestError)
     }
 }
 

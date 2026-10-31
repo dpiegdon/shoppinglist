@@ -11,7 +11,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.p23q.shoppinglist.core.CategoryCanon
+import org.p23q.shoppinglist.core.GuestName
+import org.p23q.shoppinglist.core.ListGuest
 import org.p23q.shoppinglist.core.ListKind
+import org.p23q.shoppinglist.core.ListMember
+import org.p23q.shoppinglist.core.api.CreateGuestRequest
+import org.p23q.shoppinglist.core.api.UpdateGuestRequest
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.CreateInviteRequest
 import org.p23q.shoppinglist.core.api.MemberDto
@@ -24,7 +29,9 @@ import org.p23q.shoppinglist.core.sync.Syncer
 import org.p23q.shoppinglist.data.ListAccounts
 import org.p23q.shoppinglist.data.notify.NotificationPrefsStore
 import org.p23q.shoppinglist.resources.Res
+import org.p23q.shoppinglist.resources.api_error_invalid_guest_name
 import org.p23q.shoppinglist.resources.error_offline
+import org.p23q.shoppinglist.resources.guest_msg_failed
 import org.p23q.shoppinglist.resources.error_offline_retry
 import org.p23q.shoppinglist.resources.expense_vote_failed
 import org.p23q.shoppinglist.resources.listprops_msg_email_required
@@ -94,6 +101,20 @@ data class ListPropsUiState(
      * has no roster, invites, close votes or collaborator notifications, and leaving it deletes it.
      */
     val local: Boolean? = null,
+    /** A ledger's guests as the list row last had them (T-364), oldest first. */
+    val guests: List<ListGuest> = emptyList(),
+    /** The roster on the list row, for naming a guest's claimant ("claimed by DP"). */
+    val listMembers: List<ListMember> = emptyList(),
+    /** Whether the account's server keeps guests (T-364); none of the section is shown otherwise. */
+    val guestsEnabled: Boolean = false,
+    /** The guests a live entry names: those cannot be removed until the entries are edited. */
+    val guestsInUse: Set<String> = emptySet(),
+    /** The ledger's live entries as stored, for numbering a claimant who has left (T-197). */
+    val ledgerEntries: List<org.p23q.shoppinglist.core.Expense> = emptyList(),
+    val newGuestName: String = "",
+    val isGuestBusy: Boolean = false,
+    /** A guest action failed, said inside the Guests card. */
+    val guestError: UiText? = null,
 ) {
     /** The name as it would be saved: trimmed, and never blank. */
     val nameChanged: Boolean get() = name.trim().let { it.isNotBlank() && it != savedName }
@@ -150,6 +171,7 @@ class ListPropsViewModel(
                     memberCount = list?.let { row -> listsRepo.decodeMembers(row.membersJson).size } ?: 0,
                     myAccountId = account?.accountId,
                     local = account?.let { row -> !row.isServer },
+                    guestsEnabled = account?.supportsGuests == true,
                     categoryOrder = categories,
                     savedCategoryOrder = categories,
                     notes = notes,
@@ -167,10 +189,106 @@ class ListPropsViewModel(
         viewModelScope.launch {
             itemsRepo.itemsForList(listId).collect { items ->
                 val count = items.count { it.status.value == Status.CHECKED.wireValue }
-                _uiState.update { it.copy(checkedCount = count) }
+                // Who the ledger's live entries name, by stored key (T-364): a guest among them
+                // cannot be removed, which the card says before the server would.
+                val entries = items.mapNotNull { item -> itemsRepo.decodeExpense(item.expense.value) }
+                val named = entries.flatMap { it.paidBy.keys + it.paidFor.keys }.toSet()
+                _uiState.update { it.copy(checkedCount = count, guestsInUse = named, ledgerEntries = entries) }
+            }
+        }
+        // The guests change through their endpoints and arrive with the next sync (T-364): live.
+        viewModelScope.launch {
+            listsRepo.observeById(listId).collect { list ->
+                _uiState.update {
+                    it.copy(
+                        guests = list?.let { row -> listsRepo.decodeGuests(row.guestsJson) } ?: emptyList(),
+                        listMembers = list?.let { row -> listsRepo.decodeMembers(row.membersJson) } ?: emptyList(),
+                    )
+                }
             }
         }
     }
+
+    fun onNewGuestNameChange(value: String) = _uiState.update { it.copy(newGuestName = value, guestError = null) }
+
+    /** Add guest (T-364): the typed name, refused here with the server's own words if it would be. */
+    fun addGuest(): Job? {
+        val name = GuestName.normalize(_uiState.value.newGuestName)
+        if (name == null) {
+            _uiState.update { it.copy(guestError = UiText.res(Res.string.api_error_invalid_guest_name)) }
+            return null
+        }
+        return guestCall { api, serverId ->
+            api.createGuest(serverId, CreateGuestRequest(name)).also {
+                _uiState.update { state -> state.copy(newGuestName = "") }
+            }
+        }
+    }
+
+    /** Rename inline; false when the name would be refused, so the field stays open. */
+    fun renameGuest(guestId: String, newName: String): Boolean {
+        val name = GuestName.normalize(newName)
+        if (name == null) {
+            _uiState.update { it.copy(guestError = UiText.res(Res.string.api_error_invalid_guest_name)) }
+            return false
+        }
+        if (_uiState.value.guests.firstOrNull { it.id == guestId }?.name == name) return true
+        guestCall { api, serverId -> api.updateGuest(serverId, guestId, UpdateGuestRequest(name = name)) }
+        return true
+    }
+
+    /** "Amounts locked" (T-364): the guest's amounts may not move while it is on. */
+    fun setGuestLocked(guestId: String, locked: Boolean): Job =
+        guestCall { api, serverId -> api.updateGuest(serverId, guestId, UpdateGuestRequest(locked = locked)) }
+
+    fun removeGuest(guestId: String): Job = guestCall { api, serverId ->
+        api.deleteGuest(serverId, guestId)
+        _uiState.update { state -> state.copy(guests = state.guests.filterNot { it.id == guestId }) }
+        null
+    }
+
+    /** "This is me": the guest's history becomes mine (T-364). */
+    fun claimGuest(guestId: String): Job = guestCall { api, serverId -> api.claimGuest(serverId, guestId) }
+
+    fun unclaimGuest(guestId: String): Job = guestCall { api, serverId -> api.unclaimGuest(serverId, guestId) }
+
+    /**
+     * One guest endpoint call (T-364). Online-only, like a vote: the guest object it answers with
+     * is shown at once, and the sync that follows brings the list row up to date.
+     */
+    private fun guestCall(call: suspend (api: org.p23q.shoppinglist.core.api.Api, serverId: String) -> ListGuest?): Job =
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGuestBusy = true, guestError = null) }
+            try {
+                val serverId = listsRepo.serverIdOf(listId)
+                val api = listAccounts.api(listId)
+                if (serverId == null || api == null) {
+                    _uiState.update { it.copy(guestError = UiText.res(Res.string.guest_msg_failed)) }
+                    return@launch
+                }
+                val changed = call(api, serverId)
+                if (changed != null) {
+                    _uiState.update { state ->
+                        val known = state.guests.any { it.id == changed.id }
+                        state.copy(guests = if (known) state.guests.map { if (it.id == changed.id) changed else it } else state.guests + changed)
+                    }
+                }
+                runCatching { syncer.syncNow(emptyList()) }
+            } catch (e: ApiException) {
+                // Before IOException, which it extends (T-264).
+                val message = if (e.code == "participant_frozen") {
+                    val name = _uiState.value.guests.firstOrNull { it.id == e.accountId }?.name ?: e.accountId.orEmpty()
+                    ErrorText.frozen(name, guest = true)
+                } else {
+                    ErrorText.of(e, Res.string.guest_msg_failed)
+                }
+                _uiState.update { it.copy(guestError = message) }
+            } catch (e: IOException) {
+                _uiState.update { it.copy(guestError = UiText.res(Res.string.error_offline_retry)) }
+            } finally {
+                _uiState.update { it.copy(isGuestBusy = false) }
+            }
+        }
 
     /** Per-list collaborator-notification mute (T-65) — device-local, deliberately not synced. */
     fun setListNotificationsEnabled(enabled: Boolean): Job = viewModelScope.launch {

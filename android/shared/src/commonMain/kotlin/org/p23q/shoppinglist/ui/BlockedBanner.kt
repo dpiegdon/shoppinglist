@@ -24,8 +24,8 @@ import org.p23q.shoppinglist.resources.expense_not_saved
  * item form (T-210) — they say the same thing, so they should not drift apart.
  */
 @Composable
-fun BlockedBanner(code: String?, who: String?) {
-    val reason = ErrorText.refusal(code, who)?.asString()
+fun BlockedBanner(code: String?, who: String?, guest: Boolean = false) {
+    val reason = ErrorText.refusal(code, who, guest)?.asString()
     ErrorBanner {
         Column {
             // expense_not_saved, whose English is generic on purpose: "the list" is whichever list

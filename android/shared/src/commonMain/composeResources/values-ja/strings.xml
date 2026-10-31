@@ -437,4 +437,27 @@
     <string name="listprops_delete_list">リストを削除</string>
     <string name="listprops_delete_confirm_title">このリストを削除しますか？</string>
     <string name="listprops_delete_confirm_body">「%1$s」とそのアイテムはこの端末から削除されます。元に戻すことはできません。</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">ゲスト</string>
+    <string name="guest_rename">名前を変更</string>
+    <string name="guest_locked">金額をロック</string>
+    <string name="guest_locked_help">ロック中：締めに同意したメンバーと同じく、金額は変更できません</string>
+    <string name="guest_this_is_me">これは私です</string>
+    <string name="guest_in_use">記録で使われています — 先にそちらを編集してください</string>
+    <string name="guest_claimed_by">%1$s が引き継ぎ済み</string>
+    <string name="guest_unclaim">引き継ぎを取り消す</string>
+    <string name="guest_add">ゲストを追加</string>
+    <string name="guest_add_another">もう1人追加</string>
+    <string name="guest_chooser_title">この中にあなたはいますか？</string>
+    <string name="guest_chooser_new">いいえ、初めてです</string>
+    <string name="guest_amounts_locked">金額はロック中</string>
+    <string name="guest_error_locked">%1$s：金額はロック中</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s（ゲスト）</string>
+    <string name="guest_frozen_locked">ロック中 — 金額は確定</string>
+    <string name="guest_name">ゲストの名前</string>
+    <string name="guest_msg_failed">ゲストを変更できませんでした</string>
+    <string name="api_error_guest_not_found">このゲストはもうこのリストにいません</string>
+    <string name="api_error_guest_claimed">このゲストはすでに引き継がれています</string>
+    <string name="api_error_invalid_guest_name">ゲストの名前は64文字以内で入力してください</string>
 </resources>

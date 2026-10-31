@@ -57,6 +57,15 @@ import org.p23q.shoppinglist.resources.expense_currency
 import org.p23q.shoppinglist.resources.overview_account_outdated
 import org.p23q.shoppinglist.resources.overview_account_signed_out
 import org.p23q.shoppinglist.resources.overview_currency_help
+import org.p23q.shoppinglist.resources.api_error_invalid_guest_name
+import org.p23q.shoppinglist.resources.guest_add_another
+import org.p23q.shoppinglist.resources.guest_name
+import org.p23q.shoppinglist.resources.account_remove_confirm
+import org.p23q.shoppinglist.resources.guest_section
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import org.p23q.shoppinglist.resources.overview_currency_required
 import org.p23q.shoppinglist.resources.overview_invite_from
 import org.p23q.shoppinglist.resources.overview_invites
@@ -258,6 +267,9 @@ fun OverviewScreen(
             onAccountChange = viewModel::onNewListAccountChange,
             onCreate = { viewModel.createList() },
             onDismiss = viewModel::dismissCreateDialog,
+            onGuestNameChange = viewModel::onNewListGuestNameChange,
+            onAddGuest = viewModel::addNewListGuest,
+            onRemoveGuest = viewModel::removeNewListGuest,
         )
     }
 }
@@ -272,12 +284,16 @@ internal fun NewListDialog(
     onAccountChange: (String) -> Unit,
     onCreate: () -> Unit,
     onDismiss: () -> Unit,
+    onGuestNameChange: (Int, String) -> Unit = { _, _ -> },
+    onAddGuest: () -> Unit = {},
+    onRemoveGuest: (Int) -> Unit = {},
 ) {
     LocalizedAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.overview_new_list)) },
         text = {
-            Column {
+            // Scrolls: a ledger's guest boxes can outgrow the screen (T-364).
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 // Which account the list goes to (T-292), only when there is a choice. Fixed for
                 // the list's life: a list never moves between accounts.
                 if (state.several) {
@@ -360,6 +376,38 @@ internal fun NewListDialog(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                // A ledger's first guests (T-364), under the currency: one box each.
+                if (state.newListGuestsOffered) {
+                    Spacer(Modifier.height(12.dp))
+                    FieldLabel(stringResource(Res.string.guest_section))
+                    val removeLabel = stringResource(Res.string.account_remove_confirm)
+                    state.newListGuestNames.forEachIndexed { index, guestName ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = guestName,
+                                onValueChange = { onGuestNameChange(index, it) },
+                                label = { Text(stringResource(Res.string.guest_name)) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f).testTag("new-list-guest-$index"),
+                            )
+                            IconButton(onClick = { onRemoveGuest(index) }, modifier = Modifier.testTag("new-list-guest-remove-$index")) {
+                                Icon(Icons.Default.Close, contentDescription = removeLabel)
+                            }
+                        }
+                    }
+                    if (state.newListGuestNameInvalid) {
+                        Text(
+                            stringResource(Res.string.api_error_invalid_guest_name),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (state.canAddNewListGuest) {
+                        TuppuTextButton(onClick = onAddGuest, modifier = Modifier.testTag("new-list-guest-add")) {
+                            Text(stringResource(Res.string.guest_add_another))
+                        }
+                    }
                 }
             }
         },

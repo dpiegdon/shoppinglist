@@ -437,4 +437,27 @@
     <string name="listprops_delete_list">删除清单</string>
     <string name="listprops_delete_confirm_title">要删除此清单吗？</string>
     <string name="listprops_delete_confirm_body">“%1$s”及其物品将从此手机中删除。此操作无法撤销。</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">访客</string>
+    <string name="guest_rename">重命名</string>
+    <string name="guest_locked">金额已锁定</string>
+    <string name="guest_locked_help">已锁定：金额不能更改，就像已同意结算的成员一样</string>
+    <string name="guest_this_is_me">这是我</string>
+    <string name="guest_in_use">已在记录中使用 — 请先编辑这些记录</string>
+    <string name="guest_claimed_by">已由 %1$s 认领</string>
+    <string name="guest_unclaim">取消认领</string>
+    <string name="guest_add">添加访客</string>
+    <string name="guest_add_another">再添加一个</string>
+    <string name="guest_chooser_title">你是其中一位吗？</string>
+    <string name="guest_chooser_new">不，我是新来的</string>
+    <string name="guest_amounts_locked">金额已锁定</string>
+    <string name="guest_error_locked">%1$s：金额已锁定</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s（访客）</string>
+    <string name="guest_frozen_locked">已锁定 — 金额已锁定</string>
+    <string name="guest_name">访客姓名</string>
+    <string name="guest_msg_failed">无法更改访客</string>
+    <string name="api_error_guest_not_found">此访客已不在此列表中</string>
+    <string name="api_error_guest_claimed">此访客已被认领</string>
+    <string name="api_error_invalid_guest_name">请输入不超过 64 个字符的访客姓名</string>
 </resources>

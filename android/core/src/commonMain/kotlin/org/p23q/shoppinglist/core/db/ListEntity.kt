@@ -55,4 +55,17 @@ data class ListEntity(
     val membersJson: String = "[]",
     val closeVotesJson: String = "[]",
     val closedAt: Long? = null,
+    /**
+     * A ledger's guests as the server last reported them (T-364): server-maintained like
+     * [membersJson], a JSON array of [org.p23q.shoppinglist.core.ListGuest]. The client never
+     * writes them through `/sync`; the guest endpoints change them, and the next pull brings it.
+     */
+    val guestsJson: String = "[]",
+    /**
+     * The names of the first guests of a ledger created on this phone and not yet acknowledged by
+     * the server (T-364), a JSON array of strings: sent as the creating push's `guest_names`, and
+     * cleared by the first pull of the list, which serves them as [guestsJson]. A creation queued
+     * offline thus carries its people with it.
+     */
+    val pendingGuestNamesJson: String = "[]",
 )

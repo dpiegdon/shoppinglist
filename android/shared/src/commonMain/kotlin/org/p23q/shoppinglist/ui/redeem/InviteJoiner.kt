@@ -6,6 +6,7 @@ import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.RedeemInviteRequest
 import org.p23q.shoppinglist.core.repo.ListsRepo
 import org.p23q.shoppinglist.core.sync.Syncer
+import org.p23q.shoppinglist.data.JoinedLists
 import org.p23q.shoppinglist.resources.Res
 import org.p23q.shoppinglist.resources.api_error_invite_not_found
 import org.p23q.shoppinglist.resources.error_offline
@@ -26,6 +27,8 @@ internal class InviteJoiner(
     private val sessions: AccountSessions,
     private val syncer: Syncer,
     private val listsRepo: ListsRepo,
+    /** Where a join is noted for the list screen's guest chooser (T-364). */
+    private val joinedLists: JoinedLists,
 ) {
     suspend fun join(accountId: String, token: String): InviteJoin {
         // Removed meanwhile: there is no server left to ask.
@@ -35,7 +38,10 @@ internal class InviteJoiner(
             val serverId = sessions.get(account.id).api.redeemInvite(RedeemInviteRequest(token)).listId
             syncer.syncJoined(account.id, serverId)
             // Without the row (the pull failed) there is nothing to open yet.
-            listsRepo.localIdForServerId(account.id, serverId)?.let { InviteJoin.Joined(it) }
+            listsRepo.localIdForServerId(account.id, serverId)?.let { listId ->
+                joinedLists.mark(listId)
+                InviteJoin.Joined(listId)
+            }
                 ?: InviteJoin.Failed(UiText.res(Res.string.error_offline))
         } catch (e: ApiException) {
             // Before IOException, which it extends (T-264).

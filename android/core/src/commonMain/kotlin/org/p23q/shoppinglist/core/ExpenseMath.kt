@@ -245,6 +245,41 @@ object ExpenseMath {
         return numbers
     }
 
+    /**
+     * The claimed guests of a ledger, each mapped to the account that claimed it (T-364): what
+     * [fold] replaces. An unclaimed guest is not in it, and is a participant in its own right.
+     */
+    fun aliasesOf(guests: List<ListGuest>): Map<String, String> =
+        guests.mapNotNull { guest -> guest.claimedBy?.let { guest.id to it } }.toMap()
+
+    /**
+     * [expense] with every participant replaced by whom they now are (T-364): a claimed guest by
+     * its claimant, everyone else by themselves. Amounts that land on the same id are summed in
+     * cents, so an entry naming a guest and, from before the claim, the claimant keeps every cent.
+     * The type, date and equal flags are copied.
+     *
+     * A folded entry is for arithmetic and display only and is never written; a transfer that
+     * folds onto one id on both sides is the claimant paying themself, and its effect is zero.
+     * Every figure a screen shows is computed on folded entries, by the functions above unchanged.
+     */
+    fun fold(expense: Expense, aliases: Map<String, String>): Expense {
+        if (aliases.isEmpty()) return expense
+        fun foldSide(shares: Map<String, String>): Map<String, String> {
+            if (shares.keys.none { it in aliases }) return shares
+            val cents = LinkedHashMap<String, Long>()
+            for ((id, amount) in shares) {
+                val target = aliases[id] ?: id
+                cents[target] = (cents[target] ?: 0L) + (toCents(amount) ?: 0L)
+            }
+            return sharesToWire(cents)
+        }
+        return expense.copy(paidBy = foldSide(expense.paidBy), paidFor = foldSide(expense.paidFor))
+    }
+
+    /** [fold] over a ledger's entries, in their order. */
+    fun foldAll(expenses: List<Expense>, aliases: Map<String, String>): List<Expense> =
+        if (aliases.isEmpty()) expenses else expenses.map { fold(it, aliases) }
+
     /** One payment that settling up asks for: [from] pays [to]. */
     data class Transfer(val from: String, val to: String, val cents: Long)
 

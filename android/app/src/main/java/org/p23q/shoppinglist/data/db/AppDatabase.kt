@@ -276,6 +276,16 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
     }
 }
 
+/** Adds lists.guestsJson and lists.pendingGuestNamesJson (T-364): a ledger's guests as the
+ *  server serves them, and the names a creation queued here still has to send. None of either for
+ *  every existing list, until its next pull brings the guests. */
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE lists ADD COLUMN guestsJson TEXT NOT NULL DEFAULT '[]'")
+        db.execSQL("ALTER TABLE lists ADD COLUMN pendingGuestNamesJson TEXT NOT NULL DEFAULT '[]'")
+    }
+}
+
 /** Room's own SQL, from core/schemas/…/10.json. */
 private const val CREATE_LISTS_10 =
     "CREATE TABLE IF NOT EXISTS `lists` (`localId` TEXT NOT NULL, `serverId` TEXT NOT NULL, " +
@@ -332,6 +342,6 @@ fun buildAppDb(context: Context, legacy: LegacySessionSource): AppDb =
         .addMigrations(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
             MIGRATION_7_8, Migration8To9(legacy), MIGRATION_9_10, MIGRATION_10_11,
-            MIGRATION_11_12, MIGRATION_12_13,
+            MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
         )
         .build()

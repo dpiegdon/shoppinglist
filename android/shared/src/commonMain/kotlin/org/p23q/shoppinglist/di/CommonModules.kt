@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.di
 
+import org.p23q.shoppinglist.data.JoinedLists
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -75,6 +76,7 @@ val coreModule: Module = module {
     factory { InviteChecker(get(), get(), get(), get()) }
 
     single { PendingInviteHolder() }
+    single { JoinedLists() }
     factory { ListAccounts(get(), get(), get()) }
     factory<LocalArea> {
         val registry = get<AccountRegistry>()

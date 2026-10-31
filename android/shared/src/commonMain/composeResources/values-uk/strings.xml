@@ -437,4 +437,27 @@
     <string name="listprops_delete_list">Видалити список</string>
     <string name="listprops_delete_confirm_title">Видалити цей список?</string>
     <string name="listprops_delete_confirm_body">«%1$s» і його товари буде видалено з цього телефона. Цю дію не можна скасувати.</string>
+    <!-- A ledger's guests (T-364) -->
+    <string name="guest_section">Гості</string>
+    <string name="guest_rename">Перейменувати</string>
+    <string name="guest_locked">Суми заблоковано</string>
+    <string name="guest_locked_help">Заблоковано: суми не можуть змінитися, як у учасника, що погодився закрити</string>
+    <string name="guest_this_is_me">Це я</string>
+    <string name="guest_in_use">Згадано в записах — спершу змініть їх</string>
+    <string name="guest_claimed_by">привласнено: %1$s</string>
+    <string name="guest_unclaim">Скасувати привласнення</string>
+    <string name="guest_add">Додати гостя</string>
+    <string name="guest_add_another">Додати ще</string>
+    <string name="guest_chooser_title">Ви одна з цих осіб?</string>
+    <string name="guest_chooser_new">Ні, я новий</string>
+    <string name="guest_amounts_locked">суми заблоковано</string>
+    <string name="guest_error_locked">%1$s: суми заблоковано</string>
+    <string name="guest_claimed_label">%1$s · %2$s</string>
+    <string name="guest_a11y">%1$s (гість)</string>
+    <string name="guest_frozen_locked">заблоковано — суми зафіксовано</string>
+    <string name="guest_name">Ім'я гостя</string>
+    <string name="guest_msg_failed">Не вдалося змінити гостя</string>
+    <string name="api_error_guest_not_found">Цього гостя вже немає в цьому списку</string>
+    <string name="api_error_guest_claimed">Цього гостя вже привласнено</string>
+    <string name="api_error_invalid_guest_name">Введіть ім'я гостя до 64 символів</string>
 </resources>

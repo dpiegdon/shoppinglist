@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist.ui.expense
 
 import org.p23q.shoppinglist.ui.todayIso
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +31,7 @@ import org.p23q.shoppinglist.resources.expense_reimburse
 import org.p23q.shoppinglist.resources.expense_settle_up
 import org.p23q.shoppinglist.resources.expense_settlement
 import org.p23q.shoppinglist.resources.expense_transfer
+import org.p23q.shoppinglist.resources.guest_amounts_locked
 import org.p23q.shoppinglist.ui.CompactButtonPadding
 import org.p23q.shoppinglist.ui.appLocale
 import org.p23q.shoppinglist.ui.bidiIsolate
@@ -54,9 +56,9 @@ fun BalancesContent(
 ) {
     val settlementTitle = stringResource(Res.string.expense_settlement)
 
+    // Balances are per effective id (T-364): members, unclaimed guests, then anyone gone.
     @Composable
-    fun label(accountId: String): String =
-        state.members.firstOrNull { it.accountId == accountId }?.email ?: participantLabel(accountId, state)
+    fun label(accountId: String): String = state.roster.nameOf(accountId, byEmail = true).text()
 
     // Dividers only between rows, in the colour the entries tab and the lists use (T-342).
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -74,15 +76,21 @@ fun BalancesContent(
         LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             itemsIndexed(state.balances, key = { _, balance -> balance.accountId }) { index, balance ->
                 val member = state.members.firstOrNull { it.accountId == balance.accountId }
+                val guest = state.guests.firstOrNull { it.id == balance.accountId && !it.isClaimed }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = member?.initials ?: "—",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.width(44.dp),
-                    )
+                    // A guest is marked by the outline badge (T-364); a member's initials are plain.
+                    if (guest != null) {
+                        Box(modifier = Modifier.width(44.dp)) { GuestBadge(guest.name, guest.initials) }
+                    } else {
+                        Text(
+                            text = member?.initials ?: "—",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.width(44.dp),
+                        )
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = label(balance.accountId),
@@ -110,6 +118,14 @@ fun BalancesContent(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        // Its own words, not a voter's "agreed to close" (T-364).
+                        if (guest?.locked == true) {
+                            Text(
+                                text = stringResource(Res.string.guest_amounts_locked),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     Text(
                         text = AppFormat.signedMoney(balance.balanceCents, state.currency, appLocale()),

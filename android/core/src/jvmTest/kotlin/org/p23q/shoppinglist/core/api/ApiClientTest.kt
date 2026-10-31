@@ -95,4 +95,34 @@ class ApiClientTest {
             assertEquals(410, e.httpStatus)
         }
     }
+
+    @Test
+    fun `the five guest calls go to their wire contract paths with their bodies (T-364)`() = runTest {
+        val guest = """{"id": "g:1", "name": "Dave", "initials": "DA", "locked": false, "claimed_by": null, "created_at": 5}"""
+        repeat(2) { server.enqueue(MockResponse().setResponseCode(if (it == 0) 201 else 200).setBody(guest)) }
+        server.enqueue(MockResponse().setResponseCode(204))
+        repeat(2) { server.enqueue(MockResponse().setResponseCode(200).setBody(guest)) }
+        val api = buildApi(TokenProvider { "t" })
+
+        assertEquals("DA", api.createGuest("L1", CreateGuestRequest("Dave")).initials)
+        api.updateGuest("L1", "g:1", UpdateGuestRequest(locked = true))
+        api.deleteGuest("L1", "g:1")
+        api.claimGuest("L1", "g:1")
+        api.unclaimGuest("L1", "g:1")
+
+        val requests = List(5) { server.takeRequest() }
+        assertEquals(
+            listOf(
+                "POST /api/v1/lists/L1/guests",
+                "PATCH /api/v1/lists/L1/guests/g:1",
+                "DELETE /api/v1/lists/L1/guests/g:1",
+                "POST /api/v1/lists/L1/guests/g:1/claim",
+                "DELETE /api/v1/lists/L1/guests/g:1/claim",
+            ),
+            requests.map { "${it.method} ${it.path}" },
+        )
+        assertEquals("""{"name":"Dave"}""", requests[0].body.readUtf8())
+        // Only what changes: the name is left out, so the server leaves it alone.
+        assertEquals("""{"locked":true}""", requests[1].body.readUtf8())
+    }
 }

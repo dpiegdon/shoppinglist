@@ -88,7 +88,7 @@ class AppDbMigrationTest {
     private val migrations = listOf(
         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
         MIGRATION_7_8, Migration8To9(FakeLegacySession()), MIGRATION_9_10,
-        MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+        MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
     )
 
     private fun execWithArgs(connection: SQLiteConnection, sql: String, bindArgs: Array<*>) {
@@ -565,7 +565,7 @@ class AppDbMigrationTest {
     // ---- 9 to 10: phone-local ids (T-299) ----------------------------------------------
 
     /** The schema this build's database declares; the newest exported schema. */
-    private val LATEST = 13
+    private val LATEST = 14
 
     /** A version-9 database: [seedV8]'s list and item, owned by the migrated signed-in account. */
     private fun seedV9(connection: SQLiteConnection, orphans: Boolean = false) {
@@ -836,6 +836,31 @@ class AppDbMigrationTest {
             assertEquals(1L, count(connection, "SELECT COUNT(*) FROM accounts"))
             assertNull(readText(connection, "SELECT serverVersion FROM accounts"))
             assertEquals(0L, readLong(connection, "SELECT dueDatesSeen FROM accounts"))
+            assertEquals(1L, count(connection, "SELECT COUNT(*) FROM items"))
+        } finally {
+            connection.close()
+        }
+    }
+
+    @Test
+    fun `migrating 13 to 14 adds a ledger's guests and pending guest names, none for every list, and keeps the lists (T-364)`() {
+        val connection = openFresh("v13")
+        try {
+            seedV9(connection)
+            MIGRATION_9_10.migrate(supportFacade(connection))
+            MIGRATION_10_11.migrate(supportFacade(connection))
+            MIGRATION_11_12.migrate(supportFacade(connection))
+            MIGRATION_12_13.migrate(supportFacade(connection))
+            MIGRATION_13_14.migrate(supportFacade(connection))
+
+            for (table in listOf("accounts", "lists", "items")) {
+                assertEquals(table, expectedColumns(table, 14), actualColumns(connection, table))
+                assertEquals(table, expectedIndices(table, 14), actualIndices(connection, table))
+                assertEquals(table, expectedForeignKeys(table, 14), actualForeignKeys(connection, table))
+            }
+            assertEquals("[]", readText(connection, "SELECT guestsJson FROM lists WHERE localId = 'l1'"))
+            assertEquals("[]", readText(connection, "SELECT pendingGuestNamesJson FROM lists WHERE localId = 'l1'"))
+            assertEquals("Groceries", readText(connection, "SELECT name_value FROM lists WHERE localId = 'l1'"))
             assertEquals(1L, count(connection, "SELECT COUNT(*) FROM items"))
         } finally {
             connection.close()

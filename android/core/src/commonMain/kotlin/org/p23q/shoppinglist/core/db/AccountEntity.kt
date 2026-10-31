@@ -72,7 +72,18 @@ data class AccountEntity(
         get() = !isServer || dueDatesSeen ||
             serverVersion?.let { compareVersions(it, DUE_DATES_SINCE) }?.let { it >= 0 } == true
 
+    /**
+     * Whether this account's server keeps ledger guests (T-364): a server account whose protocol
+     * is known to be [GUESTS_SINCE_PROTOCOL] or newer. Against an older one every guest control is
+     * hidden, and a ledger looks as it always did; reading guests off a list needs no such gate.
+     */
+    val supportsGuests: Boolean
+        get() = isServer && (serverProtocol ?: 0) >= GUESTS_SINCE_PROTOCOL
+
     companion object {
+        /** The first server protocol with ledger guests (T-364). */
+        const val GUESTS_SINCE_PROTOCOL = 4
+
         const val KIND_SERVER = "server"
         const val KIND_LOCAL = "local"
 

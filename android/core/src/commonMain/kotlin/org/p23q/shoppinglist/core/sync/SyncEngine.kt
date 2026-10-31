@@ -624,7 +624,13 @@ private fun ListEntity.toDto(): ListDto = ListDto(
         currency = FieldClock(currency.value, currency.updatedAt, currency.updatedBy),
         deleted = FieldClock(deleted.value, deleted.updatedAt, deleted.updatedBy),
     ),
+    // A ledger created here carries its first guests until the server has seen it (T-364); any
+    // later push of the list would have them ignored, so an empty array is left off the wire.
+    guestNames = decodePendingGuestNames(pendingGuestNamesJson).takeIf { it.isNotEmpty() },
 )
+
+private fun decodePendingGuestNames(json: String): List<String> =
+    runCatching { Json.decodeFromString<List<String>>(json) }.getOrDefault(emptyList())
 
 /** Result of merging one field: the winning value/clock, and whether the LOCAL side won (still unsynced). */
 private data class MergedField<T>(val value: T, val updatedAt: Long, val updatedBy: String, val dirty: Boolean)
@@ -755,6 +761,7 @@ private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String, lo
             membersJson = Json.encodeToString(remote.members),
             closeVotesJson = Json.encodeToString(remote.closeVotes),
             closedAt = remote.closedAt,
+            guestsJson = Json.encodeToString(remote.guests),
         )
     }
 
@@ -784,6 +791,10 @@ private fun mergeList(local: ListEntity?, remote: ListDto, accountId: String, lo
         membersJson = Json.encodeToString(remote.members),
         closeVotesJson = Json.encodeToString(remote.closeVotes),
         closedAt = remote.closedAt,
+        guestsJson = Json.encodeToString(remote.guests),
+        // The server holds the list now, so it has had its one chance at the creation's guests
+        // (T-364): it minted them, and they arrive above as guests, or it ignored them.
+        pendingGuestNamesJson = "[]",
     )
 }
 

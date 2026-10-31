@@ -39,7 +39,12 @@ import org.p23q.shoppinglist.resources.api_error_server_busy
 import org.p23q.shoppinglist.resources.api_error_session_not_found
 import org.p23q.shoppinglist.resources.api_error_unknown_list
 import org.p23q.shoppinglist.resources.api_error_voted_to_close
+import org.p23q.shoppinglist.resources.api_error_guest_claimed
+import org.p23q.shoppinglist.resources.api_error_guest_not_found
+import org.p23q.shoppinglist.resources.api_error_invalid_guest_name
 import org.p23q.shoppinglist.resources.expense_error_frozen
+import org.p23q.shoppinglist.resources.guest_error_locked
+import org.p23q.shoppinglist.resources.guest_in_use
 import org.p23q.shoppinglist.resources.listprops_leave_blocked
 import org.p23q.shoppinglist.resources.login_msg_incorrect_credentials
 import org.p23q.shoppinglist.resources.settings_msg_initials_too_long
@@ -111,6 +116,11 @@ object ErrorText {
         "method_not_allowed" to UiText.res(Res.string.api_error_method_not_allowed),
         // An unhandled server fault (T-316): nothing the user can fix, so the generic sentence.
         "internal_error" to UiText.res(Res.string.api_error_internal_error),
+        // A ledger's guests (T-364). guest_in_use says what the disabled Remove already says.
+        "guest_not_found" to UiText.res(Res.string.api_error_guest_not_found),
+        "guest_claimed" to UiText.res(Res.string.api_error_guest_claimed),
+        "guest_in_use" to UiText.res(Res.string.guest_in_use),
+        "invalid_guest_name" to UiText.res(Res.string.api_error_invalid_guest_name),
     )
 
     /**
@@ -122,11 +132,19 @@ object ErrorText {
      * Separate from [of] because there is no exception left by then — the refusal was stored on the
      * row when the push failed, possibly days earlier, with nobody watching.
      */
-    fun refusal(code: String?, who: String?): UiText? = when {
+    fun refusal(code: String?, who: String?, guest: Boolean = false): UiText? = when {
         code == null -> null
-        code == "participant_frozen" -> who?.let { UiText.res(Res.string.expense_error_frozen, it) }
+        code == "participant_frozen" -> who?.let { frozen(it, guest) }
         else -> byCode[code]
     }
+
+    /**
+     * participant_frozen, naming [who] as the screens label them (T-364): a guest — [guest], an
+     * unclaimed one — "Dave: amounts locked"; a member, or a claimed guest through its claimant,
+     * that they agreed to close or left.
+     */
+    fun frozen(who: String, guest: Boolean): UiText =
+        if (guest) UiText.res(Res.string.guest_error_locked, who) else UiText.res(Res.string.expense_error_frozen, who)
 
     /**
      * [e] as a message for the user: the code's translation if it has one, else [fallback].

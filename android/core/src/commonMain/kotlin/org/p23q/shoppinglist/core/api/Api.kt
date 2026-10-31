@@ -96,6 +96,20 @@ interface Api {
 
     suspend fun sync(body: SyncRequest): SyncResponse
 
+    // --- Guests of a ledger (T-364) ---
+
+    suspend fun createGuest(listId: String, body: CreateGuestRequest): org.p23q.shoppinglist.core.ListGuest
+
+    suspend fun updateGuest(listId: String, guestId: String, body: UpdateGuestRequest): org.p23q.shoppinglist.core.ListGuest
+
+    suspend fun deleteGuest(listId: String, guestId: String)
+
+    /** The caller claims the guest: from now on its history folds into the caller's (T-364). */
+    suspend fun claimGuest(listId: String, guestId: String): org.p23q.shoppinglist.core.ListGuest
+
+    /** The claimant takes a claim back while the list is open (T-364). */
+    suspend fun unclaimGuest(listId: String, guestId: String): org.p23q.shoppinglist.core.ListGuest
+
     // --- Admin (T-107) ---
 
     suspend fun adminUsers(): AdminUsersResponse

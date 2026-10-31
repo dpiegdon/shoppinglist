@@ -12,7 +12,7 @@ import io.ktor.client.plugins.api.createClientPlugin
  * The same integer lives in `web/src/api/protocol.ts` and in the server's `protocol.py`; the web
  * suite's protocolVersion test reads all three and asserts they are equal.
  */
-const val PROTOCOL_VERSION = 3
+const val PROTOCOL_VERSION = 4
 
 /**
  * The oldest server protocol this build still works against. A server is asked for its protocol

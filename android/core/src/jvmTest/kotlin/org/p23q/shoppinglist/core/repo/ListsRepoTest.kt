@@ -55,6 +55,24 @@ class ListsRepoTest {
     }
 
     @Test
+    fun `a new ledger keeps its first guests, trimmed and without blanks, until the server has it (T-364)`() = runTest {
+        val ledger = repo.create(TEST_ACCOUNT_ID, "Trip", "expenses", "EUR", guestNames = listOf(" Dave ", "", "  ", "Eve, Jr."))
+        val shopping = repo.create(TEST_ACCOUNT_ID, "Groceries", "shopping", guestNames = listOf("Dave"))
+
+        assertEquals("""["Dave","Eve, Jr."]""", repo.getById(ledger)!!.pendingGuestNamesJson)
+        // Only a ledger has guests.
+        assertEquals("[]", repo.getById(shopping)!!.pendingGuestNamesJson)
+    }
+
+    @Test
+    fun `guests decode leniently, and a row without any decodes to none (T-364)`() {
+        assertEquals(emptyList<org.p23q.shoppinglist.core.ListGuest>(), repo.decodeGuests("[]"))
+        assertEquals(emptyList<org.p23q.shoppinglist.core.ListGuest>(), repo.decodeGuests("not json"))
+        val guests = repo.decodeGuests("""[{"id": "g:1", "name": "Dave", "initials": "DA", "locked": true, "claimed_by": null, "created_at": 1, "new_key": 2}]""")
+        assertEquals(listOf(org.p23q.shoppinglist.core.ListGuest("g:1", "Dave", "DA", locked = true, createdAt = 1)), guests)
+    }
+
+    @Test
     fun `rename stamps only the name field clock`() = runTest {
         val listId = repo.create(TEST_ACCOUNT_ID, "Groceries")
         val created = repo.getById(listId)!!

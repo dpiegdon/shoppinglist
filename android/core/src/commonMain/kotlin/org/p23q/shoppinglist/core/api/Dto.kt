@@ -76,6 +76,32 @@ data class ListDto(
     val members: List<org.p23q.shoppinglist.core.ListMember> = emptyList(),
     @SerialName("close_votes") val closeVotes: List<String> = emptyList(),
     @SerialName("closed_at") val closedAt: Long? = null,
+    /**
+     * A ledger's guests (T-364), server-maintained like [members]: never written by a client, and
+     * absent (none) from a server before them. Reading it needs no protocol gate.
+     */
+    val guests: List<org.p23q.shoppinglist.core.ListGuest> = emptyList(),
+    /**
+     * The first guests of a ledger this push CREATES (T-364), by name, in order. Only ever sent,
+     * and only on the creating push: the server ignores it on any later push of the list, and on
+     * another kind. Null is left out of the wire (encodeDefaults=false), as is an older server's
+     * absence of it on a pull.
+     */
+    @SerialName("guest_names") val guestNames: List<String>? = null,
+)
+
+/** POST /lists/{id}/guests (T-364). */
+@Serializable
+data class CreateGuestRequest(val name: String)
+
+/**
+ * PATCH /lists/{id}/guests/{gid} (T-364): a rename, a lock or an unlock. A null field is left out
+ * of the wire and the server leaves it as it is; at least one is set.
+ */
+@Serializable
+data class UpdateGuestRequest(
+    val name: String? = null,
+    val locked: Boolean? = null,
 )
 
 /** What the close-vote endpoints answer with (T-157). */

@@ -69,6 +69,7 @@ class OverviewViewModelTest {
     private var syncCalls = 0
     private val syncedFullLists = mutableListOf<List<String>>()
     private lateinit var viewModel: OverviewViewModel
+    private val joinedLists = org.p23q.shoppinglist.data.JoinedLists()
     private lateinit var server: MockWebServer
     private lateinit var notificationPrefs: NotificationPrefsStore
 
@@ -126,7 +127,7 @@ class OverviewViewModelTest {
                 return syncNow(listOf(serverListId))
             }
         }
-        return OverviewViewModel(listsRepo, itemsRepo, accounts.registry, accounts.sessions, accounts.secrets, syncer, syncStatus, notificationPrefs)
+        return OverviewViewModel(listsRepo, itemsRepo, accounts.registry, accounts.sessions, accounts.secrets, syncer, syncStatus, notificationPrefs, joinedLists)
             .also(viewModels::add)
     }
 
@@ -157,6 +158,104 @@ class OverviewViewModelTest {
         assertTrue(lists.first().dirty)
         assertFalse(viewModel.uiState.value.isCreateDialogOpen)
         assertEquals("", viewModel.uiState.value.newListName)
+    }
+
+    // ---- a new ledger's guests (T-364) ------------------------------------------
+
+    private suspend fun serverProtocol(protocol: Int) {
+        accounts.registry.update(TEST_ACCOUNT_ID) { it.copy(serverProtocol = protocol) }
+        viewModel.uiState.first { state -> state.accounts.any { it.serverProtocol == protocol } }
+    }
+
+    private suspend fun ledgerDialog() {
+        viewModel.openCreateDialog()
+        viewModel.onNewListNameChange("Trip")
+        viewModel.onNewListKindChange(ListKind.EXPENSES)
+        viewModel.onNewListCurrencyChange("EUR")
+    }
+
+    @Test
+    fun `a new ledger carries its typed guests in order, blanks dropped, no comma splitting (T-364)`() = runTest(mainDispatcherRule.dispatcher) {
+        serverProtocol(4)
+        ledgerDialog()
+        assertTrue(viewModel.uiState.value.newListGuestsOffered)
+        viewModel.onNewListGuestNameChange(0, " Dave ")
+        viewModel.addNewListGuest()
+        viewModel.addNewListGuest()
+        viewModel.onNewListGuestNameChange(2, "Eve, Jr.")
+
+        viewModel.createList()!!.join()
+
+        val created = viewModel.uiState.first { it.lists.isNotEmpty() }.lists.single()
+        assertEquals("""["Dave","Eve, Jr."]""", created.pendingGuestNamesJson)
+    }
+
+    @Test
+    fun `against a protocol-3 server a ledger offers no guests and sends none (T-364)`() = runTest(mainDispatcherRule.dispatcher) {
+        serverProtocol(3)
+        ledgerDialog()
+        viewModel.onNewListGuestNameChange(0, "Dave")
+
+        assertFalse(viewModel.uiState.value.newListGuestsOffered)
+        viewModel.createList()!!.join()
+
+        assertEquals("[]", viewModel.uiState.first { it.lists.isNotEmpty() }.lists.single().pendingGuestNamesJson)
+    }
+
+    @Test
+    fun `a guest name the server would refuse keeps the dialog open (T-364)`() = runTest(mainDispatcherRule.dispatcher) {
+        serverProtocol(4)
+        ledgerDialog()
+        viewModel.onNewListGuestNameChange(0, "x".repeat(65))
+
+        assertNull(viewModel.createList())
+
+        assertTrue(viewModel.uiState.value.newListGuestNameInvalid)
+        assertTrue(viewModel.uiState.value.isCreateDialogOpen)
+    }
+
+    @Test
+    fun `Add another stops at 50 boxes, and removing the last box leaves an empty one (T-364)`() = runTest(mainDispatcherRule.dispatcher) {
+        serverProtocol(4)
+        ledgerDialog()
+        repeat(60) { viewModel.addNewListGuest() }
+        assertEquals(50, viewModel.uiState.value.newListGuestNames.size)
+        assertFalse(viewModel.uiState.value.canAddNewListGuest)
+
+        repeat(50) { viewModel.removeNewListGuest(0) }
+        assertEquals(listOf(""), viewModel.uiState.value.newListGuestNames)
+    }
+
+    @Test
+    fun `a ledger card's balance counts what a guest I claimed did as mine (T-364)`() = runTest(mainDispatcherRule.dispatcher) {
+        val listId = listsRepo.create(TEST_ACCOUNT_ID, "Trip", ListKind.EXPENSES, currency = "EUR")
+        val me = accounts.registry.get(TEST_ACCOUNT_ID)!!.accountId!!
+        val members = listOf(org.p23q.shoppinglist.core.ListMember(me, "me@example.com", "ME"), org.p23q.shoppinglist.core.ListMember("acct-other", "o@example.com", "OT"))
+        val guests = listOf(org.p23q.shoppinglist.core.ListGuest("g:dave", "Dave", "DA", claimedBy = me))
+        db.listDao().upsert(
+            listsRepo.getById(listId)!!.copy(
+                membersJson = kotlinx.serialization.json.Json.encodeToString(members),
+                guestsJson = kotlinx.serialization.json.Json.encodeToString(guests),
+            ),
+        )
+        itemsRepo.createExpense(listId, "Taxi", org.p23q.shoppinglist.core.Expense(mapOf("g:dave" to "20.00"), true, mapOf("acct-other" to "20.00"), true, "2026-10-31"))
+
+        val summary = viewModel.uiState.first { it.expenseSummaries[listId]?.myBalanceCents != null }.expenseSummaries.getValue(listId)
+
+        assertEquals(2000L, summary.myBalanceCents)
+    }
+
+    @Test
+    fun `a join marks the list for the guest chooser (T-364)`() = runTest(mainDispatcherRule.dispatcher) {
+        inboxJson = """{"invites": [${inviteJson("a", "Camping")}]}"""
+        val viewModel = newViewModel()
+        val invite = viewModel.uiState.first { it.invites.isNotEmpty() }.invites.single()
+
+        viewModel.joinInvite(TEST_ACCOUNT_ID, invite).join()
+
+        val localId = viewModel.uiState.value.joinedListId!!
+        assertTrue(joinedLists.consume(localId))
+        assertFalse("once", joinedLists.consume(localId))
     }
 
     @Test

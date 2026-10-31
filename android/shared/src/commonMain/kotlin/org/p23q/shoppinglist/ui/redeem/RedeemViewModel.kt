@@ -1,5 +1,6 @@
 package org.p23q.shoppinglist.ui.redeem
 
+import org.p23q.shoppinglist.data.JoinedLists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -58,9 +59,10 @@ class RedeemViewModel(
     private val syncer: Syncer,
     private val pendingInviteHolder: PendingInviteHolder,
     private val listsRepo: ListsRepo,
+    joinedLists: JoinedLists = JoinedLists(),
 ) : ViewModel() {
 
-    private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo)
+    private val joiner = InviteJoiner(registry, sessions, syncer, listsRepo, joinedLists)
 
     private val _uiState = MutableStateFlow(RedeemUiState())
     val uiState: StateFlow<RedeemUiState> = _uiState.asStateFlow()
