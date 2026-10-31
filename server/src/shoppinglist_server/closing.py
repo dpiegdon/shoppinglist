@@ -242,6 +242,8 @@ def check_write_against_freeze(conn, list_id: str, item_id: str, before_value, a
     members = _members(conn, list_id)
     voters = set(votes(conn, list_id))
     guests = guests_module.states(conn, list_id)
+    if not voters and not guests and not (set(before) | set(after)) - members:
+        return  # nobody can be frozen on this list, which is the normal case
     # Per stored key, never per folded id (T-364): moving an amount from a claimed guest's key to
     # the claimant's own is refused while the claimant is frozen, although the folded balance
     # would not move. Conservative and simple; nobody has a reason to make such a write.
