@@ -1,3 +1,4 @@
 {"actor": "claude", "at": "2026-10-31T22:03:09+00:00", "kind": "created", "ref": "main@4a1a7df9", "text": "Ledger guests: web \u2014 fold, list menu Guests section, create dialog, form, balances, post-join chooser, strings"}
 {"actor": "claude", "at": "2026-10-31T22:03:09+00:00", "kind": "dependency", "ref": "main@4a1a7df9", "text": "T-364"}
 {"actor": "claude", "at": "2026-10-31T22:07:16+00:00", "kind": "dependency", "ref": "main@cde16cb1", "text": "removed T-364"}
+{"actor": "claude", "at": "2026-10-31T22:07:16+00:00", "kind": "claimed", "ref": "main@cde16cb1", "text": "claude"}
