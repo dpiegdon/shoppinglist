@@ -23,7 +23,7 @@ a web test asserts all three agree.
 
 import re
 
-PROTOCOL_VERSION = 3
+PROTOCOL_VERSION = 4
 PROTOCOL_HEADER = "X-Client-Protocol"
 
 # Plain ASCII digits only. `str.isdigit()` and `\d` both accept other scripts' digits (and

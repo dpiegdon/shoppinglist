@@ -217,6 +217,21 @@ MIGRATIONS: list[tuple[int, list[Step]]] = [
             "CREATE INDEX idx_invites_email_normalized ON invites (invited_email_normalized)",
         ],
     ),  # T-328: one Unicode case folding for e-mail addresses
+    (
+        13,
+        [
+            "CREATE TABLE guests ("
+            "  id TEXT PRIMARY KEY,"
+            "  list_id TEXT NOT NULL REFERENCES lists (id),"
+            "  name TEXT NOT NULL,"
+            "  locked INTEGER NOT NULL DEFAULT 0,"
+            "  claimed_by TEXT,"
+            "  created_at INTEGER NOT NULL,"
+            "  created_by TEXT NOT NULL"
+            ")",
+            "CREATE INDEX IF NOT EXISTS idx_guests_list ON guests (list_id)",
+        ],
+    ),  # T-364: a ledger's guests
 ]
 
 CURRENT_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else 0

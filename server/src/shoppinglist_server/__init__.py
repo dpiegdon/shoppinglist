@@ -320,6 +320,7 @@ def create_blueprint(
     from .routes.admin import register_routes as register_admin_routes
     from .routes.app_version import register_routes as register_app_version_routes
     from .routes.auth import register_routes as register_auth_routes
+    from .routes.guests import register_routes as register_guests_routes
     from .routes.invites import register_routes as register_invites_routes
     from .routes.lists import register_routes as register_lists_routes
     from .routes.sync import register_routes as register_sync_routes
@@ -328,6 +329,7 @@ def create_blueprint(
     register_account_routes(bp)
     register_app_version_routes(bp)
     register_lists_routes(bp)
+    register_guests_routes(bp)
     register_invites_routes(bp)
     register_sync_routes(bp)
     register_admin_routes(bp)

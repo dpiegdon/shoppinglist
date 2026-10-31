@@ -714,3 +714,39 @@ def test_gc_purges_sessions_past_their_idle_window(db_conn):
         for row in db_conn.execute("SELECT device_label FROM auth_tokens").fetchall()
     }
     assert survivors == {"fresh-web", "android-30d"}
+
+
+def test_purging_a_ledger_removes_its_guests_with_it(db_conn):
+    """guests.list_id references lists(id), so they go with the list, before its row (T-364)."""
+    from shoppinglist_server import closing, guests
+
+    account_id = _register(db_conn, "a@example.com")
+    sync.apply_changes(
+        db_conn,
+        account_id,
+        "devA",
+        {
+            "lists": [
+                {
+                    "id": "trip",
+                    "fields": {
+                        "name": {"value": "Trip", "updated_at": 100, "updated_by": "devA"},
+                        "kind": {"value": "expenses", "updated_at": 100, "updated_by": "devA"},
+                        "currency": {"value": "EUR", "updated_at": 100, "updated_by": "devA"},
+                    },
+                    "guest_names": ["Dave", "Eve"],
+                }
+            ]
+        },
+    )
+    guests.claim(db_conn, account_id, "trip", guests.for_lists(db_conn, ["trip"])["trip"][0]["id"])
+    closing.cast_vote(db_conn, account_id, "trip")  # closes it
+    invites.leave(db_conn, account_id, "trip")  # the last member out orphans it
+    db_conn.execute("UPDATE lists SET deleted_ts = ? WHERE id = 'trip'", (NOW - PAST_RETENTION,))
+    db_conn.commit()
+
+    result = gc.run(db_conn, NOW)  # must not raise an FK IntegrityError
+
+    assert result["lists_purged"] == 1
+    assert not _list_exists(db_conn, "trip")
+    assert db_conn.execute("SELECT COUNT(*) FROM guests").fetchone()[0] == 0

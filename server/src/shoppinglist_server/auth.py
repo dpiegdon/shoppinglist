@@ -94,10 +94,15 @@ def now_ms() -> int:
     return time.time_ns() // 1_000_000
 
 
+def initials_of(text: str) -> str:
+    """Leading 1-2 characters of `text`, uppercased: the one derivation behind every default
+    badge — an account's from its email's local part (T-64), a guest's from its name (T-364)."""
+    return text[:2].upper()
+
+
 def _default_initials(email: str) -> str:
     """Leading 1-2 characters of the email's local-part, uppercased (T-64)."""
-    local_part = email.split("@", 1)[0]
-    return local_part[:2].upper()
+    return initials_of(email.split("@", 1)[0])
 
 
 def resolve_initials(email: str, initials: str | None) -> str:

@@ -104,6 +104,14 @@ def _vote(conn, list_id, account_id):
     )
 
 
+def _guest(conn, guest_id, list_id, claimed_by=None):
+    conn.execute(
+        "INSERT INTO guests (id, list_id, name, locked, claimed_by, created_at, created_by) "
+        "VALUES (?, ?, ?, 0, ?, ?, ?)",
+        (guest_id, list_id, "Dave", claimed_by, NOW, "a1"),
+    )
+
+
 def _invite(conn, invite_id, list_id, created_by, expires_at=NOW + DAY_MS, used_at=None):
     conn.execute(
         "INSERT INTO invites (id, list_id, invited_email, created_by, created_at, expires_at, "
@@ -154,12 +162,17 @@ def _baseline(conn):
     _list(conn, "e1", kind="expenses")  # live expenses list with a member's close vote
     _membership(conn, "a1", "e1")
     _vote(conn, "e1", "a1")
+    # Its guests, one claimed by an account that has since been deleted: claimed_by is history,
+    # not a reference, so that is no violation (T-364).
+    _guest(conn, "g:1", "e1")
+    _guest(conn, "g:2", "e1", claimed_by=GHOST)
 
     # Tombstoned, inside retention. Everything hanging off it is the documented
     # lingering state, not a defect.
     _list(conn, "t1", kind="expenses", deleted=1, deleted_ts=NOW - 1000)
     _membership(conn, "a1", "t1")
     _item(conn, "i2", "t1", deleted=1, deleted_ts=NOW - 1000)
+    _guest(conn, "g:3", "t1")
     _vote(conn, "t1", "a2")
     # Long past its grace window: what keeps it out of the findings is that its
     # list is tombstoned, not its age.
@@ -272,6 +285,11 @@ def _case_invites_list(conn):
     return "inv-bad"
 
 
+def _case_guests_list(conn):
+    _guest(conn, "g:bad", GHOST_LIST)
+    return "g:bad"
+
+
 @pytest.mark.parametrize(
     "build, expected_checks",
     [
@@ -289,6 +307,7 @@ def _case_invites_list(conn):
         (_case_memberships_list, ["memberships_list_missing"]),
         (_case_close_votes_list, ["close_votes_list_missing"]),
         (_case_invites_list, ["invites_list_missing"]),
+        (_case_guests_list, ["guests_list_missing"]),
     ],
     ids=lambda value: value[0] if isinstance(value, list) else "",
 )
@@ -349,6 +368,17 @@ def test_a_close_vote_on_a_non_expenses_list_is_reported(db_conn):
 
     assert _checks(findings) == ["close_votes_on_non_expenses_list"]
     assert findings[0].samples == ("l1/a1",)
+
+
+def test_a_guest_on_a_non_expenses_list_is_reported(db_conn):
+    _baseline(db_conn)
+    _guest(db_conn, "g:shop", "l1")
+    db_conn.commit()
+
+    findings = housekeeping.audit(db_conn, NOW)
+
+    assert _checks(findings) == ["guests_on_non_expenses_list"]
+    assert findings[0].samples == ("g:shop",)
 
 
 def test_a_close_vote_by_a_non_member_of_a_live_list_is_reported(db_conn):

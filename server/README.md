@@ -214,7 +214,7 @@ The client/server interface carries an integer version, `PROTOCOL_VERSION` in
 malformed, or an older version is answered
 
 ```json
-{"error": "client_outdated", "message": "...", "protocol": 3}
+{"error": "client_outdated", "message": "...", "protocol": 4}
 ```
 
 with status `426`, decided before authentication and before the database is
@@ -659,6 +659,21 @@ naming them cannot be deleted either, and neither can its type be changed, which
 moves everyone in it. Someone who has voted also changes nothing on the list
 themselves until they withdraw. That is what makes agreeing to close mean
 something.
+
+A ledger can also hold **guests**: people who take part in entries but have no
+account on this server, such as a friend who came along on the trip. A guest
+belongs to that one ledger, has a server-minted id (`g:` followed by a UUID, so
+it can never be mistaken for an account), and is added, renamed or removed by
+any member through `/lists/{id}/guests`; a new ledger's creation row may bring
+its first guests along as `guest_names`. Guests never vote and never count
+towards closing. Instead any member can **lock** a guest, which freezes the
+guest's amounts exactly like a close vote freezes a member's. A guest named in
+a live entry cannot be removed. A member can **claim** a guest ("this is me"),
+after which the guest's amounts count towards that member: the server keeps the
+entries as they are and applies the claimant's own freeze to the guest's
+amounts, and the clients fold the guest into the claimant when they compute
+balances. Guests live in the `guests` table and are removed with their list by
+the retention GC.
 
 The wire shapes, error codes and the exact freeze rule are in
 [`../docs/wire-contract.md`](../docs/wire-contract.md).

@@ -152,6 +152,11 @@ _MISSING_LIST_CHECKS: list[tuple[str, str]] = [
         "SELECT invites.id FROM invites WHERE NOT EXISTS ("
         "  SELECT 1 FROM lists WHERE lists.id = invites.list_id)",
     ),
+    (
+        "guests_list_missing",
+        "SELECT guests.id FROM guests WHERE NOT EXISTS ("
+        "  SELECT 1 FROM lists WHERE lists.id = guests.list_id)",
+    ),
 ]
 
 # The name the repair below reports itself under, and the check that finds its
@@ -202,6 +207,13 @@ _CHECKS: list[tuple[str, str]] = [
         "close_votes_on_non_expenses_list",
         "SELECT close_votes.list_id || '/' || close_votes.account_id FROM close_votes "
         "JOIN lists ON lists.id = close_votes.list_id WHERE lists.kind != :expenses_kind",
+    ),
+    #    Guests exist only on a ledger (T-364): nothing creates one anywhere else, and the kind
+    #    of a ledger never changes. Like the vote check above, tombstoned lists are included.
+    (
+        "guests_on_non_expenses_list",
+        "SELECT guests.id FROM guests "
+        "JOIN lists ON lists.id = guests.list_id WHERE lists.kind != :expenses_kind",
     ),
     #    A close vote by a non-member, on a list that is still LIVE. The
     #    "still live" clause is load-bearing, and leaving it out is the easiest

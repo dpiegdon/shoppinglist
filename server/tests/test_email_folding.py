@@ -245,7 +245,8 @@ def test_reset_password_cli_finds_the_account_by_folding(app, cli_runner):
 
 def _pre_12_database(path):
     """A database as schema version 11 left it: schema.sql without the folded columns and their
-    indexes, with the ASCII lower() index in their place."""
+    indexes, with the ASCII lower() index in their place, and without the tables of later
+    migrations (13: guests)."""
     schema_sql = resources.files("shoppinglist_server").joinpath("schema.sql").read_text()
     pre = schema_sql
     for pattern, replacement in (
@@ -269,8 +270,13 @@ def _pre_12_database(path):
             r"ON invites \(invited_email_normalized\);",
             "",
         ),
+        (
+            r"CREATE TABLE IF NOT EXISTS guests \(.*?\);\s*"
+            r"CREATE INDEX IF NOT EXISTS idx_guests_list ON guests \(list_id\);",
+            "",
+        ),
     ):
-        pre, count = re.subn(pattern, replacement, pre)
+        pre, count = re.subn(pattern, replacement, pre, flags=re.S)
         assert count == 1, pattern
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row

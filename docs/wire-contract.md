@@ -53,7 +53,7 @@ Verified against the implementation in `server/src/shoppinglist_server/`.
 
 ## Protocol version
 
-The interface has a single integer version, **3**. Both clients send it on every
+The interface has a single integer version, **4**. Both clients send it on every
 API request as `X-Client-Protocol`, and the server compares it with its own
 `PROTOCOL_VERSION` (`server/src/shoppinglist_server/protocol.py`,
 `web/src/api/protocol.ts`, the Android client's `Protocol.kt` — all three carry
@@ -70,7 +70,7 @@ the same number).
 The refusal is the standard envelope plus the server's version:
 
 ```json
-{"error": "client_outdated", "message": "...", "protocol": 3}
+{"error": "client_outdated", "message": "...", "protocol": 4}
 ```
 
 It is decided before authentication and before the database is opened: nothing is
@@ -123,6 +123,7 @@ refuses a release that breaks either rule.
 | Protocol | Introduced in | What an older client cannot handle |
 |---|---|---|
 | 3 | 3.0.0 | Ledger entry types. |
+| 4 | 4.0.0 | Ledger guests: an entry may name a guest (`g:…`), which a protocol-3 client would show as a former member, and a claimed guest's amounts belong to its claimant. See "Guests". |
 
 | Client floor | Since | Why |
 |---|---|---|
@@ -288,10 +289,13 @@ whichever it is: the sign lives in the type, never on the wire.
   from the map.
 - The two maps **sum to the same value**, compared in whole cents. There is no
   stored total; it is the sum of either map.
-- Every key is an account id that is a current member of the list, or is already
-  present in the item's stored entry (so an entry involving someone who has
-  since left stays editable). That check applies only to a write that would win
-  last-write-wins; a stale write is discarded without error.
+- Every key is an account id that is a current member of the list, the id of a
+  guest of this list — claimed or not (see "Guests") — or is already present in
+  the item's stored entry (so an entry involving someone who has since left, or
+  a guest since removed, stays editable). A guest of another list is not a
+  participant here. That check applies only to a write that would win
+  last-write-wins; a stale write is discarded without error. A transfer between
+  a guest and a member, or between two guests, is an ordinary transfer.
 - `equal_by` / `equal_for` record that the map was an equal split, so a client
   reopening the entry redistributes on a changed total. The server stores them
   and does not cross-check them against the amounts.
@@ -321,7 +325,9 @@ nulling it later, is refused too.
   },
   "members": [{"account_id": "account-uuid", "email": "a@example.com", "initials": "AL"}],
   "close_votes": [],
-  "closed_at": null
+  "closed_at": null,
+  "guests": [{"id": "g:3f0c…", "name": "Dave", "initials": "DA", "locked": false,
+              "claimed_by": null, "created_at": 1761900000000}]
 }
 ```
 
@@ -351,9 +357,9 @@ nulling it later, is refused too.
   the stored one is `422 invalid_field` with `row_id` and `field`, whatever its
   clock; a write carrying the same value is not a change and is accepted. On
   other kinds the field is permitted, unrendered and freely changed.
-- `members`, `close_votes` and `closed_at` sit **outside** `fields` and are
-  server-maintained, like an item's `last_touched_by`: clients never write them,
-  and a client that sends them has them ignored.
+- `members`, `close_votes`, `closed_at` and `guests` sit **outside** `fields`
+  and are server-maintained, like an item's `last_touched_by`: clients never
+  write them, and a client that sends them has them ignored.
 - `members` is the list's current roster, oldest membership first and
   alphabetical within one millisecond. `initials` is already resolved
   (override-or-derived), so no second lookup is needed. Joining, leaving,
@@ -364,6 +370,26 @@ nulling it later, is refused too.
 - `close_votes` is the account ids that have agreed to close this expenses list,
   and `closed_at` is when it closed, or `null` while it is open. See "Closing an
   expenses list" below.
+- `guests` is an `expenses` list's guests, oldest first and by `id` within one
+  millisecond; every other kind serves `[]`. Each carries `id`, `name`,
+  `initials` (resolved from the name like a member's default: its first two
+  characters, upper-cased), `locked`, `claimed_by` (an account id or `null`) and
+  `created_at`. Every guest change bumps the list's `change_seq`, like a roster
+  change. See "Guests" below. A server older than protocol 4 sends no `guests`
+  key; absent means none.
+- **`guest_names`**, on a pushed list row only, outside `fields` and without a
+  clock: a row that **creates** an `expenses` list may carry its first guests,
+  `"guest_names": ["Dave", "Eve"]`, so a ledger made offline arrives with its
+  people. The server mints them in the same transaction, in the array's order
+  (strictly increasing `created_at`), so the list's first sync already serves
+  them under `guests`. At most **50** names, each following the guest-name rule
+  (see "Guests"), and nothing is split on commas. Anything else — not an array,
+  a non-string, a bad or blank name, too many — is `422 invalid_guest_name`
+  with `row_id` and `field: "guest_names"`, and nothing of the row is created;
+  blank boxes are the client's to drop before pushing. The key is honoured only
+  when the row creates the list (no list with that id exists) and its kind is
+  `expenses`; on any later push of the list, and on any other kind, it is
+  ignored without being validated.
 - A write that wins LWW on a list's `deleted` also tombstones every live item on
   it, server-side, in the same push — a client never has to (and cannot) tombstone
   a list's items itself before or after deleting the list. This matches what
@@ -695,11 +721,20 @@ tombstoned server-side, exactly as any other list is.
 ### The freeze
 
 While an expenses list is open, a **frozen** participant's numbers may not move.
-Frozen means: has voted to close, or is no longer a member.
+Frozen means, for each key of an entry's maps:
+
+- an account id: has voted to close, or is no longer a member;
+- an unclaimed guest: is `locked`, or is no longer a guest of this list;
+- a claimed guest: whatever holds for its claimant's account.
+
+The amounts are compared **per stored key**, never per claimant: a write that
+moves an amount from a claimed guest's key to the claimant's own key is refused
+while the claimant is frozen, even though the claimant's folded balance would
+not move.
 
 > Any write that would change a frozen participant's total paid or total owed on
 > an entry is `422 participant_frozen`, carrying `row_id`, `field` and the
-> `account_id` in question.
+> `account_id` in question — the key as stored, so a guest id for a guest.
 
 Amounts are compared with the entry type's sign applied (income counts against
 an expense; a transfer counts like an expense), and **changing an entry's `type`
@@ -733,6 +768,75 @@ the freeze, a stale write that loses is discarded without error rather than
 refused. Withdrawing the vote lifts the rule. The check comes before the freeze
 check, so a voter hears the rule that applies to them. Voting itself, withdrawing
 and leaving go through their own endpoints and are not affected.
+
+### Guests
+
+A ledger (`kind = expenses`) can hold **guests**: participants with no account
+on this server. A guest belongs to exactly one ledger, and nothing about it is
+visible from or usable on any other list. Its `id` is server-minted, `g:`
+followed by a UUID, so a guest id is never an account id and a client tells the
+two apart by the prefix. Guests are served on the list object (see "List
+object") and written only through these endpoints, plus a creation row's
+`guest_names`.
+
+| Endpoint | Request body | Success response |
+|---|---|---|
+| `POST /lists/{id}/guests` | `{"name"}` | `201 {guest object}` |
+| `PATCH /lists/{id}/guests/{gid}` | `{"name"?, "locked"?}` | `200 {guest object}` |
+| `DELETE /lists/{id}/guests/{gid}` | — | `204` |
+| `POST /lists/{id}/guests/{gid}/claim` | — | `200 {guest object}` |
+| `DELETE /lists/{id}/guests/{gid}/claim` | — | `200 {guest object}` |
+
+The guest object is the one served in the list object's `guests`. Every
+successful call bumps the list's `change_seq`, so the change reaches every
+device through the ordinary incremental sync.
+
+**The name** is free text. It is trimmed of tab, CR, LF, space and every `Zs`
+from both ends, then refused if it holds a control character (`Cc`), a line or
+paragraph separator, a bidi embedding or override (U+202A–U+202E) or an unpaired
+surrogate — the server message's rule (`shared-test-cases/server-message.json`).
+What remains must be 1 to **64** characters (code points), and not only
+invisible format characters (`Cf`) and spaces. A missing or non-string `name`
+is refused the same way. Names are not unique: two "Dave"s are two people. The
+stored name is the trimmed one.
+
+**Locked** means what having voted to close means for a member: the guest's
+amounts may not move while the list is open (see "The freeze"). Any member may
+set or clear it for any unclaimed guest; it is a safeguard, not a permission.
+Guests never vote and never count towards closing — a ledger closes when every
+current *member* has voted, so it can close with a guest's balance unsettled.
+
+**Claiming** (`POST …/claim`) records the caller as `claimed_by`: "this guest
+is me". No stored entry is rewritten. The clients fold a claimed guest into its
+claimant for every balance, and the server applies the claimant's own freeze to
+the guest's amounts. An account may claim several guests. Only the claimant can
+unclaim (`DELETE …/claim`), and only while the list is open. A claimed guest
+can still be renamed, but neither locked nor unlocked: the claimant's vote
+governs those numbers now. Deleting the claimant's account, or the claimant
+leaving a closed list, leaves `claimed_by` as it is.
+
+**Removing** a guest is allowed only while no live entry on the list names it,
+on either side; tombstoned entries do not count. The guest is then deleted. An
+entry that still names the id stays editable through the "already present in
+the stored entry" rule, and the id is rendered like a former member's.
+
+The answers, in the order they are checked. `not_a_member` comes first and is
+the same whether or not the list exists:
+
+| Answer | When |
+|---|---|
+| `403 not_a_member` | the caller is not on the list |
+| `409 not_an_expenses_list` | any of them on another kind |
+| `409 list_closed` | any of them on a closed list |
+| `422 voted_to_close` with `row_id` (the list id) | any of them by a member with a close vote |
+| `404 guest_not_found` | `gid` is not a guest of **this** list (a guest of another list included) |
+| `422 invalid_request` | a `PATCH` with neither `name` nor `locked`, or a `locked` that is not a boolean |
+| `422 invalid_guest_name` with `field: "name"` | the name breaks the name rule |
+| `409 guest_claimed` | `PATCH` with `locked` on a claimed guest; `POST …/claim` on a guest that is already claimed (by anyone, the caller included); `DELETE …/claim` by anyone but the claimant, an unclaimed guest included |
+| `409 guest_in_use` | `DELETE` while a live entry on the list names the guest |
+| `422 participant_frozen` with `account_id` (the guest id) | `POST …/claim` on a locked guest |
+
+A refused `PATCH` changes nothing, even the half of it that was fine.
 
 ### Site-root routes (outside the API prefix)
 
@@ -792,26 +896,29 @@ id — the signal to quarantine that row and keep syncing the rest.
 | 401 | `invalid_credentials` | Login with a wrong email or password — one answer for both. |
 | 403 | `invalid_credentials` | A re-entered password is wrong (account and admin operations that ask for one). |
 | 403 | `registration_disabled` | `POST /register` on an instance with registration off. |
-| 403 | `not_a_member` | A list the caller is not on, whether or not it exists — on a read (`GET /lists/{id}/members`, `full_lists` in `/sync`), a vote, inviting (`POST /lists/{id}/invites`), withdrawing an invite (`DELETE /invites/{id}`) or leaving (`POST /lists/{id}/leave`). Never on a pushed row; see `unknown_list` below. |
+| 403 | `not_a_member` | A list the caller is not on, whether or not it exists — on a read (`GET /lists/{id}/members`, `full_lists` in `/sync`), a vote, a guest endpoint (`/lists/{id}/guests…`), inviting (`POST /lists/{id}/invites`), withdrawing an invite (`DELETE /invites/{id}`) or leaving (`POST /lists/{id}/leave`). Never on a pushed row; see `unknown_list` below. |
 | 403 | `not_admin` | An admin endpoint, called by someone who is not. |
 | 403 | `cannot_delete_self`, `cannot_delete_admin` | See "Admin". |
 | 404 | `account_not_found`, `session_not_found`, `invite_not_found` | The id names nothing. |
+| 404 | `guest_not_found` | The guest id is not a guest of this list. See "Guests". |
 | 404 | `not_found` | No endpoint under the API root takes this path. See "Conventions". |
 | 404 | `no_app_package` | Carries `protocol`, the server's `PROTOCOL_VERSION`, and `version` where the server knows its release. See "App package". |
 | 405 | `method_not_allowed` | The endpoint does not take this method; `Allow` names the ones it does. |
 | 409 | `email_taken` | Registering or changing to an address already in use. |
 | 409 | `invite_email_mismatch`, `invite_expired`, `invite_revoked`, `invite_used` | Redeeming an invite that is for someone else, too old, withdrawn, or already used. |
-| 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list". |
+| 409 | `list_closed`, `list_open`, `not_an_expenses_list` | See "Closing an expenses list"; the guest endpoints answer the same. |
+| 409 | `guest_claimed`, `guest_in_use` | Locking, unlocking or claiming a claimed guest, or unclaiming by anyone but the claimant; removing a guest a live entry names. See "Guests". |
 | 410 | `full_resync_required` | See "Sync". |
 | 413 | `payload_too_large` | The request body is over the size cap (4 MB by default, `max_content_length`). |
-| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers, on any route that takes a body, one that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`), one nested too deeply to parse, and one with a lone surrogate in any string (outside `/sync` and the server message; see "Conventions"); and on `PUT /admin/server-settings` an `allow_registration` that is not a boolean. |
+| 422 | `invalid_email`, `invalid_password`, `invalid_device_label`, `invalid_initials`, `invalid_list_id`, `invalid_request` | A request field is out of bounds (see "Input caps"). `invalid_request` also answers, on any route that takes a body, one that parses as JSON but is not an object (`[1]`, `"abc"`, `5`, `true`), one nested too deeply to parse, and one with a lone surrogate in any string (outside `/sync` and the server message; see "Conventions"); on `PUT /admin/server-settings` an `allow_registration` that is not a boolean; and on `PATCH /lists/{id}/guests/{gid}` a body with neither `name` nor `locked`, or a `locked` that is not a boolean. |
 | 422 | `invalid_message` | `PUT /admin/server-settings` `message` is not a string or breaks the message rule: after trimming it holds a control character, a line or paragraph separator, a bidi embedding or override, or an unpaired surrogate, or is over 200 code points. See "Admin". |
 | 422 | `invalid_currency` | `PATCH /settings` `default_currency` is not a 3-letter uppercase ISO-4217 code. Nothing on `/sync` uses this code. |
 | 422 | `invalid_cursor`, `invalid_device_id`, `invalid_full_lists`, `invalid_changes` | A `/sync` request is malformed as a whole — a lone surrogate in `device_id` or a `full_lists` entry included. No `row_id`. `invalid_full_lists` also answers more than 250 distinct entries (see "Sync"). |
 | 422 | `too_many_changes` | See "Sync". No `row_id`. |
 | 422 | `invalid_row`, `missing_list_id`, `unknown_list` | A pushed row has no usable id, `created_at` or `list_id` (a lone surrogate in the id makes it unusable, so that answer carries no `row_id`); or (`unknown_list`, on either an item's `list_id` or a LIST row's own id) names a list the caller cannot write to. |
 | 422 | `invalid_field`, `invalid_name`, `invalid_notes`, `invalid_status`, `invalid_price`, `invalid_expense`, `invalid_list_currency` | A pushed field value breaks its rule (see "Item object", "List object"). `invalid_field` also answers a lone surrogate in any string of a known field's clock — its value, a key inside it, or `updated_by`. A list's `currency` is `invalid_list_currency` — free text, non-blank on an `expenses` list, at most 32 characters. `invalid_expense` covers every rule on a ledger entry: its `type` (one of `expense`, `income`, `transfer`, or absent for `expense`), the transfer's one sender and one different recipient, the positive amounts, the two maps summing alike, the date, the participants, and an entry on a list that is not a ledger. |
-| 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). |
+| 422 | `list_closed`, `cannot_delete_expense_list`, `participant_frozen`, `voted_to_close` | A pushed row breaks an expenses-list rule (see "Closing an expenses list"). `voted_to_close` also answers every guest endpoint called by a voter, and `participant_frozen` claiming a locked guest (see "Guests"). |
+| 422 | `invalid_guest_name` | A guest's name breaks the name rule: on the guest endpoints with `field: "name"`, on a ledger's creation row with `row_id` and `field: "guest_names"` (which also answers a `guest_names` that is not an array of at most 50 strings). See "Guests". |
 | 426 | `client_outdated` | The request declared no `X-Client-Protocol`, a malformed one, or a version below the server's. Carries the server's `protocol`. See "Protocol version". |
 | 500 | `internal_error` | An unhandled server fault. No details; safe to report, not to retry blindly. |
 | 503 | `server_busy` | See "Conventions". Always safe to retry. |

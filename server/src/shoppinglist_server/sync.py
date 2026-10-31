@@ -25,6 +25,7 @@ import time
 
 from . import auth
 from . import db as db_module
+from . import guests as guests_module
 from .errors import ApiError
 from .request_body import has_lone_surrogate
 
@@ -300,7 +301,7 @@ def _item_to_wire(row) -> dict:
     }
 
 
-def _list_to_wire(row, members, close_votes) -> dict:
+def _list_to_wire(row, members, close_votes, guests) -> dict:
     fields = {
         key: {"value": _list_load_field(key, row), "updated_at": row[ts], "updated_by": row[by]}
         for key, ts, by in LIST_FIELD_META
@@ -315,6 +316,9 @@ def _list_to_wire(row, members, close_votes) -> dict:
         "members": members,
         "close_votes": close_votes,
         "closed_at": row["closed_at"],
+        # A ledger's guests (T-364), server-maintained the same way: every guest change bumps the
+        # list's change_seq. Only a ledger has any; every other kind serves [].
+        "guests": guests if row["kind"] == EXPENSES_KIND else [],
     }
 
 
@@ -738,8 +742,10 @@ def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fie
 
     - Only an expenses list holds expenses; any other kind may send null but never a value.
     - On an expenses list every item is an expense: required on create, never null afterwards.
-    - Every participant must be a current member, or already be in the row's stored expense —
-      so an expense involving someone who has since left stays editable.
+    - Every participant must be a current member, a guest of this list — claimed or not (T-364):
+      an entry written offline before a claim landed must not be quarantined for it — or already
+      be in the row's stored expense, so an expense involving someone who has since left, or a
+      guest since removed, stays editable.
 
     Both the null-expense rule and the participant rule are only applied to a write that would WIN
     last-write-wins (T-206): a stale write is discarded anyway, and rejecting it would quarantine
@@ -776,14 +782,15 @@ def _check_expense_against_list(conn, list_id, list_kind, item_id, existing, fie
     if existing is not None and existing["expense"] is not None:
         stored = _decode_expense(existing["expense"])
         already_present = set(stored["paid_by"]) | set(stored["paid_for"])
-    members = {
+    allowed = {
         row["account_id"]
         for row in conn.execute("SELECT account_id FROM memberships WHERE list_id = ?", (list_id,))
     }
+    allowed |= set(guests_module.states(conn, list_id))
     for participant in sorted(set(value["paid_by"]) | set(value["paid_for"])):
-        if participant not in members and participant not in already_present:
+        if participant not in allowed and participant not in already_present:
             reject(
-                "Every participant in an expense must be a member of the list.",
+                "Every participant in an expense must be a member or a guest of the list.",
                 account_id=participant,
             )
 
@@ -1028,6 +1035,13 @@ def _apply_list(conn, account_id, device_id, obj):
                 "An expenses list requires a currency.",
                 details={"row_id": list_id, "field": "currency"},
             )
+        # A new ledger may bring its first guests (T-364), so one made offline arrives with its
+        # people. Outside `fields`, with no clock: honoured on creation of a ledger only, and
+        # ignored on any other row, like a pushed `members`. Validated before anything is
+        # written, so a refused row creates nothing.
+        guest_names = []
+        if kind == EXPENSES_KIND and "guest_names" in obj:
+            guest_names = guests_module.check_creation_names(obj["guest_names"], list_id)
         cols = _new_list_columns(list_id, created_at, fields)
         cols["change_seq"] = _bump(conn)
         _insert(conn, "lists", cols)
@@ -1035,6 +1049,7 @@ def _apply_list(conn, account_id, device_id, obj):
             "INSERT OR IGNORE INTO memberships (account_id, list_id, joined_at) VALUES (?, ?, ?)",
             (account_id, list_id, _now_ms()),
         )
+        guests_module.create_at_list_creation(conn, list_id, guest_names, account_id)
         return
 
     # Residual, deliberate (T-120): unlike _apply_item above, this branch cannot be made uniform.
@@ -1381,8 +1396,9 @@ def delta(conn, account_id, cursor, full_lists=None) -> dict:
     from . import closing  # deferred: see the note in _apply_list
 
     vote_state = closing.votes_for_lists(conn, list_rows)
+    guest_state = guests_module.for_lists(conn, list_rows)
     lists_out = [
-        _list_to_wire(row, rosters[list_id], vote_state[list_id])
+        _list_to_wire(row, rosters[list_id], vote_state[list_id], guest_state[list_id])
         for list_id, row in list_rows.items()
     ]
     return {

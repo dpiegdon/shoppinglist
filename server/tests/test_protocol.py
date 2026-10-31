@@ -56,12 +56,13 @@ REFUSED_HEADERS = [
     "0",
     "1",
     "2",
+    "3",  # protocol 3: every client before ledger guests (T-364)
     "٣",
     "3" * 10,
     "9" * 5000,
 ]
 
-ACCEPTED_HEADERS = [str(PROTOCOL_VERSION), str(PROTOCOL_VERSION + 1), "99", "0003"]
+ACCEPTED_HEADERS = [str(PROTOCOL_VERSION), str(PROTOCOL_VERSION + 1), "99", "0004"]
 
 
 def _app(tmp_path, name="protocol", init_db=True, **kwargs):

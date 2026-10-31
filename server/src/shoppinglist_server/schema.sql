@@ -100,6 +100,24 @@ CREATE TABLE IF NOT EXISTS close_votes (
 );
 CREATE INDEX IF NOT EXISTS idx_close_votes_list ON close_votes (list_id);
 
+-- A ledger's guests (T-364): participants with no account on this server, on exactly one
+-- expenses list. Server-maintained, served on the list object as `guests`, written only through
+-- the guest endpoints (and a ledger's creation row's `guest_names`). `locked` freezes the
+-- guest's amounts like a member's close vote does; `claimed_by` is the account that said "this
+-- is me", whose balance the guest's entries then count towards. Neither `claimed_by` nor
+-- `created_by` references accounts: like an item's last_touched_by they are history, and must
+-- survive the account. The id is server-minted, 'g:' + uuid4, so it is never an account id.
+CREATE TABLE IF NOT EXISTS guests (
+    id TEXT PRIMARY KEY,
+    list_id TEXT NOT NULL REFERENCES lists (id),
+    name TEXT NOT NULL,
+    locked INTEGER NOT NULL DEFAULT 0,
+    claimed_by TEXT,
+    created_at INTEGER NOT NULL,
+    created_by TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_guests_list ON guests (list_id);
+
 CREATE TABLE IF NOT EXISTS memberships (
     account_id TEXT NOT NULL REFERENCES accounts (id),
     list_id TEXT NOT NULL REFERENCES lists (id),

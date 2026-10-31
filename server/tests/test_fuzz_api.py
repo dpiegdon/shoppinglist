@@ -96,6 +96,9 @@ class World:
                             "kind": _clock("expenses"),
                             "currency": _clock("EUR"),
                         },
+                        # The ledger's first guest (T-364): honoured only when the row creates
+                        # a ledger, which a mutated id makes this row do again.
+                        "guest_names": ["Dave"],
                     },
                 ],
                 "items": [
@@ -138,6 +141,10 @@ class World:
         }
         response = self.post("/sync", self.user_token, self.base_sync)
         assert response.status_code == 200, response.get_json()
+        (ledger,) = [
+            row for row in response.get_json()["changes"]["lists"] if row["id"] == EXPENSES_LIST_ID
+        ]
+        self.guest_id = ledger["guests"][0]["id"]
         # The fuzzed pushes re-send the same rows at a later clock, so they win and exercise the
         # write paths rather than all being discarded as stale.
         self.base_sync = _retimed(self.base_sync, 2_000)
@@ -266,6 +273,16 @@ ENDPOINTS = [
     ("POST", "/lists/{expenses_list_id}/close-votes", "user", None),
     ("DELETE", "/lists/{expenses_list_id}/close-votes", "user", None),
     ("POST", "/lists/{list_id}/leave", "user", None),
+    ("POST", "/lists/{expenses_list_id}/guests", "user", [{"name": "Eve"}]),
+    (
+        "PATCH",
+        "/lists/{expenses_list_id}/guests/{guest_id}",
+        "user",
+        [{"name": "David"}, {"locked": True}, {"name": "Dave", "locked": False}],
+    ),
+    ("DELETE", "/lists/{expenses_list_id}/guests/{guest_id}", "user", None),
+    ("POST", "/lists/{expenses_list_id}/guests/{guest_id}/claim", "user", None),
+    ("DELETE", "/lists/{expenses_list_id}/guests/{guest_id}/claim", "user", None),
     ("DELETE", "/invites/{invite_id}", "user", None),
     ("POST", "/invites/redeem", "admin", [{"token": "{invite_token}"}]),
     ("POST", "/sync", "user", ["{base_sync}", "{merge_sync}"]),
@@ -294,6 +311,7 @@ def _fill(template, world):
         "expenses_list_id": EXPENSES_LIST_ID,
         "invite_id": world.invite_id,
         "invite_token": world.invite_token,
+        "guest_id": world.guest_id,
     }
     if template == "{base_sync}":
         return copy.deepcopy(world.base_sync)

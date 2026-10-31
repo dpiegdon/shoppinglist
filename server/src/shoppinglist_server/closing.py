@@ -18,6 +18,7 @@ Two rules hang off that:
 """
 
 from . import db as db_module
+from . import guests as guests_module
 from .auth import now_ms
 from .errors import ApiError
 from .sync import EXPENSE_TYPE_INCOME, EXPENSES_KIND, amount_cents, expense_type
@@ -81,14 +82,28 @@ def require_open(conn, list_id: str) -> None:
         raise ApiError(409, "list_closed", "This list is closed.")
 
 
-def is_frozen(conn, list_id: str, account_id: str, members=None, voters=None) -> bool:
+def is_frozen(conn, list_id: str, account_id: str, members=None, voters=None, guests=None) -> bool:
     """Whether this participant's amounts may not move while the list is open.
 
-    Voters, because that is what a vote buys them. And anyone who is not a member any more: their
-    debts and credits belong to someone who is no longer around to object to them being edited.
+    `account_id` is a key of an entry's maps: an account id or a guest id (T-364).
+
+    * An account: frozen when it has voted, because that is what a vote buys it, or is not a
+      member any more — its debts and credits belong to someone who is no longer around to object
+      to them being edited.
+    * An unclaimed guest: frozen when locked, the vote without a vote.
+    * A claimed guest: whatever holds for the claimant's account, since the guest's numbers are
+      the claimant's now.
+    * A guest id that is no longer a guest of this list falls under the account rule: it is not
+      a member, so it is frozen, like someone who has left.
     """
     members = _members(conn, list_id) if members is None else members
     voters = set(votes(conn, list_id)) if voters is None else voters
+    guests = guests_module.states(conn, list_id) if guests is None else guests
+    if account_id in guests:
+        locked, claimed_by = guests[account_id]
+        if claimed_by is None:
+            return locked
+        account_id = claimed_by
     return account_id in voters or account_id not in members
 
 
@@ -226,16 +241,19 @@ def check_write_against_freeze(conn, list_id: str, item_id: str, before_value, a
         return
     members = _members(conn, list_id)
     voters = set(votes(conn, list_id))
-    if not voters and not (set(before) | set(after)) - members:
-        return  # nobody is frozen on this list, which is the normal case
+    guests = guests_module.states(conn, list_id)
+    # Per stored key, never per folded id (T-364): moving an amount from a claimed guest's key to
+    # the claimant's own is refused while the claimant is frozen, although the folded balance
+    # would not move. Conservative and simple; nobody has a reason to make such a write.
     for account_id in sorted(set(before) | set(after)):
         if not type_changed and before.get(account_id, (0, 0)) == after.get(account_id, (0, 0)):
             continue
-        if is_frozen(conn, list_id, account_id, members=members, voters=voters):
+        if is_frozen(conn, list_id, account_id, members=members, voters=voters, guests=guests):
             raise ApiError(
                 422,
                 "participant_frozen",
                 "This expense involves someone whose amounts are frozen: they have agreed to "
-                "close the list, or are no longer a member.",
+                "close the list, are no longer a member, or are a guest whose amounts are "
+                "locked.",
                 details={"row_id": item_id, "field": "expense", "account_id": account_id},
             )

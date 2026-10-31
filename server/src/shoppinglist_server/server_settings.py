@@ -68,28 +68,40 @@ def _trimmed(c: str) -> bool:
     return c in _TRIM_CHARS or unicodedata.category(c) == "Zs"
 
 
-def validate_message(value) -> str:
-    """The message as it will be stored, `''` for none, by the rule above; otherwise
-    `422 invalid_message`. Any other text, links included, is allowed; clients show it as plain
-    text and never make it clickable."""
-    if not isinstance(value, str):
-        raise ApiError(422, "invalid_message", "message must be a string.")
+def one_line_text(value: str, max_chars: int) -> str | None:
+    """`value` under the rule above: trimmed; `None` when it is refused (a refused character, or
+    over `max_chars` code points after trimming); `''` when nothing but Cf and Zs is left.
+
+    Shared by the server message and a guest's name (T-364), which follow the same rule and
+    differ only in their length cap and error code."""
     start, end = 0, len(value)
     while start < end and _trimmed(value[start]):
         start += 1
     while end > start and _trimmed(value[end - 1]):
         end -= 1
     text = value[start:end]
-    if len(text) > MAX_MESSAGE_CHARS or any(
+    if len(text) > max_chars or any(
         c in _REFUSED_CHARS or unicodedata.category(c) in _REFUSED_CATEGORIES for c in text
     ):
+        return None
+    if all(unicodedata.category(c) in ("Cf", "Zs") for c in text):
+        return ""
+    return text
+
+
+def validate_message(value) -> str:
+    """The message as it will be stored, `''` for none, by the rule above; otherwise
+    `422 invalid_message`. Any other text, links included, is allowed; clients show it as plain
+    text and never make it clickable."""
+    if not isinstance(value, str):
+        raise ApiError(422, "invalid_message", "message must be a string.")
+    text = one_line_text(value, MAX_MESSAGE_CHARS)
+    if text is None:
         raise ApiError(
             422,
             "invalid_message",
             f"The message must be one line of at most {MAX_MESSAGE_CHARS} characters.",
         )
-    if all(unicodedata.category(c) in ("Cf", "Zs") for c in text):
-        return ""
     return text
 
 

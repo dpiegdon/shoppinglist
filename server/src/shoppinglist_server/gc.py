@@ -87,6 +87,8 @@ def run(conn, now_ms: int) -> dict:
         conn.execute("DELETE FROM memberships WHERE list_id = ?", (list_id,))
         # close_votes references lists(id), so it has to go with the list, not after it (T-157).
         conn.execute("DELETE FROM close_votes WHERE list_id = ?", (list_id,))
+        # So does a ledger's guests table (T-364), for the same reason.
+        conn.execute("DELETE FROM guests WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM invites WHERE list_id = ?", (list_id,))
         conn.execute("DELETE FROM lists WHERE id = ?", (list_id,))
         lists_purged += 1
