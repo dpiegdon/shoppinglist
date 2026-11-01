@@ -1,0 +1,14 @@
+{
+  "body": "android/gradle.properties still carries the Raspberry Pi's limits (a 1.5 GB Gradle daemon, a 1 GB\nKotlin daemon), and the Release link of the iOS framework for a device (T-353) runs out of them:\nthe maintainer's macOS guest had to override them in ~/.gradle/gradle.properties. The Pi is retired;\nthe hosts are the Linux box the gate runs on and the macOS guest (8 cores, 16 GB). Size the repo's\nsettings for them (Gradle 8 GB, Kotlin daemon 6 GB, Kotlin/Native 6 GB), drop the override on the\nguest, verify the device link there and the gate here, and retire the Pi from AGENTS.md's host\nnotes and ios/README.md.",
+  "created_at": "2026-11-01T19:30:36+00:00",
+  "id": "T-376",
+  "labels": [
+    "build",
+    "android",
+    "ios",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "build: Gradle memory sized for the current hosts, the Pi retired",
+  "updated_at": "2026-11-01T19:30:36+00:00"
+}
