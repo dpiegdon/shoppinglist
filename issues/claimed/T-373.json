@@ -8,7 +8,8 @@
     "ios",
     "agent"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "iOS: iosX64 target for the Intel simulator and the Shared framework",
-  "updated_at": "2026-11-01T16:40:28+00:00"
+  "updated_at": "2026-11-01T16:41:12+00:00"
 }
