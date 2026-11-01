@@ -14,3 +14,9 @@ __pycache__/
 
 # Agent worktrees Claude Code creates for parallel work; never content
 .claude/worktrees/
+
+# The iOS shell's build output and Xcode's per-user state
+ios/build/
+ios/DerivedData/
+xcuserdata/
+*.xcworkspace/xcshareddata/swiftpm/

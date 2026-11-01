@@ -1,0 +1,8 @@
+// Settings the project's build configurations read (Tuppu.xcodeproj). TEAM_ID stays empty for the
+// simulator; a device build and TestFlight (T-355) need the Apple Developer team. The versions
+// follow the Android app's (android/app/build.gradle.kts): release.sh will bump them too.
+TEAM_ID=
+BUNDLE_ID=org.p23q.shoppinglist
+APP_NAME=Tuppu
+MARKETING_VERSION=4.0.0
+CURRENT_PROJECT_VERSION=40

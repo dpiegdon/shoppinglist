@@ -10,10 +10,14 @@ it does to Android.
 
 - **Shared Compose UI**, not SwiftUI. The iPhone app is an Xcode shell around the shared screens.
   It looks like the Android app; native touches can come later where they matter.
-- **No Mac on the maintainer's side.** Everything up to the iOS shell is built and tested on Linux
-  through the Android target. The shared modules' iOS targets are compiled on Linux with Kotlin's
-  klib cross-compilation where that works. Linking, signing and running the app happen on a hosted
-  macOS CI service, which uploads to TestFlight (decided at step 3).
+- **A macOS guest, not a Mac, on the maintainer's side.** Everything up to the iOS shell is built
+  and tested on Linux through the Android target, and the shared modules' iOS targets are compiled
+  there with Kotlin's klib cross-compilation. Linking, the Kotlin/Native tests and the app's own
+  XCTests run on a macOS VM (OSX-KVM on an Intel host, Xcode, the simulator). That VM has no GPU, and
+  Compose Multiplatform on iOS draws through Metal with no software renderer, so **the shared
+  screens cannot be shown there**: the VM proves the platform layer (Keychain, database, HTTP,
+  login, sync) and that the app builds for device and simulator, while seeing the screens on iOS
+  needs a Mac with a GPU or a hosted macOS runner (step 5). Signing and TestFlight stay with step 5.
 - **Wire protocol unchanged** until step 4.
 
 ## Modules (target)
@@ -23,7 +27,7 @@ it does to Android.
 | `:core` | KMP: jvm, iosArm64, iosSimulatorArm64, iosX64 | API (Ktor), Room database, repositories, sync engine, platform interfaces |
 | `:shared` | KMP: android, iosArm64, iosSimulatorArm64, iosX64; links `Shared.framework` | screens, view models, navigation, theme, strings and drawables (Compose resources), dependency wiring (Koin) |
 | `:app` | Android application | Activity, WorkManager workers, notifications, Keystore, DataStore, the Android implementations of the platform interfaces |
-| `ios/` | Xcode project | the iOS shell: `UIViewController` hosting the shared UI, Keychain, background refresh, the iOS implementations |
+| `ios/` | Xcode project | the iOS shell: the SwiftUI window hosting the shared UI, the app's XCTests over the platform layer; the iOS implementations themselves are `:shared`'s `iosMain` |
 
 `:core` keeps a `jvm()` target rather than an Android one, so it stays free of the Android SDK and its
 tests stay plain JUnit.

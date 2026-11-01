@@ -137,7 +137,9 @@ the app's uncaught-exception handler writes), the app's version for
 the app is open), `IosCrashLog`, and silent notifiers until step 4 of the port
 (T-354). `src/iosMain/…/ios/IosApp.kt` is what the Swift shell calls:
 `startIosApp()` starts Koin, loads the accounts and syncs on foreground, and
-`MainViewController()` hosts `TuppuApp(startDestination)`. Their tests are
+`MainViewController()` hosts `TuppuApp(startDestination)`; `IosServices` names
+the services the Swift side may need beside the screens (the app's XCTests in
+`../ios/TuppuTests` drive login, lists, items and sync through it). Their tests are
 Kotlin/Native tests in `src/iosTest`, run on a simulator by
 `./gradlew :shared:iosX64Test` (an Intel Mac) or `:shared:iosSimulatorArm64Test`;
 the Linux gate compiles them but cannot run them. The test binary runs outside

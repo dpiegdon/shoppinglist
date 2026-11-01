@@ -33,6 +33,12 @@ kotlin {
         target.binaries.framework {
             baseName = "Shared"
             isStatic = true
+            // :core's own types (ListKind, Status, the login expectations, the sync results)
+            // by their names in Swift; without this only what :shared's signatures mention is seen.
+            export(project(":core"))
+            // Swift calls the suspend functions (login, sync, the repos) as async from any
+            // thread, the XCTests included; without this Kotlin allows them on the main thread only.
+            binaryOption("objcExportSuspendFunctionLaunchThreadRestriction", "none")
         }
     }
 
@@ -56,7 +62,9 @@ kotlin {
             // The device-local preferences: DataStore is multiplatform, and the platform hands each
             // store its file (the app's appPlatformModule).
             api(libs.androidx.datastore.preferences.core)
-            implementation(project.dependencies.platform(libs.koin.bom))
+            // api, as koin-core below is: the framework export (the iOS targets) resolves the
+            // api dependencies on their own, and koin-core's version is the BOM's.
+            api(project.dependencies.platform(libs.koin.bom))
             api(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
