@@ -1,0 +1,3 @@
+{"actor": "claude", "at": "2026-11-01T01:24:10+00:00", "kind": "created", "ref": "main@96ae86d2", "text": "Release 4.0.0"}
+{"actor": "claude", "at": "2026-11-01T01:30:31+00:00", "kind": "claimed", "ref": "main@3925a08a", "text": "claude"}
+{"actor": "claude", "at": "2026-11-01T01:39:23+00:00", "kind": "closed", "ref": "main@e28d71a7", "text": "Tagged v4.0.0 at e28d71a7 (versionCode 40, protocol 4). release.sh: full gate green, signed APK checked against the previous key and embedded, wheel built and smoke-tested: server/dist/shoppinglist_server-4.0.0-py3-none-any.whl. The first run was refused by its own gate on the slow guest-cap web test, fixed as T-372 before the second run."}
