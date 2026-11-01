@@ -1,0 +1,18 @@
+{
+  "body": "Step 3 of docs/ios-port-design.md. The iOS shell: an Xcode project (ios/) that hosts the shared UI\nin a UIViewController (startIosApp() and MainViewController() from :shared's iosMain, T-349),\nbuilt, linked and run in the simulator on the maintainer's macOS guest (OSX-KVM, Intel, Xcode\n16.2; the simulator is x86_64, so the iosX64 target of T-373). Hosted CI, signing for a device and\nTestFlight are T-355. First milestone: log in, overview, open a list, add and check items, sync\nwhile open, multi-account as on Android \u2014 against a server run on the guest, its self-signed\ncertificate trusted by the simulator (simctl keychain add-root-cert). Update the design doc's\n\"No Mac\" decision and the module table's ios/ row.",
+  "created_at": "2026-10-16T21:23:39+00:00",
+  "deps": [
+    "T-349",
+    "T-352"
+  ],
+  "id": "T-353",
+  "labels": [
+    "feature",
+    "ops",
+    "ios",
+    "agent"
+  ],
+  "priority": 4,
+  "title": "iPhone port step 3: the iOS shell, built and run in the simulator on the macOS guest",
+  "updated_at": "2026-11-01T17:07:33+00:00"
+}
