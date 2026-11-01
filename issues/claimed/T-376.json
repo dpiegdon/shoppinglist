@@ -8,6 +8,7 @@
     "ios",
     "agent"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "build: Gradle memory sized for the current hosts, the Pi retired",
   "updated_at": "2026-11-01T19:30:36+00:00"
