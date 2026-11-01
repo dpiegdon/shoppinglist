@@ -1,2 +1,3 @@
 {"actor": "claude", "at": "2026-11-01T18:16:20+00:00", "kind": "created", "ref": "main@c4612460", "text": "web: tests time out under the parallel gate's load (vitest 5 s)"}
 {"actor": "claude", "at": "2026-11-01T19:33:08+00:00", "kind": "note", "ref": "main@9aa4fc21", "text": "Again on 2026-11-01 (gate for T-376): RedeemPage 'redeems the token of an invite link pasted inside a whole message' at 5051 ms, alone; passed on the rerun. That is 3 of 7 gate runs today with a web timeout."}
+{"actor": "claude", "at": "2026-11-01T19:38:13+00:00", "kind": "claimed", "ref": "main@9aa4fc21", "text": "claude"}
