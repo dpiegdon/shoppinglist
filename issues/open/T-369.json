@@ -8,8 +8,7 @@
     "reliability",
     "agent"
   ],
-  "owner": "claude",
   "priority": 4,
   "title": "Android: SettingsViewModelTest and InboxSeenInvitesTest time out under the parallel gate",
-  "updated_at": "2026-10-31T22:49:37+00:00"
+  "updated_at": "2026-11-01T01:08:58+00:00"
 }
