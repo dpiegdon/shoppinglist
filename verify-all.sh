@@ -126,7 +126,7 @@ web_check() (
     # missing locally, which can silently run a version other than the one the
     # lockfile pins. Both are devDependencies, so node_modules/.bin always has them
     # once `npm ci` has run.
-    # $VITEST_ARGS is unquoted on purpose: none, or the worker flags.
+    # $VITEST_ARGS is unquoted on purpose: the timeout, and in parallel mode the worker flags.
     # shellcheck disable=SC2086
     ./node_modules/.bin/vitest run $VITEST_ARGS &&
     ./node_modules/.bin/tsc --noEmit -p tsconfig.app.json &&
@@ -266,14 +266,18 @@ esac
 # In the serial mode vitest runs its files one at a time, as web/vite.config.ts says,
 # because on a constrained host parallel jsdom files missed their timeouts.
 # PYTEST_WORKERS overrides the pytest count (`0` runs the tests in this process).
+#
+# Under the gate a web test gets 15 s, not vitest's 5 s default (T-375): three suites
+# share the cores here, and a heavy neighbour (a VM build on the same machine) made
+# tests of 1-2 s cross 5 s. A test that hangs still fails, 10 s later.
 HALF=$(((CPUS + 1) / 2))
 [ "$HALF" -ge 2 ] || HALF=2
 if [ "$MODE" = parallel ]; then
   PYTEST_WORKERS="${PYTEST_WORKERS:-$HALF}"
-  VITEST_ARGS="--fileParallelism --maxWorkers=$HALF"
+  VITEST_ARGS="--fileParallelism --maxWorkers=$HALF --testTimeout=15000"
 else
   PYTEST_WORKERS="${PYTEST_WORKERS:-auto}"
-  VITEST_ARGS=""
+  VITEST_ARGS="--testTimeout=15000"
 fi
 
 echo "verify-all: $MODE ($MODE_REASON)"

@@ -193,15 +193,18 @@ def test_the_mode_can_be_chosen_by_environment(stub_tree):
     result, record = _run(stub_tree, mode="serial")
     assert result.returncode == 0
     assert "verify-all: serial (chosen)" in result.stdout
-    # serial: vitest keeps vite.config.ts's one file at a time; pytest takes every core
-    assert re.search(r"^vitest run\s*$", record, re.MULTILINE)
+    # serial: vitest keeps vite.config.ts's one file at a time, with the gate's 15 s per test
+    # (T-375); pytest takes every core
+    assert re.search(r"^vitest run --testTimeout=15000$", record, re.MULTILINE)
     assert "-m pytest -q -n auto " in record
 
     (stub_tree / "record").unlink()
     result, record = _run(stub_tree, mode="parallel")
     assert result.returncode == 0
     assert "verify-all: parallel (chosen)" in result.stdout
-    assert re.search(r"^vitest run --fileParallelism --maxWorkers=\d+$", record, re.MULTILINE)
+    assert re.search(
+        r"^vitest run --fileParallelism --maxWorkers=\d+ --testTimeout=15000$", record, re.MULTILINE
+    )
     assert re.search(r"-m pytest -q -n \d+ ", record)
 
 
