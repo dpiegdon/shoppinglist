@@ -12,6 +12,7 @@
     "ios",
     "agent"
   ],
+  "owner": "claude",
   "priority": 4,
   "title": "iPhone port step 3: the iOS shell, built and run in the simulator on the macOS guest",
   "updated_at": "2026-11-01T17:07:33+00:00"
