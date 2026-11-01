@@ -11,5 +11,5 @@
   "owner": "claude",
   "priority": 4,
   "title": "web: tests time out under the parallel gate's load (vitest 5 s)",
-  "updated_at": "2026-11-01T19:38:13+00:00"
+  "updated_at": "2026-11-01T19:55:23+00:00"
 }

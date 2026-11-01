@@ -2,3 +2,4 @@
 {"actor": "claude", "at": "2026-11-01T19:33:08+00:00", "kind": "note", "ref": "main@9aa4fc21", "text": "Again on 2026-11-01 (gate for T-376): RedeemPage 'redeems the token of an invite link pasted inside a whole message' at 5051 ms, alone; passed on the rerun. That is 3 of 7 gate runs today with a web timeout."}
 {"actor": "claude", "at": "2026-11-01T19:38:13+00:00", "kind": "claimed", "ref": "main@9aa4fc21", "text": "claude"}
 {"actor": "claude", "at": "2026-11-01T19:38:13+00:00", "kind": "note", "ref": "main@9aa4fc21", "text": "Cause found: all three failing runs on 2026-11-01 overlapped with a Gradle/Xcode job on the macOS guest, which shares the 12-core host with the gate (the maintainer saw it swap). Rule recorded. Hardening kept: the gate passes --testTimeout=15000 to vitest in both modes; the 5 s default stays for a developer's own vitest runs."}
+{"actor": "claude", "at": "2026-11-01T19:55:23+00:00", "kind": "closed", "ref": "main@65b18836", "text": ""}
