@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -550,7 +550,9 @@ describe("creating a ledger with guests", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Ledger/ }));
     const group = screen.getByRole("group", { name: "Guests" });
     const addAnother = within(group).getByRole("button", { name: "Add another" });
-    for (let count = 1; count < MAX_NEW_GUESTS; count += 1) await userEvent.click(addAnother);
+    // Synchronous clicks (T-372): 49 userEvent clicks carry 49 pointer-event delays, which under the
+    // parallel gate's load ran past vitest's 5s; the cap is about the count, not the pointer.
+    for (let count = 1; count < MAX_NEW_GUESTS; count += 1) fireEvent.click(addAnother);
     expect(within(group).getAllByLabelText("Guest name")).toHaveLength(50);
     expect(within(group).queryByRole("button", { name: "Add another" })).not.toBeInTheDocument();
   });
