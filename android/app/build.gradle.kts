@@ -133,6 +133,7 @@ dependencies {
     testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotlinx.coroutines.debug)
     // Robolectric pulls conscrypt-openjdk-uber 2.5.2 transitively, which predates linux-aarch_64
     // native support; force the newer version that bundles it (Gradle picks the highest by default).
     testImplementation(libs.conscrypt.openjdk.uber)
@@ -156,6 +157,9 @@ dependencies {
 // Robolectric needs JDK 21 to shadow Android SDK 36 (compileSdk here), even though the rest of
 // the build runs on JDK 17. Only the Test tasks get the newer toolchain.
 tasks.withType<Test>().configureEach {
+    // MainDispatcherRule installs kotlinx-coroutines-debug's probes (T-369), whose ByteBuddy agent
+    // attaches to this very JVM; JDK 21 refuses self-attach without this.
+    jvmArgs("-Djdk.attach.allowAttachSelf=true")
     javaLauncher.set(
         javaToolchains.launcherFor {
             languageVersion.set(JavaLanguageVersion.of(21))

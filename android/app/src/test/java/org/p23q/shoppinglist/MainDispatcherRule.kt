@@ -1,6 +1,7 @@
 package org.p23q.shoppinglist
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.debug.DebugProbes
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
@@ -31,11 +32,54 @@ import org.junit.runner.Description
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(val dispatcher: TestDispatcher = StandardTestDispatcher()) : TestWatcher() {
+    @Volatile private var running = false
+
     override fun starting(description: Description) {
+        // A hang's whereabouts (T-369). kotlinx-coroutines-debug's probes track every coroutine's
+        // suspension point; they patch the stdlib's DebugProbesKt, which lives in the SYSTEM class
+        // loader, so under Robolectric the sandbox-loaded test's coroutines are tracked by the
+        // system loader's DebugProbesImpl and runTest's own timeout dump (the sandbox copy) comes
+        // out empty. So a watchdog dumps from the system loader by reflection, 30s into a test
+        // that is still running — the slowest healthy test takes 10s — plus every Java thread's
+        // stack, into stderr, which the test report keeps. Installed once per JVM: the patching
+        // is a ByteBuddy redefinition, not something to repeat 800 times.
+        installProbes()
         Dispatchers.setMain(dispatcher)
+        running = true
+        val name = description.displayName
+        Thread {
+            try { Thread.sleep(30_000) } catch (_: InterruptedException) { return@Thread }
+            if (!running) return@Thread
+            System.err.println("=== watchdog (T-369): $name still running after 30s ===")
+            try {
+                val probes = ClassLoader.getSystemClassLoader().loadClass("kotlinx.coroutines.debug.DebugProbes")
+                val instance = probes.getField("INSTANCE").get(null)
+                probes.getMethod("dumpCoroutines", java.io.PrintStream::class.java).invoke(instance, System.err)
+            } catch (e: Throwable) {
+                System.err.println("(system-loader coroutine dump failed: $e)")
+            }
+            System.err.println("=== watchdog (T-369): thread dump ===")
+            for ((thread, frames) in Thread.getAllStackTraces()) {
+                System.err.println("-- ${thread.name} (${thread.state})")
+                frames.take(14).forEach { System.err.println("    at $it") }
+            }
+        }.apply { isDaemon = true; start() }
     }
 
     override fun finished(description: Description) {
+        running = false
         Dispatchers.resetMain()
+    }
+
+    private companion object {
+        @Volatile private var probesInstalled = false
+
+        @Synchronized
+        fun installProbes() {
+            if (probesInstalled) return
+            DebugProbes.enableCreationStackTraces = false
+            DebugProbes.install()
+            probesInstalled = true
+        }
     }
 }

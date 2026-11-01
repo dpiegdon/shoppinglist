@@ -76,6 +76,7 @@ kotlin {
             implementation(project.dependencies.platform(libs.androidx.compose.bom))
             implementation(libs.androidx.ui.test.junit4)
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.kotlinx.coroutines.debug)
             // See app/build.gradle.kts: the conscrypt Robolectric needs on Linux/aarch64.
             implementation(libs.conscrypt.openjdk.uber)
             // Room's bundled SQLite with a self-extracting native library, for the in-memory
@@ -159,6 +160,9 @@ compose.resources {
 // screenshot tests need its native graphics, which has no Linux/aarch64 build, so on such a host
 // they are left out and verifyRoborazziDebug has nothing to compare.
 tasks.withType<Test>().configureEach {
+    // MainDispatcherRule installs kotlinx-coroutines-debug's probes (T-369), whose ByteBuddy agent
+    // attaches to this very JVM; JDK 21 refuses self-attach without this.
+    jvmArgs("-Djdk.attach.allowAttachSelf=true")
     javaLauncher.set(
         javaToolchains.launcherFor {
             languageVersion.set(JavaLanguageVersion.of(21))
