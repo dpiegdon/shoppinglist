@@ -1,0 +1,13 @@
+{
+  "body": "The shared Compose screens have never been seen on iOS: the maintainer's macOS guest has no GPU,\nand Compose Multiplatform on iOS draws through Metal with no software renderer, so the simulator\nthere shows ContentView's \"no Metal\" notice instead (T-353). Verify the first milestone's screens\n(login, overview, a list, adding and checking items, the accounts, the chooser after an invite)\non a Mac with a GPU or a hosted macOS runner, fix what the iOS shell gets wrong (insets, the\nkeyboard, back navigation, the share sheet, deep links from invite links), and add screenshot\ntests there if the runner is kept. Needs the maintainer's decision on the machine (see T-353's\nnotes: a used Mac mini, or a runner on Apple Silicon hosts, which expose Metal).",
+  "created_at": "2026-11-01T18:04:29+00:00",
+  "id": "T-374",
+  "labels": [
+    "feature",
+    "ios",
+    "human"
+  ],
+  "priority": 4,
+  "title": "iOS: the screens verified on a Metal-capable Mac or runner",
+  "updated_at": "2026-11-01T18:04:29+00:00"
+}
