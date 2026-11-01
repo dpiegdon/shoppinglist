@@ -88,8 +88,8 @@ data class ExpenseListUiState(
     /** What the screens show as "Net spent": expenses less income, settlements counting for nothing. */
     val totalCents: Long get() = spent.netCents
 
-    /** Who is who: labels, guests and the freeze, one source for every row (T-364). */
-    val roster: Roster get() = Roster(members, guests, closeVotes, formerMemberNumbers)
+    /** Who is who: labels, guests and the freeze, one source for every row (T-364). Once per state, not per row. */
+    val roster: Roster by lazy { Roster(members, guests, closeVotes, formerMemberNumbers) }
 
     /** The guests the chooser offers: every one nobody has claimed yet. */
     val unclaimedGuests: List<ListGuest> get() = guests.filter { !it.isClaimed }

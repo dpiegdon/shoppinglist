@@ -76,14 +76,12 @@ export default function ExpenseListPage() {
     [expenses, members, guests],
   );
   // Every figure is computed on folded entries (T-364): a claimed guest's amounts are its claimant's.
-  const balances = useMemo(
-    () =>
-      balancesFor(
-        expenses.map((item) => fold(itemFieldValue(item, "expense") as Expense, aliases)),
-        roster,
-      ),
-    [expenses, aliases, roster],
+  // Folded once, by item id, for the balances, the net and each row's effect alike.
+  const folded = useMemo(
+    () => new Map(expenses.map((item) => [item.id, fold(itemFieldValue(item, "expense") as Expense, aliases)])),
+    [expenses, aliases],
   );
+  const balances = useMemo(() => balancesFor([...folded.values()], roster), [folded, roster]);
 
   // The post-join chooser (T-364): RedeemPage and the overview's inbox arrive with `?joined`, read
   // exactly once — the flag goes from the URL whatever is decided, so a reload never asks again.
@@ -114,9 +112,7 @@ export default function ExpenseListPage() {
   }
 
   // What the list has spent, income taken off it and settlements counting for nothing (T-245).
-  const netCents = spentTotals(
-    expenses.map((item) => fold(itemFieldValue(item, "expense") as Expense, aliases)),
-  ).netCents;
+  const netCents = spentTotals([...folded.values()]).netCents;
   const myBalance = balances.find((balance) => balance.accountId === account?.id);
 
   /** A stored key as the label table reads it (T-364): initials, a guest's name, "Dave · DP". */
@@ -215,7 +211,7 @@ export default function ExpenseListPage() {
               // What this one entry does to my own balance, which is the only figure on the row
               // that is mine rather than the group's — so the only one that is coloured (T-245).
               // On the folded entry (T-364), so a guest I have claimed counts as me.
-              const myEffect = account ? entryEffectCents(fold(expense, aliases), account.id) : 0;
+              const myEffect = account ? entryEffectCents(folded.get(item.id) ?? expense, account.id) : 0;
               return (
                 <button
                   key={item.id}

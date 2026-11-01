@@ -35,7 +35,13 @@ export default function GuestChooser({ listId, guests, onClose }: GuestChooserPr
       await refresh();
       onClose();
     } catch (err) {
-      setError(errorMessage(t, err, "item.saveFailed"));
+      // A locked guest's amounts may not move onto anyone (T-364): said in its own words, as the
+      // Guests card says it, not as a retry hint that cannot help.
+      if (err instanceof api.ApiError && err.code === "participant_frozen") {
+        setError(t("guest.errorLocked", { who: guest.name }));
+      } else {
+        setError(errorMessage(t, err, "item.saveFailed"));
+      }
     } finally {
       setBusy(false);
     }

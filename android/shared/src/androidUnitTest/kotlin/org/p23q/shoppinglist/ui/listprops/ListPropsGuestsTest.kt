@@ -7,6 +7,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -60,6 +65,8 @@ class ListPropsGuestsTest {
 
     private val server = MockWebServer()
     private val requests = mutableListOf<String>()
+    /** What a PATCH of a guest answers: 200 with the guest, or a refusal. */
+    private var patchStatus = 200
     private lateinit var db: AppDb
     private lateinit var listsRepo: ListsRepo
     private lateinit var itemsRepo: ItemsRepo
@@ -91,6 +98,8 @@ class ListPropsGuestsTest {
                 return when {
                     path.endsWith("/members") -> MockResponse().setResponseCode(200).setBody("""{"members": [], "invites": []}""")
                     "/guests" in path && request.method == "DELETE" && !path.endsWith("/claim") -> MockResponse().setResponseCode(204)
+                    "g:dave" in path && request.method == "PATCH" && patchStatus != 200 -> MockResponse().setResponseCode(patchStatus)
+                        .setBody("""{"error": "invalid_guest_name", "message": "no", "field": "name"}""")
                     "g:dave" in path -> MockResponse().setResponseCode(200)
                         .setBody("""{"id": "g:dave", "name": "Dave", "initials": "DA", "locked": false, "claimed_by": null, "created_at": 1}""")
                     "/guests" in path -> MockResponse().setResponseCode(200)
@@ -145,6 +154,10 @@ class ListPropsGuestsTest {
 
     private val serverId: String get() = runBlocking { listsRepo.getById(listId)!!.serverId }
 
+    /** A control inside one guest's row: every guest has a Remove and a Rename, so the text alone is ambiguous. */
+    private fun inRow(guest: ListGuest, text: String) =
+        composeTestRule.onNode(hasText(text) and hasAnyAncestor(hasTestTag("guest-" + guest.id)))
+
     @Test
     fun `a ledger shows its guests, an unclaimed one with its controls and a claimed one with its claimant`() = runBlocking<Unit> {
         show()
@@ -154,7 +167,9 @@ class ListPropsGuestsTest {
         composeTestRule.onNodeWithText("Amounts locked").assertIsDisplayed()
         composeTestRule.onNodeWithText("Locked: the amounts cannot change, like a member who agreed to close").assertIsDisplayed()
         composeTestRule.onNodeWithText("This is me").assertIsEnabled()
-        composeTestRule.onNodeWithText("Remove").assertIsEnabled()
+        inRow(dave, "Remove").assertIsEnabled()
+        // A claimed guest can be removed too, like on the web: the server allows it while no live entry names it.
+        inRow(eve, "Remove").assertIsEnabled()
         // Eve is mine: no switch or claim for her, but Unclaim.
         composeTestRule.onNodeWithText("claimed by ME").assertIsDisplayed()
         composeTestRule.onNodeWithText("Unclaim").assertIsEnabled()
@@ -165,7 +180,7 @@ class ListPropsGuestsTest {
     fun `a guest a live entry names cannot be removed, and the card says why`() = runBlocking<Unit> {
         show(entries = listOf(Expense(mapOf(me to "10.00"), true, mapOf(dave.id to "10.00"), true, "2026-10-31")))
 
-        composeTestRule.onNodeWithText("Remove").performScrollTo().assertIsNotEnabled()
+        inRow(dave, "Remove").performScrollTo().assertIsNotEnabled()
         composeTestRule.onNodeWithText("Named in entries — edit those first").assertIsDisplayed()
     }
 
@@ -208,8 +223,37 @@ class ListPropsGuestsTest {
         show(closeVotes = listOf(me))
 
         composeTestRule.onNodeWithText("This is me").performScrollTo().assertIsNotEnabled()
-        composeTestRule.onNodeWithText("Remove").assertIsNotEnabled()
+        inRow(dave, "Remove").assertIsNotEnabled()
+        inRow(eve, "Remove").assertIsNotEnabled()
         composeTestRule.onNodeWithText("Unclaim").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `a refused rename keeps the field open with what was typed`() = runBlocking<Unit> {
+        patchStatus = 422
+        show()
+        inRow(dave, "Rename").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("guest-rename-field").performTextClearance()
+        composeTestRule.onNodeWithTag("guest-rename-field").performTextInput("David")
+        inRow(dave, "Save").performClick()
+        waitForRequests(1)
+
+        // The draft survives the refusal, as on the web; the row has not reverted under the person.
+        composeTestRule.onNodeWithTag("guest-rename-field").assert(hasText("David"))
+        composeTestRule.onNodeWithText("Enter a guest name of up to 64 characters").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a rename the server takes closes the field`() = runBlocking<Unit> {
+        show()
+        inRow(dave, "Rename").performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("guest-rename-field").performTextClearance()
+        composeTestRule.onNodeWithTag("guest-rename-field").performTextInput("David")
+        inRow(dave, "Save").performClick()
+        waitForRequests(1)
+
+        composeTestRule.onNodeWithTag("guest-rename-field").assertDoesNotExist()
+        assertEquals(listOf("PATCH /api/v1/lists/$serverId/guests/g:dave {\"name\":\"David\"}"), synchronized(requests) { requests.toList() })
     }
 
     @Test

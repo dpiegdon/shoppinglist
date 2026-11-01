@@ -35,6 +35,7 @@ import org.p23q.shoppinglist.resources.guest_msg_failed
 import org.p23q.shoppinglist.resources.error_offline_retry
 import org.p23q.shoppinglist.resources.expense_vote_failed
 import org.p23q.shoppinglist.resources.listprops_msg_email_required
+import org.p23q.shoppinglist.ui.expense.expenseRowsOf
 import org.p23q.shoppinglist.resources.listprops_msg_invite_failed
 import org.p23q.shoppinglist.resources.listprops_msg_leave_failed
 import org.p23q.shoppinglist.resources.listprops_msg_members_offline
@@ -112,6 +113,8 @@ data class ListPropsUiState(
     /** The ledger's live entries as stored, for numbering a claimant who has left (T-197). */
     val ledgerEntries: List<org.p23q.shoppinglist.core.Expense> = emptyList(),
     val newGuestName: String = "",
+    /** The guest whose name is being edited inline, until the server has taken the new name. */
+    val renamingGuestId: String? = null,
     val isGuestBusy: Boolean = false,
     /** A guest action failed, said inside the Guests card. */
     val guestError: UiText? = null,
@@ -191,7 +194,8 @@ class ListPropsViewModel(
                 val count = items.count { it.status.value == Status.CHECKED.wireValue }
                 // Who the ledger's live entries name, by stored key (T-364): a guest among them
                 // cannot be removed, which the card says before the server would.
-                val entries = items.mapNotNull { item -> itemsRepo.decodeExpense(item.expense.value) }
+                // In the ledger's order (T-197): a departed claimant is numbered as every other screen numbers them.
+                val entries = expenseRowsOf(items, itemsRepo).map { it.expense }
                 val named = entries.flatMap { it.paidBy.keys + it.paidFor.keys }.toSet()
                 _uiState.update { it.copy(checkedCount = count, guestsInUse = named, ledgerEntries = entries) }
             }
@@ -225,16 +229,29 @@ class ListPropsViewModel(
         }
     }
 
-    /** Rename inline; false when the name would be refused, so the field stays open. */
-    fun renameGuest(guestId: String, newName: String): Boolean {
+    fun startRename(guestId: String) = _uiState.update { it.copy(renamingGuestId = guestId, guestError = null) }
+
+    fun cancelRename() = _uiState.update { it.copy(renamingGuestId = null) }
+
+    /**
+     * Rename inline. The field stays open until the server has taken the name, as on the web, so a
+     * refused or offline rename keeps what was typed rather than reverting the row.
+     */
+    fun renameGuest(guestId: String, newName: String): Job? {
         val name = GuestName.normalize(newName)
         if (name == null) {
             _uiState.update { it.copy(guestError = UiText.res(Res.string.api_error_invalid_guest_name)) }
-            return false
+            return null
         }
-        if (_uiState.value.guests.firstOrNull { it.id == guestId }?.name == name) return true
-        guestCall { api, serverId -> api.updateGuest(serverId, guestId, UpdateGuestRequest(name = name)) }
-        return true
+        if (_uiState.value.guests.firstOrNull { it.id == guestId }?.name == name) {
+            cancelRename()
+            return null
+        }
+        return guestCall { api, serverId ->
+            api.updateGuest(serverId, guestId, UpdateGuestRequest(name = name)).also {
+                _uiState.update { state -> state.copy(renamingGuestId = null) }
+            }
+        }
     }
 
     /** "Amounts locked" (T-364): the guest's amounts may not move while it is on. */

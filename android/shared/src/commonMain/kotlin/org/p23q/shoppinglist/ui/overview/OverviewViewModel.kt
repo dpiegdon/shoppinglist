@@ -17,6 +17,7 @@ import org.p23q.shoppinglist.core.account.AccountSessions
 import org.p23q.shoppinglist.core.account.LastOpenedListStore
 import org.p23q.shoppinglist.core.ExpenseMath
 import org.p23q.shoppinglist.core.GuestName
+import org.p23q.shoppinglist.ui.expense.Roster
 import org.p23q.shoppinglist.core.ListKind
 import org.p23q.shoppinglist.core.api.ApiException
 import org.p23q.shoppinglist.core.api.InviteForMeDto
@@ -199,8 +200,9 @@ class OverviewViewModel(
                     // on the same list, with its own row and its own balance (T-292). Folded, as
                     // on the ledger, so what a guest I claimed did is mine (T-364).
                     val me = registry.get(list.accountId)?.accountId
-                    val participants = members.map { m -> m.accountId } + guests.filter { g -> !g.isClaimed }.map { g -> g.id }
-                    val balance = ExpenseMath.balancesFor(ExpenseMath.foldAll(expenses, ExpenseMath.aliasesOf(guests)), participants)
+                    val roster = Roster(members, guests)
+                    val participants = roster.participantIds
+                    val balance = ExpenseMath.balancesFor(ExpenseMath.foldAll(expenses, roster.aliases), participants)
                         .firstOrNull { b -> b.accountId == me }
                     list.localId to ExpenseSummary(
                         // Net spent, as on the ledger itself: income off it, settlements counting

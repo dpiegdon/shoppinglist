@@ -513,21 +513,16 @@ private fun SharedWithSection(state: ListPropsUiState, viewModel: ListPropsViewM
 private fun GuestsSection(state: ListPropsUiState, viewModel: ListPropsViewModel, lockedByVote: Boolean) {
     val open = state.closedAt == null
     val enabled = open && !lockedByVote && !state.isGuestBusy
-    val roster = Roster(state.listMembers, state.guests).withFormerNumbersFrom(state.ledgerEntries)
-    var renaming by remember { mutableStateOf<String?>(null) }
+    // Folding every entry to number a departed claimant is not per-keystroke work.
+    val roster = remember(state.listMembers, state.guests, state.ledgerEntries) {
+        Roster(state.listMembers, state.guests).withFormerNumbersFrom(state.ledgerEntries)
+    }
     var draft by remember { mutableStateOf("") }
     SectionCard(stringResource(Res.string.guest_section), modifier = Modifier.testTag("guests-card")) {
-        if (open && lockedByVote) {
-            Text(
-                stringResource(Res.string.api_error_voted_to_close),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         state.guests.forEach { guest ->
             key(guest.id) {
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("guest-" + guest.id)) {
-                    if (renaming == guest.id) {
+                    if (state.renamingGuestId == guest.id) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(
                                 value = draft,
@@ -538,12 +533,12 @@ private fun GuestsSection(state: ListPropsUiState, viewModel: ListPropsViewModel
                             )
                             Spacer(Modifier.width(8.dp))
                             TuppuButton(
-                                onClick = { if (viewModel.renameGuest(guest.id, draft)) renaming = null },
+                                onClick = { viewModel.renameGuest(guest.id, draft) },
                                 enabled = enabled,
                                 contentPadding = CompactButtonPadding,
                             ) { Text(stringResource(Res.string.action_save)) }
                             Spacer(Modifier.width(4.dp))
-                            TuppuOutlinedButton(onClick = { renaming = null }, contentPadding = CompactButtonPadding) {
+                            TuppuOutlinedButton(onClick = viewModel::cancelRename, contentPadding = CompactButtonPadding) {
                                 Text(stringResource(Res.string.action_cancel))
                             }
                         }
@@ -554,7 +549,7 @@ private fun GuestsSection(state: ListPropsUiState, viewModel: ListPropsViewModel
                             Text(guest.name, modifier = Modifier.weight(1f))
                             if (open) {
                                 TuppuTextButton(
-                                    onClick = { renaming = guest.id; draft = guest.name },
+                                    onClick = { draft = guest.name; viewModel.startRename(guest.id) },
                                     enabled = enabled,
                                 ) { Text(stringResource(Res.string.guest_rename)) }
                             }
@@ -593,28 +588,32 @@ private fun GuestsSection(state: ListPropsUiState, viewModel: ListPropsViewModel
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        if (open) {
-                            val inUse = guest.id in state.guestsInUse
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    }
+                    // Remove for every guest, claimed or not, as on the web — the server permits removing a
+                    // claimed one that no live entry names; "This is me" only while unclaimed.
+                    if (open) {
+                        val inUse = guest.id in state.guestsInUse
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                            if (claimant == null) {
                                 TuppuOutlinedButton(
                                     onClick = { viewModel.claimGuest(guest.id) },
                                     enabled = enabled,
                                     contentPadding = CompactButtonPadding,
                                 ) { Text(stringResource(Res.string.guest_this_is_me)) }
-                                TuppuButton(
-                                    onClick = { viewModel.removeGuest(guest.id) },
-                                    enabled = enabled && !inUse,
-                                    colors = dangerButtonColors(),
-                                    contentPadding = CompactButtonPadding,
-                                ) { Text(stringResource(Res.string.account_remove_confirm)) }
                             }
-                            if (inUse) {
-                                Text(
-                                    stringResource(Res.string.guest_in_use),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            TuppuButton(
+                                onClick = { viewModel.removeGuest(guest.id) },
+                                enabled = enabled && !inUse,
+                                colors = dangerButtonColors(),
+                                contentPadding = CompactButtonPadding,
+                            ) { Text(stringResource(Res.string.account_remove_confirm)) }
+                        }
+                        if (inUse) {
+                            Text(
+                                stringResource(Res.string.guest_in_use),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }

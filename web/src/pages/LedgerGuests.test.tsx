@@ -430,6 +430,18 @@ describe("after joining: are you one of these?", () => {
     expect(api.claimGuest).not.toHaveBeenCalled();
   });
 
+  it("says 'Dave: amounts locked' when the one picked is locked, as the Guests card does", async () => {
+    serve(ledger([guest("g:dave", "Dave", { locked: true })]));
+    vi.mocked(api.claimGuest).mockRejectedValue(new ApiError(422, "participant_frozen", "frozen", { account_id: "g:dave" }));
+    renderAt("/list/list-1?joined=1");
+
+    const dialog = await screen.findByRole("dialog", { name: "Are you one of these?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: /Dave/ }));
+    // Not the generic "try again": retrying cannot help, and Android says the same sentence.
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Dave: amounts locked");
+    expect(dialog).toBeInTheDocument();
+  });
+
   it("asks nothing without the flag, without unclaimed guests, or from a server without guests", async () => {
     for (const [path, list] of [
       ["/list/list-1", ledger([DAVE])],

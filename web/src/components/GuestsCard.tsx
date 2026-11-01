@@ -5,7 +5,7 @@ import { useSyncContext } from "../hooks/SyncContext";
 import { itemFieldValue } from "../hooks/useSync";
 import { useT } from "../i18n";
 import { errorMessage } from "../i18n/apiErrors";
-import { formerMemberNumbers, resolveParticipant } from "../lib/expenses";
+import { formerMemberNumbers, resolveParticipant, sortedExpenses } from "../lib/expenses";
 import { GuestBadge } from "./GuestBadge";
 import { participantText } from "../lib/participantLabel";
 import ToggleSwitch from "./ToggleSwitch";
@@ -46,7 +46,8 @@ export default function GuestsCard({ list, liveItems, myAccountId, lockedByVote 
     if (!expense) continue;
     for (const id of [...Object.keys(expense.paid_by), ...Object.keys(expense.paid_for)]) named.add(id);
   }
-  const formerNumbers = formerMemberNumbers(liveItems, members, guests);
+  // Over the ledger's order (T-197), so a departed claimant keeps the number every other screen gives.
+  const formerNumbers = formerMemberNumbers(sortedExpenses(liveItems), members, guests);
 
   async function act(action: () => Promise<unknown>, guest?: ListGuest): Promise<boolean> {
     setBusy(true);

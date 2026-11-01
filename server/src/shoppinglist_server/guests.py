@@ -207,9 +207,12 @@ def update(conn, account_id: str, list_id: str, guest_id: str, body: dict) -> di
 def is_named_in_live_entry(conn, list_id: str, guest_id: str) -> bool:
     """Whether any live entry on the list names the guest, on either side. A tombstoned one does
     not count: if it is ever restored, the "already in the stored entry" rule admits the id."""
+    # The decode below is the exact test; instr() on the quoted id just spares it the rows that
+    # cannot name the guest, which on a long ledger is nearly all of them.
     for row in conn.execute(
-        "SELECT expense FROM items WHERE list_id = ? AND deleted = 0 AND expense IS NOT NULL",
-        (list_id,),
+        "SELECT expense FROM items WHERE list_id = ? AND deleted = 0 AND expense IS NOT NULL "
+        "AND instr(expense, ?) > 0",
+        (list_id, json.dumps(guest_id)),
     ):
         expense = json.loads(row["expense"])
         if guest_id in (expense.get("paid_by") or {}) or guest_id in (
