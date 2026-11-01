@@ -1,0 +1,13 @@
+{
+  "body": "LedgerGuests.test.tsx 'stops offering another box at the server's cap' timed out at 5049ms in the release run's gate (./release.sh 4.0.0, web stage, 2026-11-01) and failed the release; it passed in every earlier gate. It clicks 'Add another' 49 times through userEvent, whose per-click delays add up under load. Make the repeated clicks synchronous (fireEvent) or raise the case's own timeout; it is not a logic bug.",
+  "created_at": "2026-11-01T01:32:12+00:00",
+  "id": "T-372",
+  "labels": [
+    "bug",
+    "web",
+    "reliability"
+  ],
+  "priority": 3,
+  "title": "Web test: the create-dialog guest-cap case clicks 49 times and exceeds vitest's 5s timeout under the parallel gate",
+  "updated_at": "2026-11-01T01:32:12+00:00"
+}
