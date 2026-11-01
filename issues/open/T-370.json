@@ -1,0 +1,15 @@
+{
+  "body": "Follow-ups from the integrated review of the ledger-guests feature (T-364..T-368) before 4.0.0, found by a code review of v3.7.0..main:\n\n- Web chooser: claiming a locked guest said \"Failed to save\" instead of \"{name}: amounts locked\" (Android said it right).\n- Both clients: the Guests section numbered a departed claimant over the entries in sync/DAO order, not the ledger's order, so \"claimed by Former member N\" could disagree with every other screen (T-197).\n- Android: an inline rename closed the field before the server answered, losing the draft on refusal or offline; the web keeps it open.\n- Android: Remove was offered only for unclaimed guests, the web for all (the server permits removing a claimed guest no live entry names); and the Guests section repeated the page's voted-to-close note.\n- Hygiene: the web ledger page folded every entry three times per render; Android rebuilt the ledger Roster on every access and the overview derived the roster by hand; the server decoded every live entry to find a guest's \u2014 now prefiltered with instr().",
+  "created_at": "2026-11-01T01:21:14+00:00",
+  "id": "T-370",
+  "labels": [
+    "bug",
+    "ux",
+    "web",
+    "android",
+    "server"
+  ],
+  "priority": 2,
+  "title": "Ledger guests: review follow-ups before 4.0.0 \u2014 chooser wording, former numbering, rename draft, Remove parity, folds",
+  "updated_at": "2026-11-01T01:21:14+00:00"
+}
