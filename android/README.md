@@ -131,9 +131,19 @@ What a platform hands in through Koin is an interface or a value: the
 `DataStore<Preferences>` each store keeps its file in, the crash log
 (`data/crash/CrashLog`, on Android `CrashLogWriter` in `androidMain`, which
 the app's uncaught-exception handler writes), the app's version for
-`UpdateChecker`, and everything `:core` asks for. An iOS app starts Koin with
-its own module beside `commonModules` and hosts `TuppuApp(startDestination)` in
-a view controller; linking that framework needs a Mac.
+`UpdateChecker`, and everything `:core` asks for. The iOS app's module is
+`iosPlatformModule` in `src/iosMain/…/di/`: the files under `AppFiles`
+(Application Support), `KeychainSecretStore`, `InAppSyncTrigger` (syncs while
+the app is open), `IosCrashLog`, and silent notifiers until step 4 of the port
+(T-354). `src/iosMain/…/ios/IosApp.kt` is what the Swift shell calls:
+`startIosApp()` starts Koin, loads the accounts and syncs on foreground, and
+`MainViewController()` hosts `TuppuApp(startDestination)`. Their tests are
+Kotlin/Native tests in `src/iosTest`, run on a simulator by
+`./gradlew :shared:iosX64Test` (an Intel Mac) or `:shared:iosSimulatorArm64Test`;
+the Linux gate compiles them but cannot run them. The test binary runs outside
+any app sandbox, where iOS has no Keychain (errSecNotAvailable), so the token
+tests of `KeychainSecretStoreTest` skip there, saying so; the app's own login
+exercises the store.
 
 The strings resolve through a `ResourceEnvironment` built from the app's
 language, whose constructor the resources library keeps internal: `Strings.kt`

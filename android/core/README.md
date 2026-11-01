@@ -77,12 +77,12 @@ What only the platform can do, the platform hands in:
 
 | interface | Android (`:app`) | iOS |
 |---|---|---|
-| `account/SecretStore` (tokens by local account id), `account/LastOpenedListStore` | `KeystoreSecretStore` (Keystore-backed EncryptedSharedPreferences) | the app's own, on the Keychain |
+| `account/SecretStore` (tokens by local account id), `account/LastOpenedListStore` | `KeystoreSecretStore` (Keystore-backed EncryptedSharedPreferences) | `KeychainSecretStore` (`:shared`'s `iosMain`): generic-password items on the Keychain; the last-opened list in the user defaults |
 | `api/HttpEngineFactory` (a new Ktor engine for each API client) | `OkHttpEngineFactory` (Ktor's OkHttp engine, the debug-only certificate opt-in, OkHttp's User-Agent) | `DarwinEngineFactory` in `iosMain` (NSURLSession; no certificate opt-in) |
-| `DeviceIdProvider` | `appPlatformModule`, from `ServerConfig` (DataStore) | the app's own, a UUID it keeps |
-| `sync/SyncTrigger` | `SyncScheduler` (WorkManager) | the app's own, on BGTaskScheduler |
-| `sync/CollaboratorChangeNotifier`, `sync/InviteNotifier` | `CollaboratorChangeNotificationPoster`, `InviteNotificationPoster` (notifications) | the app's own, on UNUserNotificationCenter |
-| the database | `buildAppDb(context, legacy)` in `data/db/AppDatabase.kt`: `Room.databaseBuilder(context, AppDb::class.java, …)` with its migrations | `buildAppDb(path)` in `iosMain` (bundled SQLite) |
+| `DeviceIdProvider` | `appPlatformModule`, from `ServerConfig` (DataStore) | `iosPlatformModule`, from the same `ServerConfig` on a DataStore file |
+| `sync/SyncTrigger` | `SyncScheduler` (WorkManager) | `InAppSyncTrigger` (`:shared`'s `iosMain`): syncs while the app is open; the background is step 4 (T-354) |
+| `sync/CollaboratorChangeNotifier`, `sync/InviteNotifier` | `CollaboratorChangeNotificationPoster`, `InviteNotificationPoster` (notifications) | `SilentCollaboratorChangeNotifier`, `SilentInviteNotifier` until step 4 (T-354) |
+| the database | `buildAppDb(context, legacy)` in `data/db/AppDatabase.kt`: `Room.databaseBuilder(context, AppDb::class.java, …)` with its migrations | `buildAppDb(path)` in `iosMain` (bundled SQLite), the file under `AppFiles` |
 | `Clock` | `Clock.System`, the default | `Clock.System`, the default |
 
 The design notes call these `SecretStore`, `DeviceId`, `BackgroundSync` and
@@ -91,9 +91,10 @@ and `Clock`.
 
 ### Using the module from an iOS app
 
-An iOS app builds on the same classes the Android app wires in Koin. `:shared`'s
-`commonModules` wire them, given a module of the iOS implementations; built by
-hand they are:
+An iOS app builds on the same classes the Android app wires in Koin: `:shared`'s
+`iosPlatformModule` (`shared/src/iosMain/…/di/`) supplies the iOS
+implementations above and `commonModules` wire the rest; `startIosApp()` in
+`shared/src/iosMain/…/ios/IosApp.kt` starts them. Built by hand they are:
 
 ```kotlin
 val db = buildAppDb("$documents/shoppinglist.db")

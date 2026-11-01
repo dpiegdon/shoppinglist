@@ -74,6 +74,13 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
         }
+        iosTest.dependencies {
+            // Kotlin/Native tests, run on the simulator by ./gradlew :shared:iosX64Test (on an
+            // Intel Mac; iosSimulatorArm64Test on Apple Silicon): the Keychain store, the in-app
+            // sync trigger and the iOS Koin graph. See ../README.md, "The shared module".
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+        }
         androidUnitTest.dependencies {
             implementation(libs.junit)
             implementation(project.dependencies.platform(libs.koin.bom))
