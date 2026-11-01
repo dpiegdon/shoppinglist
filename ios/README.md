@@ -37,7 +37,20 @@ xcrun simctl io booted screenshot screen.png
 
 The destination picks the architecture: this simulator on an Intel Mac is the
 `iosX64` target, on an Apple Silicon Mac `iosSimulatorArm64`. A device build
-(`-destination generic/platform=iOS`) needs `TEAM_ID` and signing (T-355).
+(`-destination generic/platform=iOS`, `-configuration Release`) links the
+`iosArm64` framework with Kotlin/Native's whole-program optimization, which
+takes about 40 minutes on the guest and more heap than the project's
+`gradle.properties` (sized for a small host) allows: put
+
+```
+org.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=1g
+kotlin.daemon.jvmargs=-Xmx6g
+kotlin.native.jvmArgs=-Xmx6g
+```
+
+in `~/.gradle/gradle.properties` on the Mac. Without a team id, pass
+`CODE_SIGNING_ALLOWED=NO` to build unsigned; installing on a phone and
+TestFlight need `TEAM_ID` and signing (T-355).
 
 The app only talks HTTPS. Against a development server with a self-signed
 certificate, trust its certificate in the simulator first:
