@@ -157,8 +157,7 @@ sessions. The READMEs describe the code; this file describes how to work on it.
   using the app: what changed, grouped, no ticket numbers. Close the ticket once
   the tag is made.
 - On an ARM host whose Android SDK ships an x86_64 `aapt2`, pass
-  `AAPT2=<a working aapt2>`. The original Raspberry Pi used a qemu wrapper at
-  `/home/claude/tools/bin/aapt2`.
+  `AAPT2=<a working aapt2>` (a qemu wrapper around it works).
 - Afterwards, give the maintainer the wheel (`server/dist/*.whl`). They install it
   and test on a real device, so don't file device-verification tickets.
 - Never re-cut a tagged version. By the time a defect shows up, the APK is
@@ -166,9 +165,11 @@ sessions. The READMEs describe the code; this file describes how to work on it.
 
 ## Host notes
 
-- On a low-RAM host (the original Pi had about 4 GB), stop the Gradle daemon
-  after Android work (`cd android && ./gradlew --stop`), batch Android builds, and
-  don't leave watchers or dev servers running. Only touch your own user's
-  processes. There `./verify-all.sh` picks its serial mode by itself (fewer than
-  6 cores or 12 GB); its parallel mode runs Gradle, vitest and pytest workers at
-  once and peaks about 2.5 GB above an idle Gradle daemon.
+- The build hosts are the maintainer's Linux box (the gate) and the macOS guest
+  for iOS (8 cores, 16 GB; see `ios/README.md`); `android/gradle.properties` is
+  sized for them. Stop the Gradle daemon after Android work (`cd android &&
+  ./gradlew --stop`) — on the macOS guest it is 8 GB sitting next to Xcode and
+  the simulator — and don't leave watchers or dev servers running. Only touch
+  your own user's processes. On a small host `./verify-all.sh` picks its serial
+  mode by itself (fewer than 6 cores or 12 GB); its parallel mode runs Gradle,
+  vitest and pytest workers at once.
