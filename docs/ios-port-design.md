@@ -20,8 +20,8 @@ it does to Android.
 
 | module | kind | holds |
 |---|---|---|
-| `:core` | KMP: jvm, iosArm64, iosSimulatorArm64 | API (Ktor), Room database, repositories, sync engine, platform interfaces |
-| `:shared` | KMP: android, iosArm64, iosSimulatorArm64 | screens, view models, navigation, theme, strings and drawables (Compose resources), dependency wiring (Koin) |
+| `:core` | KMP: jvm, iosArm64, iosSimulatorArm64, iosX64 | API (Ktor), Room database, repositories, sync engine, platform interfaces |
+| `:shared` | KMP: android, iosArm64, iosSimulatorArm64, iosX64; links `Shared.framework` | screens, view models, navigation, theme, strings and drawables (Compose resources), dependency wiring (Koin) |
 | `:app` | Android application | Activity, WorkManager workers, notifications, Keystore, DataStore, the Android implementations of the platform interfaces |
 | `ios/` | Xcode project | the iOS shell: `UIViewController` hosting the shared UI, Keychain, background refresh, the iOS implementations |
 

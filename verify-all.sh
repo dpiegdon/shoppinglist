@@ -189,7 +189,8 @@ android_check() (
   # :app:lintDebug does not see. The :core:compileKotlinIos* and
   # :shared:compileKotlinIos* tasks compile the same code for the iPhone targets,
   # to klibs only (T-295): Kotlin/Native does that on Linux x86_64 and macOS, and
-  # has no Linux/aarch64 host, so there the iOS check is left out.
+  # has no Linux/aarch64 host, so there the iOS check is left out. The iosX64
+  # target (the simulator on an Intel Mac, T-373) is built on the Mac only.
   # :shared:verifyRoborazziDebug compares the screenshot tests' captures with the
   # committed images in android/shared/src/androidUnitTest/screenshots (T-325); it
   # runs them as part of :shared:testDebugUnitTest, so it costs no second test run.

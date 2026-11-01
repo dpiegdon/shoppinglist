@@ -25,9 +25,16 @@ kotlin {
         }
     }
     // Compiled to klibs on any host with kotlin.native.enableKlibsCrossCompilation (gradle.properties);
-    // linking a framework for an app needs a Mac. See ../core/README.md.
-    iosArm64()
-    iosSimulatorArm64()
+    // linking a framework for an app needs a Mac. See ../core/README.md. iosX64 is the simulator
+    // on an Intel Mac (the maintainer's macOS guest); the Linux gate compiles the other two.
+    // Each iOS target also links this module, with :core, into the framework the iOS shell
+    // (../../ios) embeds: static, as Compose Multiplatform recommends for the shared framework.
+    listOf(iosArm64(), iosSimulatorArm64(), iosX64()).forEach { target ->
+        target.binaries.framework {
+            baseName = "Shared"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {

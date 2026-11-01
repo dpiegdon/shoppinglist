@@ -2,8 +2,9 @@
 
 The API client, the Room database, the repositories and the sync engine, as a
 Kotlin Multiplatform module. Its JVM target is what the Android app (`:app`)
-and the shared screens' Android target (`:shared`) build on; its `iosArm64` and
-`iosSimulatorArm64` targets are what `:shared`'s iOS targets build on. Nothing
+and the shared screens' Android target (`:shared`) build on; its `iosArm64`,
+`iosSimulatorArm64` and `iosX64` targets are what `:shared`'s iOS targets build
+on (`iosX64` is the simulator on an Intel Mac). Nothing
 here can use Android or iOS directly: what needs the platform is an interface
 declared here, implemented by `:app` on Android (see
 [`../README.md`](../README.md#modules)) and by the iOS app on iOS.
@@ -27,8 +28,10 @@ The iOS targets compile to klibs on any host Kotlin/Native runs on, with
 `kotlin.native.enableKlibsCrossCompilation` (`../gradle.properties`): macOS, and
 Linux x86_64, where `../../verify-all.sh` compiles them as part of the Android
 stage. Kotlin/Native has no Linux/aarch64 host, so there the gate leaves them
-out. Linking a framework for an app, and running anything on iOS, needs a Mac
-with Xcode; before an iOS milestone, run the two compile tasks above there.
+out, and it compiles `iosArm64` and `iosSimulatorArm64` only; `iosX64`, the
+simulator on an Intel Mac, is built on the Mac. Linking a framework for an app,
+and running anything on iOS, needs a Mac with Xcode; before an iOS milestone,
+run the compile tasks above there.
 
 Two libraries are older on the iOS targets than on the JVM, because their newer
 releases are built with Kotlin 2.3, whose klibs this Kotlin (2.2) cannot read:
@@ -104,11 +107,13 @@ val engine = SyncEngine(db.itemDao(), db.listDao(), registry, sessions, deviceId
 ```
 
 `secrets`, `lastOpened`, `deviceId`, `syncTrigger` and `notifier` are the
-app's implementations of the interfaces above. The module is published to the
-app as a framework: add a `binaries.framework { … }` to the iOS targets in
-`build.gradle.kts` and link it on a Mac. The Swift side then calls the
-`suspend` functions through Kotlin's completion handlers, and collects the
-`Flow`s (lists, items, sync status) with a small adapter of its own.
+app's implementations of the interfaces above. The module reaches the app
+inside `:shared`'s framework (`Shared.framework`, a static one, which
+`../shared/build.gradle.kts` declares on every iOS target and
+`./gradlew :shared:linkDebugFrameworkIosX64` — or the simulator-arm64 or arm64
+task — links on a Mac). The Swift side then calls the `suspend` functions
+through Kotlin's completion handlers, and collects the `Flow`s (lists, items,
+sync status) with a small adapter of its own.
 
 ## Accounts
 

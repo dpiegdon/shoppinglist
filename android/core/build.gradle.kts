@@ -21,9 +21,11 @@ kotlin {
         }
     }
     // Compiled to klibs on any host with kotlin.native.enableKlibsCrossCompilation (gradle.properties);
-    // linking a framework for an app needs a Mac. See README.md.
+    // linking a framework for an app needs a Mac. See README.md. iosX64 is the simulator on an
+    // Intel Mac (the maintainer's macOS guest); the Linux gate compiles the other two.
     iosArm64()
     iosSimulatorArm64()
+    iosX64()
 
     sourceSets {
         commonMain.dependencies {
@@ -79,6 +81,7 @@ dependencies {
     add("kspJvm", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspIosX64", libs.androidx.room.compiler)
 }
 
 // Room exports each schema version as JSON so migrations can be tested against a real old database

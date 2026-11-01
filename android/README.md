@@ -81,7 +81,8 @@ The build has three Gradle modules:
   update check, the strings and drawables (Compose Multiplatform resources,
   below) and the Koin modules that name no platform class
   (`di/CommonModules.kt`). It is a Kotlin Multiplatform module with an Android
-  target and the `iosArm64` and `iosSimulatorArm64` targets; the code is in
+  target and the `iosArm64`, `iosSimulatorArm64` and `iosX64` targets (the
+  last is the simulator on an Intel Mac); the code is in
   `src/commonMain`, and what needs the platform is described under
   [The shared module](#the-shared-module). Its tests run on the Android target
   under Robolectric (`./gradlew :shared:testDebugUnitTest`): the screens, the view
