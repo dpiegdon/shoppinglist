@@ -7,6 +7,7 @@
     "web",
     "reliability"
   ],
+  "owner": "claude",
   "priority": 3,
   "title": "Web test: the create-dialog guest-cap case clicks 49 times and exceeds vitest's 5s timeout under the parallel gate",
   "updated_at": "2026-11-01T01:32:12+00:00"
